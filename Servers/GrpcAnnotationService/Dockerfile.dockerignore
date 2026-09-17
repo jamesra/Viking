@@ -1,0 +1,34 @@
+# BuildKit uses this file instead of the repo-root .dockerignore for
+# Servers/GrpcAnnotationService/Dockerfile. Deny everything, then allow only
+# the gRPC project graph (source, not host bin/obj).
+
+**
+
+!Directory.Build.props
+!Servers/GrpcAnnotationService/
+!Servers/GrpcAnnotationService/**
+!Servers/ConnectomeDataModelCore/
+!Servers/ConnectomeDataModelCore/**
+!gRPCAnnotationServiceTypes/
+!gRPCAnnotationServiceTypes/**
+!Geometry.Core/
+!Geometry.Core/**
+!GeometrySqlTypeMapper/
+!GeometrySqlTypeMapper/**
+!AnnotationInterfaces/
+!AnnotationInterfaces/**
+!Geometry/
+!Geometry/**
+!GraphLib/
+!GraphLib/**
+!RTree/
+!RTree/**
+!UnitsAndScale/
+!UnitsAndScale/**
+!Utils/
+!Utils/**
+
+**/bin/
+**/bin/**
+**/obj/
+**/obj/**

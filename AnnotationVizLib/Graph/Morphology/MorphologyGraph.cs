@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using GraphLib;
 using RTree;
@@ -11,8 +11,6 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib
 {
-
-
     [Serializable]
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
@@ -22,42 +20,31 @@ namespace AnnotationVizLib
         /// </summary>
         public readonly ulong StructureID = 0;
 
-        public IStructureReadOnly structure = null;
+        public readonly IStructureReadOnly structure = null;
 
         public readonly IScale scale = null;
 
-        public virtual double SectionThickness
-        {
-            get { return scale.Z.Value; }
-        }
+        public virtual double SectionThickness => scale.Z.Value;
 
-        public IStructureTypeReadOnly structureType
-        {
-            get { return structure.Type; }
-        }
+        public IStructureTypeReadOnly structureType => structure.Type;
 
         [field: NonSerialized()]
         private RTree<ulong> _RTree = null;
 
-        private RTree<ulong> RTree
-        {
-            get
-            {
-                if (_RTree == null)
-                {
-                    _RTree = CreateRTree(this);
-                }
+        private RTree<ulong> RTree => _RTree ??= CreateRTree(this);
 
-                return _RTree;
-            }
-        }
+        /// <summary>
+        /// Graph this subgraph was added under. Null for a factory root. Not serialized (parent/child cycle).
+        /// </summary>
+        [field: NonSerialized()]
+        public MorphologyGraph Parent { get; private set; }
 
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.
         /// </summary>
-        public ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
+        public readonly ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new();
 
-        internal ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
+        internal readonly ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new();
 
         public MorphologyGraph(ulong subgraph_id, IScale scale)
         {
@@ -77,13 +64,14 @@ namespace AnnotationVizLib
         protected void ResetCachedMeasurements()
         {
             _BoundingBox = default;
+            _NodesBoundingBox = default;
         }
 
         public void AddSubgraph(MorphologyGraph subgraph)
         {
+            subgraph.Parent = this;
             Subgraphs.TryAdd(subgraph.StructureID, subgraph);
-            double minDistance;
-            ulong nearest_id = NearestNode(subgraph, out minDistance);
+            ulong nearest_id = NearestNode(subgraph, out double minDistance);
             if (nearest_id != ulong.MaxValue)
             {
                 MorphologyNode nearest_node_in_parent = Nodes[nearest_id];
@@ -92,16 +80,20 @@ namespace AnnotationVizLib
             }
         }
 
-        public void RemoveSubgraph(ulong sid)
+        public void RemoveSubgraph(ulong StructureID)
         {
-            Subgraphs.TryRemove(sid, out MorphologyGraph value);
-            if (NearestNodeToSubgraph.TryRemove(sid, out ulong nearest_node_id)) 
-                Nodes[nearest_node_id].RemoveSubgraph(sid); 
+            Subgraphs.TryRemove(StructureID, out MorphologyGraph value);
+            if (value != null)
+                value.Parent = null;
+            if (NearestNodeToSubgraph.TryRemove(StructureID, out ulong nearest_node_id))
+            {
+                Nodes[nearest_node_id].RemoveSubgraph(StructureID);
+            }
         }
 
         internal static RTree<ulong> CreateRTree(MorphologyGraph graph)
         {
-            RTree<ulong> rtree = new RTree<ulong>();
+            RTree<ulong> rtree = new();
             foreach (MorphologyNode node in graph.Nodes.Values)
             {
                 rtree.Add(node.BoundingBox.ToRTreeRect(), node.Key);
@@ -131,18 +123,17 @@ namespace AnnotationVizLib
         private SortedSet<MorphologyEdge> EdgesForRemovedNode(ulong key)
         {
             //Move all of my edges to the nearest node
-            double min_distance;
             MorphologyNode node_to_remove = Nodes[key];
-            SortedSet<ulong> other_nodes = new SortedSet<ulong>(node_to_remove.Edges.Keys);
+            SortedSet<ulong> other_nodes = [.. node_to_remove.Edges.Keys];
 
-            ulong nearest_id = NearestNode(key, other_nodes, out min_distance);
+            ulong nearest_id = NearestNode(key, other_nodes, out double min_distance);
 
             other_nodes.Remove(nearest_id); //Do not link nearest_node to itself
 
-            SortedSet<MorphologyEdge> new_edges = new SortedSet<MorphologyEdge>();
+            SortedSet<MorphologyEdge> new_edges = [];
             foreach (ulong relink_id in other_nodes)
             {
-                MorphologyEdge new_edge = new MorphologyEdge(this, nearest_id, relink_id);
+                MorphologyEdge new_edge = new(this, nearest_id, relink_id);
                 new_edges.Add(new_edge);
             }
 
@@ -162,62 +153,64 @@ namespace AnnotationVizLib
             }
         }
 
-        private GridBox _BoundingBox = default;
-        public Geometry.GridBox BoundingBox
+        private Box _BoundingBox = default;
+        private Box _NodesBoundingBox = default;
+
+        /// <summary>
+        /// AABB of this structure's own locations, excluding child subgraphs.
+        /// SliceGraph recenters and BajajMultiTest restores volume XY from this origin so a cell mesh is not shifted by synapse bboxes.
+        /// </summary>
+        public Geometry.Box NodesBoundingBox
+        {
+            get
+            {
+                const int ParallelThreshold = 64;
+                if (_NodesBoundingBox == default && this.Nodes.Count > 0)
+                {
+                    IEnumerable<Box> boxes = this.Nodes.Count > ParallelThreshold
+                        ? this.Nodes.Values.Select(n => n.BoundingBox).AsParallel()
+                        : this.Nodes.Values.Select(n => n.BoundingBox);
+                    _NodesBoundingBox = boxes.Aggregate((a, b) => Box.Union(a, b));
+                }
+
+                return _NodesBoundingBox;
+            }
+        }
+
+        public Geometry.Box BoundingBox
         {
             get
             {
                 const int ParallelThreshold = 64;
                 if (_BoundingBox == default)
                 {
-                    if (this.Nodes.Count > 0)
+                    _BoundingBox = NodesBoundingBox;
+
+                    if (!Subgraphs.IsEmpty)
                     {
-                        //Don't bother using parrallelism for small graphs
-                        IEnumerable<GridBox> boxes;
-                        if (this.Nodes.Count > ParallelThreshold)
-                        {
-                            boxes = this.Nodes.Values.Select(n => n.BoundingBox).AsParallel();
-                        }
-                        else
-                        {
-                            boxes = this.Nodes.Values.Select(n => n.BoundingBox);
-                        }
+                        IEnumerable<Box> subgraphBoxes = this.Subgraphs.Count > ParallelThreshold
+                            ? Subgraphs.Values.Select(sg => sg.BoundingBox).AsParallel()
+                            : Subgraphs.Values.Select(sg => sg.BoundingBox);
+                        Box subgraph_bbox = subgraphBoxes.Aggregate((a, b) => Box.Union(a, b));
 
-                        _BoundingBox = boxes.Aggregate((a, b) => GridBox.Union(a, b));
-                    }
-
-                    if (this.Subgraphs.Count > 0)
-                    {
-                        IEnumerable<GridBox> subgraphBoxes;
-
-                        if (this.Subgraphs.Count > ParallelThreshold)
-                            subgraphBoxes = Subgraphs.Values.Select(sg => sg.BoundingBox).AsParallel();
-                        else
-                            subgraphBoxes = Subgraphs.Values.Select(sg => sg.BoundingBox);
-
-                        GridBox subgraph_bbox = subgraphBoxes.Aggregate((a, b) => GridBox.Union(a, b));
-
-                        if (_BoundingBox != null)
-                            _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
-                        else
-                            _BoundingBox = subgraph_bbox;
+                        _BoundingBox = _BoundingBox != default ? Box.Union(_BoundingBox, subgraph_bbox) : subgraph_bbox;
                     }
                 }
 
-                Debug.Assert(_BoundingBox != null);
+                Debug.Assert(_BoundingBox != default);
                 return _BoundingBox;
             }
         }
 
         protected SortedDictionary<ulong, SortedSet<ulong>> BuildEdgeLookup()
         {
-            SortedDictionary<ulong, SortedSet<ulong>> Links = new SortedDictionary<ulong, SortedSet<ulong>>();
+            SortedDictionary<ulong, SortedSet<ulong>> Links = [];
 
             foreach (MorphologyEdge edge in Edges.Values)
             {
                 if (!Links.ContainsKey(edge.SourceNodeKey))
                 {
-                    Links[edge.SourceNodeKey] = new SortedSet<ulong>(new ulong[] { edge.TargetNodeKey });
+                    Links[edge.SourceNodeKey] = [edge.TargetNodeKey];
                 }
                 else
                 {
@@ -226,7 +219,7 @@ namespace AnnotationVizLib
 
                 if (!Links.ContainsKey(edge.TargetNodeKey))
                 {
-                    Links[edge.TargetNodeKey] = new SortedSet<ulong>(new ulong[] { edge.SourceNodeKey });
+                    Links[edge.TargetNodeKey] = [edge.SourceNodeKey];
                 }
                 else
                 {
@@ -241,122 +234,92 @@ namespace AnnotationVizLib
         /// Locations with 3 or more edges, branch points in a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetBranchPointIDs()
-        {
-            return this.Nodes.Values.Where(n => n.Edges.Count > 2).Select(n => n.Key).ToArray();
-        }
+        public ulong[] GetBranchPointIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count > 2).Select(n => n.Key)];
 
         /// <summary>
         /// Locations with 1 or fewer links, the tip of a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetTerminalIDs()
-        {
-            return this.Nodes.Values.Where(n => n.Edges.Count == 1 && !n.Location.IsVericosityCap).Select(n => n.Key).ToArray();
-        }
+        public ulong[] GetTerminalIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count == 1 && !n.Location.IsVericosityCap).Select(n => n.Key)];
 
         /// <summary>
         /// Locations with 2 links, the middle of a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetProcessIDs()
-        {
-            return this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key).ToArray();
-        }
+        public ulong[] GetProcessIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key)];
 
+        /// <summary>
+        /// Unbranched 1-up-and-1-down shafts, each including the pinned branch/terminal endpoints used as Catmull-Rom anchors.
+        /// Isolated blobs are omitted. A degree-2 node with both links at the same Z is a branch endpoint, not a process.
+        /// Called by <see cref="CurveFitProcesses"/>; ToStickFigure still uses <see cref="GetProcessIDs"/> (edge count).
+        /// </summary>
         public List<ulong[]> Processes()
         {
-            SortedSet<ulong> allProcessIDs = new SortedSet<ulong>(this.GetProcessIDs());
+            SortedSet<ulong> remaining = [.. Nodes.Values.Where(n => n.IsUnbranchedProcess()).Select(n => n.Key)];
+            if (remaining.Count == 0)
+                return [];
 
-            if (allProcessIDs.Count == 0)
+            List<ulong[]> listOutput = [];
+            while (remaining.Count > 0)
             {
-                return new List<ulong[]>();
-            }
-
-            SortedSet<ulong> DoNotTraverse = new SortedSet<ulong>();
-
-            //Do not traverse branches or terminals
-            DoNotTraverse.UnionWith(this.Nodes.Values.Where(n => n.Edges.Count != 2).Select(n => n.ID));
-
-            //Find a starting point
-            MorphologyNode seed = this.Nodes[allProcessIDs.First()];
-
-            List<ulong[]> listOutput = new List<ulong[]>();
-            while (true)
-            {
-                ulong[] process = TraverseEntireProcess(seed);
+                ulong[] process = TraverseUnbranchedProcess(Nodes[remaining.First()]);
                 listOutput.Add(process);
-
-                allProcessIDs.ExceptWith(process);
-
-                if (allProcessIDs.Count == 0)
-                    break;
-
-                seed = this.Nodes[allProcessIDs.First()];
+                remaining.ExceptWith(process.Where(id => Nodes[id].IsUnbranchedProcess()));
             }
 
             return listOutput;
         }
 
-        private static ulong[] TraverseEntireProcess(MorphologyNode seed)
+        /// <summary>
+        /// Walks from <paramref name="seed"/> down to the lowest process node, then up, appending the
+        /// non-process neighbor at each end so the fit is anchored at branches and terminals.
+        /// </summary>
+        private ulong[] TraverseUnbranchedProcess(MorphologyNode seed)
         {
-            Debug.Assert(seed.Edges.Count == 2);
-
             MorphologyGraph graph = seed.Graph;
+            MorphologyNode lowest = seed;
+            HashSet<ulong> visited = [seed.Key];
 
-            List<ulong> listOutput = new List<ulong>();
-            listOutput.Add(seed.ID);
-
-            ulong[] linkedIDs = seed.Edges.Keys.ToArray();
-            MorphologyNode rightOfSeed = graph.Nodes[linkedIDs[0]];
-            if (rightOfSeed.Edges.Count == 2)
+            while (true)
             {
-                listOutput.Add(rightOfSeed.ID);
-                TraverseProcessRecursively(ref listOutput, rightOfSeed, 1, false);
+                ulong[] below = lowest.GetEdgesBelow();
+                if (below.Length != 1)
+                    break;
+
+                MorphologyNode neighbor = graph.Nodes[below[0]];
+                if (!neighbor.IsUnbranchedProcess() || !visited.Add(neighbor.Key))
+                    break;
+
+                lowest = neighbor;
             }
 
-            MorphologyNode leftOfSeed = graph.Nodes[linkedIDs[1]];
-            if (leftOfSeed.Edges.Count == 2)
+            List<ulong> chain = [];
+            ulong[] lowestBelow = lowest.GetEdgesBelow();
+            if (lowestBelow.Length == 1)
+                chain.Add(lowestBelow[0]);
+
+            MorphologyNode cursor = lowest;
+            while (true)
             {
-                listOutput.Insert(0, leftOfSeed.ID);
-                TraverseProcessRecursively(ref listOutput, leftOfSeed, 0, true);
-            }
+                chain.Add(cursor.Key);
+                ulong[] above = cursor.GetEdgesAbove();
+                if (above.Length != 1)
+                    break;
 
-            return listOutput.ToArray();
-        }
+                MorphologyNode next = graph.Nodes[above[0]];
+                if (chain.Contains(next.Key))
+                    break;
 
-        private static void TraverseProcessRecursively(ref List<ulong> output, MorphologyNode seed, int iSeedIndex, bool InsertBefore)
-        {
-            int iLastAdded = InsertBefore ? iSeedIndex + 1 : iSeedIndex - 1;
-            ulong LastAddedID = output[iLastAdded];
-            Debug.Assert(output[iSeedIndex] == seed.ID);
-
-            //This function does not tolerate cycles
-            MorphologyGraph graph = seed.Graph;
-            foreach (ulong linkedID in seed.Edges.Keys)
-            {
-                //Don't add the seed node again
-                if (linkedID == LastAddedID)
-                    continue;
-
-                //Debug.Assert(output.Contains(linkedID) == false);
-
-                //I shouldn't have to do this, but cycles can occur and this check is needed to prevent them.
-                if (output.Contains(linkedID))
-                    continue;
-
-                MorphologyNode candidate = graph.Nodes[linkedID];
-
-                int InsertionIndex = InsertBefore ? iSeedIndex : iSeedIndex + 1;
-                int iNewSeedIndex = InsertBefore ? iSeedIndex : iSeedIndex + 1;
-
-                output.Insert(InsertionIndex, candidate.ID);
-
-                if (candidate.Edges.Count == 2)
+                if (!next.IsUnbranchedProcess())
                 {
-                    TraverseProcessRecursively(ref output, candidate, iNewSeedIndex, InsertBefore);
+                    chain.Add(next.Key);
+                    break;
                 }
+
+                cursor = next;
             }
+
+            return [.. chain.Distinct().OrderBy(id => graph.Nodes[id].Z).ThenBy(id => id)];
         }
     }
 }

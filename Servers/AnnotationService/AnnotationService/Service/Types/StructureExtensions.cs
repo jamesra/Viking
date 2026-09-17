@@ -36,15 +36,16 @@ namespace AnnotationService.Types
         {
             ConnectomeDataModel.Structure dbStructObj = obj as ConnectomeDataModel.Structure;
 
-            Structure s = new Structure();
+            Structure s = new()
+            {
+                ID = dbStructObj.ID,
+                TypeID = dbStructObj.TypeID,
+                Notes = dbStructObj.Notes,
+                Verified = dbStructObj.Verified
+            };
 
-            s.ID = dbStructObj.ID;
-            s.TypeID = dbStructObj.TypeID;
-            s.Notes = dbStructObj.Notes;
-            s.Verified = dbStructObj.Verified;
 
-
-            if (dbStructObj.Tags == null)
+            if (dbStructObj.Tags is null)
             {
                 //_Tags = new string[0];
                 s.AttributesXml = "";
@@ -61,14 +62,7 @@ namespace AnnotationService.Types
 
             s.Links = PopulateLinks(dbStructObj);
 
-            if (IncludeChildren)
-            {
-                s.ChildIDs = dbStructObj.Children.Select(child => child.ID).ToArray();
-            }
-            else
-            {
-                s.ChildIDs = null;
-            }
+            s.ChildIDs = IncludeChildren ? [.. dbStructObj.Children.Select(child => child.ID)] : null;
 
             s.Label = dbStructObj.Label;
             s.Username = dbStructObj.Username;

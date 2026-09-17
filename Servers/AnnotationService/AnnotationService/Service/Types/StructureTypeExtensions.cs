@@ -1,4 +1,5 @@
-﻿using System.Linq;
+using System;
+using System.Linq;
 
 namespace AnnotationService.Types
 {
@@ -26,31 +27,27 @@ namespace AnnotationService.Types
 
             return _Links;
         }
-         
+
         public static StructureType Create(this ConnectomeDataModel.StructureType type)
         {
-            StructureType st = new StructureType();
-            st.ID = type.ID;
-            st.ParentID = type.ParentID;
-            st.Name = type.Name.Trim();
+            StructureType st = new()
+            {
+                ID = type.ID,
+                ParentID = type.ParentID,
+                Name = type.Name.Trim()
+            };
 
 
             if (type.Notes != null)
                 st.Notes = type.Notes.TrimEnd();
             st.MarkupType = type.MarkupType;
 
-            if (type.Tags == null)
-                st.Tags = new string[0];
-            else
-                st.Tags = type.Tags.Split(';');
+            st.Tags = type.Tags is null ? [] : type.Tags.Split(';');
 
-            if (type.StructureTags == null)
-                st.StructureTags = new string[0];
-            else
-                st.StructureTags = type.StructureTags.Split(';');
+            st.StructureTags = type.StructureTags is null ? [] : type.StructureTags.Split(';');
 
             st.Abstract = type.Abstract;
-            st.Color = (uint)type.Color;
+            st.Color = type.Color;
             st.Code = type.Code;
             st.HotKey = type.HotKey.Length > 0 ? type.HotKey[0] : '\0';
             st.PermittedLinks = PopulateLinks(type);
@@ -65,7 +62,7 @@ namespace AnnotationService.Types
             type.Name = st.Name;
             type.Notes = st.Notes;
             type.MarkupType = st.MarkupType;
-            
+
             string tags = "";
             foreach (string s in st.Tags)
             {
@@ -82,7 +79,7 @@ namespace AnnotationService.Types
 
             type.StructureTags = structuretags;
             type.Abstract = st.Abstract;
-            type.Color = (int)st.Color;
+            type.Color = st.Color;
             type.Code = st.Code;
             type.HotKey = st.HotKey.ToString();
             type.Username = Annotation.ServiceModelUtil.GetUserForCall();

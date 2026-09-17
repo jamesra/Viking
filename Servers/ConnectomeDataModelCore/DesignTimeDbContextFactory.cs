@@ -1,28 +1,33 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
 namespace Viking.DataModel.Annotation
 {
+    /// <summary>
+    /// Supplies a context to the dotnet-ef design-time tools, which cannot use the
+    /// application's dependency injection container.
+    /// </summary>
     public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AnnotationContext>
     {
+        /// <summary>Environment variable consulted when no connection string is passed on the command line.</summary>
+        public const string ConnectionStringVariable = "ANNOTATION_CONNECTION";
+
         public AnnotationContext CreateDbContext(string[] args)
         {
-            //Check if the first argument is a connection string
-            string connectionString =
-                "Server=localhost;Database={0};Trusted_Connection=True;integrated security=false;Pwd=Glutamate88;User ID=sa;MultipleActiveResultSets=true";
-            if (args.Length > 0)
+            var connectionString = args.Length > 0
+                ? args[0]
+                : Environment.GetEnvironmentVariable(ConnectionStringVariable);
+
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                connectionString = args[0];
+                throw new InvalidOperationException(
+                    $"No annotation database connection string. Set {ConnectionStringVariable} or pass one as the " +
+                    "first argument, for example: dotnet ef dbcontext info -- \"Server=.;Database=Annotation;Trusted_Connection=True\"");
             }
 
             var optionsBuilder = new DbContextOptionsBuilder<AnnotationContext>();
-            optionsBuilder.UseSqlServer(connectionString,
-                config => config.UseNetTopologySuite())
+            optionsBuilder.UseSqlServer(connectionString, config => config.UseNetTopologySuite())
                 .EnableDetailedErrors()
                 .EnableSensitiveDataLogging();
             return new AnnotationContext(optionsBuilder.Options);

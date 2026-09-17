@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Face.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -20,8 +20,10 @@ namespace TriangleNet.Topology.DCEL
 
         static Face()
         {
-            Empty = new Face(null);
-            Empty.id = -1;
+            Empty = new Face(null)
+            {
+                id = -1
+            };
         }
 
         #endregion
@@ -39,8 +41,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public int ID
         {
-            get { return id; }
-            set { id = value; }
+            get => id;
+            set => id = value;
         }
 
         /// <summary>
@@ -48,8 +50,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public HalfEdge Edge
         {
-            get { return edge; }
-            set { edge = value; }
+            get => edge;
+            set => edge = value;
         }
 
         /// <summary>
@@ -57,8 +59,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public bool Bounded
         {
-            get { return bounded; }
-            set { bounded = value; }
+            get => bounded;
+            set => bounded = value;
         }
 
         /// <summary>
@@ -104,9 +106,6 @@ namespace TriangleNet.Topology.DCEL
             } while (edge.ID != first);
         }
 
-        public override string ToString()
-        {
-            return string.Format("F-ID {0}", id);
-        }
+        public override string ToString() => string.Format("F-ID {0}", id);
     }
 }

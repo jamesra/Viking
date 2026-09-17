@@ -1,15 +1,47 @@
-﻿using Geometry;
+using System;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
+using System.Windows.Controls;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.Common
 {
+    /// <summary>
+    /// Provides context information to extensions during conditional loading checks.
+    /// Extensions can implement a static method: static bool ShouldLoad(IExtensionLoadContext context)
+    /// to examine program state and determine if they should be loaded.
+    /// </summary>
+    public interface IExtensionLoadContext
+    {
+        /// <summary>
+        /// The full VikingXML document defining the volume
+        /// </summary>
+        System.Xml.Linq.XDocument VikingXML { get; }
+
+        /// <summary>
+        /// The Volume element from the VikingXML
+        /// </summary>
+        System.Xml.Linq.XElement VolumeElement { get; }
+
+        /// <summary>
+        /// The volume name from the VikingXML
+        /// </summary>
+        string VolumeName { get; }
+
+        /// <summary>
+        /// The volume host URL
+        /// </summary>
+        string VolumeHost { get; }
+    }
+
     /// <summary>
     /// This interface can be placed on a class in an extension assembly.  If the Initialize
     /// method returns false the assembly will not be loaded as an extension
     /// </summary>
     public interface IInitExtensions
     {
-        bool Initialize();
+        bool Initialize(IServiceProvider provider);
     }
 
     /// <summary>
@@ -24,45 +56,6 @@ namespace Viking.Common
         System.Windows.Forms.TabPage GetPage();
     }
 
-    public interface ISectionOverlayExtension
-    {
-        /// <summary>
-        /// Name of the overlay for UI purposes
-        /// </summary>
-        /// <returns></returns>
-        string Name();
-
-        /// <summary>
-        /// Used to sort all extensions to determine draw order
-        /// </summary>
-        /// <returns></returns>
-        int DrawOrder();
-
-        /// <summary>
-        /// Must be called before draw
-        /// </summary>
-        /// <param name="parent"></param>
-        void SetParent(Viking.UI.Controls.SectionViewerControl parent);
-
-        /// <summary>
-        /// The UI is being asked to select an object.  The extension should respond to this method with the object if it exists 
-        /// and the distance to object.  Return null if no object can be selected at the given point
-        /// </summary>
-        /// <param name="WorldPosition"></param>
-        /// <param name="distance"></param>
-        /// <returns></returns>
-        object ObjectAtPosition(GridVector2 WorldPosition, out double distance); 
-
-        /// <summary>
-        /// Draw the specified overlay extension on the render target.  
-        /// </summary>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="Bounds"></param>
-        /// <param name="DownSample"></param>
-        /// <param name="BackgroundLuma">Texture matching size of client with Luma value of each pixel</param>
-        /// <param name="BackgroundColors">Texture matching size of client window with RGB values for each pixel.  May be null of no color data available</param>
-        void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue);
-    }
 
     /// <summary>
     /// Primary interface for extensions to listen in on User interface commands and react accordingly
@@ -81,6 +74,18 @@ namespace Viking.Common
     }
 
     /// <summary>
+    /// Optional interface for menu extensions that contribute a sub-item to the shared Preferences menu.
+    /// If implemented, the returned menu item is added under the top-level Preferences menu.
+    /// </summary>
+    public interface IPreferencesMenuContributor
+    {
+        /// <summary>
+        /// Returns a single menu item to add under Preferences (e.g. "Annotation...").
+        /// </summary>
+        System.Windows.Forms.ToolStripMenuItem GetPreferencesMenuItem();
+    }
+
+    /// <summary>
     /// </summary>
     public interface IToolBarButtons
     {
@@ -94,12 +99,12 @@ namespace Viking.Common
         /// <summary>
         /// GetMenuFor returns a context menu for the passed DataObject or null
         /// </summary>
-        System.Windows.Forms.ContextMenu BuildMenuFor(IContextMenu Obj, System.Windows.Forms.ContextMenu Menu);
+        System.Windows.Forms.ContextMenuStrip BuildMenuFor(object Obj, System.Windows.Forms.ContextMenuStrip Menu);
 
         /// <summary>
         /// GetMenuFor returns a context menu for the passed System.Type or null
         /// </summary>
-        System.Windows.Forms.ContextMenu BuildMenuFor(System.Type ObjType, System.Windows.Forms.ContextMenu Menu);
+        System.Windows.Forms.ContextMenuStrip BuildMenuFor(System.Type ObjType, System.Windows.Forms.ContextMenuStrip Menu);
     }
 
     /// <summary>
@@ -159,12 +164,15 @@ namespace Viking.Common
         void OnCancelChanges();
     }
 
+    /// <summary>
+    /// Implemented by an object to provide a context menu for itself.
+    /// </summary>
     public interface IContextMenu
     {
-        System.Windows.Forms.ContextMenu ContextMenu { get; }
+        System.Windows.Forms.ContextMenuStrip ContextMenu { get; }
     }
 
-    public interface IUIObjectBasic : IContextMenu
+    public interface IUIObjectBasic
     {
         void ShowProperties();
 
@@ -187,7 +195,7 @@ namespace Viking.Common
         event System.EventHandler BeforeSave;
         event System.EventHandler AfterSave;
 
-        System.Drawing.Image SmallThumbnail {get;}
+        System.Drawing.Image SmallThumbnail { get; }
 
         #region DragDrop
 
@@ -200,7 +208,7 @@ namespace Viking.Common
         /// Add ourselves to the passed parent as a child object
         /// </summary>
         /// <param name="parent"></param>
-        void SetParent(IUIObject parent);
+        void SetParent(IUIObject? parent);
 
         #endregion
 

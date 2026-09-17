@@ -1,8 +1,8 @@
+using Neo4JService.Areas.HelpPage.ModelDescriptions;
+using Neo4JService.Areas.HelpPage.Models;
 using System;
 using System.Web.Http;
 using System.Web.Mvc;
-using Neo4JService.Areas.HelpPage.ModelDescriptions;
-using Neo4JService.Areas.HelpPage.Models;
 
 namespace Neo4JService.Areas.HelpPage.Controllers
 {
@@ -50,8 +50,7 @@ namespace Neo4JService.Areas.HelpPage.Controllers
             if (!String.IsNullOrEmpty(modelName))
             {
                 ModelDescriptionGenerator modelDescriptionGenerator = Configuration.GetModelDescriptionGenerator();
-                ModelDescription modelDescription;
-                if (modelDescriptionGenerator.GeneratedModels.TryGetValue(modelName, out modelDescription))
+                if (modelDescriptionGenerator.GeneratedModels.TryGetValue(modelName, out var modelDescription))
                 {
                     return View(modelDescription);
                 }

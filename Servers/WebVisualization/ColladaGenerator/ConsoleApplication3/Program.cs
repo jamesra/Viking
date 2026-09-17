@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Web;
 using System.Web.Script.Serialization;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ConsoleApplication3
 {
@@ -48,15 +50,7 @@ namespace ConsoleApplication3
             //   Console.WriteLine(result);
             //}
 
-            HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create("http://connectomes.utah.edu/Test/FormRequest/GetTopStructures?request=MarcLab(connectome.utah.edu,Rabbit(MarcLab),0");
-            httpWebRequest.Method = WebRequestMethods.Http.Get;
-            httpWebRequest.ContentType = "application/json; charset=utf-8";
-            string jsonResponse = null;
-            var response = (HttpWebResponse)httpWebRequest.GetResponse();
-            using (StreamReader sr = new StreamReader(response.GetResponseStream()))
-            {
-                jsonResponse = sr.ReadToEnd();
-            }
+            var jsonResponse = GetJsonResponseAsync().GetAwaiter().GetResult();
 
             JavaScriptSerializer deserialize = new JavaScriptSerializer();
             object[] sendJson = (object[])deserialize.Deserialize<object>(jsonResponse);
@@ -530,6 +524,16 @@ namespace ConsoleApplication3
             Directory.Delete(target_dir, false);
 
             return result;
+        }
+
+        private static async Task<string> GetJsonResponseAsync()
+        {
+            using (var httpClient = new HttpClient())
+            {
+                var response = await httpClient.GetAsync("http://connectomes.utah.edu/Test/FormRequest/GetTopStructures?request=MarcLab(connectome.utah.edu,Rabbit(MarcLab),0");
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync();
+            }
         }
 
     }

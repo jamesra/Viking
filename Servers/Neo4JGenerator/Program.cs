@@ -1,10 +1,16 @@
-﻿using Neo4j.Driver.V1;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using CommandLine;
+using CommandLine.Text;
+using Neo4j.Driver.V1;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Neo4JGenerator
 {
@@ -14,13 +20,9 @@ namespace Neo4JGenerator
 
         public static void WriteProgress(string output)
         {
-            if(Program.options.Verbose)
+            if (Program.options.Verbose)
             {
                 Console.Write(output);
-            }
-            else if(!Program.options.Quiet)
-            {
-                Console.Write('.');
             }
         }
 
@@ -30,40 +32,37 @@ namespace Neo4JGenerator
             {
                 Console.WriteLine(output);
             }
-            else if (!Program.options.Quiet)
-            {
-                Console.Write('.');
-            }
         }
 
         static void Main(string[] args)
         {
-            Simple.OData.Client.V4Adapter.Reference();
-            if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
-            {
-                System.Console.WriteLine("Unable to parse command line arguments, aborting");
-                return;
-            }
+            var result = Parser.Default.ParseArguments<CommandLineOptions>(args);
+            result.WithParsed(RunWithOptions)
+                  .WithNotParsed(errs => HandleParseErrors(result, errs));
+        }
 
-            Newtonsoft.Json.Linq.JObject json = null;
+        private static void RunWithOptions(CommandLineOptions opts)
+        {
+            Program.options = opts;
+
+            JObject json = null;
+
             if (Program.options.JsonFilename != null)
             {
                 json = DeserializeFromStream(System.IO.File.OpenRead(Program.options.JsonFilename));
             }
             else if(Program.options.JsonURL != null)
             {
-                System.Net.WebClient client = new System.Net.WebClient();
-                System.IO.Stream response = client.OpenRead(Program.options.JsonURL);
-
-                json = DeserializeFromStream(response); 
+                json = DeserializeFromStreamAsync(Program.options.JsonURL).GetAwaiter().GetResult();
             }
 
-            if(json == null)
+            if(json is null)
             {
                 Console.WriteLine("Unable to load JSON data");
+                return;
             }
 
-            if (Program.options.ODataEndpoint == null)
+            if (Program.options.ODataEndpoint is null)
             {
                 ClearAndImportDatabase(json);
             }
@@ -73,6 +72,25 @@ namespace Neo4JGenerator
             }
 
             Console.WriteLine("All done!");
+        }
+
+        private static void HandleParseErrors(ParserResult<CommandLineOptions> result, IEnumerable<Error> errs)
+        {
+            // Create a new help text with error information
+            var errorHelpText = HelpText.AutoBuild(result);
+            errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+            errorHelpText.AddPreOptionsLine("The following errors occurred:");
+            
+            foreach (var error in errs)
+            {
+                errorHelpText.AddPreOptionsLine($"  {error}");
+            }
+            
+            errorHelpText.AddPreOptionsLine("");
+            Console.WriteLine(errorHelpText);
+            
+            // Exit with error code
+            Environment.Exit(1);
         }
 
         public static void ClearAndImportDatabase(JObject json)
@@ -400,7 +418,15 @@ namespace Neo4JGenerator
                 return (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(jsonTextReader);
             }
         }
-        
+
+        public static async Task<Newtonsoft.Json.Linq.JObject> DeserializeFromStreamAsync(string url)
+        {
+            using (var client = new System.Net.Http.HttpClient())
+            using (var stream = await client.GetStreamAsync(url))
+            {
+                return DeserializeFromStream(stream);
+            }
+        }
         
     }
 }

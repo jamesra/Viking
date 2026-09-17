@@ -1,13 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
 
     <IsPackable>false</IsPackable>
-
-    <AssemblyName>Viking.DataModel.Annotation.Tests</AssemblyName>
-
-    <RootNamespace>Viking.DataModel.Annotation.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,18 +26,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
     <PackageReference Include="NetTopologySuite.Core" Version="1.15.3" />
     <PackageReference Include="xunit" Version="2.4.1" />
-    <PackageReference Include="Xunit.DependencyInjection" Version="8.4.1" />
-    <PackageReference Include="Xunit.DependencyInjection.Logging" Version="8.0.1" />
+    <PackageReference Include="Xunit.DependencyInjection" Version="7.2.0" />
+    <PackageReference Include="Xunit.DependencyInjection.Logging" Version="2.1.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="3.1.2">
+    <PackageReference Include="coverlet.collector" Version="3.0.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -48,6 +48,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj" />
+    <ProjectReference Include="..\GrpcAnnotationService\GrpcAnnotationService.csproj" />
   </ItemGroup>
 
 </Project>

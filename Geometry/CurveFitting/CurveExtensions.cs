@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,35 +7,15 @@ namespace Geometry
 {
     public static class CurveExtensions
     {
-        public static double CurveSmoothingEpsilon = 1.0;
+        //private static readonly double CurveSmoothingEpsilon = 1.0;
 
-        public static GridVector2[] CalculateCurvePoints(this GridVector2[] ControlPoints, uint NumInterpolations, bool closeCurve)
+        public static Vector2[] CalculateCurvePoints(this Vector2[] ControlPoints, uint NumInterpolations, bool closeCurve) => ((ICollection<Vector2>)ControlPoints).CalculateCurvePoints(NumInterpolations, closeCurve);
+
+        public static Vector2[] CalculateCurvePoints(this ICollection<Vector2> ControlPoints, uint NumInterpolations, bool closeCurve)
         {
-            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
-            return ((ICollection<GridVector2>)ControlPoints).CalculateCurvePoints(NumInterpolations, closeCurve);
-        }
-
-        public static GridVector2[] CalculateCurvePoints(this IPoint2D[] ControlPoints, uint NumInterpolations, bool closeCurve)
-        {
-            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
-            return ControlPoints.ToGridVector2().CalculateCurvePoints(NumInterpolations, closeCurve);
-        }
-
-        public static GridVector2[] CalculateCurvePoints(this ICollection<IPoint2D> ControlPoints,
-            uint NumInterpolations, bool closeCurve)
-        {
-            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
-            return ControlPoints.ToGridVector2().CalculateCurvePoints(NumInterpolations, closeCurve);
-        }
-
-        public static GridVector2[] CalculateCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations, bool closeCurve)
-        {
-            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
-
-
             if (NumInterpolations == 0)
             {
-                return ControlPoints.ToArray();
+                return [.. ControlPoints];
             }
 
             if (closeCurve)
@@ -44,27 +24,27 @@ namespace Geometry
                 return CalculateOpenCurvePoints(ControlPoints, NumInterpolations);
         }
 
-        public static GridPolyline CalculateCurvePoints(this GridPolyline polyline, uint NumInterpolations)
+        public static Polyline CalculateCurvePoints(this Polyline polyline, uint NumInterpolations)
         {
             if (NumInterpolations == 0)
             {
                 return polyline;
             }
 
-            return new GridPolyline(CalculateOpenCurvePoints(polyline.Points.Select(p => new GridVector2(p.X, p.Y)).ToArray(), NumInterpolations), polyline.AllowsSelfIntersection);
+            return new Polyline(CalculateOpenCurvePoints([.. polyline.Points.Select(p => new Vector2(p.X, p.Y))], NumInterpolations), polyline.AllowsSelfIntersection);
         }
 
-        private static GridVector2[] CalculateClosedCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
+        private static Vector2[] CalculateClosedCurvePoints(this ICollection<Vector2> ControlPoints, uint NumInterpolations)
         {
-            GridVector2[] CurvePoints = null;
+            Vector2[] CurvePoints = null;
             if (ControlPoints.Count <= 2)
             {
-                CurvePoints = new GridVector2[ControlPoints.Count];
+                CurvePoints = new Vector2[ControlPoints.Count];
                 ControlPoints.CopyTo(CurvePoints, 0);
             }
             else if (ControlPoints.Count >= 3)
             {
-                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), NumInterpolations, true);
+                CurvePoints = Geometry.CatmullRom.FitCurve([.. ControlPoints], NumInterpolations, true);
 
                 System.Diagnostics.Debug.Assert(CurvePoints[0] == CurvePoints.Last(), "First and last point should be identical in closed curve");
                 System.Diagnostics.Debug.Assert(CurvePoints[CurvePoints.Length - 2] != CurvePoints[CurvePoints.Length - 1], "The last and second last points should not match, probable bug.");
@@ -72,7 +52,7 @@ namespace Geometry
                 //The SQL Spatial types are more sensitive than our geometry epsilon, so explicitly set the first and last points equal.
                 CurvePoints[CurvePoints.Length - 1] = CurvePoints[0];
 
-                //CurvePoints = new GridVector2[SmoothedCurvePoints.Length + 1];
+                //CurvePoints = new Vector2[SmoothedCurvePoints.Length + 1];
                 //SmoothedCurvePoints.CopyTo(CurvePoints, 0);
 
                 //Ensure the first and last point are identical in a closed curve
@@ -88,7 +68,7 @@ namespace Geometry
         /// </summary>
         /// <param name="ControlPoints"></param>
         /// <returns></returns>
-        public static double[] MeasureCurvature(this IReadOnlyList<GridVector2> ControlPoints)
+        public static double[] MeasureCurvature(this IReadOnlyList<Vector2> ControlPoints)
         {
             //System.Diagnostics.Debug.Assert(ControlPoints.Count == 3, "Curve requires three points to measure");
 
@@ -99,11 +79,11 @@ namespace Geometry
 
             for (int i = 1; i < ControlPoints.Count - 1; i++)
             {
-                GridVector2 Origin = ControlPoints[i];
-                GridVector2 A = ControlPoints[i - 1];
-                GridVector2 B = ControlPoints[i + 1];
+                Vector2 Origin = ControlPoints[i];
+                Vector2 A = ControlPoints[i - 1];
+                Vector2 B = ControlPoints[i + 1];
 
-                Angles[i] = GridVector2.ArcAngle(Origin, A, B);
+                Angles[i] = Vector2.ArcAngle(Origin, A, B);
             }
 
             return Angles;
@@ -115,7 +95,7 @@ namespace Geometry
         /// </summary>
         /// <param name="ControlPoints"></param>
         /// <returns>A list of angles, showing how many degrees the next vertex deviates from travelling from a straight line</returns>
-        public static double[] MeasureCurvature(this IList<GridVector2> ControlPoints)
+        public static double[] MeasureCurvature(this IList<Vector2> ControlPoints)
         {
             //System.Diagnostics.Debug.Assert(ControlPoints.Count == 3, "Curve requires three points to measure");
 
@@ -133,38 +113,38 @@ namespace Geometry
                     //Angles[i] = 0;
                     //continue;
                 }
-                else if (GridVector2.DistanceSquared(ControlPoints[i], ControlPoints[i - 1]) < Global.EpsilonSquared)
+                else if (Vector2.DistanceSquared(ControlPoints[i], ControlPoints[i - 1]) < Tolerance.EpsilonSquared)
                 {
                     Angles[i] = 0;
                     continue;
                 }
 
                 //Extrapolate a line past the control point, and measure how much we deviate from it
-                GridLineSegment line = new GridLineSegment(ControlPoints[i - 1], ControlPoints[i]);
-                GridVector2 Origin = ControlPoints[i];
-                GridVector2 A = line.PointAlongLine(2.0);//ControlPoints[i - 1];
-                GridVector2 B = ControlPoints[i + 1];
+                LineSegment line = new(ControlPoints[i - 1], ControlPoints[i]);
+                Vector2 Origin = ControlPoints[i];
+                Vector2 A = line.PointAlongLine(2.0);//ControlPoints[i - 1];
+                Vector2 B = ControlPoints[i + 1];
 
-                Angles[i] = GridVector2.ArcAngle(in Origin, in A, in B);
+                Angles[i] = Vector2.ArcAngle(in Origin, in A, in B);
             }
 
             return Angles;
         }
 
-        private static GridVector2[] CalculateOpenCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
+        private static Vector2[] CalculateOpenCurvePoints(this ICollection<Vector2> ControlPoints, uint NumInterpolations)
         {
-            GridVector2[] CurvePoints = null;
+            Vector2[] CurvePoints = null;
             if (ControlPoints.Count <= 2)
             {
-                CurvePoints = new GridVector2[ControlPoints.Count];
+                CurvePoints = new Vector2[ControlPoints.Count];
                 ControlPoints.CopyTo(CurvePoints, 0);
             }
             if (ControlPoints.Count >= 3)
             {
                 //CurvePoints = Geometry.Lagrange.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations * ControlPoints.Count);
-                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), NumInterpolations, false);
+                CurvePoints = Geometry.CatmullRom.FitCurve([.. ControlPoints], NumInterpolations, false);
 #if DEBUG
-                foreach (GridVector2 p in ControlPoints)
+                foreach (Vector2 p in ControlPoints)
                 {
                     System.Diagnostics.Debug.Assert(CurvePoints.Contains(p));
                 }
@@ -179,41 +159,41 @@ namespace Geometry
         /// </summary>
         /// <param name="TPoints">The positions where we evaluate the curve, from 0 to 1</param>
         /// <returns>False if no points were added</returns>
-        public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees = 10.0)
+        public static bool TryAddTPointsAboveThreshold(Vector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees = 10.0)
         {
             //TODO: Remove points where curvature is low 
-            double[] TPointsArray = TPoints.ToArray();
+            double[] TPointsArray = [.. TPoints];
 
             for (int i = 1; i < output.Length - 1; i++)
             {
-                if (GridVector2.DistanceSquared(in output[i - 1], in output[i]) < Global.EpsilonSquared ||
-                   GridVector2.DistanceSquared(in output[i], in output[i + 1]) < Global.EpsilonSquared)
+                if (Vector2.DistanceSquared(in output[i - 1], in output[i]) < Tolerance.EpsilonSquared ||
+                   Vector2.DistanceSquared(in output[i], in output[i + 1]) < Tolerance.EpsilonSquared)
                 {
                     output = output.RemoveAt(i);
                     TPoints.Remove(TPointsArray[i]);
                     TPointsArray = TPointsArray.RemoveAt(i);
 
-                    i = i - 1;
+                    i--;
                 }
-            } 
-             
+            }
+
             double[] degrees;
 
             degrees = output.MeasureCurvature();
-            degrees = degrees.Select(d => Math.Abs(d)).ToArray();
+            degrees = [.. degrees.Select(d => Math.Abs(d))];
 
             const double onedegree = (Math.PI * 2.0 / 360);
             double threshold = onedegree * angleThresholdInDegrees;
             const double distance_threshold = 0.0625; // Math.Pow(0.25,2);
 
             int StartingPoints = TPointsArray.Length;
-            bool[] NeedsInterpolation = TPointsArray.Select(t => false).ToArray();
+            bool[] NeedsInterpolation = [.. TPointsArray.Select(t => false)];
 
             for (int i = TPointsArray.Length - 2; i > 0; i--)
             {
                 if (degrees[i] > threshold)
                 {
-                    double distance = GridVector2.DistanceSquared(in output[i - 1], in output[i]) + GridVector2.DistanceSquared(in output[i], in output[i + 1]);
+                    double distance = Vector2.DistanceSquared(in output[i - 1], in output[i]) + Vector2.DistanceSquared(in output[i], in output[i + 1]);
                     NeedsInterpolation[i] = distance > distance_threshold;
                 }
             }
@@ -270,27 +250,24 @@ namespace Geometry
             return output;
         }
 
-        public static double[] TakeDerivative(this double[] input)
-        {
-            return input.Select((value, i) => i == 0 ? 0 : value - input[i - 1]).ToArray();
-        }
+        public static double[] TakeDerivative(this double[] input) => [.. input.Select((value, i) => i == 0 ? 0 : value - input[i - 1])];
 
-        public static int[] InflectionPointIndicies(this IList<GridVector2> input)
+        public static int[] InflectionPointIndices(this IList<Vector2> input)
         {
-            if (input == null)
+            if (input is null)
                 return null;
 
             if (input.Count == 1)
             {
-                return new int[] { 0 };
+                return [0];
             }
             else if (input.Count < 2)
-                return new int[] { 0, 1 };
+                return [0, 1];
 
-            GridVector2[] points = input.ToArray();
+            Vector2[] points = [.. input];
 
             double[] angles = points.MeasureCurvature();
-            return angles.InflectionPointIndicies(); //TODO: Angle is a measure of change, so we should probably take the first derivative instead of a 2nd in InflectionPointIndicies
+            return angles.InflectionPointIndices(); //TODO: Angle is a measure of change, so we should probably take the first derivative instead of a 2nd in InflectionPointIndices
         }
 
 
@@ -299,17 +276,17 @@ namespace Geometry
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        private static int[] InflectionPointIndicies(this double[] input)
+        private static int[] InflectionPointIndices(this double[] input)
         {
-            if (input == null)
+            if (input is null)
                 return null;
 
             if (input.Length == 1)
             {
-                return new int[] { 0 };
+                return [0];
             }
             else if (input.Length < 2)
-                return new int[] { 0, 1 };
+                return [0, 1];
 
             double[] first_diff = input.TakeDerivative();
             double[] second_diff = first_diff.TakeDerivative();
@@ -317,11 +294,11 @@ namespace Geometry
 
             //Identify all zero-crossings, max/min values in the list of angles 
 
-            SortedSet<int> inflection_points = new SortedSet<int>
-            {
+            SortedSet<int> inflection_points =
+            [
                 0,
                 input.Length - 1
-            };
+            ];
             int last_sign = 0; //-1, 0, or 1 to indicate direction of change in the last datapoint
             //double total_change = 0;
             //const double one_degree = Math.PI / 180.0;
@@ -344,7 +321,7 @@ namespace Geometry
                 last_sign = this_sign;
             }
 
-            return inflection_points.ToArray();
+            return [.. inflection_points];
         }
 
         /// <summary>
@@ -353,7 +330,7 @@ namespace Geometry
         /// <param name="Points">The points.</param>
         /// <param name="Tolerance">The tolerance.</param>
         /// <returns></returns>
-        public static List<GridVector2> DouglasPeuckerReduction(this IList<GridVector2> Points, Double Tolerance, ICollection<GridVector2> PointsToPreserve)
+        public static List<Vector2> DouglasPeuckerReduction(this IList<Vector2> Points, Double Tolerance, ICollection<Vector2> PointsToPreserve)
         {
             IEnumerable<int> PointsToPreserveIndicies = PointsToPreserve.Where(p => Points.Contains(p)).Select(p => Points.IndexOf(p));
 
@@ -366,20 +343,20 @@ namespace Geometry
         /// <param name="Points">The points.</param>
         /// <param name="Tolerance">The tolerance.</param>
         /// <returns></returns>
-        public static List<GridVector2> DouglasPeuckerReduction
-        (this IList<GridVector2> Points, Double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)
+        public static List<Vector2> DouglasPeuckerReduction
+        (this IList<Vector2> Points, Double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)
         {
-            if (Points == null || Points.Count < 3)
-                return Points.ToList();
+            if (Points is null || Points.Count < 3)
+                return [.. Points];
 
             Int32 firstPoint = 0;
             Int32 lastPoint = Points.Count - 1;
-            SortedSet<Int32> pointIndexsToKeep = new SortedSet<Int32>
-            { 
+            SortedSet<Int32> pointIndexsToKeep =
+            [ 
                 //Add the first and last index to the keepers
                 firstPoint,
                 lastPoint
-            };
+            ];
             if (PointsToPreserveIndicies != null)
             {
                 pointIndexsToKeep.UnionWith(PointsToPreserveIndicies);
@@ -394,7 +371,7 @@ namespace Geometry
             DouglasPeuckerReduction(Points, firstPoint, lastPoint,
             Tolerance, ref pointIndexsToKeep);
 
-            List<GridVector2> returnPoints = new List<GridVector2>();
+            List<Vector2> returnPoints = [];
             foreach (Int32 index in pointIndexsToKeep)
             {
                 returnPoints.Add(Points[index]);
@@ -411,13 +388,13 @@ namespace Geometry
         /// <param name="lastPoint">The last point.</param>
         /// <param name="tolerance">The tolerance.</param>
         /// <param name="pointIndexsToKeep">The point index to keep.</param>
-        private static void DouglasPeuckerReduction(IList<GridVector2> points, Int32 firstPoint, Int32 lastPoint, Double tolerance, ref SortedSet<Int32> pointIndexsToKeep)
+        private static void DouglasPeuckerReduction(IList<Vector2> points, Int32 firstPoint, Int32 lastPoint, Double tolerance, ref SortedSet<Int32> pointIndexsToKeep)
         {
             Double maxDistance = 0;
             Int32 indexFarthest = 0;
 
             //Reference line 
-            GridLineSegment reference_line = new GridLineSegment(points[firstPoint], points[lastPoint]);
+            LineSegment reference_line = new(points[firstPoint], points[lastPoint]);
 
             for (Int32 index = firstPoint + 1; index < lastPoint; index++)
             {

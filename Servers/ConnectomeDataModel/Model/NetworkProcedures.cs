@@ -1,4 +1,4 @@
-﻿using EntityFrameworkExtras.EF6;
+using EntityFrameworkExtras.EF6;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -12,23 +12,23 @@ namespace ConnectomeDataModel
         [StoredProcedureParameter(System.Data.SqlDbType.Int, Direction = System.Data.ParameterDirection.Input)]
         public int Hops { get; set; }
     }
-    
+
     [StoredProcedure("SelectNetworkDetails")]
     class SelectNetworkDetailsStoredProcedure : NetworkQueryParameters
     {
-    
+
     }
 
     [StoredProcedure("SelectNetworkStructures")]
     class SelectNetworkStructuresProcedure : NetworkQueryParameters
     {
-   
+
     }
 
     [StoredProcedure("SelectNetworkStructureLinks")]
     class SelectNetworkStructureLinksProcedure : NetworkQueryParameters
     {
-        
+
     }
 
     [StoredProcedure("SelectNetworkChildStructures")]
@@ -47,7 +47,7 @@ namespace ConnectomeDataModel
     [StoredProcedure("SelectNetworkChildStructureIDs")]
     class SelectNetworkChildStructureIDsProcedure : NetworkQueryParameters
     {
-       
+
     }
 
     [StoredProcedure("SelectNetworkStructureSpatialData")]
@@ -63,19 +63,11 @@ namespace ConnectomeDataModel
     }
 
     [UserDefinedTableType("integer_list")]
-    struct udt_integer_list
+    struct udt_integer_list(long id)
     {
         [UserDefinedTableTypeColumn(0, "ID")]
-        public long ID { get; set; }
+        public long ID { get; set; } = id;
 
-        public udt_integer_list(long id)
-        {
-            this.ID = id;
-        }
-
-        public static List<udt_integer_list> Create(IEnumerable<long> ids)
-        {
-            return ids.Select(id => new udt_integer_list(id)).ToList();
-        }
+        public static List<udt_integer_list> Create(IEnumerable<long> ids) => [.. ids.Select(id => new udt_integer_list(id))];
     }
 }

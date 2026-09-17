@@ -9,7 +9,10 @@ namespace WebAnnotationModel
     public interface IRegionLoader<OBJECT>
     {
         /// <summary>
-        /// Divides the requested region into a grid and requests intersecting grid cells.
+        /// Divides the requested region into a grid and requests intersecting grid cells,
+        /// including a padded band around the visible screen. In-flight cell streams are
+        /// cancelled only when that cell leaves the padded region; pan/zoom wait cancellation
+        /// does not abort still-visible streams.
         /// The callbacks are invoked multiple times as local and server objects are identified
         /// within each grid
         /// </summary>
@@ -20,7 +23,7 @@ namespace WebAnnotationModel
         /// <param name="OnServerObjectsLoadedCallback"></param>
         /// <param name="FoundCachedLocalObjectsCallback"></param>
         /// <returns></returns>
-        Task<List<OBJECT>> GetObjectsInRegionAsync(GridRectangle VolumeBounds,
+        Task<List<OBJECT>> GetObjectsInRegionAsync(Rectangle VolumeBounds,
             double ScreenPixelSizeInVolume,
             int SectionNumber,
             QueryTargets queryTargets,

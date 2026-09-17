@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Viking.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
@@ -42,7 +42,7 @@
       <Value Profile="(Default)">16</Value>
     </Setting>
     <Setting Name="LastScreenshotPath" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">%UserProfile%\Pictures</Value>
     </Setting>
     <Setting Name="LastScreenshotIncludeOverlays" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
@@ -53,29 +53,13 @@
     <Setting Name="CachedUsername" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="ServerURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
-      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
-&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
-  &lt;string&gt;http://storage1.connectomes.utah.edu/&lt;/string&gt;
-  &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
-  &lt;string&gt;http://openconnecto.me/ocp/ca/&lt;/string&gt;
-  &lt;string&gt;http://v0152.host.s.uw.edu/&lt;/string&gt;
-  &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
-  &lt;string&gt;http://storage2.connectomes.utah.edu/&lt;/string&gt;
-&lt;/ArrayOfString&gt;</Value>
-    </Setting>
     <Setting Name="ShowCommandHelp" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="VolumeURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
       <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
-&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
-  &lt;string&gt;http://connectomes.utah.edu/Rabbit&lt;/string&gt;
-  &lt;string&gt;http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML&lt;/string&gt;
-  &lt;string&gt;http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML&lt;/string&gt;
-  &lt;string&gt;http://storage1.connectomes.utah.edu/RPC1/Testing.VikingXML&lt;/string&gt;
-  &lt;string&gt;http://storage2.connectomes.utah.edu/RPC2/SliceToVolume.VikingXML&lt;/string&gt;
-  &lt;string&gt;http://storage2.connectomes.utah.edu/RC3/SliceToVolume.VikingXML&lt;/string&gt;
+&lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+  
 &lt;/ArrayOfString&gt;</Value>
     </Setting>
     <Setting Name="FrameExportPrefix" Type="System.String" Scope="User">
@@ -83,6 +67,83 @@
     </Setting>
     <Setting Name="FrameExportPath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ScreenShotFilePrefix" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ScreenShot</Value>
+    </Setting>
+    <Setting Name="ScreenShotNumber" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="ServerURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
+      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+  &lt;string&gt;http://storage1.connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://openconnecto.me/ocp/ca/&lt;/string&gt;
+  &lt;string&gt;http://v2486.host.s.uw.edu/&lt;/string&gt;
+  &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://storage2.connectomes.utah.edu/&lt;/string&gt;
+&lt;/ArrayOfString&gt;</Value>
+    </Setting>
+    <Setting Name="ApiClientSecret" Type="System.String" Scope="Application">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+    <Setting Name="VikingSecret" Type="System.String" Scope="Application">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+    <Setting Name="IdentityServerURL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://identity.codepharm.net:5001/</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayEnabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayCount" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayAcceleration" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.1</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayEdge" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Left</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayOpacity" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.7</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayMinOpacityNonCenter" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayCenterMagnification" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">3</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayPidProportionalGain" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">4.0</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayPidDerivativeGain" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">1.0</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayPidIntegralGain" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.01</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayPidVelocityThreshold" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayPidPositionThreshold" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="TextureLoadingWindow" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">30</Value>
+    </Setting>
+    <Setting Name="MinTexturesToLoadFromQueue" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">3</Value>
+    </Setting>
+    <Setting Name="VisibleTileSortIntervalMs" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="MaxConcurrentTextureRequests" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="LoadAdjacentSectionTextures" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>
 </SettingsFile>

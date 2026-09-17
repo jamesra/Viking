@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
@@ -24,12 +24,11 @@ namespace EntityFrameworkExtras
             Type collectionType = GetCollectionType(propertyInfo.PropertyType);
             var attribute = Attributes.GetAttribute<UserDefinedTableTypeAttribute>(collectionType);
 
-            if (attribute == null)
-                throw new InvalidOperationException(
+            return attribute is null
+                ? throw new InvalidOperationException(
                     String.Format("{0} has not been decorated with UserDefinedTableTypeAttribute.",
-                                  propertyInfo.PropertyType));
-
-            return attribute.Name;
+                                  propertyInfo.PropertyType))
+                : attribute.Name;
         }
 
         public Type GetCollectionType(Type type)
@@ -38,7 +37,7 @@ namespace EntityFrameworkExtras
             {
                 foreach (Type interfaceType in type.GetInterfaces())
                 {
-                    if (interfaceType.GetGenericTypeDefinition() == typeof (IList<>))
+                    if (interfaceType.GetGenericTypeDefinition() == typeof(IList<>))
                     {
                         return interfaceType.GetGenericArguments()[0];
                     }
@@ -46,7 +45,7 @@ namespace EntityFrameworkExtras
             }
 
             return null;
-             
+
         }
 
         public object GetUserDefinedTableValue(PropertyInfo propertyInfo, object storedProcedure)
@@ -54,7 +53,7 @@ namespace EntityFrameworkExtras
             Type enumerableType = GetCollectionType(propertyInfo.PropertyType);
             object propertyValue = propertyInfo.GetValue(storedProcedure, null);
 
-            var generator = new UserDefinedTableGenerator(enumerableType, propertyValue);
+            UserDefinedTableGenerator generator = new(enumerableType, propertyValue);
 
             DataTable table = generator.GenerateTable();
 

@@ -1,6 +1,8 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Query;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
@@ -17,41 +19,54 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<SelectStructureLocations_Result>("SelectStructureLocations_Result");
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class SelectStructureLocationsController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class SelectStructureLocationsController(ConnectomeEntities db, ILogger<SelectStructureLocationsController> logger) : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
-        private static ODataValidationSettings _validationSettings = new ODataValidationSettings();
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<SelectStructureLocationsController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private static readonly ODataValidationSettings _validationSettings = new();
 
         // GET: odata/SelectStructureLocations
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IHttpActionResult GetSelectStructureLocations(ODataQueryOptions<SelectStructureLocations_Result> queryOptions)
         {
-            // validate the query.
             try
             {
+                // validate the query.
                 queryOptions.Validate(_validationSettings);
+
+                _logger.LogInformation("Fetching all structure locations");
+                _db.ConfigureAsReadOnly();
+                return Ok<IList<Location>>([.. _db.SelectAllStructureLocations()]);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error fetching all structure locations");
                 return BadRequest(ex.Message);
             }
-
-            return Ok<IList<Location>>(db.SelectAllStructureLocations().ToList());
         }
 
         // GET: odata/SelectStructureLocations(5)
         public IHttpActionResult GetSelectStructureLocations_Result([FromODataUri] long key, ODataQueryOptions<SelectStructureLocations_Result> queryOptions)
         {
-            // validate the query.
             try
             {
+                // validate the query.
                 queryOptions.Validate(_validationSettings);
+
+                _logger.LogInformation("Fetching structure locations for structure ID {StructureId}", key);
+                _db.ConfigureAsReadOnly();
+                return Ok<IList<Location>>([.. _db.SelectStructureLocations(new long?(key))]);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error fetching structure locations for structure ID {StructureId}", key);
                 return BadRequest(ex.Message);
             }
-            return Ok<IList<Location>>(db.SelectStructureLocations(new long?(key)).ToList());
         }
+
+        // No need for Dispose override - DI container handles disposal
     }
 }

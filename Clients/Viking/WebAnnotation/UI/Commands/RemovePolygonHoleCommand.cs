@@ -5,22 +5,21 @@ using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class RemovePolygonHoleCommand : AnnotationCommandBase
+    internal class RemovePolygonHoleCommand : AnnotationCommandBase
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
-
-        GridPolygon UpdatedMosaicPolygon;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
+        private readonly Polygon UpdatedMosaicPolygon;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
         /// </summary>
         /// <param name="MosaicPolygon"></param>
         /// <param name="VolumePolygon"></param>
-        public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
-        OnCommandSuccess success_callback;
+        public delegate void OnCommandSuccess(Polygon MosaicPolygon, Polygon VolumePolygon);
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly OnCommandSuccess success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         /// <summary>
         /// 
@@ -30,13 +29,13 @@ namespace WebAnnotation.UI.Commands
         /// <param name="hole_position">Point in polygon where user asked to remove hole</param>
         /// <param name="success_callback"></param>
         public RemovePolygonHoleCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
-                                        GridVector2 hole_mosaic_position,
+                                        Polygon mosaic_polygon,
+                                        Vector2 hole_mosaic_position,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.UpdatedMosaicPolygon = mosaic_polygon.Clone() as GridPolygon;
+            OriginalMosaicPolygon = mosaic_polygon;
+            UpdatedMosaicPolygon = mosaic_polygon.Clone() as Polygon;
             this.success_callback = success_callback;
 
             //Launch the remove action
@@ -49,22 +48,22 @@ namespace WebAnnotation.UI.Commands
         /// <param name="polygon"></param>
         /// <param name="holePosition"></param>
         /// <returns></returns>
-        public void RemoveInteriorHole(GridPolygon polygon, GridVector2 holePosition)
+        public void RemoveInteriorHole(Polygon polygon, Vector2 holePosition)
         {
             if (polygon.TryRemoveInteriorRing(holePosition))
             {
-                this.Execute();
+                Execute();
             }
             else
             {
                 //Could not remove the interior polygon, so do nothing
-                this.Deactivated = true;
+                Deactivated = true;
             }
         }
 
         protected override void Execute()
         {
-            GridPolygon UpdatedVolumePolygon;
+            Polygon UpdatedVolumePolygon;
             try
             {
                 UpdatedVolumePolygon = mapping.TryMapShapeSectionToVolume(UpdatedMosaicPolygon);
@@ -75,7 +74,7 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(UpdatedMosaicPolygon, UpdatedVolumePolygon);
+            success_callback(UpdatedMosaicPolygon, UpdatedVolumePolygon);
 
             base.Execute();
         }

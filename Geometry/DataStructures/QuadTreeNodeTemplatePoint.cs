@@ -14,46 +14,34 @@ namespace Geometry
         /// </summary>
         public enum Quadrant
         {
-            UPPERLEFT = 0,
-            UPPERRIGHT = 1,
-            LOWERLEFT = 2,
-            LOWERRIGHT = 3
+            UpperLeft = 0,
+            UpperRight = 1,
+            LowerLeft = 2,
+            LowerRight = 3
         };
 
-        private readonly QuadTreeNodeTemplatePoint<TPoint, TValue>[] _quadrants = new QuadTreeNodeTemplatePoint<TPoint, TValue>[] { null, null, null, null };
+        private readonly QuadTreeNodeTemplatePoint<TPoint, TValue>[] _quadrants = [null, null, null, null];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperLeft
-        {
-            get { return _quadrants[(int)Quadrant.UPPERLEFT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperLeft => _quadrants[(int)Quadrant.UpperLeft];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperRight
-        {
-            get { return _quadrants[(int)Quadrant.UPPERRIGHT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperRight => _quadrants[(int)Quadrant.UpperRight];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
         /// 
-        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerLeft
-        {
-            get { return _quadrants[(int)Quadrant.LOWERLEFT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerLeft => _quadrants[(int)Quadrant.LowerLeft];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerRight
-        {
-            get { return _quadrants[(int)Quadrant.LOWERRIGHT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerRight => _quadrants[(int)Quadrant.LowerRight];
 
         /// <summary>
         /// Returns the number of non-null children
@@ -63,27 +51,21 @@ namespace Geometry
             get
             {
                 int count = 0;
-                if (_quadrants[(int)Quadrant.UPPERLEFT] != null)
+                if (_quadrants[(int)Quadrant.UpperLeft] != null)
                     count++;
-                if (_quadrants[(int)Quadrant.UPPERRIGHT] != null)
+                if (_quadrants[(int)Quadrant.UpperRight] != null)
                     count++;
-                if (_quadrants[(int)Quadrant.LOWERLEFT] != null)
+                if (_quadrants[(int)Quadrant.LowerLeft] != null)
                     count++;
-                if (_quadrants[(int)Quadrant.LOWERRIGHT] != null)
+                if (_quadrants[(int)Quadrant.LowerRight] != null)
                     count++;
 
                 return count;
             }
         }
 
-        internal GridRectangle Border;
-        protected GridVector2 Center
-        {
-            get
-            {
-                return Border.Center;
-            }
-        }
+        internal Rectangle Border;
+        protected Vector2 Center => Border.Center;
 
         /// <summary>
         /// If this node is a leaf then Point contains the position of the point in this node
@@ -100,25 +82,19 @@ namespace Geometry
         /// </summary>
         public TValue Value;
 
-        public bool IsLeaf
-        {
-            get
-            {
-                return UpperLeft == null && UpperRight == null &&
-                        LowerLeft == null && LowerRight == null;
-            }
-        }
+        public bool IsLeaf =>
+            UpperLeft is null && UpperRight is null &&
+            LowerLeft is null && LowerRight is null;
 
         /// <summary>
         /// This constructor is used to create the root node
         /// </summary>
         /// <param name="border"></param>
-        public QuadTreeNodeTemplatePoint(QuadTreeTemplatePoint<TPoint, TValue> tree, GridRectangle border)
+        public QuadTreeNodeTemplatePoint(QuadTreeTemplatePoint<TPoint, TValue> tree, Rectangle border)
         {
             this.Tree = tree;
             this.Border = border;
-            this.Point.X = double.MinValue;
-            this.Point.Y = double.MinValue;
+            this.Point = default;
 
             Debug.Assert(this.Border.Width > 0 && this.Border.Height > 0);
         }
@@ -130,17 +106,17 @@ namespace Geometry
 
             switch (quad)
             {
-                case Quadrant.UPPERLEFT:
-                    this.Border = new GridRectangle(Parent.Border.Left, Parent.Border.Center.X, Parent.Border.Center.Y, Parent.Border.Top);
+                case Quadrant.UpperLeft:
+                    this.Border = new Rectangle(Parent.Border.Left, Parent.Border.Center.X, Parent.Border.Center.Y, Parent.Border.Top);
                     break;
-                case Quadrant.UPPERRIGHT:
-                    this.Border = new GridRectangle(Parent.Border.Center.X, Parent.Border.Right, Parent.Border.Center.Y, Parent.Border.Top);
+                case Quadrant.UpperRight:
+                    this.Border = new Rectangle(Parent.Border.Center.X, Parent.Border.Right, Parent.Border.Center.Y, Parent.Border.Top);
                     break;
-                case Quadrant.LOWERLEFT:
-                    this.Border = new GridRectangle(Parent.Border.Left, Parent.Border.Center.X, Parent.Border.Bottom, Parent.Border.Center.Y);
+                case Quadrant.LowerLeft:
+                    this.Border = new Rectangle(Parent.Border.Left, Parent.Border.Center.X, Parent.Border.Bottom, Parent.Border.Center.Y);
                     break;
-                case Quadrant.LOWERRIGHT:
-                    this.Border = new GridRectangle(Parent.Border.Center.X, Parent.Border.Right, Parent.Border.Bottom, Parent.Border.Center.Y);
+                case Quadrant.LowerRight:
+                    this.Border = new Rectangle(Parent.Border.Center.X, Parent.Border.Right, Parent.Border.Bottom, Parent.Border.Center.Y);
                     break;
             }
 
@@ -166,30 +142,16 @@ namespace Geometry
         {
             Quadrant quad;
 
-            GridVector2 center = this.Center;
+            Vector2 center = this.Center;
 
             if (point.X > center.X) //Right of center
             {
 
-                if (point.Y > center.Y)
-                {
-                    quad = Quadrant.UPPERRIGHT;
-                }
-                else
-                {
-                    quad = Quadrant.LOWERRIGHT;
-                }
+                quad = point.Y > center.Y ? Quadrant.UpperRight : Quadrant.LowerRight;
             }
             else //Left of center
             {
-                if (point.Y > center.Y)
-                {
-                    quad = Quadrant.UPPERLEFT;
-                }
-                else
-                {
-                    quad = Quadrant.LOWERLEFT;
-                }
+                quad = point.Y > center.Y ? Quadrant.UpperLeft : Quadrant.LowerLeft;
             }
 
             return quad;
@@ -197,7 +159,7 @@ namespace Geometry
 
 
         /// <summary>
-        /// Inserts a point into the tree.  Returns the new QuadTreeNode the caller should point to as the root of the tree
+        /// Inserts a point into the treeWithUniqueValues.  Returns the new QuadTreeNode the caller should point to as the root of the treeWithUniqueValues
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
@@ -206,8 +168,8 @@ namespace Geometry
             //If we are a leaf node, we need to divide and create new leaf nodes
             if (this.IsLeaf)
             {
-                //Check for the default point value in case this is the root of the tree
-                if (this.Parent == null && this.HasValue == false)
+                //Check for the default point value in case this is the root of the treeWithUniqueValues
+                if (this.Parent is null && this.HasValue == false)
                 {
                     this.Point = point;
                     this.Value = value;
@@ -218,7 +180,7 @@ namespace Geometry
                 //Check that the point we are being asked to insert is not a duplicate of our current point
                 else if (this.Point.Equals(point))
                 {
-                    //throw new ArgumentException("The point being inserted into the quad tree is a duplicate point: " + point.ToString(), "point");
+                    //throw new ArgumentException("The point being inserted into the quad treeWithUniqueValues is a duplicate point: " + point.ToString(), "point");
                     return null;
                 }
                 else // It is a new point.  We need to create children for this node and insert the points
@@ -247,7 +209,7 @@ namespace Geometry
                 Quadrant quad = GetQuad(point);
 
                 //If we haven't created a node for this quadrant then do so...
-                if (_quadrants[(int)quad] == null)
+                if (_quadrants[(int)quad] is null)
                 {
                     _quadrants[(int)quad] = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, quad, point, value);
                     return _quadrants[(int)quad];
@@ -290,7 +252,7 @@ namespace Geometry
                 }
                 else
                 {
-                    //Looks like we are the last node in the tree
+                    //Looks like we are the last node in the treeWithUniqueValues
                     Tree.ValueToNodeTable.Remove(this.Value);
                     this.Value = default;
                     this.HasValue = false;
@@ -302,7 +264,7 @@ namespace Geometry
         /// Returns the value associated with the point nearest to the passed input parameter point
         /// </summary>
         /// <param name="point">Query point</param>
-        /// <param name="nodePoint">Nearest point in QuadTree to query point</param>
+        /// <param name="nodePoint">Nearest point in QuadTreeWithUniqueValues to query point</param>
         /// <param name="distance">Distance from query point to nodePoint</param>
         /// <returns>Data value associated with nearest point</returns>
         public TValue FindNearest(TPoint point, out TPoint nodePoint, ref double distance)
@@ -310,7 +272,7 @@ namespace Geometry
             if (this.IsLeaf)
             {
                 Debug.Assert(this.HasValue);
-                distance = GridVector2.Distance(this.Point, point);
+                distance = Vector2.Distance(this.Point, point);
                 nodePoint = this.Point;
                 return this.Value;
             }
@@ -319,8 +281,6 @@ namespace Geometry
                 Quadrant quad = GetQuad(point);
                 TValue retValue = default;
                 nodePoint = default;
-                nodePoint.X = double.MinValue;
-                nodePoint.Y = double.MinValue;
 
                 //If we aren't a leaf node then do a depth first search to find the nearest point
                 if (_quadrants[(int)quad] != null)
@@ -332,7 +292,7 @@ namespace Geometry
                 //It is OK if we didn't have a quadrant for the point in the earlier check because then the default values for 
                 //distance force the adjacent quadrants to be checked
 
-                GridRectangle rect = new GridRectangle(point, distance);
+                Rectangle rect = new(point, distance);
 
                 //If we aren't a leaf, then check each of our children for the nearest point
                 for (int iQuad = 0; iQuad < 4; iQuad++)
@@ -354,7 +314,7 @@ namespace Geometry
                                 nodePoint = foundNode;
                                 retValue = foundValue;
                                 distance = newDistance;
-                                rect = new GridRectangle(point, distance);
+                                rect = new Rectangle(point, distance);
                             }
                         }
                     }
@@ -368,7 +328,7 @@ namespace Geometry
 
         //Returns a list of all points inside the specified rectangle.  If test is false a parents test determined the border
         //was completely inside the RequestRect and no further testing was needed
-        public void Intersect(in GridRectangle RequestRect,
+        public void Intersect(in Rectangle RequestRect,
                                         bool NeedTest,
                                         out List<TPoint> Points,
                                         out List<TValue> Values)
@@ -381,7 +341,7 @@ namespace Geometry
 
                 if (NeedTest)
                 {
-                    if (RequestRect.Contains(this.Point))
+                    if (RequestRect.Covers(this.Point))
                     {
                         Points.Add(this.Point);
                         Values.Add(this.Value);
@@ -408,7 +368,7 @@ namespace Geometry
                     if (Border.Intersects(RequestRect))
                     {
 
-                        if (RequestRect.Contains(Border))
+                        if (RequestRect.Covers(Border))
                         {
                             if (this.UpperLeft != null)
                             {

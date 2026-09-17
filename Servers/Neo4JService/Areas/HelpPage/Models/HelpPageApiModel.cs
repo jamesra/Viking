@@ -1,8 +1,8 @@
+using Neo4JService.Areas.HelpPage.ModelDescriptions;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net.Http.Headers;
 using System.Web.Http.Description;
-using Neo4JService.Areas.HelpPage.ModelDescriptions;
 
 namespace Neo4JService.Areas.HelpPage.Models
 {
@@ -86,19 +86,16 @@ namespace Neo4JService.Areas.HelpPage.Models
 
         private static IList<ParameterDescription> GetParameterDescriptions(ModelDescription modelDescription)
         {
-            ComplexTypeModelDescription complexTypeModelDescription = modelDescription as ComplexTypeModelDescription;
-            if (complexTypeModelDescription != null)
+            if (modelDescription is ComplexTypeModelDescription complexTypeModelDescription)
             {
                 return complexTypeModelDescription.Properties;
             }
 
-            CollectionModelDescription collectionModelDescription = modelDescription as CollectionModelDescription;
-            if (collectionModelDescription != null)
-            {
-                complexTypeModelDescription = collectionModelDescription.ElementDescription as ComplexTypeModelDescription;
-                if (complexTypeModelDescription != null)
+            if (modelDescription is CollectionModelDescription collectionModelDescription)
+            { 
+                if (collectionModelDescription.ElementDescription is ComplexTypeModelDescription collectionComplexTypeModelDescription)
                 {
-                    return complexTypeModelDescription.Properties;
+                    return collectionComplexTypeModelDescription.Properties;
                 }
             }
 

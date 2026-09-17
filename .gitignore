@@ -1,5 +1,6 @@
 /PublishJotunn/
 /Publish/
+/PublishTest/
 **/obj/
 **/bin/
 **/packages/
@@ -27,4 +28,42 @@ TestResults
 **/.vs/
 **/MigrationBackup
 /src/
+**/*.pyc
+**/*.egg-info
+**/*.bak
+**/.idea
+**/.log
+**/.so
+**/net48/
+**/Debug/
+**/Release/
+/Clients/Viking/Viking/Properties/launchSettings.json
+*.log
+*.csproj.user
+# Environment variable files (contain secrets)
+.env
+.env.*
+*.env
+*.env.*
+
+# Optional local mirror of another Viking checkout (not part of this tree)
+/Viking/
+
+# Cursor plan files (local only, not for version control)
+.cursor/plans/
+
+# Benchmark run output
+/BenchmarkDotNet.Artifacts/
+
+# Reference papers (large PDFs, mirrors the /Papers/ rule above)
+/MorphologyMesh/Papers/
+
+# Local build/scratch output
+build_output.txt
+cleanup-list.txt
+debug-*.log
+*.mp3
+/mgcb Clients/
+
+# Signing certificates and key stores
 *.pfx

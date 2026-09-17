@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,45 +7,46 @@ using System.Threading;
 
 namespace Geometry.Transforms
 {
-    class AddTransformThreadObj : IDisposable
+    class AddTransformThreadObj(int[] iMapPoints, IControlPointTriangulation warpingT, ITransform fixedT) : IDisposable
     {
-        public ManualResetEvent DoneEvent = new ManualResetEvent(false);
+        public ManualResetEvent DoneEvent = new(false);
 
         /// <summary>
         /// The output returned after processing
         /// </summary>
-        public MappingGridVector2[] newPoints;
+        public MappingVector2[] newPoints;
 
-        readonly int[] iPoints; 
-        readonly IControlPointTriangulation warpingTransform;
-        readonly ITransform fixedTransform;
+        readonly int[] iPoints = iMapPoints;
+        readonly IControlPointTriangulation warpingTransform = warpingT;
+        readonly ITransform fixedTransform = fixedT;
 
         /// <summary>
         /// This is set to true if every original point was transformed successfully
         /// </summary>
         public bool AllPointsTransformed = true;
 
-        public AddTransformThreadObj(int[] iMapPoints, IControlPointTriangulation warpingT, ITransform fixedT)
-        {
-            this.iPoints = iMapPoints; 
-            this.warpingTransform = warpingT;
-            this.fixedTransform = fixedT; 
-        }
-
         //TODO: Convert this entire class to an async method 
         public void ThreadPoolCallback(Object threadContext)
         {
-            bool[] mapped = fixedTransform.TryTransform(warpingTransform.MapPoints.Select(p => p.ControlPoint).ToArray(), out var MappedControlPoints);
-            
+            bool[] mapped = fixedTransform.TryTransform([.. warpingTransform.MapPoints.Select(p => p.ControlPoint)], out var MappedControlPoints);
+
             //Create new MappingGridVector2s for all the points we could cleanly transform
-            List<MappingGridVector2> newPointsList = MappedControlPoints.Select((cp, i) => mapped[i] ? 
-                new MappingGridVector2(cp, warpingTransform.MapPoints[i].MappedPoint) :
-                default).Where((_,i) => mapped[i]).ToList();
-             
+            List<MappingVector2> newPointsList = [.. MappedControlPoints.Select((cp, i) => mapped[i] ?
+                new MappingVector2(cp, warpingTransform.MapPoints[i].MappedPoint) :
+                default).Where((_,i) => mapped[i])];
+
             if (!mapped.All(m => m))
             {
                 //Prepare to remove unmappable points
-                IDiscreteTransform discreteFixedTransform = fixedTransform as IDiscreteTransform;
+                if (fixedTransform is not IDiscreteTransform discreteFixedTransform)
+                {
+                    this.AllPointsTransformed = false;
+                    MappingVector2.RemoveControlSpaceDuplicates(newPointsList);
+                    MappingVector2.RemoveMappedSpaceDuplicates(newPointsList);
+                    newPoints = [.. newPointsList];
+                    DoneEvent.Set();
+                    return;
+                }
 
                 //OK, cleanup all of the points that could not be mapped
                 foreach (int iPoint in iPoints)
@@ -54,7 +55,7 @@ namespace Geometry.Transforms
                         continue;
 
                     //If we could not map a point we need to test each edge connecting this point to other points to see if the edge intersects the fixed transform boundaries
-                    MappingGridVector2 UnmappedPoint = warpingTransform.MapPoints[iPoint];
+                    MappingVector2 UnmappedPoint = warpingTransform.MapPoints[iPoint];
 
                     this.AllPointsTransformed = false;
 
@@ -66,14 +67,14 @@ namespace Geometry.Transforms
                     {
                         int iEdgePoint = MovingEdgeIndicies[iEdge];
 
-                        GridLineSegment ctrlLine = new GridLineSegment(UnmappedPoint.ControlPoint, this.warpingTransform.MapPoints[iEdgePoint].ControlPoint);
-                        GridLineSegment mapLine = new GridLineSegment(UnmappedPoint.MappedPoint, this.warpingTransform.MapPoints[iEdgePoint].MappedPoint);
+                        LineSegment ctrlLine = new(UnmappedPoint.ControlPoint, this.warpingTransform.MapPoints[iEdgePoint].ControlPoint);
+                        LineSegment mapLine = new(UnmappedPoint.MappedPoint, this.warpingTransform.MapPoints[iEdgePoint].MappedPoint);
 
                         //Control line found in nearest line call
                         //Corresponding map line found in nearest line call
 
                         //Find out if there is a line in the fixed transform we intersect with. 
-                        double distance = discreteFixedTransform.ConvexHullIntersection(ctrlLine, UnmappedPoint.ControlPoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersect);
+                        double distance = discreteFixedTransform.ConvexHullIntersection(ctrlLine, UnmappedPoint.ControlPoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersect);
                         if (distance == double.MaxValue)
                             continue;
 
@@ -81,11 +82,11 @@ namespace Geometry.Transforms
                             continue;
 
                         //Translate from the fixed transform map space into control space. 
-                        GridVector2 newCtrlPoint;
+                        Vector2 newCtrlPoint;
                         {
 
                             //Determine how far along the mapping line on the fixed transfrom is the intersect point.
-                            double mapLineDistance = GridVector2.Distance(in foundMapLine.A, in intersect);
+                            double mapLineDistance = Vector2.Distance(in foundMapLine.A, in intersect);
                             double mapLineFraction = mapLineDistance / foundMapLine.Length;
 
                             //How far along the corresponding control line are we?
@@ -97,11 +98,11 @@ namespace Geometry.Transforms
                         }
 
                         //Now we must find out where the point on the warping transform is by checking how far along the mapping line on the warping transform we were.
-                        GridVector2 newMapPoint;
+                        Vector2 newMapPoint;
                         {
                             //Figure out where the transformed point lies in the moving transform mapped space. 
                             //Make sure we measure from the same origin on both mapped and control lines
-                            double CtrlLineDistance = GridVector2.Distance(in ctrlLine.A, in intersect);
+                            double CtrlLineDistance = Vector2.Distance(in ctrlLine.A, in intersect);
                             double fraction = CtrlLineDistance / ctrlLine.Length;
 
                             Debug.Assert(fraction <= 1.0 && fraction >= 0.0);
@@ -117,25 +118,23 @@ namespace Geometry.Transforms
                             newMapPoint += mapLine.A;
                         }
 
-                        newPointsList.Add(new MappingGridVector2(newCtrlPoint, newMapPoint));
+                        newPointsList.Add(new MappingVector2(newCtrlPoint, newMapPoint));
                     }
                 }
             }
 
-            MappingGridVector2.RemoveDuplicates(newPointsList);
-            newPoints = newPointsList.ToArray();
-            DoneEvent.Set(); 
+            MappingVector2.RemoveControlSpaceDuplicates(newPointsList);
+            MappingVector2.RemoveMappedSpaceDuplicates(newPointsList);
+            newPoints = [.. newPointsList];
+            DoneEvent.Set();
         }
 
         #region IDisposable Members
 
         public void Dispose()
         {
-            if (this.DoneEvent != null)
-            {
-                this.DoneEvent.Close();
-                this.DoneEvent = null;
-            }
+            this.DoneEvent?.Close();
+            this.DoneEvent = null;
         }
 
         #endregion

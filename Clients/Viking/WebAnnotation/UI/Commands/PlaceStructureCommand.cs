@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Forms;
@@ -6,6 +6,8 @@ using VikingXNAWinForms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -15,15 +17,15 @@ namespace WebAnnotation.UI.Commands
     /// command which requires the user to select the parent structure.  Once that is done the structure is created
     /// </summary>
     [Viking.Common.CommandAttribute(typeof(WebAnnotation.ViewModel.StructureType))]
-    class PlaceStructureCommand : AnnotationCommandBase
+    internal class PlaceStructureCommand : AnnotationCommandBase
     {
-        StructureType Type = Viking.UI.State.SelectedObject as StructureType;
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly StructureType Type = Viking.UI.State.SelectedObject as StructureType;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
-            this.Type = Viking.UI.State.SelectedObject as StructureType;
+            Type = Viking.UI.State.SelectedObject as StructureType;
             parent.Cursor = Cursors.Cross;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
@@ -31,7 +33,7 @@ namespace WebAnnotation.UI.Commands
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent, StructureType type)
             : base(parent)
         {
-            this.Type = type;
+            Type = type;
             parent.Cursor = Cursors.Cross;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
@@ -59,51 +61,51 @@ namespace WebAnnotation.UI.Commands
             //Create a new structure on left click
             if (e.Button.Left())
             {
-                //  Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
-                if (Type == null)
+                //  Debug.Assert(obj is null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
+                if (Type is null)
+                {
                     return;
+                }
 
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 //Transform from volume space to section space if we need to
-                GridVector2 SectionPos;
 
-                bool Transformed = mapping.TryVolumeToSection(WorldPos, out SectionPos);
+                bool Transformed = mapping.TryVolumeToSection(WorldPos, out Geometry.Vector2 SectionPos);
 
                 if (!Transformed)
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     base.OnMouseClick(sender, e);
                 }
 
 
-                StructureObj newStruct = new StructureObj(Type.modelObj);
+                StructureObj newStruct = new(Type.modelObj);
 
-                LocationObj newLocation = new LocationObj(newStruct,
+                LocationObj newLocation = new(newStruct,
                                                 Parent.Section.Number,
                                                 Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
 
                 WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, 16);
 
-                Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos,
-                        new ResizeCircleCommand.OnCommandSuccess((double radius) =>
-                        {
+                Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), [ Parent, Type.Color, WorldPos,
+                        new ResizeCircleCommand.OnCommandSuccess(radius => {
                             radius = radius < Global.MinRadius ? Global.MinRadius : radius;
                             WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, radius);
-                        }) });
+                        }) ]);
                 if (Type.Parent != null)
                 {
                     //Enqueue extra command to select a parent
-                    Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                    Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [Parent, newStruct, newLocation]);
                 }
 
-                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [Parent, newStruct, newLocation]);
 
                 Execute();
             }
             else if (e.Button.Right())
             {
-                this.Deactivated = true;
+                Deactivated = true;
             }
 
             base.OnMouseClick(sender, e);
@@ -112,15 +114,17 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
             StructureType obj = Type;
-            //    Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
-            if (obj == null)
+            //    Debug.Assert(obj is null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
+            if (obj is null)
+            {
                 return;
+            }
 
             Parent.spriteBatch.Begin();
 
             string title = obj.Code;
 
-            if (this.Parent.spriteBatch != null && this.oldMouse != null)
+            if (Parent.spriteBatch != null && oldMouse != null)
             {
 
                 Vector2 offset = Parent.fontArial.MeasureString(title);
@@ -128,8 +132,7 @@ namespace WebAnnotation.UI.Commands
                 offset.Y /= 2;
                 Parent.spriteBatch.DrawString(Parent.fontArial,
                     title,
-                    new Vector2((float)this.oldMouse.X - offset.X, (float)this.oldMouse.Y - offset.Y),
-                    new Microsoft.Xna.Framework.Color(obj.Color.R, obj.Color.G, obj.Color.B, 196));
+                    new Vector2(oldMouse.X - offset.X, oldMouse.Y - offset.Y), obj.Color.ToXNAColor(0.75f));
 
             }
 

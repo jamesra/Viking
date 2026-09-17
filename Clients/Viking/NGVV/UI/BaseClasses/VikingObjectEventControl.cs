@@ -1,25 +1,20 @@
-﻿namespace Viking.UI.BaseClasses
+namespace Viking.UI.BaseClasses
 {
     public partial class VikingObjectEventControl : VikingControl
     {
-        /// <summary>
-        /// When the user brings up the context menu and no item is obviously the source, such as 
-        /// bringing up the context menu for an empty section of a list. DefaultContextMenuObject is
-        /// used to create a context menu. If DefaultContextMenuObject is null, no menu is created. 
-        /// </summary>
-        protected Viking.Common.IUIObject DefaultContextMenuObject = null;
+
 
         #region Variables
-        private System.EventHandler OnNewObjectEventHandler = null;
-        private System.EventHandler BeforeAnyDeleteEventHandler = null;
-        private System.EventHandler OnAnyDeleteEventHandler = null;
-        private System.EventHandler OnAnySaveEventHandler = null;
+        private readonly System.EventHandler? OnNewObjectEventHandler = null;
+        private readonly System.EventHandler? BeforeAnyDeleteEventHandler = null;
+        private readonly System.EventHandler? OnAnyDeleteEventHandler = null;
+        private readonly System.EventHandler? OnAnySaveEventHandler = null;
 
-        protected System.EventHandler BeforeAnySaveEventHandler = null;
-        protected System.EventHandler BeforeDeleteEventHandler = null;
-        protected System.EventHandler OnDeleteEventHandler = null;
-        protected System.ComponentModel.PropertyChangedEventHandler OnValueChangeEventHandler = null;
-        protected System.EventHandler OnSaveEventHandler = null;
+        protected System.EventHandler? BeforeAnySaveEventHandler = null;
+        protected System.EventHandler? BeforeDeleteEventHandler = null;
+        protected System.EventHandler? OnDeleteEventHandler = null;
+        protected System.ComponentModel.PropertyChangedEventHandler? OnValueChangeEventHandler = null;
+        protected System.EventHandler? OnSaveEventHandler = null;
         #endregion
 
 
@@ -61,15 +56,9 @@
         {
         }
 
-        protected virtual void OnObjectDelete(object sender, System.EventArgs e)
-        {
-            Refresh();
-        }
+        protected virtual void OnObjectDelete(object sender, System.EventArgs e) => Refresh();
 
-        protected virtual void OnAnySave(object sender, System.EventArgs e)
-        {
-            Refresh();
-        }
+        protected virtual void OnAnySave(object sender, System.EventArgs e) => Refresh();
 
         protected virtual void BeforeAnySave(object sender, System.EventArgs e)
         {

@@ -3,23 +3,22 @@ using System.Collections.Generic;
 
 namespace WebAnnotation
 {
-    class SortByDistance : IComparer<GridVector3>
+    internal class SortByDistance(Vector3 Origin) : IComparer<Vector3>
     {
-        public readonly GridVector3 Origin;
-        public SortByDistance(GridVector3 Origin)
-        {
-            this.Origin = Origin;
-        }
+        public readonly Vector3 Origin = Origin;
 
-        public int Compare(GridVector3 x, GridVector3 y)
+        public int Compare(Vector3 x, Vector3 y)
         {
-            double x_origin_dist = GridVector3.Distance(this.Origin, x);
-            double y_origin_dist = GridVector3.Distance(this.Origin, y);
+            double x_origin_dist = Vector3.Distance(Origin, x);
+            double y_origin_dist = Vector3.Distance(Origin, y);
 
             double delta = x_origin_dist - y_origin_dist;
 
             if (delta == 0)
+            {
                 return 0;
+            }
+
             return delta < 0 ? -1 : 1;
         }
     }

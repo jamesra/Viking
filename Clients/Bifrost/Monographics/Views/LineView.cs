@@ -3,6 +3,8 @@ using System.Linq;
 using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -12,13 +14,13 @@ namespace VikingXNAGraphics
         RoundLineCode.RoundLine line;
         public LineStyle Style; 
 
-        public GridVector2 Source
+        public Geometry.Vector2 Source
         {
             get { return line.P0.ToGridVector(); }
             set { line.P0 = value.ToVector2(); }
         }
 
-        public GridVector2 Destination
+        public Geometry.Vector2 Destination
         {
             get { return line.P1.ToGridVector(); }
             set { line.P1 = value.ToVector2(); }
@@ -41,7 +43,7 @@ namespace VikingXNAGraphics
 
         private Microsoft.Xna.Framework.Color _HSLColor;
 
-        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
+        public LineView(Geometry.Vector2 source, Geometry.Vector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
         {
             line = new RoundLineCode.RoundLine(source.ToVector2(), destination.ToVector2());
             this.LineWidth = (float)width;

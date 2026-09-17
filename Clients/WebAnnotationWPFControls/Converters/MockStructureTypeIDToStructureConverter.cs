@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace WebAnnotation.WPF.MockData
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null)
+            if (value is null)
                 return null;
 
             if (value is long || value is int || value is uint || value is ulong)
@@ -25,15 +25,14 @@ namespace WebAnnotation.WPF.MockData
 
                 return MockData.StructureTypes[ID];
             }
-            else if(value is IEnumerable)
+            else if (value is IEnumerable enumerable)
             {
-                List<MockStructureType> listTypes = new List<MockStructureType>();
-                foreach(var obj in (IEnumerable)value)
+                List<MockStructureType> listTypes = [];
+                foreach (var obj in enumerable)
                 {
-                    var result = this.Convert(obj, targetType, parameter, culture) as MockStructureType;
-                    if (result != null)
+                    if (this.Convert(obj, targetType, parameter, culture) is MockStructureType result)
                         listTypes.Add(result);
-                     
+
                 }
 
                 return listTypes;
@@ -44,15 +43,14 @@ namespace WebAnnotation.WPF.MockData
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null)
+            if (value is null)
                 return null;
 
-            
-            var structType = value as IStructureTypeReadOnly;
-            if(structType == null)
+
+            if (value is not IStructureTypeReadOnly structType)
             {
                 throw new ArgumentException(string.Format("Expected object implementing IStructureType, got {0}", value));
-       
+
             }
 
             return structType.ID;

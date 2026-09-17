@@ -1,18 +1,20 @@
 ﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using System;
+using Viking.Common;
 using Viking.Common.UI;
 using VikingXNAGraphics;
 
 namespace LocalBookmarks
 {
     [TreeViewVisible()]
-    partial class BookmarkUIObj : UIObjTemplate<Bookmark>
+    partial class BookmarkUIObj : UIObjTemplate<Bookmark>, IContextMenu
     {
         internal static float LabelScaleFactor = 2.25f;
 
-        public VikingXNAGraphics.TextureOverlayView _shapeView;
-        public VikingXNAGraphics.LabelView _labelView;
+        public VikingXNAGraphics.TextureOverlayView? _shapeView;
+        public VikingXNAGraphics.LabelView? _labelView;
 
         public BookmarkUIObj(FolderUIObj parent)
         {
@@ -24,9 +26,11 @@ namespace LocalBookmarks
 
         public void UpdateView()
         {
-            _labelView = new VikingXNAGraphics.LabelView(this.Name, this.GridPosition);
-            _labelView.FontSize = Global.DefaultBookmarkRadius / 2.5;
-            GridRectangle boundingRect = new GridRectangle(GridPosition, Global.DefaultBookmarkRadius);
+            _labelView = new VikingXNAGraphics.LabelView(this.Name, this.GridPosition)
+            {
+                FontSize = Global.DefaultBookmarkRadius / 2.5
+            };
+            Rectangle boundingRect = new(GridPosition, Global.DefaultBookmarkRadius);
             _shapeView = new VikingXNAGraphics.TextureOverlayView(Parent.ShapeTexture, boundingRect, Parent.Color.SetAlpha(0.75f));
         }
 
@@ -42,7 +46,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if (_shapeView == null)
+                if (_shapeView is null)
                 {
                     UpdateView();
                 }
@@ -54,7 +58,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if (_labelView == null)
+                if (_labelView is null)
                 {
                     UpdateView();
                 }
@@ -64,38 +68,31 @@ namespace LocalBookmarks
 
         }
 
-        public GridRectangle BoundingRect
-        {
-            get
-            {
-                return new GridRectangle(GridPosition, Global.DefaultBookmarkRadius);
-            }
-        }
+        public Rectangle BoundingRect => new(GridPosition, Global.DefaultBookmarkRadius);
 
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
         {
             if (OnCreate != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, [this, null]);
             }
         }
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
 
 
 
         public override string Name
         {
-            get { return Data.Name; }
+            get => Data.Name;
             set
             {
                 Data.Name = value;
-                if (Data.Name == null)
-                    Data.Name = "";
+                Data.Name ??= "";
 
                 _LabelSizeMeasured = false;
                 LabelView.Text = value;
@@ -107,50 +104,33 @@ namespace LocalBookmarks
         {
             get
             {
-                if (Data.VolumePosition == null)
-                    Data.VolumePosition = new Point2D();
+                Data.VolumePosition ??= new Point2D();
                 return Data.VolumePosition;
             }
-            set
-            {
-                Data.VolumePosition = value;
-            }
+            set => Data.VolumePosition = value;
         }
 
         public Point2D MosaicPosition
         {
-            get
-            {
-                return Data.MosaicPosition;
-            }
-            set
-            {
-                Data.MosaicPosition = value;
-            }
+            get => Data.MosaicPosition;
+            set => Data.MosaicPosition = value;
         }
 
         public View View
         {
             get
             {
-                if (Data.View == null)
-                    Data.View = new View();
+                Data.View ??= new View();
                 return Data.View;
             }
-            set
-            {
-                Data.View = value;
-            }
+            set => Data.View = value;
         }
 
-        public GridVector2 GridPosition
-        {
-            get { return new GridVector2(X, Y); }
-        }
+        public Vector2 GridPosition => new(X, Y);
 
         public double X
         {
-            get { return System.Convert.ToDouble(Data.VolumePosition.X); }
+            get => System.Convert.ToDouble(Data.VolumePosition.X);
             set
             {
                 Position.X = (float)value;
@@ -160,7 +140,7 @@ namespace LocalBookmarks
 
         public double Y
         {
-            get { return System.Convert.ToDouble(Data.VolumePosition.Y); }
+            get => System.Convert.ToDouble(Data.VolumePosition.Y);
             set
             {
                 Position.Y = (float)value;
@@ -170,7 +150,7 @@ namespace LocalBookmarks
 
         public int Z
         {
-            get { return System.Convert.ToInt32(Math.Round(Data.Z)); }
+            get => System.Convert.ToInt32(Math.Round(Data.Z));
             set
             {
                 Data.Z = (float)value;
@@ -180,7 +160,7 @@ namespace LocalBookmarks
 
         public string Comment
         {
-            get { return Data.Comment; }
+            get => Data.Comment;
             set
             {
                 Data.Comment = value;
@@ -190,7 +170,7 @@ namespace LocalBookmarks
 
         public double Downsample
         {
-            get { return View.Downsample; }
+            get => View.Downsample;
             set
             {
                 View.Downsample = value;
@@ -200,13 +180,7 @@ namespace LocalBookmarks
 
         #region Export
 
-        public string URI
-        {
-            get
-            {
-                return Viking.Common.Util.CoordinatesToURI(X, Y, Z, Downsample);
-            }
-        }
+        public string URI => Viking.Common.Util.CoordinatesToURI(X, Y, Z, Downsample);
 
         public string HTMLAnchor
         {
@@ -221,13 +195,7 @@ namespace LocalBookmarks
             }
         }
 
-        public string CutPasteCoords
-        {
-            get
-            {
-                return Viking.Common.Util.CoordinatesToCopyPaste(X, Y, Z, Downsample);
-            }
-        }
+        public string CutPasteCoords => Viking.Common.Util.CoordinatesToCopyPaste(X, Y, Z, Downsample);
 
         #endregion
 
@@ -235,26 +203,16 @@ namespace LocalBookmarks
 
         public override Viking.UI.Controls.GenericTreeNode CreateNode()
         {
-            BookmarkTreeNode node = new BookmarkTreeNode(this);
-            node.Name = this.Name;
+            BookmarkTreeNode node = new(this)
+            {
+                Name = this.Name
+            };
             return node;
         }
 
-        public override int TreeImageIndex
-        {
-            get
-            {
-                return 2;
-            }
-        }
+        public override int TreeImageIndex => 2;
 
-        public override int TreeSelectedImageIndex
-        {
-            get
-            {
-                return 2;
-            }
-        }
+        public override int TreeSelectedImageIndex => 2;
 
         public override void Delete()
         {
@@ -265,13 +223,7 @@ namespace LocalBookmarks
             Global.Save();
         }
 
-        public override string ToolTip
-        {
-            get
-            {
-                return this.Comment;
-            }
-        }
+        public override string ToolTip => this.Comment;
 
         #endregion
 

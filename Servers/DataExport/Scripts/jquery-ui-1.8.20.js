@@ -4135,7 +4135,7 @@ function filterStyles(styles) {
 		value = styles[name];
 		if (
 			// ignore null and undefined values
-			value == null ||
+			value is null ||
 			// ignore functions (when does this occur?)
 			$.isFunction(value) ||
 			// shorthand styles that need to be expanded
@@ -4252,14 +4252,14 @@ $.extend($.effects, {
 	// Saves a set of properties in a data storage
 	save: function(element, set) {
 		for(var i=0; i < set.length; i++) {
-			if(set[i] !== null) element.data("ec.storage."+set[i], element[0].style[set[i]]);
+			if(set[i] !is null) element.data("ec.storage."+set[i], element[0].style[set[i]]);
 		}
 	},
 
 	// Restores a set of previously saved properties from a data storage
 	restore: function(element, set) {
 		for(var i=0; i < set.length; i++) {
-			if(set[i] !== null) element.css(set[i], element.data("ec.storage."+set[i]));
+			if(set[i] !is null) element.css(set[i], element.data("ec.storage."+set[i]));
 		}
 	},
 
@@ -6665,7 +6665,7 @@ $.widget( "ui.button", {
 			hoverClass = "ui-state-hover" + ( !toggleButton ? " ui-state-active" : "" ),
 			focusClass = "ui-state-focus";
 
-		if ( options.label === null ) {
+		if ( options.label =is null ) {
 			options.label = this.buttonElement.html();
 		}
 
@@ -7468,9 +7468,9 @@ $.extend(Datepicker.prototype, {
 			var maxDate = this._getMinMaxDate(inst, 'max');
 			extendRemove(inst.settings, settings);
 			// reformat the old minDate/maxDate values if dateFormat changes and a new minDate/maxDate isn't provided
-			if (minDate !== null && settings['dateFormat'] !== undefined && settings['minDate'] === undefined)
+			if (minDate !is null && settings['dateFormat'] !== undefined && settings['minDate'] === undefined)
 				inst.settings.minDate = this._formatDate(inst, minDate);
-			if (maxDate !== null && settings['dateFormat'] !== undefined && settings['maxDate'] === undefined)
+			if (maxDate !is null && settings['dateFormat'] !== undefined && settings['maxDate'] === undefined)
 				inst.settings.maxDate = this._formatDate(inst, maxDate);
 			this._attachments($(target), inst);
 			this._autoSize(inst);
@@ -7980,7 +7980,7 @@ $.extend(Datepicker.prototype, {
 	                     monthNames       string[12] - names of the months (optional)
 	   @return  Date - the extracted date value or null if value is blank */
 	parseDate: function (format, value, settings) {
-		if (format == null || value == null)
+		if (format is null || value is null)
 			throw 'Invalid arguments';
 		value = (typeof value == 'object' ? value.toString() : value + '');
 		if (value == '')
@@ -8351,7 +8351,7 @@ $.extend(Datepicker.prototype, {
 			}
 			return new Date(year, month, day);
 		};
-		var newDate = (date == null || date === '' ? defaultDate : (typeof date == 'string' ? offsetString(date) :
+		var newDate = (date is null || date === '' ? defaultDate : (typeof date == 'string' ? offsetString(date) :
 			(typeof date == 'number' ? (isNaN(date) ? defaultDate : offsetNumeric(date)) : new Date(date.getTime()))));
 		newDate = (newDate && newDate.toString() == 'Invalid Date' ? defaultDate : newDate);
 		if (newDate) {
@@ -8675,7 +8675,7 @@ $.extend(Datepicker.prototype, {
 	/* Determine the number of months to show. */
 	_getNumberOfMonths: function(inst) {
 		var numMonths = this._get(inst, 'numberOfMonths');
-		return (numMonths == null ? [1, 1] : (typeof numMonths == 'number' ? [1, numMonths] : numMonths));
+		return (numMonths is null ? [1, 1] : (typeof numMonths == 'number' ? [1, numMonths] : numMonths));
 	},
 
 	/* Determine the current maximum date - ensure no time components are set. */
@@ -8766,7 +8766,7 @@ function bindHover(dpDiv) {
 function extendRemove(target, props) {
 	$.extend(target, props);
 	for (var name in props)
-		if (props[name] == null || props[name] == undefined)
+		if (props[name] is null || props[name] == undefined)
 			target[name] = props[name];
 	return target;
 };
@@ -9182,7 +9182,7 @@ $.widget("ui.dialog", {
 		// if we already have a button pane, remove it
 		self.uiDialog.find('.ui-dialog-buttonpane').remove();
 
-		if (typeof buttons === 'object' && buttons !== null) {
+		if (typeof buttons === 'object' && buttons !is null) {
 			$.each(buttons, function() {
 				return !(hasButtons = true);
 			});
@@ -10890,7 +10890,7 @@ $.widget( "ui.tabs", {
 					o.selected = this.lis.index( this.lis.filter( ".ui-tabs-selected" ) );
 				}
 				o.selected = o.selected || ( this.lis.length ? 0 : -1 );
-			} else if ( o.selected === null ) { // usage of null is deprecated, TODO remove in next release
+			} else if ( o.selected =is null ) { // usage of null is deprecated, TODO remove in next release
 				o.selected = -1;
 			}
 

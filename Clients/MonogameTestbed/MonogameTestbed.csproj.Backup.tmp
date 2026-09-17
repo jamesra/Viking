@@ -1,0 +1,93 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<RollForward>Major</RollForward>
+		<RootNamespace>MonogameTestbed</RootNamespace>
+		<AssemblyName>MonogameTestbed</AssemblyName>
+		<Platforms>x64</Platforms>
+		<MonoGamePlatform>Windows</MonoGamePlatform>
+		<SignManifests>true</SignManifests>
+		<ManifestCertificateThumbprint>2BADCE24EC984EC73C686B32B12C48B543B4441C</ManifestCertificateThumbprint>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\Windows\x64\Debug\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<DefineConstants>TRACE;WINDOWS</DefineConstants>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\Windows\x64\Release\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<ItemGroup> 
+		<None Include="**\*.json" CopyToOutputDirectory="PreserveNewest" /> 
+		<Compile Remove=".vs\**" /> 
+		<Compile Remove="bin\**" /> 
+		<Compile Remove="obj\**" /> 
+		<EmbeddedResource Remove=".vs\**" /> 
+		<EmbeddedResource Remove="bin\**" /> 
+		<EmbeddedResource Remove="obj\**" /> 
+		<None Remove=".vs\**" /> 
+		<None Remove="bin\**" /> 
+		<None Remove="obj\**" />
+		<None Include="Properties\Settings.settings">
+			<Generator>SettingsSingleFileGenerator</Generator>
+			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="MonoGame.Framework">
+			<HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\Windows\MonoGame.Framework.dll</HintPath>
+		</Reference>
+		<Reference Include="System.Net" />
+		<Reference Include="System.Numerics" />
+		<Reference Include="System.Runtime.Serialization" />
+		<Reference Include="System.Xml" />
+	</ItemGroup>
+	<ItemGroup>
+		<MonoGameContentReference Include="Content\Content.mgcb" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CommandLineParser" Version="2.9.1" />
+		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<PackageReference Include="FsCheck" Version="3.3.0" />
+		<PackageReference Include="FSharp.Core" Version="5.0.2" />
+		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+		<PackageReference Include="MIConvexHull" Version="1.1.19.1019" />
+		<PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
+		<PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
+		<PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
+		<PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
+		<PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
+		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+		<ProjectReference Include="..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj" />
+		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
+		<ProjectReference Include="..\..\ColladaIO\ColladaIO.csproj" />
+		<ProjectReference Include="..\..\GeometryTests\GeometryTests.csproj" />
+		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+		<ProjectReference Include="..\..\GraphLib\GraphLib.csproj" />
+		<ProjectReference Include="..\..\MIConvexHullExtensions\MIConvexHullExtensions.csproj" />
+		<ProjectReference Include="..\..\MorphologyMesh\MorphologyMesh.csproj" />
+		<ProjectReference Include="..\..\RTree\RTree.csproj" />
+		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
+		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />
+		<ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />
+		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="Always" />
+	</ItemGroup>
+	<PropertyGroup>
+		<PostBuildEvent>copy $(ProjectDir)..\MonogameXNAGraphicsShared\bin\Monogame\$(ConfigurationName)\Content\*.xnb $(TargetDir)\Content\*</PostBuildEvent>
+	</PropertyGroup>
+</Project>

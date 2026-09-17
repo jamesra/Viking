@@ -1,203 +1,104 @@
-﻿using ProtoBuf;
+
 using System;
 using System.Runtime.Serialization;
+using ProtoBuf;
+#if NET48
+using System.Data.Entity;
+#endif
+using System.Data.SqlTypes;
+
 
 namespace AnnotationService.Types
 {
 
-    [ProtoContract]
     [DataContract]
+    [ProtoContract()]
     [Serializable]
-    public struct AnnotationPoint
+    public struct AnnotationPoint(double x, double y, double z)
     {
-        private double _X;
-        private double _Y;
-        private double _Z;
-
+        [DataMember]
         [ProtoMember(1)]
-        [DataMember]
-        public double X
-        {
-            get { return _X; }
-            set { _X = value; }
-        }
+        public double X { get; set; } = x;
 
+        [DataMember]
         [ProtoMember(2)]
-        [DataMember]
-        public double Y
-        {
-            get { return _Y; }
-            set { _Y = value; }
-        }
+        public double Y { get; set; } = y;
 
+        [DataMember]
         [ProtoMember(3)]
-        [DataMember]
-        public double Z
-        {
-            get { return _Z; }
-            set { _Z = value; }
-        }
+        public double Z { get; set; } = z;
+    }
 
-        public AnnotationPoint(double x, double y, double z)
-        {
-            _X = x;
-            _Y = y;
-            _Z = z;
-        }
+    [DataContract]
+    [ProtoContract]
+    [Serializable]
+    public struct BoundingRectangle(double xmin, double ymin, double xmax, double ymax)
+    {
+        [DataMember]
+        [ProtoMember(1)]
+        public double XMax { get; set; } = xmax;
+
+        [DataMember]
+        [ProtoMember(2)]
+        public double XMin { get; set; } = xmin;
+
+        [DataMember]
+        [ProtoMember(3)]
+        public double YMax { get; set; } = ymax;
+
+        [DataMember]
+        [ProtoMember(4)]
+        public double YMin { get; set; } = ymin;
+
+        public readonly double Width => XMax - XMin;
+
+        public readonly double Height => YMax - YMin;
+
+        public readonly double Area => Width * Height;
+
+
+#if NET48
+        public readonly System.Data.Entity.Spatial.DbGeometry ToGeometry() => System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
+#endif
     }
 
     [ProtoContract]
     [DataContract]
     [Serializable]
-    public struct BoundingRectangle
+    public struct BoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
     {
-        private double _XMin;
-        private double _YMin;
-        private double _XMax;
-        private double _YMax;
-
         [ProtoMember(1)]
         [DataMember]
-        public double XMin
-        {
-            get { return _XMin; }
-            set { _XMin = value; }
-        }
+        public double XMin { get; set; } = xmin;
 
         [ProtoMember(2)]
         [DataMember]
-        public double YMin
-        {
-            get { return _YMin; }
-            set { _YMin = value; }
-        }
+        public double YMin { get; set; } = ymin;
 
         [ProtoMember(3)]
         [DataMember]
-        public double XMax
-        {
-            get { return _XMax; }
-            set { _XMax = value; }
-        }
+        public double ZMin { get; set; } = zmin;
 
         [ProtoMember(4)]
         [DataMember]
-        public double YMax
-        {
-            get { return _YMax; }
-            set { _YMax = value; }
-        }
-
-        public double Width
-        {
-            get { return _XMax - _XMin; }
-        }
-
-        public double Height
-        {
-            get { return _YMax - _YMin; }
-        }
-
-        public double Area
-        {
-            get { return Width * Height; }
-        }
-
-        public BoundingRectangle(double xmin, double ymin, double xmax, double ymax)
-        {
-            _XMin = xmin;
-            _YMin = ymin;
-            _XMax = xmax;
-            _YMax = ymax;
-        }
-        public System.Data.Entity.Spatial.DbGeometry ToGeometry()
-        {
-            return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
-        }
-    }
-
-    [ProtoContract]
-    [DataContract]
-    [Serializable]
-    public struct BoundingBox
-    {
-        private double _XMin;
-        private double _YMin;
-        private double _ZMin;
-        private double _XMax;
-        private double _YMax;
-        private double _ZMax;
-
-        [ProtoMember(1)]
-        [DataMember]
-        public double XMin
-        {
-            get { return _XMin; }
-            set { _XMin = value; }
-        }
-
-        [ProtoMember(2)]
-        [DataMember]
-        public double YMin
-        {
-            get { return _YMin; }
-            set { _YMin = value; }
-        }
-
-        [ProtoMember(3)]
-        [DataMember]
-        public double ZMin
-        {
-            get { return _ZMin; }
-            set { _ZMin = value; }
-        }
-
-        [ProtoMember(4)]
-        [DataMember]
-        public double XMax
-        {
-            get { return _XMax; }
-            set { _XMax = value; }
-        }
+        public double XMax { get; set; } = xmax;
 
         [ProtoMember(5)]
         [DataMember]
-        public double YMax
-        {
-            get { return _YMax; }
-            set { _YMax = value; }
-        }
+        public double YMax { get; set; } = ymax;
 
         [ProtoMember(6)]
         [DataMember]
-        public double ZMax
-        {
-            get { return _ZMax; }
-            set { _ZMax = value; }
-        }
+        public double ZMax { get; set; } = zmax;
 
-        public double Width => _XMax - _XMin;
+        public readonly double Width => XMax - XMin;
 
-        public double Height => _YMax - _YMin;
+        public readonly double Height => YMax - YMin;
 
-        public double Depth
-        {
-            get { return _ZMax - _ZMin; }
-        }
-
-        public BoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
-        {
-            _XMin = xmin;
-            _YMin = ymin;
-            _ZMin = zmin;
-            _XMax = xmax;
-            _YMax = ymax;
-            _ZMax = zmax;
-        }
-        public System.Data.Entity.Spatial.DbGeometry ToGeometry()
-        {
-            return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
-        }
+        public readonly double Depth => ZMax - ZMin;
+#if NET48
+        public readonly System.Data.Entity.Spatial.DbGeometry ToGeometry() => System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
+#endif
     }
 
 }

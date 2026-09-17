@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -13,23 +13,21 @@ namespace WebAnnotation.UI
     //TODO: Work in progresss [PropertyPage(typeof(Structure), 4)]
     public partial class StructureLocationsChangeLogPropertiesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
-
-        BindingList<ObjAttribute> ListTags = null;
-
-        bool listLoaded = false;
+        private Structure Obj;
+        private readonly BindingList<WebAnnotationModel.Objects.ObjAttribute>? ListTags = null;
+        private bool listLoaded = false;
 
         public StructureLocationsChangeLogPropertiesPage()
         {
 
             InitializeComponent();
-            this.Title = "Location Change Log";
+            Title = "Location Change Log";
         }
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
         }
 
 
@@ -38,18 +36,18 @@ namespace WebAnnotation.UI
             if (!listLoaded)
             {
                 listLoaded = true;
-                this.UseWaitCursor = true;
+                UseWaitCursor = true;
                 ICollection<LocationObj> locations = Store.Locations.GetStructureLocationChangeLog(Obj.ID);
-                List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Count);
+                List<Location_PropertyPageViewModel> listLocationViews = new(locations.Count);
 
                 foreach (LocationObj loc in locations)
                 {
                     listLocationViews.Add(new Location_PropertyPageViewModel(loc.ID));
                 }
 
-                listLocations.SetLocations(listLocationViews.ToArray());
+                listLocations.SetLocations([.. listLocationViews]);
 
-                this.UseWaitCursor = false;
+                UseWaitCursor = false;
             }
         }
     }

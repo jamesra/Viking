@@ -1,0 +1,42 @@
+<Window x:Class="Viking.UI.WPF.ColorPickerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Custom color"
+        Width="320" Height="220"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="40"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="R"/>
+        <Slider x:Name="RedSlider" Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="255" Margin="8,4" ValueChanged="OnColorChanged"/>
+        <TextBlock x:Name="RedValue" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="G"/>
+        <Slider x:Name="GreenSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" Margin="8,4" ValueChanged="OnColorChanged"/>
+        <TextBlock x:Name="GreenValue" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="B"/>
+        <Slider x:Name="BlueSlider" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" Margin="8,4" ValueChanged="OnColorChanged"/>
+        <TextBlock x:Name="BlueValue" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center"/>
+
+        <Border x:Name="Preview" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,8" Height="36" BorderBrush="Gray" BorderThickness="1"/>
+
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="OK" Width="75" IsDefault="True" Click="OnOk" Margin="0,0,8,0"/>
+            <Button Content="Cancel" Width="75" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

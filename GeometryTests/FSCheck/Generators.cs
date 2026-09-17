@@ -1,4 +1,4 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
 using Geometry.Meshing;
 using GeometryTests.Algorithms;
@@ -16,10 +16,7 @@ namespace GeometryTests.FSCheck
             Arb.Register<ConstrainedDelaunayModelGenerators>();
         }
 
-        public static Arbitrary<TriangulationMesh<IVertex2D>> TriangulatedMeshGenerator()
-        {
-            return TriangulatedMeshGenerators.ArbRandomMesh();
-        }
+        public static Arbitrary<TriangulationMesh<IVertex2D>> TriangulatedMeshGenerator() => TriangulatedMeshGenerators.ArbRandomMesh();
     }
 
 
@@ -35,28 +32,22 @@ namespace GeometryTests.FSCheck
         public static Gen<TriangulationMesh<IVertex2D>> GenMesh(int nVerts)
         {
             /*
-            return GridVector2Generators.Fresh().ArrayOf(nVerts)
+            return Vector2Generators.Fresh().ArrayOf(nVerts)
                 .Where(points => points.Distinct().Count() == points.Length)
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
                 .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));            
                 */
 
 
-            return GridVector2Generators.GenDistinctPoints(nVerts)
+            return Vector2Generators.GenDistinctPoints(nVerts)
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
-                .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));
-            //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+                .TriangulateToMesh([.. verts.Select(v => new TriangulationVertex(v))], OnProgress));
+            //return Vector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
         }
 
-        public static Gen<TriangulationMesh<IVertex2D>> RandomMesh()
-        {
-            return Gen.Sized(size => GenMesh(size));
-        }
+        public static Gen<TriangulationMesh<IVertex2D>> RandomMesh() => Gen.Sized(size => GenMesh(size));
 
-        public static Arbitrary<TriangulationMesh<IVertex2D>> ArbRandomMesh()
-        {
-            return Arb.From(RandomMesh(), MeshShrinker);
-        }
+        public static Arbitrary<TriangulationMesh<IVertex2D>> ArbRandomMesh() => Arb.From(RandomMesh(), MeshShrinker);
 
         /// <summary>
         /// Shrink a mesh by randomly removing points.
@@ -66,12 +57,12 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         public static IEnumerable<TriangulationMesh<IVertex2D>> MeshShrinker(TriangulationMesh<IVertex2D> mesh)
         {
-            IVertex2D[] verts = mesh.Verticies.ToArray();
+            IVertex2D[] verts = [.. mesh.Vertices];
 
-            for (int i = mesh.Verticies.Count - 1; i >= 0; i--)
+            for (int i = mesh.Vertices.Count - 1; i >= 0; i--)
             {
                 /*
-                Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
+                Vertex2D[] fewer_verts = new Vertex2D[mesh.Vertices.Count - 1];
                 Array.Copy(verts, fewer_verts, i);
                 Array.Copy(verts, i+1, fewer_verts, i, fewer_verts.Length - i);
 
@@ -92,13 +83,13 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         public static TriangulationMesh<IVertex2D> RemoveMeshVert(TriangulationMesh<IVertex2D> mesh, int i)
         {
-            IVertex2D[] verts = mesh.Verticies.ToArray();
+            IVertex2D[] verts = [.. mesh.Vertices];
 
-            Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
+            Vertex2D[] fewer_verts = new Vertex2D[mesh.Vertices.Count - 1];
             Array.Copy(verts, fewer_verts, i);
             Array.Copy(verts, i + 1, fewer_verts, i, fewer_verts.Length - i);
 
-            IVertex2D[] vert_clones = fewer_verts.Select(v => v.ShallowCopy() as IVertex2D).ToArray();
+            IVertex2D[] vert_clones = [.. fewer_verts.Select(v => v.ShallowCopy() as IVertex2D)];
 
             TriangulationMesh<IVertex2D> newMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(vert_clones, OnProgress);
             return newMesh;
@@ -112,15 +103,9 @@ namespace GeometryTests.FSCheck
     public class ConstrainedDelaunayModelGenerators
     {
 
-        public static Arbitrary<ConstrainedDelaunayModel> ArbRandomModel()
-        {
-            return Arb.From(Fresh(), ModelShrinker);
-        }
+        public static Arbitrary<ConstrainedDelaunayModel> ArbRandomModel() => Arb.From(Fresh(), ModelShrinker);
 
-        public static Gen<ConstrainedDelaunayModel> Fresh()
-        {
-            return Gen.Sized(size => GenModel(size));
-        }
+        public static Gen<ConstrainedDelaunayModel> Fresh() => Gen.Sized(size => GenModel(size));
 
         public static Gen<ConstrainedDelaunayModel> GenModel(int size)
         {
@@ -144,7 +129,7 @@ namespace GeometryTests.FSCheck
             }
 
             //Attempt to shrink the mesh
-            for (int i = model.mesh.Verticies.Count - 1; i >= 0; i--)
+            for (int i = model.mesh.Vertices.Count - 1; i >= 0; i--)
             {
                 yield return RemoveModelMeshVert(model, i);
             }
@@ -158,7 +143,7 @@ namespace GeometryTests.FSCheck
             //a vertex with a higher index decrement it.  This should result in edges connecting the same verticies
             //if they remain in the new mesh.
 
-            List<EdgeKey> new_edges = new List<EdgeKey>(model.ConstraintEdges.Count);
+            List<EdgeKey> new_edges = new(model.ConstraintEdges.Count);
             for (int i = 0; i < model.ConstraintEdges.Count; i++)
             {
                 EdgeKey key = model.ConstraintEdges[i];
@@ -170,7 +155,7 @@ namespace GeometryTests.FSCheck
                 }
 
                 //Adjust Edge vert if needed
-                EdgeKey new_key = new EdgeKey(key.A > iVert ? key.A - 1 : key.A,
+                EdgeKey new_key = new(key.A > iVert ? key.A - 1 : key.A,
                                                 key.B > iVert ? key.B - 1 : key.B);
                 new_edges.Add(new_key);
             }
@@ -185,9 +170,9 @@ namespace GeometryTests.FSCheck
 
             //TriangulationMesh<IVertex2D> newMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(vert_clones, TriangulatedMeshGenerators.OnProgress);
 
-            List<EdgeKey> edge_clones = model.ConstraintEdges.ToList();
+            List<EdgeKey> edge_clones = [.. model.ConstraintEdges];
             edge_clones.RemoveAt(iEdge);
-            ConstrainedDelaunayModel shrunk_model = new ConstrainedDelaunayModel(newMesh, edge_clones);
+            ConstrainedDelaunayModel shrunk_model = new(newMesh, edge_clones);
 
             return shrunk_model;
         }
@@ -196,11 +181,11 @@ namespace GeometryTests.FSCheck
         /*
         public static Gen<TriangulationMesh<Vertex2D>> GenMesh(int nVerts)
         {
-            return GridVector2Generators.Fresh().ArrayOf(nVerts)
+            return Vector2Generators.Fresh().ArrayOf(nVerts)
                 .Where(points => points.Distinct().Count() == points.Length)
                 .Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>
                 .TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
-            //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+            //return Vector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
         }
 
         public static Gen<TriangulationMesh<Vertex2D>> RandomMesh()
@@ -220,11 +205,11 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         public static IEnumerable<TriangulationMesh<Vertex2D>> MeshShrinker(TriangulationMesh<Vertex2D> mesh)
         {
-            Vertex2D[] verts = mesh.Verticies.ToArray();
+            Vertex2D[] verts = mesh.Vertices.ToArray();
 
-            for (int i = mesh.Verticies.Count - 1; i >= 0; i--)
+            for (int i = mesh.Vertices.Count - 1; i >= 0; i--)
             {
-                Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
+                Vertex2D[] fewer_verts = new Vertex2D[mesh.Vertices.Count - 1];
                 Array.Copy(verts, fewer_verts, i);
                 Array.Copy(verts, i + 1, fewer_verts, i, fewer_verts.Length - i);
 

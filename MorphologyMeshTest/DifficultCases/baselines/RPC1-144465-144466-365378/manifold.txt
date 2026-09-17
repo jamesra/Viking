@@ -1,0 +1,14 @@
+locations: 144465,144466,365378
+final: faces:3042 manifold:3104 nonManifold:0 inconsistent:0 contourSeam:2918 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+firstInvalidStage: Remove Invalid Edges
+stages:
+  Remove Invalid Edges: faces:1674 manifold:1579 nonManifold:0 inconsistent:0 contourSeam:1674 holes:190 isolated:1318 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  CompleteCorrespondingVertexFaces: faces:1913 manifold:1844 nonManifold:0 inconsistent:116 contourSeam:1913 holes:138 isolated:1006 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  MergeAndCloseRegionsPass: faces:1913 manifold:1844 nonManifold:0 inconsistent:116 contourSeam:1913 holes:138 isolated:1006 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  FirstPassSliceChordGeneration: faces:2849 manifold:2831 nonManifold:0 inconsistent:213 contourSeam:2849 holes:36 isolated:70 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  FirstPassFaceGeneration: faces:2865 manifold:2862 nonManifold:0 inconsistent:229 contourSeam:2857 holes:14 isolated:61 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  Second MergeAndCloseRegionsPass: faces:3042 manifold:3104 nonManifold:0 inconsistent:230 contourSeam:2918 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  Second FirstPassFaceGeneration: faces:3042 manifold:3104 nonManifold:0 inconsistent:230 contourSeam:2918 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  Final mesh: faces:3042 manifold:3104 nonManifold:0 inconsistent:0 contourSeam:2918 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+defects:
+notes:

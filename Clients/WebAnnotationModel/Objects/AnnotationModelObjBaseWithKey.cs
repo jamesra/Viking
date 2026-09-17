@@ -3,6 +3,9 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace WebAnnotationModel.Objects
 {
+    /// <summary>
+    /// Keyed annotation object. Hash is frozen on first GetHashCode so a temp negative ID stays valid after the server assigns a real ID.
+    /// </summary>
     public abstract class AnnotationModelObjBaseWithKey<KEY, SERVER_INTERFACE> : AnnotationModelObjBase<SERVER_INTERFACE>,
         IEquatable<AnnotationModelObjBaseWithKey<KEY, SERVER_INTERFACE>>, IDataObjectWithKey<KEY>
         where KEY : struct, IComparable<KEY>, IEquatable<KEY>

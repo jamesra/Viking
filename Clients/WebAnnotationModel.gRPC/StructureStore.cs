@@ -6,27 +6,19 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
+using ProtoLocationPositionOnly = Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly;
 
 namespace WebAnnotationModel.gRPC
 {
-    public readonly struct CreateStructureResult
-    {
-        public readonly StructureObj Structure;
-        public readonly LocationObj Location;
-          
-        public CreateStructureResult(StructureObj structure, LocationObj location)
-        {
-            Structure = structure;
-            Location = location;
-        }
-    }
-
-
+    /// <summary>
+    /// Client cache of structures.
+    /// </summary>
     public class StructureStore : StoreBaseWithKeyAndParent<long, StructureObj, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>, IRegionQuery<long, StructureObj>, IStructureStore
     {
         private readonly IStructureLinkStore StructureLinkStore;
@@ -36,30 +28,50 @@ namespace WebAnnotationModel.gRPC
         public StructureStore( 
                  IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>> clientFactory,
                   IServerAnnotationsClientFactory<IStructureRepository> structureClientFactory,
-                 IStoreServerQueryResultsHandler<long, StructureObj, IStructure> serverQueryResultsHandler,
                   IObjectConverter<StructureObj, IStructure> objToServerObjConverter,
                 IObjectConverter<IStructure, StructureObj> serverObjToObjConverter,
                 IObjectUpdater<StructureObj, IStructure> objUpdater,
-                IObjectConverter<ILocation, LocationObj> serverLocationObjToObjConverter)
-            : base(clientFactory, serverQueryResultsHandler, objToServerObjConverter, serverObjToObjConverter)
+                IObjectConverter<ILocation, LocationObj> serverLocationObjToObjConverter,
+                IStructureLinkStore structureLinkStore)
+            : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter)
         {
             StructureClientFactory = structureClientFactory;
             ServerLocationObjToObjConverter = serverLocationObjToObjConverter;
+            StructureLinkStore = structureLinkStore;
         }
 
         /// <summary>
-        /// Get the location ID's and positions for branches that are incomplete
+        /// Get the location ID's for branches that are incomplete
         /// </summary>
         /// <returns></returns>
-        public void GetUnfinishedBranchesWithPosition(long structureID)
+        public async Task<long[]> GetUnfinishedBranches(long structureID)
         {
-            /*using (AnnotateStructures.AnnotateStructuresClient proxy = CreateProxy())
-            {
-                return proxy.GetUnfinishedLocationsWithPosition(structureID);
-            }*/
-            throw new NotImplementedException();
+            var client = StructureClientFactory.GetOrCreate();
+            return await client.GetUnfinishedLocations(structureID).ConfigureAwait(false);
         }
+
+        public async Task<WebAnnotationModel.LocationPositionOnly[]> GetUnfinishedBranchesWithPosition(long structureID)
+        {
+            var client = StructureClientFactory.GetOrCreate();
+            ProtoLocationPositionOnly[] tips = await client.GetUnfinishedLocationsWithPosition(structureID).ConfigureAwait(false);
+            return tips.Select(t =>
+            {
+                var z = t.Position?.HasZ == true ? t.Position.Z : 0;
+                var pos = t.Position == null
+                    ? default
+                    : new Vector3(t.Position.X, t.Position.Y, z);
+                return new WebAnnotationModel.LocationPositionOnly(t.Id, pos, t.Radius);
+            }).ToArray();
+        }
+
+        /// <summary>
+        /// Fire-and-forget request to delete the structure on the server if it has no locations.
+        /// </summary>
+        public Task CheckForOrphan(long ID) => TryRemoveIfOrphan(ID);
            
+        /// <summary>
+        /// Structures are not warmed at startup. They arrive from region/section queries after the view exists.
+        /// </summary>
         protected override Task Init()
         {
             
@@ -71,14 +83,19 @@ namespace WebAnnotationModel.gRPC
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Full table load. Uses this.CallOnCollectionChanged so Parent.Children is wired; EndBatch would skip that.
+        /// </summary>
         public async Task<ICollection<StructureObj>> GetAll()
         {
             Trace.WriteLine("GetAllStructures, Begin", "WebAnnotation");
 
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetAll();
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(DateTime.UtcNow, result, Array.Empty<long>()));
-            CallOnCollectionChanged(changes);
+            var queryTime = DateTime.UtcNow;
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
 
@@ -118,15 +135,14 @@ namespace WebAnnotationModel.gRPC
             }
         }
 
-        public async Task<CreateStructureResult> Create(StructureObj newStruct, LocationObj newLocation)
+        public async Task<(StructureObj Structure, LocationObj Location)> Create(StructureObj newStruct, LocationObj newLocation)
         {
             var client = StructureClientFactory.GetOrCreate();
 
             var serverResult = await client.Create(new CreateStructureRequestParameter(newStruct, newLocation), CancellationToken.None);
             
             var obj = await Add(ServerObjConverter.Convert(serverResult.Structure));
-            var result = new CreateStructureResult(obj,
-                ServerLocationObjToObjConverter.Convert(serverResult.Location));
+            var result = (obj, ServerLocationObjToObjConverter.Convert(serverResult.Location));
              
             return result;
 
@@ -171,58 +187,39 @@ namespace WebAnnotationModel.gRPC
             */
         }
 
-        public override async Task<bool> Remove(StructureObj obj)
+        public override Task<bool> Remove(StructureObj obj)
         {
-            obj.DBAction = DBACTION.DELETE;
-            return true;
+            // Match LocationStore / StoreBaseWithKey: mark DELETE, drop from the local index,
+            // and queue for Save() so DeepDeleteStructure runs on the next flush.
+            return base.Remove(obj);
         }
 
         public async Task<ICollection<StructureObj>> GetChildStructures(long ID)
         {
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetChildStructures(ID);
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(DateTime.UtcNow, result, Array.Empty<long>()));
-            CallOnCollectionChanged(changes);
+            var queryTime = DateTime.UtcNow;
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
 
         public async Task<long> Merge(long KeepID, long MergeID)
         {
             var client = StructureClientFactory.GetOrCreate();
-            var response = await client.MergeStructures(KeepID, MergeID);
+            var keptId = await client.MergeStructures(KeepID, MergeID);
 
-            throw new NotImplementedException("Need to update the affected locations");
-            return response;
-
-            /*
-            AnnotateStructures.AnnotateStructuresClient proxy = null;
-            try
+            LocationObj[] mergedLocations = Store.Locations.GetLocalObjectsForStructure(MergeID);
+            if (mergedLocations.Length > 0)
             {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                KeepID = proxy.Merge(KeepID, MergeID);
-
-                LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(MergeID);
-                Store.Locations.Refresh(locations.Select(l => l.ID).ToArray());
-
-                this.ForgetLocally(MergeID);
-
-                return 0;
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                throw;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
+                await Store.Locations.Refresh(mergedLocations.Select(l => l.ID).ToArray(), CancellationToken.None);
             }
 
-            return 0;
-            */
+            ForgetLocally(MergeID);
+            await Refresh(KeepID, CancellationToken.None);
+
+            return keptId;
         }
 
         public async Task<long> SplitStructureAtLocationLink(long KeepLocID, long SplitLocID)
@@ -230,96 +227,80 @@ namespace WebAnnotationModel.gRPC
             var client = StructureClientFactory.GetOrCreate();
             var splitStructureID = await client.SplitStructureAtLocationLink(KeepLocID, SplitLocID);
 
-            throw new NotImplementedException();
+            LocationObj keepLoc = await Store.Locations.GetObjectByID(KeepLocID, CancellationToken.None);
+            if (keepLoc?.ParentID != null)
+            {
+                var keepLocations = await Store.Locations.GetStructureLocations(keepLoc.ParentID.Value, QueryTargets.Server);
+                await Store.Locations.Refresh(keepLocations.Select(l => l.ID).ToArray(), CancellationToken.None);
+            }
+
+            var splitLocations = await Store.Locations.GetStructureLocations(splitStructureID, QueryTargets.Server);
+            await Store.Locations.Refresh(splitLocations.Select(l => l.ID).ToArray(), CancellationToken.None);
+
+            Store.LocationLinks.ForgetLocally(new LocationLinkKey(KeepLocID, SplitLocID));
 
             return splitStructureID;
-            /*
-            AnnotateStructures.AnnotateStructuresClient proxy = null;
-            try
-            {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                long SplitStructureID = proxy.SplitAtLocationLink(KeepLocID, SplitLocID);
-
-                LocationObj keepLoc = Store.Locations.GetObjectByID(KeepLocID);
-                LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(keepLoc.ParentID.Value);
-                Store.Locations.Refresh(locations.Select(l => l.ID).ToArray());
-
-                LocationObj[] SplitLocations = Store.Locations.GetLocalObjectsForStructure(SplitStructureID);
-                Store.Locations.Refresh(SplitLocations.Select(l => l.ID).ToArray());
-
-                Store.LocationLinks.ForgetLocally(new LocationLinkKey(KeepLocID, SplitLocID));
-
-                return SplitStructureID;
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                throw;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
-            */
         }
-
 
         public async Task<ICollection<StructureObj>> GetStructuresOfType(long StructureTypeID)
         {
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetStructuresOfType(StructureTypeID);
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(DateTime.UtcNow, result, Array.Empty<long>()));
-            CallOnCollectionChanged(changes);
+            var queryTime = DateTime.UtcNow;
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
 
-        public Task<ICollection<StructureObj>> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
+        public Task<ICollection<StructureObj>> GetLocalObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius)
         {
-            throw new NotImplementedException();
+            var structures = Store.Locations.GetLocalObjectsForSection(SectionNumber).Values
+                .Where(l => l.Radius >= MinRadius && bounds.Contains(l.Position) && l.Parent != null)
+                .Select(l => l.Parent)
+                .Distinct()
+                .ToList();
+            return Task.FromResult<ICollection<StructureObj>>(structures);
         }
 
-        public Task<ICollection<StructureObj>> GetServerObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime)
+        public async Task<(ICollection<StructureObj> Objects, DateTime QueryCompletedTime)> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
-            throw new NotImplementedException();
+            var client = StructureClientFactory.GetOrCreate();
+            string regionWkt = ToWktPolygon(bounds);
+            var update = await ((IServerSpatialAnnotationsClient<long, IStructure>)client)
+                .GetAsync(SectionNumber, regionWkt, MinRadius, LastQueryUtc, CancellationToken.None, null)
+                .ConfigureAwait(false);
+
+            var changes = await ServerQueryResultsHandler
+                .ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(update.QueryTime, update.NewOrUpdated, update.DeletedIDs))
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime).ConfigureAwait(false);
+            return (changes.ObjectsInStore, update.QueryTime);
         }
 
-        public Task<StructureLinkObj> GetLinksForStructure(bool AskServer)
+        /// <summary>
+        /// Hydrate StructureLinkStore from Structure.Links embedded on section/region/by-ID responses.
+        /// </summary>
+        protected override Task OnServerObjectsLoaded(IEnumerable<IStructure> objs, DateTime queryTime)
         {
-            throw new NotImplementedException();
-        }
-          
-        /*
-        public ICollection<StructureObj> GetServerObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
-        {
-            ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
-
-            return known_locations.Select(l => l.Parent).Distinct().ToList();
+            return StructureLinkStore.MergeServerLinksAsync(
+                objs.Where(s => s != null).SelectMany(s => s.Links ?? Array.Empty<IStructureLink>()),
+                queryTime);
         }
 
-        
-        public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
+        /// <summary>
+        /// Legacy interface member without a structure ID; returns null. Prefer StructureLinks.GetLinks(structureId).
+        /// </summary>
+        public Task<StructureLinkObj> GetLinksForStructure() =>
+            Task.FromResult<StructureLinkObj>(null);
+
+        private static string ToWktPolygon(Rectangle bounds)
         {
-            MixedLocalAndRemoteQueryResults<long, StructureObj> results;
-
-            MixedLocalAndRemoteQueryResults<long, LocationObj> locResults = Store.Locations.GetObjectsInRegionAsync(SectionNumber,
-                                                                                                                    bounds,
-                                                                                                                    MinRadius,
-                                                                                                                    LastQueryUtc,
-                                                                                                                    (locs) => OnLoadedCallback(locs.Select(l => l.Parent).ToList()));
-            ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
-
-            ICollection<StructureObj> known_structs = known_locations.Select(l => l.Parent).ToList();
-
-            return new MixedLocalAndRemoteQueryResults<long, StructureObj>(locResults.ServerRequestResult, known_structs);
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            return string.Format(ci,
+                "POLYGON(({0} {1}, {2} {1}, {2} {3}, {0} {3}, {0} {1}))",
+                bounds.Left, bounds.Bottom, bounds.Right, bounds.Top);
         }
-        
-
-        public ICollection<StructureObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
-        {
-            return Store.Locations.GetLocalObjectsInRegion(SectionNumber, bounds, MinRadius).Select(l => l.Parent).Distinct().ToList();
-        }*/
     }
 }

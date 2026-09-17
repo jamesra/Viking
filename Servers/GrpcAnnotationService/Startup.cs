@@ -1,14 +1,7 @@
 ﻿using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Net;
-using IdentityModel.AspNetCore.AccessTokenValidation;
-using IdentityModel.Client;
-using MathNet.Numerics;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Duende.AspNetCore.Authentication.OAuth2Introspection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -16,82 +9,75 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace gRPCAnnotationService
 {
-
+    /// <summary>
+    /// Identity Server issues both JWTs and opaque reference tokens. A JWT always
+    /// contains dots separating its three segments; a reference token never does,
+    /// and has to be sent back to the introspection endpoint to be resolved.
+    /// </summary>
     public static class PolicySchemeSelector
     {
+        public const string IntrospectionScheme = "Introspection";
+
         public static string SchemeSelector(HttpContext context)
         {
             var (scheme, token) = GetSchemeAndCredential(context);
 
             if (!string.Equals(scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
-            {
                 return null;
-            }
 
-            if (token.Contains("."))
-            {
-                return "Bearer";
-            }
-            else
-            {
-                return "Introspection";
-            }
+            return token.Contains('.') ? JwtBearerDefaults.AuthenticationScheme : IntrospectionScheme;
         }
 
-        /// <summary>
-        /// Extracts scheme and credential from Authorization header (if present)
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
-        public static (string, string) GetSchemeAndCredential(HttpContext context)
+        /// <summary>Splits the Authorization header into its scheme and credential.</summary>
+        public static (string Scheme, string Credential) GetSchemeAndCredential(HttpContext context)
         {
             var header = context.Request.Headers["Authorization"].FirstOrDefault();
-
             if (string.IsNullOrEmpty(header))
-            {
                 return ("", "");
-            }
 
             var parts = header.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length != 2)
-            {
-                return ("", "");
-            }
-
-            return (parts[0], parts[1]);
+            return parts.Length != 2 ? ("", "") : (parts[0], parts[1]);
         }
     }
 
+    /// <summary>
+    /// AnnotationContext + JWT/introspection auth. Every mapped gRPC service requires Viking.Annotation.
+    /// Do not add UseHttpsRedirection — gRPC clients will not follow it.
+    /// </summary>
     public class Startup
     {
+        /// <summary>Scope a caller must hold to reach any annotation service.</summary>
+        public const string AnnotationScope = "Viking.Annotation";
+
+        private const string ProtectedScopePolicy = "protectedScope";
+
         public IConfiguration Configuration { get; }
 
-        public Startup(IConfiguration configuration)
+        private readonly IWebHostEnvironment _env;
+
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
-
-            /*Log.Logger = new LoggerConfiguration()
-              .Enrich.FromLogContext()
-              .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose)
-              .CreateLogger();*/
+            _env = env;
         }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            var connectionString = Configuration.GetConnectionString("AnnotationConnection");
-
             services.AddDbContext<Viking.DataModel.Annotation.AnnotationContext>(options =>
+            {
                 options.UseSqlServer(Configuration.GetConnectionString("AnnotationConnection"),
-                                     options => options.UseNetTopologySuite())
-                       .EnableDetailedErrors()
-                       .EnableSensitiveDataLogging());
+                                     sql => sql.UseNetTopologySuite());
+                if (_env.IsDevelopment())
+                {
+                    options.EnableDetailedErrors();
+                    options.EnableSensitiveDataLogging();
+                }
+            });
 
             services.AddHttpContextAccessor();
 
@@ -102,171 +88,109 @@ namespace gRPCAnnotationService
 #endif
             });
 
-            IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
-            string endpoint = identityServerConfig["Endpoint"];
-
+            var identityServer = Configuration.GetSection("IdentityServer");
+            var authority = identityServer["Endpoint"];
+            if (string.IsNullOrWhiteSpace(authority))
+                throw new InvalidOperationException("IdentityServer:Endpoint is not configured.");
 
             services.AddAuthorization(options =>
-            {
-                /*var builder = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme);
-                    .RequireAuthenticatedUser();
-                options.DefaultPolicy = builder.Build();*/
-                options.AddPolicy("protectedScope", policy => policy.RequireClaim("scope", "Viking.Annotation"));
-                //options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
-                //options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
-            });
-             
-            //JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+                options.AddPolicy(ProtectedScopePolicy,
+                    policy => policy.RequireClaim("scope", AnnotationScope)));
+
             services.AddAuthentication(options =>
                 {
                     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
-                /*
-                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+                .AddOAuth2Introspection(PolicySchemeSelector.IntrospectionScheme, options =>
                 {
-                    options.Events.OnSigningOut = async e => { await e.HttpContext.RevokeUserRefreshTokenAsync(); };
-                })*/
-                /*.AddOpenIdConnect("oidc", options =>
-                {
-                    options.Authority = identityServerConfig["Endpoint"];
-                    options.ClientId = "mvc";
-                    options.ClientSecret = "CorrectHorseBatteryStaple";
-                    options.ResponseType = "code id_token";
-
-                    options.Scope.Clear();
-                    options.Scope.Add("openid");
-                    options.Scope.Add("profile");
-                    //options.Scope.Add("email");
-                    //options.Scope.Add("offline_access");
-                    //options.Scope.Add("api");
-                    options.Scope.Add("Viking.Annotation");
-
-                    // keeps id_token smaller
-                    //options.GetClaimsFromUserInfoEndpoint = true;
-                    options.SaveTokens = true;
-
-                    // if token does not contain a dot, it is a reference token
-                    //options.ForwardDefaultSelector = Selector.ForwardReferenceToken("Introspection");
-                })*/
-            /*
-                .AddOAuth("oidc", options =>
-                {   
-                    options.AuthorizationEndpoint = identityServerConfig["Endpoint"];
-                    options.SignInScheme = "cookie";
-                    options.ClientId = "mvc";
-                    options.ClientSecret = "CorrectHorseBatteryStaple";
-                    options.SaveTokens = true;
-                })*/
-                .AddOAuth2Introspection("Introspection", options =>
-                {
-                    options.ClientId = "mvc";
-                    options.ClientSecret = "CorrectHorseBatteryStaple";
-                    options.Authority = identityServerConfig["Endpoint"];
-                    options.EnableCaching = true;
+                    options.Authority = authority;
+                    options.ClientId = identityServer["ClientId"];
+                    options.ClientSecret = identityServer["ClientSecret"];
+                    // Caching is on by default (backed by HybridCache) as of Duende.AspNetCore.Authentication.OAuth2Introspection 7.x;
+                    // see options.SetCacheEntryFlags to tune or disable it.
                     options.SaveToken = true;
+
+                    // Local DevTest Identity is HTTP-only. Set the introspection endpoint
+                    // explicitly so Duende does not require HTTPS discovery metadata.
+                    var introspectionEndpoint = identityServer["IntrospectionEndpoint"];
+                    if (string.IsNullOrWhiteSpace(introspectionEndpoint) &&
+                        string.Equals(identityServer["AllowHttpMetadata"], "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        introspectionEndpoint = authority.TrimEnd('/') + "/connect/introspect";
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(introspectionEndpoint))
+                        options.IntrospectionEndpoint = introspectionEndpoint;
                 })
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
+                    options.Authority = authority;
+                    options.RequireHttpsMetadata = !string.Equals(identityServer["AllowHttpMetadata"], "true",
+                        StringComparison.OrdinalIgnoreCase);
+                    options.SaveToken = true;
+                    options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
+
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateAudience = true,
                         ValidateLifetime = true,
                         ValidateIssuer = true,
-                        ValidateTokenReplay = true,
                         ValidateIssuerSigningKey = true,
-                    };
-                    
-                    options.RequireHttpsMetadata = false;
-                    options.Authority = identityServerConfig["Endpoint"];
-                    options.SaveToken = true;
-
-                    options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
-                    //options.MapInboundClaims = false; 
-
-                    // if token does not contain a dot, it is a reference token
-                    options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
-                    
-                    
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
+                        ValidateTokenReplay = true,
+                        ValidAudiences = new[] { AnnotationScope, "Viking.Annotation.API" },
                         NameClaimType = "name",
-                        ValidAudience = "Viking.Annotation"
-                        //RoleClaimType = "role",
+                        ValidTypes = new[] { "at+jwt", "JWT" }
                     };
-                    
-                });
 
-
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
-            /*
-            /*
-                .AddPolicyScheme("token", "token", policySchemeOptions =>
-    {
-        policySchemeOptions.ForwardDefaultSelector =
-            PolicySchemeSelector.SchemeSelector;
-    });*/
-            //.AddOAuth();
-
-            // adds user and client access token management
-            services.AddAccessTokenManagement(options =>
-                {
-                    // client config is inferred from OpenID Connect settings
-                    // if you want to specify scopes explicitly, do it here, otherwise the scope parameter will not be sent
-                    //options.Client.Scope = "Viking.Annotation";
-                    options.Client.Clients.Add("identityserver", new ClientCredentialsTokenRequest
+                    options.Events = new JwtBearerEvents
                     {
-                        Address = identityServerConfig["Endpoint"],
-                        ClientId = "mvc",
-                        ClientSecret = "CorrectHorseBatteryStaple",
-                        Scope = "openid profile Viking.Annotation"
-                    });
+                        OnAuthenticationFailed = context =>
+                        {
+                            var logger = context.HttpContext.RequestServices.GetService<ILogger<Startup>>();
+                            logger?.LogWarning(context.Exception, "JWT authentication failed for gRPC request");
+                            return System.Threading.Tasks.Task.CompletedTask;
+                        },
+                        OnChallenge = context =>
+                        {
+                            var logger = context.HttpContext.RequestServices.GetService<ILogger<Startup>>();
+                            var hasBearer = context.Request.Headers.ContainsKey("Authorization");
+                            logger?.LogWarning(
+                                "JWT challenge on {Path}. Authorization header present: {HasBearer}",
+                                context.Request.Path, hasBearer);
+                            return System.Threading.Tasks.Task.CompletedTask;
+                        }
+                    };
                 });
-
-            // registers HTTP client that uses the managed user access token
-            services.AddUserAccessTokenHttpClient("user_client", null, (client) =>
-            {
-                client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
-            });
-
-            // registers HTTP client that uses the managed client access token
-            services.AddClientAccessTokenHttpClient("client", configureClient: client =>
-            {
-                client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
-            });
-            
-            services.AddAuthorizationPolicyEvaluator();
-
-            services.AddMvcCore()
-                .AddAuthorization();
-
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
-            {
                 app.UseDeveloperExceptionPage();
-            }
-            
-            app.UseHttpsRedirection();
+
+            // gRPC clients do not follow HTTP redirects. Serve h2c (:80) and HTTPS (:443)
+            // as separate listeners; never redirect between them.
 
             app.UseRouting();
             app.UseAuthentication();
-            app.UseAuthorization(); 
-            
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<LocationService>().RequireAuthorization("protectedScope");
+                endpoints.MapGrpcService<LocationService>().RequireAuthorization(ProtectedScopePolicy);
+                endpoints.MapGrpcService<StructureService>().RequireAuthorization(ProtectedScopePolicy);
+                endpoints.MapGrpcService<StructureTypeService>().RequireAuthorization(ProtectedScopePolicy);
+                endpoints.MapGrpcService<PermittedStructureLinksService>().RequireAuthorization(ProtectedScopePolicy);
+                endpoints.MapGrpcService<MetaDataService>().RequireAuthorization(ProtectedScopePolicy);
 
                 endpoints.MapGet("/", async context =>
                 {
-                    await context.Response.WriteAsync("Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+                    await context.Response.WriteAsync(
+                        "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
                 });
             });
-
         }
     }
 }

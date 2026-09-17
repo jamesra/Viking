@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
@@ -14,10 +14,10 @@ namespace MorphologyMesh
 
     public class MeshEdge : GraphLib.Edge<ulong>
     {
-        public ConnectionVerticies SourcePort;
-        public ConnectionVerticies TargetPort; 
+        public ConnectionVertices SourcePort;
+        public ConnectionVertices TargetPort;
 
-        public MeshEdge(ulong SourceNode, ulong TargetNode, ConnectionVerticies sourcePort, ConnectionVerticies targetPort) : base(SourceNode, TargetNode, false)
+        public MeshEdge(ulong SourceNode, ulong TargetNode, ConnectionVertices sourcePort, ConnectionVertices targetPort) : base(SourceNode, TargetNode, false)
         {
             this.SourcePort = sourcePort;
             this.TargetPort = targetPort;
@@ -29,22 +29,22 @@ namespace MorphologyMesh
             this.TargetPort = null;
         }
 
-        public ConnectionVerticies GetPortForNode(ulong NodeID)
+        public ConnectionVertices GetPortForNode(ulong NodeID)
         {
-            if(NodeID == this.SourceNodeKey)
+            if (NodeID == this.SourceNodeKey)
             {
                 return SourcePort;
             }
 
-            if(NodeID == this.TargetNodeKey)
+            if (NodeID == this.TargetNodeKey)
             {
-                return TargetPort; 
+                return TargetPort;
             }
 
             throw new ArgumentException("Node ID not part of edge");
         }
 
-        public ConnectionVerticies GetOppositePortForNode(ulong NodeID)
+        public ConnectionVertices GetOppositePortForNode(ulong NodeID)
         {
             if (NodeID == this.SourceNodeKey)
             {
@@ -59,51 +59,45 @@ namespace MorphologyMesh
             throw new ArgumentException("Node ID not part of edge");
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0}-{1}", SourceNodeKey, TargetNodeKey);
-        }
+        public override string ToString() => string.Format("{0}-{1}", SourceNodeKey, TargetNodeKey);
     }
 
 
-    public class MeshNode : GraphLib.Node<ulong, MeshEdge>
+    public class MeshNode(ulong key) : GraphLib.Node<ulong, MeshEdge>(key)
     {
-        public Mesh3D<IVertex3D<ulong>> Mesh = null; 
+        public Mesh3D<IVertex3D<ulong>> Mesh = null;
 
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated
 
-        public Dictionary<ulong, ConnectionVerticies> IDToCrossSection = new Dictionary<ulong, ConnectionVerticies>();
+        public Dictionary<ulong, ConnectionVertices> IDToCrossSection = [];
 
-        
-        private ConnectionVerticies _CapPort;
-        public ConnectionVerticies CapPort
+
+        private ConnectionVertices _CapPort;
+        public ConnectionVertices CapPort
         {
-            get
-            {
-                return _CapPort;
-            }
+            get => _CapPort;
             set
             {
                 _CapPort = value;
                 this.IDToCrossSection[this.Key] = value;
             }
         }
-        
-        //public ConnectionVerticies CapPort;
 
-        public bool AdjacentToPolygon = false; 
+        //public ConnectionVertices CapPort;
+
+        public bool AdjacentToPolygon = false;
 
 
-        //public GridVector3 UpperCentroid;
-        //public GridVector3 LowerCentroid;
+        //public Vector3 UpperCentroid;
+        //public Vector3 LowerCentroid;
 
         public MeshGraph MeshGraph
         {
             get; set;
         }
 
-        public GridBox BoundingBox => Mesh.BoundingBox;
+        public Box BoundingBox => Mesh.BoundingBox;
 
         public double Z => BoundingBox.CenterPoint.Z;
 
@@ -113,9 +107,9 @@ namespace MorphologyMesh
         public double CapPortZ;
 
         /*
-        private GridPolygon _ShapeAsPolygon;
+        private Polygon _ShapeAsPolygon;
 
-        public GridPolygon ShapeAsPolygon
+        public Polygon ShapeAsPolygon
         {
             get
             {
@@ -129,12 +123,9 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesAbove(MeshGraph graph = null)
         {
-            if(graph == null)
-            {
-                graph = this.MeshGraph;
-            }
+            graph ??= this.MeshGraph;
 
-            return this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+            return [.. this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key)];
         }
 
         /// <summary>
@@ -142,32 +133,15 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesBelow(MeshGraph graph = null)
         {
-            if (graph == null)
-            {
-                graph = this.MeshGraph;
-            }
+            graph ??= this.MeshGraph;
 
-            return this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+            return [.. this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key)];
         }
 
-        public bool IsNodeAbove(MeshNode other)
-        {
-            return other.Z > this.Z;
-        }
+        public bool IsNodeAbove(MeshNode other) => other.Z > this.Z;
 
-        public bool IsNodeBelow(MeshNode other)
-        {
-            return other.Z < this.Z;
-        }
+        public bool IsNodeBelow(MeshNode other) => other.Z < this.Z;
 
-
-        public MeshNode(ulong key) : base(key)
-        {
-        }
-
-        public override string ToString()
-        {
-            return Key.ToString() + " Z: " + Z.ToString();
-        }
+        public override string ToString() => Key.ToString() + " Z: " + Z.ToString();
     }
 }

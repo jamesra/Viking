@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Vertex.cs" company="">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -13,7 +13,13 @@ namespace TriangleNet.Geometry
     /// <summary>
     /// The vertex data structure.
     /// </summary>
-    public class Vertex : Point
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="Vertex" /> class.
+    /// </remarks>
+    /// <param name="x">The x coordinate of the vertex.</param>
+    /// <param name="y">The y coordinate of the vertex.</param>
+    /// <param name="mark">The boundary mark.</param>
+    public class Vertex(double x, double y, int mark) : Point(x, y, mark)
     {
         // Hash for dictionary. Will be set by mesh instance.
         internal int hash;
@@ -21,13 +27,13 @@ namespace TriangleNet.Geometry
 #if USE_ATTRIBS
         internal double[] attributes;
 #endif
-        internal VertexType type;
+        internal VertexType type = VertexType.InputVertex;
         internal Otri tri;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Vertex" /> class.
         /// </summary>
-        protected Vertex()
+        public Vertex()
             : this(0, 0, 0)
         {
         }
@@ -40,18 +46,6 @@ namespace TriangleNet.Geometry
         public Vertex(double x, double y)
             : this(x, y, 0)
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Vertex" /> class.
-        /// </summary>
-        /// <param name="x">The x coordinate of the vertex.</param>
-        /// <param name="y">The y coordinate of the vertex.</param>
-        /// <param name="mark">The boundary mark.</param>
-        public Vertex(double x, double y, int mark)
-            : base(x, y, mark)
-        {
-            this.type = VertexType.InputVertex;
         }
 
 #if USE_ATTRIBS
@@ -78,19 +72,13 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// Gets the vertex attributes (may be null).
         /// </summary>
-        public double[] Attributes
-        {
-            get { return this.attributes; }
-        }
+        public double[] Attributes => this.attributes;
 #endif
 
         /// <summary>
         /// Gets the vertex type.
         /// </summary>
-        public VertexType Type
-        {
-            get { return this.type; }
-        }
+        public VertexType Type => this.type;
 
         /// <summary>
         /// Gets the specified coordinate of the vertex.
@@ -117,9 +105,6 @@ namespace TriangleNet.Geometry
 
         #endregion
 
-        public override int GetHashCode()
-        {
-            return this.hash;
-        }
+        public override int GetHashCode() => this.hash;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 
 namespace Viking.Common
 {
@@ -11,7 +11,7 @@ namespace Viking.Common
     }
 
     public interface IObservableHelpStrings
-    {   
+    {
         ObservableCollection<string> ObservableHelpStrings { get; }
     }
 }

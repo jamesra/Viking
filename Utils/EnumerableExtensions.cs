@@ -8,7 +8,7 @@ namespace Viking
     {
         public static string ToCsv<T>(this IEnumerable<T> collection)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             bool first = true;
             foreach (T item in collection)
             {

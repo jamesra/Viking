@@ -26,7 +26,7 @@ namespace ConnectomeViz.Models
         public void Execute(string param)
         {
             /*ScriptEngine engine = Python.CreateEngine();
-            string cwd = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().GetName().CodeBase);
+            string cwd = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             Console.WriteLine(cwd);
              string path_file = cwd.Replace("file:\\", "");
              path_file = path_file.Replace("\\bin", "\\Models\\graph_line.py");

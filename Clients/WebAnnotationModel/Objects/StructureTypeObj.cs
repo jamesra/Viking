@@ -13,6 +13,9 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel.Objects
 {
+    /// <summary>
+    /// Category for structures (code, color, permitted links). Abstract types are folders — do not create structures of that type.
+    /// </summary>
     public class StructureTypeObj : AnnotationModelObjBaseWithParent<long, IStructureType, StructureTypeObj>, IEquatable<StructureTypeObj>, IStructureTypeReadOnly
     {
         private readonly long _ID;
@@ -107,6 +110,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>True when this type is a folder in the type tree, not a creatable annotation type.</summary>
         private bool _Abstract;
         public bool Abstract
         {
@@ -120,6 +124,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        // Getter reads the property, not _AllowedShapes — do not treat as a working bitmask until that is fixed.
         private int _AllowedShapes;
         public int AllowedShapes
         {
@@ -233,6 +238,7 @@ namespace WebAnnotationModel.Objects
         }
         */
 
+        /// <summary>Type IDs that may link into this type (unidirectional incoming).</summary>
         public long[] PermittedLinkSourceTypes
         {
             get
@@ -241,6 +247,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>Type IDs this type may link to (unidirectional outgoing).</summary>
         public long[] PermittedLinkTargetTypes
         {
             get
@@ -249,6 +256,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>Peer type IDs that may link either direction.</summary>
         public long[] PermittedLinkBidirectionalTypes
         {
             get

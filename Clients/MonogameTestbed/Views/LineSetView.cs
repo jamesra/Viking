@@ -1,17 +1,25 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
 
     public class LineSetView
     {
-        public List<LineView> LineViews = new List<LineView>();
-        public List<LabelView> LineLabels = new List<LabelView>();
+        public List<LineView> LineViews = [];
+        public List<LabelView> LineLabels = [];
+
+        /// <summary>
+        /// Unit vector per entry in <see cref="LineLabels"/> pointing from the edge into the face beside it, so a
+        /// label can be nudged off the line it names and onto the surface.  Zero where no direction is known.
+        /// </summary>
+        public List<Geometry.Vector2> LineLabelOffsetDirections = [];
         public double LineRadius = 1;
         public Color color;
         public LineStyle Style = LineStyle.Standard;
@@ -21,7 +29,7 @@ namespace MonogameTestbed
         /// </summary>
         public string Name = "";
 
-        public void UpdateViews(ICollection<GridVector2> Points)
+        public void UpdateViews(ICollection<Geometry.Vector2> Points)
         {
             if (Points.Count >= 3)
             {
@@ -30,57 +38,26 @@ namespace MonogameTestbed
             }
             else
             {
-                LineViews = new List<LineView>();
+                LineViews = [];
             }
         }
 
-        public void UpdateViews(TriangleNet.Voronoi.VoronoiBase v)
-        {
-            if (v != null)
-            {
-                LineViews = ToLines(v, color);
-            }
-            else
-            {
-                LineViews = new List<LineView>();
-            }
-        }
+        public void UpdateViews(TriangleNet.Voronoi.VoronoiBase v) => LineViews = v != null ? ToLines(v, color) : [];
 
-        public void UpdateViews(ICollection<GridLineSegment> lines)
-        {
-            if (lines != null)
-            {
-                LineViews = lines.Select(l => new LineView(l.A, l.B, LineRadius, color, Style)).ToList();
+        public void UpdateViews(ICollection<LineSegment> lines) => LineViews = lines != null ? [.. lines.Select(l => new LineView(l.A, l.B, LineRadius, color, Style))] : [];
 
-            }
-            else
-            {
-                LineViews = new List<LineView>();
-            }
-        }
-
-        public void UpdateViews(GridPolygon polygon)
-        {
-            if (polygon == null)
-            {
-                LineViews = new List<LineView>();
-            }
-            else
-            {
-                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, Style)).ToList();
-            }
-        }
+        public void UpdateViews(Polygon polygon) => LineViews = polygon is null ? [] : [.. polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, Style))];
 
         private List<LineView> ToLines(TriangleNet.Topology.DCEL.DcelMesh mesh, Color color)
         {
-            List<LineView> listLines = new List<LineView>();
+            List<LineView> listLines = [];
             //Create a map of Vertex ID's to DRMesh ID's
-            int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
+            int[] IndexMap = [.. mesh.Vertices.Select(v => v.ID)];
 
             foreach (var e in mesh.Edges)
             {
-                listLines.Add(new LineView(mesh.Vertices[e.P0].ToGridVector2(),
-                                           mesh.Vertices[e.P1].ToGridVector2(),
+                listLines.Add(new LineView(mesh.Vertices[e.P0].ToVector2(),
+                                           mesh.Vertices[e.P1].ToVector2(),
                                            LineRadius,
                                            color,
                                            Style));

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,30 +10,28 @@ using Microsoft.Xna.Framework.Graphics;
 using Viking.Common;
 using WebAnnotation;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Drawing;
-using Common.UI;
+using Viking.Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_CanvasViewModel : Location_ViewModelBase
+    public class Location_CanvasViewModel(LocationObj location) : Location_ViewModelBase(location.ID)
     {
-        public Location_CanvasViewModel(LocationObj location)
-            : base(location)
-        {
-
-        }
-
-
-        public override ContextMenu ContextMenu
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ContextMenuStrip menu = new();
+                ToolStripMenuItem propertiesItem = new("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
                 this._AddTerminalOffEdgeMenus(menu);
                 this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);
@@ -43,28 +41,8 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public GridVector2 SectionPosition
-        {
-            get
-            {
-                return modelObj.Position;
-            }
-            set
-            {
-                modelObj.Position = value;
-            }
-        }
+        public Geometry.Vector2 SectionPosition => modelObj.Position;
 
-        public GridVector2 VolumePosition
-        {
-            get
-            {
-                return modelObj.VolumePosition;
-            }
-            set
-            {
-                modelObj.VolumePosition = value;
-            }
-        }
+        public Geometry.Vector2 VolumePosition => modelObj.VolumePosition;
     }
 }

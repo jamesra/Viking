@@ -1,5 +1,6 @@
-﻿using Geometry;
-using System; 
+using Geometry;
+using Rectangle = Geometry.Rectangle;
+using System;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
@@ -9,15 +10,15 @@ namespace VikingXNAGraphics
     /// </summary>
     public interface IViewPosition2D
     {
-        GridVector2 Position { get; set; }
+        Geometry.Vector2 Position { get; set; }
     }
-    
+
     /// <summary>
     /// Interface for 2D views with a bounding box
     /// </summary>
     public interface IViewBoundingRect
     {
-        GridRectangle BoundingRect { get; set; }
+        Geometry.Rectangle BoundingRect { get; set; }
     }
 
     /// <summary>
@@ -25,6 +26,6 @@ namespace VikingXNAGraphics
     /// </summary>
     public interface IViewPosition3D
     {
-        GridVector3 Position { get; set; }
+        Geometry.Vector3 Position { get; set; }
     }
 }

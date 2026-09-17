@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -9,10 +9,10 @@ namespace VikingXNAGraphics
     /// <summary>
     /// A collection of points/circles that notifies about changes
     /// </summary>
-    public class PointSet : INotifyCollectionChanged, ICollection<GridVector2>
+    public class PointSet : INotifyCollectionChanged, ICollection<Vector2>
     {
         public double PointRadius = 2.0;
-        public List<GridCircle> Circles = new List<GridCircle>();
+        public List<Circle> Circles = [];
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
 
@@ -20,104 +20,65 @@ namespace VikingXNAGraphics
         {
         }
 
-        public PointSet(IEnumerable<GridVector2> input)
+        public PointSet(IEnumerable<Vector2> input)
         {
-            Circles.AddRange(input.Select(p => new GridCircle(p, PointRadius)));
+            Circles.AddRange(input.Select(p => new Circle(p, PointRadius)));
         }
 
-        public ICollection<GridVector2> Points
-        {
-            get
-            {
-                return Circles.Select(c => c.Center).ToList();
-            }
-        }
+        public ICollection<Vector2> Points => [.. Circles.Select(c => c.Center)];
 
-        public int Count
-        {
-            get
-            {
-                return Points.Count;
-            }
-        }
+        public int Count => Points.Count;
 
-        public bool IsReadOnly
-        {
-            get
-            {
-                return Points.IsReadOnly;
-            }
-        }
+        public bool IsReadOnly => Points.IsReadOnly;
 
         /// <summary>
         /// Add or remove a point from the list
         /// </summary>
         /// <param name="p"></param>
-        public void Toggle(GridVector2 p)
+        public void Toggle(Vector2 p)
         {
-            GridCircle newCircle = new GridCircle(p, PointRadius);
+            Circle newCircle = new(p, PointRadius);
             if (Circles.Any(c => c.Intersects(newCircle)))
             {
-                GridCircle[] removedCircles = Circles.Where(c => c.Intersects(newCircle)).ToArray();
+                Circle[] removedCircles = [.. Circles.Where(c => c.Intersects(newCircle))];
                 Circles.RemoveAll(c => c.Intersects(newCircle));
-                if(CollectionChanged != null)
-                {
-                    CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedCircles));
-                }
+                CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedCircles));
             }
             else
             {
                 Circles.Add(newCircle);
-                if (CollectionChanged != null)
-                {
-                    CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
-                }
+                CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
             }
         }
 
-        public void Add(GridVector2 item)
+        public void Add(Vector2 item)
         {
-            GridCircle newCircle = new GridCircle(item, PointRadius);
+            Circle newCircle = new(item, PointRadius);
             Circles.Add(newCircle);
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
-            }
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
         }
 
-        public void AddRange(IEnumerable<GridVector2> items)
+        public void AddRange(IEnumerable<Vector2> items)
         {
-            IEnumerable<GridCircle> circles = items.Select(i => new GridCircle(i, PointRadius));
+            IEnumerable<Circle> circles = items.Select(i => new Circle(i, PointRadius));
             Circles.AddRange(circles);
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, circles));
-            }
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, circles));
         }
 
         public void Clear()
         {
             Points.Clear();
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-            }
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
-        public bool Contains(GridVector2 item)
-        {
-            return Points.Contains(item);
-        }
+        public bool Contains(Vector2 item) => Points.Contains(item);
 
-        public void CopyTo(GridVector2[] array, int arrayIndex)
-        {
-            Points.CopyTo(array, arrayIndex);
-        }
+        public void CopyTo(Vector2[] array, int arrayIndex) => Points.CopyTo(array, arrayIndex);
 
-        public bool Remove(GridVector2 item)
+        public bool Remove(Vector2 item)
         {
-            GridCircle[] remove = Circles.Where(c => c.Contains(item)).ToArray();
-            bool nRemoved = Circles.RemoveAll(c => c.Contains(item)) > 0;
+            Circle[] remove = [.. Circles.Where(c => c.Covers(item))];
+            bool nRemoved = Circles.RemoveAll(c => c.Covers(item)) > 0;
             if (CollectionChanged != null && remove.Length > 0)
             {
                 CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, remove));
@@ -126,14 +87,8 @@ namespace VikingXNAGraphics
             return nRemoved;
         }
 
-        public IEnumerator<GridVector2> GetEnumerator()
-        {
-            return Points.GetEnumerator();
-        }
+        public IEnumerator<Vector2> GetEnumerator() => Points.GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return Points.GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => Points.GetEnumerator();
     }
 }

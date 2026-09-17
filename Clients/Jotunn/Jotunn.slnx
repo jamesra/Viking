@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/JotunnCommon/">
+    <Project Path="JotunnCommon/JotunnUICommon.csproj" />
+  </Folder>
+  <Folder Name="/JotunnVolumeView/">
+    <Project Path="JotunnVolumeView/VolumeView.csproj" />
+  </Folder>
+  <Project Path="../../Geometry/Geometry.csproj" />
+  <Project Path="../../GraphLib/GraphLib.csproj" />
+  <Project Path="../../RTree/RTree.csproj" />
+  <Project Path="../../SqlServerTypesLoader/SqlServerTypesLoader.csproj" />
+  <Project Path="../../UnitsAndScale/UnitsAndScale.csproj" />
+  <Project Path="../../Utils/Utils.csproj" />
+  <Project Path="../Common/Common.csproj" />
+  <Project Path="../VolumeModel/VolumeModel.csproj" />
+  <Project Path="../Viking.Tokens/Viking.Tokens.csproj" />
+  <Project Path="../Viking.UI.WPF/Viking.UI.WPF.csproj" />
+  <Project Path="../Viking.Input/Viking.Input.csproj" />
+  <Project Path="../Viking.Scene/Viking.Scene.csproj" />
+  <Project Path="../Viking/WebAnnotation/WebAnnotation.csproj" />
+  <Project Path="Jotunn/Jotunn.csproj" />
+  <Project Path="JotunnUIControls/JotunnUIControls.csproj" />
+  <Project Path="VolumeViewModel/VolumeViewModel.csproj" />
+</Solution>

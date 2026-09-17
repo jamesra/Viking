@@ -24,8 +24,8 @@ namespace AnnotationService.Types
         [DataMember]
         public List<long> FrontierNodes
         {
-            get { return _FrontierNodes; }
-            set { _FrontierNodes = value; }
+            get => _FrontierNodes;
+            set => _FrontierNodes = value;
         }
         [DataMember]
         public List<long> ReducedEdges { get; set; }
@@ -43,17 +43,17 @@ namespace AnnotationService.Types
 
         public Graphx()
         {
-            EdgeList = new List<Edgex>();
+            EdgeList = [];
 
-            InvolvedCells = new List<long>();
+            InvolvedCells = [];
 
-            ReducedEdges = new List<long>();
+            ReducedEdges = [];
 
-            NodeList = new SortedDictionary<long, Structure>();
+            NodeList = [];
 
-            locationInfo = new SortedDictionary<long, LocationInfo>();
+            locationInfo = [];
 
-            zLocationForSynapses = new SortedDictionary<long, long>();
+            zLocationForSynapses = [];
         }
 
     }

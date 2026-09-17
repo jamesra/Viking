@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Geometry.Transforms
 {
@@ -21,8 +23,8 @@ namespace Geometry.Transforms
                 return "Transform Base, No Info";
         }
 
-        private GridRectangle _ControlBounds = new GridRectangle();
-        public GridRectangle ControlBounds
+        private Rectangle _ControlBounds = new();
+        public Rectangle ControlBounds
         {
             get
             {
@@ -33,14 +35,11 @@ namespace Geometry.Transforms
 
                 return _ControlBounds;
             }
-            protected set
-            {
-                _ControlBounds = value;
-            }
+            protected set => _ControlBounds = value;
         }
 
-        private GridRectangle _MappedBounds = new GridRectangle();
-        public GridRectangle MappedBounds
+        private Rectangle _MappedBounds = new();
+        public Rectangle MappedBounds
         {
             get
             {
@@ -51,10 +50,7 @@ namespace Geometry.Transforms
 
                 return _MappedBounds;
             }
-            protected set
-            {
-                _MappedBounds = value;
-            }
+            protected set => _MappedBounds = value;
         }
 
         /// <summary>
@@ -62,54 +58,82 @@ namespace Geometry.Transforms
         /// be replaced during a transformation with a new list, which requires regenerating triangles and any other derived data.
         /// These points are sorted by control point x, lowest to highest
         /// </summary>
-        private MappingGridVector2[] _mapPoints = Array.Empty<MappingGridVector2>();
-        public MappingGridVector2[] MapPoints
+        private MappingVector2[] _mapPoints = [];
+        public MappingVector2[] MapPoints
         {
             get { return _mapPoints; }
-            protected set
-            {
-                //SortedSet<MappingGridVector2> listPoints = new SortedSet<MappingGridVector2>(value);
-                Array.Sort(value);
-                _mapPoints = value;
-#if DEBUG
-                DebugVerifyPointsAreUnique(_mapPoints);
-#endif
-
-                //Reset the bounds
-                MappedBounds = new GridRectangle();
-                ControlBounds = new GridRectangle();
-            }
+            protected set => AssignMapPoints(value, sortPoints: true);
         }
 
-        private static void DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
+        protected void AssignMapPoints(MappingVector2[] value, bool sortPoints)
+        {
+            if (sortPoints)
+                Array.Sort(value);
+            _mapPoints = value;
+
+            var _mapPointsList = _mapPoints.ToList();
+            bool ArrayHadDuplicates = false;
+            ArrayHadDuplicates = ArrayHadDuplicates || MappingVector2.RemoveControlSpaceDuplicates(_mapPointsList);
+            ArrayHadDuplicates = ArrayHadDuplicates || MappingVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
+
+            //Replace our map points with the list that had duplicates removed if necessary
+            if (ArrayHadDuplicates)
+            {
+                _mapPoints = [.. _mapPointsList];
+                if (_mapPoints.Length < 3)
+                    throw new ArgumentException("Not enough control points after duplicates removed");
+            }
+
+#if DEBUG
+            DebugVerifyPointsAreUnique(_mapPoints);
+#endif
+
+            //Reset the bounds
+            MappedBounds = new Rectangle();
+            ControlBounds = new Rectangle();
+        }
+
+        private static bool DebugVerifyPointsAreUnique(MappingVector2[] listPoints)
         {
 #if DEBUG
             //Check for duplicate points
             for (int i = 1; i < listPoints.Length; i++)
             {
-                Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
-                Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
+                Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, $"Duplicate control space points found in transform.  This breaks Delaunay. Point #{i-1} and #{i}");
+                Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, $"Duplicate mapped space points found in transform.  This breaks Delaunay. Point #{i - 1} and #{i}");
             }
+
+            return true;
+#else
+            return true;
 #endif
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformBasicInfo info)
+        protected ReferencePointBasedTransform(MappingVector2[] points, TransformBasicInfo info)
         {
-            //List<MappingGridVector2> listPoints = new List<MappingGridVector2>(points);
-            //MappingGridVector2.RemoveDuplicates(listPoints);
-
-            //this.MapPoints = listPoints.ToArray();
-            this.MapPoints = points;
+            AssignMapPoints(points, sortPoints: true);
             this.Info = info;
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformBasicInfo info)
+        protected ReferencePointBasedTransform(MappingVector2[] points, TransformBasicInfo info, bool preserveMapPointOrder)
+        {
+            AssignMapPoints(points, sortPoints: !preserveMapPointOrder);
+            this.Info = info;
+        }
+
+        protected ReferencePointBasedTransform(MappingVector2[] points, Rectangle mappedBounds, TransformBasicInfo info)
             : this(points, info)
         {
             this.MappedBounds = mappedBounds;
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, GridRectangle controlBounds, TransformBasicInfo info)
+        protected ReferencePointBasedTransform(MappingVector2[] points, Rectangle mappedBounds, TransformBasicInfo info, bool preserveMapPointOrder)
+            : this(points, info, preserveMapPointOrder)
+        {
+            this.MappedBounds = mappedBounds;
+        }
+
+        protected ReferencePointBasedTransform(MappingVector2[] points, Rectangle mappedBounds, Rectangle controlBounds, TransformBasicInfo info)
         {
             this.MapPoints = points;
             this.MappedBounds = mappedBounds;
@@ -119,18 +143,18 @@ namespace Geometry.Transforms
 
         protected ReferencePointBasedTransform(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
-            _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
+            _mapPoints = info.GetValue("_mapPoints", typeof(MappingVector2[])) as MappingVector2[];
             this.Info = info.GetValue("Info", typeof(TransformBasicInfo)) as TransformBasicInfo;
-            MappedBounds = (GridRectangle)info.GetValue("MappedBounds", typeof(GridRectangle));
-            ControlBounds = (GridRectangle)info.GetValue("ControlBounds", typeof(GridRectangle));
+            MappedBounds = (Rectangle)info.GetValue("MappedBounds", typeof(Rectangle));
+            ControlBounds = (Rectangle)info.GetValue("ControlBounds", typeof(Rectangle));
         }
 
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_mapPoints", _mapPoints);
@@ -143,27 +167,27 @@ namespace Geometry.Transforms
         /// Translates all verticies in the tile according to the vector
         /// </summary>
         /// <param name="vector"></param>
-        public void Translate(GridVector2 vector)
+        public void Translate(Vector2 vector)
         {
             for (int i = 0; i < MapPoints.Length; i++)
             {
                 var p = MapPoints[i];
-                MapPoints[i] = new MappingGridVector2(p.ControlPoint + vector, p.MappedPoint);
+                MapPoints[i] = new MappingVector2(p.ControlPoint + vector, p.MappedPoint);
             }
 
             //Remove any cached data structures
             //MinimizeMemory();
 
-            ControlBounds = new GridRectangle(ControlBounds.Left + vector.X,
+            ControlBounds = new Rectangle(ControlBounds.Left + vector.X,
                                               ControlBounds.Right + vector.X,
                                               ControlBounds.Bottom + vector.Y,
                                               ControlBounds.Top + vector.Y);
         }
 
-        public static GridRectangle CalculateControlBounds(ITransformControlPoints[] transforms)
+        public static Rectangle CalculateControlBounds(ITransformControlPoints[] transforms)
         {
-            if (transforms == null || transforms.Length == 0)
-                return new GridRectangle();
+            if (transforms is null || transforms.Length == 0)
+                return new Rectangle();
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -172,7 +196,7 @@ namespace Geometry.Transforms
 
             foreach (ITransformControlPoints T in transforms)
             {
-                GridRectangle R = T.ControlBounds;
+                Rectangle R = T.ControlBounds;
 
                 if (R.Left < minX)
                     minX = R.Left;
@@ -184,13 +208,13 @@ namespace Geometry.Transforms
                     maxY = R.Top;
             }
 
-            return new GridRectangle(minX, maxX, minY, maxY);
+            return new Rectangle(minX, maxX, minY, maxY);
         }
 
-        public static GridRectangle CalculateMappedBounds(ITransformControlPoints[] transforms)
+        public static Rectangle CalculateMappedBounds(ITransformControlPoints[] transforms)
         {
-            if (transforms == null || transforms.Length == 0)
-                return new GridRectangle();
+            if (transforms is null || transforms.Length == 0)
+                return new Rectangle();
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -199,7 +223,7 @@ namespace Geometry.Transforms
 
             foreach (ITransformControlPoints T in transforms)
             {
-                GridRectangle R = T.MappedBounds;
+                Rectangle R = T.MappedBounds;
 
                 if (R.Left < minX)
                     minX = R.Left;
@@ -211,7 +235,7 @@ namespace Geometry.Transforms
                     maxY = R.Top;
             }
 
-            return new GridRectangle(minX, maxX, minY, maxY);
+            return new Rectangle(minX, maxX, minY, maxY);
         }
 
         /// <summary>
@@ -219,28 +243,28 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect) => this.controlPointsRTree.Intersects(gridRect).ToList();
+        public List<MappingVector2> IntersectingControlRectangle(in Rectangle gridRect) => [.. this.controlPointsRTree.Intersects(gridRect.ToRTreeRect(0))];
 
         /// <summary>
         /// Return mapped control points intersecting the rectangle
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect) => this.mappedPointsRTree.Intersects(gridRect).ToList();
+        public List<MappingVector2> IntersectingMappedRectangle(in Rectangle gridRect) => [.. this.mappedPointsRTree.Intersects(gridRect.ToRTreeRect(0))];
 
 
         /// <summary>
         /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
         /// </summary>
         [NonSerialized]
-        readonly ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim rwLockTriangles = new();
 
-        private RTree.RTree<MappingGridVector2> _mappedPointsRTree = null;
+        private RTree.RTree<MappingVector2> _mappedPointsRTree = null;
 
         /// <summary>
         /// Quadtree mapping mapped points to triangles that contain the points
         /// </summary>
-        public RTree.RTree<MappingGridVector2> mappedPointsRTree
+        public RTree.RTree<MappingVector2> mappedPointsRTree
         {
             get
             {
@@ -263,7 +287,7 @@ namespace Geometry.Transforms
                 try
                 {
                     rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_mappedPointsRTree == null)
+                    if (_mappedPointsRTree is null)
                         BuildPointRTree(); //Locks internally
 
                     Debug.Assert(_mappedPointsRTree != null);
@@ -277,12 +301,12 @@ namespace Geometry.Transforms
             }
         }
 
-        private RTree.RTree<MappingGridVector2> _controlPointsRTree = null;
+        private RTree.RTree<MappingVector2> _controlPointsRTree = null;
 
         /// <summary>
         /// Quadtree mapping control points to triangles that contain the points
         /// </summary>
-        public RTree.RTree<MappingGridVector2> controlPointsRTree
+        public RTree.RTree<MappingVector2> controlPointsRTree
         {
             get
             {
@@ -305,7 +329,7 @@ namespace Geometry.Transforms
                 try
                 {
                     rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_controlPointsRTree == null)
+                    if (_controlPointsRTree is null)
                         BuildPointRTree(); //Locks internally
 
                     Debug.Assert(_controlPointsRTree != null);
@@ -325,12 +349,12 @@ namespace Geometry.Transforms
             {
                 rwLockTriangles.EnterWriteLock();
 
-                this._mappedPointsRTree = new RTree.RTree<MappingGridVector2>();
-                this._controlPointsRTree = new RTree.RTree<MappingGridVector2>();
+                this._mappedPointsRTree = new RTree.RTree<MappingVector2>();
+                this._controlPointsRTree = new RTree.RTree<MappingVector2>();
 
                 for (int i = 0; i < this.MapPoints.Length; i++)
                 {
-                    MappingGridVector2 mp = this._mapPoints[i];
+                    MappingVector2 mp = this._mapPoints[i];
                     this._mappedPointsRTree.Add(mp.MappedPoint.ToRTreeRect(0), mp);
                     this._controlPointsRTree.Add(mp.ControlPoint.ToRTreeRect(0), mp);
                 }
@@ -344,17 +368,14 @@ namespace Geometry.Transforms
 
 
         /// <summary>
-        /// Save a transform using the itk transform text format.  Any reference point transform can be a mesh, so we default to that representation
+        /// Express the transform using the itk transform text format.  Any reference point transform can be a mesh, so we default to that representation
         /// </summary>
         /// <param name="stream"></param>
-        public virtual void WriteITKTransform(System.IO.StreamWriter stream)
+        public virtual string GetITKTransform()
         {
-            if (stream == null)
-                throw new ArgumentNullException(nameof(stream));
-
             double Downsample = 1.0;
 
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             string transform = "meshtransform_double_2_2";
 
             output.Append("0\n0\n");
@@ -368,7 +389,7 @@ namespace Geometry.Transforms
             output.Append(transform + " vp ");
             output.AppendFormat("{0:d}", this.MapPoints.Length * 4);
 
-            foreach (MappingGridVector2 p in this.MapPoints)
+            foreach (MappingVector2 p in this.MapPoints)
             {
                 output.AppendFormat(" {0:g} {1:g} {2:g} {3:g}",
                                         (p.MappedPoint.X - MappedBounds.Left) / MappedBounds.Width,
@@ -383,7 +404,7 @@ namespace Geometry.Transforms
 
             output.AppendFormat(" {0:d}\n", this.MapPoints.Length);
 
-            stream.Write(output.ToString());
+            return output.ToString();
         }
 
         public virtual void MinimizeMemory()
@@ -401,15 +422,15 @@ namespace Geometry.Transforms
             }
         }
 
-        public abstract GridVector2 Transform(in GridVector2 Point);
-        public abstract GridVector2[] Transform(in GridVector2[] Points);
-        public abstract GridVector2 InverseTransform(in GridVector2 Point);
-        public abstract GridVector2[] InverseTransform(in GridVector2[] Points);
-        public abstract bool CanTransform(in GridVector2 Point);
-        public abstract bool TryTransform(in GridVector2 Point, out GridVector2 v);
-        public abstract bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
-        public abstract bool CanInverseTransform(in GridVector2 Point);
-        public abstract bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
-        public abstract bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
+        public abstract Vector2 Transform(in Vector2 Point);
+        public abstract Vector2[] Transform(in Vector2[] Points);
+        public abstract Vector2 InverseTransform(in Vector2 Point);
+        public abstract Vector2[] InverseTransform(in Vector2[] Points);
+        public abstract bool CanTransform(in Vector2 Point);
+        public abstract bool TryTransform(in Vector2 Point, out Vector2 v);
+        public abstract bool[] TryTransform(in Vector2[] Points, out Vector2[] v);
+        public abstract bool CanInverseTransform(in Vector2 Point);
+        public abstract bool TryInverseTransform(in Vector2 Point, out Vector2 v);
+        public abstract bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] v);
     }
 }

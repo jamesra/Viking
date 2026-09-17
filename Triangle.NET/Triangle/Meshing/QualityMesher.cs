@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="QualityMesher.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -20,20 +20,20 @@ namespace TriangleNet.Meshing
     /// </summary>
     class QualityMesher
     {
-        IPredicates predicates;
+        readonly IPredicates predicates;
 
-        Queue<BadSubseg> badsubsegs;
-        BadTriQueue queue;
-        Mesh mesh;
-        Behavior behavior;
+        readonly Queue<BadSubseg> badsubsegs;
+        readonly BadTriQueue queue;
+        readonly Mesh mesh;
+        readonly Behavior behavior;
 
-        NewLocation newLocation;
+        readonly NewLocation newLocation;
 
-        ILog<LogItem> logger;
+        readonly ILog<LogItem> logger;
 
         // Stores the vertices of the triangle that contains newvertex
         // in SplitTriangle method.
-        Triangle newvertex_tri;
+        readonly Triangle newvertex_tri;
 
         public QualityMesher(Mesh mesh, Configuration config)
         {
@@ -105,10 +105,7 @@ namespace TriangleNet.Meshing
         /// Add a bad subsegment to the queue.
         /// </summary>
         /// <param name="badseg">Bad subsegment.</param>
-        public void AddBadSubseg(BadSubseg badseg)
-        {
-            badsubsegs.Enqueue(badseg);
-        }
+        public void AddBadSubseg(BadSubseg badseg) => badsubsegs.Enqueue(badseg);
 
         #region Check
 
@@ -609,11 +606,12 @@ namespace TriangleNet.Meshing
 #if USE_ATTRIBS
                         , mesh.nextras
 #endif
-                    );
+                    )
+                    {
+                        type = VertexType.SegmentVertex,
 
-                    newvertex.type = VertexType.SegmentVertex;
-
-                    newvertex.hash = mesh.hash_vtx++;
+                        hash = mesh.hash_vtx++
+                    };
                     newvertex.id = newvertex.hash;
 
                     mesh.vertices.Add(newvertex.hash, newvertex);
@@ -635,7 +633,7 @@ namespace TriangleNet.Meshing
                                    (eorg.y - edest.y) * (eorg.y - edest.y));
                         if ((multiplier != 0.0) && (divisor != 0.0))
                         {
-                            multiplier = multiplier / divisor;
+                            multiplier /= divisor;
                             // Watch out for NANs.
                             if (!double.IsNaN(multiplier))
                             {
@@ -729,14 +727,9 @@ namespace TriangleNet.Meshing
                 // for mesh refinement.
                 // TODO: NewLocation doesn't work for refinement. Why? Maybe 
                 // reset VertexType?
-                if (behavior.fixedArea || behavior.VarArea)
-                {
-                    newloc = predicates.FindCircumcenter(borg, bdest, bapex, ref xi, ref eta, behavior.offconstant);
-                }
-                else
-                {
-                    newloc = newLocation.FindLocation(borg, bdest, bapex, ref xi, ref eta, true, badotri);
-                }
+                newloc = behavior.fixedArea || behavior.VarArea
+                    ? predicates.FindCircumcenter(borg, bdest, bapex, ref xi, ref eta, behavior.offconstant)
+                    : newLocation.FindLocation(borg, bdest, bapex, ref xi, ref eta, true, badotri);
 
                 // Check whether the new vertex lies on a triangle vertex.
                 if (((newloc.x == borg.x) && (newloc.y == borg.y)) ||
@@ -753,13 +746,14 @@ namespace TriangleNet.Meshing
                 {
                     // The new vertex must be in the interior, and therefore is a
                     // free vertex with a marker of zero.
-                    Vertex newvertex = new Vertex(newloc.x, newloc.y, 0
+                    Vertex newvertex = new(newloc.x, newloc.y, 0
 #if USE_ATTRIBS
                         , mesh.nextras
 #endif
-                        );
-
-                    newvertex.type = VertexType.FreeVertex;
+                        )
+                    {
+                        type = VertexType.FreeVertex
+                    };
 
                     // Ensure that the handle 'badotri' does not represent the longest
                     // edge of the triangle.  This ensures that the circumcenter must

@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,29 +6,26 @@ using System.Text;
 
 namespace AnnotationVizLib
 {
-    public class NeuronGMLView : GMLView<long>
+    public class NeuronGMLView(string VolumeURL) : GMLView<long>(VolumeURL)
     {
-        public NeuronGMLView(string VolumeURL) : base(VolumeURL)
-        {
-        }
-
         public GMLViewNode CreateGMLNode(NeuronNode node)
         {
             GMLViewNode GMLnode = createNode(node.Key);
-            IDictionary<string, string> NodeAttribs = new Dictionary<string, string>();
+            IDictionary<string, string> NodeAttribs = new Dictionary<string, string>
+            {
+                { "Label", NeuronGMLView.LabelForNode(node) },
 
-            NodeAttribs.Add("Label", LabelForNode(node));
-
-            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
+                { "StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key) }
+            };
 
             GMLnode.AddStandardizedAttributes(NodeAttribs);
 
             return GMLnode;
         }
 
-        public string LabelForNode(NeuronNode node)
+        public static string LabelForNode(NeuronNode node)
         {
-            if (!string.IsNullOrEmpty(node.Structure.Label))
+            if (node.Structure.Label != null && node.Structure.Label.Length > 0)
                 return node.Structure.Label + "\n" + node.Key.ToString();
 
             return node.Key.ToString();
@@ -36,9 +33,9 @@ namespace AnnotationVizLib
 
         public static string LinkedStructures(NeuronEdge edge)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             //sb.Append(edge.SynapseType);
-            foreach (IStructureLinkKey link in edge.Links)
+            foreach (IStructureLink link in edge.Links)
             {
                 sb.Append("\t" + LinkString(link));
             }
@@ -46,10 +43,7 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        public static string LinkString(IStructureLinkKey link)
-        {
-            return link.SourceID + " -> " + link.TargetID;
-        }
+        public static string LinkString(IStructureLink link) => link.SourceID + " -> " + link.TargetID;
 
         /// <summary>
         /// Create an edge between two nodes.  Returns null if the nodes do not exist
@@ -77,23 +71,24 @@ namespace AnnotationVizLib
             IDictionary<string, string> EdgeAttribs = AttributesForEdge(edge);
             GMLedge.AddStandardizedAttributes(EdgeAttribs);
 
-            if (GMLReverseEdge != null)
-                GMLReverseEdge.AddStandardizedAttributes(EdgeAttribs);
+            GMLReverseEdge?.AddStandardizedAttributes(EdgeAttribs);
 
             return;
         }
 
         protected static IDictionary<string, string> AttributesForEdge(NeuronEdge edge)
         {
-            Dictionary<string, string> EdgeAttribs = new Dictionary<string, string>();
-            EdgeAttribs.Add("edgeType", edge.SynapseType);
-            EdgeAttribs.Add("Directional", (edge.Directional).ToString());
+            Dictionary<string, string> EdgeAttribs = new()
+            {
+                { "edgeType", edge.SynapseType },
+                { "Directional", (edge.Directional).ToString() }
+            };
             return EdgeAttribs;
         }
 
         public static NeuronGMLView ToGML(NeuronGraph graph, string VolumeURL, bool IncludeUnlabeled = false)
         {
-            NeuronGMLView view = new NeuronGMLView(VolumeURL);
+            NeuronGMLView view = new(VolumeURL);
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {

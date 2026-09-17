@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -18,13 +20,16 @@ namespace MonogameTestbed
         POLYGON = 0x04, //The polygon indicies, with polygon index and vertex inside the polygon index
     }
 
+    /// <summary>
+    /// Displays a set of polygons with indicies labeled.  If there are null values in the polygon array they are skipped, but the index number of the shape is still advanced.s
+    /// </summary>
     class PolygonSetView
     {
         private PointSetView[] PolyPointsView = null;
         private LineView[] PolyRingViews = null;
-        private LabelView[] PolyIndexLabels = new LabelView[0];
+        private LabelView[] PolyIndexLabels = [];
 
-        private readonly List<GridPolygon> _Polygons = new List<GridPolygon>();
+        private readonly List<Polygon> _Polygons;
 
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;
@@ -32,14 +37,12 @@ namespace MonogameTestbed
         private double _PointRadius;
         public double PointRadius
         {
-            get
+            get => _PointRadius;
+            set
             {
-                return _PointRadius;
-            }
-            set {
 
                 if (_PointRadius != value)
-                { 
+                {
                     foreach (PointSetView psv in PolyPointsView)
                     {
                         psv.PointRadius = value;
@@ -53,13 +56,10 @@ namespace MonogameTestbed
         private IndexLabelType _PointLabelTypes = IndexLabelType.NONE;
         public IndexLabelType PointLabelType
         {
-            get
-            {
-                return _PointLabelTypes;
-            }
+            get => _PointLabelTypes;
             set
             {
-                _PointLabelTypes = value; 
+                _PointLabelTypes = value;
                 this.LabelIndex = (value & IndexLabelType.MESH) > 0;
                 this.LabelPolygonIndex = (value & IndexLabelType.POLYGON) > 0;
                 this.LabelPosition = (value & IndexLabelType.POSITION) > 0;
@@ -68,10 +68,7 @@ namespace MonogameTestbed
 
         public bool LabelIndex
         {
-            get
-            {
-                return (_PointLabelTypes & IndexLabelType.MESH) > 0;
-            }
+            get => (_PointLabelTypes & IndexLabelType.MESH) > 0;
             private set
             {
                 foreach (PointSetView psv in PolyPointsView)
@@ -83,10 +80,7 @@ namespace MonogameTestbed
 
         public bool LabelPosition
         {
-            get
-            {
-                return (_PointLabelTypes & IndexLabelType.POSITION) > 0;
-            }
+            get => (_PointLabelTypes & IndexLabelType.POSITION) > 0;
             private set
             {
                 foreach (PointSetView psv in PolyPointsView)
@@ -98,30 +92,49 @@ namespace MonogameTestbed
 
         public bool LabelPolygonIndex
         {
-            get
-            {
-                return (_PointLabelTypes & IndexLabelType.POLYGON) > 0;
-            }
+            get => (_PointLabelTypes & IndexLabelType.POLYGON) > 0;
             private set
             {
-                if(true == value)
+                if (true == value)
                 {
-                    PolyIndexLabels = CreatePolyIndexLabels(_Polygons, this.PointRadius).ToArray();
+                    PolyIndexLabels = [.. CreatePolyIndexLabels(_Polygons, this.PointRadius)];
                 }
             }
         }
 
-        private static List<LabelView> CreatePolyIndexLabels(List<GridPolygon> Polygons, double pointradius)
+        /// <summary>
+        /// Applies vertex, ring, and label sizes in world units.  All three are world measurements, so their
+        /// apparent size depends entirely on the camera zoom: the constructor defaults fall well below one pixel
+        /// once the camera is fitted to a whole slice, and the vertices, rings, and labels all disappear.
+        /// </summary>
+        public void SetDrawScale(double pointRadius, double lineWidth, double labelFontSize)
         {
-            List<LabelView> listPointLabels = new List<LabelView>();
+            PointRadius = pointRadius;
+
+            foreach (LineView line in PolyRingViews ?? [])
+                line.LineWidth = (float)lineWidth;
+
+            foreach (LabelView label in PolyIndexLabels)
+                label.FontSize = labelFontSize;
+
+            //The per-polygon point sets rebuild their labels from PointRadius, so size those after the assignment
+            //above rather than letting the marker radius decide how large the index text is.
+            foreach (PointSetView psv in PolyPointsView ?? [])
+                foreach (LabelView label in psv.LabelViews ?? [])
+                    label.FontSize = labelFontSize;
+        }
+
+        private static List<LabelView> CreatePolyIndexLabels(List<Polygon> Polygons, double pointradius)
+        {
+            List<LabelView> listPointLabels = [];
 
             //Figure out if we have duplicate points and offset labels as needed
-            var pointEnum = new PolySetVertexEnum(Polygons);
-            GridVector2[] point_array = pointEnum.Select(i => i.Point(Polygons)).ToArray();
+            PolySetVertexEnum pointEnum = new(Polygons);
+            Geometry.Vector2[] point_array = [.. pointEnum.Select(i => i.Point(Polygons))];
 
-            QuadTree<int> DuplicatePointsAddedCount = new QuadTree<int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
-            HashSet<GridVector2> KnownPoints = new HashSet<GridVector2>();
-            foreach (GridVector2 p in point_array)
+            QuadTree<int> DuplicatePointsAddedCount = new(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            HashSet<Geometry.Vector2> KnownPoints = [];
+            foreach (Geometry.Vector2 p in point_array)
             {
                 if (KnownPoints.Contains(p))
                 {
@@ -135,23 +148,23 @@ namespace MonogameTestbed
 
             foreach (PolygonIndex pi in new PolySetVertexEnum(Polygons))
             {
-                GridVector2 point = pi.Point(Polygons);
-                GridVector2 offset_point = point - new GridVector2(0, (pointradius * 2));
-                LabelView label = new LabelView(pi.ToString(), offset_point);
+                Geometry.Vector2 point = pi.Point(Polygons);
+                Geometry.Vector2 offset_point = point - new Geometry.Vector2(0, (pointradius * 2));
+                LabelView label = new(pi.ToString(), offset_point);
                 listPointLabels.Add(label);
                 label.FontSize = pointradius * 2.0;
 
                 if (DuplicatePointsAddedCount.Contains(point))
                 {
                     //label.Position = label.Position + label.
-                    //label.Position = label.Position + new GridVector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
-                     
+                    //label.Position = label.Position + new Geometry.Vector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
+
                     string prepended_newlines = "";
                     for (int iLine = 0; iLine < DuplicatePointsAddedCount[point]; iLine++)
                         prepended_newlines += "|\n\r";
 
                     label.Text = prepended_newlines + label.Text; //Prepend a line
-                    
+
                     DuplicatePointsAddedCount[point] = DuplicatePointsAddedCount[point] + 1;
                 }
             }
@@ -160,13 +173,13 @@ namespace MonogameTestbed
         }
 
 
-        public static readonly Color[] DefaultColorMapping = new Color[]
-        {
+        public static readonly Color[] DefaultColorMapping =
+        [
             Color.Green,
             Color.Yellow,
             Color.Red,
             Color.Blue
-        };
+        ];
 
         /// <summary>
         /// 
@@ -174,31 +187,34 @@ namespace MonogameTestbed
         /// <param name="polys"></param>
         /// <param name="colors">Colors can be null and does not need to match the length of the polys array.  If an entry does not exist a random color is selected.</param>
         /// <param name="PointRadius"></param>
-        public PolygonSetView(IEnumerable<GridPolygon> polys, IReadOnlyList<Color> colors = null, double PointRadius=1.0)
+        public PolygonSetView(IEnumerable<Polygon> polys, IReadOnlyList<Color> colors = null, double PointRadius = 1.0)
         {
             this._PointRadius = PointRadius;
-              
-            _Polygons = polys.ToList();
-            PolyLineColors = polys.Select((_,i) => colors != null && colors.Count > i ? 
-                colors[i] : Color.Black.Random()).ToArray();
-            PolyVertexColors = PolyLineColors.Select(c => c.SetAlpha(0.5f)).ToArray();
+
+            _Polygons = [.. polys];
+            PolyLineColors = [.. polys.Select((_,i) => colors != null && colors.Count > i ?
+                colors[i] : Color.Black.Random())];
+            PolyVertexColors = [.. PolyLineColors.Select(c => c.SetAlpha(0.5f))];
 
             UpdatePolyViews();
         }
 
         private void UpdatePolyViews()
         {
-            List<PointSetView> listPointSetView = new List<PointSetView>();
+            List<PointSetView> listPointSetView = [];
 
-            List<LineView> polyRingViews = new List<LineView>();
+            List<LineView> polyRingViews = [];
 
             for (int iPoly = 0; iPoly < _Polygons.Count; iPoly++)
             {
-                GridPolygon p = _Polygons[iPoly];
-                PointSetView psv = new PointSetView();
+                Polygon p = _Polygons[iPoly];
+                if (p is null)
+                    continue;
 
-                List<GridVector2> points = p.ExteriorRing.ToList();
-                foreach (GridPolygon innerPoly in p.InteriorPolygons)
+                PointSetView psv = new();
+
+                List<Geometry.Vector2> points = [.. p.ExteriorRing];
+                foreach (Polygon innerPoly in p.InteriorPolygons)
                 {
                     points.AddRange(innerPoly.ExteriorRing);
                 }
@@ -206,18 +222,18 @@ namespace MonogameTestbed
                 psv.Points = points;
                 psv.PointRadius = this.PointRadius;
                 psv.Color = PolyVertexColors[iPoly];
+                psv.LabelColor = PolyLineColors[iPoly];
                 psv.LabelIndex = false;
-                
+
 
                 psv.UpdateViews();
                 listPointSetView.Add(psv);
 
-                var ip = iPoly;
-                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 1, PolyLineColors[ip], LineStyle.Standard)));
+                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 1, PolyLineColors[iPoly], LineStyle.Standard)));
             }
 
-            PolyPointsView = listPointSetView.ToArray();
-            PolyRingViews = polyRingViews.ToArray();
+            PolyPointsView = [.. listPointSetView];
+            PolyRingViews = [.. polyRingViews];
         }
 
         public void Draw(MonoTestbed window, Scene scene)
@@ -235,7 +251,7 @@ namespace MonogameTestbed
                 }
             }
 
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, 1.0f, 0);
 
             if (((this.PointLabelType & (IndexLabelType.POLYGON)) > 0) && this.PolyIndexLabels != null)
             {

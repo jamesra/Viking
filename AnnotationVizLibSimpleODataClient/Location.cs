@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
@@ -20,16 +20,15 @@ namespace AnnotationVizLib.SimpleOData
 
         public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; internal set; }
 
-        private IShape2D _VolumeShape = null;
-        public IShape2D VolumeGeometry
+        private SqlGeometry _VolumeShape = null;
+        public SqlGeometry Geometry
         {
             get
             {
-                if (_VolumeShape == null)
+                if (_VolumeShape is null)
                 {
-                    _VolumeShape = this.VolumeShape.WellKnownValue.WellKnownText.ParseWKT();
-                    throw new NotImplementedException("IShape2D must be scaled to match units");
-                    //_VolumeShape = _VolumeShape.Scale(scale);
+                    _VolumeShape = this.VolumeShape.ToSqlGeometry();
+                    _VolumeShape = _VolumeShape.Scale(scale);
                 }
 
                 return _VolumeShape;
@@ -40,16 +39,15 @@ namespace AnnotationVizLib.SimpleOData
 
         public System.Data.Entity.Spatial.DbGeometry MosaicShape { get; internal set; }
 
-        private IShape2D _MosaicShape = null;
-        public IShape2D MosaicGeometry
+        private SqlGeometry _MosaicShape = null;
+        public SqlGeometry MosaicGeometry
         {
             get
             {
-                if (_MosaicShape == null)
+                if (_MosaicShape is null)
                 {
-                    _MosaicShape = this.MosaicShape.WellKnownValue.WellKnownText.ParseWKT();
-                    throw new NotImplementedException("IShape2D must be scaled to match units");
-                    //_MosaicShape = _MosaicShape.Scale(scale);
+                    _MosaicShape = this.MosaicShape.ToSqlGeometry();
+                    _MosaicShape = _MosaicShape.Scale(scale);
                 }
 
                 return _MosaicShape;
@@ -108,68 +106,42 @@ namespace AnnotationVizLib.SimpleOData
         LocationType _TypeCode;
         public LocationType TypeCode
         {
-            get
-            {
-                return (LocationType)this._TypeCode;
-            }
-            internal set
-            {
-                _TypeCode = value;
-            }
+            get => (LocationType)this._TypeCode;
+            internal set => _TypeCode = value;
         }
 
-        GridBox _BoundingBox = default;
-        public GridBox BoundingBox
+        Box _BoundingBox = default;
+        public Box BoundingBox
         {
             get
             {
 
-                if (VolumeShape == null)
+                if (VolumeShape is null)
                     return default;
 
                 if (_BoundingBox == default)
                 {
-                    GridRectangle bound_rect = VolumeShape.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value / 2.0));
+                    Rectangle bound_rect = VolumeShape.BoundingBox();
+                    _BoundingBox = new Box(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value / 2.0));
                 }
 
                 return _BoundingBox;
             }
         }
 
-        string ILocationReadOnly.VolumeGeometryWKT => VolumeShape.WellKnownValue.WellKnownText;
-
-        IReadOnlyDictionary<string, string> ILocationReadOnly.Attributes => throw new NotImplementedException();
-
-        public double? Width
-        {
-            get; internal set;
-        }
-
-        public string MosaicGeometryWKT
-        {
-            get; internal set;
-        }
-
-        public override string ToString()
-        {
-            return ID.ToString();
-        }
+        public override string ToString() => ID.ToString();
 
         public bool Equals(ILocationReadOnly other)
         {
             if (other is null)
                 return false;
 
-            return other.ID.Equals(this.ID);
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
         }
 
-        public bool Equals(Location other)
-        {
-            if (other is null)
-                return false;
-
-            return other.ID.Equals(ID);
-        }
+        public bool Equals(Location other) => this.Equals((ILocationReadOnly)other);
     }
 }

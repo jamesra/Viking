@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,7 +9,7 @@ namespace Viking.UI.Controls
 {
     public partial class ObjectTreeView : System.Windows.Forms.TreeView
     {
-        private Dictionary<IUIObject, List<GenericTreeNode>> ObjectNodesTable = new Dictionary<IUIObject, List<GenericTreeNode>>();
+        private readonly Dictionary<IUIObject, List<GenericTreeNode>> ObjectNodesTable = [];
 
         public ObjectTreeView()
         {
@@ -27,14 +27,7 @@ namespace Viking.UI.Controls
 
         private void MapNode(GenericTreeNode Node, IUIObject Obj)
         {
-            List<GenericTreeNode> NodeList = null;
-            if (ObjectNodesTable.ContainsKey(Obj))
-            {
-                NodeList = ObjectNodesTable[Obj] as List<GenericTreeNode>;
-            }
-            else
-                NodeList = new List<GenericTreeNode>(1);
-
+            List<GenericTreeNode> NodeList = ObjectNodesTable.ContainsKey(Obj) ? ObjectNodesTable[Obj] : new List<GenericTreeNode>(1);
             NodeList.Add(Node);
 
             ObjectNodesTable[Obj] = NodeList;
@@ -42,10 +35,9 @@ namespace Viking.UI.Controls
 
         private void UnmapNode(GenericTreeNode Node)
         {
-            IUIObject Obj = Node.Tag as IUIObject;
-            if (ObjectNodesTable.ContainsKey(Obj))
+            if (Node.Tag is IUIObject Obj && ObjectNodesTable.ContainsKey(Obj))
             {
-                List<GenericTreeNode> NodeList = ObjectNodesTable[Obj] as List<GenericTreeNode>;
+                List<GenericTreeNode> NodeList = ObjectNodesTable[Obj];
                 if (NodeList.Contains(Node))
                     NodeList.Remove(Node);
 
@@ -59,23 +51,20 @@ namespace Viking.UI.Controls
         #region Public Node Hashtable Functions
 
 
-        public bool Contains(IUIObject obj)
-        {
-            return ObjectNodesTable.ContainsKey(obj);
-        }
+        public bool Contains(IUIObject obj) => ObjectNodesTable.ContainsKey(obj);
 
-        public GenericTreeNode[] GetNodesForObject(IUIObject Obj)
+        public GenericTreeNode[] GetNodesForObject(IUIObject? Obj)
         {
-            if (Obj == null)
-                return new GenericTreeNode[0];
+            if (Obj is null)
+                return [];
 
             if (ObjectNodesTable.ContainsKey(Obj))
             {
-                List<GenericTreeNode> NodeList = ObjectNodesTable[Obj] as List<GenericTreeNode>;
-                return NodeList.ToArray();
+                List<GenericTreeNode> NodeList = ObjectNodesTable[Obj];
+                return [.. NodeList];
             }
 
-            return new GenericTreeNode[0];
+            return [];
         }
 
         public void RemoveNode(GenericTreeNode Node)
@@ -94,25 +83,16 @@ namespace Viking.UI.Controls
             {
                 this.Enabled = !value;
 
-                if (value == true)
-                    this.Cursor = Cursors.WaitCursor;
-                else
-                    this.Cursor = Cursors.Default;
+                this.Cursor = value == true ? Cursors.WaitCursor : Cursors.Default;
             }
         }
 
-        public IUIObject SelectedObject
+        public IUIObject? SelectedObject
         {
-            get
-            {
-                if (this.SelectedNode != null)
-                    return this.SelectedNode.Tag as IUIObject;
-
-                return null;
-            }
+            get => this.SelectedNode?.Tag as IUIObject;
             set
             {
-                GenericTreeNode[] SelectedNodes = GetNodesForObject(value) as GenericTreeNode[];
+                GenericTreeNode[] SelectedNodes = GetNodesForObject(value);
                 if (SelectedNodes.Length > 0)
                 {
                     this.SelectedNode = SelectedNodes[0];
@@ -122,8 +102,10 @@ namespace Viking.UI.Controls
 
         protected override void OnBeforeExpand(TreeViewCancelEventArgs e)
         {
-            GenericTreeNode genNode = e.Node as GenericTreeNode;
-            Debug.Assert(genNode != null);
+            GenericTreeNode? genNode = e.Node as GenericTreeNode;
+            Debug.Assert(genNode is not null);
+            if (genNode is null)  //Safety if we are not in debug mode
+                return;
 
             this.Busy = true;
             genNode.DoExpand();
@@ -137,11 +119,11 @@ namespace Viking.UI.Controls
         /// <param name="Obj"></param>
         /// <param name="Parent"></param>
         /// <returns></returns>
-        protected GenericTreeNode AddObject(IUIObject Obj, TreeNode Parent)
+        protected GenericTreeNode AddObject(IUIObject Obj, TreeNode? Parent)
         {
             GenericTreeNode NewNode = Obj.CreateNode();
 
-            if (Parent == null)
+            if (Parent is null)
                 this.Nodes.Add(NewNode);
             else
                 Parent.Nodes.Add(NewNode);
@@ -156,18 +138,14 @@ namespace Viking.UI.Controls
         /// When a drag drop operation is occuring over the region of the control without any nodes we
         /// ask which types the control can insert at the root
         /// </summary>
-        private Type[] _ValidDragDropTypes = new Type[0];
+        private Type[] _ValidDragDropTypes = [];
         public virtual Type[] ValidDragDropTypes
         {
-            get
-            {
-                return _ValidDragDropTypes;
-            }
+            get => _ValidDragDropTypes;
             set
             {
                 _ValidDragDropTypes = value;
-                if (_ValidDragDropTypes == null)
-                    _ValidDragDropTypes = new Type[0];
+                _ValidDragDropTypes ??= [];
             }
         }
 
@@ -176,12 +154,9 @@ namespace Viking.UI.Controls
         {
             base.OnItemDrag(e);
 
-            TreeNode DragNode = e.Item as TreeNode;
-            if (DragNode == null)
-                return;
+            TreeNode? DragNode = e.Item as TreeNode;
 
-            IUIObject Obj = DragNode.Tag as IUIObject;
-            if (Obj == null)
+            if (DragNode?.Tag is not IUIObject Obj)
                 return;
 
             UI.State.DragDropOrigin = new System.Drawing.Point(0, 0);
@@ -197,12 +172,15 @@ namespace Viking.UI.Controls
             e.Effect = DragDropEffects.None;
 
             Point DragPoint = this.PointToClient(new Point(e.X, e.Y));
-            TreeNode Node = this.GetNodeAt(DragPoint);
-            IUIObject DragObject = UI.State.DragDropObject;
+            TreeNode? Node = this.GetNodeAt(DragPoint);
+            IUIObject? DragObject = UI.State.DragDropObject;
 
             //This means we are dragging over an empty region and we should ask the control which drag targets it supports
-            if (Node == null)
+            if (Node is null)
             {
+                if (DragObject is null)
+                    return;
+
                 //Find out if the object being dragged can be assigned to the control
                 //This is a little reversed because in the rest of the code we ask the drag object who its parents
                 //can be, in this code we as a control who its children can be.
@@ -219,8 +197,7 @@ namespace Viking.UI.Controls
             }
             else
             {
-                IUIObject Target = Node.Tag as IUIObject;
-                if (Target == null)
+                if (DragObject is null || Node.Tag is not IUIObject Target)
                     return;
 
                 //Can't drag onto ourselves
@@ -244,18 +221,21 @@ namespace Viking.UI.Controls
         protected override void OnDragDrop(System.Windows.Forms.DragEventArgs e)
         {
             Point DragPoint = this.PointToClient(new Point(e.X, e.Y));
-            TreeNode DropNode = this.GetNodeAt(DragPoint);
-            IUIObject DragObject = UI.State.DragDropObject;
+            TreeNode? DropNode = this.GetNodeAt(DragPoint);
+
+            if (UI.State.DragDropObject is null)
+                return;
+
+            IUIObject DragObject = UI.State.DragDropObject as IUIObject;
+
             //We are dragging onto the control, but not a node in particular
-            if (DropNode == null)
+            if (DropNode is null)
             {
-                DragObject.SetParent(null);
+                DragObject.SetParent(null); // null is valid for SetParent to remove parent
             }
             else
             {
-
-                IUIObject Target = DropNode.Tag as IUIObject;
-                if (Target != null)
+                if (DropNode.Tag is IUIObject Target)
                 {
                     if (Target != DragObject)
                     {
@@ -282,28 +262,52 @@ namespace Viking.UI.Controls
             if (e.Button != MouseButtons.Right && e.Button != MouseButtons.Left)
             {
                 base.OnMouseDown(e);
+                return;
             }
 
-            TreeNode MouseNode = this.GetNodeAt(new Point(e.X, e.Y));
+            TreeNode? MouseNode = this.GetNodeAt(new Point(e.X, e.Y));
 
             if (e.Button == MouseButtons.Right)
             {
-                if (MouseNode != null)
+                // Select the node first so the context menu applies to the correct item
+                if (MouseNode is not null)
                 {
-                    IUIObject Obj = MouseNode.Tag as IUIObject;
-                    this.ContextMenu = Obj.ContextMenu;
+                    this.SelectedNode = MouseNode;
+                    UI.State.SelectedObject = MouseNode.Tag as IUIObjectBasic;
+                }
+
+                System.Windows.Forms.ContextMenuStrip? contextMenu = null;
+
+                if (MouseNode is not null)
+                {
+                    // Get context menu from the object associated with the node
+                    if (MouseNode.Tag is IContextMenu obj)
+                    {
+                        contextMenu = obj.ContextMenu;
+                    }
                 }
                 else
                 {
-                    //If we don't have a node, as the parent for a context menu
-                    this.ContextMenu = Parent.ContextMenu;
+                    // If we don't have a node, try to get the parent's context menu
+                    if (Parent is not null && Parent.ContextMenuStrip is not null)
+                    {
+                        contextMenu = Parent.ContextMenuStrip;
+                    }
                 }
+
+                if (contextMenu is not null && contextMenu.Items.Count > 0)
+                {
+                    contextMenu.Show(this, new Point(e.X, e.Y));
+                    return;
+                }
+
+                // Don't call base.OnMouseDown for right-clicks to prevent default selection behavior
             }
             else if (e.Button == MouseButtons.Left)
             {
                 if (MouseNode != null)
                 {
-                    UI.State.SelectedObject = MouseNode.Tag as IUIObject;
+                    UI.State.SelectedObject = MouseNode.Tag as IUIObjectBasic;
                 }
             }
 
@@ -328,7 +332,14 @@ namespace Viking.UI.Controls
 
             while (this.Nodes.Count > 0)
             {
-                RemoveNode(this.Nodes[0] as GenericTreeNode);
+                if (this.Nodes[0] is GenericTreeNode node)
+                {
+                    RemoveNode(node);
+                }
+                else
+                {
+                    this.Nodes.RemoveAt(0);
+                }
             }
 
             this.EndUpdate();
@@ -337,11 +348,8 @@ namespace Viking.UI.Controls
         protected override void OnDoubleClick(System.EventArgs e)
         {
             Point P = PointToClient(Control.MousePosition);
-            GenericTreeNode ClickNode = this.GetNodeAt(P) as GenericTreeNode;
-            if (ClickNode != null)
-            {
-                ClickNode.OnDoubleClick();
-            }
+            GenericTreeNode? ClickNode = this.GetNodeAt(P) as GenericTreeNode;
+            ClickNode?.OnDoubleClick();
         }
     }
 }

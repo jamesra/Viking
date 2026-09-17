@@ -1,60 +1,45 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Geometry
 {
-    public readonly struct GridLineSegmentPair : IComparable, IComparable<GridLineSegmentPair>
+    public readonly struct LineSegmentPair(LineSegment mapline, LineSegment ctrlline) : IComparable, IComparable<LineSegmentPair>
     {
-        public readonly GridLineSegment mapLine;
-        public readonly GridLineSegment ctrlLine;
-
-        public GridLineSegmentPair(GridLineSegment mapline, GridLineSegment ctrlline)
-        {
-            mapLine = mapline;
-            ctrlLine = ctrlline;
-        } 
+        public readonly LineSegment mapLine = mapline;
+        public readonly LineSegment ctrlLine = ctrlline;
 
         public override bool Equals(object obj)
         {
-            if (obj is GridLineSegmentPair p)
+            if (obj is LineSegmentPair p)
                 return this == p;
 
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return mapLine.GetHashCode();
-        }
+        public override int GetHashCode() => GeometryHashCode.Combine(mapLine.GetHashCode(), ctrlLine.GetHashCode());
 
         public int CompareTo(object obj)
         {
-            if (obj is GridLineSegmentPair other)
+            if (obj is LineSegmentPair other)
                 return CompareTo(other);
 
             throw new ArgumentException(
-                $"Attempting to compare {nameof(GridLineSegmentPair)} to unknown type {obj.GetType()}");
+                $"Attempting to compare {nameof(LineSegmentPair)} to unknown type {obj.GetType()}");
         }
 
-        public int CompareTo(GridLineSegmentPair other)
+        public int CompareTo(LineSegmentPair other)
         {
             int result = mapLine.CompareTo(other.mapLine);
-            if (result == 0) 
+            if (result == 0)
                 result = ctrlLine.CompareTo(other.ctrlLine);
 
             return result;
         }
 
-        public static bool operator ==(in GridLineSegmentPair A, in GridLineSegmentPair B)
-        {
-            return (A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine);
-        }
+        public static bool operator ==(in LineSegmentPair A, in LineSegmentPair B) => (A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine);
 
-        public static bool operator !=(in GridLineSegmentPair A, in GridLineSegmentPair B)
-        {
-            return !((A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine));
-        }
+        public static bool operator !=(in LineSegmentPair A, in LineSegmentPair B) => !((A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine));
     }
 
     /// <summary>
@@ -71,16 +56,16 @@ namespace Geometry
         /// We use these because returning a list would copy a massive amount of memory
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        private class PairedLineSearchGridCoordListEnumerator : IEnumerable<GridLineSegmentPair>, IEnumerator<GridLineSegmentPair>
+        private class PairedLineSearchGridCoordListEnumerator : IEnumerable<LineSegmentPair>, IEnumerator<LineSegmentPair>
         {
             private readonly PairedLineSearchGrid searchGrid;
-            private List<GridLineSegmentPair> currentCell;
+            private List<LineSegmentPair> currentCell;
             private readonly IEnumerable<Coord> coords;
             private IEnumerator<Coord> coordEnum;
             private int iGridIndex = -1;
 
             //Only return unique values
-            //           SortedSet<GridLineSegmentPair> UniqueLines = new SortedSet<GridLineSegmentPair>();
+            //           SortedSet<LineSegmentPair> UniqueLines = new SortedSet<LineSegmentPair>();
 
             public PairedLineSearchGridCoordListEnumerator(PairedLineSearchGrid SearchGrid, IEnumerable<Coord> Coords)
             {
@@ -89,11 +74,11 @@ namespace Geometry
                 Reset();
             }
 
-            public GridLineSegmentPair Current
+            public LineSegmentPair Current
             {
                 get
                 {
-                    GridLineSegmentPair segment = currentCell[iGridIndex];
+                    LineSegmentPair segment = currentCell[iGridIndex];
                     //                   Debug.Assert(UniqueLines.Contains(segment) == false);
                     //                   UniqueLines.Add(segment);
                     return segment;
@@ -104,7 +89,7 @@ namespace Geometry
             {
                 get
                 {
-                    GridLineSegmentPair segment = currentCell[iGridIndex];
+                    LineSegmentPair segment = currentCell[iGridIndex];
                     //                    Debug.Assert(UniqueLines.Contains(segment) == false);
                     //                    UniqueLines.Add(segment);
                     return segment;
@@ -114,7 +99,7 @@ namespace Geometry
             public bool MoveNext()
             {
                 iGridIndex++;
-                if (currentCell == null)
+                if (currentCell is null)
                 {
                     bool success = coordEnum.MoveNext();
                     if (!success)
@@ -157,7 +142,7 @@ namespace Geometry
                 return;
             }
 
-            public IEnumerator<GridLineSegmentPair> GetEnumerator()
+            public IEnumerator<LineSegmentPair> GetEnumerator()
             {
                 this.Reset();
                 return this;
@@ -174,10 +159,10 @@ namespace Geometry
 
         #region PairedLineSearchGridEnumerator
         /*
-        private class PairedLineSearchGridRectangleEnumerator : IEnumerable<GridLineSegmentPair>, IEnumerator<GridLineSegmentPair>
+        private class PairedLineSearchGridRectangleEnumerator : IEnumerable<LineSegmentPair>, IEnumerator<LineSegmentPair>
         {
             private PairedLineSearchGrid searchGrid;
-            private List<GridLineSegmentPair> currentCell;
+            private List<LineSegmentPair> currentCell;
             private Coord start;
             private Coord end;
             private int iX = 0;
@@ -185,7 +170,7 @@ namespace Geometry
             private int iGridIndex = -1;
 
             //Only return unique values
- //           SortedSet<GridLineSegmentPair> UniqueLines = new SortedSet<GridLineSegmentPair>();
+ //           SortedSet<LineSegmentPair> UniqueLines = new SortedSet<LineSegmentPair>();
 
             public PairedLineSearchGridRectangleEnumerator(PairedLineSearchGrid SearchGrid, Coord Start, Coord End)
             {
@@ -195,10 +180,10 @@ namespace Geometry
                 Reset(); 
             }
 
-            public GridLineSegmentPair Current
+            public LineSegmentPair Current
             {
                 get {
-                    GridLineSegmentPair segment = currentCell[iGridIndex]; 
+                    LineSegmentPair segment = currentCell[iGridIndex]; 
 //                    UniqueLines.Add(segment);
                     return segment;
                 }
@@ -208,7 +193,7 @@ namespace Geometry
             {
                 get
                 {
-                    GridLineSegmentPair segment = currentCell[iGridIndex];
+                    LineSegmentPair segment = currentCell[iGridIndex];
 //                    UniqueLines.Add(segment);
                     return segment;
                 }
@@ -257,7 +242,7 @@ namespace Geometry
                 return; 
             }
 
-            public IEnumerator<GridLineSegmentPair> GetEnumerator()
+            public IEnumerator<LineSegmentPair> GetEnumerator()
             {
                 return this; 
             }
@@ -270,8 +255,8 @@ namespace Geometry
         */
         #endregion
 
-        readonly GridRectangle Bounds;
-        readonly List<GridLineSegmentPair>[,] _LineGrid;
+        readonly Rectangle Bounds;
+        readonly List<LineSegmentPair>[,] _LineGrid;
 
         readonly double GridWidth;
         readonly double GridHeight;
@@ -282,10 +267,13 @@ namespace Geometry
         readonly int EstimatedLinesPerCell;
 
 
-        public PairedLineSearchGrid(MappingGridVector2[] _mapPoints, GridRectangle bounds, List<int>[] edges)
+        public PairedLineSearchGrid(MappingVector2[] _mapPoints, Rectangle bounds, List<int>[] edges)
         {
-            if (_mapPoints == null || edges == null)
-                throw new ArgumentNullException("PairedLineSearchGrid Constructor");
+            if (_mapPoints is null)
+                throw new ArgumentNullException(nameof(_mapPoints));
+
+            if (edges is null)
+                throw new ArgumentNullException(nameof(edges));
 
             this.Bounds = bounds;
 
@@ -316,17 +304,17 @@ namespace Geometry
 
             this.EstimatedLinesPerCell = (int)(numPoints / NumGrids);
 
-            _LineGrid = new List<GridLineSegmentPair>[NumGridsX + 1, NumGridsY + 1];
+            _LineGrid = new List<LineSegmentPair>[NumGridsX + 1, NumGridsY + 1];
             //Initialize the grid
             for (int iX = 0; iX < NumGridsX + 1; iX++)
             {
                 for (int iY = 0; iY < NumGridsY + 1; iY++)
                 {
-                    _LineGrid[iX, iY] = new List<GridLineSegmentPair>(this.EstimatedLinesPerCell);
+                    _LineGrid[iX, iY] = new List<LineSegmentPair>(this.EstimatedLinesPerCell);
                 }
             }
 
-            //Populate the grid by adding each intersecting GridLineSegment to the proper cells
+            //Populate the grid by adding each intersecting LineSegment to the proper cells
             for (int iPoint = 0; iPoint < edges.Length; iPoint++)
             {
                 //Get the list of edges
@@ -338,13 +326,13 @@ namespace Geometry
                     if (iEdgePoint <= iPoint) //We would have tested this point already so skip it
                         continue;
 
-                    if (GridVector2.DistanceSquared(in _mapPoints[iPoint].MappedPoint, in _mapPoints[iEdgePoint].MappedPoint) <= Global.EpsilonSquared)
+                    if (Vector2.DistanceSquared(in _mapPoints[iPoint].MappedPoint, in _mapPoints[iEdgePoint].MappedPoint) <= Global.EpsilonSquared)
                     {
                         Debug.Fail("Map points are equal");
                         continue;
                     }
 
-                    if (GridVector2.DistanceSquared(in _mapPoints[iPoint].ControlPoint, in _mapPoints[iEdgePoint].ControlPoint) <= Global.EpsilonSquared)
+                    if (Vector2.DistanceSquared(in _mapPoints[iPoint].ControlPoint, in _mapPoints[iEdgePoint].ControlPoint) <= Global.EpsilonSquared)
                     {
                         Debug.Fail("Control points are equal");
                         continue;
@@ -353,10 +341,10 @@ namespace Geometry
                     //Build the edge and find out if it intersects
                     try
                     {
-                        GridLineSegment mapLine = new GridLineSegment(_mapPoints[iPoint].MappedPoint, _mapPoints[iEdgePoint].MappedPoint);
-                        GridLineSegment ctrlLine = new GridLineSegment(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint);
+                        LineSegment mapLine = new(_mapPoints[iPoint].MappedPoint, _mapPoints[iEdgePoint].MappedPoint);
+                        LineSegment ctrlLine = new(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint);
 
-                        GridLineSegmentPair pair = new GridLineSegmentPair(mapline: mapLine, ctrlline: ctrlLine);
+                        LineSegmentPair pair = new(mapline: mapLine, ctrlline: ctrlLine);
 
                         IEnumerable<Coord> Coords = GetCoordsForLine(mapLine);
                         foreach (Coord coord in Coords)
@@ -366,7 +354,7 @@ namespace Geometry
                     }
                     catch (ArgumentException e)
                     {
-                        Trace.WriteLine("Error creating GridLineSegment\n" + e.ToString());
+                        Trace.WriteLine("Error creating LineSegment\n" + e.ToString());
                         continue;
                     }
 
@@ -378,10 +366,7 @@ namespace Geometry
             }
         }
 
-        private Coord GetCoord(GridVector2 position)
-        {
-            return GetCoord(position.X, position.Y);
-        }
+        private Coord GetCoord(Vector2 position) => GetCoord(position.X, position.Y);
 
         private Coord GetCoord(double x, double y)
         {
@@ -400,7 +385,7 @@ namespace Geometry
         }
 
 
-        private IEnumerable<Coord> GetCoordsForLine(GridLineSegment line)
+        private IEnumerable<Coord> GetCoordsForLine(LineSegment line)
         {
             Coord start;
             Coord end;
@@ -421,7 +406,7 @@ namespace Geometry
             int iEndX = Math.Max(start.iX, end.iX);
             int iEndY = Math.Max(start.iY, end.iY);
 
-            List<Coord> listCoords = new List<Coord>(Math.Abs(end.iX - start.iX) * Math.Abs(end.iY - start.iY));
+            List<Coord> listCoords = new(Math.Abs(end.iX - start.iX) * Math.Abs(end.iY - start.iY));
             if (start.iX == end.iX)
             {
 
@@ -440,8 +425,8 @@ namespace Geometry
             else
             {
                 //Figure out the line function
-                double m = line.slope;
-                double b = line.intercept;
+                double m = line.Slope;
+                double b = line.Intercept;
 
                 listCoords.Add(start);
 
@@ -471,8 +456,8 @@ namespace Geometry
                     listCoords.Add(new Coord(intersect.iX, intersect.iY));
                 }
 
-                m = line.yslope;
-                b = line.yintercept;
+                m = line.YSlope;
+                b = line.YIntercept;
 
 
 
@@ -498,7 +483,7 @@ namespace Geometry
                 listCoords.Add(end);
                 listCoords.Sort();
 
-                List<Coord> uniqueCoords = new List<Coord>(listCoords.Count);
+                List<Coord> uniqueCoords = new(listCoords.Count);
 
                 //Remove duplicates
                 foreach (Coord coord in listCoords)
@@ -531,16 +516,16 @@ namespace Geometry
         /// </summary>
         /// <param name="L"></param>
         /// <returns></returns>
-        public IEnumerable<GridLineSegmentPair> GetPotentialIntersections(GridLineSegment line)
+        public IEnumerable<LineSegmentPair> GetPotentialIntersections(LineSegment line)
         {
-            //     List<GridLineSegmentPair> LineList;
-            //Coord start = GetCoord(new GridVector2(line.MinX, line.MinY));
-            //Coord end = GetCoord(new GridVector2(line.MaxX, line.MaxY));
+            //     List<LineSegmentPair> LineList;
+            //Coord start = GetCoord(new Vector2(line.MinX, line.MinY));
+            //Coord end = GetCoord(new Vector2(line.MaxX, line.MaxY));
 
             //No sense testing if it doesn't intersect our boundary
             if (this.Bounds.Intersects(line.BoundingBox) == false)
             {
-                return Array.Empty<GridLineSegmentPair>();
+                return Array.Empty<LineSegmentPair>();
             }
 
             return new PairedLineSearchGridCoordListEnumerator(this, GetCoordsForLine(line));

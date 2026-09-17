@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
@@ -35,7 +35,7 @@ namespace MonogameTestbed
         /// Mouse button was up and remained up since last update
         /// 0 =  < 1 | LastState
         /// </summary>
-        Up = 0,             
+        Up = 0,
         /// <summary>
         /// Mouse was pressed since last update
         /// </summary>
@@ -47,7 +47,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Mouse button was down and remained down since last update
         /// </summary>
-        Down = 3 
+        Down = 3
     }
 
     public static class MouseButtonStateExtensions
@@ -63,48 +63,39 @@ namespace MonogameTestbed
 
     }
 
-    public class MouseStateHelper
+    public class MouseStateHelper(MouseState state)
     {
-        readonly MouseState State;
+        readonly MouseState State = state;
 
-        public MouseStateHelper(MouseState state)
-        {
-            this.State = state; 
-        }
+        public int X => State.X;
 
-        public int X { get => State.X; }
         //
         // Summary:
         //     Gets vertical position of the cursor.
-        public int Y { get => State.Y; }
+        public int Y => State.Y;
+
         //
         // Summary:
         //     Gets cursor position.
-        public Point Position { get => State.Position; }
+        public Point Position => State.Position;
 
-        public int ScrollWheelValue { get => State.ScrollWheelValue; }
+        public int ScrollWheelValue => State.ScrollWheelValue;
 
         public ButtonState this[MouseButton index]
         {
             get
             {
-                switch (index)
+                return index switch
                 {
-                    case MouseButton.Left:
-                        return State.LeftButton;
-                    case MouseButton.Middle:
-                        return State.MiddleButton;
-                    case MouseButton.Right:
-                        return State.RightButton;
-                    case MouseButton.X1:
-                        return State.XButton1;
-                    case MouseButton.X2:
-                        return State.XButton2;
-                    default:
-                        throw new NotImplementedException($"Unexpected button requested {index}");
-                }
+                    MouseButton.Left => State.LeftButton,
+                    MouseButton.Middle => State.MiddleButton,
+                    MouseButton.Right => State.RightButton,
+                    MouseButton.X1 => State.XButton1,
+                    MouseButton.X2 => State.XButton2,
+                    _ => throw new NotImplementedException($"Unexpected button requested {index}"),
+                };
             }
-        } 
+        }
     }
 
     class MouseButtonList<T> : List<T>
@@ -115,7 +106,7 @@ namespace MonogameTestbed
 
         public MouseButtonList(int capacity) : base(capacity)
         {
-            for(int i = 0; i < capacity; i++)
+            for (int i = 0; i < capacity; i++)
             {
                 this.Add(default);
             }
@@ -127,16 +118,10 @@ namespace MonogameTestbed
 
         public T this[MouseButton index]
         {
-            get
-            {
-                return this[(int)index];
-            }
-            set
-            {
-                this[(int)index] = value; 
-            }
+            get => this[(int)index];
+            set => this[(int)index] = value;
         }
-         
+
     }
 
 
@@ -151,52 +136,52 @@ namespace MonogameTestbed
         /// <summary>
         /// True if the button was pressed last update
         /// </summary>
-        public MouseButtonList<bool> Clicked = new MouseButtonList<bool>(NumButtons);
+        public MouseButtonList<bool> Clicked = new(NumButtons);
 
         /// <summary>
         /// True if the button was released last update
         /// </summary>
-        public MouseButtonList<bool> Released = new MouseButtonList<bool>(NumButtons);
+        public MouseButtonList<bool> Released = new(NumButtons);
 
         /// <summary>
         /// True if the button is down and its state did not change last update
         /// </summary>
-        public MouseButtonList<bool> Down = new MouseButtonList<bool>(NumButtons);
+        public MouseButtonList<bool> Down = new(NumButtons);
 
         /// <summary>
         /// True if the button is not pressed and its state did not change last update
         /// </summary>
-        public MouseButtonList<bool> Up = new MouseButtonList<bool>(NumButtons);
+        public MouseButtonList<bool> Up = new(NumButtons);
 
         /// <summary>
         /// True if the button is not pressed and its state did not change last update
         /// </summary>
-        public MouseButtonList<MouseButtonStatus> ButtonStatus = new MouseButtonList<MouseButtonStatus>(NumButtons);
+        public MouseButtonList<MouseButtonStatus> ButtonStatus = new(NumButtons);
 
         /// <summary>
         /// The length of time the button has been in the current state
         /// </summary>
-        public MouseButtonList<DateTime> ButtonStateStartTime = new MouseButtonList<DateTime>(NumButtons);
+        public MouseButtonList<DateTime> ButtonStateStartTime = new(NumButtons);
 
 
-        public Point Positon { get => CurrentState.Position; }
-        public int X { get => CurrentState.X; }
-        public int Y { get => CurrentState.Y; }
+        public Point Positon => CurrentState.Position;
+        public int X => CurrentState.X;
+        public int Y => CurrentState.Y;
 
-        public int ScrollWheelValue { get => CurrentState.ScrollWheelValue; }
+        public int ScrollWheelValue => CurrentState.ScrollWheelValue;
 
-        public int ScrollWheelValueDelta { get => LastState.ScrollWheelValue - CurrentState.ScrollWheelValue; }
+        public int ScrollWheelValueDelta => LastState.ScrollWheelValue - CurrentState.ScrollWheelValue;
 
-        public Point PositionDelta { get => new Point(LastState.X - CurrentState.X, 
-                                              LastState.Y - CurrentState.Y); }
+        public Point PositionDelta =>
+            new(LastState.X - CurrentState.X,
+                LastState.Y - CurrentState.Y);
 
         public void Update(MouseState state)
         {
             LastState = CurrentState;
             CurrentState = new MouseStateHelper(state);
 
-            if (LastState == null)
-                LastState = CurrentState;
+            LastState ??= CurrentState;
 
             foreach (var idx in Enum.GetValues(typeof(MouseButton)))
             {
@@ -210,7 +195,7 @@ namespace MonogameTestbed
                 bool isPressed = CurrentState[btn].HasFlag(ButtonState.Pressed);
 
                 MouseButtonStatus btnStatus = btn.ReadStatus(CurrentState, LastState);
-                if(btnStatus != ButtonStatus[btn])
+                if (btnStatus != ButtonStatus[btn])
                 {
                     ButtonStateStartTime[btn] = DateTime.UtcNow;
                     ButtonStatus[btn] = btnStatus;
@@ -228,10 +213,7 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="btn">The button we are inquiring about</param>
         /// <returns></returns>
-        public TimeSpan ButtonStateDuration(MouseButton btn)
-        {
-            return DateTime.UtcNow - ButtonStateStartTime[btn];
-        }
+        public TimeSpan ButtonStateDuration(MouseButton btn) => DateTime.UtcNow - ButtonStateStartTime[btn];
 
     }
 }

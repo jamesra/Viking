@@ -55,32 +55,16 @@ namespace Viking.DataModel.Annotation
         }
         */
 
+        // EF Core does not support DataTable/TVP parameters on [DbFunction] mappings —
+        // model validation throws InvalidOperationException on context creation.
+        // Call AnnotationContextProcedures.RecursiveSelectChildStructureIDsAsync instead.
+        /*
         [DbFunction(nameof(RecursiveSelectChildStructureIDs), "dbo")]
         public virtual IQueryable<integer_list> RecursiveSelectChildStructureIDs(DataTable IDs)
         {
-            /*
-            var parameterreturnValue = new SqlParameter
-            {
-                ParameterName = "returnValue",
-                Direction = System.Data.ParameterDirection.Output,
-                SqlDbType = System.Data.SqlDbType.Udt,
-            };
-
-            var sqlParameters = new[]
-            {
-                new SqlParameter
-                {
-                    ParameterName = "IDs",
-                    Value = IDs ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.Udt,
-                    TypeName = nameof(integer_list),
-                },
-                parameterreturnValue,
-            }; 
-            */
-
             return FromExpression(() => RecursiveSelectChildStructureIDs(IDs));
         }
+        */
 
         /*
         [DbFunction("RecursiveSelectChildStructureIDs", "dbo")]
@@ -106,7 +90,7 @@ namespace Viking.DataModel.Annotation
                 ParameterName = "IDs",
                 Value = IDs ?? Convert.DBNull,
                 SqlDbType = System.Data.SqlDbType.Structured,
-                TypeName = "[dbo].[zz_integer_list]",
+                TypeName = "[dbo].[integer_list]",
             },
             parameterreturnValue,
         };

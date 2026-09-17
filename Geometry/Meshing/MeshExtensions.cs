@@ -1,7 +1,10 @@
-﻿//#define TRACEMESH
+//#define TRACEMESH
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace Geometry.Meshing
 {
@@ -10,10 +13,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Creates a copy of the input that ensures the first and last index value are identical
         /// </summary>
-        public static IReadOnlyList<int> EnsureClosedRing(this IEnumerable<int> iVerts)
-        {
-            return iVerts.ToList().EnsureClosedRing();
-        }
+        public static IReadOnlyList<int> EnsureClosedRing(this IEnumerable<int> iVerts) => iVerts.ToList().EnsureClosedRing();
 
         /// <summary>
         /// Creates a copy of the input that ensures the first and last index value are identical
@@ -22,7 +22,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public static IReadOnlyList<int> EnsureClosedRing(this List<int> iVerts)
         {
-            List<int> iClosedRing = iVerts.ToList();
+            List<int> iClosedRing = [.. iVerts];
 
             if (iClosedRing[0] == iClosedRing.Last())
                 return iClosedRing;
@@ -31,40 +31,17 @@ namespace Geometry.Meshing
             return iClosedRing;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="iVerts"></param>
-        /// <returns>True if the first and last index are identical</returns>
-        public static bool IsClosedRing(this IEnumerable<int> iVerts)
-        {
-            return iVerts.First() == iVerts.Last();
-        }
+        /// <summary>True if the first and last index are the same (closed ring).</summary>
+        public static bool IsClosedRing(this IEnumerable<int> iVerts) => iVerts.First() == iVerts.Last();
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="iVerts"></param>
-        /// <returns>True if the first and last index are identical</returns>
-        public static bool IsClosedRing(this IReadOnlyList<int> iVerts)
-        {
-            return iVerts[0] == iVerts[iVerts.Count - 1];
-        }
+        /// <summary>True if the first and last index are the same (closed ring).</summary>
+        public static bool IsClosedRing(this IReadOnlyList<int> iVerts) => iVerts[0] == iVerts[iVerts.Count - 1];
 
-        public static bool IsValidClosedRing(this IEnumerable<int> iVerts)
-        {
-            return iVerts.ToArray().IsValidClosedRing(out string Reason);
-        }
+        public static bool IsValidClosedRing(this IEnumerable<int> iVerts) => iVerts.ToArray().IsValidClosedRing(out string Reason);
 
-        public static bool IsValidClosedRing(this IEnumerable<int> iVerts, out string Reason)
-        {
-            return iVerts.ToArray().IsValidClosedRing(out Reason);
-        }
+        public static bool IsValidClosedRing(this IEnumerable<int> iVerts, out string Reason) => iVerts.ToArray().IsValidClosedRing(out Reason);
 
-        public static bool IsValidClosedRing(this IReadOnlyList<int> iVerts)
-        {
-            return iVerts.IsValidClosedRing(out string Reason);
-        }
+        public static bool IsValidClosedRing(this IReadOnlyList<int> iVerts) => iVerts.IsValidClosedRing(out string Reason);
 
         public static bool IsValidClosedRing(this IReadOnlyList<int> iVerts, out string Reason)
         {
@@ -100,8 +77,8 @@ namespace Geometry.Meshing
 
         public static TriangulationMesh<IVertex2D> Clone(this TriangulationMesh<IVertex2D> mesh)
         {
-            IVertex2D[] vert_clones = mesh.Verticies.Select(v => v.ShallowCopy() as IVertex2D).ToArray();
-            TriangulationMesh<IVertex2D> newMesh = new TriangulationMesh<IVertex2D>();
+            IVertex2D[] vert_clones = [.. mesh.Vertices.Select(v => v.ShallowCopy() as IVertex2D)];
+            TriangulationMesh<IVertex2D> newMesh = new();
             newMesh.AddVerticies(vert_clones);
             foreach (IEdge key in mesh.Edges.Values)
             {
@@ -127,13 +104,13 @@ namespace Geometry.Meshing
 
             foreach (var e in mesh.Edges.Keys)
             {
-                GridLineSegment seg = mesh.ToGridLineSegment(e);
-                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))
+                LineSegment seg = mesh.ToLineSegment(e);
+                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox.ToRTreeRect(0)))
                 {
                     if (intersection.Equals(e)) //Don't test for intersecting with ourselves
                         continue;
 
-                    GridLineSegment testLine = mesh.ToGridLineSegment(intersection);
+                    LineSegment testLine = mesh.ToLineSegment(intersection);
                     if (seg.Intersects(in testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
                     {
                         System.Diagnostics.Trace.WriteLine(string.Format("{0} intersects {1}", e, intersection));
@@ -148,11 +125,11 @@ namespace Geometry.Meshing
 
         public static RTree.RTree<IEdge> GenerateEdgeRTree(this IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            RTree.RTree<IEdge> rTree = new RTree.RTree<IEdge>();
+            RTree.RTree<IEdge> rTree = new();
             foreach (var e in mesh.Edges.Values)
             {
-                GridLineSegment seg = mesh.ToGridLineSegment(e);
-                rTree.Add(seg.BoundingBox, e);
+                LineSegment seg = mesh.ToLineSegment(e);
+                rTree.Add(seg.BoundingBox.ToRTreeRect(0), e);
             }
 
             return rTree;
@@ -163,29 +140,29 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="triangles"></param>
         /// <returns></returns>
-        public static Mesh2D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
+        public static Mesh2D ToDynamicRenderMesh(this ICollection<Triangle> triangles)
         {
-            Mesh2D mesh = new Meshing.Mesh2D();
-            QuadTree<int> PointToVertexIndex = new QuadTree<int>();
+            Mesh2D mesh = new();
+            QuadTreeWithUniqueValues<int> PointToVertexIndex = new();
 
-            foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
+            foreach (Vector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
             {
                 int index = mesh.AddVertex(new Vertex2D(v));
                 PointToVertexIndex.Add(v, index);
             }
 
-            foreach (GridLineSegment segment in triangles.SelectMany(tri => tri.Segments).Distinct())
+            foreach (LineSegment segment in triangles.SelectMany(tri => tri.Segments).Distinct(LineSegmentUndirectedComparer.Default))
             {
                 int vertexA = PointToVertexIndex[segment.A];
                 int vertexB = PointToVertexIndex[segment.B];
                 mesh.AddEdge(vertexA, vertexB);
             }
 
-            foreach (GridTriangle tri in triangles)
+            foreach (Triangle tri in triangles)
             {
-                int vertexA = PointToVertexIndex[tri.p1];
-                int vertexB = PointToVertexIndex[tri.p2];
-                int vertexC = PointToVertexIndex[tri.p3];
+                int vertexA = PointToVertexIndex[tri.P1];
+                int vertexB = PointToVertexIndex[tri.P2];
+                int vertexC = PointToVertexIndex[tri.P3];
 
                 mesh.AddFace(new Face(vertexA, vertexB, vertexC));
             }
@@ -193,24 +170,30 @@ namespace Geometry.Meshing
             return mesh;
         }
 
-        public static bool IsTriangle(this IFace face)
-        {
-            return face.iVerts.Length == 3;
-        }
+        public static bool IsTriangle(this IFace face) => face.iVerts.Length == 3;
 
-        public static bool IsQuad(this IFace face)
-        {
-            return face.iVerts.Length == 4;
-        }
+        public static bool IsQuad(this IFace face) => face.iVerts.Length == 4;
 
-        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this IReadOnlyList<Polygon> polys, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null) => throw new NotImplementedException();
+
+        /// <summary>
+        /// Constrained Delaunay triangulation of a polygon (including holes). Vertices are translated
+        /// to the centroid first to reduce floating-point error, then an unconstrained Delaunay mesh
+        /// is built and each ring edge is inserted as a constrained edge; edges whose midpoint lies
+        /// outside the polygon are removed.
+        /// </summary>
+        /// <remarks>
+        /// Constraint insertion follows the usual delete-and-retriangulate approach of Chew,
+        /// "Constrained Delaunay triangulations," Algorithmica 4:97–108 (1989).
+        /// </remarks>
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this Polygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
-            //var polyCopy = (GridPolygon)poly.Clone();
+            //var polyCopy = (Polygon)poly.Clone();
 
             //Center the polygon on 0,0 to reduce floating point error
             var centeredPoly = poly.Translate(-poly.Centroid);
 
-            PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(centeredPoly, iPoly);
+            PolygonVertexEnum vertEnumerator = new(centeredPoly, iPoly);
 
             var meshVerts = vertEnumerator.Select(v => new Vertex2D<PolygonIndex>(v.Point(centeredPoly), v)).ToArray();
 
@@ -218,12 +201,12 @@ namespace Geometry.Meshing
 
             TriangulationMesh<IVertex2D<PolygonIndex>> mesh = GenericDelaunayMeshGenerator2D<IVertex2D<PolygonIndex>>.TriangulateToMesh(meshVerts, OnProgress);
 
-            SortedSet<IEdgeKey> constrainedEdges = new SortedSet<IEdgeKey>();
+            SortedSet<IEdgeKey> constrainedEdges = [];
 
             //Add constrained edges to the mesh
             PolygonIndex[] pIndicies = vertEnumerator.ToArray();
 
-            Dictionary<PolygonIndex, Edge> edgeFacesToCheck = new Dictionary<PolygonIndex, Edge>();
+            Dictionary<PolygonIndex, Edge> edgeFacesToCheck = [];
 
             //while (vertEnumerator.MoveNext() == true)
             foreach (PolygonIndex currentVert in pIndicies)
@@ -248,9 +231,9 @@ namespace Geometry.Meshing
             var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
             foreach (IEdgeKey key in EdgesToCheck)
             {
-                GridLineSegment line = mesh.ToGridLineSegment(key);
+                LineSegment line = mesh.ToLineSegment(key);
 
-                if (OverlapType.NONE == centeredPoly.ContainsExt(line.Bisect()))
+                if (ShapeRelation.None == centeredPoly.GetRelation(line.Bisect()))
                 {
                     mesh.RemoveEdge(key);
 
@@ -258,18 +241,18 @@ namespace Geometry.Meshing
                 }
             }
 
-            //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
+            //If there are three constrained edges that form an interior polygon that is a triangle the face won't be removed.  This results
             //in a constrained edge with two faces.  For this case remove the interior face
-            foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
+            foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.InnerShapeIndex))
             {
-                GridPolygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
-                GridVector2 Centroid = innerPolygon.Centroid;
+                Polygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
+                Vector2 Centroid = innerPolygon.Centroid;
 
                 //Figure out the inner polygon vertex numbers in the mesh
-                SortedSet<int> innerPolyVerts = new SortedSet<int>(innerPolyGroup.SelectMany(g => new int[] { g.Value.A, g.Value.B }));
-                IFace[] allFaces = innerPolyGroup.SelectMany(g => g.Value.Faces).Distinct().ToArray();
+                SortedSet<int> innerPolyVerts = [.. innerPolyGroup.SelectMany(g => new int[] { g.Value.A, g.Value.B })];
+                IFace[] allFaces = [.. innerPolyGroup.SelectMany(g => g.Value.Faces).Distinct()];
 
-                IFace[] InteriorFaces = allFaces.Where(f => f.iVerts.All(iVert => innerPolyVerts.Contains(iVert))).ToArray();
+                IFace[] InteriorFaces = [.. allFaces.Where(f => f.iVerts.All(iVert => innerPolyVerts.Contains(iVert)))];
 
                 //Should only ever be one interior face for a 3 vert interior polygon, unless someone adds interior polygons to interior polygons later <shudder/>
                 foreach (IFace f in InteriorFaces)
@@ -287,34 +270,93 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
-        /// Triangulate a set of points on a face, that include a set of points inside the faces.
+        /// Removes degenerate input before triangulating a region: perimeter vertices that sit within
+        /// <see cref="Global.Epsilon"/> of the previously kept perimeter vertex (or the ring start), and interior
+        /// points that coincide with a kept perimeter vertex or a previously kept interior point.
+        /// The original vertex <see cref="IVertex.Index"/> values are preserved so callers can map the
+        /// triangulation result back to their source mesh.  Without this the divide-and-conquer Delaunay
+        /// generator throws on coincident points (e.g. "Can't create line with two identical points").
+        ///
+        /// Colinear perimeter vertices are kept.  They used to be dropped as redundant midpoints, but every
+        /// perimeter vertex is a mesh vertex whose contour edges need a face: dropping the middle of a straight run
+        /// tiled the region with one triangle spanning the run and left the contour edges along it with no face
+        /// (RPC1 82605/82606, a five-vertex region with four colinear contour vertices).  The constrained
+        /// triangulation honours a straight run of ring edges without help.
         /// </summary>
-        /// <param name="verts">Exterior ring of a polygon</param>
-        /// <param name="InteriorPoints">These points must be contained by the polygon defined by face</param>
-        /// <param name="OnProgress"></param>
-        /// <returns></returns>
+        /// <param name="perimeter">Ordered perimeter ring of the region.</param>
+        /// <param name="interior">Interior (e.g. medial-axis) points that must lie inside the region.</param>
+        public static (IVertex2D[] Perimeter, IVertex2D[] Interior) CleanRegionTriangulationInput(IReadOnlyList<IVertex2D> perimeter, IReadOnlyList<IVertex2D> interior)
+        {
+            List<IVertex2D> cleanedPerimeter = new(perimeter.Count);
+            foreach (IVertex2D v in perimeter)
+            {
+                if (cleanedPerimeter.Count > 0 && Vector2.Equals(cleanedPerimeter[cleanedPerimeter.Count - 1].Position, v.Position))
+                    continue; //Skip a point that duplicates the previous perimeter point
+
+                cleanedPerimeter.Add(v);
+            }
+
+            //Drop a trailing point that closes the ring back onto the first point
+            while (cleanedPerimeter.Count > 1 && Vector2.Equals(cleanedPerimeter[0].Position, cleanedPerimeter[cleanedPerimeter.Count - 1].Position))
+                cleanedPerimeter.RemoveAt(cleanedPerimeter.Count - 1);
+
+            List<IVertex2D> cleanedInterior = new(interior?.Count ?? 0);
+            if (interior != null)
+            {
+                foreach (IVertex2D v in interior)
+                {
+                    bool duplicate = cleanedPerimeter.Any(p => Vector2.Equals(p.Position, v.Position))
+                                  || cleanedInterior.Any(p => Vector2.Equals(p.Position, v.Position));
+                    if (duplicate)
+                        continue;
+
+                    cleanedInterior.Add(v);
+                }
+            }
+
+            return ([.. cleanedPerimeter], [.. cleanedInterior]);
+        }
+
+        /// <summary>
+        /// Constrained Delaunay triangulation of a face ring plus optional interior Steiner points.
+        /// Vertices far from the origin are translated to reduce floating-point error; ring edges
+        /// are then inserted as constrained edges (Chew 1989, same approach as the polygon overload).
+        /// </summary>
+        /// <param name="InteriorPoints">Must lie inside the polygon defined by <paramref name="verts"/>.</param>
         public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[] InteriorPoints = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
             if (verts.Last() == verts.First())
             {
                 var faceList = verts.ToList();
                 faceList.RemoveAt(faceList.Count - 1);
-                verts = faceList.ToArray();
+                verts = [.. faceList];
             }
 
-            GridVector2 faceCenter = verts.Select(v => v.Position).ToArray().Average();
+            Vector2 shapeCenter = verts.Select(v => v.Position).ToArray().Average();
 
-            if (faceCenter.Magnitude < 100)
+            if (shapeCenter.Magnitude < 100)
             {
-                faceCenter = GridVector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
+                shapeCenter = Vector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
             }
 
             //Center the verts on 0,0 to reduce floating point error
-            var faceVerts = verts.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
-            var interiorVerts = InteriorPoints == null ? System.Array.Empty<Vertex2D<int>>() : InteriorPoints.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
+            //Assign the index to the new vertex to match the index into the faceVerts and interiorVerts arrays
+            var faceVerts = verts.Select((v, i) => new Vertex2D<int>(i, v.Position - shapeCenter, v.Index)).ToArray();
+            var interiorVerts = InteriorPoints is null ? System.Array.Empty<Vertex2D<int>>() : [.. InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index))];
 
-            GridPolygon centeredPoly = new GridPolygon(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
-            System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Contains(v.Position)), "Interior points must be inside Face");
+            Polygon centeredPoly = new(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
+
+            //Interior points are Steiner points: they refine the triangulation but the ring alone still tiles.
+            //One that falls outside the ring (a medial-axis estimate on a nearly self-touching polygon) would
+            //pull faces outside the polygon, so drop it and continue rather than reject the whole region.
+            if (interiorVerts.Length > 0 && !interiorVerts.All(v => centeredPoly.Covers(v.Position)))
+            {
+                Vertex2D<int>[] insideVerts = [.. interiorVerts.Where(v => centeredPoly.Covers(v.Position))];
+                Trace.WriteLine($"Triangulate: dropping {interiorVerts.Length - insideVerts.Length} of {interiorVerts.Length} interior points that lie outside the face ring.");
+
+                //Re-number so the mesh indicies stay contiguous after the ring verticies.
+                interiorVerts = [.. insideVerts.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position, v.Data))];
+            }
 
             var tri_mesh_verts = faceVerts.Union(interiorVerts).ToArray();
 
@@ -322,12 +364,12 @@ namespace Geometry.Meshing
 
             OnProgress?.Invoke(tri_mesh);
 
-            SortedSet<IEdgeKey> expectedConstrainedEdges = new SortedSet<IEdgeKey>();
+            SortedSet<IEdgeKey> expectedConstrainedEdges = [];
 
             //Add constrained edges to the mesh
-            SortedSet<int> FaceIndicies = new SortedSet<int>(faceVerts.Select(f => f.Index));
+            SortedSet<int> faceIndicies = [.. faceVerts.Select(f => f.Index)];
 
-            InfiniteSequentialIndexSet FaceIndexer = new InfiniteSequentialIndexSet(0, faceVerts.Length, 0);
+            InfiniteSequentialIndexSet FaceIndexer = new(0, faceVerts.Length, 0);
             for (int i = 0; i < faceVerts.Length; i++)
             {
                 int A = faceVerts[FaceIndexer[i]].Index;
@@ -336,7 +378,8 @@ namespace Geometry.Meshing
                 Edge e = new ConstrainedEdge(A, B);
                 if (tri_mesh.Contains(e))
                 {
-                    if (tri_mesh[e] as ConstrainedEdge == null)
+                    //Replace the standard edge with a constrained edge
+                    if (tri_mesh[e] as ConstrainedEdge is null)
                     {
                         var existing_faces = tri_mesh[e].Faces;
                         tri_mesh.RemoveEdge(e.Key);
@@ -351,13 +394,14 @@ namespace Geometry.Meshing
                 expectedConstrainedEdges.UnionWith(added_constrained_edges.Select(ce => ce.Key));
             }
 
-            //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
-            var EdgesToCheck = tri_mesh.Edges.Keys.Where(k => FaceIndicies.Contains(k.A) && FaceIndicies.Contains(k.B) && expectedConstrainedEdges.Contains(k) == false).ToArray();
+            //Remove edges that are not contained inside the polygon, that means any edges that connect points on the same ring which are not constrained edges. 
+            //This removes edges from concave regions and interior holes
+            var EdgesToCheck = tri_mesh.Edges.Keys.Where(k => faceIndicies.Contains(k.A) && faceIndicies.Contains(k.B) && expectedConstrainedEdges.Contains(k) == false).ToArray();
             foreach (IEdgeKey key in EdgesToCheck)
             {
-                GridLineSegment line = new GridLineSegment(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToGridLineSegment(key);
+                LineSegment line = new(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToLineSegment(key);
 
-                if (false == centeredPoly.Contains(line.Bisect()))
+                if (false == centeredPoly.Covers(line.Bisect()))
                 {
 #if TRACEMESH
                     Trace.WriteLine(string.Format("{0} exterior to poly", key));
@@ -368,15 +412,46 @@ namespace Geometry.Meshing
                 }
             }
 
-#if DEBUG
-            bool[] constrainedEdgeInMesh = expectedConstrainedEdges.Select(e => tri_mesh.Contains(e)).ToArray();
-            int[] constrainedEdgeFaces = expectedConstrainedEdges.Where(e => tri_mesh.Contains(e)).Select(e => tri_mesh[e].Faces.Count).ToArray();
+            ThrowIfRingNotHonoured(tri_mesh, expectedConstrainedEdges);
 
-            System.Diagnostics.Debug.Assert(constrainedEdgeInMesh.All(hasEdge => hasEdge), "Triangulation of polygon should create at least one face");
-            System.Diagnostics.Debug.Assert(tri_mesh.Faces.Count > 0, "Triangulation of polygon should create at least one face");
-            System.Diagnostics.Debug.Assert(constrainedEdgeFaces.All(facecount => facecount == 1), "All constrained edges should have one face");
-#endif
             return tri_mesh;
+        }
+
+        /// <summary>
+        /// A single ring with optional interior points must end up with every ring edge in the mesh, bordered by
+        /// exactly one face, and at least one face overall.  Anything else means the mesh has a hole or a face
+        /// outside the ring, and a caller that stitched it in would produce a non-manifold surface.  This used to
+        /// be a Debug.Assert, which terminates the process in a debug build; the caller already knows how to skip
+        /// a region it cannot close, so report it as the typed exception those handlers catch.
+        /// </summary>
+        private static void ThrowIfRingNotHonoured(TriangulationMesh<IVertex2D<int>> tri_mesh, SortedSet<IEdgeKey> expectedConstrainedEdges)
+        {
+            List<IEdgeKey> missing = [];
+            List<KeyValuePair<IEdgeKey, int>> misbounded = [];
+            foreach (IEdgeKey key in expectedConstrainedEdges)
+            {
+                if (!tri_mesh.Contains(key))
+                {
+                    missing.Add(key);
+                    continue;
+                }
+
+                int faceCount = tri_mesh[key].Faces.Count;
+                if (faceCount != 1)
+                    misbounded.Add(new KeyValuePair<IEdgeKey, int>(key, faceCount));
+            }
+
+            if (missing.Count == 0 && misbounded.Count == 0 && tri_mesh.Faces.Count > 0)
+                return;
+
+            StringBuilder sb = new("Constrained triangulation did not honour its ring: ");
+            sb.Append(tri_mesh.Faces.Count).Append(" faces");
+            if (missing.Count > 0)
+                sb.Append("; missing ring edges ").Append(string.Join(", ", missing));
+            if (misbounded.Count > 0)
+                sb.Append("; ring edges with face count != 1 ").Append(string.Join(", ", misbounded.Select(m => $"{m.Key}x{m.Value}")));
+
+            throw new ConstrainedTriangulationException(missing, misbounded, tri_mesh.Faces.Count, sb.ToString());
         }
     }
 }

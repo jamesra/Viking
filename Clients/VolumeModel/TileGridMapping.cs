@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,8 +8,7 @@ using Utils;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Tile grid mappings refer to a pre-assembled set of tiles, where the tile size is fixed
-    /// to the same value at every level of the pyramid, so the area must change
+    /// Tileset: warp is already in the tile images. Initialized is always true; Try* is identity until wrapped by TileGridToVolumeMapping.
     /// </summary>
     public class TileGridMapping : TileGridMappingBase
     {
@@ -67,12 +66,10 @@ namespace Viking.VolumeModel
         {
         }
 
+        /// <summary>Tilesets need no mosaic load. DrawTiles can run immediately.</summary>
         public override bool Initialized => true;
 
-        public override Task Initialize(CancellationToken token)
-        {
-            return Task.CompletedTask;
-        }
+        public override Task Initialize(CancellationToken token) => Task.CompletedTask;
 
         public static TileGridMapping CreateFromTilesetElement(XElement TilesetNode, Section section)
         {
@@ -85,7 +82,7 @@ namespace Viking.VolumeModel
             string TileGridPath = TilesetNode.GetAttributeCaseInsensitive("path").Value;
             string GridTileFormat = null;
 
-            XElement scale_elem = TilesetNode.Elements().FirstOrDefault(elem => elem.Name.LocalName == "Scale");
+            XElement scale_elem = TilesetNode.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
             UnitsAndScale.IAxisUnits XYScale = null;
             if (scale_elem != null)
                 XYScale = scale_elem.ParseScale();
@@ -105,13 +102,13 @@ namespace Viking.VolumeModel
             if (TilesetNode.Nodes().Any() == false)
                 return null;
 
-            TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,
+            TileGridMapping mapping = new(section, Name, TilePrefix, TilePostfix,
                                                           TileSizeX, TileSizeY, TileGridPath, GridTileFormat, XYScale);
 
 
             foreach (XNode node in TilesetNode.Nodes())
             {
-                if (!(node is XElement elem))
+                if (node is not XElement elem)
                     continue;
 
                 //Fetch the name if we know it
@@ -129,20 +126,21 @@ namespace Viking.VolumeModel
             return mapping;
         }
 
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        /// <summary>Identity: tileset pixels are already in this mapping's output space.</summary>
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
 
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
-        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        public override Vector2[] VolumeToSection(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -153,11 +151,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return [.. P.Select(p => true)];
         }
 
         /// <summary>
@@ -165,16 +163,16 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return [.. P.Select(p => true)];
         }
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        public override Vector2[] SectionToVolume(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }

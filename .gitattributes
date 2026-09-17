@@ -3,6 +3,13 @@
 ###############################################################################
 * text=auto
 
+# Env files: force LF for Docker/Unix (avoids $'\r': command not found in containers)
+.env* text eol=lf
+
+# Shell scripts and Dockerfiles: force LF so containers produce Unix line endings (avoids exec ... no such file or directory)
+Servers/SegmentationServer/Dockerfile text eol=lf
+Servers/SegmentationServer/start.sh text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

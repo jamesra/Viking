@@ -22,13 +22,13 @@ namespace TriangleNet.Meshing.Data
     {
         const double SQRT2 = 1.4142135623730950488016887242096980785696718753769480732;
 
-        public int Count { get { return this.count; } }
+        public int Count => this.count;
 
         // Variables that maintain the bad triangle queues.  The queues are
         // ordered from 4095 (highest priority) to 0 (lowest priority).
-        BadTriangle[] queuefront;
-        BadTriangle[] queuetail;
-        int[] nextnonemptyq;
+        readonly BadTriangle[] queuefront;
+        readonly BadTriangle[] queuetail;
+        readonly int[] nextnonemptyq;
         int firstnonemptyq;
 
         int count;
@@ -94,17 +94,10 @@ namespace TriangleNet.Meshing.Data
             // 'exponent' is now in the range 0...2047 for IEEE double precision.
             // Choose a queue in the range 0...4095.  The shortest edges have the
             // highest priority (queue 4095).
-            if (posexponent > 0)
-            {
-                queuenumber = 2047 - exponent;
-            }
-            else
-            {
-                queuenumber = 2048 + exponent;
-            }
+            queuenumber = posexponent > 0 ? 2047 - exponent : 2048 + exponent;
 
             // Are we inserting into an empty queue?
-            if (queuefront[queuenumber] == null)
+            if (queuefront[queuenumber] is null)
             {
                 // Yes, we are inserting into an empty queue.
                 // Will this become the highest-priority queue?
@@ -119,7 +112,7 @@ namespace TriangleNet.Meshing.Data
                     // No, this is not the highest-priority queue.
                     // Find the queue with next higher priority.
                     i = queuenumber + 1;
-                    while (queuefront[i] == null)
+                    while (queuefront[i] is null)
                     {
                         i++;
                     }
@@ -152,13 +145,14 @@ namespace TriangleNet.Meshing.Data
         public void Enqueue(ref Otri enqtri, double minedge, Vertex apex, Vertex org, Vertex dest)
         {
             // Allocate space for the bad triangle.
-            BadTriangle newbad = new BadTriangle();
-
-            newbad.poortri = enqtri;
-            newbad.key = minedge;
-            newbad.apex = apex;
-            newbad.org = org;
-            newbad.dest = dest;
+            BadTriangle newbad = new()
+            {
+                poortri = enqtri,
+                key = minedge,
+                apex = apex,
+                org = org,
+                dest = dest
+            };
 
             Enqueue(newbad);
         }

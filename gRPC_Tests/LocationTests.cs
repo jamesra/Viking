@@ -12,7 +12,7 @@ namespace gRPC_Tests
         [TestMethod]
         public void Test_GetLocationByID()
         {
-            using var channel = GrpcChannel.ForAddress("https://localhost:5001");
+            using var channel = GrpcChannel.ForAddress("https://localhost:5011");
             long Id = 4;           
             AnnotateLocations.AnnotateLocationsClient client = new AnnotateLocations.AnnotateLocationsClient(channel);
 

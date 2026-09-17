@@ -5,52 +5,42 @@ using System.Windows.Forms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class AddLineControlPointCommand : AnnotationCommandBase
+    internal class AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                    Vector2[] OriginalMosaicControlPoints,
+AddLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCommandBase(parent)
     {
-        GridVector2[] OriginalControlPoints;
-        GridVector2[] NewControlPoints;
+        private readonly Vector2[] OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+        private Vector2[] NewControlPoints;
         private int iNewControlPoint = -1;
 
-        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
-        OnCommandSuccess success_callback;
+        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints);
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly OnCommandSuccess success_callback = success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping = parent.Section.ActiveSectionToVolumeTransform;
 
-        public AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalMosaicControlPoints,
-                                        OnCommandSuccess success_callback) : base(parent)
-        {
-            this.OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
-
-            this.success_callback = success_callback;
-
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
-        }
-
-        public static GridVector2[] AddControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition, out int iNewControlPoint)
+        public static Vector2[] AddControlPoint(Vector2[] OriginalControlPoints, Vector2 NewControlPointPosition, out int iNewControlPoint)
         {
             iNewControlPoint = -1;
-            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(OriginalControlPoints);
+            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(OriginalControlPoints);
 
             //Find the line segment the NewControlPoint intersects
-            double MinDistance;
-            int iNearestSegment = lineSegs.NearestSegment(NewControlPointPosition, out MinDistance);
-            GridLineSegment[] updatedSegments = lineSegs.Insert(NewControlPointPosition, iNearestSegment);
+            int iNearestSegment = lineSegs.NearestSegment(NewControlPointPosition, out double MinDistance);
+            LineSegment[] updatedSegments = lineSegs.Insert(NewControlPointPosition, iNearestSegment);
 
-            return updatedSegments.Verticies();
+            return updatedSegments.Vertices();
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 NewControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
-            this.NewControlPoints = AddLineControlPointCommand.AddControlPoint(OriginalControlPoints, NewControlPointPosition, out iNewControlPoint);
+            Vector2 NewControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
+            NewControlPoints = AddLineControlPointCommand.AddControlPoint(OriginalControlPoints, NewControlPointPosition, out iNewControlPoint);
             base.OnMouseMove(sender, e);
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
         protected override void Execute()
         {
-            GridVector2[] MosaicControlPoints;
+            Vector2[] MosaicControlPoints;
             try
             {
                 MosaicControlPoints = mapping.VolumeToSection(NewControlPoints);
@@ -61,42 +51,31 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(NewControlPoints, MosaicControlPoints);
+            success_callback(NewControlPoints, MosaicControlPoints);
 
             base.Execute();
         }
     }
 
-    class RemoveLineControlPointCommand : AnnotationCommandBase
+    internal class RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                    Vector2[] OriginalMosaicControlPoints,
+                                    bool IsClosed,
+RemoveLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCommandBase(parent)
     {
-        GridVector2[] OriginalControlPoints;
-        GridVector2[] NewControlPoints;
-        bool IsClosedShape;
+        private readonly Vector2[] OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+        private Vector2[] NewControlPoints;
+        private readonly bool IsClosedShape = IsClosed;
 
-        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
-        OnCommandSuccess success_callback;
+        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints);
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly OnCommandSuccess success_callback = success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping = parent.Section.ActiveSectionToVolumeTransform;
 
-        public RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalMosaicControlPoints,
-                                        bool IsClosed,
-                                        OnCommandSuccess success_callback) : base(parent)
+        public static Vector2[] RemoveControlPoint(Vector2[] OriginalControlPoints, Vector2 RemovedControlPointPosition, bool IsClosedShape)
         {
-            IsClosedShape = IsClosed;
-            this.OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+            int iNearestPoint = OriginalControlPoints.NearestPoint(RemovedControlPointPosition, out double MinDistance);
 
-            this.success_callback = success_callback;
-
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
-        }
-
-        public static GridVector2[] RemoveControlPoint(GridVector2[] OriginalControlPoints, GridVector2 RemovedControlPointPosition, bool IsClosedShape)
-        {
-            double MinDistance;
-            int iNearestPoint = OriginalControlPoints.NearestPoint(RemovedControlPointPosition, out MinDistance);
-
-            GridVector2[] newControlPoints = new GridVector2[OriginalControlPoints.Length - 1];
+            Vector2[] newControlPoints = new Vector2[OriginalControlPoints.Length - 1];
 
             Array.Copy(OriginalControlPoints, newControlPoints, iNearestPoint);
             Array.Copy(OriginalControlPoints, iNearestPoint + 1, newControlPoints, iNearestPoint, OriginalControlPoints.Length - (iNearestPoint + 1));
@@ -122,15 +101,15 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 NewControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
-            this.NewControlPoints = RemoveLineControlPointCommand.RemoveControlPoint(OriginalControlPoints, NewControlPointPosition, this.IsClosedShape);
+            Vector2 NewControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
+            NewControlPoints = RemoveLineControlPointCommand.RemoveControlPoint(OriginalControlPoints, NewControlPointPosition, IsClosedShape);
             base.OnMouseMove(sender, e);
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
         protected override void Execute()
         {
-            GridVector2[] MosaicControlPoints;
+            Vector2[] MosaicControlPoints;
             try
             {
                 MosaicControlPoints = mapping.VolumeToSection(NewControlPoints);
@@ -141,7 +120,7 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(NewControlPoints, MosaicControlPoints);
+            success_callback(NewControlPoints, MosaicControlPoints);
 
             base.Execute();
         }

@@ -1,4 +1,4 @@
-﻿
+
 namespace TriangleNet.Smoothing
 {
     using System;
@@ -13,9 +13,9 @@ namespace TriangleNet.Smoothing
     /// </remarks>
     class VoronoiFactory : IVoronoiFactory
     {
-        ObjectPool<Vertex> vertices;
-        ObjectPool<HalfEdge> edges;
-        ObjectPool<Face> faces;
+        readonly ObjectPool<Vertex> vertices;
+        readonly ObjectPool<HalfEdge> edges;
+        readonly ObjectPool<Face> faces;
 
         public VoronoiFactory()
         {
@@ -58,9 +58,7 @@ namespace TriangleNet.Smoothing
 
         public Vertex CreateVertex(double x, double y)
         {
-            Vertex vertex;
-
-            if (vertices.TryGet(out vertex))
+            if (vertices.TryGet(out var vertex))
             {
                 vertex.x = x;
                 vertex.y = y;
@@ -78,16 +76,14 @@ namespace TriangleNet.Smoothing
 
         public HalfEdge CreateHalfEdge(Vertex origin, Face face)
         {
-            HalfEdge edge;
-
-            if (edges.TryGet(out edge))
+            if (edges.TryGet(out var edge))
             {
                 edge.origin = origin;
                 edge.face = face;
                 edge.next = null;
                 edge.twin = null;
 
-                if (face != null && face.edge == null)
+                if (face != null && face.edge is null)
                 {
                     face.edge = edge;
                 }
@@ -104,9 +100,7 @@ namespace TriangleNet.Smoothing
 
         public Face CreateFace(Geometry.Vertex vertex)
         {
-            Face face;
-
-            if (faces.TryGet(out face))
+            if (faces.TryGet(out var face))
             {
                 face.id = vertex.id;
                 face.generator = vertex;
@@ -128,16 +122,13 @@ namespace TriangleNet.Smoothing
 
             T[] pool;
 
-            public int Count
-            {
-                get { return count; }
-            }
+            public int Count => count;
 
 
             public int Capacity
             {
-                get { return this.pool.Length; }
-                set { Resize(value); }
+                get => this.pool.Length;
+                set => Resize(value);
             }
 
             public ObjectPool(int capacity = 3)
@@ -184,10 +175,7 @@ namespace TriangleNet.Smoothing
                 this.index++;
             }
 
-            public void Release()
-            {
-                this.index = 0;
-            }
+            public void Release() => this.index = 0;
 
             private void Resize(int size)
             {

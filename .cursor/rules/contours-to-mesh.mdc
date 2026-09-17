@@ -1,0 +1,28 @@
+---
+description: Bajaj contour-to-3D-mesh pipeline (MorphologyMesh, MonogameTestbed mesh tests)
+globs: ["MorphologyMesh/**", "Clients/MonogameTestbed/**/Bajaj*.cs", "Clients/MonogameTestbed/**/Mesh*.cs", "Clients/MonogameTestbed/**/Boundary*.cs", "Clients/MonogameTestbed/**/SliceGraph*.cs", "Clients/MonogameTestbed/**/MeshAssembly*.cs", "Geometry/**/MedialAxis*.cs", "Geometry/**/Meshing/**", "Documentation/source/developerdocs/mesh/**"]
+alwaysApply: false
+---
+
+# Contours to 3D mesh
+
+Viking builds 3D surface meshes from 2D annotation contours using the **Bajaj 1996** algorithm (see `MorphologyMesh/Papers/Bajaj96.pdf`). Untiled-region and robustness details follow **Edwards & Bajaj 2011** (`MorphologyMesh/Papers/edwards2011topologically.pdf`).
+
+For full domain context, read the project skill: `.cursor/skills/contours-to-mesh/SKILL.md` (papers summary, code map, debugging workflow).
+
+## Pipeline (do not reorder casually)
+
+`MorphologyGraph` → `SliceGraph` (corresponding vertices) → per-slice `BajajMeshGenerator.GenerateFaces` → `MeshAssemblyPlanner` composite.
+
+Per slice: Delaunay + edge classify → remove invalid → corresponding faces → **close UNTILED** (medial axis) → slice chords (OTV, `Theorem2`/`Theorem4`) → second-pass region cap → end caps + outward normals.
+
+## Edit carefully
+
+- Correspondence at shape intersections is prerequisite for valid tiling; fix `AddPointsAtIntersections` failures before triangulation hacks.
+- `TryClosingUntiledRegion` needs cleaned perimeter/interior points before Delaunay.
+- Slice-chord tests use progressively loosened `SliceChordTestType` passes — do not delete tests to “fix” one case.
+- Preserve volume-coordinate placement; mesh vertices are not mosaic-space.
+
+## Test in MonogameTestbed
+
+`BajajMultiTest` (whole cell), `MeshTest` (repro cases). Log lines `Exception building mesh U: …` come from pass-2 catch in `GenerateFaces`.

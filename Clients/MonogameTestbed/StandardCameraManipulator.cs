@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using VikingXNA;
@@ -8,7 +8,7 @@ namespace MonogameTestbed
 {
     static class StandardCameraManipulator
     {
-        static DateTime? TriggerDownStartTime = new DateTime?(); 
+        static DateTime? TriggerDownStartTime = new DateTime?();
 
         /// <summary>
         /// Basic camera manipulation for only gamepad
@@ -16,12 +16,9 @@ namespace MonogameTestbed
         /// 
         /// <param name="Camera"></param>
         /// <param name="unitStepSize">How far to move the camera for a single d-pad click or input event</param>
-        public static void Update(Camera3D Camera, float unitStepSize=10.0f)
-        { 
-            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController();
-            if (InputSource == null)
-                InputSource = PlayerIndex.One;
-
+        public static void Update(Camera3D Camera, float unitStepSize = 10.0f)
+        {
+            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
             GamePadState state = GamePad.GetState(InputSource.Value);
 
 
@@ -94,45 +91,67 @@ namespace MonogameTestbed
         }
     }
 
+    /// <summary>
+    /// Gamepad, mouse, and keyboard orbit/dolly for a <see cref="Camera3D"/>. BajajTest and BajajMultiTest
+    /// call this when drawing 3D; other mesh tests still use gamepad-only <see cref="StandardCameraManipulator"/>.
+    /// </summary>
     internal class Camera3DManipulator
     {
-        readonly KeyboardStateTracker keyboard = new KeyboardStateTracker();
-        readonly GamePadStateTracker gamepad = new GamePadStateTracker();
-        readonly MouseStateTracker mouse = new MouseStateTracker();
+        readonly KeyboardStateTracker keyboard = new();
+        readonly GamePadStateTracker gamepad = new();
+        readonly MouseStateTracker mouse = new();
 
         public float UnitStepSize = 10.0f;
         const double OneDegree = (Math.PI * 2.0 / 360);
         public double PitchRawStepSize = OneDegree;
 
-        public void Update(Camera3D Camera)
+        /// <summary>
+        /// Polls all three input devices and applies gamepad, WASD/E/C/PageUp keyboard, and mouse mappings.
+        /// Viewport size scales right-drag so a full-width drag is about one turn (same as Jotunn Camera3DBehavior).
+        /// </summary>
+        public void Update(Camera3D Camera, int viewportWidth, int viewportHeight)
         {
-            keyboard.Update(Keyboard.GetState());
-            mouse.Update(Mouse.GetState());
-            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController();
-            if (InputSource == null)
-                InputSource = PlayerIndex.One;
+            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
+            Update(
+                Camera,
+                viewportWidth,
+                viewportHeight,
+                Keyboard.GetState(),
+                Microsoft.Xna.Framework.Input.Mouse.GetState(),
+                GamePad.GetState(InputSource.Value));
+        }
 
-            GamePadState state = GamePad.GetState(InputSource.Value);
-            gamepad.Update(state);
+        /// <summary>
+        /// Same as <see cref="Update(Camera3D, int, int)"/> but uses already-polled device states so callers
+        /// that share one input snapshot per frame avoid redundant GetState calls.
+        /// </summary>
+        public void Update(
+            Camera3D Camera,
+            int viewportWidth,
+            int viewportHeight,
+            KeyboardState keyboardState,
+            MouseState mouseState,
+            GamePadState gamePadState)
+        {
+            keyboard.Update(keyboardState);
+            mouse.Update(mouseState);
+            gamepad.Update(gamePadState);
 
             UpdateCameraFromGamepad(Camera);
             UpdateCameraFromKeyboard(Camera);
-            UpdateCameraFromMouse(Camera);
+            UpdateCameraFromMouse(Camera, viewportWidth, viewportHeight);
         }
 
-        public void UpdateCameraFromGamepad(Camera3D camera)
-        {
-            StandardCameraManipulator.Update(camera, UnitStepSize);
-        }
+        /// <summary>Last mouse sample from <see cref="Update"/>; used by click-pick without a second GetState.</summary>
+        public MouseStateTracker MouseTracker => mouse;
 
-        private bool PressedOrDown(Keys key)
-        {
-            return keyboard.Pressed(key) || keyboard.Down(key);
-        }
+        public void UpdateCameraFromGamepad(Camera3D camera) => StandardCameraManipulator.Update(camera, UnitStepSize);
+
+        private bool PressedOrDown(Keys key) => keyboard.Pressed(key) || keyboard.Down(key);
 
         public void UpdateCameraFromKeyboard(Camera3D Camera)
         {
-            Vector3 translation = new Vector3();
+            Vector3 translation = new();
             bool CapsLockDown = PressedOrDown(Keys.CapsLock);
             bool ShiftDown = PressedOrDown(Keys.LeftShift) || PressedOrDown(Keys.RightShift);
             bool CtrlDown = PressedOrDown(Keys.LeftControl) || PressedOrDown(Keys.RightControl);
@@ -142,11 +161,11 @@ namespace MonogameTestbed
 
             if (PressedOrDown(Keys.W))
             {
-                if(CtrlDown)
+                if (CtrlDown)
                 {
                     Camera.Pitch -= OneDegree * rotateScalar;
                 }
-                else 
+                else
                     translation += new Vector3(0, 0, -UnitStepSize * stepScalar) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.W) : 1);
             }
             if (PressedOrDown(Keys.S))
@@ -177,21 +196,63 @@ namespace MonogameTestbed
                     translation += new Vector3(UnitStepSize * stepScalar, 0, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.D) : 1);
             }
             if (PressedOrDown(Keys.E))
-            { 
+            {
                 translation += new Vector3(0, UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.E) : 1);
             }
             if (PressedOrDown(Keys.C))
             {
                 translation += new Vector3(0, -UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.C) : 1);
             }
-             
+
+            if (PressedOrDown(Keys.PageUp))
+                Camera.Position += new Vector3(0, 0, UnitStepSize * stepScalar * (CapsLockDown ? ScalarForElapsedDownTime(Keys.PageUp) : 1));
+            if (PressedOrDown(Keys.PageDown))
+                Camera.Position += new Vector3(0, 0, -UnitStepSize * stepScalar * (CapsLockDown ? ScalarForElapsedDownTime(Keys.PageDown) : 1));
 
             Vector3 translated = Camera.View.TranslateRelativeToViewMatrix(translation.X, translation.Y, translation.Z);
             Camera.Position += translated;
         }
 
-        public void UpdateCameraFromMouse(Camera3D camera)
-        { 
+        /// <summary>
+        /// Maps mouse onto the same 3D camera roles as the gamepad: left-drag translates in view XY
+        /// (left stick), right-drag yaws/pitches (right stick), wheel dollies (triggers), middle-click
+        /// resets (right-stick click). Right-drag uses viewport size so a full-width drag is about one turn.
+        /// Called from <see cref="Update"/>.
+        /// </summary>
+        public void UpdateCameraFromMouse(Camera3D camera, int viewportWidth, int viewportHeight)
+        {
+            const float dragPixelsToStick = 200f;
+            const float wheelTicks = 120f;
+            float width = Math.Max(viewportWidth, 1);
+            float height = Math.Max(viewportHeight, 1);
+
+            if (mouse.Down[MouseButton.Left] || mouse.Clicked[MouseButton.Left])
+            {
+                Vector3 translated = camera.View.TranslateRelativeToViewMatrix(
+                    mouse.PositionDelta.X / dragPixelsToStick * UnitStepSize,
+                    -mouse.PositionDelta.Y / dragPixelsToStick * UnitStepSize,
+                    0);
+                camera.Position += translated;
+            }
+
+            if (mouse.Down[MouseButton.Right] || mouse.Clicked[MouseButton.Right])
+            {
+                camera.Yaw += mouse.PositionDelta.X / width * (Math.PI * 2);
+                camera.Pitch += mouse.PositionDelta.Y / height * (Math.PI * 2);
+            }
+
+            int wheel = mouse.ScrollWheelValueDelta;
+            if (wheel != 0)
+            {
+                Vector3 dolly = camera.View.TranslateRelativeToViewMatrix(0, 0, UnitStepSize * (wheel / wheelTicks));
+                camera.Position += dolly;
+            }
+
+            if (mouse.Clicked[MouseButton.Middle])
+            {
+                camera.Rotation = Vector3.Zero;
+                camera.Position = new Vector3(0, -UnitStepSize, 0);
+            }
         }
 
         public float ScalarForElapsedDownTime(Keys key)
@@ -200,16 +261,13 @@ namespace MonogameTestbed
             return ScalarForElapsedTime(elapsed.TotalSeconds);
         }
 
-        public float ScalarForElapsedTime(TimeSpan elapsed)
-        {
-            return ScalarForElapsedTime(elapsed.TotalSeconds);
-        }
+        public float ScalarForElapsedTime(TimeSpan elapsed) => ScalarForElapsedTime(elapsed.TotalSeconds);
 
-        public float ScalarForElapsedTime(double elapsed)
+        public static float ScalarForElapsedTime(double elapsed)
         {
             if (elapsed < 1)
             {
-                return 1; 
+                return 1;
             }
 
             float scalar = (float)Math.Pow(2, elapsed);

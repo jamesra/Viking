@@ -45,8 +45,8 @@ namespace Viking.VolumeViewModel
             if (this.TileMapping == null)
                 return false;
 
-            Geometry.GridVector2 outputGV;
-            bool success = this.TileMapping.TryVolumeToSection(new Geometry.GridVector2(input.X, input.Y), out outputGV);
+            Geometry.Vector2 outputGV;
+            bool success = this.TileMapping.TryVolumeToSection(new Geometry.Vector2(input.X, input.Y), out outputGV);
 
             if (success)
             {
@@ -62,8 +62,8 @@ namespace Viking.VolumeViewModel
             if (this.TileMapping == null)
                 return false; 
 
-            Geometry.GridVector2 outputGV;
-            bool success = this.TileMapping.TrySectionToVolume(new Geometry.GridVector2(input.X, input.Y), out outputGV);
+            Geometry.Vector2 outputGV;
+            bool success = this.TileMapping.TrySectionToVolume(new Geometry.Vector2(input.X, input.Y), out outputGV);
 
             if(success)
             {
@@ -99,7 +99,7 @@ namespace Viking.VolumeViewModel
         {
             get
             {
-                Geometry.GridRectangle grect = this.TileMapping.ControlBounds;
+                Geometry.Rectangle grect = this.TileMapping.ControlBounds;
                 Rect bounds = new Rect(grect.Left, grect.Bottom, grect.Width, grect.Height);
                 return bounds; 
             }
@@ -181,7 +181,7 @@ namespace Viking.VolumeViewModel
 
             //Find which tiles changed
             //Rect visRect = this.VisibleRect;
-            Geometry.GridRectangle visibleGridRect = new Geometry.GridRectangle(visRect.Left, visRect.Right, visRect.Top, visRect.Bottom);
+            Geometry.Rectangle visibleGridRect = new Geometry.Rectangle(visRect.Left, visRect.Right, visRect.Top, visRect.Bottom);
             TilePyramid oldTilePyramid = this.TilePyramid;
 
             Trace.WriteLine(TileMapping.ToString());
@@ -219,7 +219,7 @@ namespace Viking.VolumeViewModel
             //for (int iLevel = 0; iLevel < newTilePyramid.AvailableLevels.Length; iLevel++)
             {
                 int level = newTilePyramid.AvailableLevels[iLevel];
-                SortedDictionary<string, Tile> tiles = newTilePyramid.GetTilesForLevel(level);
+                SortedDictionary<TileUniqueKey, Viking.VolumeModel.TileViewModel> tiles = newTilePyramid.GetTilesForLevel(level);
                 bool IgnoreOldPyramid = oldTilePyramid == null;
 
                 //Don't check the old pyramid if it doesn't have the downsample level we are looking at
@@ -240,7 +240,7 @@ namespace Viking.VolumeViewModel
                     }
                 }
 
-                foreach (Tile t in tiles.Values)
+                foreach (Viking.VolumeModel.TileViewModel t in tiles.Values)
                 {
                     //We already loaded this one
           //          if (!IgnoreOldPyramid && oldTilePyramid.Bounds.Intersects(t.Bounds))

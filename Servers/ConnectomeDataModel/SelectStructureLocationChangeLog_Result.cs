@@ -22,7 +22,7 @@ namespace ConnectomeDataModel
         public Nullable<double> X { get; set; }
         public Nullable<double> Y { get; set; }
         public Nullable<double> Z { get; set; }
-        public byte[] Verticies { get; set; }
+        public byte[] Vertices { get; set; }
         public Nullable<bool> Closed { get; set; }
         public byte[] Version { get; set; }
         public byte[] Overlay { get; set; }

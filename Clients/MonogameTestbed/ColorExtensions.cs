@@ -10,59 +10,37 @@ namespace MonogameTestbed
 
         public static Color GetColor(this EdgeType type)
         {
-            switch (type)
+            return type switch
             {
-                case EdgeType.INVALID:
-                    return Color.GhostWhite.SetAlpha(0.25f);
-                case EdgeType.UNKNOWN:
-                    return Color.Black;
-                case EdgeType.FLYING:
-                    return Color.Pink.SetAlpha(0.5f);
-                case EdgeType.CONTOUR:
-                    return Color.Cyan.SetAlpha(0.5f);
-                case EdgeType.SURFACE:
-                    return Color.Blue.SetAlpha(0.5f);
-                case EdgeType.CORRESPONDING:
-                    return Color.Gold.SetAlpha(0.5f);
-                case EdgeType.INTERNAL:
-                    return Color.Red.SetAlpha(0.5f);
-                case EdgeType.FLAT:
-                    return Color.Brown.SetAlpha(0.5f);
-                case EdgeType.INVAGINATION:
-                    return Color.Orange.SetAlpha(0.5f);
-                case EdgeType.HOLE:
-                    return Color.Purple.SetAlpha(0.5f);
-                case EdgeType.FLIPPED_DIRECTION:
-                    return Color.Black.SetAlpha(0.5f);
-                case EdgeType.UNTILED:
-                    return Color.Black.SetAlpha(1.0f);
-                case EdgeType.MEDIALAXIS:
-                    return Color.LightCyan.SetAlpha(0.5f);
-                case EdgeType.CONTOUR_TO_MEDIALAXIS:
-                    return Color.DarkCyan.SetAlpha(0.5f);
-                case EdgeType.ARTIFICIAL:
-                    return Color.YellowGreen.SetAlpha(0.5f);
-
-                default:
-                    throw new ArgumentException("Unknown line type " + type.ToString());
-            }
+                EdgeType.INVALID => Color.GhostWhite.SetAlpha(0.25f),
+                EdgeType.UNKNOWN => Color.Black,
+                EdgeType.FLYING => Color.Pink.SetAlpha(0.5f),
+                EdgeType.CONTOUR => Color.Cyan.SetAlpha(0.5f),
+                EdgeType.SURFACE => Color.Blue.SetAlpha(0.5f),
+                EdgeType.CORRESPONDING => Color.Gold.SetAlpha(0.5f),
+                EdgeType.INTERNAL => Color.Red.SetAlpha(0.5f),
+                EdgeType.FLAT => Color.Brown.SetAlpha(0.5f),
+                EdgeType.INVAGINATION => Color.Orange.SetAlpha(0.5f),
+                EdgeType.HOLE => Color.Purple.SetAlpha(0.5f),
+                EdgeType.FLIPPED_DIRECTION => Color.Black.SetAlpha(0.5f),
+                EdgeType.UNTILED => Color.Black.SetAlpha(1.0f),
+                EdgeType.MEDIALAXIS => Color.LightCyan.SetAlpha(0.5f),
+                EdgeType.CONTOUR_TO_MEDIALAXIS => Color.DarkCyan.SetAlpha(0.5f),
+                EdgeType.ARTIFICIAL => Color.YellowGreen.SetAlpha(0.5f),
+                _ => throw new ArgumentException("Unknown line type " + type.ToString()),
+            };
         }
 
         public static Color GetColor(this RegionType type)
         {
-            switch (type)
+            return type switch
             {
-                case RegionType.EXPOSED:
-                    return Color.Blue.SetAlpha(0.5f);
-                case RegionType.HOLE:
-                    return Color.GhostWhite.SetAlpha(0.5f);
-                case RegionType.INVAGINATION:
-                    return Color.Purple.SetAlpha(0.5f);
-                case RegionType.UNTILED:
-                    return Color.Green.SetAlpha(0.5f);
-                default:
-                    throw new ArgumentException("Unknown region type " + type.ToString());
-            }
+                RegionType.EXPOSED => Color.Blue.SetAlpha(0.5f),
+                RegionType.HOLE => Color.GhostWhite.SetAlpha(0.5f),
+                RegionType.INVAGINATION => Color.Purple.SetAlpha(0.5f),
+                RegionType.UNTILED => Color.Green.SetAlpha(0.5f),
+                _ => throw new ArgumentException("Unknown region type " + type.ToString()),
+            };
         }
     }
 }

@@ -1,0 +1,253 @@
+using Geometry;
+using Geometry.JSON;
+using Geometry.Meshing;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MorphologyMesh;
+using System;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+
+namespace MorphologyMeshTest
+{
+    [TestClass]
+    public class MeshManifoldTests
+    {
+        private static Polygon Rectangle(double halfWidth, double halfHeight) =>
+            new(
+            [
+                new Vector2(-halfWidth, -halfHeight),
+                new Vector2(halfWidth, -halfHeight),
+                new Vector2(halfWidth, halfHeight),
+                new Vector2(-halfWidth, halfHeight),
+                new Vector2(-halfWidth, -halfHeight),
+            ]);
+
+        private static Polygon Square(double halfWidth) => Rectangle(halfWidth, halfWidth);
+
+        /// <summary>
+        /// An ellipse sampled at <paramref name="nPoints"/> verticies.  The medial axis approximation needs a
+        /// reasonably sampled boundary, like a real annotation contour, to produce interior points at all.
+        /// </summary>
+        private static Polygon Ellipse(double radiusX, double radiusY, int nPoints)
+        {
+            Vector2[] ring = new Vector2[nPoints + 1];
+            for (int i = 0; i < nPoints; i++)
+            {
+                double theta = 2.0 * Math.PI * i / nPoints;
+                ring[i] = new Vector2(radiusX * Math.Cos(theta), radiusY * Math.Sin(theta));
+            }
+
+            ring[nPoints] = ring[0];
+            return new Polygon(ring);
+        }
+
+        /// <summary>
+        /// SliceTopology indexes its shapes, Z values and upper/lower flags in lockstep.  A caller that filtered the
+        /// shape list without filtering the rest used to build a topology that paired each shape with another
+        /// shape's data, which is how polyline slices and shapes dropped below MinAnnotationArea corrupted a mesh.
+        /// </summary>
+        [TestMethod]
+        public void SliceTopologyRejectsFewerFlagsThanShapes()
+        {
+            IShape2D[] shapes = [Square(10), Square(8)];
+
+            var ex = Assert.ThrowsException<ArgumentException>(() => new SliceTopology(shapes, [true], [0.0, 10.0]));
+            StringAssert.Contains(ex.Message, "lockstep");
+        }
+
+        [TestMethod]
+        public void SliceTopologyRejectsFewerZValuesThanShapes()
+        {
+            IShape2D[] shapes = [Square(10), Square(8)];
+
+            Assert.ThrowsException<ArgumentException>(() => new SliceTopology(shapes, [false, true], [0.0]));
+        }
+
+        [TestMethod]
+        public void SliceTopologyRejectsMisalignedNodeIndicies()
+        {
+            IShape2D[] shapes = [Square(10), Square(8)];
+
+            Assert.ThrowsException<ArgumentException>(() => new SliceTopology(shapes, [false, true], [0.0, 10.0], [1UL]));
+        }
+
+        /// <summary>
+        /// A slice split entirely into one set still has to report the other set as empty rather than sizing it from
+        /// the shape count, which previously left null entries in the lower shape array.
+        /// </summary>
+        [TestMethod]
+        public void SliceTopologySeparatesUpperAndLowerByFlag()
+        {
+            IShape2D[] shapes = [Square(10), Square(8), Square(6)];
+
+            SliceTopology topology = new(shapes, [false, true, true], [0.0, 10.0, 10.0]);
+
+            Assert.AreEqual(1, topology.LowerShapeIndicies.Count);
+            Assert.AreEqual(2, topology.UpperShapeIndicies.Count);
+            Assert.AreEqual(0, topology.LowerShapeIndicies.Single());
+        }
+
+        /// <summary>
+        /// The end cap used to place every medial axis vertex at one Z, producing a flat plateau joined to the
+        /// contour by a vertical wall.  Each vertex should instead rise in proportion to its distance from the
+        /// contour, so the cap is a dome that peaks half a section above the contour it closes.
+        /// </summary>
+        [TestMethod]
+        public void CapMeshEndProducesADomeRatherThanAPlateau()
+        {
+            const double LowerZ = 0;
+            const double UpperZ = 100;
+
+            //An elongated rectangle gives the medial axis interior points at clearly different clearances.
+            IShape2D[] shapes = [Ellipse(80, 20, 16), Ellipse(80, 20, 16)];
+            BajajGeneratorMesh mesh = new(shapes, [LowerZ, UpperZ], [false, true]);
+
+            mesh.CapMeshEnd(true);
+
+            double[] capZ = [.. mesh.Vertices.Where(v => v.MedialAxisIndex.HasValue).Select(v => v.Position.Z)];
+
+            Assert.IsTrue(capZ.Length > 1, "The cap should add several medial axis verticies to a long rectangle.");
+
+            double halfSection = (UpperZ - LowerZ) / 2.0;
+            Assert.AreEqual(UpperZ + halfSection, capZ.Max(), 1.0,
+                "The deepest cap vertex should sit half a section above the contour it closes.");
+
+            Assert.IsTrue(capZ.Min() >= UpperZ - Global.Epsilon,
+                "No cap vertex should fall below the contour it closes.");
+
+            Assert.IsTrue(capZ.Max() - capZ.Min() > 1.0,
+                "Cap verticies must vary in Z.  A single shared Z is the flat plateau this replaced.");
+        }
+
+        /// <summary>
+        /// Capping the lower end mirrors the upper end, descending below the contour.
+        /// </summary>
+        [TestMethod]
+        public void CapMeshEndDomesDownwardOnTheLowerEnd()
+        {
+            const double LowerZ = 0;
+            const double UpperZ = 100;
+
+            IShape2D[] shapes = [Ellipse(80, 20, 16), Ellipse(80, 20, 16)];
+            BajajGeneratorMesh mesh = new(shapes, [LowerZ, UpperZ], [false, true]);
+
+            mesh.CapMeshEnd(false);
+
+            double[] capZ = [.. mesh.Vertices.Where(v => v.MedialAxisIndex.HasValue).Select(v => v.Position.Z)];
+
+            Assert.IsTrue(capZ.Length > 1, "The cap should add several medial axis verticies to a long rectangle.");
+
+            double halfSection = (UpperZ - LowerZ) / 2.0;
+            Assert.AreEqual(LowerZ - halfSection, capZ.Min(), 1.0,
+                "The deepest cap vertex should sit half a section below the contour it closes.");
+
+            Assert.IsTrue(capZ.Max() <= LowerZ + Global.Epsilon,
+                "No cap vertex should rise above the contour it closes.");
+        }
+
+        /// <summary>
+        /// The generator should produce a surface with no non-manifold edges, no faces disagreeing across a shared
+        /// edge, and no holes beyond the contour seams the neighboring slice will close.
+        /// </summary>
+        [TestMethod]
+        public void StackedSquaresProduceAValidSliceSurface()
+        {
+            IShape2D[] shapes = [Square(10), Square(8)];
+            BajajGeneratorMesh mesh = new(shapes, [0, 10], [false, true]);
+
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+
+            Assert.AreEqual(0, report.NonManifoldEdges, $"Edges shared by three or more faces.  {report}");
+            Assert.AreEqual(0, report.InconsistentManifoldEdges, $"Faces disagree across a shared edge.  {report}");
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges, $"The surface has holes away from the contour seam.  {report}");
+            Assert.IsTrue(report.ContourBoundaryEdges > 0, $"A slice mesh should leave its contour seam open.  {report}");
+        }
+
+        /// <summary>
+        /// The RC1 1724 adjacent pair is a near-cylinder.  Live BAJAJMULTITEST logs show almost every such
+        /// slice picking up exactly one non-manifold edge and one unexpected hole, which is what leaves
+        /// gaps in the assembled tube.  Fail this test with a dump of those edges so the extra face is
+        /// identifiable.
+        /// </summary>
+        [TestMethod]
+        public void CachedRc1Structure1724Pair_IsAValidSliceSurface()
+        {
+            string path = System.IO.Path.Combine(AppContext.BaseDirectory, "Testdata", "rc1-structure-1724-adjacent-pair.json");
+            Assert.IsTrue(System.IO.File.Exists(path), $"Cached slice pair is missing: {path}");
+
+            using JsonDocument doc = JsonDocument.Parse(System.IO.File.ReadAllText(path));
+            JsonElement root = doc.RootElement;
+            Polygon lower = GeometryJSONExtensions.PolygonFromJSON(root.GetProperty("lower").GetRawText());
+            Polygon upper = GeometryJSONExtensions.PolygonFromJSON(root.GetProperty("upper").GetRawText());
+            double lowerZ = root.GetProperty("lowerZ").GetDouble();
+            double upperZ = root.GetProperty("upperZ").GetDouble();
+
+            BajajGeneratorMesh mesh = new([lower, upper], [lowerZ, upperZ], [false, true]);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+            Assert.AreEqual(0, report.NonManifoldEdges, $"Non-manifold edges:\n{DescribeDefectiveEdges(mesh)}\n{report}");
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges, $"Unexpected holes:\n{DescribeDefectiveEdges(mesh)}\n{report}");
+            Assert.AreEqual(0, report.InconsistentManifoldEdges, $"Inconsistent winding.  {report}");
+        }
+
+        static string DescribeDefectiveEdges(BajajGeneratorMesh mesh)
+        {
+            StringBuilder sb = new();
+            foreach (var kvp in mesh.Edges)
+            {
+                int n = kvp.Value.Faces.Count;
+                bool isContour = kvp.Value is MorphMeshEdge me && me.Type == EdgeType.CONTOUR;
+                if (n <= 2 && (n != 1 || isContour) && n != 0)
+                    continue;
+                if (n == 2)
+                    continue;
+
+                string type = kvp.Value is MorphMeshEdge morph ? morph.Type.ToString() : "unknown";
+                MorphMeshVertex a = mesh[kvp.Key.A];
+                MorphMeshVertex b = mesh[kvp.Key.B];
+                sb.AppendLine($"edge {kvp.Key.A}-{kvp.Key.B} faces:{n} type:{type} A={a.Position} shape={a.ShapeIndex} B={b.Position} shape={b.ShapeIndex}");
+                foreach (IFace f in kvp.Value.Faces)
+                    sb.AppendLine($"  face [{string.Join(",", f.iVerts)}] Z=[{string.Join(",", f.iVerts.Select(i => mesh[i].Position.Z.ToString("F1")))}]");
+            }
+
+            return sb.Length == 0 ? "(none)" : sb.ToString();
+        }
+
+        /// <summary>
+        /// Two contours joined by a single LocationLink but not overlapping in XY used to produce no slice
+        /// chords (FLYING). Virtual overlap must let tiling run, then restore the lower contour to its original XY.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_SingleLinkNonOverlappingSquares_ConnectsAndRestoresLowerXY()
+        {
+            Polygon lower = Square(10).Translate(new Vector2(-50, 0));
+            Polygon upper = Square(8).Translate(new Vector2(50, 0));
+            Assert.IsFalse(lower.Intersects(upper), "Test setup requires a disjoint pair.");
+
+            BajajGeneratorMesh mesh = new([lower, upper], [0, 10], [false, true]);
+            Assert.IsTrue(mesh.Topology.HasVirtualOverlapTranslation);
+
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            Assert.IsTrue(mesh.Faces.Count > 0, "1:1 disjoint pair must still generate a connecting mesh.");
+
+            MorphMeshVertex[] lowerVerts = [.. mesh.MorphVerticies.Where(v =>
+                v.ShapeIndex != null && mesh.Topology.IsUpper[v.ShapeIndex.ShapeIndex] == false)];
+            Assert.IsTrue(lowerVerts.Length > 0);
+            double avgX = lowerVerts.Average(v => v.Position.X);
+            Assert.IsTrue(avgX < 0, $"Lower contour should return to original XY (avg X {avgX}), not stay stacked on the upper.");
+        }
+
+        [TestMethod]
+        public void TryTranslateNonOverlappingShapes_OverlappingSquares_DoesNotMove()
+        {
+            IShape2D[] shapes = [Square(10), Square(8)];
+            bool[] isUpper = [false, true];
+            Assert.IsNull(SliceTopology.TryTranslateNonOverlappingShapes(shapes, isUpper));
+        }
+    }
+}

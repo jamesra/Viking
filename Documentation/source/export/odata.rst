@@ -3,10 +3,13 @@
 OData Web Service
 #################
 
-`OData`_ is an open consistent method for querying data over the web.  Viking volumes suppport a read-only OData 4.0 interface under the http://<Volume>/OData/ path.  
+`OData`_ is an open consistent method for querying data over the web.  Viking volumes suppport a read-only OData 4.0 interface under the ``/( volume )/OData/`` path.  
 
 For example, the RC1 OData service is available here:
-   http://websvc1.connectomes.utah.edu/RC1/OData/
+   https://websvc.codepharm.net/RC1/OData/
+
+Every volume offered by the `export portal`_ exposes the same interface, so substituting
+the volume name reaches its OData service.
     
 The power of OData is allowing external clients to access annotations over the web.  OData can export either `JSON`_ or `ATOM`_ formats.  Below are examples of using OData.
 
@@ -44,6 +47,7 @@ The connectome analysis package also contains unit tests and examples which are 
 
 
 .. _ATOM: http://www.atomenabled.org/
+.. _export portal: https://websvc.codepharm.net/Export/
 .. _connectome analysis package: https://github.com/jamesra/py-connectome-analysis
 .. _documentation: https://github.com/jamesra/py-connectome-analysis/wiki  
 .. _JSON: http://www.json.org/

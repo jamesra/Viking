@@ -68,11 +68,7 @@ select
 	MIN(SQRT((DM.XYDistance * DM.XYDistance) + (DM.ZDistance * DM.ZDistance))) as Distance_nm
 FROM @Distance_Measure_Details DM
 GROUP BY DM.SourceID, DM.TargetID
-
-/*
-select * from @Distance_Measure_Details
-select * from @Distance_Measure
-*/
+ 
 
 select DMD.SourceID,
 	   DMD.TargetID,
@@ -99,4 +95,3 @@ LEFT join StructureType STST ON STST.ID = SynapseTargetStructure.TypeID
 LEFT join Structure SynapseTargetParentStructure ON SynapseTargetParentStructure.ID = SynapseTargetStructure.ParentID
 LEFT join StructureType STPST ON STPST.ID = SynapseTargetParentStructure.TypeID
 WHERE SQRT((DMD.XYDistance * DMD.XYDistance) + (DMD.ZDistance * DMD.ZDistance)) = DM.Distance_nm
- 

@@ -12,6 +12,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 #endregion
 
 
@@ -29,42 +31,39 @@ namespace RoundCurve
     /// </summary>
     public partial class RoundCurve
     {
-        private GridVector2[] _controlPoints;
+        private Geometry.Vector2[] _controlPoints;
         private double[] _tangent_thetas; // Length of the line
         private double[] _distance_to_origin; //Distance of each control point to the origin of the line
         private double[] _distance_to_origin_normalized; //Distance of each control point to the origin of the line
-        private bool _Closed;
+        private readonly bool _Closed;
 
-        public GridVector2[] ControlPoints
+        public Geometry.Vector2[] ControlPoints
         {
-            get
-            {
-                return _controlPoints;
-            }
+            get => _controlPoints;
             set
             {
                 _controlPoints = value;
                 RecalcDistanceAndTheta();
             }
-        } 
+        }
 
-       public bool Closed { get { return _Closed; } }
+        public bool Closed => _Closed;
 
-        public double[] Distance { get { return _distance_to_origin; } }
-        public double[] DistanceNormalized { get { return _distance_to_origin_normalized; } }
-        public double[] Theta { get { return _tangent_thetas; } }
+        public double[] Distance => _distance_to_origin;
+        public double[] DistanceNormalized => _distance_to_origin_normalized;
+        public double[] Theta => _tangent_thetas;
 
-        public double TotalDistance { get { return _distance_to_origin.Last(); } }
+        public double TotalDistance => _distance_to_origin.Last();
 
 
-        public RoundCurve(GridVector2[] ControlPoints, bool Closed)
+        public RoundCurve(Geometry.Vector2[] ControlPoints, bool Closed)
         {
             this._Closed = Closed;
             this.ControlPoints = ControlPoints;
-            
-        } 
 
-        private static double[] CalcLineDistances(GridVector2[] points)
+        }
+
+        private static double[] CalcLineDistances(Geometry.Vector2[] points)
         {
             double total_distance = 0;
             double[] point_distances = new double[points.Length];
@@ -72,36 +71,36 @@ namespace RoundCurve
 
             for (int i = 1; i < points.Length; i++)
             {
-                double step_distance = GridVector2.Distance(points[i], points[i - 1]);
+                double step_distance = Geometry.Vector2.Distance(points[i], points[i - 1]);
                 total_distance += step_distance;
                 point_distances[i] = total_distance;
             }
-             
+
             return point_distances;
         }
 
-        private static double[] CalcLineTangents(GridVector2[] points, bool Closed)
+        private static double[] CalcLineTangents(Geometry.Vector2[] points, bool Closed)
         {
             double[] tangents = new double[points.Length];
 
             int numPoints = points.Length;
-            
+
             for (int i = 1; i < numPoints - 1; i++)
             {
-                tangents[i] = GridVector2.Angle(points[i - 1], points[i + 1]);
+                tangents[i] = Geometry.Vector2.Angle(points[i - 1], points[i + 1]);
             }
 
             if (Closed)
             {
-                tangents[0] = GridVector2.Angle(points[numPoints - 2], points[1]);
-                tangents[numPoints-1] = GridVector2.Angle(points[numPoints - 2], points[1]);
+                tangents[0] = Geometry.Vector2.Angle(points[numPoints - 2], points[1]);
+                tangents[numPoints - 1] = Geometry.Vector2.Angle(points[numPoints - 2], points[1]);
             }
             else
             {
-                tangents[0] = (float)GridVector2.Angle(points[0], points[1]);
-                tangents[numPoints - 1] = GridVector2.Angle(points[numPoints - 2], points[numPoints - 1]);
+                tangents[0] = (float)Geometry.Vector2.Angle(points[0], points[1]);
+                tangents[numPoints - 1] = Geometry.Vector2.Angle(points[numPoints - 2], points[numPoints - 1]);
             }
-            
+
             return tangents;
         }
 
@@ -109,39 +108,28 @@ namespace RoundCurve
         {
             this._distance_to_origin = CalcLineDistances(this._controlPoints);
             double TotalDistance = _distance_to_origin.Last();
-            this._distance_to_origin_normalized = _distance_to_origin.Select(d => d / TotalDistance).ToArray();
+            this._distance_to_origin_normalized = [.. _distance_to_origin.Select(d => d / TotalDistance)];
             this._tangent_thetas = CalcLineTangents(this._controlPoints, this._Closed);
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0} - {1}", _controlPoints[0], _controlPoints.Last());
-        }
+        public override string ToString() => string.Format("{0} - {1}", _controlPoints[0], _controlPoints.Last());
     };
 
     // A vertex type for drawing RoundLines, including an instance index
-    struct RoundCurveVertex
+    struct RoundCurveVertex(Vector3 pos, Vector2 tex, float index)
     {
-        public Vector3 pos;
-        public Vector2 scaleTrans;
-        public float index;
-
-        public RoundCurveVertex(Vector3 pos, Vector2 tex, float index)
-        {
-            this.pos = pos;
-            this.scaleTrans = tex;
-            this.index = index;
-        }
-
+        public Vector3 pos = pos;
+        public Vector2 scaleTrans = tex;
+        public float index = index;
         public static int SizeInBytes = 6 * sizeof(float);
 
-        public static VertexElement[] VertexElements = new VertexElement[]
-            {
-                new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+        public static VertexElement[] VertexElements =
+            [
+                new(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
                 //new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.Normal, 0),
-                new VertexElement(3*sizeof(float), VertexElementFormat.Vector2, VertexElementUsage.Normal, 0),
-                new VertexElement(5*sizeof(float), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
-            };
+                new(3*sizeof(float), VertexElementFormat.Vector2, VertexElementUsage.Normal, 0),
+                new(5*sizeof(float), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
+            ];
     }
 
 
@@ -179,23 +167,14 @@ namespace RoundCurve
 
         public float DashLength
         {
-            get
-            {
-                return this.dashLengthParameter.GetValueSingle();
-            }
-            set
-            {
-                this.dashLengthParameter.SetValue(value);
-            }
+            get => this.dashLengthParameter.GetValueSingle();
+            set => this.dashLengthParameter.SetValue(value);
         }
 
         /// <summary>
         /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
         /// </summary>
-        public virtual bool UseHSLColor
-        {
-            get { return false; }
-        }
+        public virtual bool UseHSLColor => false;
 
         public virtual void Init(GraphicsDevice device, ContentManager content)
         {
@@ -204,11 +183,11 @@ namespace RoundCurve
             LoadParameters(effect);
             CreateRoundLineMesh();
         }
-        
+
         protected void LoadParameters(Effect e)
         {
             viewProjMatrixParameter = e.Parameters["viewProj"];
-            
+
             timeParameter = e.Parameters["time"];
             lineRadiusParameter = e.Parameters["lineRadius"];
             lineColorParameter = e.Parameters["lineColor"];
@@ -233,10 +212,7 @@ namespace RoundCurve
             }
         }
 
-        public bool IsTechnique(string name)
-        {
-            return TechniqueNames.Contains(name);
-        }
+        public bool IsTechnique(string name) => TechniqueNames.Contains(name);
 
         /// <summary>
         /// Create a mesh for a RoundLine.
@@ -262,7 +238,7 @@ namespace RoundCurve
             numVertices = verticesPerCore * MaxInstancesPerBatch;
             //numVertices = (verticesPerCore + verticesPerCap + verticesPerCap) * MaxInstancesPerBatch;
             numPrimitivesPerInstance = primsPerCore; // + primsPerCap + primsPerCap;
-            numPrimitives = numPrimitivesPerInstance * (MaxInstancesPerBatch-1);
+            numPrimitives = numPrimitivesPerInstance * (MaxInstancesPerBatch - 1);
             numIndices = 3 * numPrimitives;
             short[] indices = new short[numIndices];
             bytesPerVertex = RoundCurveVertex.SizeInBytes;
@@ -407,10 +383,10 @@ namespace RoundCurve
         /// to the back buffer.  Then apply an empirically-determined mapping to get
         /// a good BlurThreshold for such lines.
         /// </summary>
-        public float ComputeBlurThreshold(float lineRadius, Matrix viewProjMatrix, float viewportWidth)
+        public static float ComputeBlurThreshold(float lineRadius, Matrix viewProjMatrix, float viewportWidth)
         {
-            Vector4 lineRadiusTestBase = new Vector4(0, 0, 0, 1);
-            Vector4 lineRadiusTest = new Vector4(lineRadius, 0, 0, 1);
+            Vector4 lineRadiusTestBase = new(0, 0, 0, 1);
+            Vector4 lineRadiusTest = new(lineRadius, 0, 0, 1);
             Vector4 delta = lineRadiusTest - lineRadiusTestBase;
             Vector4 output = Vector4.Transform(delta, viewProjMatrix);
             output.X *= viewportWidth;
@@ -434,10 +410,7 @@ namespace RoundCurve
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName == null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
+            effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -458,10 +431,7 @@ namespace RoundCurve
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName == null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
+            effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -482,7 +452,7 @@ namespace RoundCurve
             lineRadiusParameter.SetValue(lineRadius);
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
             lineTotalLengthParameter.SetValue((float)roundLine.TotalDistance);
-                       
+
             int SegmentsAlreadyDrawn = 0;
             int numSegmentsThisDraw = 0;
             int numSegmentsToDraw = roundLine.ControlPoints.Length;
@@ -527,7 +497,7 @@ namespace RoundCurve
                 }
 
                 SegmentsAlreadyDrawn += numSegmentsThisDraw;
-                         
+
             }
             //NumLinesDrawn += numInstancesThisDraw;
         }
@@ -582,13 +552,13 @@ namespace RoundCurve
 
             Draw(roundCurve, lineRadius, lineColor, viewProjMatrix, time, "Textured");
         }
-         
+
         /// <summary>
         /// Draw a list of Lines in batches, up to the maximum number of instances for the shader.
         /// </summary>
         public void Draw(IEnumerable<RoundCurve> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix,
             float time, string techniqueName)
-        {            
+        {
             device.SetVertexBuffer(vb);
             device.Indices = ib;
 
@@ -599,10 +569,7 @@ namespace RoundCurve
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
 
-            if (techniqueName == null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
+            effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -621,7 +588,7 @@ namespace RoundCurve
         /// <param name="roundCurve"></param>
         /// <param name="lineWidth"></param>
         /// <returns></returns>
-        private float LengthOfCurveRequiredToPreserveTextureAspectRatio(Texture2D texture, float TotalDistance, float lineWidth)
+        private static float LengthOfCurveRequiredToPreserveTextureAspectRatio(Texture2D texture, float TotalDistance, float lineWidth)
         {
             double textureAspectRatio = (double)texture.Width / (double)texture.Height;
             double curveAspectRatio = TotalDistance / lineWidth;
@@ -630,7 +597,7 @@ namespace RoundCurve
             return length_of_curve_to_use_for_texture > 1.0 ? 1.0f : (float)length_of_curve_to_use_for_texture;
         }
 
-        private Vector2 TextureStartStopForAlignment(HorizontalAlignment alignment, float NormalizedLengthOfCurveToFillWithTexture)
+        private static Vector2 TextureStartStopForAlignment(HorizontalAlignment alignment, float NormalizedLengthOfCurveToFillWithTexture)
         {
             switch (alignment)
             {
@@ -649,32 +616,23 @@ namespace RoundCurve
     }
 
     public class CurveManagerHSV : CurveManager
-    { 
+    {
         private EffectParameter _BackgroundTexture;
         private EffectParameter _RenderTargetSize;
 
         /// <summary>
         /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
         /// </summary>
-        public override bool UseHSLColor
-        {
-            get { return true; }
-        }
+        public override bool UseHSLColor => true;
 
         public Texture LumaTexture
         {
-            set
-            {
-                _BackgroundTexture.SetValue(value);
-            }
+            set => _BackgroundTexture.SetValue(value);
         }
 
         public Viewport RenderTargetSize
         {
-            set
-            {
-                _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
-            }
+            set => _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
         }
 
         public override void Init(GraphicsDevice device, ContentManager content)

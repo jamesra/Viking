@@ -5,7 +5,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.ServiceModel; 
+using System.ServiceModel;
+using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
@@ -34,11 +35,12 @@ namespace WebAnnotationModel
             return;
         }
 
-        public ICollection<LocationObj> Intersects(GridRectangle bbox, float SectionNumber)
+        public ICollection<LocationObj> Intersects(Rectangle bbox, float SectionNumber)
         {
             List<long> objIDs = SpatialSearch.Intersects(bbox.ToRTreeRect(SectionNumber));
 
-            return Store.GetObjectsByIDs(objIDs, false);
+            Store.TryGetObjectsByIDs(objIDs, out IReadOnlyList<LocationObj> found, out _);
+            return found as ICollection<LocationObj> ?? found.ToList();
         }
     }
 
@@ -143,7 +145,7 @@ namespace WebAnnotationModel
         {
             long[] MissingParentIDs = newObjs.Where(loc => loc.ParentID.HasValue && Store.Structures.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct().ToArray();
             if (MissingParentIDs.Length > 0)
-                Store.Structures.GetObjectsByIDs(MissingParentIDs, true);
+                Store.Structures.GetObjectsByIDs(MissingParentIDs).GetAwaiter().GetResult();
 
             return base.InternalAdd(newObjs);
         }
@@ -258,7 +260,7 @@ namespace WebAnnotationModel
             return listLocations;
         }
 
-        public bool Contains(LocationObj o, Geometry.GridRectangle bounds)
+        public bool Contains(LocationObj o, Geometry.Rectangle bounds)
         {
             return bounds.Contains(o.Position);
         }
@@ -351,7 +353,7 @@ namespace WebAnnotationModel
 
         #endregion
 
-        public virtual ICollection<LocationObj> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
+        public virtual ICollection<LocationObj> GetObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
@@ -414,7 +416,7 @@ namespace WebAnnotationModel
         }
 
         public virtual MixedLocalAndRemoteQueryResults<long, LocationObj> GetObjectsInRegionAsync(long SectionNumber,
-                                                                                           Geometry.GridRectangle bounds,
+                                                                                           Geometry.Rectangle bounds,
                                                                                            double MinRadius,
                                                                                            DateTime? LastQueryUtc,
                                                                                            Action<ICollection<LocationObj>> OnLoadCompletedCallBack)
@@ -520,9 +522,16 @@ namespace WebAnnotationModel
             }
         }
 
-        public ICollection<LocationObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
+        public Task<ICollection<LocationObj>> GetLocalObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius)
         {
-            return SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius).ToList();
+            ICollection<LocationObj> result = SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius).ToList();
+            return Task.FromResult(result);
+        }
+
+        public Task<(ICollection<LocationObj> Objects, DateTime QueryCompletedTime)> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
+        {
+            ICollection<LocationObj> objects = GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
+            return Task.FromResult((objects, DateTime.UtcNow));
         }
     }
 }

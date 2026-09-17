@@ -1,10 +1,12 @@
-﻿using SIMeasurement;
+using SIMeasurement;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Viking.Common;
 using Viking.ViewModels;
@@ -15,25 +17,26 @@ namespace MeasurementExtension
     {
         internal static double _UnitsPerPixel = 1;
         public static double UnitsPerPixel => _UnitsPerPixel;
-        
+
         internal static SILengthUnits _UnitOfMeasure;
         public static SILengthUnits UnitOfMeasure => _UnitOfMeasure;
 
-        public static LengthMeasurement PixelWidth => new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel);
+        public static LengthMeasurement PixelWidth => new(Global.UnitOfMeasure, Global.UnitsPerPixel);
 
         #region IInitExtensions Members
 
         /// <summary>
         /// Returns true if the extension should be loaded
         /// </summary>
+        /// <param name="provider"></param>
         /// <returns></returns>
-        bool IInitExtensions.Initialize()
+        bool IInitExtensions.Initialize(IServiceProvider provider)
         {
             //This code will fetch the scale of the images from the webserver
             //If the scale can't be found we won't
             VolumeViewModel volume = Viking.UI.State.volume;
 
-            if (volume == null)
+            if (volume is null)
                 return false;
 
             if (GetScaleFromXML(volume.VolumeElement))
@@ -42,39 +45,12 @@ namespace MeasurementExtension
             //See if we can load the about.xml file, this is for legacy support and can be removed after VikinkXML files have been regenerated with latest
             //CreateXML updates from 11/1/10
 
-            Uri MappingURI = new Uri(volume.Host + "/About.xml");
-            HttpWebRequest request = WebRequest.CreateHttp(MappingURI);
-
-            //Attach credentials if using security
-            if (MappingURI.Scheme.ToLower() == "https")
-                request.Credentials = Viking.UI.State.UserCredentials;
-
-            WebResponse response = null;
-            try
-            {
-                response = request.GetResponse();
-            }
-            catch (WebException)
-            {
-                Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "Measurement");
-                if (response != null)
-                    response.Close();
-
-                return true;
-            }
-
-            //Convert the response into an XML document we can parse
-            Stream responseStream = response.GetResponseStream();
-            StreamReader XMLStream = new StreamReader(responseStream);
-            XDocument XMLMapping = XDocument.Parse(XMLStream.ReadToEnd());
-
-            //We are done with HTTP and the stream, so free those resources
-            XMLStream.Close();
-            responseStream.Close();
-            response.Close();
+            Uri MappingURI = new(volume.Host + "/About.xml");
+            // Use Task.Run to avoid blocking the thread pool when called from synchronous context
+            var xmlMapping = Task.Run(async () => await GetXMLFromUriAsync(MappingURI).ConfigureAwait(false)).GetAwaiter().GetResult();
 
             //See if we can locate a scale tag
-            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(XMLMapping));
+            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(xmlMapping));
 
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.
             //If this module could not function we should return false which would tell Viking to unload it
@@ -82,7 +58,25 @@ namespace MeasurementExtension
 
         }
 
-        private bool GetScaleFromXML(XElement elem)
+        private static async Task<XDocument?> GetXMLFromUriAsync(Uri uri)
+        {
+            using HttpClient httpClient = HttpClientFactory.CreateClient(uri, Viking.UI.State.UserCredentials);
+            try
+            {
+                var response = await httpClient.GetAsync(uri).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return XDocument.Parse(content);
+            }
+            catch (HttpRequestException)
+            {
+                Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "Measurement");
+                return null;
+            }
+        }
+
+        private static bool GetScaleFromXML(XElement elem)
         {
 
             //Examine the XML document and determine the scale
@@ -93,19 +87,19 @@ namespace MeasurementExtension
                 case "Volume":
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "Scale");
 
-                    if (!MappingElements.Any())
+                    if (MappingElements.Count() == 0)
                         break;
 
                     XElement MappingElement = MappingElements.First();
 
                     XAttribute EndpointAttribute = MappingElement.Attribute("UnitsPerPixel");
-                    if (EndpointAttribute == null)
+                    if (EndpointAttribute is null)
                         break;
 
                     Global._UnitsPerPixel = System.Convert.ToDouble(EndpointAttribute.Value);
 
                     EndpointAttribute = MappingElement.Attribute("UnitsOfMeasure");
-                    if (EndpointAttribute == null)
+                    if (EndpointAttribute is null)
                         break;
 
                     try
@@ -119,12 +113,12 @@ namespace MeasurementExtension
                     }
                     catch (ArgumentException)
                     {
-                        Trace.WriteLine($"Non SI unit of measure {EndpointAttribute.Value}, disabling WebAnnotations.", "Measurement");
+                        Trace.WriteLine(string.Format("Non SI unit of measure {0}, disabling WebAnnotations.", EndpointAttribute.Value), "Measurement");
                         return false;
                     }
                     catch (OverflowException)
                     {
-                        Trace.WriteLine($"{EndpointAttribute.Value} is outside the range of the underlying type of SI Length Units", "Measurement");
+                        Trace.WriteLine(string.Format("{0} is outside the range of the underlying type of SI Length Units", EndpointAttribute.Value), "Measurement");
                         return false;
                     }
 

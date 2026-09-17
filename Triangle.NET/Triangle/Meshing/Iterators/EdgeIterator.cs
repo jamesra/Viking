@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="EdgeEnumerator.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -15,7 +15,7 @@ namespace TriangleNet.Meshing.Iterators
     /// </summary>
     public class EdgeIterator : IEnumerator<Edge>
     {
-        IEnumerator<Triangle> triangles;
+        readonly IEnumerator<Triangle> triangles;
         Otri tri = default;
         Otri neighbor = default;
         Osub sub = default;
@@ -34,31 +34,22 @@ namespace TriangleNet.Meshing.Iterators
             tri.orient = 0;
         }
 
-        public Edge Current
-        {
-            get { return current; }
-        }
+        public Edge Current => current;
 
-        public void Dispose()
-        {
-            this.triangles.Dispose();
-        }
+        public void Dispose() => this.triangles.Dispose();
 
-        object System.Collections.IEnumerator.Current
-        {
-            get { return current; }
-        }
+        object System.Collections.IEnumerator.Current => current;
 
         public bool MoveNext()
         {
-            if (tri.tri == null)
+            if (tri.tri is null)
             {
                 return false;
             }
 
             current = null;
 
-            while (current == null)
+            while (current is null)
             {
                 if (tri.orient == 3)
                 {
@@ -93,9 +84,6 @@ namespace TriangleNet.Meshing.Iterators
             return true;
         }
 
-        public void Reset()
-        {
-            this.triangles.Reset();
-        }
+        public void Reset() => this.triangles.Reset();
     }
 }

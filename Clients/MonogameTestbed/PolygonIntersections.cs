@@ -1,5 +1,6 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Geometry.JSON;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -8,12 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using GeometryTests;
 using Newtonsoft.Json.Linq;
 using VikingXNA;
-using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -27,9 +28,9 @@ namespace MonogameTestbed
     public class PolygonIntersectionView
     {
         readonly PolygonSetView PolygonsView = null;
-         
 
-        public PolygonIntersectionView(GridPolygon[] polygons)
+
+        public PolygonIntersectionView(Polygon[] polygons)
         {
             PolygonsView = new PolygonSetView(polygons, PolygonSetView.DefaultColorMapping)
             {
@@ -37,26 +38,20 @@ namespace MonogameTestbed
             };
         }
 
-        public void Draw(MonoTestbed window, Scene scene)
-        {
-            if(PolygonsView != null)
-            {
-                PolygonsView.Draw(window, scene);
-            }
-        }
+        public void Draw(MonoTestbed window, Scene scene) => PolygonsView?.Draw(window, scene);
     }
 
     public class PolygonIntersectionTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
-        private string JSONFile = "PolygonIntersectionRepro.json";
+        private readonly string JSONFile = "PolygonIntersectionRepro.json";
 
         Scene scene;
-        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly Cursor2DCameraManipulator CameraManipulator = new();
+        readonly GamePadStateTracker Gamepad = new();
         //readonly PolygonIntersectionTestDataSource TestType = PolygonIntersectionTestDataSource.FS_CHECK;
         readonly PolygonIntersectionTestDataSource TestType = PolygonIntersectionTestDataSource.JSON_FILE;
         //readonly PolygonIntersectionTestDataType TestType = PolygonIntersectionTestDataType.JSON_POLYGON_INTERSECTION;
@@ -65,11 +60,11 @@ namespace MonogameTestbed
 
         PolygonIntersectionView polygonSetView = null;
 
-        private static readonly string[] PolygonIntersections1 = new string[]
-        {
+        private static readonly string[] PolygonIntersections1 =
+        [
             "{\"ExteriorRing\": [{\"X\": -30.0,\"Y\": 70.0},{\"X\": -93.928035982008993,\"Y\": -77.526236881559214},{\"X\": -95.0,\"Y\": -80.0},{\"X\": -91.377245508982043,\"Y\": -76.487025948103792},{\"X\": 70.0,\"Y\": 80.0},{\"X\": -30.0,\"Y\": 70.0}],\"InteriorRings\": []}",
             "{ \"ExteriorRing\": [{\"X\": -100.0,\"Y\": -80.0},{\"X\": -95.0,\"Y\": -80.0},{\"X\": 35.0,\"Y\": -25.0},{\"X\": -91.377245508982043,\"Y\": -76.487025948103792},{\"X\": -93.928035982008993,\"Y\": -77.526236881559214},    {\"X\": -100.0,\"Y\": -80.0}],\"InteriorRings\": []}"
-        };
+        ];
 
         public Task Init(MonoTestbed window)
         {
@@ -82,24 +77,22 @@ namespace MonogameTestbed
 
         private async Task PopulateTestTask()
         {
-            GridRectangle rect = new GridRectangle(GridVector2.Zero, 50);
-            GridPolygon[] polygons = Array.Empty<GridPolygon>();
+            Rectangle rect = new(Geometry.Vector2.Zero, 50);
+            Polygon[] polygons = [];
             if (TestType == PolygonIntersectionTestDataSource.JSON_POLYGON_INTERSECTION)
             {
-                polygons = PolygonIntersections1.Select(s => GeometryJSONExtensions.PolygonFromJSON(s)).ToArray();
-                 
+                polygons = [.. PolygonIntersections1.Select(s => GeometryJSONExtensions.PolygonFromJSON(s))];
+
                 //FirstTriangulationDone = true;  
-                
+
             }
             else if (TestType == PolygonIntersectionTestDataSource.FS_CHECK)
             {
-                TestTask = Task.Run(() => {
-                    GeometryTests.GridPolygonTest.TestPolygonGeneratorUnderpinnings(this.OnPolygonUpdate);
-                }); 
+                TestTask = Task.Run(() => GeometryTests.PolygonTest.TestPolygonGeneratorUnderpinnings(this.OnPolygonUpdate));
             }
             else if (TestType == PolygonIntersectionTestDataSource.JSON_FILE)
             {
-                FileInfo finfo = new FileInfo(JSONFile);
+                FileInfo finfo = new(JSONFile);
                 if (finfo.Exists == false)
                     throw new ArgumentException($"Input file {JSONFile} not found");
 
@@ -108,7 +101,7 @@ namespace MonogameTestbed
             }
 
             if (polygons != null && polygons.Length > 0)
-            { 
+            {
                 rect = polygons.BoundingBox();
                 scene.VisibleWorldBounds = rect;
                 //scene.Camera.LookAt = rect.Center.ToXNAVector2();
@@ -116,9 +109,10 @@ namespace MonogameTestbed
 
                 polygonSetView = new PolygonIntersectionView(polygons);
 
-                TestTask = Task.Run(() => {
+                TestTask = Task.Run(() =>
+                {
                     polygonSetView = new PolygonIntersectionView(polygons);
-                    var result = GridPolygonTest.AssessPolygonIntersectionAndCorrespondancePoints(polygons[0], polygons[1], OnPolygonUpdate);
+                    var result = PolygonTest.AssessPolygonIntersectionAndCorrespondancePoints(polygons[0], polygons[1], OnPolygonUpdate);
                     result.VerboseCheckThrowOnFailure();
                 });
             }
@@ -127,32 +121,30 @@ namespace MonogameTestbed
         }
 
 
-        AnnotationVizLib.MorphologyGraph graph;
-        private void PopulateFromOData()
+        readonly AnnotationVizLib.MorphologyGraph graph;
+        private static void PopulateFromOData()
         {
 
         }
 
-        private void OnPolygonUpdate(GridPolygon[] polygons, List<GridVector2> found, List<GridVector2> expected)
-        {
-            polygonSetView = new PolygonIntersectionView(polygons);
-        }
+        private void OnPolygonUpdate(Polygon[] polygons, List<Geometry.Vector2> found, List<Geometry.Vector2> expected) => polygonSetView = new PolygonIntersectionView(polygons);
 
         public void UnloadContent(MonoTestbed window)
         {
-            
+
         }
 
+        /*
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         { 
-            GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
-              
-            int[] cv_idx;
-            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+            Geometry.Vector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, Geometry.Vector3.Zero).Select(v => new Geometry.Vector2(v.Position.X, v.Position.Y)).ToArray();
 
-            GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
+            Geometry.Vector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
+
+            Polygon convex_hull_poly = new Polygon(cv_verticies);
             return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
         }
+        */
 
         public void Update()
         {
@@ -169,19 +161,12 @@ namespace MonogameTestbed
                     TestTask = null;
                 }
 
-                if (TestTask == null)
-                {
-                    TestTask = PopulateTestTask();
-                }
+                TestTask ??= PopulateTestTask();
 
                 TestTask.Start();
             }
         }
 
-        public void Draw(MonoTestbed window)
-        {
-            if(polygonSetView != null)
-                polygonSetView.Draw(window, this.scene);
-        }
+        public void Draw(MonoTestbed window) => polygonSetView?.Draw(window, this.scene);
     }
 }

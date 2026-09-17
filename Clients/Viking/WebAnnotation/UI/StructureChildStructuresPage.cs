@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -11,48 +12,45 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 2)]
     public partial class StructureChildStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
-        bool listLoaded = false;
+        private Structure Obj;
+        private bool listLoaded = false;
 
         public StructureChildStructuresPage()
         {
-            this.Title = "Child Structures";
+            Title = "Child Structures";
 
             InitializeComponent();
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
         }
 
-        private void StructureChildStructuresPage_VisibleChanged(object sender, EventArgs e)
+        private async void StructureChildStructuresPage_VisibleChanged(object sender, EventArgs e)
         {
             if (!listLoaded)
             {
 
-                this.UseWaitCursor = true;
-                ICollection<StructureObj> childStructureObjs = Store.Structures.GetChildStructuresForStructure(Obj.ID);
-                List<Structure> childStructures = new List<Structure>(childStructureObjs.Count);
+                UseWaitCursor = true;
+                ICollection<StructureObj> childStructureObjs = await Store.Structures.GetChildStructures(Obj.ID);
+                List<Structure> childStructures = new(childStructureObjs.Count);
 
                 foreach (StructureObj s in childStructureObjs)
                 {
                     childStructures.Add(new Structure(s));
                 }
 
-                if (!this.IsDisposed)
+                if (!IsDisposed)
                 {
-                    listStructures.SetStructures(childStructures.ToArray());
+                    listStructures.SetStructures([.. childStructures]);
 
                     listLoaded = true;
 
-                    this.UseWaitCursor = false;
+                    UseWaitCursor = false;
                 }
             }
         }

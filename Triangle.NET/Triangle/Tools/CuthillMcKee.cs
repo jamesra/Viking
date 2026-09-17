@@ -228,7 +228,7 @@ namespace TriangleNet.Tools
                         while (k < lnbr)
                         {
                             l = k;
-                            k = k + 1;
+                            k++;
                             nbr = perm[offset + k - 1];
 
                             while (fnbr < l)
@@ -241,7 +241,7 @@ namespace TriangleNet.Tools
                                 }
 
                                 perm[offset + l] = lperm;
-                                l = l - 1;
+                                l--;
                             }
                             perm[offset + l] = nbr;
                         }
@@ -552,12 +552,12 @@ namespace TriangleNet.Tools
 
                         if (mask[nbr] != 0) // EDIT: [nbr - 1]
                         {
-                            ideg = ideg + 1;
+                            ideg++;
 
                             if (0 <= pcol[nbr]) // EDIT: [nbr - 1]
                             {
                                 pcol[nbr] = -pcol[nbr]; // EDIT: [nbr - 1]
-                                iccsze = iccsze + 1;
+                                iccsze++;
                                 ls[offset + iccsze - 1] = nbr;
                             }
                         }

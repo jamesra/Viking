@@ -1,4 +1,5 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Collections.Generic;
@@ -6,42 +7,32 @@ using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureAdapter : IStructureReadOnly
+    /// <summary>
+    /// Represents a read-only adapter around an OData Structure object
+    /// </summary>
+    class ODataStructureAdapter(Structure s) : IStructureReadOnly
     {
-        private Structure structure;
+        private readonly Structure structure = s ?? throw new ArgumentNullException();
 
-        public ODataStructureAdapter(Structure s)
-        {
-            if (s == null)
-                throw new ArgumentNullException();
+        public ulong ID => (ulong)structure.ID;
 
-            this.structure = s;
-        }
+        public string Label => structure.Label;
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)structure.ID;
-            }
-        }
+        public IReadOnlyDictionary<string, string> Attributes =>
+            ObjAttribute.Parse(structure.Tags).ToDictionary(a => a.Name, a => a.Value);
 
-        public string Label
-        {
-            get
-            {
-                return structure.Label;
-            }
-        }
+        public double Confidence => 0;
+
+        public string Notes => null;
 
         public ICollection<IStructureLinkKey> Links
         {
             get
             {
-                List<StructureLink> links = structure.SourceOfLinks.ToList();
+                List<StructureLink> links = [.. structure.SourceOfLinks];
                 links.AddRange(structure.TargetOfLinks);
 
-                return links.Select(l => new ODataStructureLinkAdapter(l)).ToArray();
+                return [.. links.Select(l => (IStructureLinkKey)new StructureLinkKey(new ODataStructureLinkAdapter(l)))];
             }
         }
 
@@ -56,40 +47,15 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        public string TagsXML
-        {
-            get
-            {
-                return structure.Tags;
-            }
-        }
+        public string TagsXML => structure.Tags;
 
-        public IStructureTypeReadOnly Type
-        {
-            get
-            {
-                return new ODataStructureTypeAdapter(structure.Type);
-            }
-        }
+        public IStructureTypeReadOnly Type => new ODataStructureTypeAdapter(structure.Type);
 
-        public ulong TypeID
-        {
-            get
-            {
-                return (ulong)structure.TypeID;
-            }
-        }
-
-        public IReadOnlyDictionary<string, string> Attributes =>
-            ObjAttribute.Parse(structure.Tags).ToDictionary(a => a.Name, a => a.Value);
-
-        public double Confidence => structure.Confidence;
-
-        public string Notes => structure.Notes;
+        public ulong TypeID => (ulong)structure.TypeID;
 
         public bool Equals(IStructureReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)
@@ -98,9 +64,6 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(Structure other)
-        {
-            return this.Equals((IStructureReadOnly)other);
-        }
+        public bool Equals(Structure other) => this.Equals((IStructureReadOnly)other);
     }
 }

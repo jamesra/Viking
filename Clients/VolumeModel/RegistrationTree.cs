@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Viking.VolumeModel
 {
@@ -11,21 +11,19 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Nodes in the tree
         /// </summary>
-        public SortedList<int, RegistrationTreeNode> Nodes = new SortedList<int, RegistrationTreeNode>();
+        public SortedList<int, RegistrationTreeNode> Nodes = [];
 
         /// <summary>
         /// Nodes with no known parents
         /// </summary>
-        public SortedList<int, RegistrationTreeNode> RootNodes = new SortedList<int, RegistrationTreeNode>();
+        public SortedList<int, RegistrationTreeNode> RootNodes = [];
 
+        /// <summary>
+        /// Stos pair: ControlSection is the parent/reference (volume side); MappedSection is the child being registered.
+        /// </summary>
         public void AddPair(int ControlSection, int MappedSection)
         {
-            RegistrationTreeNode ControlNode = null;
-            if (Nodes.ContainsKey(ControlSection))
-            {
-                ControlNode = Nodes[ControlSection];
-            }
-            else
+            if (!Nodes.TryGetValue(ControlSection, out RegistrationTreeNode ControlNode))
             {
                 ControlNode = new RegistrationTreeNode(ControlSection);
                 Nodes.Add(ControlNode.SectionNumber, ControlNode);
@@ -34,13 +32,10 @@ namespace Viking.VolumeModel
 
             ControlNode.Children.Add(MappedSection);
 
-            RegistrationTreeNode MappedNode = null;
-            if (Nodes.ContainsKey(MappedSection))
+            if (Nodes.TryGetValue(MappedSection, out RegistrationTreeNode MappedNode))
             {
-                MappedNode = Nodes[MappedSection];
                 MappedNode.SetParent(new int?(ControlSection));
-                if (RootNodes.ContainsKey(MappedNode.SectionNumber))
-                    RootNodes.Remove(MappedNode.SectionNumber);
+                RootNodes.Remove(MappedNode.SectionNumber);
             }
             else
             {
@@ -60,14 +55,14 @@ namespace Viking.VolumeModel
             SortedSet<int> ValidSectionsLookup = null;
             if (ValidSections != null)
             {
-                ValidSectionsLookup = new SortedSet<int>(ValidSections);
+                ValidSectionsLookup = [.. ValidSections];
             }
             //Create a registration chain so we know what order to register the sections in
-            RegistrationTree tree = new RegistrationTree();
+            RegistrationTree tree = new();
             foreach (int iSection in TList.Keys)
             {
                 Geometry.ITransform trans = TList[iSection];
-                if (!(((Geometry.ITransformInfo)trans)?.Info is Geometry.Transforms.StosTransformInfo info))
+                if (((Geometry.ITransformInfo)trans)?.Info is not Geometry.Transforms.StosTransformInfo info)
                     continue;
 
                 if (ValidSectionsLookup != null && !ValidSectionsLookup.Contains(info.MappedSection))
@@ -80,39 +75,25 @@ namespace Viking.VolumeModel
         }
     }
 
-    class RegistrationTreeNode
+    class RegistrationTreeNode(int sectionNumber)
     {
         public int? Parent = new int?();
-        public readonly int SectionNumber;
-        public List<int> Children = new List<int>();
-
-        public RegistrationTreeNode(int sectionNumber)
-        {
-            SectionNumber = sectionNumber;
-        }
+        public readonly int SectionNumber = sectionNumber;
+        public List<int> Children = [];
 
         public RegistrationTreeNode(int sectionNumber, int parentSection) : this(sectionNumber)
         {
             Parent = new int?(sectionNumber);
         }
 
-        override public int GetHashCode()
-        {
-            return SectionNumber;
-        }
+        public override int GetHashCode() => SectionNumber;
 
         /// <summary>
         /// We are a root node if we have no parent
         /// </summary>
-        bool IsRoot
-        {
-            get { return !Parent.HasValue; }
-        }
+        bool IsRoot => !Parent.HasValue;
 
-        public void SetParent(int? parentSection)
-        {
-            Parent = parentSection;
-        }
+        public void SetParent(int? parentSection) => Parent = parentSection;
 
         void AddChild(int childSection)
         {

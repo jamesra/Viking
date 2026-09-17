@@ -1,139 +1,117 @@
-﻿using System;
+using System;
 using System.Linq;
-using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Web.Configuration;
 using UnitsAndScale;
 
 namespace VikingWebAppSettings
 {
     public static class UriExtensions
     {
-        public static Uri Append(this Uri uri, params string[] paths)
-        {
-            return new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
-        }
+        public static Uri Append(this Uri uri, params string[] paths) => new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
     }
 
     public static class AppSettings
     {
         public static string GetApplicationSetting(string name)
         {
-            if (!ConfigurationManager.AppSettings.HasKeys())
+            // First check environment variable (convert key name to environment variable format)
+            string envVarName = name.Replace(".", "_").ToUpperInvariant();
+            string envValue = Environment.GetEnvironmentVariable(envVarName);
+            if (!string.IsNullOrEmpty(envValue))
             {
-                throw new ArgumentException(name + " not configured in AppSettings");
+                return envValue;
             }
 
-            string? setting = ConfigurationManager.AppSettings[name];
-            if (setting == null)
+            // Fall back to web.config
+            if (!WebConfigurationManager.AppSettings.HasKeys())
             {
-                throw new ArgumentException(name + " not configured in AppSettings");
+                throw new ArgumentException(name + " not configured in AppSettings or environment variables");
             }
 
-            return setting;
+            string setting = WebConfigurationManager.AppSettings[name];
+            return setting ?? throw new ArgumentNullException(name + " not configured in AppSettings or environment variables");
         }
 
-        public static string GetDatabaseServer()
+        public static string GetDatabaseServer() => GetApplicationSetting("DatabaseServer");
+
+        public static string GetDatabaseCatalogName() => GetApplicationSetting("DatabaseCatalog");
+
+        public static string GetDefaultDatabaseConnectionStringName() => GetApplicationSetting("DatabaseConnectionName");
+
+        public static string GetIdentityServerURLString() => GetApplicationSetting("IdentityServer");
+
+        /// <summary>
+        /// Shared Identity Server client secret for token introspection. Prefers IDENTITY_SERVER_SECRET, then web.config IdentityServerClientSecret.
+        /// </summary>
+        public static string GetIdentityServerClientSecret()
         {
-            return GetApplicationSetting("DatabaseServer");
+            var fromEnv = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET");
+            if (!string.IsNullOrWhiteSpace(fromEnv))
+                return fromEnv;
+
+            var setting = WebConfigurationManager.AppSettings["IdentityServerClientSecret"];
+            if (!string.IsNullOrWhiteSpace(setting))
+                return setting;
+
+            throw new ArgumentException("Identity Server client secret is not configured. Set IDENTITY_SERVER_SECRET or IdentityServerClientSecret in app settings.");
         }
 
-        public static string GetDatabaseCatalogName()
-        {
-            return GetApplicationSetting("DatabaseCatalog");
-        } 
+        public static string GetDefaultConnectionString() => GetConnectionString(GetDefaultDatabaseConnectionStringName());
 
-        public static string GetDefaultDatabaseConnectionStringName()
-        { 
-            return GetApplicationSetting("DatabaseConnectionName");
-        }
-
-        public static string GetIdentityServerURLString()
-        {
-            return GetApplicationSetting("IdentityServer");
-        }
-
-        public static string GetDefaultConnectionString()
-        {
-            return GetConnectionString(GetDefaultDatabaseConnectionStringName());
-        }
-
-        public static string[] GetAllowedOrganizations()
-        {
-            return GetStringList("AllowedOrganizations");
-        }
+        public static string[] GetAllowedOrganizations() => GetStringList("AllowedOrganizations");
 
         public static string[] GetStringList(string name)
         {
             string setting = GetApplicationSetting(name);
-            if (setting == null)
-                return Array.Empty<string>();
+            if (setting is null)
+                return [];
 
-            return setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
+            return [.. setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0)];
         }
 
         public static string GetConnectionString(string name)
-        { 
-            if (ConfigurationManager.ConnectionStrings == null)
+        {
+            if (WebConfigurationManager.ConnectionStrings is null)
             {
-                throw new ArgumentException("ConfigurationManager.ConnectionStrings is null");
+                throw new ArgumentException("WebConfigurationManager.ConnectionStrings is null");
             }
-            if (ConfigurationManager.ConnectionStrings.Count == 0)
+            if (WebConfigurationManager.ConnectionStrings.Count == 0)
             {
                 throw new ArgumentException("Connection string " + name + " not configured.");
             }
-            if (ConfigurationManager.ConnectionStrings[name] == null)
+            if (WebConfigurationManager.ConnectionStrings[name] is null)
             {
                 throw new ArgumentException("Connection string " + name + " has a null ConnectionStringSettings value");
             }
 
-            string? conn_string = ConfigurationManager.ConnectionStrings[name].ConnectionString;
-            if(conn_string == null)
-            {
-                throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
-            }
+            string connectionString = WebConfigurationManager.ConnectionStrings[name].ConnectionString ?? throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
 
-            return conn_string;
-        }
-          
-        public static string WebServiceURL
-        {
-            get
+            // Substitute environment variables in connection string
+            // Pattern: %VARIABLE_NAME% will be replaced with environment variable value
+            connectionString = Regex.Replace(connectionString, @"%([A-Z_][A-Z0-9_]*)%", match =>
             {
-                return GetApplicationSetting("EndpointURL");
-            }
+                string envVarName = match.Groups[1].Value;
+                string envValue = Environment.GetEnvironmentVariable(envVarName);
+                return envValue ?? match.Value; // Return original if env var not found
+            });
+
+            return connectionString;
         }
 
-        public static string VolumeURL
-        {
-            get
-            {
-                return GetApplicationSetting("VolumeURL");
-            }
-        }
+        public static string WebServiceURL => GetApplicationSetting("EndpointURL");
 
-        public static Uri? VolumeURI
-        {
-            get
-            {
-                if (Uri.TryCreate(VolumeURL, UriKind.Absolute, out Uri? uri))
-                    return uri;
+        public static string VolumeURL => GetApplicationSetting("VolumeURL");
 
-                return null;
-            }
-        }
+        public static Uri VolumeURI => Uri.TryCreate(VolumeURL, UriKind.Absolute, out var uri) ? uri : null;
 
-        public static Uri? ODataURL
-        {
-            get
-            {
-                return VolumeURI?.Append("OData");
-            }
-        }
+        public static Uri ODataURL => VolumeURI.Append("OData");
 
         public static System.Net.NetworkCredential EndpointCredentials
         {
             get
             {
-                System.Net.NetworkCredential userCredentials = new System.Net.NetworkCredential(GetApplicationSetting("EndpointUsername"), GetApplicationSetting("EndpointPassword"));
+                System.Net.NetworkCredential userCredentials = new(GetApplicationSetting("EndpointUsername"), GetApplicationSetting("EndpointPassword"));
                 return userCredentials;
             }
         }
@@ -146,14 +124,14 @@ namespace VikingWebAppSettings
             try
             {
 #endif
-                X = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("XScaleValue")),
-                                            GetApplicationSetting("XScaleUnits"));
+            X = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("XScaleValue")),
+                                        GetApplicationSetting("XScaleUnits"));
 
-                Y = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("YScaleValue")),
-                                            GetApplicationSetting("YScaleUnits"));
+            Y = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("YScaleValue")),
+                                        GetApplicationSetting("YScaleUnits"));
 
-                Z = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("ZScaleValue")),
-                                            GetApplicationSetting("ZScaleUnits"));
+            Z = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("ZScaleValue")),
+                                        GetApplicationSetting("ZScaleUnits"));
 #if DEBUG
             }
             catch(ArgumentException)
@@ -165,7 +143,7 @@ namespace VikingWebAppSettings
                 Z = new AxisUnits(90, "nm");
             }
 #endif
-            return new Scale(X, Y, Z); 
-        } 
+            return new Scale(X, Y, Z);
+        }
     }
 }

@@ -1,4 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.ViewModels;
@@ -18,13 +21,14 @@ namespace Viking.UI.Forms
 
         public SectionViewerForm(SectionViewModel section)
         {
+            if (section is null)
+                throw new ArgumentNullException(nameof(section));
             InitializeComponent();
 
             this.SectionControl.Section = section;
             this.SectionControl.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged);
 
-            if (section != null)
-                this.Text = this.BuildTitleString(section.ToString());
+            this.Text = this.BuildTitleString(section.ToString());
         }
 
         private string BuildTitleString(string text)
@@ -41,26 +45,23 @@ namespace Viking.UI.Forms
 
         }
 
-        public void OnSectionChanged(object sender, SectionChangedEventArgs e)
+        public async Task OnSectionChanged(object sender, SectionChangedEventArgs e, CancellationToken token)
         {
+            if (token.IsCancellationRequested)
+                return;
+
             if (e.NewSection != null)
             {
-                this.Text = this.BuildTitleString(e.NewSection.ToString());
+                this.Invoke(new Action(() => Text = this.BuildTitleString(e.NewSection.ToString())));
             }
 
-            this.Invalidate();
+            this.Invoke(new Action(() => this.Invalidate()));
         }
 
 
-        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace)
-        {
-            this.SectionControl.GoToLocation(location, Z, InputInSectionSpace);
-        }
+        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace) => this.SectionControl.GoToLocation(location, Z, InputInSectionSpace);
 
-        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double Downsample)
-        {
-            this.SectionControl.GoToLocation(location, Z, InputInSectionSpace, Downsample);
-        }
+        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double Downsample) => this.SectionControl.GoToLocation(location, Z, InputInSectionSpace, Downsample);
 
         public double CameraDownsample
         {
@@ -75,10 +76,12 @@ namespace Viking.UI.Forms
         /// <returns></returns>
         public static SectionViewerForm Show(SectionViewModel section)
         {
+            if (section is null)
+                throw new ArgumentNullException(nameof(section));
             //  SectionViewerForm form = new SectionViewerForm(section);
             //  form.Show();
             SectionViewerForm form = State.ViewerForm;
-            if (form == null)
+            if (form is null)
             {
                 form = new SectionViewerForm(section);
                 State.ViewerForm = form;

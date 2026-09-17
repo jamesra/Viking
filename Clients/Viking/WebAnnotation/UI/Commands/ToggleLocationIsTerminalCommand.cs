@@ -1,29 +1,26 @@
-﻿using System;
-
-using WebAnnotationModel;
+using System;
+using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ToggleLocationIsTerminalCommand : Viking.UI.Commands.Command
+    internal class ToggleLocationIsTerminalCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                     LocationObj loc) : Viking.UI.Commands.Command(parent)
     {
-        LocationObj target;
-        public ToggleLocationIsTerminalCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                         LocationObj loc)
-            : base(parent)
-        {
-            this.target = loc;
-        }
+        private readonly LocationObj target = loc;
 
-        public override void OnActivate()
-        {
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
+            _ = ExecuteAsync();
+        }
+
+        async Task ExecuteAsync()
+        {
             target.Terminal = !target.Terminal;
-            var t = new System.Threading.Tasks.Task(() => WebAnnotation.AnnotationOverlay.SaveLocationsWithMessageBoxOnError());
+            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                target.Terminal = !target.Terminal;
             base.Execute();
         }
     }

@@ -13,6 +13,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
 using System.Linq;
 using Geometry;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 #endregion
 
 
@@ -30,13 +32,13 @@ namespace RoundCurve
     /// </summary>
     public partial class RoundCurve
     {
-        private GridVector2[] _controlPoints;
+        private Geometry.Vector2[] _controlPoints;
         private double[] _tangent_thetas; // Length of the line
         private double[] _distance_to_origin; //Distance of each control point to the origin of the line
         private double[] _distance_to_origin_normalized; //Distance of each control point to the origin of the line
         private bool _Closed;
 
-        public GridVector2[] ControlPoints
+        public Geometry.Vector2[] ControlPoints
         {
             get
             {
@@ -58,14 +60,14 @@ namespace RoundCurve
         public double TotalDistance { get { return _distance_to_origin.Last(); } }
 
 
-        public RoundCurve(GridVector2[] ControlPoints, bool Closed)
+        public RoundCurve(Geometry.Vector2[] ControlPoints, bool Closed)
         {
             this._Closed = Closed;
             this.ControlPoints = ControlPoints;
             
         } 
 
-        private static double[] CalcLineDistances(GridVector2[] points)
+        private static double[] CalcLineDistances(Geometry.Vector2[] points)
         {
             double total_distance = 0;
             double[] point_distances = new double[points.Length];
@@ -73,7 +75,7 @@ namespace RoundCurve
 
             for (int i = 1; i < points.Length; i++)
             {
-                double step_distance = GridVector2.Distance(points[i], points[i - 1]);
+                double step_distance = Geometry.Vector2.Distance(points[i], points[i - 1]);
                 total_distance += step_distance;
                 point_distances[i] = total_distance;
             }
@@ -81,7 +83,7 @@ namespace RoundCurve
             return point_distances;
         }
 
-        private static double[] CalcLineTangents(GridVector2[] points, bool Closed)
+        private static double[] CalcLineTangents(Geometry.Vector2[] points, bool Closed)
         {
             double[] tangents = new double[points.Length];
 
@@ -89,18 +91,18 @@ namespace RoundCurve
             
             for (int i = 1; i < numPoints - 1; i++)
             {
-                tangents[i] = GridVector2.Angle(points[i - 1], points[i + 1]);
+                tangents[i] = Geometry.Vector2.Angle(points[i - 1], points[i + 1]);
             }
 
             if (Closed)
             {
-                tangents[0] = GridVector2.Angle(points[numPoints - 2], points[1]);
-                tangents[numPoints-1] = GridVector2.Angle(points[numPoints - 2], points[1]);
+                tangents[0] = Geometry.Vector2.Angle(points[numPoints - 2], points[1]);
+                tangents[numPoints-1] = Geometry.Vector2.Angle(points[numPoints - 2], points[1]);
             }
             else
             {
-                tangents[0] = (float)GridVector2.Angle(points[0], points[1]);
-                tangents[numPoints - 1] = GridVector2.Angle(points[numPoints - 2], points[numPoints - 1]);
+                tangents[0] = (float)Geometry.Vector2.Angle(points[0], points[1]);
+                tangents[numPoints - 1] = Geometry.Vector2.Angle(points[numPoints - 2], points[numPoints - 1]);
             }
             
             return tangents;

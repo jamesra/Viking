@@ -19,7 +19,7 @@ namespace TriangleNet.Meshing.Algorithm
     public class SweepLine : ITriangulator
     {
         static int randomseed = 1;
-        static int SAMPLERATE = 10;
+        static readonly int SAMPLERATE = 10;
 
         static int randomnation(int choices)
         {
@@ -44,8 +44,6 @@ namespace TriangleNet.Meshing.Algorithm
             // Delaunay algorithm.
             xminextreme = 10 * mesh.bounds.Left - 9 * mesh.bounds.Right;
 
-            SweepEvent[] eventheap;
-
             SweepEvent nextevent;
             SweepEvent newevent;
             SplayNode splayroot;
@@ -65,11 +63,11 @@ namespace TriangleNet.Meshing.Algorithm
             int heapsize;
             bool check4events, farrightflag = false;
 
-            splaynodes = new List<SplayNode>();
+            splaynodes = [];
             splayroot = null;
 
             heapsize = points.Count;
-            CreateHeap(out eventheap, heapsize);//, out events, out freeevents);
+            CreateHeap(out var eventheap, heapsize);//, out events, out freeevents);
 
             mesh.MakeTriangle(ref lefttri);
             mesh.MakeTriangle(ref righttri);
@@ -220,11 +218,12 @@ namespace TriangleNet.Meshing.Algorithm
                     lefttest = predicates.CounterClockwise(leftvertex, midvertex, rightvertex);
                     if (lefttest > 0.0)
                     {
-                        newevent = new SweepEvent();
-
-                        newevent.xkey = xminextreme;
-                        newevent.ykey = CircleTop(leftvertex, midvertex, rightvertex, lefttest);
-                        newevent.otriEvent = lefttri;
+                        newevent = new SweepEvent
+                        {
+                            xkey = xminextreme,
+                            ykey = CircleTop(leftvertex, midvertex, rightvertex, lefttest),
+                            otriEvent = lefttri
+                        };
                         HeapInsert(eventheap, heapsize, newevent);
                         heapsize++;
                         lefttri.SetOrg(new SweepEventVertex(newevent));
@@ -235,11 +234,12 @@ namespace TriangleNet.Meshing.Algorithm
                     righttest = predicates.CounterClockwise(leftvertex, midvertex, rightvertex);
                     if (righttest > 0.0)
                     {
-                        newevent = new SweepEvent();
-
-                        newevent.xkey = xminextreme;
-                        newevent.ykey = CircleTop(leftvertex, midvertex, rightvertex, righttest);
-                        newevent.otriEvent = farrighttri;
+                        newevent = new SweepEvent
+                        {
+                            xkey = xminextreme,
+                            ykey = CircleTop(leftvertex, midvertex, rightvertex, righttest),
+                            otriEvent = farrighttri
+                        };
                         HeapInsert(eventheap, heapsize, newevent);
                         heapsize++;
                         farrighttri.SetOrg(new SweepEventVertex(newevent));
@@ -305,16 +305,11 @@ namespace TriangleNet.Meshing.Algorithm
             notdone = leftchild < heapsize;
             while (notdone)
             {
-                if ((heap[leftchild].ykey < eventy) ||
+                smallest = (heap[leftchild].ykey < eventy) ||
                     ((heap[leftchild].ykey == eventy)
-                     && (heap[leftchild].xkey < eventx)))
-                {
-                    smallest = leftchild;
-                }
-                else
-                {
-                    smallest = eventnum;
-                }
+                     && (heap[leftchild].xkey < eventx))
+                    ? leftchild
+                    : eventnum;
                 rightchild = leftchild + 1;
                 if (rightchild < heapsize)
                 {
@@ -393,10 +388,12 @@ namespace TriangleNet.Meshing.Algorithm
             foreach (var v in mesh.vertices.Values)
             {
                 thisvertex = v;
-                evt = new SweepEvent();
-                evt.vertexEvent = thisvertex;
-                evt.xkey = thisvertex.x;
-                evt.ykey = thisvertex.y;
+                evt = new SweepEvent
+                {
+                    vertexEvent = thisvertex,
+                    xkey = thisvertex.x,
+                    ykey = thisvertex.y
+                };
                 HeapInsert(eventheap, i++, evt);
             }
         }
@@ -413,7 +410,7 @@ namespace TriangleNet.Meshing.Algorithm
             Vertex checkvertex;
             bool rightofroot, rightofchild;
 
-            if (splaytree == null)
+            if (splaytree is null)
             {
                 return null;
             }
@@ -430,7 +427,7 @@ namespace TriangleNet.Meshing.Algorithm
                 {
                     child = splaytree.lchild;
                 }
-                if (child == null)
+                if (child is null)
                 {
                     return splaytree;
                 }
@@ -438,7 +435,7 @@ namespace TriangleNet.Meshing.Algorithm
                 if (checkvertex != child.keydest)
                 {
                     child = Splay(child, searchpoint, ref searchtri);
-                    if (child == null)
+                    if (child is null)
                     {
                         if (rightofroot)
                         {
@@ -463,7 +460,7 @@ namespace TriangleNet.Meshing.Algorithm
                     grandchild = Splay(child.lchild, searchpoint, ref searchtri);
                     child.lchild = grandchild;
                 }
-                if (grandchild == null)
+                if (grandchild is null)
                 {
                     if (rightofroot)
                     {
@@ -515,21 +512,21 @@ namespace TriangleNet.Meshing.Algorithm
                 righttree = Splay(splaytree.rchild, searchpoint, ref searchtri);
 
                 splaynodes.Remove(splaytree);
-                if (lefttree == null)
+                if (lefttree is null)
                 {
                     return righttree;
                 }
-                else if (righttree == null)
+                else if (righttree is null)
                 {
                     return lefttree;
                 }
-                else if (lefttree.rchild == null)
+                else if (lefttree.rchild is null)
                 {
                     lefttree.rchild = righttree.lchild;
                     righttree.lchild = lefttree;
                     return righttree;
                 }
-                else if (righttree.lchild == null)
+                else if (righttree.lchild is null)
                 {
                     righttree.lchild = lefttree.rchild;
                     lefttree.rchild = righttree;
@@ -557,7 +554,7 @@ namespace TriangleNet.Meshing.Algorithm
             splaynodes.Add(newsplaynode);
             newkey.Copy(ref newsplaynode.keyedge);
             newsplaynode.keydest = newkey.Dest();
-            if (splayroot == null)
+            if (splayroot is null)
             {
                 newsplaynode.lchild = null;
                 newsplaynode.rchild = null;
@@ -601,7 +598,7 @@ namespace TriangleNet.Meshing.Algorithm
             double ccwabc;
             double xac, yac, xbc, ybc;
             double aclen2, bclen2;
-            Point searchpoint = new Point(); // TODO: mesh.nextras
+            Point searchpoint = new(); // TODO: mesh.nextras
             Otri dummytri = default;
 
             ccwabc = predicates.CounterClockwise(pa, pb, pc);
@@ -770,14 +767,9 @@ namespace TriangleNet.Meshing.Algorithm
         /// to handle the pointer magic of the original code (casting a sweep event 
         /// to vertex etc.).
         /// </summary>
-        class SweepEventVertex : Vertex
+        class SweepEventVertex(SweepLine.SweepEvent e) : Vertex
         {
-            public SweepEvent evt;
-
-            public SweepEventVertex(SweepEvent e)
-            {
-                evt = e;
-            }
+            public readonly SweepEvent evt = e;
         }
 
         /// <summary>

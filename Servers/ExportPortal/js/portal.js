@@ -1,0 +1,968 @@
+/*
+ * Viking Data Export portal.
+ *
+ * A static page. It builds URLs against the existing per-volume Export services and downloads
+ * the result, so it adds no server of its own and cannot fail to start.
+ *
+ * Two things about the export service shape the whole design:
+ *
+ *   1. There is no volume in its routes. Each volume is a separate IIS application bound to one
+ *      volume by configuration, so the volume becomes a path segment: /{Volume}/Export/...
+ *
+ *   2. A GET carries its inputs in the query string, which IIS caps near 2 KB. The service also
+ *      accepts the same list as a POST body, so downloads are sent that way and a long structure
+ *      list arrives as one request. The query form is still shown as a copyable URL.
+ */
+
+'use strict';
+
+/* ── Configuration ──────────────────────────────────────── */
+
+const IDENTITY_VOLUME_TREE = 'https://identity.codepharm.net:6001/Permissions/UserAccessibleVolumeTree';
+
+/*
+ * Volumes known to host an Export application, used to seed the list. The identity server only
+ * reports volumes granted to the Anonymous group, which today is a subset, so the two sources are
+ * merged and every candidate is probed before it is offered.
+ */
+const SEED_VOLUMES = [
+  'RC1', 'RC2', 'RPC1', 'RPC2', 'RPC3',
+  'NeitzTemporalMonkey', 'NeitzInferiorMonkey', 'NeitzCPED', 'NeitzNM',
+  'RC1Marshak', 'KwanZebra1', 'John', 'RC1Test'
+];
+
+const DEFAULT_VOLUME = 'RC1';
+
+/*
+ * IIS caps the query string near 2048 bytes by default. Staying meaningfully below that leaves
+ * headroom for the path and the other parameters. This no longer limits a download, which uses a
+ * POST body; it only decides whether the previewed GET URL is short enough to be pasted elsewhere.
+ */
+const MAX_QUERY_BYTES = 1800;
+
+/* Matches RequestBodyIds.MaxIdCount in the export service, which rejects anything larger. */
+const MAX_ID_COUNT = 50000;
+
+/*
+ * The service's route table: {Report}/{format}. The service also still answers the older
+ * {Report}/Get{FORMAT}/{format} form that named the format twice, so links published before
+ * August 2026 keep working, but there is no reason to generate them.
+ *
+ * An unmatched URL returns the instructions page with HTTP 200 rather than a 404, so a typo
+ * here surfaces as a successful download of an HTML file. These must be exact.
+ */
+const REPORTS = {
+  morphology: {
+    label: 'Morphology',
+    acceptsIds: true,
+    options: ['stick'],
+    formats: [
+      { id: 'tlp',  path: 'Morphology/tlp',  label: 'TLP',  note: 'Tulip' },
+      { id: 'json', path: 'Morphology/json', label: 'JSON', note: 'generic' }
+    ]
+  },
+  network: {
+    label: 'Network',
+    acceptsIds: true,
+    options: ['hops'],
+    formats: [
+      { id: 'dot',  path: 'Network/dot',  label: 'DOT',     note: 'Graphviz' },
+      { id: 'tlp',  path: 'Network/tlp',  label: 'TLP',     note: 'Tulip' },
+      { id: 'gml',  path: 'Network/gml',  label: 'GraphML', note: 'XML' },
+      { id: 'json', path: 'Network/json', label: 'JSON',    note: 'generic' }
+    ]
+  },
+  motif: {
+    label: 'Motif',
+    acceptsIds: false,
+    options: [],
+    formats: [
+      { id: 'dot',  path: 'Motif/dot',  label: 'DOT',  note: 'Graphviz' },
+      { id: 'tlp',  path: 'Motif/tlp',  label: 'TLP',  note: 'Tulip' },
+      { id: 'json', path: 'Motif/json', label: 'JSON', note: 'generic' }
+    ]
+  }
+};
+
+/* ── State ──────────────────────────────────────────────── */
+
+const state = {
+  volumes: [],
+  report: 'morphology',
+  format: 'tlp',
+
+  ids: [],          // everything to export: numeric entries plus resolved labels
+  numericIds: [],   // from plain IDs and ranges, available without a round trip
+  invalid: [],      // entries that could not be read, surfaced rather than dropped
+  labelTerms: [],   // label entries awaiting or holding a lookup result
+  labelResults: [],
+  resolving: false,
+  hasInput: false   // whether the box holds anything at all, which decides the empty-set guard
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* ── Service root ───────────────────────────────────────── */
+
+/** Where the volume applications live when this page is not being served alongside them. */
+const DEFAULT_SERVICE_ROOT = 'https://websvc.codepharm.net';
+
+/**
+ * Resolves the root that volume applications hang from.
+ *
+ * In production the portal is served at /Export/ and the volume applications sit at
+ * /{Volume}/Export/, so the root is this page's URL with its own trailing /Export segment
+ * removed. Both then share an origin, which is what lets downloads use fetch.
+ *
+ * When the page is opened from a file or from a local development server there are no volume
+ * applications beneath it, so it targets the production host instead. A ?root= parameter
+ * overrides both, which is useful for pointing a local copy at a staging host.
+ */
+function deriveServiceRoot() {
+  const override = new URLSearchParams(location.search).get('root');
+  if (override) {
+    return override.replace(/\/+$/, '');
+  }
+
+  const host = location.hostname;
+  const isLocal = location.protocol === 'file:'
+    || host === ''
+    || host === 'localhost'
+    || host === '127.0.0.1'
+    || host === '[::1]';
+
+  if (isLocal) {
+    return DEFAULT_SERVICE_ROOT;
+  }
+
+  let path = location.pathname.replace(/\/index\.html?$/i, '');
+  path = path.replace(/\/Export\/?$/i, '');
+  path = path.replace(/\/$/, '');
+  return location.origin + path;
+}
+
+const SERVICE_ROOT = deriveServiceRoot();
+
+/**
+ * Whether the export services share this page's origin.
+ *
+ * This decides how a download is performed. Same-origin uses fetch, which can POST the ID list in
+ * the request body, inspect the response, and report failures precisely. Cross-origin cannot use
+ * fetch, because the export service sends no CORS headers, so the browser is navigated to a GET
+ * URL instead and the service's Content-Disposition header produces the download. That fallback
+ * is subject to the URL length limit that POST exists to avoid.
+ */
+const SAME_ORIGIN = (() => {
+  try {
+    return new URL(SERVICE_ROOT, location.href).origin === location.origin;
+  } catch {
+    return false;
+  }
+})();
+
+/* ── Input parsing ──────────────────────────────────────── */
+
+/*
+ * A range wider than this is refused rather than expanded. It is far above any plausible real
+ * request and stops a slip such as 1-99999999 from building a multi-megabyte list.
+ */
+const MAX_RANGE_SPAN = 10000;
+
+/*
+ * Entries are separated by newline, comma, or semicolon, and never by whitespace alone.
+ *
+ * That restriction exists because labels contain spaces. On RC1, 313 of 8,044 labelled parent
+ * structures have a space in the label, including "GC ON", "yAC ON+OFF" and "GAC yAC ON+OFF", so
+ * splitting on whitespace would tear those into meaningless fragments. Commas, semicolons and
+ * newlines appear in no label at all.
+ *
+ * Whitespace still separates within an entry that contains no letters, which keeps a pasted
+ * "180 476 514" working without endangering any label.
+ */
+const ENTRY_SEPARATORS = /[\n\r,;]+/;
+
+/** Escapes a value for an OData string literal, where a quote is doubled. */
+const odataQuote = (s) => s.replace(/'/g, "''");
+
+/**
+ * Splits raw text into entries and classifies each one.
+ *
+ * Returns numeric IDs, the label terms that need resolving against OData, and the entries that
+ * could not be understood. Unparseable entries are reported rather than dropped: an empty ID set
+ * means "export the whole volume", so silently discarding input is the one failure this page
+ * must not have.
+ */
+function parseEntries(text) {
+  const ids = new Set();
+  const labels = [];
+  const invalid = [];
+
+  if (!text) return { ids: [], labels, invalid };
+
+  for (const rawEntry of text.split(ENTRY_SEPARATORS)) {
+    const entry = rawEntry.trim();
+    if (!entry) continue;
+
+    // Anything with a letter is a label, and is never split further.
+    if (/[a-z]/i.test(entry)) {
+      if (!labels.includes(entry)) labels.push(entry);
+      continue;
+    }
+
+    // Tighten "180 - 476" to "180-476" first, so the whitespace split below cannot break a
+    // spaced range into three meaningless tokens.
+    for (const token of entry.replace(/\s*-\s*/g, '-').split(/\s+/)) {
+      if (!token) continue;
+
+      if (/^\d+$/.test(token)) {
+        const n = Number(token);
+        if (Number.isSafeInteger(n)) ids.add(n);
+        else invalid.push({ text: token, reason: 'number is too large' });
+        continue;
+      }
+
+      const range = token.match(/^(\d+)-(\d+)$/);
+      if (range) {
+        let lo = Number(range[1]);
+        let hi = Number(range[2]);
+        if (!Number.isSafeInteger(lo) || !Number.isSafeInteger(hi)) {
+          invalid.push({ text: token, reason: 'number is too large' });
+          continue;
+        }
+        if (lo > hi) [lo, hi] = [hi, lo];
+        const span = hi - lo + 1;
+        if (span > MAX_RANGE_SPAN) {
+          invalid.push({ text: token, reason: `range covers ${span.toLocaleString()} IDs, over the ${MAX_RANGE_SPAN.toLocaleString()} limit` });
+          continue;
+        }
+        for (let i = lo; i <= hi; i++) ids.add(i);
+        continue;
+      }
+
+      invalid.push({ text: token, reason: 'not an ID or a range' });
+    }
+  }
+
+  return { ids: [...ids].sort((a, b) => a - b), labels, invalid };
+}
+
+/* ── Label resolution ───────────────────────────────────── */
+
+/*
+ * Labels are turned into IDs here rather than by the export service, which accepts numeric IDs
+ * only. OData has no regular-expression support -- matchesPattern is rejected with HTTP 400 --
+ * so matching is a case-insensitive substring test, which contains() does support.
+ *
+ * Only parent structures are considered. Those are the neurons that Morphology and Network
+ * export; their children are the individual annotations.
+ */
+const labelCache = new Map();
+
+async function fetchLabelMatches(volume, term) {
+  const filter = `contains(tolower(Label),'${odataQuote(term.toLowerCase())}') and ParentID eq null`;
+  let url = `${SERVICE_ROOT}/${volume}/OData/Structures`
+    + `?$filter=${encodeURIComponent(filter)}&$select=ID,Label&$orderby=ID`;
+
+  const ids = [];
+  const samples = [];
+
+  // OData pages large result sets, so follow the continuation until it stops.
+  while (url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`OData returned HTTP ${response.status}`);
+    const page = await response.json();
+
+    for (const row of page.value || []) {
+      ids.push(row.ID);
+      if (samples.length < 4 && row.Label) {
+        const trimmed = row.Label.trim();
+        if (trimmed && !samples.includes(trimmed)) samples.push(trimmed);
+      }
+    }
+    url = page['@odata.nextLink'] || null;
+  }
+
+  return { ids, samples };
+}
+
+/**
+ * Resolves label terms to IDs, reusing earlier answers for the same volume and term.
+ *
+ * Each term is reported separately so the page can say which ones matched and which did not,
+ * instead of merging everything into one opaque count.
+ */
+async function resolveLabels(volume, terms) {
+  return Promise.all(terms.map(async (term) => {
+    const key = `${volume}\u0000${term.toLowerCase()}`;
+    if (labelCache.has(key)) return labelCache.get(key);
+
+    let result;
+    try {
+      const { ids, samples } = await fetchLabelMatches(volume, term);
+      result = { term, ids, samples, error: null };
+    } catch (error) {
+      result = {
+        term,
+        ids: [],
+        samples: [],
+        error: SAME_ORIGIN
+          ? error.message
+          : 'label lookup needs the OData service on this page\u2019s origin'
+      };
+    }
+
+    // A failure is not cached, so a transient outage does not stick for the session.
+    if (!result.error) labelCache.set(key, result);
+    return result;
+  }));
+}
+
+/* ── URL building ───────────────────────────────────────── */
+
+/**
+ * Builds the export URL for a volume, report, format, and ID batch.
+ *
+ * IDs are joined with semicolons because that is the separator the service splits on. The
+ * encoding matters: a literal comma is parsed as part of a single malformed token, which the
+ * service resolves to nothing, and an empty ID set means "export the whole volume". A caller who
+ * used commas would silently receive the entire volume instead of the structures requested.
+ */
+function buildUrl(volume, reportKey, formatId, ids) {
+  const report = REPORTS[reportKey];
+  const fmt = report.formats.find((f) => f.id === formatId) || report.formats[0];
+  const base = `${SERVICE_ROOT}/${volume}/Export/${fmt.path}`;
+
+  const params = [];
+
+  if (report.acceptsIds && ids && ids.length) {
+    params.push('id=' + encodeURIComponent(ids.join(';')));
+  }
+  if (report.options.includes('hops')) {
+    params.push('hops=' + encodeURIComponent($('hops').value || '1'));
+  }
+  if (report.options.includes('stick') && $('stick').checked) {
+    params.push('stick=1');
+  }
+
+  return params.length ? `${base}?${params.join('&')}` : base;
+}
+
+/**
+ * Number of characters the encoded ID list would occupy in a URL.
+ *
+ * Only used to decide whether the previewed GET URL is short enough to be pasted elsewhere.
+ * Downloads are not bound by it, because they send the list in a POST body instead.
+ */
+function encodedQueryLength(ids) {
+  return encodeURIComponent(ids.join(';')).length;
+}
+
+/* ── Volume discovery ───────────────────────────────────── */
+
+/** Flattens the identity server's organizational-unit tree into a list of volumes. */
+function flattenVolumeTree(nodes, groupName, out) {
+  for (const node of nodes || []) {
+    const group = node.name || groupName;
+    for (const v of node.volumes || []) {
+      out.push({
+        name: v.name,
+        group: group,
+        description: (v.metadata && v.metadata.Description) || ''
+      });
+    }
+    flattenVolumeTree(node.children, group, out);
+  }
+  return out;
+}
+
+/** Reads the anonymous volume tree. Returns an empty list if identity is unreachable. */
+async function fetchIdentityVolumes() {
+  try {
+    const response = await fetch(IDENTITY_VOLUME_TREE, { mode: 'cors' });
+    if (!response.ok) return [];
+    return flattenVolumeTree(await response.json(), 'Volumes', []);
+  } catch {
+    // Most likely the CORS grant is not deployed yet. The seed list still gives a usable page.
+    return [];
+  }
+}
+
+/**
+ * Tests whether a volume is online by asking its OData service, which is same-origin.
+ *
+ * The Export application itself cannot be probed usefully: it answers its help page with HTTP 200
+ * even when it is misconfigured and every export fails, so a green result here means the volume
+ * exists and is serving data, not that the export succeeded.
+ */
+async function probeVolume(name) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch(`${SERVICE_ROOT}/${name}/OData/`, { signal: controller.signal });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadVolumes() {
+  const select = $('volume');
+  const status = $('volume-status');
+
+  status.innerHTML = '<span class="dot wait"></span>Discovering volumes…';
+  select.disabled = true;
+
+  const identityVolumes = await fetchIdentityVolumes();
+
+  // Merge identity's richer metadata over the seed names, keyed case-insensitively.
+  const byKey = new Map();
+  for (const name of SEED_VOLUMES) {
+    byKey.set(name.toLowerCase(), { name, group: 'Volumes', description: '' });
+  }
+  for (const v of identityVolumes) {
+    if (!v.name) continue;
+    byKey.set(v.name.toLowerCase(), v);
+  }
+
+  const candidates = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  const identityNote = identityVolumes.length
+    ? ''
+    : ' The identity service did not respond, so this list comes from the built-in set.';
+
+  // Probing only works same-origin. Attempting it against a remote host produces thirteen
+  // CORS failures that look identical to thirteen dead volumes, which would be misleading.
+  if (!SAME_ORIGIN) {
+    candidates.forEach((v) => { v.online = true; v.unverified = true; });
+    state.volumes = candidates;
+    renderVolumes();
+    status.innerHTML = `<span class="dot wait"></span>Targeting <code>${SERVICE_ROOT}</code>. `
+      + `Availability was not checked because that is a different origin from this page.${identityNote}`;
+    select.disabled = false;
+    return;
+  }
+
+  status.innerHTML = `<span class="dot wait"></span>Testing ${candidates.length} volumes…`;
+
+  const online = await Promise.all(candidates.map((v) => probeVolume(v.name)));
+  candidates.forEach((v, i) => { v.online = online[i]; });
+
+  state.volumes = candidates;
+  renderVolumes();
+
+  const upCount = candidates.filter((v) => v.online).length;
+
+  status.innerHTML = upCount
+    ? `<span class="dot good"></span>${upCount} of ${candidates.length} volumes responding.${identityNote}`
+    : `<span class="dot bad"></span>No volumes responded, so every entry below is listed as unverified. `
+      + `All of them remain selectable.${identityNote}`;
+
+  select.disabled = false;
+}
+
+function renderVolumes() {
+  const select = $('volume');
+  select.innerHTML = '';
+
+  const groups = new Map();
+  for (const v of state.volumes) {
+    if (!groups.has(v.group)) groups.set(v.group, []);
+    groups.get(v.group).push(v);
+  }
+
+  for (const [groupName, volumes] of groups) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = groupName;
+    for (const v of volumes) {
+      const option = document.createElement('option');
+      option.value = v.name;
+      // The probe is advisory. A volume that did not answer stays selectable, because the probe
+      // can fail for reasons that have nothing to do with the export service, and a page that
+      // refuses to build a URL is less useful than one that lets the request fail honestly.
+      option.textContent = (v.online || v.unverified) ? v.name : `${v.name} — did not respond`;
+      optgroup.appendChild(option);
+    }
+    select.appendChild(optgroup);
+  }
+
+  // Without this the list simply opens on whatever sorts first, which is a private volume.
+  const preferred = state.volumes.find(
+    (v) => v.name.toLowerCase() === DEFAULT_VOLUME.toLowerCase() && (v.online || v.unverified));
+  const firstOnline = state.volumes.find((v) => v.online);
+  const fallback = firstOnline ? firstOnline.name : (state.volumes[0] ? state.volumes[0].name : '');
+  select.value = preferred ? preferred.name : fallback;
+
+  onVolumeChange();
+}
+
+function onVolumeChange() {
+  const volume = $('volume').value;
+  const found = state.volumes.find((v) => v.name === volume);
+
+  let description = found && found.description ? found.description : '';
+  if (found && !found.online && !found.unverified) {
+    description = (description ? description + ' ' : '') +
+      'This volume did not respond when the page loaded. You can still build and send the request.';
+  }
+
+  $('volume-desc').textContent = description;
+  $('odata-link').href = `${SERVICE_ROOT}/${volume}/OData/`;
+
+  // Labels resolve to IDs that only mean anything within one volume, so the previous answers
+  // cannot carry over. Re-running the parse re-queries whatever labels are in the box.
+  state.labelResults = [];
+  onIdsChanged();
+
+  refresh();
+}
+
+/* ── Rendering ──────────────────────────────────────────── */
+
+function renderFormats() {
+  const report = REPORTS[state.report];
+  const container = $('formats');
+  container.innerHTML = '';
+
+  if (!report.formats.some((f) => f.id === state.format)) {
+    state.format = report.formats[0].id;
+  }
+
+  for (const fmt of report.formats) {
+    const label = document.createElement('label');
+    label.className = 'fmt';
+    label.innerHTML =
+      `<input type="radio" name="format" value="${fmt.id}"${fmt.id === state.format ? ' checked' : ''}>` +
+      `${fmt.label}<small>${fmt.note}</small>`;
+    label.querySelector('input').addEventListener('change', () => {
+      state.format = fmt.id;
+      refresh();
+    });
+    container.appendChild(label);
+  }
+
+  $('format-hint').textContent =
+    state.report === 'morphology' && state.format === 'json'
+      ? 'Morphology JSON is currently returned empty by the service. Use TLP for full detail.'
+      : '';
+}
+
+function renderOptions() {
+  const report = REPORTS[state.report];
+
+  $('motif-note').hidden = report.acceptsIds;
+  $('options-body').hidden = !report.acceptsIds && !report.options.length;
+
+  $('field-ids').hidden = !report.acceptsIds;
+  $('field-hops').hidden = !report.options.includes('hops');
+  $('field-stick').hidden = !report.options.includes('stick');
+}
+
+function renderIdCount() {
+  const pill = $('id-count');
+  const n = state.ids.length;
+
+  if (state.resolving) {
+    pill.textContent = 'looking up labels…';
+    pill.classList.add('count');
+  } else if (!n) {
+    // Only an genuinely empty box means the whole volume. Text that resolved to nothing is a
+    // mistake, and saying "whole volume" there would be the wrong reassurance entirely.
+    pill.textContent = state.hasInput ? 'nothing matched' : 'no IDs, whole volume';
+    pill.classList.remove('count');
+  } else {
+    pill.textContent = `${n.toLocaleString()} structure${n === 1 ? '' : 's'}`;
+    pill.classList.add('count');
+  }
+
+  renderIdReport();
+}
+
+/** Lists what each label matched and which entries could not be read. */
+function renderIdReport() {
+  const box = $('id-report');
+  const rows = [];
+
+  for (const term of state.labelTerms) {
+    const result = state.labelResults.find((r) => r.term === term);
+
+    if (!result) {
+      rows.push({ cls: 'wait', label: term, detail: 'looking up…' });
+    } else if (result.error) {
+      rows.push({ cls: 'err', label: term, detail: result.error });
+    } else if (!result.ids.length) {
+      rows.push({ cls: 'err', label: term, detail: 'no structures with a matching label' });
+    } else {
+      const matched = `${result.ids.length.toLocaleString()} structure${result.ids.length === 1 ? '' : 's'}`;
+      const shown = result.samples.slice(0, 3).join(', ');
+      const more = result.samples.length > 3 ? ', …' : '';
+      rows.push({ cls: 'ok', label: term, detail: shown ? `${matched} — ${shown}${more}` : matched });
+    }
+  }
+
+  for (const bad of state.invalid) {
+    rows.push({ cls: 'err', label: bad.text, detail: bad.reason });
+  }
+
+  box.innerHTML = '';
+  box.hidden = rows.length === 0;
+
+  for (const row of rows) {
+    const el = document.createElement('div');
+    el.className = 'idrow';
+    el.innerHTML = `<span class="badge ${row.cls}"></span><code></code><span class="detail"></span>`;
+    el.querySelector('.badge').textContent =
+      row.cls === 'ok' ? 'matched' : (row.cls === 'wait' ? 'checking' : 'no match');
+    el.querySelector('code').textContent = row.label;
+    el.querySelector('.detail').textContent = row.detail;
+    box.appendChild(el);
+  }
+}
+
+function renderRequest() {
+  const volume = $('volume').value;
+  if (!volume) {
+    $('url-preview').value = '';
+    $('download').disabled = true;
+    return;
+  }
+
+  const report = REPORTS[state.report];
+  const ids = report.acceptsIds ? state.ids : [];
+
+  $('url-preview').value = buildUrl(volume, state.report, state.format, ids);
+
+  const bar = $('lengthbar');
+  const fill = $('length-fill');
+  const text = $('length-text');
+
+  /*
+   * The guard that matters most on this page. Omitting the id parameter means "export the whole
+   * volume", so input that resolves to nothing would quietly export everything -- the opposite of
+   * what was asked for, and expensive on a volume the size of RC1.
+   */
+  const resolvedToNothing = report.acceptsIds && state.hasInput && !ids.length;
+  const tooMany = ids.length > MAX_ID_COUNT;
+  $('download').disabled = resolvedToNothing || tooMany || state.resolving;
+
+  if (resolvedToNothing) {
+    bar.hidden = false;
+    fill.style.width = '0%';
+    fill.className = 'lengthbar-fill warn';
+    text.textContent = state.resolving
+      ? 'Looking up labels…'
+      : 'Nothing in the box matched a structure. Clear it to export the whole volume, or correct the entries above.';
+    return;
+  }
+
+  if (!ids.length) {
+    bar.hidden = true;
+    return;
+  }
+
+  bar.hidden = false;
+  const pct = Math.min(100, (ids.length / MAX_ID_COUNT) * 100);
+  fill.style.width = pct + '%';
+  fill.className = 'lengthbar-fill' + (tooMany || pct > 90 ? ' warn' : '');
+
+  const count = `${ids.length.toLocaleString()} structure${ids.length === 1 ? '' : 's'}`;
+
+  if (tooMany) {
+    text.textContent =
+      `${count} is more than the service accepts in one request. Reduce the list to ` +
+      `${MAX_ID_COUNT.toLocaleString()} or fewer.`;
+  } else if (!SAME_ORIGIN && encodedQueryLength(ids) > MAX_QUERY_BYTES) {
+    // The cross-origin fallback navigates to the GET URL, so here the URL limit does still bite.
+    text.textContent =
+      `${count}. This list is too long for a URL, and this copy of the page can only download by ` +
+      'URL, so the request will likely be rejected. Use the portal served alongside the volumes.';
+  } else if (encodedQueryLength(ids) > MAX_QUERY_BYTES) {
+    text.textContent =
+      `${count}. Sent in the request body, so it downloads as a single file. The URL above is too ` +
+      'long to paste elsewhere.';
+  } else {
+    text.textContent = `${count}. The URL above can be copied and used directly.`;
+  }
+}
+
+function refresh() {
+  renderFormats();
+  renderOptions();
+  renderIdCount();
+  renderRequest();
+}
+
+/* ── Downloading ────────────────────────────────────────── */
+
+function filenameFromResponse(response, fallback) {
+  const header = response.headers.get('Content-Disposition') || '';
+  const star = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (star) {
+    try { return decodeURIComponent(star[1]); } catch { /* fall through */ }
+  }
+  const plain = header.match(/filename="?([^";]+)"?/i);
+  return plain ? plain[1] : fallback;
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+function addResult(name, size, ok, detail) {
+  const results = $('results');
+  results.hidden = false;
+  if (!results.querySelector('h4')) {
+    const heading = document.createElement('h4');
+    heading.textContent = 'Downloads';
+    results.appendChild(heading);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'result';
+  row.innerHTML =
+    `<span class="badge ${ok ? 'ok' : 'err'}">${ok ? 'saved' : 'failed'}</span>` +
+    `<span class="name"></span>` +
+    `<span class="size"></span>`;
+  row.querySelector('.name').textContent = ok ? name : detail;
+  row.querySelector('.size').textContent = ok ? formatBytes(size) : '';
+  results.appendChild(row);
+}
+
+function formatBytes(n) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+async function downloadOne(url, fallbackName, init) {
+  const response = await fetch(url, init);
+
+  // An unmatched route returns the help page with HTTP 200, so a success status alone does not
+  // mean an export was produced. Treat HTML on an export URL as a failure.
+  const contentType = response.headers.get('Content-Type') || '';
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.text();
+      const problem = JSON.parse(body);
+      if (problem.detail || problem.title) detail += ` — ${problem.detail || problem.title}`;
+    } catch { /* body was not problem details */ }
+    throw new Error(detail);
+  }
+  if (contentType.includes('text/html')) {
+    throw new Error('The service returned its help page instead of a file, which means the URL did not match an export route.');
+  }
+
+  const blob = await response.blob();
+  saveBlob(blob, filenameFromResponse(response, fallbackName));
+  return { name: filenameFromResponse(response, fallbackName), size: blob.size };
+}
+
+/**
+ * Starts a download by navigating to the URL.
+ *
+ * Used when the export service is on another origin, where fetch is blocked but a navigation is
+ * not. The service marks its responses as attachments, so the browser saves the file and the page
+ * stays put. Nothing can be reported about the outcome, because the response is never visible
+ * to script.
+ */
+function saveByNavigation(url) {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.rel = 'noopener';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+async function onDownload() {
+  const volume = $('volume').value;
+  if (!volume) return;
+
+  const button = $('download');
+  const status = $('status');
+  const report = REPORTS[state.report];
+  const ids = report.acceptsIds ? state.ids : [];
+
+  $('results').hidden = true;
+  $('results').innerHTML = '';
+
+  button.disabled = true;
+  status.className = 'status';
+
+  if (!SAME_ORIGIN) {
+    // A cross-origin POST would need CORS headers the export service does not send, so this copy
+    // of the page falls back to a GET navigation and inherits the URL length limit.
+    saveByNavigation(buildUrl(volume, state.report, state.format, ids));
+    button.disabled = false;
+    status.className = 'status';
+    status.textContent = 'Download started. Check your browser downloads for the result.';
+    return;
+  }
+
+  /*
+   * The ID list goes in the body rather than the query string. That keeps the whole list in one
+   * request regardless of length, which matters most for Network: hop traversal is computed over
+   * whatever arrives in a single request, so a split list would explore a smaller graph.
+   */
+  const usePost = ids.length > 0;
+  const url = buildUrl(volume, state.report, state.format, usePost ? [] : ids);
+  const init = usePost
+    ? { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ids.join(';') }
+    : undefined;
+
+  status.innerHTML = '<span class="spinner"></span>Generating export… this can take a while for large requests.';
+
+  try {
+    const saved = await downloadOne(url, `${volume}-${state.report}.${state.format}`, init);
+    addResult(saved.name, saved.size, true);
+    status.className = 'status ok';
+    status.textContent = 'Download complete.';
+  } catch (error) {
+    addResult('', 0, false, error.message);
+    status.className = 'status err';
+    status.textContent = 'The export request failed. '
+      + 'If this volume is newly deployed its export service may not be configured yet.';
+  }
+
+  button.disabled = false;
+}
+
+/* ── Drag and drop ──────────────────────────────────────── */
+
+function wireDropzone() {
+  const zone = $('dropzone');
+  const textarea = $('ids');
+  const filesPill = $('id-files');
+  const loaded = [];
+
+  const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+  ['dragenter', 'dragover'].forEach((type) =>
+    zone.addEventListener(type, (e) => { stop(e); zone.classList.add('dragging'); }));
+
+  ['dragleave', 'drop'].forEach((type) =>
+    zone.addEventListener(type, (e) => { stop(e); zone.classList.remove('dragging'); }));
+
+  zone.addEventListener('drop', async (e) => {
+    const files = [...(e.dataTransfer.files || [])];
+    if (!files.length) return;
+
+    const texts = await Promise.all(files.map((f) => f.text()));
+    const existing = textarea.value.trim();
+    textarea.value = (existing ? existing + '\n' : '') + texts.join('\n');
+
+    for (const f of files) loaded.push(f.name);
+    filesPill.hidden = false;
+    filesPill.textContent = `from ${loaded.join(', ')}`;
+
+    onIdsChanged();
+  });
+
+  $('clear-ids').addEventListener('click', () => {
+    textarea.value = '';
+    loaded.length = 0;
+    filesPill.hidden = true;
+    onIdsChanged();
+  });
+}
+
+/** Recomputes the export set from the numeric entries and whatever labels have resolved. */
+function mergeIds() {
+  const all = new Set(state.numericIds);
+  for (const result of state.labelResults) {
+    for (const id of result.ids) all.add(id);
+  }
+  state.ids = [...all].sort((a, b) => a - b);
+}
+
+/*
+ * Label lookups hit the network, so they are debounced and their results are applied only if the
+ * box has not changed again in the meantime. Without that guard a slow reply for an earlier
+ * keystroke could overwrite the answer for the current text.
+ */
+let labelTimer = null;
+let labelRequestId = 0;
+
+function onIdsChanged() {
+  const text = $('ids').value;
+  const parsed = parseEntries(text);
+
+  state.hasInput = text.trim().length > 0;
+  state.numericIds = parsed.ids;
+  state.invalid = parsed.invalid;
+  state.labelTerms = parsed.labels;
+
+  // Drop results for terms that are no longer present, so removing a label removes its IDs.
+  state.labelResults = state.labelResults.filter((r) => parsed.labels.includes(r.term));
+
+  clearTimeout(labelTimer);
+
+  const pending = parsed.labels.filter((t) => !state.labelResults.some((r) => r.term === t));
+  state.resolving = pending.length > 0;
+
+  mergeIds();
+  renderIdCount();
+  renderRequest();
+
+  if (!pending.length) return;
+
+  const requestId = ++labelRequestId;
+  labelTimer = setTimeout(async () => {
+    const volume = $('volume').value;
+    const results = await resolveLabels(volume, pending);
+    if (requestId !== labelRequestId) return;  // superseded by newer input
+
+    state.labelResults = state.labelResults
+      .filter((r) => state.labelTerms.includes(r.term))
+      .concat(results.filter((r) => state.labelTerms.includes(r.term)));
+    state.resolving = false;
+
+    mergeIds();
+    renderIdCount();
+    renderRequest();
+  }, 350);
+}
+
+/* ── Startup ────────────────────────────────────────────── */
+
+function wire() {
+  document.querySelectorAll('input[name=report]').forEach((radio) =>
+    radio.addEventListener('change', () => {
+      state.report = radio.value;
+      refresh();
+    }));
+
+  $('ids').addEventListener('input', onIdsChanged);
+  $('hops').addEventListener('input', renderRequest);
+  $('stick').addEventListener('change', renderRequest);
+  $('volume').addEventListener('change', onVolumeChange);
+  $('download').addEventListener('click', onDownload);
+  $('recheck').addEventListener('click', loadVolumes);
+
+  $('copy-url').addEventListener('click', async () => {
+    const value = $('url-preview').value;
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      $('copy-url').textContent = 'Copied';
+      setTimeout(() => { $('copy-url').textContent = 'Copy'; }, 1500);
+    } catch {
+      $('url-preview').select();
+    }
+  });
+
+  wireDropzone();
+  refresh();
+}
+
+wire();
+loadVolumes();

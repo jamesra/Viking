@@ -17,7 +17,7 @@ namespace MorphologyView
             }
 
             MeshViewModel model = new MeshViewModel();
-            model.Verticies = mesh.Verticies.Select(v => new VertexPositionColor(v.Position.ToXNAVector3(), Color.Blue)).ToArray();
+            model.Vertices = mesh.Vertices.Select(v => new VertexPositionColor(v.Position.ToXNAVector3(), Color.Blue)).ToArray();
             model.Faces = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
             return model;
             */

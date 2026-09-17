@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -9,23 +9,26 @@ using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
     [Viking.Common.CommandAttribute(typeof(LocationCanvasView))]
-    class LocationObjCommand : AnnotationCommandBase
+    internal class LocationObjCommand : AnnotationCommandBase
     {
-        LocationObj selected;
-        StructureTypeObj _LocType = null;
+        private readonly LocationObj selected;
+        private StructureTypeObj? _LocType = null;
 
-        StructureTypeObj LocType
+        private StructureTypeObj LocType
         {
             get
             {
                 if (selected.ParentID.HasValue)
                 {
-                    StructureObj structure = Store.Structures.GetObjectByID(selected.ParentID.Value, true);
-                    _LocType = Store.StructureTypes.GetObjectByID(structure.TypeID, true);
+                    Store.Structures.TryGetObjectByID(selected.ParentID.Value, out StructureObj structure);
+                    if (structure != null)
+                        Store.StructureTypes.TryGetObjectByID(structure.TypeID, out _LocType);
                 }
 
                 return _LocType;
@@ -40,23 +43,18 @@ namespace WebAnnotation.UI.Commands
             Debug.Assert(selected != null);
 
             //Figure out if we've selected a location on the same section or different
-            if (selected.Section != this.Parent.Section.Number)
-            {
-                parent.Cursor = Cursors.Cross;
-            }
-            else
-            {
-                parent.Cursor = Cursors.Hand;
-            }
+            parent.Cursor = selected.Section != Parent.Section.Number ? Cursors.Cross : Cursors.Hand;
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             //Redraw if we are dragging a location
-            if (this.oldMouse != null)
+            if (oldMouse != null)
             {
-                if (this.oldMouse.Button.Left())
+                if (oldMouse.Button.Left())
+                {
                     Parent.Invalidate();
+                }
             }
 
             base.OnMouseMove(sender, e);
@@ -74,7 +72,7 @@ namespace WebAnnotation.UI.Commands
             if (e.Button != MouseButtons.Right)
             {
                 //Any other button other than the right button cancels the command
-                this.Deactivated = true;
+                Deactivated = true;
             }
 
 
@@ -86,19 +84,25 @@ namespace WebAnnotation.UI.Commands
                                     VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (this.oldMouse == null)
+            if (oldMouse is null)
+            {
                 return;
+            }
 
-            if (basicEffect == null)
+            if (basicEffect is null)
+            {
                 throw new ArgumentNullException("basicEffect");
+            }
 
-            if (scene == null)
+            if (scene is null)
+            {
                 throw new ArgumentNullException("scene");
+            }
 
             //Draw a line from the selected location to the new location if we are holding left button down
-            if (this.oldMouse.Button == MouseButtons.Left)
+            if (oldMouse.Button == MouseButtons.Left)
             {
-                GridVector2 selectedPos = selected.VolumePosition;
+                Geometry.Vector2 selectedPos = selected.VolumePosition;
                 /*bool found = sectionAnnotations.TryGetPositionForLocation(selected, out selectedPos);
                 if (found == false)
                     return; 
@@ -113,24 +117,25 @@ namespace WebAnnotation.UI.Commands
                 {
                     Microsoft.Xna.Framework.Color color = LocType.Color.ToXNAColor(0.5f);
 
-                    GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, this.oldWorldPosition, selected.Radius, color);
+                    GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, oldWorldPosition, selected.Radius, color);
                 }
                 else
                 {
 
-                    VertexPositionColor[] verts = new VertexPositionColor[] {
-                                                        new VertexPositionColor(new Vector3((float)selectedPos.X, (float)selectedPos.Y, 0f), Color.Gold),
-                                                        new VertexPositionColor(new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)};
+                    VertexPositionColor[] verts = [
+                                                        new(new Vector3((float)selectedPos.X, (float)selectedPos.Y, 0f), Color.Gold),
+                                                        new(new Vector3((float)oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)];
 
-                    int[] indicies = new int[] { 0, 1 };
+                    int[] indicies = [0, 1];
 
                     foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
                     {
                         pass.Apply();
 
                         if (verts != null && verts.Length > 0)
+                        {
                             graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, verts, 0, verts.Length, indicies, 0, indicies.Length / 2);
-
+                        }
                     }
                 }
             }

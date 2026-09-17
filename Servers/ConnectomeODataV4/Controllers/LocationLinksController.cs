@@ -1,6 +1,8 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Data;
 using System.Linq;
 using System.Web.Http;
@@ -18,22 +20,46 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<Location>("Locations"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class LocationLinksController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class LocationLinksController(ConnectomeEntities db, ILogger<LocationLinksController> logger) : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<LocationLinksController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // GET: odata/LocationLinks
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IQueryable<LocationLink> GetLocationLinks()
         {
-            return db.LocationLinks;
+            try
+            {
+                _logger.LogInformation("Fetching location links");
+                _db.ConfigureAsReadOnly();
+                return _db.LocationLinks;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching location links");
+                throw;
+            }
         }
 
         // GET: odata/LocationLinks(5)
         [EnableQuery]
         public SingleResult<LocationLink> GetLocationLink([FromODataUri] long key)
         {
-            return SingleResult.Create(db.LocationLinks.Where(locationLink => locationLink.A == key));
+            try
+            {
+                _logger.LogInformation("Fetching location link with ID {LocationLinkId}", key);
+                _db.ConfigureAsReadOnly();
+                return SingleResult.Create(_db.LocationLinks.Where(locationLink => locationLink.A == key));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching location link with ID {LocationLinkId}", key);
+                throw;
+            }
         }
 
         /*
@@ -49,7 +75,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             LocationLink locationLink = await db.LocationLinks.FindAsync(key);
-            if (locationLink == null)
+            if (locationLink is null)
             {
                 return NotFound();
             }
@@ -116,7 +142,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             LocationLink locationLink = await db.LocationLinks.FindAsync(key);
-            if (locationLink == null)
+            if (locationLink is null)
             {
                 return NotFound();
             }
@@ -146,7 +172,7 @@ namespace ConnectomeODataV4.Controllers
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
             LocationLink locationLink = await db.LocationLinks.FindAsync(key);
-            if (locationLink == null)
+            if (locationLink is null)
             {
                 return NotFound();
             }
@@ -162,28 +188,20 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public SingleResult<Location> GetLocationA([FromODataUri] long key)
         {
-            return SingleResult.Create(db.LocationLinks.Where(m => m.A == key).Select(m => m.LocationA));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.LocationLinks.Where(m => m.A == key).Select(m => m.LocationA));
         }
 
         // GET: odata/LocationLinks(5)/LocationB
         [EnableQuery]
         public SingleResult<Location> GetLocationB([FromODataUri] long key)
         {
-            return SingleResult.Create(db.LocationLinks.Where(m => m.A == key).Select(m => m.LocationB));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.LocationLinks.Where(m => m.A == key).Select(m => m.LocationB));
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        // No need for Dispose override - DI container handles disposal
 
-        private bool LocationLinkExists(long key)
-        {
-            return db.LocationLinks.Count(e => e.A == key) > 0;
-        }
+        private bool LocationLinkExists(long key) => _db.LocationLinks.Count(e => e.A == key) > 0;
     }
 }

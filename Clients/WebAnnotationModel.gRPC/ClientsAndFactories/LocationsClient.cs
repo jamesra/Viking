@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes;
 using WebAnnotationModel.gRPC;
 using Geometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 
@@ -29,10 +30,15 @@ namespace Microsoft.Extensions.DependencyInjection
             //var _channel = GrpcChannel.ForAddress(endpointUri, channelOptions.Value);
             //service.AddSingleton<GrpcChannel>((_) => GrpcChannel.ForAddress(endpointUri, channelOptions.Value));
             service.AddSingleton<IServerAnnotationsClientFactory<ILocationsClient>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsBySectionClient<long, ILocation[]>>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>, LocationsClientFactory>();
             service.AddSingleton<IServerSpatialAnnotationsClient<long, ILocation>, LocationsClient>();
             service.AddSingleton<IServerAnnotationsBySectionClient<long, ILocation[]>, LocationsClient>();
             service.AddSingleton<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, LocationsClient>();
             service.AddSingleton<IServerSpatialAnnotationsClient<long, AnnotationSet>, LocationsClient>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>, LocationsClientFactory>();
             return service;
         }
     }
@@ -43,40 +49,54 @@ namespace WebAnnotationModel.gRPC
     public class LocationsClientFactory : IServerAnnotationsClientFactory<ILocationsClient>,
         IServerAnnotationsClientFactory<IServerAnnotationsBySectionClient<long, ILocation[]>>,
         IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>>,
-        IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>
+        IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>,
+        IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>,
+        IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>
     {
         private readonly IObjectConverter<ILocation, Location> _clientObjConverter;
         private readonly GrpcRepositorySettings _config;
-        private readonly GrpcChannel _channel;
+        private readonly IGrpcChannelManager _channelManager;
 
 
         public LocationsClientFactory(IGrpcChannelManager channelManager,
             IObjectConverter<ILocation, Location> clientObjConverter,
             IOptions<GrpcRepositorySettings> config)
         {
-            _channel = channelManager.GetOrCreate(config.Value.Endpoint);
+            _channelManager = channelManager;
             _clientObjConverter = clientObjConverter;
             _config = config.Value;
         }
 
+        private GrpcChannel Channel => _channelManager.GetOrCreate(_config.Endpoint);
+
         public ILocationsClient GetOrCreate()
         { 
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
         }
 
         IServerAnnotationsBySectionClient<long, ILocation[]> IServerAnnotationsClientFactory<IServerAnnotationsBySectionClient<long, ILocation[]>>.GetOrCreate()
         { 
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
         }
 
         IServerAnnotationsClient<long, ILocation, ILocation, ILocation> IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>>.GetOrCreate()
         {
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
         }
 
         IServerSpatialAnnotationsClient<long, AnnotationSet> IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>.GetOrCreate()
         {
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
+        }
+
+        IServerSpatialAnnotationsClient<long, ILocation> IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>.GetOrCreate()
+        {
+            return new LocationsClient(Channel, _clientObjConverter);
+        }
+
+        IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink> IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>.GetOrCreate()
+        {
+            return new LocationsClient(Channel, _clientObjConverter);
         }
     }
 
@@ -85,9 +105,17 @@ namespace WebAnnotationModel.gRPC
         Task<ILocation[]> GetStructureLocations(long structureID);
 
         Task<ILocation> GetLastModifiedLocation();
+
+        /// <summary>
+        /// Section location-link sync: new/updated links plus keys the server reports deleted since
+        /// <paramref name="modifiedAfter"/> (binary ticks of 0 / null = full section load).
+        /// </summary>
+        Task<ServerUpdate<LocationLinkKey, ILocationLink[]>> GetLocationLinksForSectionAsync(
+            long section, DateTime? modifiedAfter, CancellationToken token);
     }
 
-    public class LocationsClient : ILocationsClient, IServerSpatialAnnotationsClient<long, ILocation>, IServerAnnotationsBySectionClient<long, ILocation[]>, IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, IServerSpatialAnnotationsClient<long, AnnotationSet>
+    public class LocationsClient : ILocationsClient, IServerSpatialAnnotationsClient<long, ILocation>, IServerAnnotationsBySectionClient<long, ILocation[]>, IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, IServerSpatialAnnotationsClient<long, AnnotationSet>,
+        IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>
     {
         private readonly AnnotateLocations.AnnotateLocationsClient Client;
         private readonly IObjectConverter<ILocation, Location> ClientObjConverter;
@@ -127,41 +155,181 @@ namespace WebAnnotationModel.gRPC
             return first_response.DeletedId;
         }
 
-        public async Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume,  DateTime? modifiedAfter, CancellationToken token)
+        /// <summary>
+        /// Region load. Optional <paramref name="onChunk"/> is awaited per stream batch for progressive UI merge.
+        /// </summary>
+        public Task<ServerUpdate<long, ILocation[]>> GetAsync(
+            long Z,
+            string geometryWellKnownText,
+            double screenPixelSizeInVolume,
+            DateTime? modifiedAfter,
+            CancellationToken token,
+            Func<ServerUpdate<long, ILocation[]>, Task> onChunk) =>
+            GetRegionAsync(Z, geometryWellKnownText, screenPixelSizeInVolume, modifiedAfter, token, onChunk);
+
+        public Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token) =>
+            GetRegionAsync(Z, geometryWellKnownText, screenPixelSizeInVolume, modifiedAfter, token, onChunk: null);
+
+        private async Task<ServerUpdate<long, ILocation[]>> GetRegionAsync(
+            long Z,
+            string geometryWellKnownText,
+            double screenPixelSizeInVolume,
+            DateTime? modifiedAfter,
+            CancellationToken token,
+            Func<ServerUpdate<long, ILocation[]>, Task> onChunk)
         {
             var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
             {
                 Text = geometryWellKnownText
             };
 
-            var request = new GetLocationChangesInMosaicRegionRequest() { MinRadius = screenPixelSizeInVolume, Region = region, ModifiedAfterThisUtcTime = Timestamp.FromDateTime(modifiedAfter ?? DateTime.MinValue), Z = Z};
-            var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
+            var request = new GetLocationChangesInMosaicRegionRequest()
+            {
+                MinRadius = screenPixelSizeInVolume,
+                Region = region,
+                Z = Z
+            };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
-            return new ServerUpdate<long, ILocation[]>(
-                response.QueryExecutedTime.ToDateTime(), response.Results.Cast<ILocation>().ToArray(), response.DeletedIds.ToArray());
+            try
+            {
+                using (var call = Client.StreamLocationChangesInMosaicRegion(request, cancellationToken: token))
+                {
+                    DateTime? queryTime = null;
+                    var locations = new List<ILocation>();
+                    var deletedIds = new List<long>();
+                    var sawLast = false;
+
+                    while (await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
+                    {
+                        var chunk = call.ResponseStream.Current;
+                        if (chunk.QueryExecutedTime != null)
+                            queryTime = chunk.QueryExecutedTime.ToDateTime();
+
+                        var chunkLocations = chunk.Locations.Cast<ILocation>().ToArray();
+                        var chunkDeleted = chunk.DeletedIds.ToArray();
+                        locations.AddRange(chunkLocations);
+                        deletedIds.AddRange(chunkDeleted);
+
+                        if (onChunk != null)
+                        {
+                            await onChunk(new ServerUpdate<long, ILocation[]>(
+                                queryTime ?? DateTime.UtcNow, chunkLocations, chunkDeleted))
+                                .ConfigureAwait(false);
+                        }
+
+                        if (chunk.IsLast)
+                            sawLast = true;
+                    }
+
+                    if (!sawLast && queryTime == null)
+                        throw new RpcException(new Status(StatusCode.Internal, "Location region stream ended without chunks"));
+
+                    return new ServerUpdate<long, ILocation[]>(
+                        queryTime ?? DateTime.UtcNow, locations.ToArray(), deletedIds.ToArray());
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (RpcException ex) when (IsClientCancel(ex, token))
+            {
+                token.ThrowIfCancellationRequested();
+                throw new OperationCanceledException("gRPC call canceled by the client", ex, token);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+            {
+                var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
+                var update = new ServerUpdate<long, ILocation[]>(
+                    response.QueryExecutedTime.ToDateTime(), response.Results.Cast<ILocation>().ToArray(), response.DeletedIds.ToArray());
+                if (onChunk != null)
+                    await onChunk(update).ConfigureAwait(false);
+                return update;
+            }
         }
 
-        async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token)
+        async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, AnnotationSet[]>, Task> onChunk)
         {
             var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
             {
                 Text = geometryWellKnownText
             };
 
-            var request = new GetAnnotationsInMosaicRegionRequest() { MinRadius = screenPixelSizeInVolume, Region = region, ModifiedAfterThisUtcTime = Timestamp.FromDateTime(modifiedAfter ?? DateTime.MinValue), Z = Z};
-            var response = await Client.GetAnnotationsInMosaicRegionAsync(request, cancellationToken: token);
+            var request = new GetAnnotationsInMosaicRegionRequest()
+            {
+                MinRadius = screenPixelSizeInVolume,
+                Region = region,
+                Z = Z
+            };
+            if (modifiedAfter.HasValue && modifiedAfter.Value.Year >= 1753)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
-            return new ServerUpdate<long, AnnotationSet[]>(response.QueryExecutedTime.ToDateTime(), new AnnotationSet[] {response.Result},
-                response.DeletedIds.ToArray()
-                );
+            try
+            {
+                using (var call = Client.StreamAnnotationsInMosaicRegion(request, cancellationToken: token))
+                {
+                    DateTime? queryTime = null;
+                    var merged = new AnnotationSet();
+                    var deletedIds = new List<long>();
+                    var sawLast = false;
+
+                    while (await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
+                    {
+                        var chunk = call.ResponseStream.Current;
+                        if (chunk.QueryExecutedTime != null)
+                            queryTime = chunk.QueryExecutedTime.ToDateTime();
+                        AnnotationSet partial = chunk.Partial ?? new AnnotationSet();
+                        if (chunk.Partial != null)
+                        {
+                            merged.Locations.AddRange(chunk.Partial.Locations);
+                            merged.Structures.AddRange(chunk.Partial.Structures);
+                        }
+                        var chunkDeleted = chunk.DeletedIds.ToArray();
+                        deletedIds.AddRange(chunkDeleted);
+                        if (onChunk != null)
+                        {
+                            await onChunk(new ServerUpdate<long, AnnotationSet[]>(
+                                queryTime ?? DateTime.UtcNow, new AnnotationSet[] { partial }, chunkDeleted))
+                                .ConfigureAwait(false);
+                        }
+                        if (chunk.IsLast)
+                            sawLast = true;
+                    }
+
+                    if (!sawLast && queryTime == null)
+                        throw new RpcException(new Status(StatusCode.Internal, "Annotation region stream ended without chunks"));
+
+                    return new ServerUpdate<long, AnnotationSet[]>(
+                        queryTime ?? DateTime.UtcNow, new AnnotationSet[] { merged }, deletedIds.ToArray());
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (RpcException ex) when (IsClientCancel(ex, token))
+            {
+                token.ThrowIfCancellationRequested();
+                throw new OperationCanceledException("gRPC call canceled by the client", ex, token);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+            {
+                var response = await Client.GetAnnotationsInMosaicRegionAsync(request, cancellationToken: token);
+                var update = new ServerUpdate<long, AnnotationSet[]>(response.QueryExecutedTime.ToDateTime(), new AnnotationSet[] { response.Result },
+                    response.DeletedIds.ToArray());
+                if (onChunk != null)
+                    await onChunk(update).ConfigureAwait(false);
+                return update;
+            }
         }
 
         public async Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, DateTime? modifiedAfter, CancellationToken token)
         {
-            var request = new GetLocationChangesRequest() {
-                Section = Z,
-                ModifiedAfterThisUtcTime = (modifiedAfter ?? DateTime.MinValue).ToTimestamp()
-            };
+            var request = new GetLocationChangesRequest() { Section = Z };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
             var response = await Client.GetLocationChangesAsync(request, cancellationToken: token);
 
@@ -208,7 +376,9 @@ namespace WebAnnotationModel.gRPC
 
         private UpdateResults<long, ILocation> CollectResults(UpdateLocationsResponse response)
         {
-            var result = new UpdateResults<long, ILocation>();
+            var added = new List<ILocation>();
+            var updated = new List<ILocation>();
+            var deleted = new List<long>();
             foreach (var ro in response.Results)
             {
                 switch (ro.ActionCase)
@@ -216,22 +386,30 @@ namespace WebAnnotationModel.gRPC
                     case LocationChangeResponse.ActionOneofCase.None:
                         break;
                     case LocationChangeResponse.ActionOneofCase.Created:
-                        result.AddedObjects.Add(ro.Created);
+                        added.Add(ro.Created);
                         break;
                     case LocationChangeResponse.ActionOneofCase.Updated:
-                        result.UpdatedObjects.Add(ro.Updated);
+                        updated.Add(ro.Updated);
                         break;
                     case LocationChangeResponse.ActionOneofCase.DeletedId:
-                        result.DeletedIDs.Add(ro.DeletedId);
+                        deleted.Add(ro.DeletedId);
                         break;
                     default:
-                        throw new NotImplementedException();
+                        throw new NotImplementedException(
+                            $"Unexpected {nameof(LocationChangeResponse.ActionCase)} value {ro.ActionCase}");
                 }
             }
 
-            return result;
+            return new UpdateResults<long, ILocation>(added.ToArray(), updated.ToArray(), deleted.ToArray());
         }
           
+        /// <summary>
+        /// Pan/zoom cancels the previous region stream. Grpc.Net.Client surfaces that as
+        /// <see cref="RpcException"/> Cancelled rather than <see cref="OperationCanceledException"/>.
+        /// </summary>
+        static bool IsClientCancel(RpcException ex, CancellationToken token) =>
+            ex.StatusCode == StatusCode.Cancelled || token.IsCancellationRequested;
+
         public async Task<ILocation> GetLastModifiedLocation()
         {
             var request = new GetLastModifiedLocationRequest();
@@ -239,11 +417,78 @@ namespace WebAnnotationModel.gRPC
             return response.Result;
         }
 
+        public async Task<ServerUpdate<LocationLinkKey, ILocationLink[]>> GetLocationLinksForSectionAsync(
+            long section, DateTime? modifiedAfter, CancellationToken token)
+        {
+            var request = new GetLocationLinksForSectionRequest { Section = section };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisTime = modifiedAfter.Value.ToBinary();
+
+            var response = await Client.GetLocationLinksForSectionAsync(request, cancellationToken: token);
+
+            var links = response.Results.Cast<ILocationLink>().ToArray();
+            var deleted = response.Deleted
+                .Select(l => new LocationLinkKey(l.SourceId, l.TargetId))
+                .ToArray();
+
+            return new ServerUpdate<LocationLinkKey, ILocationLink[]>(
+                response.QueryExecutedTime.ToDateTime(), links, deleted);
+        }
+
         public async Task<ILocation[]> GetStructureLocations(long structureID)
         {
             var request = new GetStructureLocationsRequest() { StructureId = structureID };
             var response = await Client.GetStructureLocationsAsync(request);
             return response.Results.ToArray();
+        }
+
+        async Task<ILocationLink> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.Create(ILocationLink obj, CancellationToken token)
+        {
+            var request = new CreateLocationLinkRequest { SourceId = (long)obj.A, TargetId = (long)obj.B };
+            await Client.CreateLocationLinkAsync(request, cancellationToken: token);
+            return new LocationLink { SourceId = (long)obj.A, TargetId = (long)obj.B };
+        }
+
+        async Task<LocationLinkKey?> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.Delete(LocationLinkKey key, CancellationToken token)
+        {
+            var request = new DeleteLocationLinkRequest { SourceId = key.A, TargetId = key.B };
+            await Client.DeleteLocationLinkAsync(request, cancellationToken: token);
+            return key;
+        }
+
+        async Task<ILocationLink> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.GetAsync(LocationLinkKey key, CancellationToken token)
+        {
+            var request = new GetLinkedLocationsRequest { Id = key.A };
+            var response = await Client.GetLinkedLocationsAsync(request, cancellationToken: token);
+            if (!response.Results.Contains(key.B))
+                return null;
+
+            return new LocationLink { SourceId = key.A, TargetId = key.B };
+        }
+
+        async Task<IList<ILocationLink>> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.GetAsync(IEnumerable<LocationLinkKey> keys, CancellationToken token)
+        {
+            var linkClient = (IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>)this;
+            var results = new List<ILocationLink>();
+            foreach (var key in keys)
+            {
+                var link = await linkClient.GetAsync(key, token);
+                if (link != null)
+                    results.Add(link);
+            }
+
+            return results;
+        }
+
+        Task<UpdateResults<LocationLinkKey, ILocationLink>> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.UpdateAsync(ILocationLink obj, CancellationToken token)
+        {
+            //Location links have no mutable properties beyond their endpoints; there is nothing to update once created.
+            return Task.FromResult(new UpdateResults<LocationLinkKey, ILocationLink>());
+        }
+
+        Task<UpdateResults<LocationLinkKey, ILocationLink>> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.UpdateAsync(IEnumerable<ILocationLink> objs, CancellationToken token)
+        {
+            return Task.FromResult(new UpdateResults<LocationLinkKey, ILocationLink>());
         }
     }
 }

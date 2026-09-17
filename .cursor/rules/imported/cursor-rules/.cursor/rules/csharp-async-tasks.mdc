@@ -1,0 +1,8 @@
+---
+description: async methods return Task
+globs: **/*.cs
+alwaysApply: false
+---
+
+Always return a Task or Task<T> from async C# methods. Do not return void.
+When async void is required (e.g. event handlers, ICommand.Execute), wrap the entire body in try/catch and log all exceptions.

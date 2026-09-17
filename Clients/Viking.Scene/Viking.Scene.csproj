@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Viking</RootNamespace>
+    <AssemblyName>Viking.Scene</AssemblyName>
+    <NoWarn>$(NoWarn);CA1416;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
+    <ProjectReference Include="..\VikingXNAGraphics\MonographicsNet48.csproj" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.5-preview.3" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.8" />
+    <ProjectReference Include="..\Monographics\Monographics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\..\Utils\Utils.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\Viking.Input\Viking.Input.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="VikingCore" />
+    <InternalsVisibleTo Include="Jotunn" />
+    <InternalsVisibleTo Include="WebAnnotation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Viking\NGVV\ViewModels\TileView.cs" Link="Tiles\TileView.cs" />
+    <Compile Include="..\Viking\NGVV\TileViewModelCache.cs" Link="Tiles\TileViewModelCache.cs" />
+    <Compile Include="..\Viking\NGVV\TextureCache.cs" Link="Tiles\TextureCache.cs" />
+    <Compile Include="..\Viking\NGVV\Threading\TextureData.cs" Link="Tiles\TextureData.cs" />
+    <Compile Include="..\Viking\NGVV\Threading\TextureReaderV2.cs" Link="Tiles\TextureReaderV2.cs" />
+    <Compile Include="..\Viking\NGVV\Threading\TextureRequestQueue.cs" Link="Tiles\TextureRequestQueue.cs" />
+    <Compile Include="..\Viking\NGVV\Threading\PendingTextureQueue.cs" Link="Tiles\PendingTextureQueue.cs" />
+    <Compile Include="..\Viking\NGVV\Threading\DisposeTextureThreadingObj.cs" Link="Tiles\DisposeTextureThreadingObj.cs" />
+  </ItemGroup>
+
+</Project>

@@ -5,11 +5,11 @@ using WebAnnotation.UI.Actions;
 
 namespace WebAnnotation.UI.ActionViews
 {
-    class LinkLocationActionView : IActionView, IIconTexture
+    internal class LinkLocationActionView : IActionView, IIconTexture
     {
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable Passive { get; set; } = null!;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable Active { get; set; } = null!;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Chain;
 
@@ -22,9 +22,9 @@ namespace WebAnnotation.UI.ActionViews
 
         public void CreateDefaultVisuals()
         {
-            LineView view = new LineView(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(0.5f), LineStyle.Standard);
+            LineView view = new(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(0.5f), LineStyle.Standard);
             Passive = view;
-            Active = new LineView(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(1f), LineStyle.Standard);
+            Active = new LineView(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(1f), LineStyle.Standard); ;
         }
     }
 }

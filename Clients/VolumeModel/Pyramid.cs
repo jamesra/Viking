@@ -16,7 +16,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Maps downsample levels to the path
         /// </summary>
-        private readonly SortedList<int, string> LevelsToPaths = new SortedList<int, string>();
+        private readonly SortedList<int, string> LevelsToPaths = [];
 
         public UnitsAndScale.IAxisUnits XYScale { get; protected set; }
 
@@ -52,15 +52,15 @@ namespace Viking.VolumeModel
             IEnumerable<XElement> LevelElements = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Level");
 
             //Do not create a pyramid if there are no level elements
-            if (!LevelElements.Any())
+            if (LevelElements.Count() == 0)
                 return null;
 
             string Name = PyramidElement.GetAttributeCaseInsensitive("name").Value;
             string Path = PyramidElement.GetAttributeCaseInsensitive("path").Value;
 
-            Pyramid pyramid = new Pyramid(Name, Path);
+            Pyramid pyramid = new(Name, Path);
 
-            XElement scale_elem = PyramidElement.Elements().FirstOrDefault(elem => elem.Name.LocalName == "Scale");
+            XElement scale_elem = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
             if (scale_elem != null)
                 pyramid.XYScale = scale_elem.ParseScale();
 
@@ -109,7 +109,7 @@ namespace Viking.VolumeModel
             foreach (XNode node in PyramidElement.Nodes())
             {
                 XElement elem = node as XElement;
-                if (elem == null)
+                if (elem is null)
                     continue;
 
                 //Fetch the name if we know it
@@ -138,17 +138,8 @@ namespace Viking.VolumeModel
             return false;
         }
 
-        public IList<int> GetLevels()
-        {
-            return LevelsToPaths.Keys;
-        }
+        public IList<int> GetLevels() => LevelsToPaths.Keys;
 
-        public string PathForLevel(int level)
-        {
-            if (LevelsToPaths.ContainsKey(level) == false)
-                return null;
-
-            return LevelsToPaths[level];
-        }
+        public string PathForLevel(int level) => LevelsToPaths.TryGetValue(level, out var result) ? result : null;
     }
 }

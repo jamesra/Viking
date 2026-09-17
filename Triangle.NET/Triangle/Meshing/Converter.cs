@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Converter.cs" company="">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -27,10 +27,7 @@ namespace TriangleNet.Meshing
         /// <summary>
         /// Reconstruct a triangulation from its raw data representation.
         /// </summary>
-        public static Mesh ToMesh(Polygon polygon, IList<ITriangle> triangles)
-        {
-            return ToMesh(polygon, triangles.ToArray());
-        }
+        public static Mesh ToMesh(Polygon polygon, IList<ITriangle> triangles) => ToMesh(polygon, [.. triangles]);
 
         /// <summary>
         /// Reconstruct a triangulation from its raw data representation.
@@ -41,11 +38,11 @@ namespace TriangleNet.Meshing
             Osub subseg = default;
             int i = 0;
 
-            int elements = triangles == null ? 0 : triangles.Length;
+            int elements = triangles is null ? 0 : triangles.Length;
             int segments = polygon.Segments.Count;
 
             // TODO: Configuration should be a function argument.
-            var mesh = new Mesh(new Configuration());
+            Mesh mesh = new(new Configuration());
 
             mesh.TransferNodes(polygon.Points);
 
@@ -100,15 +97,17 @@ namespace TriangleNet.Meshing
             int i;
 
             // Allocate a temporary array that maps each vertex to some adjacent triangle.
-            var vertexarray = new List<Otri>[mesh.vertices.Count];
+            List<Otri>[] vertexarray = new List<Otri>[mesh.vertices.Count];
 
             // Each vertex is initially unrepresented.
             for (i = 0; i < mesh.vertices.Count; i++)
             {
                 Otri tmp = default;
                 tmp.tri = mesh.dummytri;
-                vertexarray[i] = new List<Otri>(3);
-                vertexarray[i].Add(tmp);
+                vertexarray[i] = new List<Otri>(3)
+                {
+                    tmp
+                };
             }
 
             i = 0;
@@ -347,10 +346,10 @@ namespace TriangleNet.Meshing
 
         public static DcelMesh ToDCEL(Mesh mesh)
         {
-            var dcel = new DcelMesh();
+            DcelMesh dcel = new();
 
-            var vertices = new HVertex[mesh.vertices.Count];
-            var faces = new Face[mesh.triangles.Count];
+            HVertex[] vertices = new HVertex[mesh.vertices.Count];
+            Face[] faces = new Face[mesh.triangles.Count];
 
             dcel.HalfEdges.Capacity = 2 * mesh.NumberOfEdges;
 
@@ -360,22 +359,26 @@ namespace TriangleNet.Meshing
 
             foreach (var v in mesh.vertices.Values)
             {
-                vertex = new HVertex(v.x, v.y);
-                vertex.id = v.id;
-                vertex.label = v.label;
+                vertex = new HVertex(v.x, v.y)
+                {
+                    id = v.id,
+                    label = v.label
+                };
 
                 vertices[v.id] = vertex;
             }
 
             // Maps a triangle to its 3 edges (used to set next pointers).
-            var map = new List<HalfEdge>[mesh.triangles.Count];
+            List<HalfEdge>[] map = new List<HalfEdge>[mesh.triangles.Count];
 
             Face face;
 
             foreach (var t in mesh.triangles)
             {
-                face = new Face(null);
-                face.id = t.id;
+                face = new Face(null)
+                {
+                    id = t.id
+                };
 
                 faces[t.id] = face;
 
@@ -395,7 +398,7 @@ namespace TriangleNet.Meshing
             int k = 0;
 
             // Maps a vertex to its leaving boundary edge.
-            var boundary = new Dictionary<int, HalfEdge>();
+            Dictionary<int, HalfEdge> boundary = [];
 
             foreach (var t in mesh.triangles)
             {

@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package segmentation;
+
+// Service for segmenting images using SAM2
+service SegmentationService {
+  // Segment an image based on input coordinates
+  rpc SegmentImage (SegmentationRequest) returns (SegmentationResponse) {}
+}
+
+// Request message containing the image and coordinates
+message SegmentationRequest {
+  // Grayscale image data as bytes
+  bytes image_data = 1;
+
+  // Image width
+  int32 width = 2;
+
+  // Image height
+  int32 height = 3;
+
+  // List of coordinates to use as prompts for segmentation
+  repeated Point coordinates = 4;
+
+  // Labels for each coordinate (1 for foreground, 0 for background)
+  repeated int32 labels = 5;
+
+  // Optional: Whether to output multiple masks per point
+  bool multimask_output = 6;
+}
+
+// Point coordinates
+message Point {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+// Polygon representation as a list of points
+message Polygon {
+  repeated Point points = 1;
+}
+
+// Response message containing the segmentation results
+message SegmentationResponse {
+  // Labeled image where each pixel value corresponds to a segment index
+  bytes labeled_image = 1;
+
+  // Width of the labeled image
+  int32 width = 2;
+
+  // Height of the labeled image
+  int32 height = 3;
+
+  // List of segment results
+  repeated SegmentResult segments = 4;
+}
+
+// Information about a single segment
+message SegmentResult {
+  // Index of the segment in the labeled image
+  int32 index = 1;
+
+  // Confidence score for this segment (0.0 to 1.0)
+  float score = 2;
+
+  // Binary mask for this segment (optional, may be omitted to save bandwidth)
+  bytes mask = 3;
+
+  // List of polygons representing the contours of this segment
+  repeated Polygon polygons = 4;
+}

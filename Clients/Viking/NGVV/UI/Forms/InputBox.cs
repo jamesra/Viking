@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 
@@ -6,19 +6,13 @@ namespace Viking.UI.Forms
 {
     public partial class InputBox : Form
     {
-        private Func<string, bool> IsServerValid;
+        private readonly Func<string, bool> IsServerValid;
 
         public string Value
         {
-            get
-            {
-                return this.textInput.Text;
-            }
+            get => this.textInput.Text;
 
-            set
-            {
-                this.textInput.Text = value;
-            }
+            set => this.textInput.Text = value;
         }
         public InputBox(string Instructions, string DefaultText, Func<string, bool> IsServerValid)
         {
@@ -35,10 +29,7 @@ namespace Viking.UI.Forms
 
         }
 
-        private void textInput_Validating(object sender, CancelEventArgs e)
-        {
-            e.Cancel = !IsServerValid(this.Value);
-        }
+        private void textInput_Validating(object sender, CancelEventArgs e) => e.Cancel = !IsServerValid(this.Value);
 
         private void btnOK_Click(object sender, EventArgs e)
         {

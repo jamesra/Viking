@@ -45,7 +45,7 @@
             this.SectionView.Section = null;
             this.SectionView.Size = new System.Drawing.Size(800, 450);
             this.SectionView.StatusMagnification = 256D;
-            this.SectionView.StatusPosition = ((Geometry.GridVector2)(resources.GetObject("SectionView.StatusPosition")));
+            this.SectionView.StatusPosition = ((Geometry.Vector2)(resources.GetObject("SectionView.StatusPosition")));
             this.SectionView.TabIndex = 0;
             this.SectionView.Text = "sectionViewerControl1";
             // 

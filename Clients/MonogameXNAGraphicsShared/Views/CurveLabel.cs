@@ -1,11 +1,14 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System; 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;  
+using System.Threading.Tasks;
+using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -15,7 +18,7 @@ namespace VikingXNAGraphics
         private string _Text;
         public string Text
         {
-            get { return _Text; }
+            get => _Text;
             set
             {
                 _Text = value;
@@ -25,16 +28,16 @@ namespace VikingXNAGraphics
 
         public double FontSize
         {
-            get { return (float)LineWidth; }
-            set { LineWidth = value; }
+            get => (float)LineWidth;
+            set => LineWidth = value;
         }
 
 
         public Color Color { get; set; }
         public float Alpha
         {
-            get { return Color.GetAlpha(); }
-            set { Color = Color.SetAlpha(value); }
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         public double LineWidth;
@@ -57,7 +60,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public float Max_Curve_Length_To_Use_Normalized = 1.0f;
 
-        private CurveViewControlPoints _CurveControlPoints;
+        private readonly CurveViewControlPoints _CurveControlPoints;
 
         /// <summary>
         /// How far down the length of the curve should the label start, normalized from 0 to 1
@@ -69,15 +72,15 @@ namespace VikingXNAGraphics
         /// </summary>
         public float LabelEndDistance = 1.0f;
 
-        public GridVector2[] ControlPoints
+        public Geometry.Vector2[] ControlPoints
         {
-            get { return _CurveControlPoints.ControlPoints; }
+            get => _CurveControlPoints.ControlPoints;
             set { _CurveControlPoints.ControlPoints = value; UpdateView(); }
         }
 
         public uint NumInterpolations
         {
-            get { return _CurveControlPoints.NumInterpolations; }
+            get => _CurveControlPoints.NumInterpolations;
             set
             {
                 if (_CurveControlPoints.NumInterpolations != value)
@@ -93,7 +96,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public bool TryCloseCurve
         {
-            get { return _CurveControlPoints.TryCloseCurve; }
+            get => _CurveControlPoints.TryCloseCurve;
             set
             {
                 if (_CurveControlPoints.TryCloseCurve != value)
@@ -104,10 +107,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public bool IsVisible(VikingXNA.Scene scene)
-        {
-            return this.LineWidth / scene.DevicePixelWidth > 3;
-        }
+        public bool IsVisible(VikingXNA.Scene scene) => this.LineWidth / scene.DevicePixelWidth > 3;
 
         private void BeginInvokeGenerateTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)
         {
@@ -118,22 +118,22 @@ namespace VikingXNAGraphics
                 this.TextureGenerating = true;
                 //Func<String, GraphicsDevice, SpriteBatch, SpriteFont, Color, float, RenderTarget2D> CreateTextureFunc = CreateTextureForLabel;
                 //CreateTextureFunc.BeginInvoke(Label, device, spritebatch, font, this.Color, 2.0f, EndInvokeGenerateTexture, CreateTextureFunc);
-                Action a = new Action(() =>
+                Action a = new(() =>
                 {
                     this._LabelTexture = CreateTextureForLabel(this.Text, device, spritebatch, font, Color);
                     this.TextureGenerating = false;
                 });
-                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(a, System.Windows.Threading.DispatcherPriority.Background, null);
+                GpuSynchronizationManager.RunTask(a);
             }
         }
 
         protected Texture2D GetOrCreateLabelTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)
         {
-            if (_LabelTexture == null)
+            if (_LabelTexture is null)
             {
                 BeginInvokeGenerateTexture(device, spritebatch, font);
             }
-            else if (_LabelTexture.IsDisposed || _LabelTexture.IsContentLost)
+            else if (_LabelTexture.IsDisposed)
             {
                 _LabelTexture = null;
                 BeginInvokeGenerateTexture(device, spritebatch, font);
@@ -151,15 +151,15 @@ namespace VikingXNAGraphics
         /// <param name="texture"></param>
         /// <param name="lineWidth"></param>
         /// <returns></returns>
-        public static CurveLabel CreateLineLabel(string label, GridLineSegment line, Microsoft.Xna.Framework.Color color,
+        public static CurveLabel CreateLineLabel(string label, LineSegment line, Microsoft.Xna.Framework.Color color,
                             Texture2D texture = null, double lineWidth = 16.0)
         {
-            CurveLabel labelView = new CurveLabel(label, new GridVector2[] { line.A, line.B }, color, false, texture: texture, lineWidth: lineWidth, numInterpolations: 0);
+            CurveLabel labelView = new(label, [line.A, line.B], color, false, texture: texture, lineWidth: lineWidth, numInterpolations: 0);
             return labelView;
         }
 
 
-        public CurveLabel(string label, ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color,
+        public CurveLabel(string label, ICollection<Geometry.Vector2> controlPoints, Microsoft.Xna.Framework.Color color,
                             bool TryToClose, Texture2D texture = null, double lineWidth = 16.0, uint numInterpolations = 5)
         {
             this.Text = label;
@@ -169,10 +169,7 @@ namespace VikingXNAGraphics
             UpdateView();
         }
 
-        private void UpdateView()
-        {
-            this.Curve = new RoundCurve.RoundCurve(_CurveControlPoints.CurvePoints, _CurveControlPoints.TryCloseCurve);
-        }
+        private void UpdateView() => this.Curve = new RoundCurve.RoundCurve(_CurveControlPoints.CurvePoints, _CurveControlPoints.TryCloseCurve);
 
         public static RenderTarget2D CreateTextureForLabel(string label, Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                               Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
@@ -185,7 +182,7 @@ namespace VikingXNAGraphics
 
             Vector2 labelDimensions = font.MeasureString(label);
             labelDimensions *= scale;
-            RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X, (int)labelDimensions.Y, mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
+            RenderTarget2D target = new(device, (int)labelDimensions.X, (int)labelDimensions.Y, mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
 
             //RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             //TODO: Setting the render target when the scene is being drawn causes flickering
@@ -215,7 +212,7 @@ namespace VikingXNAGraphics
                                 RoundCurve.CurveManager CurveManager)
         {
             Texture2D labelTexture = GetOrCreateLabelTexture(device, spriteBatch, font);
-            if (labelTexture == null) //Happens when the label text is null or empty
+            if (labelTexture is null) //Happens when the label text is null or empty
                 return;
 
             CurveManager.DrawLabel(this.Curve, (float)this.LineWidth / 2.0f, this.Color, ViewProj, 0, labelTexture, this.Alignment, this.Max_Curve_Length_To_Use_Normalized);

@@ -1,0 +1,14 @@
+---
+description: When tracking or fixing Bajaj / MorphologyMesh slice failures, use DifficultCases open vs closed workflow
+globs: MorphologyMesh/**/*,MorphologyMeshTest/DifficultCases/**/*,Clients/MonogameTestbed/Bajaj*.cs,Clients/MonogameTestbed/MeshAssemblyPlanner.cs,.cursor/skills/mesh-difficult-cases/**
+alwaysApply: false
+---
+
+# Difficult mesh cases
+
+Follow [.cursor/skills/mesh-difficult-cases/SKILL.md](../skills/mesh-difficult-cases/SKILL.md).
+
+- **Never delete** a case because it started failing again.
+- Unfixed MultiTest failures → `Import-FailedSlices.ps1` with `open: true` (skipped by regression until closed).
+- After a fix → clear `open`, rewrite `problem`/`fix`, run DifficultCases tests + Compare, `-Accept` baselines, commit json + baselines + code together.
+- Failure kinds in failed_slices / `problem`: `Topology`, `FaceGenerationException`, `InvalidSurface`, `UntiledLinkedPair`.

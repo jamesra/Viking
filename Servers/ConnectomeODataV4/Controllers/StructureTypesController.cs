@@ -1,5 +1,7 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Data;
 using System.Linq;
 using System.Web.Http;
@@ -17,22 +19,46 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<Structure>("Structures"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class StructureTypesController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class StructureTypesController(ConnectomeEntities db, ILogger<StructureTypesController> logger) : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<StructureTypesController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // GET: odata/StructureTypes
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IQueryable<StructureType> GetStructureTypes()
         {
-            return db.StructureTypes;
+            try
+            {
+                _logger.LogInformation("Fetching structure types");
+                _db.ConfigureAsReadOnly();
+                return _db.StructureTypes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure types");
+                throw;
+            }
         }
 
         // GET: odata/StructureTypes(5)
         [EnableQuery]
         public SingleResult<StructureType> GetStructureType([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureTypes.Where(structureType => structureType.ID == key));
+            try
+            {
+                _logger.LogInformation("Fetching structure type with ID {StructureTypeId}", key);
+                _db.ConfigureAsReadOnly();
+                return SingleResult.Create(_db.StructureTypes.Where(structureType => structureType.ID == key));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure type with ID {StructureTypeId}", key);
+                throw;
+            }
         }
 
         /*
@@ -47,7 +73,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             StructureType structureType = await db.StructureTypes.FindAsync(key);
-            if (structureType == null)
+            if (structureType is null)
             {
                 return NotFound();
             }
@@ -102,7 +128,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             StructureType structureType = await db.StructureTypes.FindAsync(key);
-            if (structureType == null)
+            if (structureType is null)
             {
                 return NotFound();
             }
@@ -132,7 +158,7 @@ namespace ConnectomeODataV4.Controllers
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
             StructureType structureType = await db.StructureTypes.FindAsync(key);
-            if (structureType == null)
+            if (structureType is null)
             {
                 return NotFound();
             }
@@ -149,35 +175,28 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public IQueryable<Structure> GetStructures([FromODataUri] long key)
         {
-            return db.StructureTypes.Where(m => m.ID == key).SelectMany(m => m.Structures);
+            _db.ConfigureAsReadOnly();
+            return _db.StructureTypes.Where(m => m.ID == key).SelectMany(m => m.Structures);
         }
 
         // GET: odata/StructureTypes(5)/Children
         [EnableQuery]
         public IQueryable<StructureType> GetChildren([FromODataUri] long key)
         {
-            return db.StructureTypes.Where(m => m.ID == key).SelectMany(m => m.Children);
+            _db.ConfigureAsReadOnly();
+            return _db.StructureTypes.Where(m => m.ID == key).SelectMany(m => m.Children);
         }
 
         // GET: odata/StructureTypes(5)/Parent
         [EnableQuery]
         public SingleResult<StructureType> GetParent([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureTypes.Where(m => m.ID == key).Select(m => m.Parent));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.StructureTypes.Where(m => m.ID == key).Select(m => m.Parent));
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        // No need for Dispose override - DI container handles disposal
 
-        private bool StructureTypeExists(long key)
-        {
-            return db.StructureTypes.Count(e => e.ID == key) > 0;
-        }
+        private bool StructureTypeExists(long key) => _db.StructureTypes.Count(e => e.ID == key) > 0;
     }
 }

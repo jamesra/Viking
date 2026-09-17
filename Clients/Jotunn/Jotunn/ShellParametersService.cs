@@ -1,160 +1,147 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using Viking.Common;
+using Viking.VolumeModel;
 
 namespace Jotunn
 {
     /// <summary>
-    /// This readonly class exposes the command line arguments or the web query arguments to modules
-    /// It also exposes the XML initialization file as an XDocument
+    /// Exposes the volume URL / CLI arguments and the VikingXML document to the shell.
     /// </summary>
-    [Export(typeof(IShellParameters))]
     internal class ShellParameterService : IShellParameters
     {
-        /// <summary>
-        /// This should always have the following properties
-        /// Host = The URL of the server hosting the volume, no file name or path
-        /// HostPath = The URL of the server and local path hosting the volume.  No filename
-        /// </summary>
-        internal readonly System.Collections.Specialized.NameValueCollection ArgTable;
+        public const string DefaultVolumeUrl = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
+
+        internal readonly NameValueCollection ArgTable;
         internal XDocument InitializationXML;
 
-        public ShellParameterService(System.Collections.Specialized.NameValueCollection argTable, XDocument InitXML)
+        public string VolumeUrl { get; }
+        public string HostPath { get; }
+        public XDocument Xml => InitializationXML;
+
+        public ShellParameterService(NameValueCollection argTable, XDocument initXml, string volumeUrl, string hostPath)
         {
-            this.ArgTable = argTable;
-            this.InitializationXML = InitXML; 
+            ArgTable = argTable;
+            InitializationXML = initXml;
+            VolumeUrl = volumeUrl;
+            HostPath = hostPath;
+        }
+
+        public static string FirstVolumeUrlFromArgs(string[] args)
+        {
+            if (args == null || args.Length == 0)
+                args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+
+            if (args != null)
+            {
+                for (int i = 0; i < args.Length; i++)
+                {
+                    string arg = args[i];
+                    if (string.IsNullOrWhiteSpace(arg) || arg.StartsWith("-", StringComparison.Ordinal))
+                        continue;
+
+                    return arg;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
-        /// Create an instance of the service using the System.Environment and
-        /// AppDomain.CurrentDomain.SetupInformation.ActivationArguments
+        /// Blocking load of volume XML. Must not run on the WPF UI thread (deadlocks on HTTP).
+        /// App uses <see cref="FromVolumeUrlAsync"/> instead.
         /// </summary>
-        public ShellParameterService()
+        public static ShellParameterService FromCommandLine(string[] args)
         {
-            this.ArgTable = new System.Collections.Specialized.NameValueCollection();
-            List<string> Args = new List<string>(System.Environment.GetCommandLineArgs());
-            Args.RemoveAt(0); 
-            
-            string AppWebsite = "";
-            string website = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
-         //   string homepage = "http://connectomes.utah.edu/";
-            
-            if (Args.Count > 0)
+            return FromVolumeUrlAsync(FirstVolumeUrlFromArgs(args) ?? DefaultVolumeUrl)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        public static Task<ShellParameterService> FromVolumeUrlAsync(
+            string volumeUrl,
+            NetworkCredential credentials = null,
+            CancellationToken cancellationToken = default,
+            IProgress<ProgressInfo> progress = null)
+        {
+            if (string.IsNullOrWhiteSpace(volumeUrl))
+                volumeUrl = DefaultVolumeUrl;
+
+            string website = AppendDefaultVolumeFilenameIfMissing(volumeUrl);
+
+            Uri websiteUri = new Uri(website, UriKind.RelativeOrAbsolute);
+            if (!websiteUri.IsAbsoluteUri)
+                websiteUri = new Uri(Path.GetFullPath(website));
+
+            string hostPath = DirectoryUrl(websiteUri);
+            NameValueCollection argTable = new NameValueCollection
             {
-                website = Args[0];
-            }
-            else
+                { "Host", websiteUri.ToString() },
+                { "HostPath", hostPath }
+            };
+
+            return LoadAsync(websiteUri, hostPath, argTable, credentials, cancellationToken, progress);
+        }
+
+        static async Task<ShellParameterService> LoadAsync(
+            Uri websiteUri,
+            string hostPath,
+            NameValueCollection argTable,
+            NetworkCredential credentials,
+            CancellationToken cancellationToken,
+            IProgress<ProgressInfo> progress)
+        {
+            XDocument xDoc = await Volume.LoadXDocumentAsync(
+                websiteUri.ToString(),
+                cancellationToken,
+                credentials,
+                progress).ConfigureAwait(false);
+
+            return new ShellParameterService(argTable, xDoc, websiteUri.ToString(), hostPath);
+        }
+
+        private static string AppendDefaultVolumeFilenameIfMissing(string website)
+        {
+            Uri websiteUri;
+            if (!Uri.TryCreate(website, UriKind.Absolute, out websiteUri))
             {
-                bool ShowUsage = true;
-                if (AppDomain.CurrentDomain.SetupInformation.ActivationArguments != null)
+                if (website.IndexOf('.') < 0)
                 {
-                    string[] ClickOnceArgs = AppDomain.CurrentDomain.SetupInformation.ActivationArguments.ActivationData;
-                    if (ClickOnceArgs != null && ClickOnceArgs.Length > 0)
-                    {
-                        Trace.WriteLine("ActivationArguments: ");
-                        foreach (string arg in ClickOnceArgs)
-                            Trace.WriteLine(arg, "Viking");
-
-                        string FirstArg = System.Web.HttpUtility.HtmlDecode(ClickOnceArgs[0]);
-                        string[] HttpArgs = FirstArg.Split('?');
-
-                        AppWebsite = HttpArgs[0]; //The website we use to launch Viking
-                        Trace.WriteLine("Application Website: " + AppWebsite, "Viking");
-
-                        if (HttpArgs.Length == 0)
-                        {
-                            //Sometimes the only argument passed is the application directory
-                            if (!HttpArgs[0].ToLower().EndsWith(".application"))
-                            {
-                                website = HttpArgs[1];
-                                ShowUsage = false;
-                            }
-                        }
-                        //Parse the arguments
-                        else if (HttpArgs.Length > 1)
-                        {
-                            ArgTable = System.Web.HttpUtility.ParseQueryString(HttpArgs[1]);
-
-                            if (ArgTable.HasKeys())
-                            {
-                                //PORT WPF
-                                //UI.State.StartupArguments = QueryTable;
-                                string VolumeValue = ArgTable["Volume"];
-                                if (VolumeValue != null)
-                                {
-                                    website = VolumeValue;
-                                    ShowUsage = false;
-                                }
-                            }
-                            else
-                            {
-                                website = HttpArgs[1];
-                                ShowUsage = false;
-                            }
-                        }
-                    }
+                    if (!website.EndsWith("/", StringComparison.Ordinal) && !website.EndsWith("\\", StringComparison.Ordinal))
+                        website += "/";
+                    website += "volume.VikingXML";
                 }
-
-                if (ShowUsage)
-                {
-                    //Launch the viking home page and exit
-
-                    System.Windows.MessageBox.Show("No volume definition file was specified.  Loading RC1 by default.  You can pass a website as the first argument to launch a different volume, or select a volume definition from the website: http://connectomes.utah.edu/", "Viking", System.Windows.MessageBoxButton.OK);
-                    //System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process();
-                    //WebBrowser.StartInfo.FileName = homepage;
-                    //WebBrowser.Start();
-                }
+                return website;
             }
 
-            
-            //Make sure the website includes a file, if it does not then include Volume.VikingXML by default
-            Uri WebsiteURI = new Uri(website);
-            string path = WebsiteURI.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
-            if (path.Contains(".") == false)
-            {
-                if (website.EndsWith("/") == false)
-                    website = website + "/";
+            string path = websiteUri.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
+            if (path.Contains("."))
+                return website;
 
-                website = website + "volume.VikingXML";
-                WebsiteURI = new Uri(website); 
-            }
+            if (!website.EndsWith("/", StringComparison.Ordinal))
+                website += "/";
 
-            string HostPath = System.IO.Path.GetDirectoryName(website);
-
-            //Add the host property to the properties
-            ArgTable.Add("Host", website);
-            ArgTable.Add("HostPath", HostPath); 
-
-            //Add the host's subpath to the properties
-            //Remove the Host, determine the path of the volume
-            
-            XDocument XDoc = Utils.IO.Load(WebsiteURI);
-
-            //Update the Volume property in case we trimmed the file name
-            this.InitializationXML = XDoc; 
+            return website + "volume.VikingXML";
         }
 
-        #region IShellParameters Members
-
-        System.Xml.Linq.XDocument IShellParameters.GetXML
+        private static string DirectoryUrl(Uri volumeUri)
         {
-            get {
-                return InitializationXML; 
-            }
+            string value = volumeUri.ToString();
+            int lastSlash = value.LastIndexOf('/');
+            if (lastSlash <= 0)
+                return value;
+            return value.Substring(0, lastSlash);
         }
 
-        #endregion
+        XDocument IShellParameters.GetXML => InitializationXML;
 
-        #region IShellParameters Members
-
-        NameValueCollection IShellParameters.GetArgTable
-        {
-            get { return ArgTable; }
-        }
-
-        #endregion
+        NameValueCollection IShellParameters.GetArgTable => ArgTable;
     }
 }

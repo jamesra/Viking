@@ -1,11 +1,13 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+#if NETFRAMEWORK
 using System.Windows.Forms;
+#endif
 using Viking.Common;
 using VikingXNA;
 using WebAnnotation.UI;
@@ -15,30 +17,67 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
-    public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
+#if NETFRAMEWORK
+    public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
+#endif
 
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
+    /// <summary>
+    /// On-canvas location. ParentDepth is structure nesting for draw/hit order, not Z.
+    /// OverlappedLinks creates child overlap views. Hit-test uses VolumeShapeAsRendered (volume), not MosaicShape.
+    /// </summary>
+    public abstract class LocationCanvasView(LocationObj obj) : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
+#if NETFRAMEWORK
+                                               , IContextMenu
+#endif
     {
-        protected readonly LocationObj modelObj;
+        #region static
+
+        /// <summary>
+        /// Optional accessor function to get the current smallest rendered size setting.
+        /// If null, the smallest rendered size check is skipped.
+        /// </summary>
+        public static Func<double> SmallestRenderedSizeAccessor { get; set; }
+
+        /// <summary>
+        /// Return true if a polygon with the given bounding box would be visible if rendered into the scene.
+        /// Uses the smallest dimension (min of width and height) to determine visibility.
+        /// </summary>
+        /// <param name="boundingBox">Bounding box in world coordinates</param>
+        /// <param name="scene">Scene to check visibility against</param>
+        /// <returns>True if the polygon would be visible</returns>
+        public static bool IsPolygonVisible(Rectangle boundingBox, VikingXNA.Scene scene)
+        {
+            // Check if bounding box intersects visible world bounds
+            if (!scene.VisibleWorldBounds.Intersects(boundingBox))
+                return false;
+
+            // Check smallest rendered size if accessor is provided
+            if (SmallestRenderedSizeAccessor != null)
+            {
+                double smallestDimension = Math.Min(boundingBox.Width, boundingBox.Height);
+                double scaledSmallestDimension = smallestDimension / scene.Camera.Downsample;
+                double smallestRenderedSize = SmallestRenderedSizeAccessor();
+                if (scaledSmallestDimension < smallestRenderedSize)
+                    return false;
+            }
+
+            return true;
+        }
+
+        #endregion
+
+        protected readonly LocationObj modelObj = obj;
 
         public abstract SqlGeometry VolumeShapeAsRendered { get; }
 
-        public LocationCanvasView(LocationObj obj)
-        {
-            this.modelObj = obj;
+#if NETFRAMEWORK
+        public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
+#endif
 
-            ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
-        }
+        public int VisualHeight => ParentDepth;
 
-        public ContextMenuGeneratorDelegate ContextMenuGenerator = null;
-
-        public int VisualHeight
-        { get { return this.ParentDepth; } }
-
-        /// <summary>
-        /// The number of parent structures until we hit a root structure
-        /// </summary>
+        /// <summary>Structure nesting depth for VisualHeight. Not section Z.</summary>
         private int? _ParentDepth = new int?();
         public int ParentDepth
         {
@@ -53,88 +92,87 @@ namespace WebAnnotation.View
             }
         }
 
-        private int CalculateParentDepth(StructureObj obj)
-        {
-            if (obj == null)
-                return 0;
+        private const int MaxParentDepth = 128;
 
-            return CalculateParentDepth(obj.Parent) + 1;
+        private static int CalculateParentDepth(StructureObj obj)
+        {
+            if (obj is null)
+            {
+                return 0;
+            }
+
+            int depth = 0;
+            HashSet<long> visited = [];
+            StructureObj current = obj;
+
+            while (current is not null)
+            {
+                if (!visited.Add(current.ID))
+                {
+                    return depth;
+                }
+
+                depth++;
+                if (depth >= MaxParentDepth)
+                {
+                    return depth;
+                }
+
+                current = current.Parent;
+            }
+
+            return depth;
         }
 
 
-        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID);
 
-        public abstract LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        public abstract LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID);
 
         public abstract List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber);
 
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
-        public double Z
-        {
-            get { return modelObj.Z; }
-        }
+        public double Z => modelObj.Z;
 
-        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode
-        {
-            get { return modelObj.TypeCode; }
-        }
+        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode => modelObj.TypeCode;
 
-        public bool IsTerminal
-        {
-            get { return modelObj.Terminal; }
-        }
+        public bool IsTerminal => modelObj.Terminal;
 
-        public bool OffEdge
-        {
-            get { return modelObj.OffEdge; }
-        }
+        public bool OffEdge => modelObj.OffEdge;
 
-        public bool IsVericosityCap
-        {
-            get { return modelObj.VericosityCap; }
-        }
+        public bool IsVericosityCap => modelObj.VericosityCap;
 
-        private Structure _Parent = null;
-        private void ResetParentCache() { _Parent = null; }
+        private Structure? _Parent = null;
+        private void ResetParentCache() => _Parent = null;
 
         public Structure Parent
         {
             get
             {
-                if (this.modelObj.Parent == null)
+                if (modelObj.Parent is null)
+                {
                     return null;
+                }
 
-                if (this._Parent == null)
-                    _Parent = new Structure(this.modelObj.Parent);
+                _Parent ??= new Structure(modelObj.Parent);
 
                 return _Parent;
             }
         }
 
-        public ICollection<long> Links
-        {
-            get { return modelObj.Links; }
-        }
+        public ICollection<long> Links => modelObj.Links;
 
+        /// <summary>Off-section peer IDs that already overlap this location. Setter builds nested overlap views.</summary>
         public abstract ICollection<long> OverlappedLinks
         {
             protected get;
             set;
         }
 
-        public override string ToString()
-        {
-            return modelObj.ToString();
-        }
+        public override string ToString() => modelObj.ToString();
 
-        protected string StructureIDLabelWithTypeCode()
-        {
-            return this.Parent.Type.Code + " " + this.ParentID.ToString();
-        }
+        protected string StructureIDLabelWithTypeCode() => Parent.Type.Code + " " + ParentID.ToString();
 
         /// <summary>
         /// Full label and tag text
@@ -142,12 +180,16 @@ namespace WebAnnotation.View
         /// <returns></returns>
         protected string FullLabelText()
         {
-            string fullLabel = this.StructureLabel();
+            string fullLabel = StructureLabel();
 
             if (fullLabel.Length == 0)
-                fullLabel = this.TagLabel();
+            {
+                fullLabel = TagLabel();
+            }
             else
-                fullLabel += '\n' + this.TagLabel();
+            {
+                fullLabel += '\n' + TagLabel();
+            }
 
             return fullLabel;
         }
@@ -156,15 +198,19 @@ namespace WebAnnotation.View
         {
             string InfoLabel = "";
             if (Parent?.InfoLabel != null)
+            {
                 InfoLabel = Parent.InfoLabel.Trim();
+            }
 
             return InfoLabel;
         }
 
         protected string TagLabel()
         {
-            if (Parent == null)
+            if (Parent is null)
+            {
                 return "";
+            }
 
             string InfoLabel = "";
             foreach (ObjAttribute tag in Parent.Attributes)
@@ -188,10 +234,7 @@ namespace WebAnnotation.View
                 PropertyName == "Attributes";
         }
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
@@ -210,42 +253,44 @@ namespace WebAnnotation.View
             return false;
         }
 
-        public static bool operator ==(LocationCanvasView A, object B)
+        public static bool operator ==(LocationCanvasView? A, object? B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is not null)
+            {
                 return A.Equals(B);
+            }
 
             return false;
         }
 
-        public static bool operator !=(LocationCanvasView A, object B)
+        public static bool operator !=(LocationCanvasView? A, object? B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is not null)
+            {
                 return !A.Equals(B);
+            }
 
             return true;
         }
 
-        public long? ParentID
-        {
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
-        public ContextMenu ContextMenu
+#if NETFRAMEWORK
+        public ContextMenuStrip ContextMenu
         {
             get
             {
-                if (this.ContextMenuGenerator != null)
+                if (ContextMenuGenerator != null)
                 {
                     return ContextMenuGenerator(this);
                 }
@@ -253,56 +298,60 @@ namespace WebAnnotation.View
                 return null;
             }
         }
+#endif
 
-        public string ToolTip
-        {
-            get
-            {
-                return this.modelObj.Label;
-            }
-        }
+        public string ToolTip => modelObj.Label;
 
         public bool Equals(LocationCanvasView x, LocationCanvasView y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
+            {
                 return true;
+            }
 
-            if (x == null || y == null)
+            if (x is null || y is null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
 
         public int GetHashCode(LocationCanvasView obj)
         {
-            if (obj == null)
+            if (obj is null)
+            {
                 throw new ArgumentNullException("obj", "GetHashCode");
+            }
 
             return obj.modelObj.GetHashCode();
         }
 
         public bool Equals(LocationObj x, LocationObj y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
+            {
                 return true;
+            }
 
-            if (x == null || y == null)
+            if (x is null || y is null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
 
-        public int GetHashCode(LocationObj obj)
-        {
-            return obj.GetHashCode();
-        }
+        public int GetHashCode(LocationObj obj) => obj.GetHashCode();
 
         int IComparable<LocationCanvasView>.CompareTo(LocationCanvasView other)
         {
-            if (other == null)
+            if (other is null)
+            {
                 return 1;
+            }
 
-            return (int)(this.ID - other.ID);
+            return (int)(ID - other.ID);
         }
 
         /// <summary>
@@ -312,17 +361,17 @@ namespace WebAnnotation.View
         {
             get
             {
-                ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
-                return listLinkedLocations.Count == this.Links.Count;
+                Store.Locations.TryGetObjectsByIDs(Links, out var listLinkedLocations, out _);
+                return listLinkedLocations.Count == Links.Count;
             }
         }
 
-        public abstract GridRectangle BoundingBox { get; }
+        public abstract Rectangle BoundingBox { get; }
         public abstract string[] HelpStrings { get; }
 
         internal virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            this.ResetParentCache();
+            ResetParentCache();
             return;
         }
 
@@ -348,49 +397,35 @@ namespace WebAnnotation.View
 
         public void ShowProperties()
         {
-            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.ID);
+#if NETFRAMEWORK
+            Location_CanvasContextMenuView contextView = new(ID);
             contextView.ShowProperties();
+#endif
         }
 
-        public void Save()
-        {
-            throw new NotImplementedException();
-        }
+        public void Save() => throw new NotImplementedException();
 
-        public virtual bool Contains(GridVector2 Position)
-        {
-            return this.VolumeShapeAsRendered.Intersects(Position);
-        }
+        public virtual bool Contains(Vector2 Position) => VolumeShapeAsRendered.Intersects(Position);
 
-        public virtual bool Intersects(GridLineSegment line)
-        {
-            return this.VolumeShapeAsRendered.Intersects(line);
-        }
+        public virtual bool Intersects(LineSegment line) => VolumeShapeAsRendered.Intersects(line);
 
-        public virtual bool Intersects(SqlGeometry shape)
-        {
-            return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
-        }
+        public virtual bool Intersects(SqlGeometry shape) => VolumeShapeAsRendered.STIntersects(shape).IsTrue;
 
-        public virtual double Distance(GridVector2 Position)
-        {
-            return this.VolumeShapeAsRendered.Distance(Position);
-        }
+        public virtual double Distance(Vector2 Position) => VolumeShapeAsRendered.Distance(Position);
 
-        public virtual double Distance(SqlGeometry Shape)
-        {
-            return this.VolumeShapeAsRendered.STDistance(Shape).Value;
-        }
+        public virtual double Distance(SqlGeometry Shape) => VolumeShapeAsRendered.STDistance(Shape).Value;
 
         public abstract bool IsVisible(Scene scene);
-        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
+        public abstract double DistanceFromCenterNormalized(Vector2 Position);
 
         public bool Equals(LocationCanvasView other)
         {
-            if ((object)other == null)
+            if (other is null)
+            {
                 return false;
+            }
 
-            return other.ID == this.ID;
+            return other.ID == ID;
         }
 
 

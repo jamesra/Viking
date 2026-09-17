@@ -8,7 +8,7 @@ namespace Viking.UI.BaseClasses
     /// </summary>
     public class TagMenuItem : System.Windows.Forms.MenuItem
     {
-        public IUIObject TagObject = null;
+        public IUIObject? TagObject = null;
 
         public TagMenuItem()
             : base()

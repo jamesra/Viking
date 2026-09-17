@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Transforms;
 using System;
 using System.Diagnostics;
@@ -11,24 +11,25 @@ using System.Threading.Tasks;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Map tiles to a section, as in a .mosaic file
+    /// Pyramid mosaic (.mosaic). Try* is identity (mosaic == volume) until MappingManager wraps it in SectionToVolumeMapping.
     /// </summary>
-    class TilesToSectionMapping : FixedTileCountMapping
+    class TilesToSectionMapping(Section section, string name, string rootPath, string mosaicPath, string tilePrefix, string tilePostfix) : FixedTileCountMapping(section, name, tilePrefix, tilePostfix)
     {
-        private readonly SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1 , 1);
-          
+        private readonly SemaphoreSlim LoadTransformSemaphore = new(1, 1);
+
         public override bool Initialized => Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) != null;
 
-        private readonly SemaphoreSlim _InitializeSemaphore = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim _InitializeSemaphore = new(1);
 
-        private GridRectangle _VolumeBounds;
-        public override GridRectangle ControlBounds { get => _VolumeBounds; }
+        private Rectangle _VolumeBounds;
+        public override Rectangle ControlBounds => _VolumeBounds;
 
-        private GridRectangle _SectionBounds;
-        public override GridRectangle? SectionBounds { get => _SectionBounds; }
+        private Rectangle _SectionBounds;
+        public override Rectangle? SectionBounds => _SectionBounds;
 
-        public override GridRectangle? VolumeBounds => _VolumeBounds;
+        public override Rectangle? VolumeBounds => _VolumeBounds;
 
+        internal static HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
         /// <summary>
         /// Starts as false since we don't load transforms from the disk by default.  Once we do this it is set to true. 
         /// </summary>
@@ -50,7 +51,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                await _InitializeSemaphore.WaitAsync();
+                await _InitializeSemaphore.WaitAsync(token).ConfigureAwait(false);
                 if (Initialized)
                     return;
 
@@ -58,12 +59,23 @@ namespace Viking.VolumeModel
                 if (token.IsCancellationRequested)
                     return;
 
+                if (transforms is null || transforms.Length == 0)
+                {
+                    return;
+                }
+
+                ////Determine boundaries of the section////
                 var transformControlPoints = transforms.Cast<ITransformControlPoints>().ToArray();
                 _VolumeBounds =
                     Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(transformControlPoints);
                 _SectionBounds =
                     Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(transformControlPoints);
+                ///////////////////////////////////////////
+
                 Interlocked.CompareExchange(ref _TileTransforms, transforms, _TileTransforms);
+            }
+            catch(TaskCanceledException) {
+                Debug.WriteLine($"TilesToSectionMapping Initialize call cancelled");
             }
             finally
             {
@@ -73,19 +85,19 @@ namespace Viking.VolumeModel
 
 
         protected ITransform[] _TileTransforms = null;
-        public async override Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
+        public override async Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
             if (Initialized == false)
             {
-                await Initialize(token);
+                await Initialize(token).ConfigureAwait(false);
             }
 
             try
             {
                 //rwLockObj.EnterReadLock();
 
-                if (_TileTransforms == null || token.IsCancellationRequested)
-                    return Array.Empty<ITransform>();
+                if (_TileTransforms is null || token.IsCancellationRequested)
+                    return [];
 
                 return _TileTransforms;
             }
@@ -95,11 +107,11 @@ namespace Viking.VolumeModel
             }
         }
 
-        protected readonly string RootPath;
+        protected readonly string RootPath = rootPath;
         /// <summary>
         /// Path to the .mosaic file containing the transforms
         /// </summary>
-        protected readonly string MosaicPath;
+        protected readonly string MosaicPath = mosaicPath;
 
 
         public override string CachedTransformsFileName
@@ -110,29 +122,22 @@ namespace Viking.VolumeModel
                 return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, Section.Number.ToString("D4") + "_" + mosaicName + ".cache");
             }
         }
-         
-        public TilesToSectionMapping(Section section, string name, string rootPath, string mosaicPath, string tilePrefix, string tilePostfix) :
-            base(section, name, tilePrefix, tilePostfix)
-        {
-            this.RootPath = rootPath;
-            this.MosaicPath = mosaicPath;
-        } 
 
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
 
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
 
-        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        public override Vector2[] VolumeToSection(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -142,16 +147,16 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => true).ToArray();
+            return [.. P.Select(p => true)];
         }
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        public override Vector2[] SectionToVolume(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -161,11 +166,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => true).ToArray();
+            return [.. P.Select(p => true)];
         }
 
 
@@ -173,7 +178,7 @@ namespace Viking.VolumeModel
         {
             try
             {
-                await LoadTransformSemaphore.WaitAsync();
+                await LoadTransformSemaphore.WaitAsync().ConfigureAwait(false);
 
                 Interlocked.CompareExchange(ref _TileTransforms, null, _TileTransforms);
             }
@@ -185,8 +190,9 @@ namespace Viking.VolumeModel
 
         private static HttpClient CreateRequest()
         {
-            var request = new HttpClient();
-            
+            //var request = new HttpClient();
+            var request = Viking.Common.SharedResources.HttpClient;
+
             //if (uri.Scheme.ToLower() == "https")
             //    request.Credentials = this.Section.volume.UserCredentials;
 
@@ -198,28 +204,24 @@ namespace Viking.VolumeModel
             return request;
         }
 
-        private async Task<DateTime> ServerSideLastModifed(Uri uri, CancellationToken token)
+        private static async Task<DateTime> ServerSideLastModifed(Uri uri, CancellationToken token)
         {
-            //HttpWebRequest headerRequest = CreateRequest(uri);
-            using (var headerRequest = CreateRequest())
+            // Do NOT use 'using' on the shared HttpClient - it must never be disposed by consumers.
+            var headerRequest = CreateRequest();
+
+            using var headerResponse =
+                await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+
+            if (false == headerResponse.IsSuccessStatusCode)
+                return DateTime.MinValue;
+
+            var lastModified = headerResponse.Content.Headers.LastModified;
+            if (lastModified.HasValue)
             {
-                //headerRequest.Method = "HEAD";
-
-                var headerResponse =
-                    await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
-                {
-                    if (false == headerResponse.IsSuccessStatusCode)
-                        return DateTime.MinValue;
-
-                    var lastModified = headerResponse.Content.Headers.LastModified;
-                    if (lastModified.HasValue)
-                    {
-                        return lastModified.Value.UtcDateTime;
-                    }
-
-                    return DateTime.MaxValue;
-                }
+                return lastModified.Value.UtcDateTime;
             }
+
+            return DateTime.MaxValue;
             /*
             using (HttpWebResponse headerResponse = await headerRequest.GetResponseAsync() as HttpWebResponse)
             {
@@ -232,48 +234,49 @@ namespace Viking.VolumeModel
         /// Loads the transform from the storage device
         /// </summary>
         public async Task<ITransform[]> LoadTransform(CancellationToken token)
-        {  
-            Uri mosaicURI = new Uri(this.RootPath + '/' + MosaicPath);
-            DateTime serverlastModified = DateTime.MaxValue; 
-            serverlastModified = await ServerSideLastModifed(mosaicURI, token);
+        {
+            Uri mosaicURI = new(this.RootPath + '/' + MosaicPath);
+            DateTime serverlastModified = DateTime.MaxValue;
+            serverlastModified = await TilesToSectionMapping.ServerSideLastModifed(mosaicURI, token).ConfigureAwait(false);
             if (token.IsCancellationRequested)
                 return null;
 
             bool CachedFileUseable;
-             
+
             //Do we need to delete a stale version of the cache file?
             CachedFileUseable = Geometry.Global.IsCacheFileValid(CachedTransformsFileName,
-                new DateTime[] { serverlastModified, Global.OldestValidCachedTransform });
-            
-            if(CachedFileUseable == false)
+                [serverlastModified, Global.OldestValidCachedTransform]);
+
+            if (CachedFileUseable == false)
             {
                 Trace.WriteLine($"Deleting stale cache file: {this.CachedTransformsFileName}");
-                Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName); 
+                Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName);
             }
 
             if (CachedFileUseable)
-            { 
+            {
                 try
-                { 
+                {
                     var loadedTransforms = LoadFromCache();
                     var loadedFromCache = loadedTransforms != null;
                     if (loadedFromCache)
-                    {  
-                        this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName); 
-                        return loadedTransforms; 
+                    {
+                        this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName);
+                        return loadedTransforms;
                     }
+
                 }
                 catch (Exception)
                 {
                     //On any error, use the traditional path
-                    this._TileTransforms = null; 
+                    this._TileTransforms = null;
                     Trace.WriteLine($"Could not load {CachedTransformsFileName} from cache even though file existed");
                     Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName);
-                } 
+                }
             }
 
             //Not in the local cache
-            var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified, token);
+            var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified, token).ConfigureAwait(false);
             bool loadedFromServer = transforms != null;
             if (loadedFromServer)
             {
@@ -290,11 +293,20 @@ namespace Viking.VolumeModel
             try
             {
                 var request = CreateRequest();
-                using (var MosaicDataStream = await request.GetStreamAsync(mosaicURI))
+                using var MosaicDataStream = await request.GetStreamAsync(mosaicURI).ConfigureAwait(false);
+                string[] MosaicLines = await MosaicDataStream.ToLinesAsync().ConfigureAwait(false);
+                return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
+                /*
+                HttpWebRequest request = CreateRequest(mosaicURI);
+                using (WebResponse response = await request.GetResponseAsync())
                 {
-                    string[] MosaicLines = await MosaicDataStream.ToLinesAsync();
-                    return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
+                    using (Stream MosaicDataStream = response.GetResponseStream())
+                    {
+                        string[] MosaicLines = await MosaicDataStream.ToLinesAsync(); 
+                        return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
+                    }
                 }
+                */
             }
             catch (System.Net.WebException webException)
             {
@@ -305,15 +317,8 @@ namespace Viking.VolumeModel
             return null;
         }
 
-        public override TilePyramid VisibleTiles(in GridRectangle VisibleBounds, double DownSample)
-        {
-            return base.VisibleTiles(VisibleBounds, default, DownSample);
-        }
+        public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample) => base.VisibleTiles(VisibleBounds, null, DownSample);
 
-        public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
-        {
-            var vb = VisibleBounds;
-            return Task.Run(() => base.VisibleTiles(vb, default, DownSample));
-        }
+        public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(Rectangle VisibleBounds, double DownSample) => Task.Run(() => base.VisibleTiles(VisibleBounds, null, DownSample));
     }
 }

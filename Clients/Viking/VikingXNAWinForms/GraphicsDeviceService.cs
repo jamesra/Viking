@@ -9,11 +9,16 @@
 
 #region Using Statements
 using Microsoft.Xna.Framework.Graphics;
+using RoundCurve;
+using RoundLineCode;
 using System;
-using System.ComponentModel.Design;
 using System.Threading;
 using VikingXNAGraphics;
+using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
+
 #endregion
+
+#nullable enable
 
 // The IGraphicsDeviceService interface requires a DeviceCreated event, but we
 // always just create the device inside our constructor, so we have no place to
@@ -37,7 +42,7 @@ namespace VikingXNAWinForms
 
 
         // Singleton device service instance.
-        static GraphicsDeviceService singletonInstance;
+        static GraphicsDeviceService? singletonInstance;
 
 
         // Keep track of how many controls are sharing the singletonInstance.
@@ -55,21 +60,23 @@ namespace VikingXNAWinForms
         /// </summary>
         GraphicsDeviceService(IntPtr windowHandle, int width, int height)
         {
-            parameters = new PresentationParameters();
+            parameters = new PresentationParameters
+            {
+                BackBufferWidth = Math.Max(width, 1),
+                BackBufferHeight = Math.Max(height, 1),
+                BackBufferFormat = SurfaceFormat.Color,
+                DepthStencilFormat = DepthFormat.Depth24Stencil8,
 
-            parameters.BackBufferWidth = Math.Max(width, 1);
-            parameters.BackBufferHeight = Math.Max(height, 1);
-            parameters.BackBufferFormat = SurfaceFormat.Color;
-            parameters.DepthStencilFormat = DepthFormat.Depth24Stencil8;
-
-            parameters.DeviceWindowHandle = windowHandle;
-            parameters.RenderTargetUsage = RenderTargetUsage.DiscardContents;
-            parameters.IsFullScreen = false;
+                DeviceWindowHandle = windowHandle,
+                RenderTargetUsage = RenderTargetUsage.DiscardContents,
+                IsFullScreen = false
+            };
 
             /*PORT XNA 4
             parameters.EnableAutoDepthStencil = true;
             parameters.AutoDepthStencilFormat = DepthFormat.Depth24;
             */
+            GpuSynchronizationManager.Initialize();
 
             if (GraphicsAdapter.DefaultAdapter.IsProfileSupported(GraphicsProfile.HiDef))
                 graphicsDevice = new GraphicsDevice(GraphicsAdapter.DefaultAdapter, GraphicsProfile.HiDef, parameters);
@@ -81,13 +88,21 @@ namespace VikingXNAWinForms
                 throw new System.InvalidOperationException("Default graphics adapter does not support XNA");
             }
 
-            // AnnotationCache.parent = parent;
-            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.MinusTexture = Content.LoadTextureWithAlpha("CircleMinus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.PlusTexture = Content.LoadTextureWithAlpha("CirclePlus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            LoadGlobalPrimitivesTextures();
+        }
+
+        /// <summary>
+        /// Loads or reloads all GlobalPrimitives textures. 
+        /// Called on device creation and after device reset.
+        /// </summary>
+        private void LoadGlobalPrimitivesTextures()
+        {
+            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask");
+            GlobalPrimitives.MinusTexture = Content.LoadTextureWithAlpha("CircleMinus", "CircleMask");
+            GlobalPrimitives.PlusTexture = Content.LoadTextureWithAlpha("CirclePlus", "CircleMask");
             GlobalPrimitives.ChainTexture = Content.LoadTextureWithAlpha("CircleChain", "CircleChain");
-            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask");
+            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask");
             GlobalPrimitives.ConnectTexture = Content.LoadTextureWithAlpha("CircleConnect", "CircleConnect");
             GlobalPrimitives.CircleXTexture = Content.LoadTextureWithAlpha("CircleX", "CircleX");
         }
@@ -96,7 +111,7 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets a reference to the singleton instance.
         /// </summary>
-        public static GraphicsDeviceService AddRef(IntPtr windowHandle,
+        public static GraphicsDeviceService? AddRef(IntPtr windowHandle,
                                                    int width, int height)
         {
             // Increment the "how many controls sharing the device" reference count.
@@ -124,10 +139,9 @@ namespace VikingXNAWinForms
                 // device, we should dispose the singleton instance.
                 if (disposing)
                 {
-                    if (DeviceDisposing != null)
-                        DeviceDisposing(this, EventArgs.Empty);
+                    DeviceDisposing?.Invoke(this, EventArgs.Empty);
 
-                    graphicsDevice.Dispose();
+                    graphicsDevice?.Dispose();
                 }
 
                 graphicsDevice = null;
@@ -142,14 +156,20 @@ namespace VikingXNAWinForms
         /// </summary>
         public void ResetDevice(int width, int height)
         {
+            if (graphicsDevice is null)
+                throw new InvalidOperationException("Graphics device is not initialized");
+
             System.Diagnostics.Debug.Assert(!graphicsDevice.IsDisposed, "Resetting disposed graphics device, why?");
             if (graphicsDevice.IsDisposed)
             {
                 System.Diagnostics.Trace.WriteLine("Resetting disposed graphics device, why?");
                 return;
             }
-            if (DeviceResetting != null)
-                DeviceResetting(this, EventArgs.Empty);
+
+            // Clear cached device-dependent resources before reset
+            ClearDeviceDependentCaches();
+
+            DeviceResetting?.Invoke(this, EventArgs.Empty);
 
             parameters.BackBufferWidth = Math.Max(width, 1);
             parameters.BackBufferHeight = Math.Max(1, height);
@@ -159,10 +179,29 @@ namespace VikingXNAWinForms
 
             graphicsDevice.Reset(parameters);
 
-            if (DeviceReset != null)
-                DeviceReset(this, EventArgs.Empty);
+            // Reload global textures after reset
+            LoadGlobalPrimitivesTextures();
 
+            DeviceReset?.Invoke(this, EventArgs.Empty);
+        }
 
+        /// <summary>
+        /// Clears all cached device-dependent resources.
+        /// Called before device reset to ensure stale resources are not used.
+        /// </summary>
+        private void ClearDeviceDependentCaches()
+        {
+            // Clear effect stores for all effect types used in the application
+            DeviceEffectsStore<RoundLineCode.RoundLineManager>.ClearAll();
+            DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.ClearAll();
+            DeviceEffectsStore<RoundCurve.CurveManager>.ClearAll();
+            DeviceEffectsStore<RoundCurve.CurveManagerHSV>.ClearAll();
+            DeviceEffectsStore<PolygonOverlayEffect>.ClearAll();
+            DeviceEffectsStore<OverlayShaderEffect>.ClearAll();
+            DeviceEffectsStore<CircleInstancedEffect>.ClearAll();
+
+            // Clear font store
+            DeviceFontStore.ClearAll();
         }
 
 
@@ -170,22 +209,19 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets the current graphics device.
         /// </summary>
-        public GraphicsDevice GraphicsDevice
-        {
-            get { return graphicsDevice; }
-        }
+        public GraphicsDevice? GraphicsDevice => graphicsDevice;
 
-        GraphicsDevice graphicsDevice;
+        GraphicsDevice? graphicsDevice;
 
         //Gets the content
-        public Microsoft.Xna.Framework.Content.ContentManager _Content;
+        public Microsoft.Xna.Framework.Content.ContentManager? _Content;
         public Microsoft.Xna.Framework.Content.ContentManager Content
         {
             get
             {
-                if (_Content == null)
+                if (_Content is null)
                 {
-                    ServiceContainer tempContainer = new ServiceContainer();
+                    ServiceContainer tempContainer = new();
                     tempContainer.AddService(typeof(IGraphicsDeviceService), this);
                     //tempContainer.AddService<IGraphicsDeviceService>(this);
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, "Content");
@@ -199,13 +235,13 @@ namespace VikingXNAWinForms
 
 
         // Store the current device settings.
-        PresentationParameters parameters;
+        readonly PresentationParameters parameters;
 
 
         // IGraphicsDeviceService events.
-        public event EventHandler<System.EventArgs> DeviceCreated;
-        public event EventHandler<System.EventArgs> DeviceDisposing;
-        public event EventHandler<System.EventArgs> DeviceReset;
-        public event EventHandler<System.EventArgs> DeviceResetting;
+        public event EventHandler<System.EventArgs>? DeviceCreated;
+        public event EventHandler<System.EventArgs>? DeviceDisposing;
+        public event EventHandler<System.EventArgs>? DeviceReset;
+        public event EventHandler<System.EventArgs>? DeviceResetting;
     }
 }

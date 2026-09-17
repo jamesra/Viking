@@ -1,0 +1,72 @@
+# Local gRPC annotation stack.
+# Integration tests (DevTest Identity + annotation-sql):
+#   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
+# Viking against local gRPC + production Identity:
+#   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
+#     -f docker-compose.yml -f docker-compose.annotation-db.yml \
+#     up -d annotation-sql grpc-annotation-service
+# See Servers/AnnotationDatabase/config-template/README.md
+
+services:
+  # Throwaway Identity Server used only to run the gRPC annotation integration
+  # tests locally, so tests don't need to hit the production identity.codepharm.net
+  # instance. See Servers/IdentityServer/DevTest/Config.cs for scopes/clients/users.
+  identity-devtest:
+    build:
+      context: .
+      dockerfile: Servers/IdentityServer/DevTest/Dockerfile
+    ports:
+      - "5020:80"
+    networks:
+      - viking-network
+
+  grpc-annotation-service:
+    build:
+      context: .
+      dockerfile: Servers/GrpcAnnotationService/Dockerfile
+    # Real secrets/connection info live outside the repo, see
+    # Servers/GrpcAnnotationService/config-template/README.md for setup.
+    env_file:
+      - D:/Docker/Builds/GrpcAnnotationService/.env.Docker
+    ports:
+      # 5000/5001 are already used by the identity-server stack on this host.
+      # :5010 h2c for tests / modern .NET. :5011 HTTPS for Viking (.NET 4.8 WinHttpHandler).
+      - "5010:80"
+      - "5011:443"
+    volumes:
+      - ./Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro
+      - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=
+      - ASPNETCORE_HTTP_PORTS=
+      - ASPNETCORE_HTTPS_PORTS=
+      - Kestrel__UseDockerPorts=true
+    networks:
+      - viking-network
+
+  segmentation-server:
+    build:
+      context: .
+      dockerfile: Servers/SegmentationServer/Dockerfile
+    restart: on-failure
+    ports:
+      - "50051:50051"
+    volumes:
+      - C:/Temp/.X11-unix:/tmp/.X11-unix
+      - C:/src/git/SAM2-docker:/home/user/SAM2-Docker
+    environment:
+      - DISPLAY
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - viking-network
+
+networks:
+  viking-network:
+    driver: bridge

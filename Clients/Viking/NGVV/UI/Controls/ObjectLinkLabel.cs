@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Viking.Common;
+using UserControl = System.Windows.Forms.UserControl;
 
 namespace Viking.UI.Controls
 {
@@ -13,10 +14,7 @@ namespace Viking.UI.Controls
         [Category("Data")]
         public new string Text
         {
-            get
-            {
-                return this.txtName.Text;
-            }
+            get => this.txtName.Text;
             set
             {
                 this.txtName.Text = value;
@@ -24,8 +22,8 @@ namespace Viking.UI.Controls
             }
         }
 
-        private IUIObject _SourceObject;
-        private Type _Type;
+        private IUIObject? _SourceObject;
+        private Type? _Type;
 
         public ObjectLinkLabel()
         {
@@ -37,19 +35,16 @@ namespace Viking.UI.Controls
 
         }
 
-        public IUIObject SourceObject
+        public IUIObject? SourceObject
         {
-            get
-            {
-                return _SourceObject;
-            }
+            get => _SourceObject;
             set
             {
                 _SourceObject = value;
                 if (null != _SourceObject)
                     SourceType = _SourceObject.GetType();
 
-                if (_SourceObject == null)
+                if (_SourceObject is null)
                 {
                     this.Text = "";
                     this.Pict.Visible = false;
@@ -63,12 +58,9 @@ namespace Viking.UI.Controls
             }
         }
 
-        public Type SourceType
+        public Type? SourceType
         {
-            get
-            {
-                return _Type;
-            }
+            get => _Type;
             set
             {
                 _Type = value;
@@ -84,7 +76,7 @@ namespace Viking.UI.Controls
 
         public bool ReadOnly
         {
-            get { return _ReadOnly; }
+            get => _ReadOnly;
             set
             {
                 _ReadOnly = value;
@@ -92,31 +84,12 @@ namespace Viking.UI.Controls
             }
         }
 
-        public override ContextMenu ContextMenu
-        {
-            get
-            {
-                if (_SourceObject == null)
-                    return base.ContextMenu;
-                ContextMenu CMenu = ((IUIObject)_SourceObject).ContextMenu;
-                CMenu.MenuItems.Add("Clear Link", new EventHandler(ContextMenuOnClear));
-                return CMenu;
-            }
-            set
-            {
-                System.Diagnostics.Debug.Assert(false, "No implemented");
-                base.ContextMenu = value;
-            }
-        }
 
-        private void ContextMenuOnClear(object sender, EventArgs e)
-        {
-            SourceObject = null;
-        }
+        private void ContextMenuOnClear(object sender, EventArgs e) => SourceObject = null;
 
         protected void EnableControls()
         {
-            if (_Type == null || _ReadOnly)
+            if (_Type is null || _ReadOnly)
             {
                 btnBrowse.Visible = false;
                 this.AllowDrop = false;
@@ -131,7 +104,13 @@ namespace Viking.UI.Controls
 
         protected override void OnDragDrop(System.Windows.Forms.DragEventArgs e)
         {
-            Debug.Assert(_Type != null);
+            if (UI.State.DragDropObject is null)
+                return;
+
+            Debug.Assert(_Type is not null);
+            if (_Type is null)
+                throw new NullReferenceException("Unexpected null type");
+
             if (_Type.IsAssignableFrom(UI.State.DragDropObject.GetType()))
                 SourceObject = UI.State.DragDropObject as IUIObject;
             base.OnDragDrop(e);
@@ -139,12 +118,9 @@ namespace Viking.UI.Controls
 
         protected override void OnDragOver(System.Windows.Forms.DragEventArgs e)
         {
-            if (_Type == null)
+            if (_Type is null)
                 e.Effect = DragDropEffects.None;
-            else if (_ReadOnly == false && _Type.IsAssignableFrom(UI.State.DragDropObject.GetType()))
-                e.Effect = DragDropEffects.All;
-            else
-                e.Effect = DragDropEffects.None;
+            else e.Effect = _ReadOnly == false && _Type.IsAssignableFrom(UI.State.DragDropObject.GetType()) ? DragDropEffects.All : DragDropEffects.None;
 
             base.OnDragOver(e);
         }
@@ -154,9 +130,35 @@ namespace Viking.UI.Controls
             if (_SourceObject != null)
             {
                 if (e.Button == MouseButtons.Right)
-                    this.ContextMenu.Show(this, new Point(e.X, e.Y));
+                {
+                    System.Windows.Forms.ContextMenuStrip? contextMenu = null;
+                    if (_SourceObject is IContextMenu contextMenuObj)
+                    {
+                        contextMenu = contextMenuObj.ContextMenu;
+                    }
+
+                    contextMenu ??= new System.Windows.Forms.ContextMenuStrip();
+
+                    // Add separator if there are existing items
+                    if (contextMenu.Items.Count > 0)
+                    {
+                        contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+                    }
+
+                    // Add "Clear Link" option
+                    ToolStripMenuItem clearLinkItem = new("Clear Link");
+                    clearLinkItem.Click += ContextMenuOnClear;
+                    contextMenu.Items.Add(clearLinkItem);
+
+                    if (contextMenu.Items.Count > 0)
+                    {
+                        contextMenu.Show(this, new Point(e.X, e.Y));
+                    }
+                }
                 else
+                {
                     ((IUIObject)_SourceObject).ShowProperties();
+                }
             }
         }
 

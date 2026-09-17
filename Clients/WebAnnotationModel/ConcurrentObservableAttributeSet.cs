@@ -60,10 +60,10 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public async Task SetAttributes(IEnumerable<ObjAttribute> attribs)
         {
-            await ClearAsync();
+            await ClearAsync().ConfigureAwait(false);
 
             foreach (var a in attribs)
-                await AddAsync(a);
+                await AddAsync(a).ConfigureAwait(false);
         }
 
         public async Task<bool> Contains(string tag)

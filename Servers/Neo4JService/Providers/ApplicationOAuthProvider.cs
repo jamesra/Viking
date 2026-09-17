@@ -16,10 +16,8 @@ namespace Neo4JService.Providers
 
         public ApplicationOAuthProvider(string publicClientId)
         {
-            if (publicClientId == null)
-            {
-                throw new ArgumentNullException("publicClientId");
-            }
+            if(publicClientId is null)
+                throw new ArgumentNullException(nameof(publicClientId));
 
             _publicClientId = publicClientId;
         }

@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Text;
 using System.Threading.Tasks;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -95,14 +97,14 @@ namespace VikingXNAGraphics
 
     public static class VectorExtensions
     {
-        public static Microsoft.Xna.Framework.Vector2 ToVector2(this Geometry.GridVector2 vec)
+        public static Microsoft.Xna.Framework.Vector2 ToVector2(this Geometry.Vector2 vec)
         {
             return new Vector2((float)vec.X, (float)vec.Y);
         }
 
-        public static Geometry.GridVector2 ToGridVector(this Vector2 vec)
+        public static Geometry.Vector2 ToGridVector(this Vector2 vec)
         {
-            return new Geometry.GridVector2(vec.X, vec.Y);
+            return new Geometry.Vector2(vec.X, vec.Y);
         }
     }
 

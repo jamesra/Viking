@@ -31,43 +31,31 @@ namespace TriangleNet.Topology.DCEL
         {
             if (initialize)
             {
-                vertices = new List<Vertex>();
-                edges = new List<HalfEdge>();
-                faces = new List<Face>();
+                vertices = [];
+                edges = [];
+                faces = [];
             }
         }
 
         /// <summary>
         /// Gets the vertices of the Voronoi diagram.
         /// </summary>
-        public List<Vertex> Vertices
-        {
-            get { return vertices; }
-        }
+        public List<Vertex> Vertices => vertices;
 
         /// <summary>
         /// Gets the list of half-edges specify the Voronoi diagram topology.
         /// </summary>
-        public List<HalfEdge> HalfEdges
-        {
-            get { return edges; }
-        }
+        public List<HalfEdge> HalfEdges => edges;
 
         /// <summary>
         /// Gets the faces of the Voronoi diagram.
         /// </summary>
-        public List<Face> Faces
-        {
-            get { return faces; }
-        }
+        public List<Face> Faces => faces;
 
         /// <summary>
         /// Gets the collection of edges of the Voronoi diagram.
         /// </summary>
-        public IEnumerable<IEdge> Edges
-        {
-            get { return EnumerateEdges(); }
-        }
+        public IEnumerable<IEdge> Edges => EnumerateEdges();
 
         /// <summary>
         /// Check if the DCEL is consistend.
@@ -86,7 +74,7 @@ namespace TriangleNet.Topology.DCEL
                     continue;
                 }
 
-                if (vertex.leaving == null)
+                if (vertex.leaving is null)
                 {
                     return false;
                 }
@@ -105,7 +93,7 @@ namespace TriangleNet.Topology.DCEL
                     continue;
                 }
 
-                if (face.edge == null)
+                if (face.edge is null)
                 {
                     return false;
                 }
@@ -124,22 +112,22 @@ namespace TriangleNet.Topology.DCEL
                     continue;
                 }
 
-                if (edge.twin == null)
+                if (edge.twin is null)
                 {
                     return false;
                 }
 
-                if (edge.origin == null)
+                if (edge.origin is null)
                 {
                     return false;
                 }
 
-                if (edge.face == null)
+                if (edge.face is null)
                 {
                     return false;
                 }
 
-                if (closed && edge.next == null)
+                if (closed && edge.next is null)
                 {
                     return false;
                 }
@@ -217,12 +205,12 @@ namespace TriangleNet.Topology.DCEL
         public void ResolveBoundaryEdges()
         {
             // Maps vertices to leaving boundary edge.
-            var map = new Dictionary<int, HalfEdge>();
+            Dictionary<int, HalfEdge> map = [];
 
             // TODO: parallel?
             foreach (var edge in this.edges)
             {
-                if (edge.twin == null)
+                if (edge.twin is null)
                 {
                     var twin = edge.twin = new HalfEdge(edge.next.origin, Face.Empty);
                     twin.twin = edge;
@@ -250,7 +238,7 @@ namespace TriangleNet.Topology.DCEL
         /// </remarks>
         protected virtual IEnumerable<IEdge> EnumerateEdges()
         {
-            var edges = new List<IEdge>(this.edges.Count / 2);
+            List<IEdge> edges = new(this.edges.Count / 2);
 
             foreach (var edge in this.edges)
             {

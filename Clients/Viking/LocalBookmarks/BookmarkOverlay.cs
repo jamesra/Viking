@@ -1,57 +1,59 @@
-﻿using Geometry;
+using System;
+using System.Linq;
+using System.Windows.Forms;
+using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Linq;
 using Viking.Common;
+using Viking.UI;
+using Viking.UI.Controls;
+using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace LocalBookmarks
 {
-    [Viking.Common.SectionOverlay("Local Bookmarks")]
-    class BookmarkOverlay : Viking.Common.ISectionOverlayExtension
+    [SectionOverlay("Local Bookmarks")]
+    class BookmarkOverlay : ISectionOverlayExtension, IProvideContextMenus
     {
         #region XNA
 
         protected TransformChangedEventHandler VolumeTransformChangedEventHandler;
 
 
-        static public Texture2D StarTexture;
-        static public Texture2D RingTexture;
-        static public Texture2D ArrowTexture;
-        static public Texture2D DefaultTexture;
+        public static Texture2D StarTexture;
+        public static Texture2D RingTexture;
+        public static Texture2D ArrowTexture;
+        public static Texture2D DefaultTexture;
 
-        static readonly public VertexPositionColorTexture[] SquareVerts = new VertexPositionColorTexture[] {
-            new VertexPositionColorTexture(new Vector3(-1,1,0), Color.White, Vector2.Zero),
-            new VertexPositionColorTexture(new Vector3(1,1,0), Color.White, Vector2.UnitX),
-            new VertexPositionColorTexture(new Vector3(-1,-1,0), Color.White, Vector2.UnitY),
-            new VertexPositionColorTexture(new Vector3(1,-1,0), Color.White, Vector2.One) };
+        public static readonly VertexPositionColorTexture[] SquareVerts = [
+            new(new Vector3(-1,1,0), Color.White, Vector2.Zero),
+            new(new Vector3(1,1,0), Color.White, Vector2.UnitX),
+            new(new Vector3(-1,-1,0), Color.White, Vector2.UnitY),
+            new(new Vector3(1,-1,0), Color.White, Vector2.One) ];
 
-        static readonly public int[] SquareIndicies = new int[] { 2, 1, 0, 3, 1, 2 };
+        public static readonly int[] SquareIndicies = [2, 1, 0, 3, 1, 2];
 
-        static public VertexDeclaration VertexPositionColorTextureDecl = null;
+        public static VertexDeclaration? VertexPositionColorTextureDecl = null;
 
         #endregion
 
         #region ISectionOverlayExtension Members
 
-        private Viking.UI.Controls.SectionViewerControl _parent = null;
+        private SectionViewerControl _parent;
 
         public BookmarkOverlay()
         {
-            VolumeTransformChangedEventHandler = new TransformChangedEventHandler(Global.OnVolumeTransformChanged);
+            VolumeTransformChangedEventHandler = Global.OnVolumeTransformChanged;
         }
 
-        string Viking.Common.ISectionOverlayExtension.Name()
-        {
-            return "Bookmarks";
-        }
+        string ISectionOverlayExtension.Name() => "Bookmarks";
 
-        int Viking.Common.ISectionOverlayExtension.DrawOrder()
-        {
-            return 5;
-        }
+        int ISectionOverlayExtension.DrawOrder() => 5;
 
-        void Viking.Common.ISectionOverlayExtension.SetParent(Viking.UI.Controls.SectionViewerControl parent)
+        void ISectionOverlayExtension.SetParent(SectionViewerControl parent)
         {
             _parent = parent;
             StarTexture = parent.Content.Load<Texture2D>("Star");
@@ -60,26 +62,26 @@ namespace LocalBookmarks
 
             DefaultTexture = StarTexture;
 
-            Viking.UI.State.volume.TransformChanged += VolumeTransformChangedEventHandler;
+            State.volume.TransformChanged += VolumeTransformChangedEventHandler;
 
             Global.FolderUIObjRoot = new FolderUIObj(null, Global.FolderRoot);
             Global.SelectedFolder = Global.FolderUIObjRoot;
         }
 
-        object Viking.Common.ISectionOverlayExtension.ObjectAtPosition(Geometry.GridVector2 WorldPosition, out double distance)
+        object ISectionOverlayExtension.ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
             return RecursiveFindBookmarks(Global.FolderUIObjRoot, WorldPosition, ref distance);
         }
 
-        BookmarkUIObj RecursiveFindBookmarks(FolderUIObj parentFolder, GridVector2 position, ref double nearestDistance)
+        BookmarkUIObj RecursiveFindBookmarks(FolderUIObj parentFolder, Geometry.Vector2 position, ref double nearestDistance)
         {
             BookmarkUIObj nearestBookmark = null;
             foreach (BookmarkUIObj bookmark in parentFolder.Bookmarks)
             {
-                if (Viking.UI.State.ViewerControl.Section.Number == bookmark.Z)
+                if (State.ViewerControl.Section.Number == bookmark.Z)
                 {
-                    double bookmarkDistance = GridVector2.Distance(position, bookmark.GridPosition);
+                    double bookmarkDistance = Geometry.Vector2.Distance(position, bookmark.GridPosition);
                     if (bookmarkDistance < nearestDistance && bookmarkDistance < Global.DefaultBookmarkRadius)
                     {
                         nearestDistance = bookmarkDistance;
@@ -103,12 +105,11 @@ namespace LocalBookmarks
             return nearestBookmark;
         }
 
-        static private BasicEffect basicEffect;
-        void Viking.Common.ISectionOverlayExtension.Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.Texture BackgroundLuma, Microsoft.Xna.Framework.Graphics.Texture BackgroundColors, ref int nextStencilValue)
+        private static BasicEffect basicEffect;
+        void ISectionOverlayExtension.Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int nextStencilValue)
         {
 
-            if (basicEffect == null)
-                basicEffect = new BasicEffect(graphicsDevice);
+            basicEffect ??= new BasicEffect(graphicsDevice);
 
             if (basicEffect.IsDisposed)
                 basicEffect = new BasicEffect(graphicsDevice);
@@ -121,20 +122,19 @@ namespace LocalBookmarks
             basicEffect.LightingEnabled = false;
 
             RecursiveDrawBookmarks(Global.FolderUIObjRoot, graphicsDevice, basicEffect, scene);
-            return;
         }
 
         void RecursiveDrawBookmarks(FolderUIObj ParentFolder,
-                                    Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
-                                    Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                                    VikingXNA.Scene scene)
+                                    GraphicsDevice graphicsDevice,
+                                    BasicEffect basicEffect,
+                                    Scene scene)
         {
-            BookmarkUIObj[] bookmarks = ParentFolder.Bookmarks.Where(b => b.Z == Viking.UI.State.ViewerControl.Section.Number && scene.VisibleWorldBounds.Intersects(b.BoundingRect)).ToArray();
+            BookmarkUIObj[] bookmarks = [.. ParentFolder.Bookmarks.Where(b => b.Z == State.ViewerControl.Section.Number && scene.VisibleWorldBounds.Intersects(b.BoundingRect))];
 
-            this._parent.AnnotationOverlayEffect.Technique = OverlayShaderEffect.Techniques.SingleColorTextureLumaOverlayEffect;
-            TextureOverlayView.Draw(graphicsDevice, scene, this._parent.AnnotationOverlayEffect, bookmarks.Select(b => b.ShapeView).ToArray());
+            _parent.AnnotationOverlayEffect.Technique = OverlayShaderEffect.Techniques.SingleColorTextureLumaOverlayEffect;
+            TextureOverlayView.Draw(graphicsDevice, scene, _parent.AnnotationOverlayEffect, [.. bookmarks.Select(b => b.ShapeView)]);
 
-            LabelView.Draw(_parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, bookmarks.Select(b => b.LabelView).ToArray());
+            LabelView.Draw(_parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, [.. bookmarks.Select(b => b.LabelView)]);
 
             foreach (FolderUIObj folder in ParentFolder.Folders)
             {
@@ -143,5 +143,134 @@ namespace LocalBookmarks
         }
 
         #endregion
+
+        public ContextMenuStrip BuildMenuFor(IContextMenu Obj, ContextMenuStrip Menu)
+        {
+            Menu ??= new ContextMenuStrip();
+
+            // Add a default menu item
+            ToolStripMenuItem addBookmarkItem = new("Add Bookmark");
+            addBookmarkItem.Click += (sender, e) => State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.FolderUIObjRoot);
+            Menu.Items.Add(addBookmarkItem);
+
+            // If the object provides its own context menu, merge it
+            if (Obj?.ContextMenu != null)
+            {
+                foreach (ToolStripItem item in Obj.ContextMenu.Items)
+                {
+                    // Create a copy of the item
+                    if (item is ToolStripMenuItem menuItem)
+                    {
+                        Menu.Items.Add(CloneToolStripMenuItem(menuItem));
+                    }
+                    else if (item is ToolStripSeparator)
+                    {
+                        Menu.Items.Add(new ToolStripSeparator());
+                    }
+                }
+            }
+
+            return Menu;
+        }
+
+        private ToolStripMenuItem CloneToolStripMenuItem(ToolStripMenuItem original)
+        {
+            ToolStripMenuItem clone = new(original.Text)
+            {
+                Enabled = original.Enabled,
+                Checked = original.Checked,
+                Tag = original.Tag
+            };
+
+            // Clone event handlers by invoking the original handler when the new one is clicked
+            clone.Click += (sender, e) => original.PerformClick();
+
+            // Clone sub-menu items recursively
+            foreach (ToolStripItem subItem in original.DropDownItems)
+            {
+                if (subItem is ToolStripMenuItem subMenuItem)
+                {
+                    clone.DropDownItems.Add(CloneToolStripMenuItem(subMenuItem));
+                }
+                else if (subItem is ToolStripSeparator)
+                {
+                    clone.DropDownItems.Add(new ToolStripSeparator());
+                }
+            }
+
+            return clone;
+        }
+
+        public ContextMenuStrip BuildMenuFor(object Obj, ContextMenuStrip Menu)
+        {
+            if (Obj is null)
+                return Menu;
+
+            Menu ??= new ContextMenuStrip();
+
+            if (Obj.GetType() == typeof(FolderUIObj))
+            {
+                ToolStripMenuItem deleteFolderItem = new("Delete Folder");
+                deleteFolderItem.Click += (sender, e) =>
+                {
+                    // Logic to delete folder
+                };
+                Menu.Items.Add(deleteFolderItem);
+            }
+            else if (Obj.GetType() == typeof(BookmarkUIObj))
+            {
+                ToolStripMenuItem propertiesItem = new("Properties");
+                propertiesItem.Click += (sender, e) =>
+                {
+                    // Logic to open bookmark
+                };
+                Menu.Items.Add(propertiesItem);
+
+                ToolStripMenuItem deleteBookmarkItem = new("Delete Bookmark");
+                deleteBookmarkItem.Click += (sender, e) =>
+                {
+                    // Logic to delete bookmark
+                };
+                Menu.Items.Add(deleteBookmarkItem);
+            }
+
+            return Menu;
+        }
+
+        public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu)
+        {
+            Menu ??= new ContextMenuStrip();
+
+            if (ObjType == typeof(FolderTreeControl))
+            {
+                ToolStripMenuItem createFolderItem = new("Create Folder");
+                createFolderItem.Click += (sender, e) =>
+                {
+                    Folder newFolder = new()
+                    {
+                        Name = "New Folder"
+                    };
+                    FolderUIObj newFolderUIObj = new(Global.FolderUIObjRoot, newFolder);
+                };
+                Menu.Items.Add(createFolderItem);
+            }
+            else if (ObjType == typeof(BookmarkUIObj))
+            {
+                ToolStripMenuItem openBookmarkItem = new("Open Bookmark");
+                openBookmarkItem.Click += (sender, e) =>
+                {
+                    // Logic to open bookmark
+                };
+                Menu.Items.Add(openBookmarkItem);
+                ToolStripMenuItem deleteBookmarkItem = new("Delete Bookmark");
+                deleteBookmarkItem.Click += (sender, e) =>
+                {
+                    // Logic to delete bookmark
+                };
+                Menu.Items.Add(deleteBookmarkItem);
+            }
+
+            return Menu;
+        }
     }
 }

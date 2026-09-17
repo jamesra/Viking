@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows.Forms;
 using Viking.Properties;
 
@@ -7,11 +8,13 @@ namespace Viking.UI.Forms
 {
     public partial class FindVolumeForm : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string VolumeURL
         {
             get; set;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string ServerURL
         {
             get; set;
@@ -22,13 +25,9 @@ namespace Viking.UI.Forms
         {
             InitializeComponent();
 
-            List<string> servers = new List<string>(Settings.Default.ServerURLs.Count);
-            foreach (string server in Settings.Default.ServerURLs)
-            {
-                servers.Add(server);
-            }
+            List<string> servers = [.. Settings.Default.ServerURLs];
 
-            volumeList.SetServers(servers.ToArray());
+            volumeList.SetServers([.. servers]);
         }
 
         private void btnOK_Click(object sender, EventArgs e)

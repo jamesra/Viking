@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,14 +20,11 @@ namespace AnnotationVizLib.SimpleOData
                                       ConvertToAxisScale((IDictionary<string, object>)scale["Z"]));
         }
 
-        private static AxisUnits ConvertToAxisScale(IDictionary<string, object> axis)
-        {
-            return new AxisUnits((double)axis["Value"], (string)axis["Units"]);
-        }
+        private static AxisUnits ConvertToAxisScale(IDictionary<string, object> axis) => new AxisUnits((double)axis["Value"], (string)axis["Units"]);
 
         internal static string ToODataArrayParameterString(this ICollection<long> IDs)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append('[');
             bool FirstEntry = true;
             foreach (long ID in IDs)

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="HalfEdge.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -21,14 +21,14 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public int ID
         {
-            get { return id; }
-            set { id = value; }
+            get => id;
+            set => id = value;
         }
 
         public int Boundary
         {
-            get { return mark; }
-            set { mark = value; }
+            get => mark;
+            set => mark = value;
         }
 
         /// <summary>
@@ -36,8 +36,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public Vertex Origin
         {
-            get { return origin; }
-            set { origin = value; }
+            get => origin;
+            set => origin = value;
         }
 
         /// <summary>
@@ -45,8 +45,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public Face Face
         {
-            get { return face; }
-            set { face = value; }
+            get => face;
+            set => face = value;
         }
 
         /// <summary>
@@ -54,8 +54,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public HalfEdge Twin
         {
-            get { return twin; }
-            set { twin = value; }
+            get => twin;
+            set => twin = value;
         }
 
         /// <summary>
@@ -63,8 +63,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public HalfEdge Next
         {
-            get { return next; }
-            set { next = value; }
+            get => next;
+            set => next = value;
         }
 
         /// <summary>
@@ -86,16 +86,13 @@ namespace TriangleNet.Topology.DCEL
             this.origin = origin;
             this.face = face;
 
-            // IMPORTANT: do not remove the (face.edge == null) check!
-            if (face != null && face.edge == null)
+            // IMPORTANT: do not remove the (face.edge is null) check!
+            if (face != null && face.edge is null)
             {
                 face.edge = this;
             }
         }
 
-        public override string ToString()
-        {
-            return string.Format("HE-ID {0} (Origin = VID-{1})", id, origin.id);
-        }
+        public override string ToString() => string.Format("HE-ID {0} (Origin = VID-{1})", id, origin.id);
     }
 }

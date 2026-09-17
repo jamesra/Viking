@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using SqlGeometryUtils;
 using System.Collections.Generic;
 using System.Drawing;
@@ -21,37 +21,27 @@ namespace AnnotationVizLib
     /// <summary>
     /// Color mapping for structures, based on StructureType, StructureID, and then morphology
     /// </summary>
-    public class StructureColorMap
+    public class StructureColorMap(ColorMapWithLong structureTypeColorMap,
+                                       ColorMapWithLong structureColorMap)
     {
-        ColorMapWithLong structure_color_map = null;
-        ColorMapWithLong structureType_color_map = null;
-
-        public StructureColorMap(ColorMapWithLong structureTypeColorMap,
-                                           ColorMapWithLong structureColorMap)
-        {
-            this.structure_color_map = structureColorMap;
-            this.structureType_color_map = structureTypeColorMap;
-        }
+        readonly ColorMapWithLong structure_color_map = structureColorMap;
+        readonly ColorMapWithLong structureType_color_map = structureTypeColorMap;
 
         /// <summary>
         /// Assign a color to the structure based on the mapping information we have
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public virtual Color GetColor(IStructureReadOnly structure)
-        {
-            COLORSOURCE source;
-            return GetColor(structure, out source);
-        }
+        public virtual System.Drawing.Color GetColor(IStructureReadOnly structure) => GetColor(structure, out COLORSOURCE source);
 
         /// <summary>
         /// Assign a color to the structure based on the mapping information we have
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public virtual Color GetColor(IStructureReadOnly structure, out COLORSOURCE source)
+        public virtual System.Drawing.Color GetColor(IStructureReadOnly structure, out COLORSOURCE source)
         {
-            if (structure == null)
+            if (structure is null)
             {
                 source = COLORSOURCE.NONE;
                 return System.Drawing.Color.Gray;
@@ -80,31 +70,29 @@ namespace AnnotationVizLib
         }
     }
 
-    public class StructureMorphologyColorMap : StructureColorMap
+    public class StructureMorphologyColorMap(ColorMapWithLong structureTypeColorMap,
+                                       ColorMapWithLong structureColorMap,
+                                       ColorMapWithImages locationColorMap) : StructureColorMap(structureTypeColorMap, structureColorMap)
     {
-        ColorMapWithImages LocationColorMap = null;
+        readonly ColorMapWithImages LocationColorMap = locationColorMap;
 
-        public StructureMorphologyColorMap(ColorMapWithLong structureTypeColorMap,
-                                           ColorMapWithLong structureColorMap,
-                                           ColorMapWithImages locationColorMap) : base(structureTypeColorMap, structureColorMap)
+        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<ILocationReadOnly> locations)
         {
-            this.LocationColorMap = locationColorMap;
+            if (LocationColorMap is null)
+                return System.Drawing.Color.Empty;
+
+            return LocationColorMap.GetColor(locations);
         }
-        
 
-        private Color GetStructureColorFromMorphology(ICollection<Geometry.GridVector3> points)
+        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<Geometry.Vector3> points)
         {
-            if (LocationColorMap == null)
+            if (LocationColorMap is null)
                 return System.Drawing.Color.Empty;
 
             return LocationColorMap.GetColor(points);
         }
 
-        public Color GetColor(MorphologyGraph graph)
-        {
-            COLORSOURCE source;
-            return GetColor(graph, out source);
-        }
+        public System.Drawing.Color GetColor(MorphologyGraph graph) => GetColor(graph, out var source);
 
         /// <summary>
         /// The standard color map returns the first color found in this list.
@@ -115,9 +103,9 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public Color GetColor(MorphologyGraph graph, out COLORSOURCE source)
+        public System.Drawing.Color GetColor(MorphologyGraph graph, out COLORSOURCE source)
         {
-            if (graph.structure == null)
+            if (graph.structure is null)
             {
                 source = COLORSOURCE.NONE;
                 return Color.Gray;
@@ -130,7 +118,7 @@ namespace AnnotationVizLib
                 return color;
             }
 
-            if (LocationColorMap == null)
+            if (LocationColorMap is null)
             {
                 source = COLORSOURCE.NONE;
                 return Color.Gray;
@@ -138,9 +126,9 @@ namespace AnnotationVizLib
 
             IEnumerable<MorphologyNode> nodes = graph.Nodes.Values.Where(v => LocationColorMap.SectionNumbers.Contains((int)v.Location.UnscaledZ));
 
-            List<Geometry.GridVector3> listPoints = nodes.Select(n =>
-                n.Geometry.BoundingBox.Center.ToGridVector3(n.UnscaledZ)
-             ).ToList();
+            List<Geometry.Vector3> listPoints = [.. nodes.Select<MorphologyNode, Geometry.Vector3>(n =>
+                n.Geometry.Centroid().ToVector3(n.UnscaledZ)
+             )];
 
             source = COLORSOURCE.LOCATION;
             return GetStructureColorFromMorphology(listPoints);

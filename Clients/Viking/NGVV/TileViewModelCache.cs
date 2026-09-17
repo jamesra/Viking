@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Viking.Common;
 using Viking.ViewModels;
@@ -6,17 +6,19 @@ using Viking.VolumeModel;
 
 namespace Viking
 {
-    internal class TileViewModelCacheEntry : CacheEntry<string>
+    public class TileViewModelCacheEntry : CacheEntry<TileUniqueKey>
     {
-        public TileViewModel TileViewModel;
+        public TileView TileView;
 
-        public TileViewModelCacheEntry(string Key, TileViewModel T)
+        public TileViewModelCacheEntry(TileUniqueKey Key, TileView T)
             : base(Key)
         {
-            TileViewModel = T;
+            TileView = T;
             LastAccessed = DateTime.Now;
             Size = T.Size;
         }
+
+        public override string ToString() => $"{LastAccessed} - {TileView.TextureFileName}";
 
         public override void Dispose()
         {
@@ -26,7 +28,7 @@ namespace Viking
     /// This object manages construction of tile objects. 
     /// It first checks a cache for a tile matching the request.  If not found it creates a new tile object.
     /// </summary>
-    internal class TileViewModelCache : TimeQueueCache<string, TileViewModelCacheEntry, TileViewModel, TileViewModel>
+    public class TileViewModelCache : TimeQueueCache<TileUniqueKey, TileViewModelCacheEntry, TileView, TileView>
     {
 
         public TileViewModelCache() : base()
@@ -34,115 +36,128 @@ namespace Viking
             this.MaxCacheSize = 1 << 28;
         }
 
-        static protected string TileKey(string textureFileName, string TransformName)
-        {
-            return $"{textureFileName} {TransformName}";
-        }
+        public TileView GetTile(TileUniqueKey key) => this.Fetch(key);
 
-        public TileViewModel GetTile(string textureFileName, string TransformName)
-        {
-            return this.Fetch(TileKey(textureFileName, TransformName));
-        }
-
-        protected override TileViewModel Fetch(TileViewModelCacheEntry key)
+        protected override TileView Fetch(TileViewModelCacheEntry key)
         {
             key.WasUsedSinceLastCheckpoint = true;
-            return key.TileViewModel;
+            return key.TileView;
         }
 
-        public TileViewModel ConstructTile(Tile tile,
+        /// <summary>
+        /// Creates a TileView if it does not exist in the cache
+        /// </summary>
+        /// <param name="tileViewModel"></param>
+        /// <param name="textureFileName"></param>
+        /// <param name="cachedTextureFileName"></param>
+        /// <param name="TransformName"></param>
+        /// <param name="MipMapLevels"></param>
+        /// <param name="TextureSize"></param>
+        /// <returns>null if TileView is in cache, otherwise true</returns>
+        protected TileView? ConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,
                                 int MipMapLevels, //Should be one, unless it is the minimum downsample level
                                 int TextureSize)
         {
-            //Check to see if this tile is already loaded
-            string key = TileKey(textureFileName, TransformName);
+            TileUniqueKey key = tileViewModel.UniqueKey;
 
-            TileViewModel tileViewModel = null;
+            TileView tileView = null;
             bool added = false;
             try
             {
-                tileViewModel = new TileViewModel(tile,
+                tileView = new TileView(tileViewModel,
                     textureFileName,
                     cachedTextureFileName,
                     MipMapLevels,
-                    TextureSize);
+                    TextureSize,
+                    TransformName);
 
-                added = Add(key, tileViewModel);
+                added = Add(key, tileView);
                 if (!added)
                 {
-                    tileViewModel.Dispose();
-                    tileViewModel = null;
+                    tileView.Dispose();
+                    tileView = null;
                 }
             }
             catch (Exception)
             {
-                if (tileViewModel != null)
-                {
-                    tileViewModel.Dispose();
-                    tileViewModel = null;
-                }
+                tileView?.Dispose();
+                tileView = null;
                 throw;
             }
 
 
 
-            return tileViewModel;
+            return tileView;
         }
 
         /// <summary>
         /// Retrieve existing tile if it exists, otherwise create a new one
         /// </summary>
-        /// <param name="tile"></param>
+        /// <param name="tileViewModel"></param>
         /// <param name="textureFileName"></param>
         /// <param name="cachedTextureFileName"></param>
         /// <param name="TransformName"></param>
         /// <param name="MipMapLevels"></param>
         /// <param name="size"></param>
         /// <returns></returns>
-        public TileViewModel FetchOrConstructTile(Tile tile,
+        public TileView FetchOrConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,
                                 int MipMapLevels //Should be one, unless it is the minimum downsample level
                                 )
         {
-            string key = TileKey(textureFileName, TransformName);
+            TileUniqueKey key = tileViewModel.UniqueKey;
 
-            TileViewModel tileViewModel = Fetch(key);
-            if (tileViewModel != null)
-                return tileViewModel;
+            TileView tileView = Fetch(key);
+            if (tileView != null)
+                return tileView;
 
-            return ConstructTile(tile, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tile.TextureSize);
+            tileView = ConstructTile(tileViewModel, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tileViewModel.TextureSize);
+            if (tileView != null)
+                return tileView;
+
+            // Race condition: another thread added the key between our Fetch and ConstructTile.
+            // ConstructTile returned null because Add failed. Retry the fetch.
+            return Fetch(key);
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, TileViewModel value)
+        protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, TileView value)
         {
-            TileViewModelCacheEntry entry = new TileViewModelCacheEntry(key, value);
+            TileViewModelCacheEntry entry = new(key, value);
             return entry;
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string,TileViewModel> valueFactory)
-        {
-            return new TileViewModelCacheEntry(key, valueFactory(key));
-        }
+        protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, Func<TileUniqueKey, TileView> valueFactory) => new TileViewModelCacheEntry(key, valueFactory(key));
 
-        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileViewModel value)
-        {
-            return Task.FromResult(CreateEntry(key, value));
-        }
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(TileUniqueKey key, TileView value) => Task.FromResult(CreateEntry(key, value));
 
         /// <summary>
-        /// Cleanup the memory allocated for this cache entry. 
-        /// RemoveEntry() calls this function
+        /// Cleanup the memory allocated for this cache entry.
+        /// RemoveEntry() calls this function. TileView owns GraphicsResources (VB/IB/texture)
+        /// that must be disposed on the UI thread; we marshal disposal there when possible.
         /// </summary>
-        /// <param name="tile"></param>
         protected override bool OnRemoveEntry(TileViewModelCacheEntry entry)
         {
-            entry.TileViewModel.FreeTexture();
-            entry.TileViewModel.Dispose();
+            TileView tileView = entry.TileView;
+            System.Windows.Threading.Dispatcher dispatcher = TileLoadEnvironment.UiDispatcher;
+
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke(new Action(() =>
+                {
+                    tileView.FreeTexture();
+                    tileView.Dispose();
+                }));
+            }
+            else
+            {
+                tileView.FreeTexture();
+                tileView.Dispose();
+            }
 
             return true;
         }
@@ -161,7 +176,7 @@ namespace Viking
             if (dictEntries.ContainsKey(entry.Key))
             {
                 //Nobody is using it, abort the request
-                entry.TileViewModel.AbortRequest();
+                entry.TileView.AbortRequest();
 
                 RemoveEntry(entry);
                 //if (entry.TileViewModel.HasTexture == false)

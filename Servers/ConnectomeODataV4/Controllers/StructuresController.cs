@@ -1,7 +1,9 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Routing;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -22,22 +24,46 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<StructureLink>("StructureLinks"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class StructuresController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class StructuresController(ConnectomeEntities db, ILogger<StructuresController> logger) : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<StructuresController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // GET: odata/Structures
         [EnableQuery(PageSize = 2048)]
         public IQueryable<Structure> GetStructures()
         {
-            return db.Structures;
+            try
+            {
+                _logger.LogInformation("Fetching structures");
+                _db.ConfigureAsReadOnly();
+                return _db.Structures;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structures");
+                throw;
+            }
         }
 
         // GET: odata/Structures(5)
         [EnableQuery]
         public SingleResult<Structure> GetStructure([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Structures.Where(structure => structure.ID == key));
+            try
+            {
+                _logger.LogInformation("Fetching structure with ID {StructureId}", key);
+                _db.ConfigureAsReadOnly();
+                return SingleResult.Create(_db.Structures.Where(structure => structure.ID == key));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure with ID {StructureId}", key);
+                throw;
+            }
         }
 
         /// <summary>
@@ -66,7 +92,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             Structure structure = await db.Structures.FindAsync(key);
-            if (structure == null)
+            if (structure is null)
             {
                 return NotFound();
             }
@@ -118,7 +144,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             Structure structure = await db.Structures.FindAsync(key);
-            if (structure == null)
+            if (structure is null)
             {
                 return NotFound();
             }
@@ -148,7 +174,7 @@ namespace ConnectomeODataV4.Controllers
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
             Structure structure = await db.Structures.FindAsync(key);
-            if (structure == null)
+            if (structure is null)
             {
                 return NotFound();
             }
@@ -165,51 +191,58 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public IQueryable<Location> GetLocations([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.Locations);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.Locations);
         }
 
         // GET: odata/Structures(5)/LocationLinks
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinks([FromODataUri] long key)
         {
-            return db.StructureLocationLinks(key);
+            _db.ConfigureAsReadOnly();
+            return _db.StructureLocationLinks(key);
         }
 
-        
+
 
         // GET: odata/Structures(5)/Children
         [EnableQuery]
         public IQueryable<Structure> GetChildren([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.Children);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.Children);
         }
 
         // GET: odata/Structures(5)/Parent
         [EnableQuery]
         public SingleResult<Structure> GetParent([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Structures.Where(m => m.ID == key).Select(m => m.Parent));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.Structures.Where(m => m.ID == key).Select(m => m.Parent));
         }
 
         // GET: odata/Structures(5)/Type
         [EnableQuery]
         public SingleResult<StructureType> GetType([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Structures.Where(m => m.ID == key).Select(m => m.Type));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.Structures.Where(m => m.ID == key).Select(m => m.Type));
         }
 
         // GET: odata/Structures(5)/SourceOfLinks
         [EnableQuery]
         public IQueryable<StructureLink> GetSourceOfLinks([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.SourceOfLinks);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.SourceOfLinks);
         }
 
         // GET: odata/Structures(5)/TargetOfLinks
         [EnableQuery]
         public IQueryable<StructureLink> GetTargetOfLinks([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.TargetOfLinks);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.TargetOfLinks);
         }
 
         [HttpGet]
@@ -226,10 +259,10 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("StructureLocationLinks(StructureID={key})")]
         public IQueryable<LocationLink> StructureLocationLinks([FromODataUri] long key)
         {
-            db.ConfigureAsReadOnly();
-            return db.StructureLocationLinks(key);
+            _db.ConfigureAsReadOnly();
+            return _db.StructureLocationLinks(key);
         }
-        
+
         /*
         [HttpGet]
         [EnableQuery]
@@ -246,9 +279,9 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("Network(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.SelectNetworkStructures(IDs, Hops);
+            return _db.SelectNetworkStructures(IDs, Hops);
         }
 
         /*
@@ -282,46 +315,35 @@ namespace ConnectomeODataV4.Controllers
             return Structures;
         }
         */
-    
+
 
         [HttpGet]
         [EnableQuery()]
         [ODataRoute("NetworkChildStructures(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.SelectNetworkChildStructures(IDs, Hops);
+            return _db.SelectNetworkChildStructures(IDs, Hops);
 
             // https://github.com/OData/WebApi/issues/255 
-             
+
         }
 
         [HttpGet]
         [EnableQuery()]
         public IQueryable<string> DistinctLabels(ODataActionParameters parameters)
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.Structures.Select(s => s.Label).Distinct();
-            
+            return _db.Structures.Select(s => s.Label).Distinct();
+
             // https://github.com/OData/WebApi/issues/255
 
         }
 
+        // No need for Dispose override - DI container handles disposal
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
-        private bool StructureExists(long key)
-        {
-            return db.Structures.Count(e => e.ID == key) > 0;
-        }
+        private bool StructureExists(long key) => _db.Structures.Count(e => e.ID == key) > 0;
     }
 }

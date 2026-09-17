@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<RootNamespace>VikingXNAGraphics</RootNamespace>
+		<AssemblyName>VikingXNAGraphics</AssemblyName>
+		<UseWindowsForms>true</UseWindowsForms>
+		<MonoGamePlatform>Windows</MonoGamePlatform>
+		<NoWarn>$(NoWarn);CA1014</NoWarn>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
+		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Include="..\MonogameXNAGraphicsShared\**\*.cs" Exclude="..\MonogameXNAGraphicsShared\obj\**;..\MonogameXNAGraphicsShared\bin\**"></Compile> 
+		<Content Include="Content\bin\Windows\**\*.xnb">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>Content\%(Filename)%(Extension)</Link>
+		</Content>
+		<None Include="Content\**\*.fx"> 
+			<Link>Content\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="MonoGame.Framework">
+			<HintPath>$(NuGetPackageRoot)\monogame.framework.windowsdx\3.7.1\lib\net45\MonoGame.Framework.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	
+	<!-- Collect all .fx files and content files as inputs for dependency tracking -->
+	<ItemGroup>
+		<MGCBShaderFiles Include="$(MSBuildThisFileDirectory)Content\**\*.fx" />
+		<MGCBContentFiles Include="$(MSBuildThisFileDirectory)Content\**\*.*" Exclude="@(MGCBShaderFiles);**\bin\**;**\obj\**" />
+		<MGCBConfigFile Include="$(MSBuildThisFileDirectory)Content\Content.mgcb" />
+	</ItemGroup>
+	
+	<Target Name="CompileContent" BeforeTargets="Build"
+	        Condition="Exists('$(MGCBPath)')"
+	        Inputs="@(MGCBShaderFiles);@(MGCBContentFiles);@(MGCBConfigFile)"
+	        Outputs="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp">
+		
+		<Exec
+			Command="&quot;$(MGCBPath)&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
+			WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="High" StandardErrorImportance="High" />
+		
+		<!-- Create timestamp file to track when content was built -->
+		<Touch Files="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp" AlwaysCreate="true" />
+	</Target>
+	
+	<Target Name="WarnMissingMGCB" BeforeTargets="Build" Condition="!Exists('$(MGCBPath)')">
+		<Warning Text="MonoGame Content Builder (MGCB.exe) not found at '$(MGCBPath)'. Content will not be recompiled. Install the MonoGame SDK or set the MGCBPath property." />
+	</Target>
+</Project> 

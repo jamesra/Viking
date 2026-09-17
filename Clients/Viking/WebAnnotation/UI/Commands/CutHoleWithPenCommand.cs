@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
@@ -8,21 +8,14 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
+    internal class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
+        private readonly List<LineSegment> ExteriorSegments;
+        public override uint NumCurveInterpolations => Global.NumClosedCurveInterpolationPoints;
 
-        List<GridLineSegment> ExteriorSegments;
-        public override uint NumCurveInterpolations
-        {
-            get
-            {
-                return Global.NumClosedCurveInterpolationPoints;
-            }
-        }
-           
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
@@ -31,49 +24,49 @@ namespace WebAnnotation.UI.Commands
         /// <param name="VolumePolygon"></param>
 
         public CutHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
             //SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
-            ExteriorSegments = OriginalVolumePolygon.ExteriorSegments.ToList();
+            ExteriorSegments = [.. OriginalVolumePolygon.ExteriorSegments];
 
             //PenInput.Push(origin);
         }
 
         public CutHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color.ToXNAColor(), origin, LineWidth, success_callback)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
         }
 
-        protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve)
+        protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<Vector2> proposed_curve)
         {
-            GridPolygon proposed_hole = new GridPolygon(proposed_curve.ToArray().EnsureClosedRing());
-            return false == GridPolygon.SegmentsIntersect(this.OriginalVolumePolygon, proposed_hole);
+            Polygon proposed_hole = new(proposed_curve.ToArray().EnsureClosedRing());
+            return false == Polygon.SegmentsIntersect(OriginalVolumePolygon, proposed_hole);
         }
 
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Vector2[] Path)
         {
 
         }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
 
         }
@@ -83,25 +76,26 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanCommandComplete()
-        {
-            return PenInput.HasSelfIntersection && ShapeIsValid();
-        }
+        protected override bool CanCommandComplete() => PenInput.HasSelfIntersection && ShapeIsValid();
 
         protected override bool ShapeIsValid()
         {
-            if (this.PenInput.Points.Count < 3 || this.PenInput.HasSelfIntersection == false)
+            if (PenInput.Points.Count < 3 || PenInput.HasSelfIntersection == false)
+            {
                 return false;
+            }
 
             //We cannot intersect any existing feature of the polygon
-            if (this.PenInput.Segments.Any(s => OriginalVolumePolygon.Intersects(s)))
+            if (PenInput.Segments.Any(s => OriginalVolumePolygon.Intersects(s)))
+            {
                 return false;
+            }
 
             try
             {
-                return this.PenInput.Loop.ToPolygon().STIsValid().IsTrue;
+                return PenInput.Loop.ToPolygon().STIsValid().IsTrue;
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 return false;
             }

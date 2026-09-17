@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Geometry
 {
@@ -29,15 +29,9 @@ namespace Geometry
             }
         }
 
-        public override int GetHashCode()
-        {
-            return iA * iB;
-        }
+        public override readonly int GetHashCode() => iA * iB;
 
-        public override string ToString()
-        {
-            return iA.ToString() + " - " + iB.ToString();
-        }
+        public override readonly string ToString() => iA.ToString() + " - " + iB.ToString();
 
         public static bool operator ==(IndexEdge A, IndexEdge B)
         {
@@ -71,9 +65,9 @@ namespace Geometry
             return true;
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
-            if(obj is IndexEdge other)
+            if (obj is IndexEdge other)
             {
                 return this == other;
             }

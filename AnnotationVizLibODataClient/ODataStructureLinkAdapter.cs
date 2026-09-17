@@ -1,57 +1,47 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using System;
+using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureLinkAdapter : IStructureLinkKey
+    class ODataStructureLinkAdapter(StructureLink sl) : IStructureLink
     {
-        private StructureLink structureLink;
-
-        public ODataStructureLinkAdapter(StructureLink sl)
-        {
-            this.structureLink = sl;
-        }
+        private readonly StructureLink structureLink = sl;
 
         public bool Directional
         {
-            get
-            {
-                return !structureLink.Bidirectional;
-            }
+            get => !structureLink.Bidirectional;
+            set => structureLink.Bidirectional = !value;
         }
 
         public ulong SourceID
         {
-            get
-            {
-                return (ulong)structureLink.SourceID;
-            }
+            get => (ulong)structureLink.SourceID;
+            set => structureLink.SourceID = (long)value;
         }
 
         public ulong TargetID
         {
-            get
-            {
-                return (ulong)structureLink.TargetID;
-            }
+            get => (ulong)structureLink.TargetID;
+            set => structureLink.TargetID = (long)value;
         }
 
-        public int CompareTo(IStructureLinkKey other)
+        IStructureLinkKey IDataObjectWithKey<IStructureLinkKey>.ID
         {
-            var result = SourceID.CompareTo(other.SourceID);
-            if (result == 0)
-            {
-                result = TargetID.CompareTo(other.TargetID);
-                if (result == 0)
-                    result = Directional.CompareTo(other.Directional);
-            }
-
-            return result;
+            get => new StructureLinkKey(this);
+            set => throw new NotSupportedException("ODataStructureLinkAdapter is a read-only view over an OData StructureLink.");
         }
 
-        public bool Equals(IStructureLinkKey other)
+        StructureLinkKey IDataObjectWithKey<StructureLinkKey>.ID
         {
-            if (object.ReferenceEquals(other, null))
+            get => new StructureLinkKey(this);
+            set => throw new NotSupportedException("ODataStructureLinkAdapter is a read-only view over an OData StructureLink.");
+        }
+
+        public bool Equals(IStructureLink other)
+        {
+            if (other is null)
                 return false;
 
             if (other.SourceID == this.SourceID &&
@@ -62,9 +52,16 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(StructureLink other)
+        public bool Equals(IStructureLinkKey other)
         {
-            return this.Equals((IStructureLinkKey)other);
+            if (other is null)
+                return false;
+
+            return other.SourceID == this.SourceID &&
+                   other.TargetID == this.TargetID &&
+                   other.Directional == this.Directional;
         }
+
+        public bool Equals(StructureLink other) => this.Equals((IStructureLink)other);
     }
 }

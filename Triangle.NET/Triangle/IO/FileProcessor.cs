@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="FileProcessor.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -8,25 +8,24 @@ namespace TriangleNet.IO
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using TriangleNet.Geometry;
     using TriangleNet.Meshing;
 
     public static class FileProcessor
     {
-        static List<IFileFormat> formats;
+        static readonly List<IFileFormat> formats;
 
         static FileProcessor()
         {
-            formats = new List<IFileFormat>();
-
-            // Add Triangle file format as default.
-            formats.Add(new TriangleFormat());
+            formats =
+            [
+                // Add Triangle file format as default.
+                new TriangleFormat()
+            ];
         }
 
-        public static void Add(IFileFormat format)
-        {
-            formats.Add(format);
-        }
+        public static void Add(IFileFormat format) => formats.Add(format);
 
         public static bool IsSupported(string file)
         {
@@ -50,7 +49,7 @@ namespace TriangleNet.IO
         /// <returns>An instance of the <see cref="IPolygon" /> class.</returns>
         public static IPolygon Read(string filename)
         {
-            foreach (IPolygonFormat format in formats)
+            foreach (IPolygonFormat format in formats.Cast<IPolygonFormat>())
             {
                 if (format != null && format.IsSupported(filename))
                 {
@@ -68,7 +67,7 @@ namespace TriangleNet.IO
         /// <param name="filename">The path of the file to save.</param>
         public static void Write(IPolygon polygon, string filename)
         {
-            foreach (IPolygonFormat format in formats)
+            foreach (IPolygonFormat format in formats.Cast<IPolygonFormat>())
             {
                 if (format != null && format.IsSupported(filename))
                 {
@@ -91,7 +90,7 @@ namespace TriangleNet.IO
         /// <returns>An instance of the <see cref="IMesh" /> interface.</returns>
         public static IMesh Import(string filename)
         {
-            foreach (IMeshFormat format in formats)
+            foreach (IMeshFormat format in formats.Cast<IMeshFormat>())
             {
                 if (format != null && format.IsSupported(filename))
                 {
@@ -109,7 +108,7 @@ namespace TriangleNet.IO
         /// <param name="filename">The path of the file to save.</param>
         public static void Write(IMesh mesh, string filename)
         {
-            foreach (IMeshFormat format in formats)
+            foreach (IMeshFormat format in formats.Cast<IMeshFormat>())
             {
                 if (format != null && format.IsSupported(filename))
                 {

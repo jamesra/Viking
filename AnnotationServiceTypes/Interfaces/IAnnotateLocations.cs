@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.ServiceModel;
 
@@ -6,7 +6,6 @@ namespace AnnotationService.Interfaces
 {
     /// <summary>
     /// All of the query based functions should be deprecated and replaced by OData, one issue may be that  interfaces return binary streams instead of text.
-    /// Using OData also ties clients to our schema.
     /// </summary>
     [ServiceContract]
     public interface IAnnotateLocations
@@ -57,7 +56,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Location[] GetLocationsForSection(Int64 section, out Int64 QueryExecutedTime);
-          
+
         /// <summary>
         /// Return all locations for this structure
         /// </summary>
@@ -86,7 +85,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         AnnotationSet GetAnnotationsInMosaicRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64? ModifiedAfterThisUtcTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
-        
+
         /// <summary>
         /// Returns all locations modified after a set date.  
         /// The passed tick count needs to be in the same timezone as the server
@@ -97,7 +96,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Location[] GetLocationChanges(Int64 section, Int64 ModifiedAfterThisUtcTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
-        
+
         /// <summary>
         /// Updates or creates a new structure
         /// </summary>
@@ -147,5 +146,5 @@ namespace AnnotationService.Interfaces
         LocationHistory[] GetLocationChangeLog(Int64? structure_id, DateTime? begin_time, DateTime? end_time);
 
     }
-         
+
 }

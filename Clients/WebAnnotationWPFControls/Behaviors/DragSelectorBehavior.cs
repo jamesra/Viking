@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -14,15 +14,9 @@ namespace WebAnnotation.WPF.Behaviors
                 "ShouldSelectItemOnMouseUp", typeof(bool), typeof(DragSelectorBehavior),
                 new PropertyMetadata(default(bool), HandleShouldSelectItemOnMouseUpChange));
 
-        public static void SetShouldSelectItemOnMouseUp(DependencyObject element, bool value)
-        {
-            element.SetValue(ShouldSelectItemOnMouseUpProperty, value);
-        }
+        public static void SetShouldSelectItemOnMouseUp(DependencyObject element, bool value) => element.SetValue(ShouldSelectItemOnMouseUpProperty, value);
 
-        public static bool GetShouldSelectItemOnMouseUp(DependencyObject element)
-        {
-            return (bool)element.GetValue(ShouldSelectItemOnMouseUpProperty);
-        }
+        public static bool GetShouldSelectItemOnMouseUp(DependencyObject element) => (bool)element.GetValue(ShouldSelectItemOnMouseUpProperty);
 
         private static void HandleShouldSelectItemOnMouseUpChange(
             DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -42,7 +36,7 @@ namespace WebAnnotation.WPF.Behaviors
 
         private static void HandleSelectMouseUp(object sender, MouseButtonEventArgs e)
         {
-            var selector = (Selector)sender;
+            Selector selector = (Selector)sender;
 
             if (e.ChangedButton == MouseButton.Left && e.OriginalSource is Visual source)
             {
@@ -58,10 +52,7 @@ namespace WebAnnotation.WPF.Behaviors
             }
         }
 
-        private static void HandleSelectPreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            e.Handled = e.ChangedButton == MouseButton.Left;
-        }
+        private static void HandleSelectPreviewMouseDown(object sender, MouseButtonEventArgs e) => e.Handled = e.ChangedButton == MouseButton.Left;
 
         #endregion
     }

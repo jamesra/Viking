@@ -1,34 +1,35 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Controls
 {
     [Viking.Common.SupportedUITypes(typeof(Location_PropertyPageViewModel))]
     public partial class ListLocations : Viking.UI.BaseClasses.DockingListControl
     {
-        Location_PropertyPageViewModel[] _locations;
-
-        EventHandler LocationCreateEventHandler;
+        private Location_PropertyPageViewModel[] _locations;
+        private readonly NotifyCollectionChangedEventHandler LocationCreateEventHandler;
 
 
         public ListLocations()
         {
-            this.ListItems.ShowPropertiesOnDoubleClick = false;
+            ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
-            LocationCreateEventHandler = new EventHandler(OnLocationCreate);
-            LocationObj.Create += LocationCreateEventHandler;
+            LocationCreateEventHandler = new NotifyCollectionChangedEventHandler(OnLocationsCollectionChanged);
+            Store.Locations.OnCollectionChanged += LocationCreateEventHandler;
         }
 
         public void SetLocations(Location_PropertyPageViewModel[] locations)
         {
-            this._locations = locations;
+            _locations = locations;
 
-            this.ListItems.DisplayObjects(_locations);
+            ListItems.DisplayObjects(_locations);
         }
 
         protected override void OnObjectDoubleClick(IUIObject obj)
@@ -39,26 +40,37 @@ namespace WebAnnotation.UI.Controls
             AnnotationOverlay.GoToLocation(loc.modelObj);
         }
 
-        public void OnLocationCreate(object sender, EventArgs e)
+        private void OnLocationsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            Location_PropertyPageViewModel loc = sender as Location_PropertyPageViewModel;
-            Debug.Assert(loc != null);
+            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems is null)
+            {
+                return;
+            }
+
+            foreach (LocationObj addedObj in e.NewItems)
+            {
+                OnLocationCreate(new Location_PropertyPageViewModel(addedObj.ID));
+            }
+        }
+
+        private void OnLocationCreate(Location_PropertyPageViewModel loc)
+        {
             if (loc != null)
             {
                 if (InvokeRequired)
                 {
-                    this.ListItems.Invoke(new Action(() => this.ListItems.AddObject(loc)));
+                    ListItems.Invoke(new Action(() => ListItems.AddObject(loc)));
                 }
                 else
                 {
-                    this.ListItems.AddObject(loc);
+                    ListItems.AddObject(loc);
                 }
             }
         }
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)
         {
-            LocationObj.Create -= LocationCreateEventHandler;
+            Store.Locations.OnCollectionChanged -= LocationCreateEventHandler;
 
             base.parentForm_Closing(sender, e);
         }

@@ -1,30 +1,25 @@
 using Microsoft.EntityFrameworkCore;
 using System;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Viking.DataModel.Annotation;
-using Viking.DataModel.Annotation.Tests;
 using Xunit;
 
 namespace ConnectomeDataModelCoreTests
 {
-    /*
-    public class AnnotationsTests : IClassFixture<CreateDropDatabaseFixture>
+    public class AnnotationsTests
     {
-        private readonly AnnotationContext _dbContext;
-        private readonly IConfiguration _config;
-        private readonly ILogger Log;
+        readonly AnnotationContext context;
 
         #region Seeding
-        public AnnotationsTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger log = null)
+        public AnnotationsTests(AnnotationContext _context)
         {
-            _dbContext = dbFixture.DataContext;
-            _config = config;
-            Log = log;
+            context = _context;
+
+            //Seed();
         }
 
         protected DbContextOptions<AnnotationContext> ContextOptions { get; }
-     
+
+        /*
         private void Seed()
         {
             using (var context = new AnnotationContext(ContextOptions))
@@ -50,10 +45,10 @@ namespace ConnectomeDataModelCoreTests
 
                 context.SaveChanges();
             }
-        } 
+        }*/
 
         #endregion
-     
+
         [Fact]
         public void GeometryCanLoad()
         {
@@ -66,7 +61,6 @@ namespace ConnectomeDataModelCoreTests
             loc = context.Locations.Find(Id);
 
             Console.WriteLine($"{loc.Id} - {loc.VolumeShape}");
-        } 
+        }
     }
-    */
 }

@@ -23,32 +23,151 @@ Tulip Analysis Plugin
 Export from the web page
 ========================
 
-  This user friendlier `website`_ exports files for Marc lab hosted databases.  
+  The `export portal`_ builds these URLs for you.  Choose a volume, an export type and a
+  format, paste or drag-drop a list of structures, and it assembles the request and
+  downloads the result.  It covers every export described below and is the recommended
+  starting point.
+
+  The portal accepts three kinds of entry, which may be mixed freely in one list:
+
+  ==========  =====================  ================================================
+  Entry       Example                Meaning
+  ==========  =====================  ================================================
+  ID          ``180``                A single structure.
+  Range       ``1-10``               Every ID from 1 to 10, inclusive of both ends.
+  Label       ``CBb3n``              Every structure whose label contains that text,
+                                     ignoring case.
+  ==========  =====================  ================================================
+
+  **Separate entries with a comma, a semicolon, or a new line.**  Whitespace separates
+  numbers only.  That distinction exists because labels contain spaces: on RC1, 313 of the
+  8,044 labelled structures have one, including ``GC ON`` and ``yAC ON+OFF``.  Splitting
+  those on whitespace would search for fragments instead of the label.  A range must have
+  digits on both sides, which is what keeps a hyphenated label such as ``CBa2-3`` from
+  being read as a range.
+
+  Labels are resolved by the portal, which looks up matching structures in the volume's
+  OData service and puts the resulting IDs into the URL.  It reports what each label
+  matched, and it will not start a download when nothing in the box matched anything,
+  because an export with no IDs means the whole volume.
+
+.. note::
+
+   Ranges and labels are conveniences of the portal, not of the export service.  By the
+   time a request reaches the service it carries plain numeric IDs.  A URL written by hand
+   must therefore use IDs only, as described below.
 
 Export directly from a URL
 ==========================
 
-  Exports are available under a volume URL's /export/ subpath.  An Export URL has the following components
+  Exports live under a volume's ``/Export/`` subpath.  An export URL has three parts after
+  the volume: the report, the format, and a query string.
 
-.. http:get:: /export/( report_type )/( format )/
-    
-   
+.. http:get:: /( volume )/Export/( report )/( format )
+
+   A mistyped URL does not return 404.  The service answers **HTTP 200 with this
+   documentation page**, so a bad URL looks like a successful request that produced
+   unexpected content.  Check the response body if an export seems to return the wrong
+   thing.
+
+   Paths are not case sensitive, so ``dot`` and ``DOT`` are equivalent.
+
+   Not every report offers every format:
+
+   ===========  ===  ====  ===  ===
+   Report       TLP  JSON  DOT  GML
+   ===========  ===  ====  ===  ===
+   Morphology   yes  yes   no   no
+   Network      yes  yes   yes  yes
+   Motif        yes  yes   yes  no
+   ===========  ===  ====  ===  ===
+
+.. note::
+
+   Until August 2026 the format had to be named twice, as
+   ``/( volume )/Export/( report )/Get( FORMAT )/( format )``.  That form still works, so
+   existing links and scripts need no changes, but the shorter URL above is preferred for
+   new work.
+
+.. warning::
+
+   Multiple IDs are separated by **semicolons**, not commas.  A comma-separated list is
+   not rejected; it silently yields a near-empty file.  Because a semicolon terminates a
+   query string in some shells, quote the URL when using tools such as ``curl``.
+
+   The service accepts **numeric IDs only**.  Ranges and labels are portal features and
+   mean nothing here: ``?ids=1-10`` and ``?ids=CBb3n`` are both discarded, and because an
+   empty ID set means "export the whole volume", either one quietly returns the entire
+   volume rather than an error.  The service splits on semicolons and newlines, so a
+   multi-line value works, but a comma does not.
+
+
+Long lists: POST the IDs instead
+--------------------------------
+
+  IIS caps a query string near 2048 bytes, which is roughly 300 structure IDs.  Beyond that
+  the request is rejected before it reaches the export service.
+
+  Every Network and Morphology export therefore also answers **POST** at the same URL, taking
+  the ID list from the request body instead of the query string.  There is no practical limit
+  on the number of IDs, so a long list is one request producing one file.  This matters for
+  Network in particular: ``hops`` traversal explores whatever arrives in a single request, so
+  splitting a list across several requests explores a smaller graph than asking for all of it
+  at once.
+
+  Two body formats are accepted.  A raw ``text/plain`` body:
+
+  .. code-block:: bash
+
+     curl -X POST -H "Content-Type: text/plain" --data-binary @ids.txt \
+       -OJ "https://websvc.codepharm.net/RC1/Export/Morphology/tlp"
+
+  Or a ``multipart/form-data`` upload of a single **.txt** file:
+
+  .. code-block:: bash
+
+     curl -X POST -F "file=@ids.txt" \
+       -OJ "https://websvc.codepharm.net/RC1/Export/Network/gml?hops=2"
+
+  The body holds IDs only, separated by semicolons or newlines, so a text file with one ID
+  per line works as-is.  Other parameters such as ``hops`` and ``stick`` stay in the query
+  string, and IDs given in the query string are merged with those in the body.
+
+  The response is the file itself, exactly as it is for GET.
+
+.. note::
+
+   Limits on the body, which apply because these endpoints are anonymous: at most 200 KB,
+   at most 50,000 IDs, valid UTF-8 text, and exactly one uploaded file whose name ends in
+   ``.txt``.  Anything else is refused with a ProblemDetails response rather than a file.
+
+   A body that contains no recognisable ID is also refused.  This is deliberate: an empty
+   ID set means "export the whole volume", and a caller who sent a body clearly wanted a
+   subset.  To export a whole volume, send no body at all.
+
+.. note::
+
+   Before September 2026 the POST actions were named ``PostTLP``, ``PostJSON``, ``PostDot``
+   and ``PostGML``, and they read their IDs from the query string, ignoring the body.  Those
+   names still route, and now read the body as well.
+
+
 Neuron connectivity network
 ===========================
 
   Neuronal connectivity graphs map nodes to individual neurons (parent structures).  Edges are the collection of all connections between neurons grouped by type.  
 
-.. http:get:: /export/network/( Format )
+.. http:get:: /( volume )/Export/Network/( format )
 
    Requests the connectivity graph for the neurons specified in the query string.
       
    **Format:**
-      * **TLP** - Tulip file format
-      * **DOT** - Graphviz DOT file format
-      * **GraphML** - GraphML file format
-      * **JSON** - Java script object notation
+      * **TLP** - Tulip file format, ``tlp``
+      * **DOT** - Graphviz DOT file format, ``dot``
+      * **GML** - GraphML file format, ``gml``
+      * **JSON** - Java script object notation, ``json``
         
-   :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
+   :query ids: ID numbers of cells to include in connectivity graph.  Semicolons separate multiple IDs.  Omit to export the whole volume.  For lists too long for a URL, POST them to the same address instead; see `Long lists: POST the IDs instead`_.
    :query hops: Degrees of seperation to include additional neurons in graph
    
    :resheader Content-Type: text/plain
@@ -57,15 +176,18 @@ Neuron connectivity network
       
       Get all cells within one degree of seperation of cells 476 and 514.
       
-      .. sourcecode:: http
+      .. code-block:: text
       
-         http://websvc1.connectomes.utah.edu/RC1/export/network/tlp?id=476,514&hops=1
+         https://websvc.codepharm.net/RC1/Export/Network/tlp?ids=476;514&hops=1
          
       Get all cells in the network:
       
-      .. sourcecode:: http
+      .. code-block:: text
       
-         http://websvc1.connectomes.utah.edu/RC1/export/network/tlp
+         https://websvc.codepharm.net/RC1/Export/Network/tlp
+         
+      Raising ``hops`` grows the result quickly.  For RC1 cell 180 the DOT export is
+      roughly 0.9 MB at one hop and 39 MB at three.
          
    **Neuron Node Properties:**
    
@@ -95,25 +217,31 @@ Motif connectivity
 
   Motif connectivity graphs group all neurons (Structures) by label and map each label to a node.  Edges are the collection of all connections between those labels grouped by type.
 
-.. http:get:: /export/motif/( Format )
+.. http:get:: /( volume )/Export/Motif/( format )
 
    Connectivity between classes of neurons based on label.  Includes all neurons.  Nodes represent the set of all structures that share a label.  Edges indicate at least one connection between cells with those labels.
    
+   The report always covers the entire volume, so it takes no query parameters.
+   
    **Format:**
-      * **TLP** - Tulip file format
-      * **DOT** - Graphviz DOT file format
-      * **GraphML** - GraphML file format
-      * **JSON** - Java script object notation
+      * **TLP** - Tulip file format, ``tlp``
+      * **DOT** - Graphviz DOT file format, ``dot``
+      * **JSON** - Java script object notation, ``json``
      
    :resheader Content-Type: text/plain
    
    **Example request**
    
-      Get a dot file of the morphology for use in Graphviz
+      Get a dot file of the motif connectivity for use in Graphviz
       
-      .. sourcecode:: http   
+      .. code-block:: text   
          
-         http://websvc1.connectomes.utah.edu/RC1/export/motifs/dot
+         https://websvc.codepharm.net/RC1/Export/Motif/dot
+         
+      Because the report covers the whole volume its cost scales with volume size.
+      Smaller volumes return in seconds, RC2 takes roughly two minutes, and RC1 can
+      take longer still.  Allow a generous timeout rather than assuming the request
+      has failed.
          
    **Motif Node Properties:**
    
@@ -151,17 +279,17 @@ Morphology
   
    Morphology graphs map each annotation to a node.  Edges represent links between annotations.  The position information is preserved to create a 3D model of the structures.
 
-.. http:get:: /export/morphology/( Format )
+.. http:get:: /( volume )/Export/Morphology/( format )
 
    Returns a 3D graph using annotations to determine node position.
    
    Nodes with a glowing effect are involved in a structure link.
    
    **Format:**
-      * **TLP** - Tulip file format
-      * **JSON** - Java script object notation
+      * **TLP** - Tulip file format, ``tlp``
+      * **JSON** - Java script object notation, ``json``
      
-   :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
+   :query ids: ID numbers of cells to include in the graph.  Semicolons separate multiple IDs.  For lists too long for a URL, POST them to the same address instead; see `Long lists: POST the IDs instead`_.
    :query stick: When set to a number greater than 0 the morphology graph is simplified.  Only nodes representing process terminations or branching points are represented.
    
    :resheader Content-Type: text/plain
@@ -170,9 +298,21 @@ Morphology
    
       Get the morphology of cells 180 and 476.
       
-      .. sourcecode:: http
+      .. code-block:: text
       
-         http://websvc1.connectomes.utah.edu/RC1/export/morphology/tlp?id=180,476
+         https://websvc.codepharm.net/RC1/Export/Morphology/tlp?ids=180;476
+         
+      Simplify the same cells to their branch and termination points.
+      
+      .. code-block:: text
+      
+         https://websvc.codepharm.net/RC1/Export/Morphology/tlp?ids=180;476&stick=1
+         
+.. note::
+
+   Morphology **JSON** currently returns an empty envelope of the form
+   ``{"Morphology":[{}]}`` on every volume, one empty object per requested structure.
+   Use the TLP format until this is fixed.
          
 .. figure:: Morphology_Export1.png
       
@@ -194,5 +334,5 @@ Navigation between Viking and Tulip
          
 .. _Tulip: http://tulip.labri.fr/
 .. _Graphviz: http://www.graphviz.org/
-.. _website: http://websvc1.connectomes.utah.edu/Export
+.. _export portal: https://websvc.codepharm.net/Export/
 .. _TulipPaths: https://github.com/visdesignlab/TulipPaths

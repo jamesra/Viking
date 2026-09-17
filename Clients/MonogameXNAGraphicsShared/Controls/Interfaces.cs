@@ -1,4 +1,5 @@
-﻿using Geometry;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using System;
 
 namespace VikingXNAGraphics.Controls
@@ -8,7 +9,7 @@ namespace VikingXNAGraphics.Controls
         Mouse,
         Pen
     }
-     
+
     //public delegate void OnClickEventHandler(object sender, VikingXNAGraphics.Controls.MouseButton button);
 
     /// <summary>
@@ -18,7 +19,7 @@ namespace VikingXNAGraphics.Controls
     /// <param name="source">Type of Device</param>
     /// <param name="source_info">Input device information (ie: mouse button info or pen info) </param>
     /// <returns>True if the input event should be considered handled.</returns>
-    public delegate bool InputDeviceEventConsumerDelegate(IClickable sender, GridVector2 point, InputDevice source, object source_info);
+    public delegate bool InputDeviceEventConsumerDelegate(IClickable sender, Vector2 point, InputDevice source, object source_info);
 
     /// <summary>
     /// Called by an owner window or control when the input device has sent an event that is relevant to the implementation.
@@ -28,7 +29,7 @@ namespace VikingXNAGraphics.Controls
     /// <param name="point">Point device was clicked at in world coordinates</param>
     /// <param name="source">Type of Device</param>
     /// <param name="source_info">Input device information (ie: mouse button info or pen info) </param>
-    public delegate void InputDeviceEventPassiveDelegate(IClickable sender, GridVector2 point, InputDevice source, object source_info);
+    public delegate void InputDeviceEventPassiveDelegate(IClickable sender, Vector2 point, InputDevice source, object source_info);
 
     /// <summary>
     /// This interface has Contains called on it by the owner.  If it contains a click
@@ -40,7 +41,7 @@ namespace VikingXNAGraphics.Controls
         /// Called by the owner window or control when the IHitTesting.Contains implementation is true for the point clicked.
         /// </summary>
         /// <returns>True if the button contained the point and an event was fired</returns>
-        InputDeviceEventConsumerDelegate OnClick { get; } 
+        InputDeviceEventConsumerDelegate OnClick { get; }
     }
 
     /// <summary>
@@ -67,31 +68,23 @@ namespace VikingXNAGraphics.Controls
     /// an arbitrary OnClick implementation assigned at construction.
     /// Useful to pair with a view to isolate views from UI actions
     /// </summary>
-    public class ClickableGeometryWrapper : IClickable
+    public class ClickableGeometryWrapper(IShape2D shape) : IClickable
     {
-        public IShape2D Shape;
+        public IShape2D Shape = shape;
 
         public static ClickableGeometryWrapper CreateSimple(IShape2D shape, Action action)
         {
-            ClickableGeometryWrapper obj = new ClickableGeometryWrapper(shape);
-            obj.OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; });
+            ClickableGeometryWrapper obj = new(shape)
+            {
+                OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; })
+            };
             return obj;
-        }
-
-        public ClickableGeometryWrapper(IShape2D shape)
-        {
-            if (shape == null)
-                throw new ArgumentNullException("IShape2D being wrapped cannot be null");
-            Shape = shape;
-        }
+        } 
 
         public InputDeviceEventConsumerDelegate OnClick { get; set; }
 
-        public GridRectangle BoundingBox => Shape.BoundingBox;
-        
-        public bool Contains(GridVector2 Position)
-        {
-            return Shape.Contains(Position);
-        }
+        public Rectangle BoundingBox => Shape.BoundingBox;
+
+        public bool Contains(Vector2 Position) => Shape.Covers((IPoint2D)Position);
     }
 }

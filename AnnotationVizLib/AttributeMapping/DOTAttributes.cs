@@ -4,7 +4,7 @@ namespace AnnotationVizLib
 {
     public static class DOTAttributes
     {
-        public static SortedDictionary<string, string> StandardGraphDOTAttributes = new SortedDictionary<string, string>()
+        public static SortedDictionary<string, string> StandardGraphDOTAttributes = new()
         {
             {"splines", "true"},
             {"dpi", "600"},
@@ -22,7 +22,7 @@ namespace AnnotationVizLib
             {"maxiter", "10000"}
         };
 
-        public static SortedDictionary<string, string> StandardNodeDOTAttributes = new SortedDictionary<string, string>() {
+        public static SortedDictionary<string, string> StandardNodeDOTAttributes = new() {
             {"peripheries", "3"},
             {"fontcolor", "white"},
             {"style", "filled"},
@@ -36,8 +36,8 @@ namespace AnnotationVizLib
         /// we search the keys in the order they appear in the list.  The first partial match
         /// has its attributes returned.
         /// </summary>
-        public static IList<AttributeMap> StandardLabelToNodeDOTAppearance = new List<AttributeMap>()
-        {
+        public static IList<AttributeMap> StandardLabelToNodeDOTAppearance =
+        [
             new AttributeMap("AXON", new SortedList<string,string> {
                             {"fillcolor", "Red3"},
                             {"shape", "hexagon"}
@@ -139,10 +139,10 @@ namespace AnnotationVizLib
                             {"fillcolor", "saddlebrown"}
                 }
             )
-        };
+        ];
 
-        public static IList<AttributeMap> StandardEdgeSourceLabelToDOTAppearance = new List<AttributeMap>()
-        {
+        public static IList<AttributeMap> StandardEdgeSourceLabelToDOTAppearance =
+        [
             new AttributeMap("RIBBON SYNAPSE", new SortedList<string,string> {
                             {"dir", "forward"},
                             {"arrowhead", "normal"},
@@ -185,6 +185,6 @@ namespace AnnotationVizLib
                             {"color", "black"}
                 }
             )
-        };
+        ];
     }
 }

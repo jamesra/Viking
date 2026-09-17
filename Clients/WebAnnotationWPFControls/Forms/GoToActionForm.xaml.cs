@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using log4net.Util;
 using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Forms
@@ -42,10 +41,7 @@ namespace WebAnnotation.UI.Forms
         public long ID
         {
             get => (long)GetValue(IDProperty);
-            set
-            {
-                SetValue(IDProperty, value);
-            }
+            set => SetValue(IDProperty, value);
         }
 
         public static readonly DependencyProperty IsActionEnabledProperty = DependencyProperty.Register(
@@ -62,10 +58,10 @@ namespace WebAnnotation.UI.Forms
         /// <summary>
         /// Returns true if the current ID is valid
         /// </summary>
-        public Func<long, bool> IsValidInput;
+        public Func<long, CancellationToken, Task<bool>> IsValidInput;
 
         /// <summary>
-        /// Called when the user requests we go to an ID. 
+        /// Called when the user requests we go to an ID.
         /// </summary>
         public Action<long> OnGo;
 
@@ -75,7 +71,7 @@ namespace WebAnnotation.UI.Forms
             InitializeComponent();
         }
 
-        private void OK_Button_Click(object sender, RoutedEventArgs e)
+        private async void OK_Button_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -86,12 +82,9 @@ namespace WebAnnotation.UI.Forms
                 return;
             }
 
-            if (IsValidInput(ID)) //Store.Locations.GetObjectByID(this.ID, true) != null)
+            if (IsValidInput == null || await IsValidInput(ID, CancellationToken.None))
             {
                 OnGo?.Invoke(ID);
-
-                //TODO: Set a property that fires an event so WebAnnotation can travel where it needs to go
-                //WebAnnotation.AnnotationOverlay.GoToLocation(this.ID);
                 this.Close();
             }
         }
@@ -112,21 +105,15 @@ namespace WebAnnotation.UI.Forms
             //WebAnnotation.AnnotationOverlay.GoToLocation(this.ID);
         }
 
-        private void Cancel_Button_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
-        }
+        private void Cancel_Button_Click(object sender, RoutedEventArgs e) => this.Close();
 
         private static bool IsNonNumeric(string text)
         {
-            Regex regex = new Regex("[^0-9]"); //regex that matches disallowed text
+            Regex regex = new("[^0-9]"); //regex that matches disallowed text
             return regex.IsMatch(text);
         }
 
-        private void NumberTextbox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            e.Handled = IsNonNumeric(e.Text);
-        }
+        private void NumberTextbox_PreviewTextInput(object sender, TextCompositionEventArgs e) => e.Handled = IsNonNumeric(e.Text);
 
         private CancellationTokenSource cancelIDUpdateTokenSource;
 
@@ -149,29 +136,26 @@ namespace WebAnnotation.UI.Forms
         private void QueueEnabledCheck(long ID)
         {
             //Cancel any existing enabled checks if they exist
-            var newCancelTokenSource = new CancellationTokenSource();
+            CancellationTokenSource newCancelTokenSource = new();
             var originalCancellationToken = Interlocked.Exchange(ref cancelIDUpdateTokenSource, newCancelTokenSource);
             originalCancellationToken?.Cancel();
-            
-            Task.Run(() => EnabledCheckTask(ID, newCancelTokenSource.Token), newCancelTokenSource.Token);
+
+            _ = EnabledCheckTask(ID, newCancelTokenSource.Token);
         }
 
-        private Task EnabledCheckTask(long ID, CancellationToken token)
+        private async Task EnabledCheckTask(long ID, CancellationToken token)
         {
             try
             {
-                var result = IsValidInput(ID);
+                bool result = IsValidInput == null || await IsValidInput(ID, token);
                 if (token.IsCancellationRequested)
-                    return Task.FromCanceled(token);
+                    return;
 
-                this.Dispatcher.BeginInvoke(new Action(()=>IsActionEnabled = result));
+                this.Dispatcher.BeginInvoke(new Action(() => IsActionEnabled = result));
             }
             catch (System.Threading.Tasks.TaskCanceledException)
             {
-                return Task.FromCanceled(token);
             }
-
-            return Task.CompletedTask;
         }
     }
 }

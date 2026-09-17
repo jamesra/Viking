@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Rectangle.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -49,50 +49,32 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// Gets the minimum x value (left boundary).
         /// </summary>
-        public double Left
-        {
-            get { return xmin; }
-        }
+        public double Left => xmin;
 
         /// <summary>
         /// Gets the maximum x value (right boundary).
         /// </summary>
-        public double Right
-        {
-            get { return xmax; }
-        }
+        public double Right => xmax;
 
         /// <summary>
         /// Gets the minimum y value (bottom boundary).
         /// </summary>
-        public double Bottom
-        {
-            get { return ymin; }
-        }
+        public double Bottom => ymin;
 
         /// <summary>
         /// Gets the maximum y value (top boundary).
         /// </summary>
-        public double Top
-        {
-            get { return ymax; }
-        }
+        public double Top => ymax;
 
         /// <summary>
         /// Gets the width of the rectangle.
         /// </summary>
-        public double Width
-        {
-            get { return xmax - xmin; }
-        }
+        public double Width => xmax - xmin;
 
         /// <summary>
         /// Gets the height of the rectangle.
         /// </summary>
-        public double Height
-        {
-            get { return ymax - ymin; }
-        }
+        public double Height => ymax - ymin;
 
         /// <summary>
         /// Scale bounds.
@@ -149,20 +131,14 @@ namespace TriangleNet.Geometry
         /// <param name="x">Point to check.</param>
         /// <param name="y">Point to check.</param>
         /// <returns>Return true, if rectangle contains given point.</returns>
-        public bool Contains(double x, double y)
-        {
-            return ((x >= xmin) && (x <= xmax) && (y >= ymin) && (y <= ymax));
-        }
+        public bool Contains(double x, double y) => ((x >= xmin) && (x <= xmax) && (y >= ymin) && (y <= ymax));
 
         /// <summary>
         /// Check if given point is inside rectangle.
         /// </summary>
         /// <param name="pt">Point to check.</param>
         /// <returns>Return true, if rectangle contains given point.</returns>
-        public bool Contains(Point pt)
-        {
-            return Contains(pt.x, pt.y);
-        }
+        public bool Contains(Point pt) => Contains(pt.x, pt.y);
 
         /// <summary>
         /// Check if this rectangle contains other rectangle.

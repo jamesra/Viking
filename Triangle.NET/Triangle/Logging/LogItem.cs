@@ -11,43 +11,23 @@ namespace TriangleNet.Logging
     /// <summary>
     /// Represents an item stored in the log.
     /// </summary>
-    public class LogItem : ILogItem
+    public class LogItem(LogLevel level, string message, string info) : ILogItem
     {
-        DateTime time;
-        LogLevel level;
-        string message;
-        string info;
+        readonly DateTime time = DateTime.Now;
+        readonly LogLevel level = level;
+        readonly string message = message;
+        readonly string info = info;
 
-        public DateTime Time
-        {
-            get { return time; }
-        }
+        public DateTime Time => time;
 
-        public LogLevel Level
-        {
-            get { return level; }
-        }
+        public LogLevel Level => level;
 
-        public string Message
-        {
-            get { return message; }
-        }
+        public string Message => message;
 
-        public string Info
-        {
-            get { return info; }
-        }
+        public string Info => info;
 
         public LogItem(LogLevel level, string message)
             : this(level, message, "")
         { }
-
-        public LogItem(LogLevel level, string message, string info)
-        {
-            this.time = DateTime.Now;
-            this.level = level;
-            this.message = message;
-            this.info = info;
-        }
     }
 }

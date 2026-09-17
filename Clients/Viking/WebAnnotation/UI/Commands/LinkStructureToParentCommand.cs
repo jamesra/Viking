@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
 using System.Collections.Generic;
@@ -11,6 +11,8 @@ using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -18,40 +20,23 @@ namespace WebAnnotation.UI.Commands
     /// Created after a location for a new structure has been determined, but we
     /// have to choose a parent for the new structure. 
     /// </summary>
-    class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelpStrings, Viking.Common.IHelpStrings
+    internal class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelpStrings, Viking.Common.IHelpStrings
     {
         /// <summary>
         /// New Locations position in world space
         /// </summary>
-        GridVector2 transformedPos;
+        private Geometry.Vector2 transformedPos;
+        private readonly StructureObj putativeStruct;
+        private readonly LocationObj putativeLoc;
+        private LocationObj nearestParent;
+        private readonly LocationCanvasView locView;
+        private Microsoft.Xna.Framework.Color linecolor;
+        private CurveLabel? labelView = null;
 
-        StructureObj putativeStruct;
-        LocationObj putativeLoc;
+        public string[] HelpStrings => [ "Left Mouse Button Release over parent structure annotation: Set annotation's parent structure",
+                                      "Escape: Cancel command"];
 
-        LocationObj nearestParent;
-
-        LocationCanvasView locView;
-
-        Microsoft.Xna.Framework.Color linecolor;
-
-        CurveLabel labelView = null;
-
-        public string[] HelpStrings
-        {
-            get
-            {
-                return new string[] { "Left Mouse Button Release over parent structure annotation: Set annotation's parent structure",
-                                      "Escape: Cancel command"};
-            }
-        }
-
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
         public LinkStructureToParentCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                StructureObj structure,
@@ -59,21 +44,14 @@ namespace WebAnnotation.UI.Commands
             : base(parent)
         {
 
-            this.putativeStruct = structure;
-            this.putativeLoc = location;
+            putativeStruct = structure;
+            putativeLoc = location;
 
-            StructureTypeObj LocType = this.putativeStruct.Type;
-            if (LocType != null)
-            {
-                linecolor = LocType.Color.ToXNAColor(0.5f);
-            }
-            else
-            {
-                linecolor = Microsoft.Xna.Framework.Color.Green;
-            }
+            StructureTypeObj LocType = putativeStruct.Type;
+            linecolor = LocType != null ? LocType.Color.ToXNAColor(0.5f) : Microsoft.Xna.Framework.Color.Green;
 
             //Transform the location position to the correct coordinates
-            transformedPos = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(new GridVector2(putativeLoc.Position.X, putativeLoc.Position.Y));
+            transformedPos = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(new Geometry.Vector2(putativeLoc.Position.X, putativeLoc.Position.Y));
 
             parent.Cursor = Cursors.Cross;
 
@@ -83,19 +61,20 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        protected LocationCanvasView NearestLocationToMouse(GridVector2 WorldPos)
+        protected LocationCanvasView NearestLocationToMouse(Geometry.Vector2 WorldPos)
         {
             List<HitTestResult> listHitTestResults = Overlay.GetAnnotations(WorldPos);
 
             //Find locations that are not equal to our origin location
-            listHitTestResults = listHitTestResults.Where(hr =>
+            listHitTestResults = [.. listHitTestResults.Where(hr =>
             {
-                LocationCanvasView loc = hr.obj as LocationCanvasView;
-                if (loc == null)
+                if (hr.obj is not LocationCanvasView loc)
+                {
                     return false;
+                }
 
                 return loc.ID != putativeLoc.ID && loc.ParentID != putativeStruct.ID;
-            }).ToList();
+            })];
 
             LocationCanvasView nearestVisible = null;
             HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)putativeLoc.Z);
@@ -122,7 +101,9 @@ namespace WebAnnotation.UI.Commands
             if (e.Button.Left())
             {
                 if (HandleInputSelection(e.X, e.Y) == false)
+                {
                     return;
+                }
             }
 
             base.OnMouseDown(sender, e);
@@ -143,7 +124,9 @@ namespace WebAnnotation.UI.Commands
             if (e.Erase == false)
             {
                 if (HandleInputSelection(e.X, e.Y) == false)
+                {
                     return;
+                }
             }
 
             base.OnPenContact(sender, e);
@@ -151,47 +134,45 @@ namespace WebAnnotation.UI.Commands
 
         protected void HandleInputMovement(int X, int Y)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
-
-            //Find if we are close enough to a location to "snap" the line to the target
-            double distance;
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(X, Y);
             LocationCanvasView nearest = NearestLocationToMouse(WorldPos);
-            if (nearest != null)
-            {
-                nearestParent = Store.Locations[nearest.ID];
-            }
-            else
-            {
-                nearestParent = null;
-            }
+            nearestParent = nearest != null ? Store.Locations[nearest.ID] : null;
         }
 
         protected bool HandleInputSelection(int X, int Y)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(X, Y);
 
             /*Check to see if we clicked a location*/
             LocationCanvasView loc = NearestLocationToMouse(WorldPos);
-            if (loc == null)
+            if (loc is null)
+            {
                 return false;
+            }
 
-            this.putativeStruct.Parent = loc.Parent.modelObj;
+            putativeStruct.Parent = loc.Parent.modelObj;
 
-            this.Deactivated = true;
+            Deactivated = true;
             return true;
         }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            if (this.oldMouse == null)
+            if (oldMouse is null)
+            {
                 return;
+            }
 
             if (locView != null)
+            {
                 LocationObjRenderer.DrawCanvasView(new LocationCanvasView[] { locView }, graphicsDevice, basicEffect, Parent.AnnotationOverlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, (int)locView.Z);
+            }
             else
+            {
                 GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
+            }
 
-            GridVector2 target;
+            Geometry.Vector2 target;
             if (nearestParent != null)
             {
                 //Snap the line to a nearby target if it exists
@@ -200,27 +181,29 @@ namespace WebAnnotation.UI.Commands
             else
             {
                 //Otherwise use the old mouse position
-                target = this.oldWorldPosition;
+                target = oldWorldPosition;
             }
 
-            LineView line = new LineView(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular);
+            LineView line = new(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular);
 
             RoundLineManager lineManager = VikingXNAGraphics.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(graphicsDevice);
-            if (lineManager == null)
-                return;
-
-            if (labelView == null)
+            if (lineManager is null)
             {
-                labelView = new CurveLabel("Select Parent Structure", new GridVector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: line.LineWidth, numInterpolations: 0);
+                return;
+            }
+
+            if (labelView is null)
+            {
+                labelView = new CurveLabel("Select Parent Structure", new Geometry.Vector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: line.LineWidth, numInterpolations: 0);
             }
             else
             {
-                labelView.ControlPoints = transformedPos.X < target.X ? new GridVector2[] { transformedPos, target } : new GridVector2[] { target, transformedPos };
+                labelView.ControlPoints = transformedPos.X < target.X ? [transformedPos, target] : [target, transformedPos];
             }
 
             labelView.Draw(graphicsDevice, scene.ViewProj, Parent.spriteBatch, Parent.fontArial, Parent.CurveManager);
 
-            LineView.Draw(graphicsDevice, scene, lineManager, new LineView[] { line });
+            LineView.Draw(graphicsDevice, scene, lineManager, [line]);
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

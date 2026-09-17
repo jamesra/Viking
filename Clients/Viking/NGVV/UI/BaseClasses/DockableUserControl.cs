@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows.Forms;
 using Viking.Common;
 
@@ -9,26 +9,24 @@ namespace Viking.UI.BaseClasses
         [Browsable(true)]
         public string Title
         {
-            get { return LabelTitle.Text; }
-            set
-            {
+            get => LabelTitle.Text;
+            set =>
                 //Convert single '&' to '&&' so they display correctly
                 LabelTitle.Text = value.Replace("&", "&&");
-            }
         }
 
         [Browsable(true)]
         [Category("Appearance")]
         public bool TitleVisible
         {
-            get { return LabelTitle.Visible; }
-            set { LabelTitle.Visible = value; }
+            get => LabelTitle.Visible;
+            set => LabelTitle.Visible = value;
         }
 
         /// <summary>
         /// If we host the control in it's own form this is a pointer to the parent form
         /// </summary>
-        private System.Windows.Forms.Form _StandaloneForm = null;
+        private System.Windows.Forms.Form? _StandaloneForm = null;
 
         public System.Windows.Forms.Form GetStandaloneForm()
         {
@@ -47,10 +45,7 @@ namespace Viking.UI.BaseClasses
             return _StandaloneForm;
         }
 
-        protected void OnStandaloneFormClosed(object sender, System.EventArgs e)
-        {
-            this._StandaloneForm = null;
-        }
+        protected void OnStandaloneFormClosed(object sender, System.EventArgs e) => this._StandaloneForm = null;
 
         public DockableUserControl()
         {
@@ -59,14 +54,11 @@ namespace Viking.UI.BaseClasses
 
         #region ITabExtension Members
 
-        public TabPage GetPage()
-        {
-            return OnGetTabPage();
-        }
+        public TabPage GetPage() => OnGetTabPage();
 
         protected virtual System.Windows.Forms.TabPage OnGetTabPage()
         {
-            TabPage OverviewPage = new TabPage(this.Title);
+            TabPage OverviewPage = new(this.Title);
             OverviewPage.Controls.Add(this);
 
             this.Dock = DockStyle.Fill;

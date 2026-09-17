@@ -8,7 +8,7 @@ namespace AnnotationService.Types
 
         public SynapseObject()
         {
-            objList = new List<SynapseStats>();
+            objList = [];
         }
 
 

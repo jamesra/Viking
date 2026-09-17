@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Transforms;
 using System;
 using System.Diagnostics;
@@ -8,14 +8,17 @@ using System.Xml.Linq;
 
 namespace Viking.VolumeModel
 {
-    internal class LoadStosResult 
+    /// <summary>
+    /// One VikingXML &lt;stos&gt; parse. controlSection is the volume/reference; mappedSection is the moving slice.
+    /// </summary>
+    internal class LoadStosResult
     {
-        public ITransform Transform; 
+        public ITransform Transform;
         public XElement element;
 
         public static async Task<LoadStosResult> LoadAsync(Stream stream, XElement element, DateTime? lastModified = null)
         {
-            var result = new LoadStosResult();
+            LoadStosResult result = new();
 
             //stosTransform = new StosGridTransform(stream, element);
             int pixelSpacing = System.Convert.ToInt32(element.Attribute("pixelSpacing").Value);
@@ -28,7 +31,7 @@ namespace Viking.VolumeModel
                 lastModified = DateTime.UtcNow;
             }
 
-            Geometry.Transforms.StosTransformInfo info = new Geometry.Transforms.StosTransformInfo(ControlSection, MappedSection, lastModified.Value);
+            Geometry.Transforms.StosTransformInfo info = new(ControlSection, MappedSection, lastModified.Value);
 
             result.Transform = await TransformFactory.ParseStos(stream, info, pixelSpacing);
 
@@ -45,16 +48,22 @@ namespace Viking.VolumeModel
 
         public static async Task<LoadStosResult> LoadAsync(String localCachePath, XElement reader)
         {
-            var result = new LoadStosResult() { element = reader };
-            result.Transform = await TransformFactory.ParseStos(localCachePath).ConfigureAwait(false);
+            LoadStosResult result = new()
+            {
+                element = reader,
+                Transform = await TransformFactory.ParseStos(localCachePath).ConfigureAwait(false)
+            };
             return result;
         }
 
         public static async Task<LoadStosResult> LoadAsync(Uri ServerPath, System.Net.NetworkCredential UserCredentials, XElement element)
         {
-            var result = new LoadStosResult() { element = element };
-            result.Transform = await TransformFactory.ParseStos(ServerPath, element, UserCredentials).ConfigureAwait(false);
+            LoadStosResult result = new()
+            {
+                element = element,
+                Transform = await TransformFactory.ParseStos(ServerPath, element, UserCredentials).ConfigureAwait(false)
+            };
             return result;
         }
-    } 
+    }
 }

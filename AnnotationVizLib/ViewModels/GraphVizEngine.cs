@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,31 +7,27 @@ using System.Text;
 
 namespace AnnotationVizLib
 {
-    public class GraphVizNode<KEY> : GraphViewNode<KEY>
+    public class GraphVizNode<KEY>(KEY key) : GraphViewNode<KEY>(key)
         where KEY : IComparable<KEY>
     {
-        public GraphVizNode(KEY key) : base(key) { }
     }
 
     public class GraphVizEdge<KEY> : GraphViewEdge<KEY>, ICloneable
         where KEY : IComparable<KEY>
     {
 
-        public void Reverse()
-        {
-            KEY temp = this.from;
-            this.from = this.to;
-            this.to = temp;
-        }
+        public void Reverse() => (this.from, this.to) = (this.to, this.from);
 
         #region ICloneable Members
 
         public object Clone()
         {
-            GraphVizEdge<KEY> clone = new GraphVizEdge<KEY>();
-            clone.label = label;
-            clone.from = from;
-            clone.to = to;
+            GraphVizEdge<KEY> clone = new()
+            {
+                label = label,
+                from = from,
+                to = to
+            };
             foreach (string key in Attributes.Keys)
             {
                 clone.Attributes.Add(key, Attributes[key]);
@@ -45,15 +41,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// This string lists the parent structures connected, i.e. cells
         /// </summary>
-        public string KeyString
-        {
-            get
-            {
-                return to + "->" + from;
-            }
-        }
-
-
+        public string KeyString => to + "->" + from;
     }
 
     public class GraphVizEngine<KEY> : GraphViewEngine<KEY>
@@ -65,7 +53,7 @@ namespace AnnotationVizLib
         public string graphLabel;
         public string completePath_URL;
         public string layout = "dot";
-        public List<string> outputFormats = new List<string>();
+        public List<string> outputFormats = [];
         public bool minimize;
 
         protected void createDirectedGraph(string name)
@@ -163,7 +151,7 @@ namespace AnnotationVizLib
                     if (subgraph.Key.Length < 1)
                         continue;
 
-                    StringBuilder sb = new StringBuilder(subgraph.Value.Count * 16);
+                    StringBuilder sb = new(subgraph.Value.Count * 16);
 
                     sb.Append("\nsubgraph \"" + subgraph.Key + "\" {");
 
@@ -193,17 +181,14 @@ namespace AnnotationVizLib
             }
             finally
             {
-                if (sw != null)
-                {
-                    sw.Close();
-                    sw = null;
-                }
+                sw?.Close();
+                sw = null;
             }
         }
 
         public void SaveDOT(string DotFileFullPath)
         {
-            using (StreamWriter write = new StreamWriter(DotFileFullPath, false))
+            using (StreamWriter write = new(DotFileFullPath, false))
             {
                 write.Write(this.ToString());
                 write.Close();
@@ -219,18 +204,18 @@ namespace AnnotationVizLib
         /// <param name="DotFileFullPath">Input .dot file for GraphViz</param>
         /// <param name="OutputExtensions">File extensions for output</param>
         /// <returns></returns>
-        static public IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
+        public static IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
         {
             Debug.Assert(System.IO.File.Exists(DotFileFullPath), "Input dot file does not exist");
 
-            int length = OutputExtensions.Count();
+            int length = OutputExtensions.Length;
             string DotFilePath = System.IO.Path.GetDirectoryName(DotFileFullPath);
             string DotFileNameNoExtension = System.IO.Path.GetFileNameWithoutExtension(DotFileFullPath);
 
             DateTime DotFileLastWrite = System.IO.File.GetLastWriteTimeUtc(DotFileFullPath);
 
-            List<Process> ProcessList = new List<Process>(length);
-            List<string> listOutputFiles = new List<string>();
+            List<Process> ProcessList = new(length);
+            List<string> listOutputFiles = [];
 
             string layout = System.IO.Path.GetFileNameWithoutExtension(GraphVizExe);
 
@@ -252,7 +237,7 @@ namespace AnnotationVizLib
                     }
                 }
 
-                Process p = new Process();
+                Process p = new();
                 ProcessList.Add(p);
 
                 p.StartInfo.FileName = GraphVizExe;

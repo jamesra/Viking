@@ -6,7 +6,7 @@ namespace Viking.UI.Forms
 {
     public partial class SectionChooserForm : Form
     {
-        public SectionViewModel SelectedSection = null;
+        public SectionViewModel? SelectedSection = null;
 
         public SectionChooserForm()
         {
@@ -15,7 +15,7 @@ namespace Viking.UI.Forms
 
         private void btnOK_Click(object sender, EventArgs e)
         {
-            if (listSections.SelectedObject == null)
+            if (listSections.SelectedObject is null)
             {
                 MessageBox.Show("Please select a section or press cancel.", "No section selected");
                 return;

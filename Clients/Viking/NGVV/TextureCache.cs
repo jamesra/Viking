@@ -1,25 +1,24 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.UI;
 using Viking.Common;
-using Viking.UI;
 
 namespace Viking
 {
-    internal class LocalTextureCacheEntry : CacheEntry<string>
+    public class LocalTextureCacheEntry : CacheEntry<string>
     {
         public LocalTextureCacheEntry(string filename)
             : this(new FileInfo(filename))
-        { 
+        {
         }
 
         public LocalTextureCacheEntry(FileInfo fileinfo)
             : base(fileinfo.FullName)
-        { 
+        {
             this.Size = fileinfo.Length;
             this.LastAccessed = fileinfo.LastAccessTimeUtc;
         }
@@ -32,13 +31,42 @@ namespace Viking
     /// <summary>
     /// This class manages all requests for textures
     /// </summary>
-    class LocalTextureCache : TimeQueueCache<string, LocalTextureCacheEntry, byte[], FileStream>
+    public class LocalTextureCache : TimeQueueCache<string, LocalTextureCacheEntry, byte[], Stream>
     {
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new(StringComparer.OrdinalIgnoreCase);
+
+        internal static SemaphoreSlim GetFileLock(string filename) =>
+            FileLocks.GetOrAdd(filename, _ => new SemaphoreSlim(1, 1));
+
+        /// <summary>
+        /// Delete a texture cache file using the same per-path lock as reads and writes.
+        /// </summary>
+        internal static void DeleteCachedFile(string filename)
+        {
+            if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
+                return;
+
+            var fileLock = GetFileLock(filename);
+            fileLock.Wait();
+            try
+            {
+                File.Delete(filename);
+            }
+            catch (IOException ex)
+            {
+                Trace.WriteLine($"Failed to delete texture cache file: {filename}\n{ex}", "TextureUse");
+            }
+            finally
+            {
+                fileLock.Release();
+            }
+        }
+
         public LocalTextureCache()
         {
             //Create the cache directory if it does not exist
-            if (System.IO.Directory.Exists(State.CachePath) == false)
-                System.IO.Directory.CreateDirectory(State.CachePath);
+            if (System.IO.Directory.Exists(TileLoadEnvironment.CachePath) == false)
+                System.IO.Directory.CreateDirectory(TileLoadEnvironment.CachePath);
 
             //Search the cache directory and create a list of existing files
             //            string[] dirs = System.IO.Directory.GetDirectories(State.CachePath);
@@ -48,12 +76,7 @@ namespace Viking
             this.MaxCacheSize <<= 30;
         }
 
-        public async Task PopulateCache(string Path, CancellationToken token)
-        {
-            await _PopulateCacheThreadStart(Path, token);
-            //Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
-            //checkAction.BeginInvoke(Path, null, null); 
-        }
+        public async Task PopulateCache(string Path, CancellationToken token) => await _PopulateCacheThreadStart(Path, token);//Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);//checkAction.BeginInvoke(Path, null, null); 
 
         /// <summary>
         /// Add all textures found under the specified directory to the cache
@@ -63,15 +86,15 @@ namespace Viking
         {
             DateTime Start = DateTime.Now;
             Trace.WriteLine("Populating cache", "TextureUse");
-            var dirinfo = new DirectoryInfo(path);
+            DirectoryInfo dirinfo = new(path);
             if (false == dirinfo.Exists)
             {
                 dirinfo.Create();
             }
-                
+
             await CheckDirectory(dirinfo, token);
 
-            TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
+            TimeSpan elapsed = new(DateTime.Now.Ticks - Start.Ticks);
             Trace.WriteLine("Finish cache populate: " + elapsed.ToString(), "TextureUse");
         }
 
@@ -84,22 +107,20 @@ namespace Viking
             if (path.Exists == false)
                 return;
 
-            var subdirs = path.EnumerateDirectories().ToArray();
-            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(subdirs.Length);
-            foreach (var subdir in subdirs)
+            System.Collections.Generic.List<Task> listTasks = new(128);
+            foreach (var subdir in path.EnumerateDirectories())
             {
                 if (token.IsCancellationRequested)
                     return;
 
                 listTasks.Add(CheckDirectory(subdir, token));
             }
-              
+
             foreach (var file in path.EnumerateFiles())
             {
-                LocalTextureCacheEntry entry = new LocalTextureCacheEntry(file);
+                LocalTextureCacheEntry entry = new(file);
 
-                bool Added = AddEntry(entry);
-                if (!Added)
+                if (!AddEntry(entry))
                 {
                     entry.Dispose();
                     entry = null;
@@ -109,31 +130,44 @@ namespace Viking
                     return;
             }
 
-            if(listTasks.Count > 0)
-                Task.WaitAll(listTasks.ToArray(), token);
+            await Task.WhenAll(listTasks);
 
             return;
         }
 
         //      static public List<int> AllocatedTextures = new List<int>();
-        protected override FileStream Fetch(LocalTextureCacheEntry entry)
-        {
-            FileStream stream = null;
 
-            if (System.IO.File.Exists(entry.Key))
+        public new Stream Fetch(string key) => base.Fetch(key);
+
+        protected override Stream Fetch(LocalTextureCacheEntry entry)
+        {
+            if (System.IO.File.Exists(entry.Key) == false)
+                return null;
+
+            var fileLock = GetFileLock(entry.Key);
+            for (int attempt = 0; attempt < 4; attempt++)
             {
+                fileLock.Wait();
                 try
                 {
-                    stream = new FileStream(entry.Key, FileMode.Open, FileAccess.Read);
+                    byte[] bytes = File.ReadAllBytes(entry.Key);
+                    return new MemoryStream(bytes, writable: false);
                 }
-                catch (System.IO.IOException)
+                catch (IOException) when (attempt < 3)
                 {
-                    //Couldn't open the file, return null
+                    Thread.Sleep(25 * (attempt + 1));
+                }
+                catch (IOException)
+                {
                     return null;
+                }
+                finally
+                {
+                    fileLock.Release();
                 }
             }
 
-            return stream;
+            return null;
         }
 
 
@@ -145,27 +179,19 @@ namespace Viking
         protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            var fileLock = GetFileLock(filename);
+            fileLock.Wait();
+            try
             {
-                try
+                return WriteStreamToCacheFile(filename, stream =>
                 {
-                    output.Write(textureBuffer, 0, textureBuffer.Length); 
-
-                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                    return entry; 
-                }
-                catch (System.IO.IOException ioexception)
-                {
-                    Trace.WriteLine(ioexception.Message);
-                    Trace.WriteLine(ioexception.StackTrace);
-
-                    return null;
-                }
+                    stream.Write(textureBuffer, 0, textureBuffer.Length);
+                });
             }
-
-            //     stream.Close();
-            //An entry is created if the asynch write succeeds
-            return null;
+            finally
+            {
+                fileLock.Release();
+            }
         }
 
         /// <summary>
@@ -173,10 +199,7 @@ namespace Viking
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="textureStream"></param>
-        protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string,byte[]> textureBufferFactory)
-        {
-            return CreateEntry(filename, textureBufferFactory(filename)); 
-        }
+        protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string, byte[]> textureBufferFactory) => CreateEntry(filename, textureBufferFactory(filename));
 
         /// <summary>
         /// Creates a file for the texture passed.
@@ -186,27 +209,19 @@ namespace Viking
         protected override async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            var fileLock = GetFileLock(filename);
+            await fileLock.WaitAsync().ConfigureAwait(false);
+            try
             {
-                try
+                return await WriteStreamToCacheFileAsync(filename, async stream =>
                 {
-                    await output.WriteAsync(textureBuffer, 0, textureBuffer.Length);
-
-                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                    return entry;
-                }
-                catch (System.IO.IOException ioexception)
-                {
-                    Trace.WriteLine(ioexception.Message);
-                    Trace.WriteLine(ioexception.StackTrace);
-
-                    return null;
-                }
+                    await stream.WriteAsync(textureBuffer, 0, textureBuffer.Length).ConfigureAwait(false);
+                }).ConfigureAwait(false);
             }
-
-            //     stream.Close();
-            //An entry is created if the asynch write succeeds
-            return null;
+            finally
+            {
+                fileLock.Release();
+            }
         }
 
         /// <summary>
@@ -227,30 +242,116 @@ namespace Viking
             {
                 //If the directory does not exist then create it and try again
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-                return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer); 
+                return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer);
             }
 
-            return null; 
+            return null;
         }
 
         private async Task<LocalTextureCacheEntry> CreateEntryAssumeDirectoryExistsAsync(string filename,
             Stream textureBuffer)
         {
-            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            var fileLock = GetFileLock(filename);
+            await fileLock.WaitAsync().ConfigureAwait(false);
+            try
             {
-                try
-                {
-                    await textureBuffer.CopyToAsync(output);
+                return await WriteStreamToCacheFileAsync(filename, stream => textureBuffer.CopyToAsync(stream))
+                    .ConfigureAwait(false);
+            }
+            finally
+            {
+                fileLock.Release();
+            }
+        }
 
+        /// <summary>
+        /// Write cache data via a temp file and atomically replace the target so concurrent readers
+        /// are not disrupted and writers do not fight over an open path.
+        /// </summary>
+        private static LocalTextureCacheEntry WriteStreamToCacheFile(string filename, Action<Stream> writeBody)
+        {
+            string tempPath = filename + ".part";
+            try
+            {
+                using (var output = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    writeBody(output);
+                }
+
+                if (ReplaceCacheFile(tempPath, filename))
+                {
                     return new LocalTextureCacheEntry(filename);
                 }
-                catch (System.IO.IOException ioexception)
-                {
-                    Trace.WriteLine(ioexception.Message);
-                    Trace.WriteLine(ioexception.StackTrace);
 
-                    return null;
+                return null;
+            }
+            catch (IOException ioexception)
+            {
+                Trace.WriteLine(ioexception.Message);
+                Trace.WriteLine(ioexception.StackTrace);
+                TryDeleteQuiet(tempPath);
+                return null;
+            }
+        }
+
+        private static async Task<LocalTextureCacheEntry> WriteStreamToCacheFileAsync(string filename, Func<Stream, Task> writeBody)
+        {
+            string tempPath = filename + ".part";
+            try
+            {
+                using (var output = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await writeBody(output).ConfigureAwait(false);
                 }
+
+                if (ReplaceCacheFile(tempPath, filename))
+                {
+                    return new LocalTextureCacheEntry(filename);
+                }
+
+                return null;
+            }
+            catch (IOException ioexception)
+            {
+                Trace.WriteLine(ioexception.Message);
+                Trace.WriteLine(ioexception.StackTrace);
+                TryDeleteQuiet(tempPath);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Atomically publish a temp cache file. Returns false only when replace fails and no usable file exists.
+        /// </summary>
+        private static bool ReplaceCacheFile(string tempPath, string filename)
+        {
+            try
+            {
+                if (File.Exists(filename))
+                    File.Replace(tempPath, filename, null);
+                else
+                    File.Move(tempPath, filename);
+
+                return true;
+            }
+            catch (IOException ex)
+            {
+                // Target may still be open for read by another thread; keep the existing file if present.
+                TryDeleteQuiet(tempPath);
+                bool targetExists = File.Exists(filename);
+                return targetExists;
+            }
+        }
+
+        private static void TryDeleteQuiet(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (IOException)
+            {
             }
         }
 
@@ -279,7 +380,7 @@ namespace Viking
 
             return true;
         }
-         
+
 
         /// <summary>
         /// Creates a file for the texture passed.
@@ -288,11 +389,15 @@ namespace Viking
         /// <param name="textureStream"></param>
         public virtual async Task<bool> AddAsync(string key, Stream value)
         {
-            var entry = await CreateEntryAsync(key,value);
-            if (entry == null)
-                return false;
 
-            return AddEntry(entry);
+            var entry = await CreateEntryAsync(key, value);
+            if (entry is null)
+            {
+                return false;
+            }
+
+            bool added = AddEntry(entry);
+            return added;
         }
     }
 }

@@ -1,9 +1,10 @@
-﻿using Geometry;
+using Geometry;
+using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace AnnotationVizLib
 {
@@ -26,7 +27,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         private RTree.RTree<ulong> CreateRTreeForSubgraph(ICollection<ulong> subgraph)
         {
-            RTree.RTree<ulong> rtree = new RTree.RTree<ulong>();
+            RTree.RTree<ulong> rtree = new();
 
             foreach (ulong key in subgraph)
             {
@@ -51,7 +52,7 @@ namespace AnnotationVizLib
                 return;
 
             //Sort the subgraphs from smallest to largest
-            List<SortedSet<ulong>> sorted_subgraphs = subgraphs.OrderBy(s => s.Count).ToList();
+            List<SortedSet<ulong>> sorted_subgraphs = [.. subgraphs.OrderBy(s => s.Count)];
 
             //OK find the nearest point between the subgraphs.
             while (sorted_subgraphs.Count > 1)
@@ -69,7 +70,7 @@ namespace AnnotationVizLib
             double[] Distances = new double[SubgraphToMerge.Count];
 
             //Create a single graph of the subgraphs we want to merge into
-            SortedSet<ulong> subgraphUnion = new SortedSet<ulong>(subgraphs[0]);
+            SortedSet<ulong> subgraphUnion = [.. subgraphs[0]];
             for (int i = 1; i < subgraphs.Count; i++)
             {
                 foreach (ulong id in subgraphs[i])
@@ -82,7 +83,7 @@ namespace AnnotationVizLib
 
 
 
-            SortedList<ulong, double> distances = new SortedList<ulong, double>();
+            SortedList<ulong, double> distances = [];
 
             ulong nearest_node_id = 0;
             MorphologyEdge best_edge = null;
@@ -95,8 +96,7 @@ namespace AnnotationVizLib
 
                 SortedSet<ulong> candidates = FindNearestCandidatesFromRTree(UnionRTree, node);
 
-                double min_distance;
-                ulong nearest = NearestNode(key, candidates, out min_distance);
+                ulong nearest = NearestNode(key, candidates, out double min_distance);
                 if (min_distance < nearest_node_distance)
                 {
                     best_edge = new MorphologyEdge(this, key, nearest);
@@ -105,16 +105,16 @@ namespace AnnotationVizLib
                 }
             }
 
-            if (best_edge == null)
+            if (best_edge is null)
                 throw new ArgumentException("Unexpected error in MergeSubgraph.  Could not find an edge between subgraphs.");
 
             this.AddEdge(best_edge);
 
             //Add the subgraph we merged to the subgraph in the list
-            MergeSubgraphs(SubgraphToMerge, nearest_node_id, subgraphs);
+            MorphologyGraph.MergeSubgraphs(SubgraphToMerge, nearest_node_id, subgraphs);
         }
 
-        private void MergeSubgraphs(SortedSet<ulong> SubgraphToMerge, ulong node_to_merge_onto, IList<SortedSet<ulong>> subgraphs)
+        private static void MergeSubgraphs(SortedSet<ulong> SubgraphToMerge, ulong node_to_merge_onto, IList<SortedSet<ulong>> subgraphs)
         {
             foreach (SortedSet<ulong> subgraph in subgraphs)
             {
@@ -143,7 +143,7 @@ namespace AnnotationVizLib
         {
             //Use the RTree to estimate which nodes to check
             SortedSet<ulong> candidates = FindNearestCandidatesFromRTree(this.RTree, shape_to_check);
-            return NearestNode(shape_to_check, new SortedSet<ulong>(this.Nodes.Keys), out min_distance);
+            return NearestNode(shape_to_check, [.. this.Nodes.Keys], out min_distance);
         }
 
         /// <summary>
@@ -153,18 +153,18 @@ namespace AnnotationVizLib
         /// <returns></returns>
         private static SortedSet<ulong> FindNearestCandidatesFromRTree(RTree.RTree<ulong> rtree, IGeometry shape_to_check)
         {
-            List<ulong> found_nodes = new List<ulong>();
+            List<ulong> found_nodes = [];
 
             double scale_factor = 2.0;
             while (found_nodes.Count < 8 && found_nodes.Count != rtree.Count)
             {
-                GridBox bbox = shape_to_check.BoundingBox;
+                Box bbox = shape_to_check.BoundingBox;
                 bbox = bbox.Scale(scale_factor);
-                found_nodes = rtree.Intersects(bbox.ToRTreeRect()).ToList();
+                found_nodes = [.. rtree.Intersects(bbox.ToRTreeRect())];
                 scale_factor *= 2.0;
             }
 
-            return new SortedSet<ulong>(found_nodes);
+            return [.. found_nodes];
         }
 
         private ulong NearestNode(IGeometry shape_to_check, SortedSet<ulong> nodes_to_compare, out double min_distance)
@@ -181,9 +181,7 @@ namespace AnnotationVizLib
                 if (z_distance > min_distance)
                     continue;
 
-                throw new NotImplementedException("Need a way to test distance between IShape2Ds");
-                /*
-                /double pair_distance = shape_to_check.Geometry.STDistance(compare_node.Geometry).Value;
+                double pair_distance = shape_to_check.Geometry.STDistance(compare_node.Geometry).Value;
                 if (pair_distance > min_distance)
                     continue;
 
@@ -195,7 +193,6 @@ namespace AnnotationVizLib
                     min_distance = pair_distance_3D;
                     Nearest = compare_id;
                 }
-                */
             }
 
             return Nearest;
@@ -241,8 +238,7 @@ namespace AnnotationVizLib
             //Get the bounding box for the graph, 
             foreach (MorphologyNode subgraphnode in other.Nodes.Values)
             {
-                double node_min_distance;
-                ulong id = NearestNode(subgraphnode, out node_min_distance);
+                ulong id = NearestNode(subgraphnode, out double node_min_distance);
                 if (node_min_distance < min_distance)
                 {
                     min_distance = node_min_distance;
@@ -294,17 +290,14 @@ namespace AnnotationVizLib
             //Find the smaller graph
             if (A.Nodes.Count > B.Nodes.Count)
             {
-                MorphologyGraph C = A;
-                A = B;
-                B = C;
+                (B, A) = (A, B);
             }
 
             double minDistance = double.MaxValue;
 
             foreach (MorphologyNode N in A.Nodes.Values)
             {
-                double node_min_distance;
-                A.NearestNode(B, out node_min_distance);
+                A.NearestNode(B, out double node_min_distance);
                 if (node_min_distance < minDistance)
                 {
                     minDistance = node_min_distance;
@@ -324,20 +317,20 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public static PathData[] DistancesBetweenSubgraphsByType(MorphologyGraph cell_graph, SortedSet<ulong> SourceTypeIDs, SortedSet<ulong> TargetTypeIDs)
         {
-            List<ulong> source_ids = cell_graph.Subgraphs.Where(sg => SourceTypeIDs.Contains(sg.Value.structureType.ID)).Select(sg => sg.Key).ToList();
+            List<ulong> source_ids = [.. cell_graph.Subgraphs.Where(sg => SourceTypeIDs.Contains(sg.Value.structureType.ID)).Select(sg => sg.Key)];
             //Assert.IsTrue(desmosome_ids.Count > 0);
             if (source_ids.Count == 0)
-                return Array.Empty<PathData>();
+                return [];
 
             var nodes_with_sourceType_subgraphs = source_ids.Select(id => new { Node = cell_graph.NearestNodeToSubgraph[id], StructureID = id }).ToList();
 
-            SortedDictionary<ulong, PathData> paths_between_types = new SortedDictionary<ulong, PathData>();
+            SortedDictionary<ulong, PathData> paths_between_types = [];
 
             //Find the nearest synapse
             foreach (var node_with_sourceType in nodes_with_sourceType_subgraphs)
             {
                 IList<ulong> path_to_targetType = MorphologyGraph.ShortestPath(cell_graph, node_with_sourceType.Node, (n) => n.NodeContainsStructureOfType(TargetTypeIDs));
-                if (path_to_targetType == null)
+                if (path_to_targetType is null)
                     continue;
 
                 //Find the substructure on the final node of the path
@@ -370,7 +363,7 @@ namespace AnnotationVizLib
                 p.Distance = DistanceBetweenSubstructures(cell_graph, p.Path, p.SourceStructureID, p.TargetStructureID);
             }
 
-            return paths_between_types.Values.ToArray();
+            return [.. paths_between_types.Values];
         }
 
 
@@ -394,47 +387,323 @@ namespace AnnotationVizLib
 
             double path_distance = graph.PathLength(path_between);
 
-            double SourceToPathDistance;
-            ulong nearest_node_to_source = graph.NearestNode(graph.Subgraphs[SourceStructureID], out SourceToPathDistance);
-            double TargetToPathDistance;
-            ulong nearest_node_to_target = graph.NearestNode(graph.Subgraphs[TargetStructureID], out TargetToPathDistance);
+            ulong nearest_node_to_source = graph.NearestNode(graph.Subgraphs[SourceStructureID], out double SourceToPathDistance);
+            ulong nearest_node_to_target = graph.NearestNode(graph.Subgraphs[TargetStructureID], out double TargetToPathDistance);
 
             return path_distance + SourceToPathDistance + TargetToPathDistance;
         }
 
         /// <summary>
-        /// Apply a smoothing function to nodes with two edges.  Leaves branch points and terminals in place.
+        /// Cap on XY translation in volume units (nm after scale) when an explicit max-offset is requested.
         /// </summary>
-        /// <param name="graph"></param>
-        public static void SmoothProcesses(MorphologyGraph graph)
+        public const double MaxProcessCentroidOffset = 80.0;
+
+        /// <summary>Default leave-one-out half-window (±N process steps) for <see cref="CurveFitProcesses"/>.</summary>
+        public const int DefaultCurveFitHalfWindow = 7;
+
+        /// <summary>
+        /// Options for residual-ordered leave-one-out Catmull-Rom process registration correction.
+        /// </summary>
+        public readonly struct CurveFitOptions
         {
-            //Iterate over each process
-            List<ulong[]> listProcesses = graph.Processes();
+            public static CurveFitOptions Default => new(DefaultCurveFitHalfWindow, null, null);
 
-            foreach (ulong[] process in listProcesses)
+            public CurveFitOptions(int halfWindow, double? maxOffsetNm, ISet<ulong> onlyLocationIds)
             {
-                MorphologyNode[] process_nodes = process.Select(p => graph.Nodes[p]).ToArray();
-
-                GridVector2[] center_of_mass = process_nodes.Select(n => n.Center.XY()).ToArray();
-
-                GridVector2[] smoothed_points = Geometry.Smoothing.Gaussian(center_of_mass);
-
-                GridVector2[] translation_vectors = center_of_mass.Select((c, i) => smoothed_points[i] - c).ToArray();
-
-                Parallel.For(0, process_nodes.Length, (i) => process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]));
-
-                /*
-                for (int i = 0; i < process_nodes.Length; i++)
-                {
-                    process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]);
-                }
-                */
+                HalfWindow = halfWindow < 1 ? 1 : halfWindow;
+                MaxOffsetNm = maxOffsetNm is > 0 ? maxOffsetNm : null;
+                OnlyLocationIds = onlyLocationIds;
             }
+
+            public int HalfWindow { get; }
+            public double? MaxOffsetNm { get; }
+            public ISet<ulong> OnlyLocationIds { get; }
+        }
+
+        /// <summary>
+        /// Legacy entry point: residual-ordered curvefit with default window, no max-offset clamp, moving
+        /// processes and terminals. Prefer <see cref="CurveFitProcesses(MorphologyGraph, CurveFitOptions)"/>.
+        /// </summary>
+        public static void SmoothProcesses(MorphologyGraph graph) =>
+            CurveFitProcesses(graph, CurveFitOptions.Default);
+
+        /// <summary>
+        /// Residual-ordered leave-one-out Catmull-Rom correction of process and terminal centroids.
+        /// Branch points stay fixed as curve anchors. Child subgraphs co-move with their parent location.
+        /// Call before <c>SliceGraph.Create</c>. Mutates <see cref="MorphologyNode.Geometry"/> in place.
+        /// </summary>
+        public static void CurveFitProcesses(MorphologyGraph graph, CurveFitOptions options = default)
+        {
+            if (graph is null)
+                return;
+
+            if (options.HalfWindow < 1 && options.MaxOffsetNm is null && options.OnlyLocationIds is null)
+                options = CurveFitOptions.Default;
+
+            Dictionary<int, List<MorphologyNode>> nodesBySection = BuildSameSectionIndex(graph);
+            foreach (ulong[] process in graph.Processes())
+                CurveFitProcessChain(graph, process, nodesBySection, options);
+
+            graph._RTree = null;
+            graph.ResetCachedMeasurements();
 
             foreach (MorphologyGraph subgraph in graph.Subgraphs.Values)
+                CurveFitProcesses(subgraph, options);
+        }
+
+        /// <summary>
+        /// True when curvefit may translate this node: unbranched process shaft or process terminal.
+        /// Same-section / multi-edge branches are anchors only.
+        /// </summary>
+        public static bool IsCurveFitMovable(MorphologyNode node, MorphologyGraph graph = null)
+        {
+            graph ??= node.Graph;
+            if (node is null)
+                return false;
+            if (node.IsSameSectionBranch(graph) || node.Edges.Count > 2)
+                return false;
+            return node.IsUnbranchedProcess(graph) || node.IsProcessTerminal();
+        }
+
+        /// <summary>
+        /// One pass over the graph so same-section overlap checks do not rescan every node for every smoothed contour.
+        /// </summary>
+        private static Dictionary<int, List<MorphologyNode>> BuildSameSectionIndex(MorphologyGraph graph)
+        {
+            Dictionary<int, List<MorphologyNode>> bySection = new();
+            foreach (MorphologyNode node in graph.Nodes.Values)
             {
-                SmoothProcesses(subgraph);
+                int section = (int)Math.Round(node.UnscaledZ);
+                if (!bySection.TryGetValue(section, out List<MorphologyNode> list))
+                {
+                    list = [];
+                    bySection[section] = list;
+                }
+
+                list.Add(node);
             }
+
+            return bySection;
+        }
+
+        private static void CurveFitProcessChain(
+            MorphologyGraph graph,
+            ulong[] process,
+            Dictionary<int, List<MorphologyNode>> nodesBySection,
+            CurveFitOptions options)
+        {
+            if (process.Length < 3)
+                return;
+
+            MorphologyNode[] nodes = [.. process.Select(id => graph.Nodes[id])];
+            Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
+            double[] z = [.. nodes.Select(n => n.Z)];
+
+            List<(int Index, double Residual)> movable = [];
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                MorphologyNode node = nodes[i];
+                if (!IsCurveFitMovable(node, graph))
+                    continue;
+                if (options.OnlyLocationIds is not null && !options.OnlyLocationIds.Contains(node.Key))
+                    continue;
+
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow);
+                double residual = Vector2.Distance(centroids[i], fitted);
+                movable.Add((i, residual));
+            }
+
+            if (movable.Count == 0)
+                return;
+
+            movable.Sort((a, b) => b.Residual.CompareTo(a.Residual));
+
+            foreach ((int i, _) in movable)
+            {
+                MorphologyNode node = nodes[i];
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow);
+                Vector2 offset = fitted - centroids[i];
+                offset = ClampProcessOffset(node, offset, options.MaxOffsetNm);
+                if (offset.Magnitude <= Tolerance.Epsilon)
+                    continue;
+
+                offset = LimitOffsetToAvoidSameSectionOverlap(node, offset, nodesBySection);
+                if (offset.Magnitude <= Tolerance.Epsilon)
+                    continue;
+
+                TranslateNodeAndAttachedSubgraphs(graph, node, offset);
+                centroids[i] = node.Center.XY();
+            }
+        }
+
+        /// <summary>
+        /// Catmull-Rom evaluation at <paramref name="i"/> using up to <paramref name="halfWindow"/> neighbors
+        /// on each side, excluding the node itself so its jitter does not enter the fit.
+        /// </summary>
+        private static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow)
+        {
+            List<int> controlIdx = [];
+            int lo = Math.Max(0, i - halfWindow);
+            int hi = Math.Min(centroids.Length - 1, i + halfWindow);
+            for (int j = lo; j <= hi; j++)
+            {
+                if (j == i)
+                    continue;
+                controlIdx.Add(j);
+            }
+
+            if (controlIdx.Count == 0)
+                return centroids[i];
+            if (controlIdx.Count == 1)
+                return centroids[controlIdx[0]];
+
+            double queryZ = z[i];
+            int seg = 0;
+            while (seg + 1 < controlIdx.Count && z[controlIdx[seg + 1]] < queryZ)
+                seg++;
+
+            if (seg + 1 >= controlIdx.Count)
+                return centroids[controlIdx[^1]];
+
+            int i1 = controlIdx[seg];
+            int i2 = controlIdx[seg + 1];
+            double dz = z[i2] - z[i1];
+            if (Math.Abs(dz) < Tolerance.Epsilon)
+                return centroids[i1];
+
+            if (Vector2.DistanceSquared(centroids[i1], centroids[i2]) <= Tolerance.EpsilonSquared)
+                return centroids[i1];
+
+            double t = (queryZ - z[i1]) / dz;
+            if (t < 0)
+                t = 0;
+            else if (t > 1)
+                t = 1;
+
+            int i0 = seg > 0 ? controlIdx[seg - 1] : i1;
+            int i3 = seg + 2 < controlIdx.Count ? controlIdx[seg + 2] : i2;
+
+            Vector2[] fitted = CatmullRom.FitCurveSegment(
+                centroids[i0], centroids[i1], centroids[i2], centroids[i3], [t]);
+            if (fitted is null || fitted.Length == 0 || double.IsNaN(fitted[0].X) || double.IsNaN(fitted[0].Y))
+                return centroids[i1] + ((centroids[i2] - centroids[i1]) * t);
+
+            return fitted[0];
+        }
+
+        /// <summary>
+        /// Shrink a smoothing translation until the moved contour no longer intersects another contour of the same
+        /// structure on the same section that it did not already intersect.  Two processes of one cell running side
+        /// by side are often closer than a large registration hop; pushing one into the other creates a
+        /// same-section overlap the Bajaj tiler cannot handle (RPC1 108506/108520: clean raw, inconsistent after
+        /// smoothing), and that was the largest remaining failure class in the Muller glia after the generator fixes.
+        /// Halving is tried three times before the node is left where it was annotated.
+        /// </summary>
+        private static Vector2 LimitOffsetToAvoidSameSectionOverlap(
+            MorphologyNode node,
+            Vector2 offset,
+            Dictionary<int, List<MorphologyNode>> nodesBySection)
+        {
+            int section = (int)Math.Round(node.UnscaledZ);
+            if (!nodesBySection.TryGetValue(section, out List<MorphologyNode> sectionNodes))
+                return offset;
+
+            Rectangle reach = node.Geometry.BoundingBox();
+            double pad = offset.Magnitude;
+            List<MorphologyNode> neighbours = [];
+            foreach (MorphologyNode other in sectionNodes)
+            {
+                if (other.Key == node.Key)
+                    continue;
+
+                Rectangle otherBox = other.Geometry.BoundingBox();
+                if (otherBox.Left > reach.Right + pad || otherBox.Right < reach.Left - pad
+                    || otherBox.Bottom > reach.Top + pad || otherBox.Top < reach.Bottom - pad)
+                    continue;
+
+                if (node.Geometry.STIntersects(other.Geometry).IsTrue)
+                    continue;
+
+                neighbours.Add(other);
+            }
+
+            if (neighbours.Count == 0)
+                return offset;
+
+            Vector2 candidate = offset;
+            List<ulong> blockers = null;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                SqlGeometry moved = node.Geometry.Translate(candidate);
+                blockers = null;
+                foreach (MorphologyNode other in neighbours)
+                {
+                    if (!moved.STIntersects(other.Geometry).IsTrue)
+                        continue;
+                    blockers ??= [];
+                    blockers.Add(other.Key);
+                }
+
+                if (blockers is null)
+                    return candidate;
+
+                candidate *= 0.5;
+            }
+
+            // blockers are from the last (smallest) attempted offset — 1/8 of the proposed move.
+            Trace.WriteLine(
+                $"CurveFitProcesses: location {node.Key} left in place on section {section}; " +
+                $"even 1/8 of the proposed offset ({offset.Magnitude:G4}) overlaps same-section neighbour(s) [{string.Join(", ", blockers)}].");
+            return Vector2.Zero;
+        }
+
+        /// <summary>
+        /// When <paramref name="maxOffsetNm"/> is null, returns <paramref name="offset"/> unchanged.
+        /// When set, caps magnitude to that many nanometres.
+        /// </summary>
+        private static Vector2 ClampProcessOffset(MorphologyNode node, Vector2 offset, double? maxOffsetNm)
+        {
+            double length = offset.Magnitude;
+            if (length <= Tolerance.Epsilon)
+                return Vector2.Zero;
+
+            if (maxOffsetNm is null || maxOffsetNm.Value <= Tolerance.Epsilon)
+                return offset;
+
+            double maxOffset = maxOffsetNm.Value;
+            if (length <= maxOffset)
+                return offset;
+
+            return offset * (maxOffset / length);
+        }
+
+        /// <summary>
+        /// Rigidly translate a process node and every child subgraph whose nearest parent location is that node.
+        /// </summary>
+        internal static void TranslateNodeAndAttachedSubgraphs(MorphologyGraph graph, MorphologyNode node, Vector2 offset)
+        {
+            node.Geometry = node.Geometry.Translate(offset);
+
+            foreach (KeyValuePair<ulong, ulong> pair in graph.NearestNodeToSubgraph)
+            {
+                if (pair.Value != node.Key)
+                    continue;
+                if (!graph.Subgraphs.TryGetValue(pair.Key, out MorphologyGraph child))
+                    continue;
+                TranslateSubgraphGeometry(child, offset);
+            }
+        }
+
+        private static void TranslateSubgraphGeometry(MorphologyGraph subgraph, Vector2 offset)
+        {
+            foreach (MorphologyNode n in subgraph.Nodes.Values)
+                n.Geometry = n.Geometry.Translate(offset);
+
+            subgraph._RTree = null;
+            subgraph.ResetCachedMeasurements();
+
+            foreach (MorphologyGraph nested in subgraph.Subgraphs.Values)
+                TranslateSubgraphGeometry(nested, offset);
         }
     }
 }

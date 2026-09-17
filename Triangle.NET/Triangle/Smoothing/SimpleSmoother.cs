@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="SimpleSmoother.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -20,12 +20,12 @@ namespace TriangleNet.Smoothing
     /// </remarks>
     public class SimpleSmoother : ISmoother
     {
-        TrianglePool pool;
-        Configuration config;
+        readonly TrianglePool pool;
+        readonly Configuration config;
 
-        IVoronoiFactory factory;
+        readonly IVoronoiFactory factory;
 
-        ConstraintOptions options;
+        readonly ConstraintOptions options;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleSmoother" /> class.
@@ -41,7 +41,7 @@ namespace TriangleNet.Smoothing
         public SimpleSmoother(IVoronoiFactory factory)
         {
             this.factory = factory;
-            this.pool = new TrianglePool();
+            this.pool = [];
 
             this.config = new Configuration(
                 () => RobustPredicates.Default,
@@ -63,16 +63,13 @@ namespace TriangleNet.Smoothing
             this.options = new ConstraintOptions() { ConformingDelaunay = true };
         }
 
-        public void Smooth(IMesh mesh)
-        {
-            Smooth(mesh, 10);
-        }
+        public void Smooth(IMesh mesh) => Smooth(mesh, 10);
 
         public void Smooth(IMesh mesh, int limit)
         {
-            var smoothedMesh = (Mesh)mesh;
+            Mesh smoothedMesh = (Mesh)mesh;
 
-            var mesher = new GenericMesher(config);
+            GenericMesher mesher = new(config);
             var predicates = config.Predicates();
 
             // The smoother should respect the mesh segment splitting behavior.
@@ -96,15 +93,13 @@ namespace TriangleNet.Smoothing
 
         private void Step(Mesh mesh, IVoronoiFactory factory, IPredicates predicates)
         {
-            var voronoi = new BoundedVoronoi(mesh, factory, predicates);
-
-            double x, y;
+            BoundedVoronoi voronoi = new(mesh, factory, predicates);
 
             foreach (var face in voronoi.Faces)
             {
                 if (face.generator.label == 0)
                 {
-                    Centroid(face, out x, out y);
+                    Centroid(face, out var x, out var y);
 
                     face.generator.x = x;
                     face.generator.y = y;
@@ -149,7 +144,7 @@ namespace TriangleNet.Smoothing
         /// </summary>
         private Polygon Rebuild(Mesh mesh)
         {
-            var data = new Polygon(mesh.vertices.Count);
+            Polygon data = new(mesh.vertices.Count);
 
             foreach (var v in mesh.vertices.Values)
             {

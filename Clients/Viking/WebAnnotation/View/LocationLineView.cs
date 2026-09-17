@@ -1,4 +1,6 @@
-﻿using Geometry;
+using Geometry;
+using Viking.Input;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -12,17 +14,19 @@ using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    class AdjacentLocationLineView : LocationLineViewBase
+    internal class AdjacentLocationLineView : LocationLineViewBase
     {
         protected PolyLineView upPolyLineView;
         protected PolyLineView downPolyLineView;
 
         public Color Color
         {
-            get { return upPolyLineView.Color; }
+            get => upPolyLineView.Color;
             set
             {
                 upPolyLineView.Color = value;
@@ -30,23 +34,14 @@ namespace WebAnnotation.View
             }
         }
 
-        public override double LineWidth
-        {
-            get { return upPolyLineView.LineWidth; }
-        }
+        public override double LineWidth => upPolyLineView.LineWidth;
 
-        public override double ControlPointRadius
-        {
-            get
-            {
-                return LineWidth / 2.0;
-            }
-        }
+        public override double ControlPointRadius => LineWidth / 2.0;
 
         public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-            upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
-            downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
+            upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHCL(0.5f), GlobalPrimitives.UpArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
+            downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHCL(0.5f), GlobalPrimitives.DownArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -57,70 +52,50 @@ namespace WebAnnotation.View
                           AdjacentLocationLineView[] listToDraw,
                           int VisibleSectionNumber)
         {
-            PolyLineView[] linesToDraw = listToDraw.Select(l => l.modelObj.Z < VisibleSectionNumber ? l.downPolyLineView : l.upPolyLineView).ToArray();
+            PolyLineView[] linesToDraw = [.. listToDraw.Select(l => l.modelObj.Z < VisibleSectionNumber ? l.downPolyLineView : l.upPolyLineView)];
             PolyLineView.Draw(device, scene, OverlayStyle.Luma, linesToDraw);
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
-        {
-            throw new NotImplementedException();
-        }
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
-            if (ModifierKeys.ShiftOrCtrlPressed())
+            LocationID = ID;
+            if (modifierKeys.ShiftOrCtrlPressed())
+            {
                 return LocationAction.NONE;
+            }
 
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
-        {
-            throw new NotImplementedException();
-            /*
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();/*
             LocationID = this.ID;
             return LocationAction.NONE;
             */
-        }
     }
 
-    class LocationLineView : LocationLineViewBase
+    internal class LocationLineView : LocationLineViewBase
     {
         protected PolyLineView polyLineView;
 
 
         public Color Color
         {
-            get { return polyLineView.Color; }
-            set { polyLineView.Color = value; }
+            get => polyLineView.Color;
+            set => polyLineView.Color = value;
         }
 
-        public override double LineWidth
-        {
-            get { return polyLineView.LineWidth; }
-        }
+        public override double LineWidth => polyLineView.LineWidth;
 
-        public override double ControlPointRadius
-        {
-            get
-            {
-                return LineWidth / 2.0;
-            }
-        }
+        public override double ControlPointRadius => LineWidth / 2.0;
 
-        public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D texture = null) : base(obj, mapper)
+        public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D? texture = null) : base(obj, mapper)
         {
-            GridVector2[] volumePoints;
-            bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out volumePoints);
-            if (success.All(s => s == true))
-            {
-                polyLineView = new PolyLineView(volumePoints, obj.Parent.Type.Color.ToXNAColor(0.5f), texture);
-            }
-            else
-            {
-                throw new ArgumentException(string.Format("Could not map location {0} to volume", obj.ID));
-            }
+            bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out Geometry.Vector2[] volumePoints);
+            polyLineView = success.All(s => s == true)
+                ? new PolyLineView(volumePoints, obj.Parent.Type.Color.ToXNAColor(0.5f), texture)
+                : throw new ArgumentException($"Could not map location {obj.ID} to volume");
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -128,32 +103,35 @@ namespace WebAnnotation.View
                           RoundLineCode.RoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
                           OverlayShaderEffect overlayEffect,
-                          LocationLineView[] listToDraw)
-        {
-            PolyLineView.Draw(device, scene, OverlayStyle.Luma, listToDraw.Select(l => l.polyLineView).ToArray());
-        }
+                          LocationLineView[] listToDraw) => PolyLineView.Draw(device, scene, OverlayStyle.Luma, [.. listToDraw.Select(l => l.polyLineView)]);
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
-            if (ModifierKeys.ShiftPressed())
+            LocationID = ID;
+            if (modifierKeys.ShiftPressed())
+            {
                 return LocationAction.NONE;
+            }
             else
             {
                 return LocationAction.CREATELINKEDLOCATION;
             }
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
-            if (ModifierKeys.ShiftPressed())
+            LocationID = ID;
+            if (modifierKeys.ShiftPressed())
+            {
                 return LocationAction.NONE;
-            else if (ModifierKeys.CtrlPressed())
+            }
+            else if (modifierKeys.CtrlPressed())
             {
                 //Allow user to add a control point if the mouse is not over an existing control point
-                if (!polyLineView.ControlPoints.Select(p => new GridCircle(p, LineWidth / 2.0)).Any(c => c.Contains(WorldPosition)))
+                if (!polyLineView.ControlPoints.Select(p => new Circle(p, LineWidth / 2.0)).Any(c => c.Covers(WorldPosition)))
+                {
                     return LocationAction.ADDCONTROLPOINT;
+                }
 
                 return LocationAction.NONE;
             }
@@ -163,32 +141,20 @@ namespace WebAnnotation.View
 
     }
 
-    abstract class LocationLineViewBase : MultipleControlPointLocationCanvasViewBase
+    internal abstract class LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : MultipleControlPointLocationCanvasViewBase(obj, mapper)
     {
-        public LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
-        { }
+        public override bool IsVisible(VikingXNA.Scene scene) => LocationCanvasView.IsPolygonVisible(BoundingBox, scene) && this.LineWidth >= SmallestRenderedSizeAccessor();
 
-        public override bool IsVisible(VikingXNA.Scene scene)
-        {
-            if (Math.Min(this.BoundingBox.Width, this.BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
-                return false;
+        public virtual bool IsLabelVisible(Scene scene) => IsVisible(scene);
 
-            return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
-        }
-
-        public virtual bool IsLabelVisible(Scene scene)
-        {
-            return IsVisible(scene);
-        }
-
-        private GridRectangle? _bbox;
-        public override GridRectangle BoundingBox
+        private Rectangle? _bbox;
+        public override Rectangle BoundingBox
         {
             get
             {
                 if (!_bbox.HasValue)
                 {
-                    _bbox = this.VolumeShapeAsRendered.BoundingBox();
+                    _bbox = VolumeShapeAsRendered.BoundingBox();
                 }
 
                 return _bbox.Value;
@@ -198,59 +164,52 @@ namespace WebAnnotation.View
         private ICollection<long> _OverlappedLinks;
         public override ICollection<long> OverlappedLinks
         {
-            protected get
-            {
-                return _OverlappedLinks;
-            }
+            protected get => _OverlappedLinks;
 
-            set
-            {
-                _OverlappedLinks = value;
-            }
+            set => _OverlappedLinks = value;
         }
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
         {
             if (PointIntersectsAnyControlPoint(Position))
             {
-                return VolumeControlPoints.Select(p => GridVector2.Distance(p, Position) / ControlPointRadius).Min();
+                return VolumeControlPoints.Select(p => Geometry.Vector2.Distance(p, Position) / ControlPointRadius).Min();
             }
             else
             {
                 //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeControlPoints);
+                LineSegment[] segs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
                 double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-                return (this.LineWidth / 2.0) - MinDistance;
+                return (LineWidth / 2.0) - MinDistance;
             }
         }
 
-        protected bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
+        protected bool PointIntersectsAnyControlPoint(Geometry.Vector2 WorldPosition)
         {
-            GridCircle testCircle = new GridCircle(WorldPosition, ControlPointRadius);
-            return VolumeControlPoints.Any(p => testCircle.Contains(p));
+            Circle testCircle = new(WorldPosition, ControlPointRadius);
+            return VolumeControlPoints.Any(p => testCircle.Covers(p));
         }
 
-        protected virtual bool PointIntersectsAnyLineSegment(GridVector2 WorldPosition)
+        protected virtual bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
         {
             //TODO: This could be optimized considerably
-            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(this.VolumeControlPoints);
+            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
             //Find the line segment the NewControlPoint intersects
-            double MinDistance;
-            int iNearest = lineSegs.NearestSegment(WorldPosition, out MinDistance);
-            return MinDistance < this.LineWidth / 2.0f;
+            int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
+            return MinDistance < LineWidth / 2.0f;
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
-            if (ModifierKeys.ShiftPressed())
+            if (modifierKeys.ShiftPressed())
             {
                 return LocationAction.TRANSLATE;
             }
             else
             {
-                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                if (VisibleSectionNumber == (int)modelObj.Z)
                 {
                     return LocationAction.NONE;// return LocationAction.CREATELINK;
                 }
@@ -263,36 +222,38 @@ namespace WebAnnotation.View
 
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
-            List<IAction> actions = new List<IAction>();
+            List<IAction> actions = [];
             if (path.HasSelfIntersection)
             {
-                GridPolygon closedpath = new GridPolygon(path.SimplifiedFirstLoop);
-                ChangeToPolygonAction action = new ChangeToPolygonAction(this.modelObj, closedpath);
+                Polygon closedpath = new(path.SimplifiedFirstLoop);
+                ChangeToPolygonAction action = new(modelObj, closedpath);
                 actions.Add(action);
             }
             else
             {
-                GridPolyline openPath = new GridPolyline(path.SimplifiedPath);
-                ChangeToPolylineAction action = new ChangeToPolylineAction(this.modelObj, openPath);
+                Polyline openPath = new(path.SimplifiedPath);
+                ChangeToPolylineAction action = new(modelObj, openPath);
                 actions.Add(action);
             }
 
             return actions;
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
-            if (ModifierKeys.ShiftPressed())
+            if (modifierKeys.ShiftPressed())
             {
                 //Allow user to add a control point if the mouse is not over an existing control point
                 if (PointIntersectsAnyControlPoint(WorldPosition))
+                {
                     return LocationAction.TRANSLATE;
+                }
 
                 return LocationAction.NONE;
             }
-            else if (ModifierKeys.CtrlPressed())
+            else if (modifierKeys.CtrlPressed())
             {
                 if (PointIntersectsAnyLineSegment(WorldPosition))
                 {
@@ -300,12 +261,18 @@ namespace WebAnnotation.View
                     if (PointIntersectsAnyControlPoint(WorldPosition))
                     {
                         if (VolumeControlPoints.Length > 2)
+                        {
                             return LocationAction.REMOVECONTROLPOINT;
+                        }
                         else
+                        {
                             return LocationAction.NONE;
+                        }
                     }
                     else
+                    {
                         return LocationAction.ADDCONTROLPOINT;
+                    }
                 }
                 else
                 {
@@ -314,13 +281,17 @@ namespace WebAnnotation.View
             }
             else
             {
-                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                if (VisibleSectionNumber == (int)modelObj.Z)
                 {
                     //Find distance to nearest control point
                     if (PointIntersectsAnyControlPoint(WorldPosition))
+                    {
                         return LocationAction.ADJUST;
+                    }
                     else
+                    {
                         return LocationAction.CREATELINK;
+                    }
                 }
                 else
                 {
@@ -329,18 +300,12 @@ namespace WebAnnotation.View
             }
         }
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                return new string[] {
+        public override string[] HelpStrings => [
                     "Hold left click + SHIFT on control point: Move all control points",
                     "Hold left click off control point: Create/Link annotation",
                     "Left click + CTRL on control point: Remove control point",
                     "Left click + CTRL off control point: Add a control point",
-                };
-            }
-        }
+                ];
 
         public abstract double LineWidth { get; }
 
@@ -351,10 +316,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (_VolumeShape == null)
-                {
-                    _VolumeShape = this.VolumeControlPoints.ToSqlGeometry().STBuffer(Math.Max(LineWidth, ControlPointRadius));
-                }
+                _VolumeShape ??= VolumeControlPoints.ToSqlGeometry().STBuffer(Math.Max(LineWidth, ControlPointRadius));
 
                 return _VolumeShape;
             }
@@ -366,16 +328,23 @@ namespace WebAnnotation.View
         /// <summary>
         /// Mosaic points composing the polyline, without added points to create a curve
         /// </summary>
-        internal readonly GridVector2[] MosaicControlPoints;
+        internal readonly Geometry.Vector2[] MosaicControlPoints;
 
         /// <summary>
         /// Mosaic points composing the polyline, without added points to create a curve
         /// </summary>
-        internal readonly GridVector2[] VolumeControlPoints;
+        internal readonly Geometry.Vector2[] VolumeControlPoints;
 
         public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
-            MosaicControlPoints = obj.MosaicShape.ToPoints();
+            if (obj.MosaicShape is not IHasControlPoints controlPoints)
+            {
+                throw new ArgumentException(
+                    $"Location {obj.ID} mosaic shape {obj.MosaicShape?.ShapeType} does not expose control points.",
+                    nameof(obj));
+            }
+
+            MosaicControlPoints = [.. controlPoints.ControlPoints.Select(p => p.ToVector2())];
             VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
         }
     }

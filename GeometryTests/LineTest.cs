@@ -1,4 +1,4 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
 using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,14 +30,8 @@ namespace GeometryTests
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
+            get => testContextInstance;
+            set => testContextInstance = value;
         }
 
         #region Additional test attributes
@@ -67,124 +61,120 @@ namespace GeometryTests
         {
             //Check edge conditions for a horizontal line
             {
-                GridLineSegment lineA = new GridLineSegment(new GridVector2(-5, 3),
-                                                            new GridVector2(5, 3));
+                LineSegment lineA = new(new Vector2(-5, 3),
+                                                            new Vector2(5, 3));
 
                 //Check edge conditions for a horizontal line
-                GridVector2 PointOnLine = new GridVector2(2, 3);
+                Vector2 PointOnLine = new(2, 3);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineA.DistanceToPoint(PointOnLine, out Intersection);
-                Assert.IsTrue(Distance == 0);
+                Distance = lineA.DistanceToPoint(PointOnLine, out Vector2 Intersection);
+                Assert.AreEqual(0, Distance);
                 Assert.IsTrue(Intersection == PointOnLine);
 
                 //Check if we go past the line in X axis
-                GridVector2 PointLeftOfLine = new GridVector2(-10, 3);
-                GridVector2 PointRightOfLine = new GridVector2(10, 3);
+                Vector2 PointLeftOfLine = new(-10, 3);
+                Vector2 PointRightOfLine = new(10, 3);
                 Distance = lineA.DistanceToPoint(PointLeftOfLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
+                Assert.AreEqual(5, Distance);
                 Assert.IsTrue(Intersection == lineA.A);
 
                 Distance = lineA.DistanceToPoint(PointRightOfLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
+                Assert.AreEqual(5, Distance);
                 Assert.IsTrue(Intersection == lineA.B);
 
                 //Check if we go above or below line
-                GridVector2 PointAboveLine = new GridVector2(3, 8);
-                GridVector2 PointBelowLine = new GridVector2(3, -2);
+                Vector2 PointAboveLine = new(3, 8);
+                Vector2 PointBelowLine = new(3, -2);
                 Distance = lineA.DistanceToPoint(PointAboveLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
-                Assert.IsTrue(Intersection == new GridVector2(3, 3));
+                Assert.AreEqual(5, Distance);
+                Assert.IsTrue(Intersection == new Vector2(3, 3));
 
                 Distance = lineA.DistanceToPoint(PointBelowLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
-                Assert.IsTrue(Intersection == new GridVector2(3, 3));
+                Assert.AreEqual(5, Distance);
+                Assert.IsTrue(Intersection == new Vector2(3, 3));
             }
 
 
             //Check edge conditions for a vertical line
             {
-                GridLineSegment lineB = new GridLineSegment(new GridVector2(3, -5),
-                                                               new GridVector2(3, 5));
+                LineSegment lineB = new(new Vector2(3, -5),
+                                                               new Vector2(3, 5));
 
-                GridVector2 PointOnLine = new GridVector2(3, 2);
+                Vector2 PointOnLine = new(3, 2);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineB.DistanceToPoint(PointOnLine, out Intersection);
-                Assert.IsTrue(Distance == 0);
+                Distance = lineB.DistanceToPoint(PointOnLine, out Vector2 Intersection);
+                Assert.AreEqual(0, Distance);
                 Assert.IsTrue(Intersection == PointOnLine);
 
                 //Check if we go above or below line
-                GridVector2 PointAboveLine = new GridVector2(3, 10);
-                GridVector2 PointBelowLine = new GridVector2(3, -10);
+                Vector2 PointAboveLine = new(3, 10);
+                Vector2 PointBelowLine = new(3, -10);
                 Distance = lineB.DistanceToPoint(PointAboveLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
+                Assert.AreEqual(5, Distance);
                 Assert.IsTrue(Intersection == lineB.B);
 
                 Distance = lineB.DistanceToPoint(PointBelowLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
+                Assert.AreEqual(5, Distance);
                 Assert.IsTrue(Intersection == lineB.A);
 
                 //Check if we go left or right of line
-                GridVector2 PointLeftOfLine = new GridVector2(-2, 4);
-                GridVector2 PointRightOfLine = new GridVector2(8, 4);
+                Vector2 PointLeftOfLine = new(-2, 4);
+                Vector2 PointRightOfLine = new(8, 4);
                 Distance = lineB.DistanceToPoint(PointLeftOfLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
-                Assert.IsTrue(Intersection == new GridVector2(3, 4));
+                Assert.AreEqual(5, Distance);
+                Assert.IsTrue(Intersection == new Vector2(3, 4));
 
                 Distance = lineB.DistanceToPoint(PointRightOfLine, out Intersection);
-                Assert.IsTrue(Distance == 5);
-                Assert.IsTrue(Intersection == new GridVector2(3, 4));
+                Assert.AreEqual(5, Distance);
+                Assert.IsTrue(Intersection == new Vector2(3, 4));
             }
 
             {   //Check the diagonal line through the axis center
-                GridLineSegment lineC = new GridLineSegment(new GridVector2(-5, -5),
-                                                               new GridVector2(5, 5));
+                LineSegment lineC = new(new Vector2(-5, -5),
+                                                               new Vector2(5, 5));
 
-                GridVector2 PointOnLine = new GridVector2(0, 0);
+                Vector2 PointOnLine = new(0, 0);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineC.DistanceToPoint(PointOnLine, out Intersection);
-                Assert.IsTrue(Distance == 0);
+                Distance = lineC.DistanceToPoint(PointOnLine, out Vector2 Intersection);
+                Assert.AreEqual(0, Distance);
                 Assert.IsTrue(Intersection == PointOnLine);
 
-                GridVector2 PointOffLine = new GridVector2(-5, 5);
+                Vector2 PointOffLine = new(-5, 5);
                 Distance = lineC.DistanceToPoint(PointOffLine, out Intersection);
-                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Assert.IsTrue(Intersection == new GridVector2(0, 0));
+                Assert.AreEqual(Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)), Distance);
+                Assert.IsTrue(Intersection == new Vector2(0, 0));
 
-                GridVector2 PointPastEdge = new GridVector2(-10, 0);
+                Vector2 PointPastEdge = new(-10, 0);
                 Distance = lineC.DistanceToPoint(PointPastEdge, out Intersection);
-                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Assert.IsTrue(Intersection == new GridVector2(-5, -5));
+                Assert.AreEqual(Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)), Distance);
+                Assert.IsTrue(Intersection == new Vector2(-5, -5));
             }
 
             {   //Check the diagonal line through the axis center
-                GridLineSegment lineD = new GridLineSegment(new GridVector2(-6, -4),
-                                                               new GridVector2(4, 6));
+                LineSegment lineD = new(new Vector2(-6, -4),
+                                                               new Vector2(4, 6));
 
-                GridVector2 PointOnLine = new GridVector2(-1, 1);
+                Vector2 PointOnLine = new(-1, 1);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineD.DistanceToPoint(PointOnLine, out Intersection);
-                Assert.IsTrue(Distance == 0);
+                Distance = lineD.DistanceToPoint(PointOnLine, out Vector2 Intersection);
+                Assert.AreEqual(0, Distance);
                 Assert.IsTrue(Intersection == PointOnLine);
 
-                GridVector2 PointOffLine = new GridVector2(-6, 6);
+                Vector2 PointOffLine = new(-6, 6);
                 Distance = lineD.DistanceToPoint(PointOffLine, out Intersection);
-                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Assert.IsTrue(Intersection == new GridVector2(-1, 1));
+                Assert.AreEqual(Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)), Distance);
+                Assert.IsTrue(Intersection == new Vector2(-1, 1));
 
-                GridVector2 PointPastEdge = new GridVector2(9, 1);
+                Vector2 PointPastEdge = new(9, 1);
                 Distance = lineD.DistanceToPoint(PointPastEdge, out Intersection);
-                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Assert.IsTrue(Intersection == new GridVector2(4, 6));
+                Assert.AreEqual(Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)), Distance);
+                Assert.IsTrue(Intersection == new Vector2(4, 6));
             }
         }
 
         struct ExpectedLineIntersectionTest
-        { 
-            public GridLineSegment Input;
+        {
+            public LineSegment Input;
             /// <summary>
             /// Null if no intersection expected
             /// </summary>
@@ -193,49 +183,49 @@ namespace GeometryTests
 
         [TestMethod]
         public void GridLineSegmentHorizontalSimpleIntersects()
-        { 
+        {
             //
             // TODO: Add test logic	here
             //
 
-            var N9 = new GridVector2(-9, 0);
-            var N5 = new GridVector2(-5, 0);
-            var N1 = new GridVector2(-1, 0);
-            var O = new GridVector2(0, 0);
-            var P1 = new GridVector2(1, 0);
-            var P5 = new GridVector2(5, 0);
-            var P9 = new GridVector2(9, 0);
+            Vector2 N9 = new(-9, 0);
+            Vector2 N5 = new(-5, 0);
+            Vector2 N1 = new(-1, 0);
+            Vector2 O = new(0, 0);
+            Vector2 P1 = new(1, 0);
+            Vector2 P5 = new(5, 0);
+            Vector2 P9 = new(9, 0);
 
             //The primary line we test against
-            var Primary = new GridLineSegment(N1, P1);
-            var OP1 = new GridLineSegment(O, P1);
-            var N1O = new GridLineSegment(N1, O);
+            LineSegment Primary = new(N1, P1);
+            LineSegment OP1 = new(O, P1);
+            LineSegment N1O = new(N1, O);
 
-            var NoIntersectionTests = new ExpectedLineIntersectionTest[]
-            {
-                new ExpectedLineIntersectionTest { Expected = null, Input = new GridLineSegment(N9, N5) },
-                new ExpectedLineIntersectionTest { Expected = null, Input = new GridLineSegment(P5, P9) },
-                new ExpectedLineIntersectionTest { Expected = null, Input = Primary.Translate(GridVector2.UnitY) }, //Parallel but offset 
-                new ExpectedLineIntersectionTest { Expected = null, Input = Primary.Translate(-GridVector2.UnitY) } //Parallel but offset 
-            };
+            ExpectedLineIntersectionTest[] NoIntersectionTests =
+            [
+                new() { Expected = null, Input = new LineSegment(N9, N5) },
+                new() { Expected = null, Input = new LineSegment(P5, P9) },
+                new() { Expected = null, Input = Primary.Translate(Vector2.UnitY) }, //Parallel but offset 
+                new() { Expected = null, Input = Primary.Translate(-Vector2.UnitY) } //Parallel but offset 
+            ];
 
-            var EndpointOnlyIntersectionTests = new ExpectedLineIntersectionTest[]
-            {
-                new ExpectedLineIntersectionTest { Expected = N1, Input = new GridLineSegment(N9, N1) },
-                new ExpectedLineIntersectionTest { Expected = P1, Input = new GridLineSegment(P1, P9) }
-            };
+            ExpectedLineIntersectionTest[] EndpointOnlyIntersectionTests =
+            [
+                new() { Expected = N1, Input = new LineSegment(N9, N1) },
+                new() { Expected = P1, Input = new LineSegment(P1, P9) }
+            ];
 
-            var IntersectionTests = new ExpectedLineIntersectionTest[]
-            {
-                new ExpectedLineIntersectionTest { Expected = Primary, Input = Primary },
-                new ExpectedLineIntersectionTest { Expected = Primary, Input = new GridLineSegment(N5, P5) },
-                new ExpectedLineIntersectionTest { Expected = Primary, Input = new GridLineSegment(N1, P5) },
-                new ExpectedLineIntersectionTest { Expected = Primary, Input = new GridLineSegment(N5, P1) },
-                new ExpectedLineIntersectionTest { Expected = OP1, Input = OP1 },
-                new ExpectedLineIntersectionTest { Expected = N1O, Input = N1O },
-                new ExpectedLineIntersectionTest { Expected = OP1, Input = new GridLineSegment(O, P5) },
-                new ExpectedLineIntersectionTest { Expected = N1O, Input = new GridLineSegment(N5, O) },
-            };
+            ExpectedLineIntersectionTest[] IntersectionTests =
+            [
+                new() { Expected = Primary, Input = Primary },
+                new() { Expected = Primary, Input = new LineSegment(N5, P5) },
+                new() { Expected = Primary, Input = new LineSegment(N1, P5) },
+                new() { Expected = Primary, Input = new LineSegment(N5, P1) },
+                new() { Expected = OP1, Input = OP1 },
+                new() { Expected = N1O, Input = N1O },
+                new() { Expected = OP1, Input = new LineSegment(O, P5) },
+                new() { Expected = N1O, Input = new LineSegment(N5, O) },
+            ];
 
             foreach (var test in NoIntersectionTests)
             {
@@ -244,15 +234,14 @@ namespace GeometryTests
 
             foreach (var test in EndpointOnlyIntersectionTests)
             {
-                IShape2D Intersection;
                 var resultNoEndpointIntersection =
-                    Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: true, out Intersection);
+                    Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: true, out IShape2D Intersection);
                 Assert.IsFalse(resultNoEndpointIntersection);
 
                 var resultWithEndpointIntersection =
                     Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: false, out Intersection);
                 Assert.IsTrue(resultWithEndpointIntersection);
-                Assert.AreEqual(Intersection, test.Expected);
+                Assert.AreEqual(test.Expected, Intersection);
             }
 
             foreach (var test in IntersectionTests)
@@ -271,39 +260,38 @@ namespace GeometryTests
             // TODO: Add test logic	here
             //
 
-            GridLineSegment lineA = new GridLineSegment(new GridVector2(-5, 3),
-                                                        new GridVector2(5, 3));
-            GridLineSegment lineB = new GridLineSegment(new GridVector2(3, -5),
-                                                        new GridVector2(3, 5));
-            GridLineSegment lineC = new GridLineSegment(new GridVector2(-6, -5),
-                                                        new GridVector2(-6, 5));
-            GridLineSegment lineD = new GridLineSegment(new GridVector2(-9, 8),
-                                                        new GridVector2(1, -8));
-            GridLineSegment lineE = new GridLineSegment(new GridVector2(-9, 8),
-                                                        new GridVector2(1, -2));
+            LineSegment lineA = new(new Vector2(-5, 3),
+                                                        new Vector2(5, 3));
+            LineSegment lineB = new(new Vector2(3, -5),
+                                                        new Vector2(3, 5));
+            LineSegment lineC = new(new Vector2(-6, -5),
+                                                        new Vector2(-6, 5));
+            LineSegment lineD = new(new Vector2(-9, 8),
+                                                        new Vector2(1, -8));
+            LineSegment lineE = new(new Vector2(-9, 8),
+                                                        new Vector2(1, -2));
 
-            IShape2D intersectShape;
-            bool result = lineA.Intersects(lineA, out intersectShape);
-            Assert.IsTrue(result == true);
-            Assert.IsTrue(intersectShape.ShapeType == ShapeType2D.LINE);
-            GridLineSegment intersectionLine = (GridLineSegment)intersectShape;
+            bool result = lineA.Intersects(lineA, out IShape2D intersectShape);
+            Assert.AreEqual(true, result);
+            Assert.AreEqual(ShapeType2D.Line, intersectShape.ShapeType);
+            LineSegment intersectionLine = (LineSegment)intersectShape;
             Assert.IsTrue(intersectionLine == lineA);
 
-            GridVector2 intersect;
-            intersect = new GridVector2();
+            Vector2 intersect;
+            intersect = new Vector2();
             result = lineA.Intersects(lineB, out intersect);
-            Assert.IsTrue(result == true);
+            Assert.AreEqual(true, result);
             Assert.IsTrue(intersect.X == 3 && intersect.Y == 3);
 
             result = lineA.Intersects(lineC, out intersect);
-            Assert.IsTrue(result == false);
+            Assert.AreEqual(false, result);
 
             result = lineA.Intersects(lineD, out intersect);
-            Assert.IsTrue(result == false);
+            Assert.AreEqual(false, result);
             //      Assert.IsTrue(intersect.X == -4 && intersect.Y == 3);
 
             result = lineA.Intersects(lineE, out intersect);
-            Assert.IsTrue(result == true);
+            Assert.AreEqual(true, result);
             Assert.IsTrue(intersect.X == -4 && intersect.Y == 3);
         }
 
@@ -314,55 +302,51 @@ namespace GeometryTests
             // TODO: Add test logic	here
             //
 
-            GridLineSegment lineA = new GridLineSegment(new GridVector2(-5, 5),
-                                                        new GridVector2(5, 5));
-            GridLineSegment lineB = new GridLineSegment(new GridVector2(-7, 5),  //Total overlap, beyond both endpoints
-                                                        new GridVector2(7, 5));
-            GridLineSegment lineC = new GridLineSegment(new GridVector2(-3, 5),  //Overlap, but not entirely
-                                                        new GridVector2(3, 5));
-            GridLineSegment lineD = new GridLineSegment(new GridVector2(-10, 5),  //Endpoint Overlaps
-                                                        new GridVector2(-5, 5));
-            GridLineSegment lineE = new GridLineSegment(new GridVector2(5, 5),    //Endpoint Overlaps
-                                                        new GridVector2(10, 5));
-            GridLineSegment lineF = new GridLineSegment(new GridVector2(-5, 4), //Parrallel, but slightly above
-                                                        new GridVector2(5, 4));
-            GridLineSegment lineG = new GridLineSegment(new GridVector2(-5, 6), //Parallel, but slightly below
-                                                        new GridVector2(5, 6));
+            LineSegment lineA = new(new Vector2(-5, 5),
+                                                        new Vector2(5, 5));
+            LineSegment lineB = new(new Vector2(-7, 5),  //Total overlap, beyond both endpoints
+                                                        new Vector2(7, 5));
+            LineSegment lineC = new(new Vector2(-3, 5),  //Overlap, but not entirely
+                                                        new Vector2(3, 5));
+            LineSegment lineD = new(new Vector2(-10, 5),  //Endpoint Overlaps
+                                                        new Vector2(-5, 5));
+            LineSegment lineE = new(new Vector2(5, 5),    //Endpoint Overlaps
+                                                        new Vector2(10, 5));
+            LineSegment lineF = new(new Vector2(-5, 4), //Parrallel, but slightly above
+                                                        new Vector2(5, 4));
+            LineSegment lineG = new(new Vector2(-5, 6), //Parallel, but slightly below
+                                                        new Vector2(5, 6));
 
-            GridLineSegment[] IntersectingLines = new GridLineSegment[] { lineB, lineC, lineD, lineE };
-            GridLineSegment[] NonIntersectingLines = new GridLineSegment[] { lineF, lineG };
+            LineSegment[] IntersectingLines = [lineB, lineC, lineD, lineE];
+            LineSegment[] NonIntersectingLines = [lineF, lineG];
 
 
-            foreach (GridLineSegment other in IntersectingLines)
+            foreach (LineSegment other in IntersectingLines)
             {
-                IShape2D intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out IShape2D intersection);
                 Assert.IsTrue(result);
             }
 
-            foreach (GridLineSegment other in NonIntersectingLines)
+            foreach (LineSegment other in NonIntersectingLines)
             {
-                GridVector2 intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out Vector2 intersection);
                 Assert.IsFalse(result);
             }
 
-            GridLineSegment vertLine = new GridLineSegment(new GridVector2(lineA.A.Y, lineA.A.X), new GridVector2(lineA.B.Y, lineA.B.X));
+            LineSegment vertLine = new(new Vector2(lineA.A.Y, lineA.A.X), new Vector2(lineA.B.Y, lineA.B.X));
 
-            GridLineSegment[] IntersectingVertical = IntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
-            GridLineSegment[] NonIntersectingVertical = NonIntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+            LineSegment[] IntersectingVertical = [.. IntersectingLines.Select(l => new LineSegment(new Vector2(l.A.Y, l.A.X), new Vector2(l.B.Y, l.B.X)))];
+            LineSegment[] NonIntersectingVertical = [.. NonIntersectingLines.Select(l => new LineSegment(new Vector2(l.A.Y, l.A.X), new Vector2(l.B.Y, l.B.X)))];
 
-            foreach (GridLineSegment other in IntersectingVertical)
+            foreach (LineSegment other in IntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out Vector2 intersection);
                 Assert.IsTrue(result);
             }
 
-            foreach (GridLineSegment other in NonIntersectingVertical)
+            foreach (LineSegment other in NonIntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out Vector2 intersection);
                 Assert.IsFalse(result);
             }
         }
@@ -374,55 +358,51 @@ namespace GeometryTests
             // TODO: Add test logic	here
             //
 
-            GridLineSegment lineA = new GridLineSegment(new GridVector2(0, 10),
-                                                        new GridVector2(0, -10));
-            GridLineSegment lineB = new GridLineSegment(new GridVector2(0, 11),  //Total overlap, beyond both endpoints
-                                                        new GridVector2(0, -11));
-            GridLineSegment lineC = new GridLineSegment(new GridVector2(0, 3),  //Overlap, but not entirely
-                                                        new GridVector2(0, 15));
-            GridLineSegment lineD = new GridLineSegment(new GridVector2(0, 10),  //Endpoint Overlaps
-                                                        new GridVector2(0, 15));
-            GridLineSegment lineE = new GridLineSegment(new GridVector2(0, -10),    //Endpoint Overlaps
-                                                        new GridVector2(0, -15));
-            GridLineSegment lineF = new GridLineSegment(new GridVector2(1, 10), //Parrallel, but slightly right
-                                                        new GridVector2(1, -10));
-            GridLineSegment lineG = new GridLineSegment(new GridVector2(-1, 10), //Parallel, but slightly left
-                                                        new GridVector2(-1, -10));
+            LineSegment lineA = new(new Vector2(0, 10),
+                                                        new Vector2(0, -10));
+            LineSegment lineB = new(new Vector2(0, 11),  //Total overlap, beyond both endpoints
+                                                        new Vector2(0, -11));
+            LineSegment lineC = new(new Vector2(0, 3),  //Overlap, but not entirely
+                                                        new Vector2(0, 15));
+            LineSegment lineD = new(new Vector2(0, 10),  //Endpoint Overlaps
+                                                        new Vector2(0, 15));
+            LineSegment lineE = new(new Vector2(0, -10),    //Endpoint Overlaps
+                                                        new Vector2(0, -15));
+            LineSegment lineF = new(new Vector2(1, 10), //Parrallel, but slightly right
+                                                        new Vector2(1, -10));
+            LineSegment lineG = new(new Vector2(-1, 10), //Parallel, but slightly left
+                                                        new Vector2(-1, -10));
 
 
-            GridLineSegment[] IntersectingLines = new GridLineSegment[] { lineB, lineC, lineD, lineE };
-            GridLineSegment[] NonIntersectingLines = new GridLineSegment[] { lineF, lineG };
+            LineSegment[] IntersectingLines = [lineB, lineC, lineD, lineE];
+            LineSegment[] NonIntersectingLines = [lineF, lineG];
 
-            foreach (GridLineSegment other in IntersectingLines)
+            foreach (LineSegment other in IntersectingLines)
             {
-                IShape2D intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out IShape2D intersection);
                 Assert.IsTrue(result);
             }
 
-            foreach (GridLineSegment other in NonIntersectingLines)
+            foreach (LineSegment other in NonIntersectingLines)
             {
-                GridVector2 intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out Vector2 intersection);
                 Assert.IsFalse(result);
             }
 
-            GridLineSegment vertLine = new GridLineSegment(new GridVector2(lineA.A.Y, lineA.A.X), new GridVector2(lineA.B.Y, lineA.B.X));
+            LineSegment vertLine = new(new Vector2(lineA.A.Y, lineA.A.X), new Vector2(lineA.B.Y, lineA.B.X));
 
-            GridLineSegment[] IntersectingVertical = IntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
-            GridLineSegment[] NonIntersectingVertical = NonIntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+            LineSegment[] IntersectingVertical = [.. IntersectingLines.Select(l => new LineSegment(new Vector2(l.A.Y, l.A.X), new Vector2(l.B.Y, l.B.X)))];
+            LineSegment[] NonIntersectingVertical = [.. NonIntersectingLines.Select(l => new LineSegment(new Vector2(l.A.Y, l.A.X), new Vector2(l.B.Y, l.B.X)))];
 
-            foreach (GridLineSegment other in IntersectingVertical)
+            foreach (LineSegment other in IntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out Vector2 intersection);
                 Assert.IsTrue(result);
             }
 
-            foreach (GridLineSegment other in NonIntersectingVertical)
+            foreach (LineSegment other in NonIntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out Vector2 intersection);
                 Assert.IsFalse(result);
             }
         }
@@ -434,55 +414,51 @@ namespace GeometryTests
             // TODO: Add test logic	here
             //
 
-            GridLineSegment lineA = new GridLineSegment(new GridVector2(0, 0),
-                                                        new GridVector2(10, 10));
-            GridLineSegment lineB = new GridLineSegment(new GridVector2(-1, -1),  //Total overlap, beyond both endpoints
-                                                        new GridVector2(11, 11));
-            GridLineSegment lineC = new GridLineSegment(new GridVector2(3, 3),  //Overlap, but not entirely
-                                                        new GridVector2(15, 15));
-            GridLineSegment lineD = new GridLineSegment(new GridVector2(10, 10),  //Endpoint Overlaps
-                                                        new GridVector2(15, 15));
-            GridLineSegment lineE = new GridLineSegment(new GridVector2(-10, -10),    //Endpoint Overlaps
-                                                        new GridVector2(0, 0));
-            GridLineSegment lineF = new GridLineSegment(new GridVector2(0, -1), //Parrallel, but slightly right
-                                                        new GridVector2(10, 9));
-            GridLineSegment lineG = new GridLineSegment(new GridVector2(0, 1), //Parallel, but slightly left
-                                                        new GridVector2(10, 11));
+            LineSegment lineA = new(new Vector2(0, 0),
+                                                        new Vector2(10, 10));
+            LineSegment lineB = new(new Vector2(-1, -1),  //Total overlap, beyond both endpoints
+                                                        new Vector2(11, 11));
+            LineSegment lineC = new(new Vector2(3, 3),  //Overlap, but not entirely
+                                                        new Vector2(15, 15));
+            LineSegment lineD = new(new Vector2(10, 10),  //Endpoint Overlaps
+                                                        new Vector2(15, 15));
+            LineSegment lineE = new(new Vector2(-10, -10),    //Endpoint Overlaps
+                                                        new Vector2(0, 0));
+            LineSegment lineF = new(new Vector2(0, -1), //Parrallel, but slightly right
+                                                        new Vector2(10, 9));
+            LineSegment lineG = new(new Vector2(0, 1), //Parallel, but slightly left
+                                                        new Vector2(10, 11));
 
 
-            GridLineSegment[] IntersectingLines = new GridLineSegment[] { lineB, lineC, lineD, lineE };
-            GridLineSegment[] NonIntersectingLines = new GridLineSegment[] { lineF, lineG };
+            LineSegment[] IntersectingLines = [lineB, lineC, lineD, lineE];
+            LineSegment[] NonIntersectingLines = [lineF, lineG];
 
-            foreach (GridLineSegment other in IntersectingLines)
+            foreach (LineSegment other in IntersectingLines)
             {
-                IShape2D intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out IShape2D intersection);
                 Assert.IsTrue(result);
             }
 
-            foreach (GridLineSegment other in NonIntersectingLines)
+            foreach (LineSegment other in NonIntersectingLines)
             {
-                GridVector2 intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out Vector2 intersection);
                 Assert.IsFalse(result);
             }
 
-            GridLineSegment vertLine = new GridLineSegment(new GridVector2(lineA.A.Y, lineA.A.X), new GridVector2(lineA.B.Y, lineA.B.X));
+            LineSegment vertLine = new(new Vector2(lineA.A.Y, lineA.A.X), new Vector2(lineA.B.Y, lineA.B.X));
 
-            GridLineSegment[] IntersectingVertical = IntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
-            GridLineSegment[] NonIntersectingVertical = NonIntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+            LineSegment[] IntersectingVertical = [.. IntersectingLines.Select(l => new LineSegment(new Vector2(l.A.Y, l.A.X), new Vector2(l.B.Y, l.B.X)))];
+            LineSegment[] NonIntersectingVertical = [.. NonIntersectingLines.Select(l => new LineSegment(new Vector2(l.A.Y, l.A.X), new Vector2(l.B.Y, l.B.X)))];
 
-            foreach (GridLineSegment other in IntersectingVertical)
+            foreach (LineSegment other in IntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out Vector2 intersection);
                 Assert.IsTrue(result);
             }
 
-            foreach (GridLineSegment other in NonIntersectingVertical)
+            foreach (LineSegment other in NonIntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out Vector2 intersection);
                 Assert.IsFalse(result);
             }
         }
@@ -494,14 +470,14 @@ namespace GeometryTests
             // TODO: Add test logic	here
             //
 
-            GridLine lineA = new GridLine(new GridVector2(-5, 0),
-                                                        new GridVector2(-10, 0));
-            GridLine lineB = new GridLine(new GridVector2(0, 5),
-                                                        new GridVector2(0, -5));
+            Line lineA = new(new Vector2(-5, 0),
+                                                        new Vector2(-10, 0));
+            Line lineB = new(new Vector2(0, 5),
+                                                        new Vector2(0, -5));
 
-            GridVector2 intersect = new GridVector2();
+            Vector2 intersect = new();
             bool result = lineA.Intersects(lineB, out intersect);
-            Assert.IsTrue(result == true);
+            Assert.AreEqual(true, result);
             Assert.IsTrue(intersect.X == 0 && intersect.Y == 0);
         }
 
@@ -509,33 +485,32 @@ namespace GeometryTests
         public void LineSetIntersectionsTest()
         {
             //Create a line mostly along the X axis.  Split it at x=2.5 and x=7.5.  Ensure we get three line segments and two intersection points
-            GridVector2 A = new GridVector2(0, 0);
-            GridVector2 B = new GridVector2(10, 1);
+            Vector2 A = new(0, 0);
+            Vector2 B = new(10, 1);
 
-            GridLineSegment line = new GridLineSegment(A, B);
+            LineSegment line = new(A, B);
 
-            GridLineSegment[] OtherLines = new GridLineSegment[] { new GridLineSegment(new GridVector2(2.5, 0), new GridVector2(2.5, 10)),
-                                                                   new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
-                                                                   new GridLineSegment(new GridVector2(7.5, 0), new GridVector2(7.5, 10)) };
+            LineSegment[] OtherLines = [ new(new Vector2(2.5, 0), new Vector2(2.5, 10)),
+                                                                   new(new Vector2(0, 11), new Vector2(10,11)), //A line that doesn't intersect
+                                                                   new(new Vector2(7.5, 0), new Vector2(7.5, 10)) ];
 
-            GridVector2[] splitPoints;
-            List<GridLineSegment> intersectingLines = line.Intersections(OtherLines, out splitPoints);
+            List<LineSegment> intersectingLines = line.Intersections(OtherLines, out Vector2[] splitPoints);
 
-            GridVector2 ExpectedIntersectionA = new GridVector2(2.5, 0.25);
-            GridVector2 ExpectedIntersectionB = new GridVector2(7.5, 0.75);
+            Vector2 ExpectedIntersectionA = new(2.5, 0.25);
+            Vector2 ExpectedIntersectionB = new(7.5, 0.75);
 
-            Assert.AreEqual(splitPoints.Length, 2);
-            Assert.AreEqual(splitPoints[0], ExpectedIntersectionA);
-            Assert.AreEqual(splitPoints[1], ExpectedIntersectionB);
+            Assert.AreEqual(2, splitPoints.Length);
+            Assert.AreEqual(ExpectedIntersectionA, splitPoints[0]);
+            Assert.AreEqual(ExpectedIntersectionB, splitPoints[1]);
 
             /*
-            GridLineSegment[] expectedLines = new GridLineSegment[] { new GridLineSegment(A, ExpectedIntersectionA),
-                                                                           new GridLineSegment(ExpectedIntersectionA, ExpectedIntersectionB),
-                                                                           new GridLineSegment(ExpectedIntersectionB, B) };
+            LineSegment[] expectedLines = new LineSegment[] { new LineSegment(A, ExpectedIntersectionA),
+                                                                           new LineSegment(ExpectedIntersectionA, ExpectedIntersectionB),
+                                                                           new LineSegment(ExpectedIntersectionB, B) };
                                                                            */
-            GridLineSegment[] expectedLines = new GridLineSegment[] { OtherLines[0], OtherLines[2] };
+            LineSegment[] expectedLines = [OtherLines[0], OtherLines[2]];
 
-            Assert.AreEqual(intersectingLines.Count, 2);
+            Assert.AreEqual(2, intersectingLines.Count);
 
             for (int i = 0; i < intersectingLines.Count; i++)
             {
@@ -550,31 +525,30 @@ namespace GeometryTests
         public void SubdivideLineTest()
         {
             //Create a line mostly along the X axis.  Split it at x=2.5 and x=7.5.  Ensure we get three line segments and two intersection points
-            GridVector2 A = new GridVector2(0, 0);
-            GridVector2 B = new GridVector2(10, 1);
+            Vector2 A = new(0, 0);
+            Vector2 B = new(10, 1);
 
-            GridLineSegment line = new GridLineSegment(A, B);
+            LineSegment line = new(A, B);
 
-            GridLineSegment[] OtherLines = new GridLineSegment[] { new GridLineSegment(new GridVector2(2.5, 0), new GridVector2(2.5, 10)),
-                                                                   new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
-                                                                   new GridLineSegment(new GridVector2(7.5, 0), new GridVector2(7.5, 10)) };
+            LineSegment[] OtherLines = [ new(new Vector2(2.5, 0), new Vector2(2.5, 10)),
+                                                                   new(new Vector2(0, 11), new Vector2(10,11)), //A line that doesn't intersect
+                                                                   new(new Vector2(7.5, 0), new Vector2(7.5, 10)) ];
 
-            GridVector2[] splitPoints;
-            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out splitPoints);
+            List<LineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out Vector2[] splitPoints);
 
-            GridVector2 ExpectedIntersectionA = new GridVector2(2.5, 0.25);
-            GridVector2 ExpectedIntersectionB = new GridVector2(7.5, 0.75);
+            Vector2 ExpectedIntersectionA = new(2.5, 0.25);
+            Vector2 ExpectedIntersectionB = new(7.5, 0.75);
 
-            Assert.AreEqual(splitPoints.Length, 2);
-            Assert.AreEqual(splitPoints[0], ExpectedIntersectionA);
-            Assert.AreEqual(splitPoints[1], ExpectedIntersectionB);
+            Assert.AreEqual(2, splitPoints.Length);
+            Assert.AreEqual(ExpectedIntersectionA, splitPoints[0]);
+            Assert.AreEqual(ExpectedIntersectionB, splitPoints[1]);
 
 
-            GridLineSegment[] expectedLines = new GridLineSegment[] { new GridLineSegment(A, ExpectedIntersectionA),
-                                                                           new GridLineSegment(ExpectedIntersectionA, ExpectedIntersectionB),
-                                                                           new GridLineSegment(ExpectedIntersectionB, B) };
+            LineSegment[] expectedLines = [ new(A, ExpectedIntersectionA),
+                                                                           new(ExpectedIntersectionA, ExpectedIntersectionB),
+                                                                           new(ExpectedIntersectionB, B) ];
 
-            Assert.AreEqual(dividedLines.Count, 3);
+            Assert.AreEqual(3, dividedLines.Count);
 
             for (int i = 0; i < dividedLines.Count; i++)
             {
@@ -589,23 +563,22 @@ namespace GeometryTests
         public void SubdivideLineTestAtEndpoints()
         {
             //Create a line mostly along the X axis.  Split it at x=2.5 and x=7.5.  Ensure we get three line segments and two intersection points
-            GridVector2 A = new GridVector2(0, 0);
-            GridVector2 B = new GridVector2(10, 1);
+            Vector2 A = new(0, 0);
+            Vector2 B = new(10, 1);
 
-            GridLineSegment line = new GridLineSegment(A, B);
+            LineSegment line = new(A, B);
 
-            GridLineSegment[] OtherLines = new GridLineSegment[] { new GridLineSegment(new GridVector2(0, -1), new GridVector2(0, 10)),
-                                                                   new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
-                                                                   new GridLineSegment(new GridVector2(10, 0), new GridVector2(10, 10)) };
+            LineSegment[] OtherLines = [ new(new Vector2(0, -1), new Vector2(0, 10)),
+                                                                   new(new Vector2(0, 11), new Vector2(10,11)), //A line that doesn't intersect
+                                                                   new(new Vector2(10, 0), new Vector2(10, 10)) ];
 
-            GridVector2[] splitPoints;
-            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out splitPoints);
+            List<LineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out Vector2[] splitPoints);
 
-            Assert.AreEqual(splitPoints.Length, 0);
+            Assert.AreEqual(0, splitPoints.Length);
 
-            GridLineSegment[] expectedLines = new GridLineSegment[] { new GridLineSegment(A, B) };
+            LineSegment[] expectedLines = [new(A, B)];
 
-            Assert.AreEqual(dividedLines.Count, 1);
+            Assert.AreEqual(1, dividedLines.Count);
 
             for (int i = 0; i < dividedLines.Count; i++)
             {
@@ -616,9 +589,9 @@ namespace GeometryTests
         /*
         public void TestSubdivideWithFSCheck()
         {
-            Func<double, GridLineSegment, bool> subdivide_check = (val, line) =>
+            Func<double, LineSegment, bool> subdivide_check = (val, line) =>
             {
-                GridVector2 linePoint = line.PointAlongLine(val);
+                Vector2 linePoint = line.PointAlongLine(val);
 
             };
         }*/
@@ -627,50 +600,50 @@ namespace GeometryTests
         public void TestIsLeft()
         {
             //Is a point to the left when standing at A looking at B
-            GridVector2 A = new GridVector2(0, 0);
-            GridVector2 B = new GridVector2(10, 0);
-            GridLineSegment line = new GridLineSegment(A, B);
+            Vector2 A = new(0, 0);
+            Vector2 B = new(10, 0);
+            LineSegment line = new(A, B);
 
-            GridVector2 left = new GridVector2(0, 1);
-            GridVector2 right = new GridVector2(0, -1);
-            GridVector2 on = A;
+            Vector2 left = new(0, 1);
+            Vector2 right = new(0, -1);
+            Vector2 on = A;
 
-            Assert.AreEqual(line.IsLeft(left), 1);
-            Assert.AreEqual(line.IsLeft(right), -1);
-            Assert.AreEqual(line.IsLeft(on), 0);
+            Assert.AreEqual(1, line.IsLeft(left));
+            Assert.AreEqual(-1, line.IsLeft(right));
+            Assert.AreEqual(0, line.IsLeft(on));
 
-            left = new GridVector2(-1, 1);
-            right = new GridVector2(-1, -1);
-            on = new GridVector2(5, 0);
+            left = new Vector2(-1, 1);
+            right = new Vector2(-1, -1);
+            on = new Vector2(5, 0);
 
-            Assert.AreEqual(line.IsLeft(left), 1);
-            Assert.AreEqual(line.IsLeft(right), -1);
-            Assert.AreEqual(line.IsLeft(on), 0);
+            Assert.AreEqual(1, line.IsLeft(left));
+            Assert.AreEqual(-1, line.IsLeft(right));
+            Assert.AreEqual(0, line.IsLeft(on));
 
-            left = new GridVector2(11, 1);
-            right = new GridVector2(11, -1);
-            on = new GridVector2(11, 0);
+            left = new Vector2(11, 1);
+            right = new Vector2(11, -1);
+            on = new Vector2(11, 0);
 
-            Assert.AreEqual(line.IsLeft(left), 1);
-            Assert.AreEqual(line.IsLeft(right), -1);
-            Assert.AreEqual(line.IsLeft(on), 0);
+            Assert.AreEqual(1, line.IsLeft(left));
+            Assert.AreEqual(-1, line.IsLeft(right));
+            Assert.AreEqual(0, line.IsLeft(on));
 
-            on = new GridVector2(-1, 0);
-            Assert.AreEqual(line.IsLeft(on), 0);
+            on = new Vector2(-1, 0);
+            Assert.AreEqual(0, line.IsLeft(on));
         }
 
         [TestMethod]
         public void TestIsLeftWithFSCheck()
         {
-            Arb.Register<GridVector2Generators>();
+            Arb.Register<Vector2Generators>();
 
-            bool IsLeftCheck(GridVector2 p, GridVector2 q, GridVector2 r)
+            bool IsLeftCheck(Vector2 p, Vector2 q, Vector2 r)
             {
                 if (p == q || q == r || r == p)
                     return true;
 
-                GridLineSegment pq = new GridLineSegment(p, q);
-                GridLineSegment pr = new GridLineSegment(p, r);
+                LineSegment pq = new(p, q);
+                LineSegment pr = new(p, r);
 
                 Trace.WriteLine(string.Format("{0} , {1}", pq, pr));
                 int r_isleft = pq.IsLeft(r);
@@ -693,18 +666,18 @@ namespace GeometryTests
                 }
             }
 
-            Prop.ForAll<GridVector2, GridVector2, GridVector2>(IsLeftCheck).QuickCheckThrowOnFailure();
+            Prop.ForAll<Vector2, Vector2, Vector2>(IsLeftCheck).QuickCheckThrowOnFailure();
         }
 
         [TestMethod]
         public void TestIsLeftWithFSCheckOnHorizontalLine()
         {
-            Arb.Register<GridVector2Generators>();
+            Arb.Register<Vector2Generators>();
 
-            bool IsLeftCheck(GridVector2 p)
+            bool IsLeftCheck(Vector2 p)
             {
-                GridLineSegment qr = new GridLineSegment(new GridVector2(-10, 0), new GridVector2(10, 0));
-                GridLineSegment rq = new GridLineSegment(new GridVector2(10, 0), new GridVector2(-10, 0));
+                LineSegment qr = new(new Vector2(-10, 0), new Vector2(10, 0));
+                LineSegment rq = new(new Vector2(10, 0), new Vector2(-10, 0));
 
                 Trace.WriteLine(string.Format("{0} , {1}", qr, p));
                 int qr_p_isleft = qr.IsLeft(p);
@@ -723,7 +696,7 @@ namespace GeometryTests
                 return rq_p_isleft == rq_p_ExpectedLeft;
             }
 
-            Prop.ForAll<GridVector2>(IsLeftCheck).QuickCheckThrowOnFailure();
+            Prop.ForAll<Vector2>(IsLeftCheck).QuickCheckThrowOnFailure();
         }
 
     }

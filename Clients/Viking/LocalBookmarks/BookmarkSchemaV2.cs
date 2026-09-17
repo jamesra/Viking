@@ -66,17 +66,17 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         /// </summary>
         public IList<Folder> Folders {
             get {
-                if ((this.Folder1Field == null)) {
+                if ((this.Folder1Field is null)) {
                     this.Folder1Field = new XTypedList<Folder>(this, LinqToXsdTypeManager.Instance, XName.Get("Folder", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
                 }
                 return this.Folder1Field;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.Folder1Field = null;
                 }
                 else {
-                    if ((this.Folder1Field == null)) {
+                    if ((this.Folder1Field is null)) {
                         this.Folder1Field = XTypedList<Folder>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Folder", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
                     }
                     else {
@@ -96,17 +96,17 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         /// </summary>
         public IList<Bookmark> Bookmarks {
             get {
-                if ((this.BookmarkField == null)) {
+                if ((this.BookmarkField is null)) {
                     this.BookmarkField = new XTypedList<Bookmark>(this, LinqToXsdTypeManager.Instance, XName.Get("Bookmark", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
                 }
                 return this.BookmarkField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.BookmarkField = null;
                 }
                 else {
-                    if ((this.BookmarkField == null)) {
+                    if ((this.BookmarkField is null)) {
                         this.BookmarkField = XTypedList<Bookmark>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Bookmark", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
                     }
                     else {
@@ -126,17 +126,17 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         /// </summary>
         public IList<string> Comment {
             get {
-                if ((this.CommentField == null)) {
+                if ((this.CommentField is null)) {
                     this.CommentField = new XSimpleList<string>(this, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype, XName.Get("Comment", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
                 }
                 return this.CommentField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.CommentField = null;
                 }
                 else {
-                    if ((this.CommentField == null)) {
+                    if ((this.CommentField is null)) {
                         this.CommentField = XSimpleList<string>.Initialize(this, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype, value, XName.Get("Comment", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
                     }
                     else {
@@ -607,7 +607,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         
         XmlSchemaSet ILinqToXsdTypeManager.Schemas {
             get {
-                if ((schemaSet == null)) {
+                if ((schemaSet is null)) {
                     XmlSchemaSet tempSet = new XmlSchemaSet();
                     System.Threading.Interlocked.CompareExchange(ref schemaSet, tempSet, null);
                 }
@@ -690,7 +690,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlFile);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -701,7 +701,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlFile, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -712,7 +712,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(textReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -723,7 +723,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(textReader, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -734,7 +734,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -745,7 +745,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Parse(text);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -756,7 +756,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Parse(text, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -813,7 +813,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlFile);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -824,7 +824,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlFile, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -835,7 +835,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(textReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -846,7 +846,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(textReader, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -857,7 +857,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -868,7 +868,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Parse(text);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -879,7 +879,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Parse(text, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="BadTriangle.cs" company="">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -26,9 +26,6 @@ namespace TriangleNet.Meshing.Data
         public Vertex org, dest, apex; // Its three vertices.
         public BadTriangle next; // Pointer to next bad triangle.
 
-        public override string ToString()
-        {
-            return String.Format("B-TID {0}", poortri.tri.hash);
-        }
+        public override string ToString() => String.Format("B-TID {0}", poortri.tri.hash);
     }
 }

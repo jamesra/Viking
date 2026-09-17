@@ -1,9 +1,11 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -15,31 +17,31 @@ namespace VikingXNAGraphics
         public Color Color { get; set; }
         public float Alpha
         {
-            get { return Color.GetAlpha(); }
-            set { Color = Color.SetAlpha(value); }
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         private CurveViewControlPoints _ExteriorCurveControlPoints;
         private ICollection<CurveViewControlPoints> _InteriorCurveControlPoints;
 
-        private MeshModel<VertexPositionColor> _mesh;
+        private readonly MeshModel<VertexPositionColor> _mesh;
 
-        public FilledClosedCurvePolygonView(ICollection<GridVector2> exteriorControlPoints, ICollection<GridVector2[]> interiorPolyControlPoints, Color color, uint numInterpolations)
+        public FilledClosedCurvePolygonView(ICollection<Geometry.Vector2> exteriorControlPoints, ICollection<Geometry.Vector2[]> interiorPolyControlPoints, Color color, uint numInterpolations)
         {
-            this.Color = color; 
+            this.Color = color;
             InitializeCurveControlPoints(exteriorControlPoints, interiorPolyControlPoints, numInterpolations);
             _mesh = CreateMesh();
         }
 
-        private void InitializeCurveControlPoints(ICollection<GridVector2> exteriorControlPoints, ICollection<GridVector2[]> interiorPolyControlPoints, uint numInterpolations)
+        private void InitializeCurveControlPoints(ICollection<Geometry.Vector2> exteriorControlPoints, ICollection<Geometry.Vector2[]> interiorPolyControlPoints, uint numInterpolations)
         {
             this._ExteriorCurveControlPoints = new CurveViewControlPoints(exteriorControlPoints, numInterpolations, true);
 
             _InteriorCurveControlPoints = new CurveViewControlPoints[interiorPolyControlPoints.Count];
 
-            foreach (GridVector2[] interiorPoints in interiorPolyControlPoints)
+            foreach (Geometry.Vector2[] interiorPoints in interiorPolyControlPoints)
             {
-                CurveViewControlPoints interiorCurve = new CurveViewControlPoints(interiorPoints, numInterpolations, true);
+                CurveViewControlPoints interiorCurve = new(interiorPoints, numInterpolations, true);
                 _InteriorCurveControlPoints.Add(interiorCurve);
             }
         }
@@ -47,14 +49,11 @@ namespace VikingXNAGraphics
         private MeshModel<VertexPositionColor> CreateMesh()
         {
             MeshModel<VertexPositionColor> mesh = TriangleNetExtensions.CreateMeshForPolygon2D(_ExteriorCurveControlPoints.CurvePoints,
-                                                                                               _InteriorCurveControlPoints.Select(ic => ic.CurvePoints).ToArray(),
+                                                                                               [.. _InteriorCurveControlPoints.Select(ic => ic.CurvePoints)],
                                                                                                Color);
             return mesh;
         }
 
-        public static void Draw(GraphicsDevice device, IScene scene, IEnumerable<FilledClosedCurvePolygonView> views)
-        {
-            MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: views.Select(v => v._mesh));
-        }
+        public static void Draw(GraphicsDevice device, IScene scene, IEnumerable<FilledClosedCurvePolygonView> views) => MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: views.Select(v => v._mesh));
     }
 }

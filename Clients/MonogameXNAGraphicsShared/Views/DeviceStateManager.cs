@@ -1,9 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text; 
+using System.Text;
 
 namespace VikingXNAGraphics
 {
@@ -15,12 +15,18 @@ namespace VikingXNAGraphics
         static DepthStencilState OriginalDepthState;
 
         static BlendState ShapeRendererBlendState = null;
+        static ColorWriteChannels ShapeRendererColorWriteChannels;
         static RasterizerState ShapeRendererRasterizerState = null;
 
         static BlendState BackgroundRendererBlendState = null;
         static RasterizerState BackgroundRendererRasterizerState = null;
 
         static DepthStencilState depthstencilState;
+        static CompareFunction? CachedDepthFunction;
+        static int? CachedStencilReference;
+        static CompareFunction? CachedStencilFunction;
+        static bool? CachedStencilEnable;
+        static bool? CachedSourceDepthEnable;
 
         public static void SaveDeviceState(GraphicsDevice graphicsDevice)
         {
@@ -43,41 +49,44 @@ namespace VikingXNAGraphics
 
         public static void SetRenderStateForShapes(GraphicsDevice graphicsDevice, ColorWriteChannels colorWriteChannels = ColorWriteChannels.All)
         {
-            if(ShapeRendererBlendState != null)
+            // BlendState cannot be mutated after use. DrawBackgrounds does a Z-only pass (None) then a
+            // color pass (All). Caching a single state left ColorWriteChannels stuck at whichever was
+            // requested first — often None once annotations load early enough to hit DrawBackgrounds
+            // before any All caller, which shows labels (SpriteBatch) without shape graphics.
+            if (ShapeRendererBlendState is null || ShapeRendererBlendState.IsDisposed
+                || ShapeRendererColorWriteChannels != colorWriteChannels)
             {
-                ShapeRendererBlendState.Dispose();
-                ShapeRendererBlendState = null;
+                BlendState previous = ShapeRendererBlendState;
+                ShapeRendererBlendState = new BlendState
+                {
+                    AlphaSourceBlend = Blend.SourceAlpha,
+                    AlphaDestinationBlend = Blend.InverseSourceAlpha,
+                    ColorSourceBlend = Blend.SourceAlpha,
+                    ColorDestinationBlend = Blend.InverseSourceAlpha,
+                    Name = "BlendShapes",
+                    ColorWriteChannels = colorWriteChannels
+                };
+                ShapeRendererColorWriteChannels = colorWriteChannels;
+                graphicsDevice.BlendState = ShapeRendererBlendState;
+                if (previous is not null && !previous.IsDisposed)
+                    previous.Dispose();
             }
-            
-            if (ShapeRendererBlendState == null || ShapeRendererBlendState.IsDisposed)
+            else
             {
-                ShapeRendererBlendState = new BlendState();
-
-                ShapeRendererBlendState.AlphaSourceBlend = Blend.SourceAlpha;
-                ShapeRendererBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
-                ShapeRendererBlendState.ColorSourceBlend = Blend.SourceAlpha;
-                ShapeRendererBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
-                ShapeRendererBlendState.Name = "BlendShapes";
-                ShapeRendererBlendState.ColorWriteChannels = colorWriteChannels;
+                graphicsDevice.BlendState = ShapeRendererBlendState;
             }
-
-            graphicsDevice.BlendState = ShapeRendererBlendState;
-            
         }
 
         public static void SetRasterizerStateForShapes(GraphicsDevice graphicsDevice)
         {
-            if(ShapeRendererRasterizerState != null)
+            if (ShapeRendererRasterizerState is null || ShapeRendererRasterizerState.IsDisposed)
             {
-                ShapeRendererRasterizerState.Dispose();
-                ShapeRendererRasterizerState = null;
-            }
-
-            if (ShapeRendererRasterizerState == null || ShapeRendererRasterizerState.IsDisposed)
-            {
-                ShapeRendererRasterizerState = new RasterizerState();
-                ShapeRendererRasterizerState.FillMode = FillMode.Solid;
-                ShapeRendererRasterizerState.CullMode = CullMode.None;
+                ShapeRendererRasterizerState?.Dispose();
+                ShapeRendererRasterizerState = new RasterizerState
+                {
+                    FillMode = FillMode.Solid,
+                    CullMode = CullMode.None
+                };
             }
 
             graphicsDevice.RasterizerState = ShapeRendererRasterizerState;
@@ -85,17 +94,18 @@ namespace VikingXNAGraphics
 
         public static void SetRenderStateForBackgrounds(GraphicsDevice graphicsDevice)
         {
-            if (BackgroundRendererBlendState == null || BackgroundRendererBlendState.IsDisposed)
+            if (BackgroundRendererBlendState is null || BackgroundRendererBlendState.IsDisposed)
             {
-                BackgroundRendererBlendState = new BlendState();
+                BackgroundRendererBlendState = new BlendState
+                {
+                    AlphaSourceBlend = Blend.One,
+                    AlphaDestinationBlend = Blend.Zero,
+                    AlphaBlendFunction = BlendFunction.Add,
 
-                BackgroundRendererBlendState.AlphaSourceBlend = Blend.One;
-                BackgroundRendererBlendState.AlphaDestinationBlend = Blend.Zero;
-                BackgroundRendererBlendState.AlphaBlendFunction = BlendFunction.Add;
-
-                BackgroundRendererBlendState.ColorSourceBlend = Blend.One;
-                BackgroundRendererBlendState.ColorDestinationBlend = Blend.Zero;
-                BackgroundRendererBlendState.ColorBlendFunction = BlendFunction.Add;
+                    ColorSourceBlend = Blend.One,
+                    ColorDestinationBlend = Blend.Zero,
+                    ColorBlendFunction = BlendFunction.Add
+                };
             }
 
             graphicsDevice.BlendState = BackgroundRendererBlendState;
@@ -103,73 +113,93 @@ namespace VikingXNAGraphics
 
         public static void SetRasterizerStateForBackgrounds(GraphicsDevice graphicsDevice)
         {
-            if (BackgroundRendererRasterizerState == null || BackgroundRendererRasterizerState.IsDisposed)
+            if (BackgroundRendererRasterizerState is null || BackgroundRendererRasterizerState.IsDisposed)
             {
-                BackgroundRendererRasterizerState = new RasterizerState();
-                BackgroundRendererRasterizerState.FillMode = FillMode.Solid;
-                BackgroundRendererRasterizerState.CullMode = CullMode.None;
+                BackgroundRendererRasterizerState = new RasterizerState
+                {
+                    FillMode = FillMode.Solid,
+                    CullMode = CullMode.None
+                };
             }
 
             graphicsDevice.RasterizerState = BackgroundRendererRasterizerState;
         }
-         
+
 
         public static void SetDepthBuffer(GraphicsDevice device, CompareFunction depthFunction = CompareFunction.LessEqual)
         {
-            if (depthstencilState != null)
+            bool sourceDepthEnable = device.DepthStencilState?.DepthBufferEnable ?? true;
+            if (depthstencilState is null || depthstencilState.IsDisposed || CachedDepthFunction != depthFunction
+                || CachedSourceDepthEnable != sourceDepthEnable)
             {
-                depthstencilState.Dispose();
-                depthstencilState = null;
-            }
-
-            if (depthstencilState == null || depthstencilState.IsDisposed)
-            {
+                DepthStencilState previous = depthstencilState;
                 depthstencilState = new DepthStencilState();
                 CopyStencilSettings(depthstencilState, device.DepthStencilState);
                 depthstencilState.DepthBufferEnable = true;
                 depthstencilState.DepthBufferWriteEnable = true;
                 depthstencilState.DepthBufferFunction = depthFunction;
-                
+                CachedDepthFunction = depthFunction;
+                CachedSourceDepthEnable = true;
+                CachedStencilReference = depthstencilState.ReferenceStencil;
+                CachedStencilFunction = depthstencilState.StencilFunction;
+                CachedStencilEnable = depthstencilState.StencilEnable;
+                device.DepthStencilState = depthstencilState;
+                if (previous is not null && !previous.IsDisposed)
+                    previous.Dispose();
+            }
+            else
+            {
                 device.DepthStencilState = depthstencilState;
             }
         }
-        
+
 
         public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual, bool stencilEnable = true)
         {
-            if (depthstencilState != null)
+            bool sourceDepthEnable = device.DepthStencilState?.DepthBufferEnable ?? true;
+            if (depthstencilState is null || depthstencilState.IsDisposed
+                || CachedStencilReference != StencilValue
+                || CachedStencilFunction != stencilFunction
+                || CachedStencilEnable != stencilEnable
+                || CachedSourceDepthEnable != sourceDepthEnable)
             {
-                depthstencilState.Dispose();
-                depthstencilState = null;
-            }
-
-            if (depthstencilState == null || depthstencilState.IsDisposed)
-            {
+                DepthStencilState previous = depthstencilState;
                 depthstencilState = new DepthStencilState();
-
                 CopyDepthSettings(depthstencilState, device.DepthStencilState);
-
+                if (!depthstencilState.DepthBufferEnable)
+                {
+                    depthstencilState.DepthBufferEnable = true;
+                    depthstencilState.DepthBufferWriteEnable = true;
+                    depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
+                }
                 depthstencilState.StencilEnable = stencilEnable;
                 depthstencilState.StencilFunction = stencilFunction;
                 depthstencilState.ReferenceStencil = StencilValue;
                 depthstencilState.StencilPass = StencilOperation.Replace;
+                CachedStencilReference = StencilValue;
+                CachedStencilFunction = stencilFunction;
+                CachedStencilEnable = stencilEnable;
+                CachedDepthFunction = depthstencilState.DepthBufferFunction;
+                CachedSourceDepthEnable = depthstencilState.DepthBufferEnable;
+                device.DepthStencilState = depthstencilState;
+                if (previous is not null && !previous.IsDisposed)
+                    previous.Dispose();
             }
-
-            device.DepthStencilState = depthstencilState;
+            else
+            {
+                device.DepthStencilState = depthstencilState;
+            }
         }
 
-        public static int GetDepthStencilValue(GraphicsDevice device)
-        {
-            return device.DepthStencilState.ReferenceStencil;
-        }
+        public static int GetDepthStencilValue(GraphicsDevice device) => device.DepthStencilState.ReferenceStencil;
 
         private static void CopyDepthSettings(DepthStencilState DestState, DepthStencilState SrcState)
         {
-            if (SrcState == null)
+            if (SrcState is null)
             {
-                depthstencilState.DepthBufferEnable = true;
-                depthstencilState.DepthBufferWriteEnable = true;
-                depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
+                DestState.DepthBufferEnable = true;
+                DestState.DepthBufferWriteEnable = true;
+                DestState.DepthBufferFunction = CompareFunction.LessEqual;
                 return;
             }
 
@@ -184,7 +214,7 @@ namespace VikingXNAGraphics
 
         private static void CopyStencilSettings(DepthStencilState DestState, DepthStencilState SrcState)
         {
-            if (SrcState == null)
+            if (SrcState is null)
                 return;
 
             DestState.StencilDepthBufferFail = SrcState.StencilDepthBufferFail;

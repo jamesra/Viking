@@ -1,0 +1,52 @@
+# Local annotation SQL for gRPC. Does not change Identity Server settings —
+# those stay in .env.Docker (Viking / production) or docker-compose.identity-devtest.yml
+# (integration tests). Mixing a production Viking JWT with DevTest Identity is a 401.
+#
+# Viking + local SQL + production Identity:
+#   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
+#     -f docker-compose.yml -f docker-compose.annotation-db.yml \
+#     up -d annotation-sql grpc-annotation-service
+#
+# Integration tests (DevTest Identity):
+#   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1
+#
+# Env template: Servers/AnnotationDatabase/config-template/
+
+services:
+  annotation-sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: viking-annotation-sql
+    env_file:
+      - D:/Docker/Builds/AnnotationSql/.env
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - annotation-sql-data:/var/opt/mssql
+      - ./Servers/AnnotationDatabase/scripts:/scripts:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks:
+      - viking-network
+
+  grpc-annotation-service:
+    depends_on:
+      annotation-sql:
+        condition: service_healthy
+    # ${MSSQL_SA_PASSWORD} and ${ANNOTATION_DATABASE} come from
+    # `docker compose --env-file D:/Docker/Builds/AnnotationSql/.env ...`
+    environment:
+      ConnectionStrings__AnnotationConnection: "Server=annotation-sql,1433;Database=${ANNOTATION_DATABASE:-AnnotationTest};User ID=sa;Password=${MSSQL_SA_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+volumes:
+  annotation-sql-data:

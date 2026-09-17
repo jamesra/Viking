@@ -386,7 +386,7 @@ public class CodeStringGenerator
             CultureInfo.InvariantCulture,
             "{0} {1} {2}({3})",
             AccessibilityAndVirtual(Accessibility.ForMethod(edmFunction)),
-            returnType == null ? "int" : "ObjectResult<" + _typeMapper.GetTypeName(returnType, modelNamespace) + ">",
+            returnType is null ? "int" : "ObjectResult<" + _typeMapper.GetTypeName(returnType, modelNamespace) + ">",
             _code.Escape(edmFunction),
             paramList);
     }
@@ -405,7 +405,7 @@ public class CodeStringGenerator
         return string.Format(
             CultureInfo.InvariantCulture,
             "return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction{0}(\"{1}\"{2});",
-            returnType == null ? "" : "<" + _typeMapper.GetTypeName(returnType, modelNamespace) + ">",
+            returnType is null ? "" : "<" + _typeMapper.GetTypeName(returnType, modelNamespace) + ">",
             edmFunction.Name,
             callParams);
     }
@@ -460,7 +460,7 @@ public class TypeMapper
 
     public string GetTypeName(TypeUsage typeUsage)
     {
-        return typeUsage == null ? null : GetTypeName(typeUsage.EdmType, _ef.IsNullable(typeUsage), modelNamespace: null);
+        return typeUsage is null ? null : GetTypeName(typeUsage.EdmType, _ef.IsNullable(typeUsage), modelNamespace: null);
     }
 
     public string GetTypeName(EdmType edmType)
@@ -470,7 +470,7 @@ public class TypeMapper
 
     public string GetTypeName(TypeUsage typeUsage, string modelNamespace)
     {
-        return typeUsage == null ? null : GetTypeName(typeUsage.EdmType, _ef.IsNullable(typeUsage), modelNamespace);
+        return typeUsage is null ? null : GetTypeName(typeUsage.EdmType, _ef.IsNullable(typeUsage), modelNamespace);
     }
 
     public string GetTypeName(EdmType edmType, string modelNamespace)
@@ -480,7 +480,7 @@ public class TypeMapper
 
     public string GetTypeName(EdmType edmType, bool? isNullable, string modelNamespace)
     {
-        if (edmType == null)
+        if (edmType is null)
         {
             return null;
         }
@@ -545,7 +545,7 @@ public class TypeMapper
         ArgumentNotNull(enumMember, "enumMember");
         
         var valueProperty = enumMember.GetType().GetProperty("Value");
-        return valueProperty == null ? null : valueProperty.GetValue(enumMember, null);
+        return valueProperty is null ? null : valueProperty.GetValue(enumMember, null);
     }
     
     public string GetEnumMemberName(MetadataItem enumMember)
@@ -553,7 +553,7 @@ public class TypeMapper
         ArgumentNotNull(enumMember, "enumMember");
         
         var nameProperty = enumMember.GetType().GetProperty("Name");
-        return nameProperty == null ? null : (string)nameProperty.GetValue(enumMember, null);
+        return nameProperty is null ? null : (string)nameProperty.GetValue(enumMember, null);
     }
 
     public System.Collections.IEnumerable GetEnumMembers(EdmType enumType)
@@ -590,7 +590,7 @@ public class TypeMapper
 
     public string CreateLiteral(object value)
     {
-        if (value == null || value.GetType() != typeof(TimeSpan))
+        if (value is null || value.GetType() != typeof(TimeSpan))
         {
             return _code.CreateLiteral(value);
         }
@@ -692,7 +692,7 @@ public class TypeMapper
         ArgumentNotNull(edmFunction, "edmFunction");
 
         var returnParamsProperty = edmFunction.GetType().GetProperty("ReturnParameters");
-        return returnParamsProperty == null
+        return returnParamsProperty is null
             ? edmFunction.ReturnParameter
             : ((IEnumerable<FunctionParameter>)returnParamsProperty.GetValue(edmFunction, null)).FirstOrDefault();
     }
@@ -713,7 +713,7 @@ public class TypeMapper
     public TypeUsage GetReturnType(EdmFunction edmFunction)
     {
         var returnParam = GetReturnParameter(edmFunction);
-        return returnParam == null ? null : _ef.GetElementType(returnParam.TypeUsage);
+        return returnParam is null ? null : _ef.GetElementType(returnParam.TypeUsage);
     }
     
     public bool GenerateMergeOptionFunction(EdmFunction edmFunction, bool includeMergeOption)
@@ -725,7 +725,7 @@ public class TypeMapper
 
 public static void ArgumentNotNull<T>(T arg, string name) where T : class
 {
-    if (arg == null)
+    if (arg is null)
     {
         throw new ArgumentNullException(name);
     }

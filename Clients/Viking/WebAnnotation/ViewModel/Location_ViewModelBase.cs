@@ -1,44 +1,48 @@
-﻿using System;
+using Geometry;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.Common.UI;
+using Viking.VolumeModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using WebAnnotation.View;
+using VikingXNAGraphics;
+using WebAnnotation.UI.Commands.Segmentation;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener
+    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener, IContextMenu
     {
         public readonly LocationObj modelObj;
 
         public Location_ViewModelBase(long LocationID)
         {
-            this.modelObj = Store.Locations.GetObjectByID(LocationID);
-            if (modelObj == null)
+            if (!Store.Locations.TryGetObjectByID(LocationID, out modelObj) || modelObj is null)
             {
-                throw new ArgumentException(string.Format("Could not load location {0} from store", LocationID));
+                throw new ArgumentException($"Could not load location {LocationID} from store");
             }
         }
 
         [Column("ID")]
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
-        public override string ToString()
-        {
-            return modelObj.ToString();
-        }
+        public override string ToString() => modelObj.ToString();
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
@@ -57,28 +61,32 @@ namespace WebAnnotation.ViewModel
             return false;
         }
 
-        public static bool operator ==(Location_ViewModelBase A, object B)
+        public static bool operator ==(Location_ViewModelBase? A, object? B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is not null)
+            {
                 return A.Equals(B);
+            }
 
             return false;
         }
 
-        public static bool operator !=(Location_ViewModelBase A, object B)
+        public static bool operator !=(Location_ViewModelBase? A, object? B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is not null)
+            {
                 return !A.Equals(B);
+            }
 
             return true;
         }
@@ -87,34 +95,36 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                if (Parent == null)
+                if (Parent is null)
+                {
                     return "";
+                }
 
-                if (Parent.Type == null)
+                if (Parent.Type is null)
+                {
                     return "";
+                }
 
                 return Parent.Type.Code + " " + Parent.ID.ToString();
             }
         }
 
-        public long? ParentID
-        {
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
-        private Structure _Parent = null;
+        private Structure? _Parent = null;
 
-        private void ResetParentCache() { _Parent = null; }
+        private void ResetParentCache() => _Parent = null;
 
         public Structure Parent
         {
             get
             {
-                if (this.modelObj.Parent == null)
+                if (modelObj.Parent is null)
+                {
                     return null;
+                }
 
-                if (this._Parent == null)
-                    _Parent = new Structure(this.modelObj.Parent);
+                _Parent ??= new Structure(modelObj.Parent);
 
                 return _Parent;
             }
@@ -135,16 +145,14 @@ namespace WebAnnotation.ViewModel
 
                 NotifyPropertyChangedEventManager.AddListener(this.modelObj, this);
 
-                if (this.modelObj.Parent == null)
+                if (this.modelObj.Parent is null)
                 {
-                    Action<long> GetParent = delegate(long ParentID)
+                    System.Threading.Tasks.Task.Run(async () =>
                     {
-                        StructureObj parent = Store.Structures.GetObjectByID(ParentID, true);
+                        StructureObj parent = await Store.Structures.GetObjectByID(this.modelObj.ParentID.Value);
                         if (parent != null)
                             NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
-                    };
-
-                    System.Threading.Tasks.Task.Run(() => GetParent(this.modelObj.ParentID.Value));
+                    });
                     //AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
                 }
                 else
@@ -174,285 +182,661 @@ namespace WebAnnotation.ViewModel
         */
         #region IUIObject Members
 
-        public override void Delete()
-        {
-            Store.Locations.Remove(this.modelObj);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+        public override void Delete() => _ = DeleteAsync();
 
-            if (this.ParentID.HasValue)
-                Store.Structures.CheckForOrphan(this.ParentID.Value);
+        async Task DeleteAsync()
+        {
+            await Store.Locations.Remove(modelObj);
+            await AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+
+            if (ParentID.HasValue)
+            {
+                await Store.Structures.CheckForOrphan(ParentID.Value);
+            }
         }
 
         public new event PropertyChangedEventHandler ValueChanged
         {
-            add { modelObj.PropertyChanged += value; }
-            remove { modelObj.PropertyChanged -= value; }
+            add => modelObj.PropertyChanged += value;
+            remove => modelObj.PropertyChanged -= value;
         }
 
-        protected ContextMenu _AddExportMenus(ContextMenu menu)
+        protected ContextMenuStrip _AddExportMenus(ContextMenuStrip menu)
         {
             if (Global.Export != null)
             {
-                MenuItem menuExport = new MenuItem("Export");
+                ToolStripMenuItem menuExport = new("Export");
 
                 _AddExportToTulipURL(menuExport);
 
-                menu.MenuItems.Add(menuExport);
+                menu.Items.Add(menuExport);
             }
 
             return menu;
         }
 
-        private void _AddExportToTulipURL(MenuItem menu)
+        private void _AddExportToTulipURL(ToolStripMenuItem menu)
         {
-            MenuItem menuTulipURL = new MenuItem("Tulip URL");
-            MenuItem menuMorphology = new MenuItem("Morphology", ContextMenu_ExportMorphology);
+            ToolStripMenuItem menuTulipURL = new("Tulip URL");
+            ToolStripMenuItem menuMorphology = new("Morphology");
+            menuMorphology.Click += ContextMenu_ExportMorphology;
 
-            menuTulipURL.MenuItems.Add(menuMorphology);
+            menuTulipURL.DropDownItems.Add(menuMorphology);
             _AddExportToTulipNetwork(menuTulipURL);
-            menu.MenuItems.Add(menuTulipURL);
+            menu.DropDownItems.Add(menuTulipURL);
         }
 
-        private void _AddExportToTulipNetwork(MenuItem menu)
+        private void _AddExportToTulipNetwork(ToolStripMenuItem menu)
         {
-            MenuItem menuNetwork = new MenuItem("Network", ContextMenu_ExportNetwork);
-            menuNetwork.Tag = new long?(); //Tag contains the number of hops
+            ToolStripMenuItem menuNetwork = new("Network")
+            {
+                Tag = new long?() //Tag contains the number of hops
+            };
+            menuNetwork.Click += ContextMenu_ExportNetwork;
 
-            MenuItem menuOneHop = new MenuItem("1 degree  of seperation", ContextMenu_ExportNetwork);
-            menuOneHop.Tag = new long?(1);
-            MenuItem menuTwoHop = new MenuItem("2 degrees of seperation", ContextMenu_ExportNetwork);
-            menuTwoHop.Tag = new long?(2);
-            MenuItem menuThreeHop = new MenuItem("3 degrees of seperation", ContextMenu_ExportNetwork);
-            menuThreeHop.Tag = new long?(3);
-            MenuItem menuAllHop = new MenuItem("All connected", ContextMenu_ExportNetwork);
-            menuAllHop.Tag = new long?();
+            ToolStripMenuItem menuOneHop = new("1 degree  of seperation")
+            {
+                Tag = new long?(1)
+            };
+            menuOneHop.Click += ContextMenu_ExportNetwork;
+            ToolStripMenuItem menuTwoHop = new("2 degrees of seperation")
+            {
+                Tag = new long?(2)
+            };
+            menuTwoHop.Click += ContextMenu_ExportNetwork;
+            ToolStripMenuItem menuThreeHop = new("3 degrees of seperation")
+            {
+                Tag = new long?(3)
+            };
+            menuThreeHop.Click += ContextMenu_ExportNetwork;
+            ToolStripMenuItem menuAllHop = new("All connected")
+            {
+                Tag = new long?()
+            };
+            menuAllHop.Click += ContextMenu_ExportNetwork;
 
-            menu.MenuItems.Add(menuNetwork);
+            menu.DropDownItems.Add(menuNetwork);
 
-            menuNetwork.MenuItems.Add(menuOneHop);
-            menuNetwork.MenuItems.Add(menuTwoHop);
-            menuNetwork.MenuItems.Add(menuThreeHop);
-            menuNetwork.MenuItems.Add(menuAllHop);
+            menuNetwork.DropDownItems.Add(menuOneHop);
+            menuNetwork.DropDownItems.Add(menuTwoHop);
+            menuNetwork.DropDownItems.Add(menuThreeHop);
+            menuNetwork.DropDownItems.Add(menuAllHop);
         }
 
-        protected ContextMenu _AddTerminalOffEdgeMenus(ContextMenu menu)
+        protected ContextMenuStrip _AddTerminalOffEdgeMenus(ContextMenuStrip menu)
         {
-            MenuItem menuExtensible = new MenuItem("Terminal", ContextMenu_OnTerminal);
-            MenuItem menuOffEdge = new MenuItem("Off Edge", ContextMenu_OnOffEdge);
+            ToolStripMenuItem menuExtensible = new("Terminal");
+            menuExtensible.Click += ContextMenu_OnTerminal;
+            ToolStripMenuItem menuOffEdge = new("Off Edge");
+            menuOffEdge.Click += ContextMenu_OnOffEdge;
 
-            menuExtensible.Checked = this.modelObj.Terminal;
-            menuOffEdge.Checked = this.modelObj.OffEdge;
+            menuExtensible.Checked = modelObj.Terminal;
+            menuOffEdge.Checked = modelObj.OffEdge;
 
-            menu.MenuItems.Add(menuExtensible);
-            menu.MenuItems.Add(menuOffEdge);
+            menu.Items.Add(menuExtensible);
+            menu.Items.Add(menuOffEdge);
 
             return menu;
         }
 
-        protected ContextMenu _AddDeleteMenu(ContextMenu menu)
+        protected ContextMenuStrip _AddDeleteMenu(ContextMenuStrip menu)
         {
-            MenuItem menuSeperator = new MenuItem();
-            MenuItem menuDelete = new MenuItem("Delete", ContextMenu_OnDelete);
+            menu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem menuDelete = new("Delete");
+            menuDelete.Click += ContextMenu_OnDelete;
 
-            menu.MenuItems.Add(menuSeperator);
-            menu.MenuItems.Add(menuDelete);
+            menu.Items.Add(menuDelete);
 
             return menu;
         }
 
-        protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
+        protected ContextMenuStrip _AddCopyLocationIDMenu(ContextMenuStrip menu)
         {
-            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}", this.ID), ContextMenu_CopyLocationID);
-            menu.MenuItems.Add(menuCopyLocationID);
+            ToolStripMenuItem menuCopyLocationID = new($"Copy Location ID: {ID}");
+            menuCopyLocationID.Click += ContextMenu_CopyLocationID;
+            menu.Items.Add(menuCopyLocationID);
 
             return menu;
         }
 
-        protected void _AddConvertShapeMenus(ContextMenu menu)
+        protected ContextMenuStrip _AddOpenInSbfsemToolsMenu(ContextMenuStrip menu)
         {
-            MenuItem menuShape = new MenuItem("Change Shape");
+            long? cellId = SbfsemToolsLauncher.GetRootStructureIdForLocation(modelObj);
+            if (cellId.HasValue)
+                SbfsemToolsLauncher.AddOpenMenuItem(menu, cellId.Value, ID);
 
-            MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
-            menuOpenCurve.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
-            MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
-            menuCircle.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
-
-            menuShape.MenuItems.Add(menuOpenCurve);
-            menuShape.MenuItems.Add(menuCircle);
-
-            menu.MenuItems.Add(menuShape);
+            return menu;
         }
 
-        public override ContextMenu ContextMenu
+        protected void _AddConvertShapeMenus(ContextMenuStrip menu)
+        {
+            ToolStripMenuItem menuShape = new("Change Shape");
+
+            if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE)
+            {
+                ToolStripMenuItem menuOpenCurve = new("Curve")
+                {
+                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE
+                };
+                menuOpenCurve.Click += ContextMenu_ConvertShape;
+                menuShape.DropDownItems.Add(menuOpenCurve);
+            }
+
+            if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            {
+                ToolStripMenuItem menuCircle = new("Circle")
+                {
+                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE
+                };
+                menuCircle.Click += ContextMenu_ConvertShape;
+                menuShape.DropDownItems.Add(menuCircle);
+            }
+
+            // Add segmentation option for circles
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE &&
+                Global.IsSegmentationServiceAvailable)
+            {
+                ToolStripMenuItem menuSegmentCircle = new("Segment to Polygon...");
+                menuSegmentCircle.Click += ContextMenu_SegmentCircleToPolygon;
+                menuShape.DropDownItems.Add(menuSegmentCircle);
+            }
+
+            // Add segmentation option for circles
+            if ((TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
+                Global.IsSegmentationServiceAvailable)
+            {
+                ToolStripMenuItem menuSegmentPoly = new("Resegment...");
+                menuSegmentPoly.Click += ContextMenu_SegmentPolygon;
+                menuShape.DropDownItems.Add(menuSegmentPoly);
+            }
+
+            menu.Items.Add(menuShape);
+        }
+
+        protected void _AddSimplifyPolygonMenus(ContextMenuStrip menu)
+        {
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
+            {
+                ToolStripMenuItem menuSimplify = new("Simplify Shape")
+                {
+                    Tag = new int?()
+                };
+                menuSimplify.Click += ContextMenu_SimplifyPolygon;
+                menu.Items.Add(menuSimplify);
+            }
+        }
+
+        protected void _AddRandomColorMenu(ContextMenuStrip menu)
+        {
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
+            {
+                ToolStripMenuItem menuRandomColor = new("Random Color");
+                menuRandomColor.Click += ContextMenu_RandomColor;
+                menu.Items.Add(menuRandomColor);
+            }
+        }
+
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ContextMenuStrip menu = new();
+                ToolStripMenuItem propertiesItem = new("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
-                this._AddCopyLocationIDMenu(menu);
-                this._AddTerminalOffEdgeMenus(menu);
-                this._AddConvertShapeMenus(menu);
-                this._AddDeleteMenu(menu);
+                _AddCopyLocationIDMenu(menu);
+                _AddOpenInSbfsemToolsMenu(menu);
+                _AddTerminalOffEdgeMenus(menu);
+                _AddConvertShapeMenus(menu);
+                _AddSimplifyPolygonMenus(menu);
+                _AddRandomColorMenu(menu);
+                _AddDeleteMenu(menu);
 
                 return menu;
             }
         }
 
-        public override Image SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override Image SmallThumbnail => throw new NotImplementedException();
 
-        public override string ToolTip
-        {
-            get { return this.modelObj.Label; }
-        }
+        public override string ToolTip => modelObj.Label;
 
-        public override void Save()
-        {
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
-        }
+        public override void Save() => _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
         #endregion
 
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
+        protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(Parent);
+
+        protected async void ContextMenu_OnTerminal(object sender, EventArgs e)
         {
-            Viking.UI.Forms.PropertySheetForm.Show(this.Parent);
+            modelObj.Terminal = !modelObj.Terminal;
+            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                modelObj.Terminal = !modelObj.Terminal;
         }
 
-        protected void ContextMenu_OnTerminal(object sender, EventArgs e)
-        {
-            this.modelObj.Terminal = !this.modelObj.Terminal;
-            try
-            {
-                Store.Locations.Save();
-            }
-            catch (System.ServiceModel.FaultException ex)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                this.modelObj.Terminal = !this.modelObj.Terminal;
-            }
-        }
-
-        protected void ContextMenu_CopyLocationID(object sender, EventArgs e)
-        {
-            System.Windows.Forms.Clipboard.SetText(this.ID.ToString());
-        }
+        protected void ContextMenu_CopyLocationID(object sender, EventArgs e) => System.Windows.Forms.Clipboard.SetText(ID.ToString());
 
         protected void ContextMenu_ExportMorphology(object sender, EventArgs e)
         {
-            Global.Export.OpenMorphology(this.ParentID.Value);
+            if (!ParentID.HasValue) return;
+            Global.Export.OpenMorphology(ParentID.Value);
         }
 
         protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem;
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
             long? hops = item.Tag as long?;
 
-            Global.Export.OpenNetwork(this.ParentID.Value, hops);
+            Global.Export.OpenNetwork(ParentID.Value, hops);
         }
 
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem;
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
             Viking.AnnotationServiceTypes.Interfaces.LocationType targetShape = (Viking.AnnotationServiceTypes.Interfaces.LocationType)item.Tag;
 
             switch (targetShape)
             {
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
+                    this.modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                    LocationActions.UpdateCircleLocationNoSaveCallback(this.modelObj, new Geometry.Vector2(VolumeX, VolumeY), new Geometry.Vector2(X, Y));
                     break;
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
                     break;
             }
         }
 
-        protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
+        /// <summary>
+        /// Simplify the shape by removing verticies
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public async void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
         {
-            this.modelObj.OffEdge = !this.modelObj.OffEdge;
+            //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
+
+            Polygon poly = modelObj.MosaicShape.ToPolygon();
+
             try
             {
-                Store.Locations.Save();
+                if (!innerPoly.HasValue)
+                {
+                    Polygon outer_poly = new(poly.ExteriorRing);
+                    Polygon simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
+                    poly.ExteriorRing = simple_poly.ExteriorRing;
+                    modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
+                }
+                else
+                {
+                    if (innerPoly.Value >= poly.InteriorRings.Count)
+                    {
+                        Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
+                        return;
+                    }
+
+                    Polygon inner_poly = poly.InteriorPolygons[innerPoly.Value];
+                    Polygon simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
+                    poly.ReplaceInteriorRing(innerPoly.Value, simple_inner_poly);
+                    modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
+                }
+
+                await Store.Locations.Save();
+            }
+            catch (Exception)
+            {
+                Trace.WriteLine("Could not simplify polygon");
+            }
+        }
+
+        /// <summary>
+        /// Simplify the shape by removing verticies
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public async void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
+        {
+            //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
+
+            Polygon poly = modelObj.MosaicShape.ToPolygon();
+
+            try
+            {
+                if (!innerPoly.HasValue)
+                {
+                    Trace.WriteLine($"No inner polygon parameter provided");
+                }
+                else
+                {
+                    if (innerPoly.Value >= poly.InteriorRings.Count)
+                    {
+                        Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
+                        return;
+                    }
+
+                    poly.RemoveInteriorRing(innerPoly.Value);
+                    modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
+                }
+
+                await Store.Locations.Save();
+            }
+            catch (Exception)
+            {
+                Trace.WriteLine("Could not simplify polygon");
+            }
+        }
+
+        /// <summary>
+        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// </summary>
+        protected void ContextMenu_SegmentCircleToPolygon(object sender, EventArgs e)
+        {
+            try
+            {
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                // Get the circle geometry
+                Circle mosaic_circle = GetCircleFromLocation();
+
+                // Generate foreground points: center + 8 points at radius/2
+                List<Geometry.Vector2> foregroundPoints = [mosaic_circle.Center];
+
+                double innerRadius = mosaic_circle.Radius / 2.0;
+                for (int i = 0; i < 8; i++)
+                {
+                    double angle = (2.0 * Math.PI * i) / 8.0;
+                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
+                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
+                    foregroundPoints.Add(new Geometry.Vector2(x, y));
+                }
+
+                innerRadius = 3 * mosaic_circle.Radius / 4.0;
+                for (int i = 0; i < 8; i++)
+                {
+                    double angle = (2.0 * Math.PI * i) / 8.0;
+                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
+                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
+                    foregroundPoints.Add(new Geometry.Vector2(x, y));
+                }
+
+                var success = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. foregroundPoints], out var volume_points);
+                //Remove points that did not map
+                volume_points = [.. volume_points.Where((p, i) => success[i])];
+
+                // Create callback to update location shape
+                void callback(Polygon outputPolygon)
+                {
+                    _ = UpdateLocationShapeFromVolumePolygon(outputPolygon);
+                }
+
+                // Launch segmentation command
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                long[]? includeStructureIds = modelObj.ParentID.HasValue ? [modelObj.ParentID.Value] : null;
+                SegmentationCommand segmentCommand = new(
+                    parent,
+                    volume_points,
+                    Array.Empty<Geometry.Vector2>(), // no background points initially
+                    callback,
+                    channelManager,
+                    [modelObj.Parent.TypeID],
+                    includeStructureIds);
+
+                parent.CurrentCommand = segmentCommand;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching segmentation: {ex.Message}");
+                MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// </summary>
+        protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
+        {
+            try
+            {
+                //ContextMenu menu = sender as ContextMenu;
+                if (this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON &&
+                   this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
+                    return;
+
+                // Get the circle geometry
+                Polygon poly = modelObj.VolumeShape.ToPolygon();
+                var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(poly);
+                var medial_axis_points = medial_axis.Points;
+
+                // Create callback to update location shape
+                void callback(Polygon volume_poly)
+                {
+                    _ = UpdateLocationShapeFromVolumePolygon(volume_poly);
+                }
+
+                // Launch segmentation command
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                long[]? includeStructureIds = modelObj.ParentID.HasValue ? [modelObj.ParentID.Value] : null;
+                SegmentationCommand segmentCommand = new(
+                    parent,
+                    medial_axis_points,
+                    Array.Empty<Geometry.Vector2>(), // no background points initially
+                    callback,
+                    channelManager,
+                    [modelObj.Parent.TypeID],
+                    includeStructureIds);
+
+                parent.CurrentCommand = segmentCommand;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching segmentation: {ex.Message}");
+                MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Extract Circle geometry from a circle location
+        /// </summary>
+        private Circle GetCircleFromLocation()
+        {
+            if (modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            {
+                throw new InvalidOperationException("Location is not a circle");
+            }
+
+            Geometry.Vector2 center = modelObj.Position;
+            double radius = modelObj.Radius;
+
+            return new Circle(center, radius);
+        }
+
+        /// <summary>
+        /// Update the location's shape from the segmented polygon and save
+        /// </summary>
+        /// <summary>Writes mosaic geometry, then stos-maps volume. Use this when the editor produced section-space points.</summary>
+        private async Task UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
+        {
+            try
+            {
+                // Convert location type to POLYGON
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
+
+                modelObj.SetShapeFromGeometryInSection(parent.Section.ActiveSectionToVolumeTransform, mosaic_poly.ToSqlGeometry());
+                // Save the location
+                await Store.Locations.Save();
+
+                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating location shape: {ex.Message}");
+                MessageBox.Show($"Failed to update location shape: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Update the location's shape from the segmented polygon and save
+        /// </summary>
+        /// <summary>Writes volume geometry, then inverse-maps mosaic. Use this when the editor produced world-space points.</summary>
+        private async Task UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
+        {
+            try
+            {
+                // Convert location type to POLYGON
+                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
+
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var mosaic_poly = parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(volume_poly);
+
+                modelObj.SetShapeFromGeometryInVolume(parent.Section.ActiveSectionToVolumeTransform, volume_poly.ToSqlGeometry());
+
+                // Save the location
+                await Store.Locations.Save();
+
+                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating location shape: {ex.Message}");
+                MessageBox.Show($"Failed to update location shape: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        protected async void ContextMenu_OnOffEdge(object sender, EventArgs e)
+        {
+            modelObj.OffEdge = !modelObj.OffEdge;
+            try
+            {
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                this.modelObj.OffEdge = !this.modelObj.OffEdge;
+                modelObj.OffEdge = !modelObj.OffEdge;
             }
         }
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
+
+        protected void ContextMenu_RandomColor(object sender, EventArgs e)
         {
-            Delete();
+            try
+            {
+                var overlay = AnnotationOverlay.CurrentOverlay;
+                if (overlay is null)
+                    return;
+
+                var sectionView = AnnotationOverlay.GetAnnotationsForSection((int)modelObj.Z);
+                if (sectionView is null)
+                    return;
+
+                if (sectionView.TryGetLocation(modelObj.ID, out LocationCanvasView locView))
+                {
+                    if (locView is LocationPolygonView polygonView)
+                    {
+                        // Generate random color while preserving alpha
+                        float currentAlpha = polygonView.Color.GetAlpha();
+                        Microsoft.Xna.Framework.Color newColor = Microsoft.Xna.Framework.Color.Black.Random().SetAlpha(currentAlpha);
+                        polygonView.Color = newColor;
+
+                        // Invalidate to trigger redraw
+                        overlay.Parent?.Invalidate();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting random color: {ex.Message}");
+            }
         }
 
 
         public bool Equals(Location_ViewModelBase x, Location_ViewModelBase y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
+            {
                 return true;
+            }
 
-            if (x == null || y == null)
+            if (x is null || y is null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
 
         public int GetHashCode(Location_ViewModelBase obj)
         {
-            if (obj == null)
+            if (obj is null)
+            {
                 throw new ArgumentNullException("obj", "GetHashCode");
+            }
 
             return obj.modelObj.GetHashCode();
         }
 
         public bool Equals(LocationObj x, LocationObj y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
+            {
                 return true;
+            }
 
-            if (x == null || y == null)
+            if (x is null || y is null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
 
-        public int GetHashCode(LocationObj obj)
-        {
-            return obj.GetHashCode();
-        }
+        public int GetHashCode(LocationObj obj) => obj.GetHashCode();
 
         int IComparable<Location_ViewModelBase>.CompareTo(Location_ViewModelBase other)
         {
-            if (other == null)
+            if (other is null)
+            {
                 return 1;
+            }
 
-            return (int)(this.ID - other.ID);
+            return (int)(ID - other.ID);
         }
 
         #region WeakEvents
 
         public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
-            PropertyChangedEventArgs PropertyChangedArgs = e as PropertyChangedEventArgs;
-            if (PropertyChangedArgs != null)
+            if (e is PropertyChangedEventArgs PropertyChangedArgs)
             {
                 StructureObj structObj = sender as StructureObj;
-                if (structObj != null && structObj.ID == this.modelObj.ParentID)
-                    this.OnParentPropertyChanged(sender, PropertyChangedArgs);
+                if (structObj != null && structObj.ID == modelObj.ParentID)
+                {
+                    OnParentPropertyChanged(sender, PropertyChangedArgs);
+                }
                 else
                 {
-                    this.OnObjPropertyChanged(sender, PropertyChangedArgs);
+                    OnObjPropertyChanged(sender, PropertyChangedArgs);
                 }
 
                 return true;
             }
 
-            System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs = e as System.Collections.Specialized.NotifyCollectionChangedEventArgs;
-            if (CollectionChangeArgs != null)
+            if (e is System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs)
             {
-                this.OnLinksChanged(sender, CollectionChangeArgs);
+                OnLinksChanged(sender, CollectionChangeArgs);
                 return true;
             }
 
@@ -462,7 +846,7 @@ namespace WebAnnotation.ViewModel
 
         protected virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            this.ResetParentCache();
+            ResetParentCache();
             return;
         }
 
@@ -483,38 +867,23 @@ namespace WebAnnotation.ViewModel
 
 
         [Column("X")]
-        public double X
-        {
-            get { return modelObj.Position.X; }
-        }
+        public double X => modelObj.Position.X;
 
         [Column("Y")]
-        public double Y
-        {
-            get { return modelObj.Position.Y; }
-        }
+        public double Y => modelObj.Position.Y;
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
         [Column("Z")]
-        public double Z
-        {
-            get { return modelObj.Z; }
-        }
+        public double Z => modelObj.Z;
 
         [Column("Last Editor")]
-        public string Username
-        {
-            get { return modelObj.Username; }
-        }
+        public string Username => modelObj.Username;
 
         [Column("Modified")]
-        public DateTime LastModified
-        {
-            get { return modelObj.LastModified; }
-        }
+        public DateTime LastModified => modelObj.LastModified;
 
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -523,13 +892,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// 
         [Column("VolumeX")]
-        public double VolumeX
-        {
-            get
-            {
-                return modelObj.VolumePosition.X;
-            }
-        }
+        public double VolumeX => modelObj.VolumePosition.X;
 
         /// <summary>
         /// VolumeY is the y position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -538,42 +901,21 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// 
         [Column("VolumeY")]
-        public double VolumeY
-        {
-            get
-            {
-                return modelObj.VolumePosition.Y;
-            }
-        }
+        public double VolumeY => modelObj.VolumePosition.Y;
 
 
 
         [Column("Width")]
-        public double Width
-        {
-            get { return modelObj.Width.HasValue ? modelObj.Width.Value : 0; }
-        }
+        public double Width => modelObj.Width ?? 0;
 
         [Column("Radius")]
-        public double Radius
-        {
-            get { return modelObj.Radius; }
-        }
+        public double Radius => modelObj.Radius;
 
 
         [Column("TypeCode")]
-        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode
-        {
-            get { return (Viking.AnnotationServiceTypes.Interfaces.LocationType)modelObj.TypeCode; }
-        }
+        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode => modelObj.TypeCode;
 
-        public bool IsTerminal
-        {
-            get
-            {
-                return modelObj.Terminal;
-            }
-        }
+        public bool IsTerminal => modelObj.Terminal;
 
         /// <summary>
         /// This column is set to true when the location has one link and is not marked as terminal.  It means the
@@ -582,13 +924,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// 
         [Column("IsUnverifiedTerminal")]
-        public bool IsUnverifiedTerminal
-        {
-            get
-            {
-                return modelObj.IsUnverifiedTerminal;
-            }
-        }
+        public bool IsUnverifiedTerminal => modelObj.IsUnverifiedTerminal;
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
@@ -597,18 +933,12 @@ namespace WebAnnotation.ViewModel
         /// 
 
         [Column("Section")]
-        public int Section
-        {
-            get { return (int)modelObj.Section; }
-        }
+        public int Section => (int)modelObj.Section;
 
         /// <summary>
         /// Return true if the locations volume position has been calculated
         /// </summary>
-        public bool VolumePositionHasBeenCalculated
-        {
-            get { return this.modelObj.VolumePositionHasBeenCalculated; }
-        }
+        public bool VolumePositionHasBeenCalculated => modelObj.VolumePositionHasBeenCalculated;
 
         #endregion
 

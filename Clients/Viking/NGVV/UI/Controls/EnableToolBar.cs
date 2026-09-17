@@ -8,9 +8,9 @@ namespace Viking.UI.Controls
     public partial class EnableToolBar : UserControl
     {
         [Browsable(true)]
-        public Size SeperatorSize = new Size(16, 16);
+        public Size SeperatorSize = new(16, 16);
 
-        public List<Button> Buttons = new List<Button>();
+        public List<Button> Buttons = [];
 
         public EnableToolBar()
         {
@@ -19,9 +19,11 @@ namespace Viking.UI.Controls
 
         public void AddSeperator()
         {
-            Panel P = new Panel();
-            P.Size = this.SeperatorSize;
-            P.Dock = DockStyle.Left;
+            Panel P = new()
+            {
+                Size = this.SeperatorSize,
+                Dock = DockStyle.Left
+            };
 
             Controls.Add(P);
             Controls.SetChildIndex(P, 0);

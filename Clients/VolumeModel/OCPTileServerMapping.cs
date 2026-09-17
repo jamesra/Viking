@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Linq;
 using System.Threading;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Handles mapping tiles that are fetched from an Open Connectome Project server.  Repurposed from nornir-web tile server code.
+    /// OCP/nornir-web tileset. Tile path uses log2(downsample) and a Z section in the filename.
     /// </summary>
     public class OCPTileServerMapping : TileGridMappingBase
     {
@@ -16,7 +16,7 @@ namespace Viking.VolumeModel
 
         #region TextureFileNames
 
-        override public string TileFullPath(int iX, int iY, int DownsampleLevel)
+        public override string TileFullPath(int iX, int iY, int DownsampleLevel)
         {
             string tileFileName = ((int)Math.Log(DownsampleLevel, 2)).ToString("D3") +
                                 '/' + this.TileTextureFileName(iX, iY);
@@ -30,15 +30,9 @@ namespace Viking.VolumeModel
             return tileFileName;
         }
 
-        protected override string TileTextureFileName(int iX, int iY)
-        {
-            return this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + "_Z" + this.Section.Number.ToString("D3") + TilePostfix;
-        }
+        protected override string TileTextureFileName(int iX, int iY) => this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + "_Z" + this.Section.Number.ToString("D3") + TilePostfix;
 
-        protected override string TileTextureCacheFileName(int downsample, int iX, int iY)
-        {
-            return this.ChannelName + System.IO.Path.DirectorySeparatorChar + downsample.ToString("D3") + System.IO.Path.DirectorySeparatorChar + TileTextureFileName(iX, iY);
-        }
+        protected override string TileTextureCacheFileName(int downsample, int iX, int iY) => this.ChannelName + System.IO.Path.DirectorySeparatorChar + downsample.ToString("D3") + System.IO.Path.DirectorySeparatorChar + TileTextureFileName(iX, iY);
 
         #endregion
 
@@ -65,10 +59,7 @@ namespace Viking.VolumeModel
 
         public override bool Initialized => true;
 
-        public override Task Initialize(CancellationToken token)
-        {
-            return Task.CompletedTask;
-        }
+        public override Task Initialize(CancellationToken token) => Task.CompletedTask;
 
         public void PopulateLevels(int MaxLevel, int GridDimX, int GridDimY)
         {
@@ -79,20 +70,20 @@ namespace Viking.VolumeModel
             }
         }
 
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
 
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
-        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        public override Vector2[] VolumeToSection(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -103,11 +94,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return [.. P.Select(p => true)];
         }
 
         /// <summary>
@@ -115,16 +106,16 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return [.. P.Select(p => true)];
         }
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        public override Vector2[] SectionToVolume(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }

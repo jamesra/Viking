@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Mesh.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -24,14 +24,14 @@ namespace TriangleNet
     {
         #region Variables
 
-        IPredicates predicates;
+        readonly IPredicates predicates;
 
-        ILog<LogItem> logger;
+        readonly ILog<LogItem> logger;
 
         QualityMesher qualityMesher;
 
         // Stack that maintains a list of recently flipped triangles.
-        Stack<Otri> flipstack;
+        readonly Stack<Otri> flipstack;
 
         // TODO: Check if custom hashmap implementation could be faster.
 
@@ -81,42 +81,27 @@ namespace TriangleNet
         /// <summary>
         /// Gets the mesh bounding box.
         /// </summary>
-        public Rectangle Bounds
-        {
-            get { return this.bounds; }
-        }
+        public Rectangle Bounds => this.bounds;
 
         /// <summary>
         /// Gets the mesh vertices.
         /// </summary>
-        public ICollection<Vertex> Vertices
-        {
-            get { return this.vertices.Values; }
-        }
+        public ICollection<Vertex> Vertices => this.vertices.Values;
 
         /// <summary>
         /// Gets the mesh holes.
         /// </summary>
-        public IList<Point> Holes
-        {
-            get { return this.holes; }
-        }
+        public IList<Point> Holes => this.holes;
 
         /// <summary>
         /// Gets the mesh triangles.
         /// </summary>
-        public ICollection<Triangle> Triangles
-        {
-            get { return this.triangles; }
-        }
+        public ICollection<Triangle> Triangles => this.triangles;
 
         /// <summary>
         /// Gets the mesh segments.
         /// </summary>
-        public ICollection<SubSegment> Segments
-        {
-            get { return this.subsegs.Values; }
-        }
+        public ICollection<SubSegment> Segments => this.subsegs.Values;
 
         /// <summary>
         /// Gets the mesh edges.
@@ -125,7 +110,7 @@ namespace TriangleNet
         {
             get
             {
-                var e = new EdgeIterator(this);
+                EdgeIterator e = new(this);
                 while (e.MoveNext())
                 {
                     yield return e.Current;
@@ -136,34 +121,22 @@ namespace TriangleNet
         /// <summary>
         /// Gets the number of input vertices.
         /// </summary>
-        public int NumberOfInputPoints
-        {
-            get { return invertices; }
-        }
+        public int NumberOfInputPoints => invertices;
 
         /// <summary>
         /// Gets the number of mesh edges.
         /// </summary>
-        public int NumberOfEdges
-        {
-            get { return (3 * triangles.Count + hullsize) / 2; }
-        }
+        public int NumberOfEdges => (3 * triangles.Count + hullsize) / 2;
 
         /// <summary>
         /// Indicates whether the input is a PSLG or a point set.
         /// </summary>
-        public bool IsPolygon
-        {
-            get { return this.insegments > 0; }
-        }
+        public bool IsPolygon => this.insegments > 0;
 
         /// <summary>
         /// Gets the current node numbering.
         /// </summary>
-        public NodeNumbering CurrentNumbering
-        {
-            get { return numbering; }
-        }
+        public NodeNumbering CurrentNumbering => numbering;
 
         #endregion
 
@@ -198,8 +171,10 @@ namespace TriangleNet
 
         private void Initialize()
         {
-            dummysub = new SubSegment();
-            dummysub.hash = DUMMY;
+            dummysub = new SubSegment
+            {
+                hash = DUMMY
+            };
 
             // Initialize the two adjoining subsegments to be the omnipresent
             // subsegment. These will eventually be changed by various bonding
@@ -240,15 +215,15 @@ namespace TriangleNet
 
             behavior = new Behavior();
 
-            vertices = new Dictionary<int, Vertex>();
-            subsegs = new Dictionary<int, SubSegment>();
+            vertices = [];
+            subsegs = [];
 
             triangles = config.TrianglePool();
 
             flipstack = new Stack<Otri>();
 
-            holes = new List<Point>();
-            regions = new List<RegionPointer>();
+            holes = [];
+            regions = [];
 
             steinerleft = -1;
 
@@ -268,10 +243,7 @@ namespace TriangleNet
 
             Reset();
 
-            if (qualityMesher == null)
-            {
-                qualityMesher = new QualityMesher(this, new Configuration());
-            }
+            qualityMesher ??= new QualityMesher(this, new Configuration());
 
             // Enforce angle and area constraints.
             qualityMesher.Apply(quality, delaunay);
@@ -280,10 +252,7 @@ namespace TriangleNet
         /// <summary>
         /// Renumber vertex and triangle id's.
         /// </summary>
-        public void Renumber()
-        {
-            this.Renumber(NodeNumbering.Linear);
-        }
+        public void Renumber() => this.Renumber(NodeNumbering.Linear);
 
         /// <summary>
         /// Renumber vertex and triangle id's.
@@ -308,7 +277,7 @@ namespace TriangleNet
             }
             else if (num == NodeNumbering.CuthillMcKee)
             {
-                var rcm = new CuthillMcKee();
+                CuthillMcKee rcm = new();
                 var iperm = rcm.Renumber(this);
 
                 // Permute the node indices.
@@ -335,10 +304,7 @@ namespace TriangleNet
         /// Set QualityMesher for mesh refinement.
         /// </summary>
         /// <param name="qmesher"></param>
-        internal void SetQualityMesher(QualityMesher qmesher)
-        {
-            qualityMesher = qmesher;
-        }
+        internal void SetQualityMesher(QualityMesher qmesher) => qualityMesher = qmesher;
 
         internal void CopyTo(Mesh target)
         {
@@ -424,7 +390,7 @@ namespace TriangleNet
 
 #if USE_ATTRIBS
             // Check attributes.
-            this.nextras = v.attributes == null ? 0 : v.attributes.Length;
+            this.nextras = v.attributes is null ? 0 : v.attributes.Length;
 #endif
 
             // Simple heuristic to check if ids are already set.  We assume that if the
@@ -511,9 +477,10 @@ namespace TriangleNet
         /// <param name="newsubseg">Reference to the new subseg.</param>
         internal void MakeSegment(ref Osub newsubseg)
         {
-            var seg = new SubSegment();
-
-            seg.hash = this.hash_seg++;
+            SubSegment seg = new()
+            {
+                hash = this.hash_seg++
+            };
 
             seg.subsegs[0].seg = dummysub;
             seg.subsegs[1].seg = dummysub;
@@ -611,7 +578,7 @@ namespace TriangleNet
             bool mirrorflag;
             bool enq;
 
-            if (splitseg.seg == null)
+            if (splitseg.seg is null)
             {
                 // Find the location of the vertex to be inserted.  Check if a good
                 // starting triangle has already been provided by the caller.
@@ -651,7 +618,7 @@ namespace TriangleNet
             if ((intersect == LocateResult.OnEdge) || (intersect == LocateResult.Outside))
             {
                 // The vertex falls on an edge or boundary.
-                if (checksegments && (splitseg.seg == null))
+                if (checksegments && (splitseg.seg is null))
                 {
                     // Check whether the vertex falls on a subsegment.
                     horiz.Pivot(ref brokensubseg);
@@ -671,10 +638,12 @@ namespace TriangleNet
                             if (enq)
                             {
                                 // Add the subsegment to the list of encroached subsegments.
-                                encroached = new BadSubseg();
-                                encroached.subseg = brokensubseg;
-                                encroached.org = brokensubseg.Org();
-                                encroached.dest = brokensubseg.Dest();
+                                encroached = new BadSubseg
+                                {
+                                    subseg = brokensubseg,
+                                    org = brokensubseg.Org(),
+                                    dest = brokensubseg.Dest()
+                                };
 
                                 qualityMesher.AddBadSubseg(encroached);
                             }
@@ -1679,7 +1648,7 @@ namespace TriangleNet
                     TriangleDealloc(botleft.tri);
                     TriangleDealloc(botright.tri);
                 }
-                else if (flipstack.Peek().tri == null) // Dummy flip
+                else if (flipstack.Peek().tri is null) // Dummy flip
                 {
                     // Restore two triangles that were split into four triangles,
                     // so they are again two triangles.

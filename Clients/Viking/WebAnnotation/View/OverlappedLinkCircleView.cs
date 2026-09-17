@@ -1,4 +1,5 @@
-﻿using Geometry;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -8,63 +9,52 @@ using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
     /// <summary>
     /// Draw overlapped links as a set of circles inscribed in a larger circle
     /// </summary>
-    class OverlappedLinkCircleView : ICanvasGeometryView, ICanvasViewContainer, IColorView, ILabelView
+    internal class OverlappedLinkCircleView : ICanvasGeometryView, ICanvasViewContainer, IColorView, ILabelView
     {
-        ICollection<OverlappedLocationLinkView> linkViews = new List<OverlappedLocationLinkView>();
+        private ICollection<OverlappedLocationLinkView> linkViews = [];
 
-        private SortedSet<long> _OverlappedLinks = new SortedSet<long>();
+        private SortedSet<long> _OverlappedLinks = [];
 
         public ICollection<long> OverlappedLinks
         {
-            get
-            {
-                return _OverlappedLinks;
-            }
+            get => _OverlappedLinks;
             set
             {
                 _OverlappedLinks.Clear();
-                _OverlappedLinks = new SortedSet<long>(value);
+                _OverlappedLinks = [.. value];
                 CreateViews();
             }
         }
 
-        GridCircle OuterCircle_MosaicSpace;
-        GridCircle OuterCircle_VolumeSpace;
+        private readonly Circle OuterCircle_MosaicSpace;
+        private readonly Circle OuterCircle_VolumeSpace;
+        private readonly long ID;
+        private readonly int Z;
 
-        long ID;
-        int Z;
-
-        public OverlappedLinkCircleView(GridCircle outerCircle_MosaicSpace, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
+        public OverlappedLinkCircleView(Circle outerCircle_MosaicSpace, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
         {
-            this.OuterCircle_MosaicSpace = outerCircle_MosaicSpace;
-            this.OuterCircle_VolumeSpace = outerCircle_MosaicSpace;
-            this.Z = ZCut;
-            this.ID = LocationID;
+            OuterCircle_MosaicSpace = outerCircle_MosaicSpace;
+            OuterCircle_VolumeSpace = outerCircle_MosaicSpace;
+            Z = ZCut;
+            ID = LocationID;
             this.OverlappedLinks = OverlappedLinks;
         }
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return OuterCircle_VolumeSpace.BoundingBox;
-            }
-        }
+        public Rectangle BoundingBox => OuterCircle_VolumeSpace.BoundingBox;
 
         private Color _Color;
 
         public Color Color
         {
-            get
-            {
-                return _Color;
-            }
+            get => _Color;
 
             set
             {
@@ -78,10 +68,7 @@ namespace WebAnnotation.View
 
         public float Alpha
         {
-            get
-            {
-                return _Color.GetAlpha();
-            }
+            get => _Color.GetAlpha();
 
             set
             {
@@ -93,77 +80,56 @@ namespace WebAnnotation.View
             }
         }
 
-        public double Distance(GridVector2 Position)
-        {
-            return linkViews.Min(c => c.Distance(Position));
-        }
+        public double Distance(Geometry.Vector2 Position) => linkViews.Min(c => c.Distance(Position));
 
-        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape)
-        {
-            return linkViews.Min(c => c.Distance(shape));
-        }
+        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => linkViews.Min(c => c.Distance(shape));
 
-        public double DistanceFromCenterNormalized(GridVector2 Position)
-        {
-            return linkViews.Min(c => c.DistanceFromCenterNormalized(Position));
-        }
+        public double DistanceFromCenterNormalized(Geometry.Vector2 Position) => linkViews.Min(c => c.DistanceFromCenterNormalized(Position));
 
-        public bool Contains(GridVector2 Position)
-        {
-            return linkViews.Any(c => c.Contains(Position));
-        }
+        public bool Contains(Geometry.Vector2 Position) => linkViews.Any(c => c.Contains(Position));
 
-        public bool Intersects(GridLineSegment line)
-        {
-            return linkViews.Any(c => c.Intersects(line));
-        }
+        public bool Intersects(LineSegment line) => linkViews.Any(c => c.Intersects(line));
 
-        public bool IsVisible(Scene scene)
-        {
-            return linkViews.Any(c => c.IsVisible(scene));
-        }
+        public bool IsVisible(Scene scene) => linkViews.Any(c => c.IsVisible(scene));
 
-        public bool IsLabelVisible(Scene scene)
-        {
-            return linkViews.Any(l => l.IsLabelVisible(scene));
-        }
+        public bool IsLabelVisible(Scene scene) => linkViews.Any(l => l.IsLabelVisible(scene));
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        /// <summary>Child overlap arrow if the point is inside one; otherwise null so the parent circle keeps the hit.</summary>
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
-            ICanvasView annotation = linkViews.FirstOrDefault(l => l.Contains(position) == true) as ICanvasGeometryView;
-            if (annotation == null)
+            ICanvasView annotation = linkViews.FirstOrDefault(l => l.Contains(position));
+            if (annotation is null)
+            {
                 return null;
+            }
 
             return annotation;
         }
 
-        public int VisualHeight
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        public int VisualHeight => 0;
 
         private void CreateViews()
         {
-            this.linkViews = CalculateOverlappedLocationCircles(this.OuterCircle_VolumeSpace, ID, Store.Locations.GetObjectsByIDs(_OverlappedLinks, false), this.Z);
+            Store.Locations.TryGetObjectsByIDs(_OverlappedLinks, out var overlapped, out _);
+            linkViews = CalculateOverlappedLocationCircles(OuterCircle_VolumeSpace, ID, overlapped.ToList(), Z);
         }
 
         /// <summary>
         /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc
         /// </summary>
         /// <returns></returns>
-        private static ICollection<OverlappedLocationLinkView> CalculateOverlappedLocationCircles(GridCircle OuterCircle, long locationID, ICollection<LocationObj> OverlappingLinks, int ZCut)
+        private static ICollection<OverlappedLocationLinkView> CalculateOverlappedLocationCircles(Circle OuterCircle, long locationID, ICollection<LocationObj> OverlappingLinks, int ZCut)
         {
             //SortedDictionary<OverlappedLocationView, LocationObj> listCircles = new SortedDictionary<OverlappedLocationView, LocationObj>();
-            List<OverlappedLocationLinkView> listCircles = new List<OverlappedLocationLinkView>(OverlappingLinks.Count);
+            List<OverlappedLocationLinkView> listCircles = new(OverlappingLinks.Count);
 
-            List<LocationObj> listLinksAbove = OverlappingLinks.Where(loc => loc.Z > ZCut).ToList();
-            List<LocationObj> listLinksBelow = OverlappingLinks.Where(loc => loc.Z < ZCut).ToList();
+            List<LocationObj> listLinksAbove = [.. OverlappingLinks.Where(loc => loc.Z > ZCut)];
+            List<LocationObj> listLinksBelow = [.. OverlappingLinks.Where(loc => loc.Z < ZCut)];
+            //List<LocationObj> listLinksEqual = OverlappingLinks.Where(loc => loc.Z == ZCut).ToList();
 
-            listLinksAbove = listLinksAbove.OrderBy(L => -L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y).ToList();
-            listLinksBelow = listLinksBelow.OrderBy(L => L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y).ToList();
+            listLinksAbove = [.. listLinksAbove.OrderBy(L => -L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y)];
+            listLinksBelow = [.. listLinksBelow.OrderBy(L => L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y)];
+            //listLinksEqual = listLinksBelow.OrderBy(L => L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y).ToList();
 
             //Figure out how large link images would be
             double linkRadius = OuterCircle.Radius / 6;
@@ -174,18 +140,24 @@ namespace WebAnnotation.View
 
             double UpperArcLinkRadius = linkRadius;
             double LowerArcLinkRadius = linkRadius;
+            //double EqualArcLinkRadius = linkRadius;
 
             //See if we will run out of room for links
-            if (linkRadius * listLinksAbove.Count > circumferenceOfLinkArc)
+            if (UpperArcLinkRadius * listLinksAbove.Count > circumferenceOfLinkArc)
             {
                 UpperArcLinkRadius = circumferenceOfLinkArc / listLinksAbove.Count;
             }
 
-            if (linkRadius * listLinksBelow.Count > circumferenceOfLinkArc)
+            if (LowerArcLinkRadius * listLinksBelow.Count > circumferenceOfLinkArc)
             {
                 LowerArcLinkRadius = circumferenceOfLinkArc / listLinksBelow.Count;
             }
-
+            /*
+            if (EqualArcLinkRadius * listLinksBelow.Count > OuterCircle.Radius * 2)
+            {
+                EqualArcLinkRadius = OuterCircle.Radius * 2 / listLinksBelow.Count;
+            }
+            */
             double UpperArcStepSize = UpperArcLinkRadius / (circumferenceOfLinkArc / 2);
             double LowerArcStepSize = LowerArcLinkRadius / (circumferenceOfLinkArc / 2);
 
@@ -198,14 +170,14 @@ namespace WebAnnotation.View
                 //Figure out where the link should be drawn. 
                 //Allocate the top 180 degree arc for links above, the bottom 180 for links below
 
-                double angle = (((((double)iLocAbove - halfNumLinksAbove) * UpperArcStepSize) - angleOffset) * Math.PI); //- angleOffset;
+                double angle = ((((iLocAbove - halfNumLinksAbove) * UpperArcStepSize) - angleOffset) * Math.PI); //- angleOffset;
 
-                Vector3 positionOffset = new Vector3((float)Math.Sin(angle), (float)Math.Cos(angle), (float)0);
+                Vector3 positionOffset = new((float)Math.Sin(angle), (float)Math.Cos(angle), 0);
                 positionOffset *= (float)linkArcDistanceFromCenter;
 
-                GridCircle circle = new GridCircle(OuterCircle.Center + new GridVector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
+                Circle circle = new(OuterCircle.Center + new Geometry.Vector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
 
-                OverlappedLocationLinkView overlapLocation = new OverlappedLocationLinkView(locationID, linkLoc, circle, true);
+                OverlappedLocationLinkView overlapLocation = new(locationID, linkLoc, circle, true);
                 listCircles.Add(overlapLocation);
             }
 
@@ -218,17 +190,29 @@ namespace WebAnnotation.View
                 //Figure out where the link should be drawn. 
                 //Allocate the top 180 degree arc for links above, the bottom 180 for links below
 
-                double angle = (((((double)iLocBelow - halfNumLinksBelow) * LowerArcStepSize) - angleOffset) * Math.PI) + Math.PI;
+                double angle = ((((iLocBelow - halfNumLinksBelow) * LowerArcStepSize) - angleOffset) * Math.PI) + Math.PI;
 
-                Vector3 positionOffset = new Vector3((float)Math.Sin(angle), (float)Math.Cos(angle), (float)0);
+                Vector3 positionOffset = new((float)Math.Sin(angle), (float)Math.Cos(angle), 0);
                 positionOffset *= (float)linkArcDistanceFromCenter;
 
-                GridCircle circle = new GridCircle(OuterCircle.Center + new GridVector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
+                Circle circle = new(OuterCircle.Center + new Geometry.Vector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
 
+                OverlappedLocationLinkView overlapLocation = new(locationID, linkLoc, circle, false);
+                listCircles.Add(overlapLocation);
+            }
+            /* This is code to create circles for error links on the same section
+            double centerStepSize = EqualArcLinkRadius * 2;
+            double firstCenterOffset = -centerStepSize * ((listLinksEqual.Count - 1) / 2);
+            for (int iLocEqual = 0; iLocEqual < listLinksEqual.Count; iLocEqual++)
+            {
+                LocationObj linkLoc = listLinksBelow[iLocEqual];
+
+                Vector3 position = new Vector3((float)(firstCenterOffset + (iLocEqual * centerStepSize)), 0, 0);
+                Circle circle = new Circle(position, EqualArcLinkRadius);
                 OverlappedLocationLinkView overlapLocation = new OverlappedLocationLinkView(locationID, linkLoc, circle, false);
                 listCircles.Add(overlapLocation);
             }
-
+            */
             return listCircles;
         }
 
@@ -238,7 +222,7 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           OverlappedLinkCircleView[] listToDraw)
         {
-            OverlappedLocationLinkView[] linkViewArray = listToDraw.SelectMany(l => l.linkViews).ToArray();
+            OverlappedLocationLinkView[] linkViewArray = [.. listToDraw.SelectMany(l => l.linkViews)];
             OverlappedLocationLinkView.Draw(device, scene, basicEffect, overlayEffect, linkViewArray);
         }
 
@@ -246,14 +230,12 @@ namespace WebAnnotation.View
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
-
-            foreach (ILabelView ov in this.linkViews.Cast<ILabelView>().Where(ov => ov.IsLabelVisible(scene)))
+            foreach (ILabelView ov in linkViews.Cast<ILabelView>().Where(ov => ov.IsLabelVisible(scene)))
             {
                 ov.DrawLabel(spriteBatch, font, scene);
             }
 
             return;
         }
-
     }
 }

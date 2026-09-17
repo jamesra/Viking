@@ -1,9 +1,9 @@
-﻿using System;
-using Viking.AnnotationServiceTypes.Interfaces;
-using Annotation.ViewModels.Commands;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Threading;
+using System.Linq;
+using Annotation.ViewModels.Commands;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 
 namespace Annotation.ViewModels
@@ -20,14 +20,11 @@ namespace Annotation.ViewModels
                     return;
 
                 _FavoriteStructureTypeIDs = value;
-                if (PropertyChanged != null)
-                {
-                    PropertyChanged(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-                }
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
             }
         }
 
-        ObservableCollection<IStructureTypeReadOnly> _RootStructureTypes = null; 
+        ObservableCollection<IStructureTypeReadOnly> _RootStructureTypes = null;
         public ObservableCollection<IStructureTypeReadOnly> RootStructureTypes
         {
             get => _RootStructureTypes;
@@ -37,10 +34,7 @@ namespace Annotation.ViewModels
                     return;
 
                 _RootStructureTypes = value;
-                if (PropertyChanged != null)
-                {
-                    PropertyChanged(this, new PropertyChangedEventArgs("RootStructureTypes"));
-                }
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("RootStructureTypes"));
             }
         }
 
@@ -48,50 +42,51 @@ namespace Annotation.ViewModels
 
         public System.Windows.Input.ICommand AddFavoriteCommand { get; set; }
 
-        private IStructureTypeStore StructureTypeStore;
-        public FavoriteStructureIDsViewModel(IStructureTypeStore structureTypeStore, ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null)
+        public FavoriteStructureIDsViewModel()
         {
-            StructureTypeStore = structureTypeStore ?? throw new ArgumentNullException(nameof(structureTypeStore));
-
-            DeleteFavoriteCommand = new DelegateCommand (DeleteFavorite, CanDeleteFavorite);
+            DeleteFavoriteCommand = new DelegateCommand(DeleteFavorite, CanDeleteFavorite);
             AddFavoriteCommand = new DelegateCommand(AddFavorite, CanAddFavorite);
+        }
 
-            if (root_types == null)
-                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(StructureTypeStore.GetObjectsByIDs(StructureTypeStore.RootObjects, true, CancellationToken.None).Result);
+        public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
+        {
+            if (root_types is null)
+            {
+                Store.StructureTypes.TryGetObjectsByIDs(Store.StructureTypes.RootObjects, out var found, out _);
+                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(found.Cast<IStructureTypeReadOnly>());
+            }
 
             FavoriteStructureTypeIDs = Favorites;
         }
-        
 
         public bool CanDeleteFavorite(object item)
         {
             if (item is IStructureTypeReadOnly TypeObj)
             {
-                return FavoriteStructureTypeIDs.Contains(TypeObj.ID) ;
+                return FavoriteStructureTypeIDs.Contains(TypeObj.ID);
             }
             else
             {
                 return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item));
-            } 
+            }
+
+            return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item));
         }
 
         public void DeleteFavorite(object item)
         {
             FavoriteStructureTypeIDs.Remove(System.Convert.ToUInt64(item));
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
         }
 
         public bool CanAddFavorite(object item)
         {
-            if(item is IStructureTypeReadOnly TypeObj)
+            if (item is IStructureTypeReadOnly TypeObj)
             {
                 return FavoriteStructureTypeIDs.Contains(TypeObj.ID) == false;
             }
             else
-            { 
+            {
                 return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item)) == false;
             }
         }
@@ -99,12 +94,8 @@ namespace Annotation.ViewModels
         public void AddFavorite(object item)
         {
             FavoriteStructureTypeIDs.Add(System.Convert.ToUInt64(item));
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
         }
-
 
         public event PropertyChangedEventHandler PropertyChanged;
     }

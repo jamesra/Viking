@@ -1,61 +1,46 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.IO;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.AspNetCore.Server.Kestrel.Https;
-using System;
-using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.SystemConsole.Themes;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace gRPCAnnotationService
 {
+    /// <summary>
+    /// Kestrel host. Docker binds h2c :80 and HTTPS :443 separately — gRPC clients do not follow redirects.
+    /// </summary>
     public class Program
     {
-        public static int Main(string[] args)
+        public static void Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Verbose)
-                .MinimumLevel.Verbose()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
-
-            try
-            {
-                Log.Information("Starting web host");
-                CreateHostBuilder(args).Build().Run();
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Host terminated unexpectedly");
-                return 1;
-            }
-            finally
-            {
-                Log.CloseAndFlush();
-            }
+            CreateHostBuilder(args).Build().Run();
         }
 
         // Additional configuration is required to successfully run gRPC on macOS.
         // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureLogging(logging => 
-                    logging.AddConsole())
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    webBuilder.ConfigureKestrel((context, options) =>
+                    {
+                        // UseDockerPorts is set in the container. Local launch uses launchSettings endpoints.
+                        if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
+                        {
+                            options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);
+                            options.ListenAnyIP(443, listen =>
+                            {
+                                listen.Protocols = HttpProtocols.Http1AndHttp2;
+                                listen.UseHttps();
+                            });
+                            return;
+                        }
+
+                        options.ConfigureEndpointDefaults(listen =>
+                        {
+                            listen.Protocols = HttpProtocols.Http1AndHttp2;
+                        });
+                    });
                     webBuilder.UseStartup<Startup>();
-                })
-                .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration
-                    .ReadFrom.Configuration(hostingContext.Configuration)
-                    .MinimumLevel.Override("Microsoft", LogEventLevel.Verbose)
-                    .MinimumLevel.Verbose()
-                    .Enrich.FromLogContext()
-                    .WriteTo.File("../_GrpcServerLogs.txt")
-                    .WriteTo.Console(theme: AnsiConsoleTheme.Code)
-                );
+                });
     }
 }

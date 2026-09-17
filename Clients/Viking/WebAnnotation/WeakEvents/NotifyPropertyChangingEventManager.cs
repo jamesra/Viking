@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Windows;
@@ -6,11 +5,11 @@ using System.Windows;
 
 namespace WebAnnotation.ViewModel
 {
-    class NotifyPropertyChangingEventManager : WeakEventManager
+    internal class NotifyPropertyChangingEventManager : WeakEventManager
     {
-        static int CleanupCountdown = 5000;
+        private static int CleanupCountdown = 5000;
 
-        static public NotifyPropertyChangingEventManager Current = new NotifyPropertyChangingEventManager();
+        public static NotifyPropertyChangingEventManager Current = new();
 
 
 
@@ -19,24 +18,26 @@ namespace WebAnnotation.ViewModel
             WeakEventManager.SetCurrentManager(typeof(INotifyPropertyChanging), Current);
         }
 
-        ConcurrentDictionary<object, PropertyChangingEventHandler> ObjectToHandler = new ConcurrentDictionary<object, PropertyChangingEventHandler>();
+        private readonly ConcurrentDictionary<object, PropertyChangingEventHandler> ObjectToHandler = new();
 
         protected override void StartListening(object source)
         {
             //Check if we can subscribe to the source
             INotifyPropertyChanging INotify = source as INotifyPropertyChanging;
             System.Diagnostics.Debug.Assert(INotify != null, "Attempt to create weak subscription to object that does not support it");
-            if (INotify == null)
+            if (INotify is null)
+            {
                 return;
+            }
 
-            PropertyChangingEventHandler eventHandler = new PropertyChangingEventHandler(this.OnPropertyChanging);
+            PropertyChangingEventHandler eventHandler = new(OnPropertyChanging);
             eventHandler = ObjectToHandler.GetOrAdd(source, eventHandler);
 
             INotify.PropertyChanging += eventHandler;
 
             if (CleanupCountdown == 0)
             {
-                this.ScheduleCleanup();
+                ScheduleCleanup();
                 CleanupCountdown = 5000;
             }
 
@@ -48,12 +49,12 @@ namespace WebAnnotation.ViewModel
         protected override void StopListening(object source)
         {
             //Check if we can subscribe to the source
-            INotifyPropertyChanging INotify = source as INotifyPropertyChanging;
-            if (INotify == null)
+            if (source is not INotifyPropertyChanging INotify)
+            {
                 return;
+            }
 
-            PropertyChangingEventHandler eventHandler = null;
-            bool Removed = ObjectToHandler.TryRemove(source, out eventHandler);
+            bool Removed = ObjectToHandler.TryRemove(source, out PropertyChangingEventHandler eventHandler);
             if (Removed)
             {
                 INotify.PropertyChanging -= eventHandler;
@@ -65,27 +66,19 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="source"></param>
         /// <param name="listener"></param>
-        public static void AddListener(Object source, IWeakEventListener listener)
-        {
-            Current.ProtectedAddListener(source, listener);
-        }
+        public static void AddListener(object source, IWeakEventListener listener) => Current.ProtectedAddListener(source, listener);
 
         /// <summary>
         /// According to MSDN all public methods on WeakEventManager are thread safe
         /// </summary>
         /// <param name="source"></param>
         /// <param name="listener"></param>
-        public static void RemoveListener(Object source, IWeakEventListener listener)
-        {
-            Current.ProtectedRemoveListener(source, listener);
-        }
+        public static void RemoveListener(object source, IWeakEventListener listener) => Current.ProtectedRemoveListener(source, listener);
 
-        delegate void DeliverEventsDelegate(object o, PropertyChangingEventArgs e);
-        protected void OnPropertyChanging(object source, PropertyChangingEventArgs e)
-        {
+        private delegate void DeliverEventsDelegate(object o, PropertyChangingEventArgs e);
+        protected void OnPropertyChanging(object source, PropertyChangingEventArgs e) =>
             //DeliverEventsDelegate del = new DeliverEventsDelegate(this.DeliverEvent);
             //this.Dispatcher.BeginInvoke(del, new object[] { source, e});
             DeliverEvent(source, e);
-        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -7,7 +7,9 @@ using System.Linq;
 namespace Geometry
 {
     /// <summary>
-    /// Describes a set of points connected sequentially, i.e. a polyline.  Exposes events for changes to the path.
+    /// A mutable polyline used by UI and annotation input. Raises change events.
+    /// Distinct from Core <see cref="Polyline"/>, which is a geometry value used for predicates and intersection.
+    /// Do not merge the two types.
     /// </summary>
     public class Path : IPolyLine2D, System.Collections.Specialized.INotifyCollectionChanged, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
@@ -19,42 +21,35 @@ namespace Geometry
         /// </summary>
         public event LoopChangedEventHandler OnLoopChanged;
 
-        private void FireOnLoopChangedEvent(bool HasLoop)
-        {
+        private void FireOnLoopChangedEvent(bool HasLoop) =>
             //Trace.WriteLine(string.Format("FireOnLoopChangedEvent: {0}", HasLoop));
 
             this.OnLoopChanged?.Invoke(this, HasLoop);
-        }
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnPathChanged;
 
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
-            add
-            {
-                this.OnPathChanged += value;
-            }
-            remove
-            {
-                this.OnPathChanged -= value;
-            }
+            add => this.OnPathChanged += value;
+            remove => this.OnPathChanged -= value;
         }
 
-        private void FireOnPathChangedEvent(NotifyCollectionChangedEventArgs e)
-        {
-            this.OnPathChanged?.Invoke(this, e);
-        }
+        private void FireOnPathChangedEvent(NotifyCollectionChangedEventArgs e) => this.OnPathChanged?.Invoke(this, e);
 
-        public List<GridVector2> Points = new List<GridVector2>();
+        public List<Vector2> Points = [];
 
         public double Length => Segments.Sum(s => s.Length);
 
+        /// <summary>Catmull-Rom samples per span when building <see cref="SimplifiedPath"/>.</summary>
         private readonly uint _SimplifiedPathInterpolations = 5;
-        /// <summary>
-        /// Sets how far from the actual path is a simplified path is allowed to stray.
-        /// </summary>
+
+        /// <summary>Backing store for <see cref="SimplifiedPathTolerance"/>.</summary>
         private double _SimplifiedPathTolerance = 1.0;
 
+        /// <summary>
+        /// Max deviation of the Catmull-Rom simplified path from <see cref="Points"/>.
+        /// Changing this nulls <see cref="SimplifiedPath"/> and simplified-loop caches.
+        /// </summary>
         public double SimplifiedPathTolerance
         {
             get => _SimplifiedPathTolerance;
@@ -71,28 +66,29 @@ namespace Geometry
         }
 
 
-        private GridVector2[] _SimplifiedPath;
-        public GridVector2[] SimplifiedPath
+        /// <summary>Null means dirty; rebuilt from <see cref="Points"/> and <see cref="SimplifiedPathTolerance"/>.</summary>
+        private Vector2[] _SimplifiedPath;
+        public Vector2[] SimplifiedPath
         {
             get
             {
-                if (_SimplifiedPath == null)
+                if (_SimplifiedPath is null)
                 {
                     try
                     {
-                        _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, _SimplifiedPathInterpolations).ToArray();
+                        _SimplifiedPath = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, _SimplifiedPathInterpolations)];
                     }
                     catch (ArgumentException)
                     {
                         Trace.WriteLine("Could not simplify path, trying tighter tolerance...");
                         try
                         {
-                            _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance / 2.0, false, _SimplifiedPathInterpolations).ToArray();
+                            _SimplifiedPath = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance / 2.0, false, _SimplifiedPathInterpolations)];
                         }
                         catch (ArgumentException)
                         {
                             Trace.WriteLine("Could not simplify path, using original path...");
-                            _SimplifiedPath = this.Points.ToArray();
+                            _SimplifiedPath = [.. this.Points];
                         }
                     }
                 }
@@ -101,65 +97,54 @@ namespace Geometry
             }
         }
 
-        public GridLineSegment NewestSegment
+        /// <summary>Last two points as a segment (A = newest, B = previous), matching <see cref="_Segments"/> order.</summary>
+        public LineSegment NewestSegment
         {
             get
             {
                 int count = Points.Count;
-                return new GridLineSegment(Points[count - 1], Points[count - 2]);
+                return new LineSegment(Points[count - 1], Points[count - 2]);
             }
         }
 
         /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
+        /// Segments stored with A = newer control point and B = older. Keep this order; hit-testing and loop detection depend on it.
         /// </summary>
-        private readonly List<GridLineSegment> _Segments = new List<GridLineSegment>();
-        public IReadOnlyList<GridLineSegment> Segments => _Segments;
+        private readonly List<LineSegment> _Segments = [];
+        public IReadOnlyList<LineSegment> Segments => _Segments;
 
         /// <summary>
-        /// True if the path has at least two points
+        /// True if the path has at least two points (one segment).
         /// </summary>
         public bool HasSegment => Points.Count >= 2;
 
         public bool HasSelfIntersection => _Loop != null;
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
-        private GridVector2[] _Loop = null;
+        /// <summary>Vertices of the first self-intersection loop; null if none. Invalidated when the path changes.</summary>
+        private Vector2[] _Loop = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
-        public GridVector2[] Loop => _Loop;
+        /// <summary>Vertices of the first loop, or null if the path does not self-intersect.</summary>
+        public Vector2[] Loop => _Loop;
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
-        private GridLineSegment[] _LoopSegments = null;
+        /// <summary>Segments of <see cref="_Loop"/>; null if no loop. Same A-newer/B-older order as <see cref="_Segments"/>.</summary>
+        private LineSegment[] _LoopSegments = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
-        public GridLineSegment[] LoopSegments => _LoopSegments;
+        /// <summary>Segments of <see cref="Loop"/>, or null if none.</summary>
+        public LineSegment[] LoopSegments => _LoopSegments;
 
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
-        private GridVector2[] _SimplifiedLoop = null;
+        /// <summary>Catmull-Rom simplification of <see cref="_Loop"/>; null means dirty.</summary>
+        private Vector2[] _SimplifiedLoop = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
-        public GridVector2[] SimplifiedFirstLoop
+        /// <summary>Simplified vertices of the first loop, or null if none.</summary>
+        public Vector2[] SimplifiedFirstLoop
         {
             get
             {
-                if (_SimplifiedLoop == null)
+                if (_SimplifiedLoop is null)
                 {
                     if (HasSelfIntersection)
-                        this._SimplifiedLoop = this._Loop.IdentifyControlPoints(this.SimplifiedPathTolerance, true, _SimplifiedPathInterpolations).EnsureClosedRing().ToArray();
+                        this._SimplifiedLoop = [.. this._Loop.IdentifyControlPoints(this.SimplifiedPathTolerance, true, _SimplifiedPathInterpolations).EnsureClosedRing()];
                     else
                         return null;
                 }
@@ -169,19 +154,15 @@ namespace Geometry
         }
 
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
-        private GridLineSegment[] _SimplifiedLoopSegments = null;
+        /// <summary>Segments of <see cref="_SimplifiedLoop"/>; null means dirty.</summary>
+        private LineSegment[] _SimplifiedLoopSegments = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
-        public GridLineSegment[] SimplifiedLoopSegments
+        /// <summary>Segments of <see cref="SimplifiedFirstLoop"/>, or null if none.</summary>
+        public LineSegment[] SimplifiedLoopSegments
         {
             get
             {
-                if (_SimplifiedLoopSegments == null)
+                if (_SimplifiedLoopSegments is null)
                 {
                     if (HasSelfIntersection)
                     {
@@ -202,7 +183,7 @@ namespace Geometry
 
         }
 
-        public void Push(GridVector2 p)
+        public void Push(Vector2 p)
         {
             bool HasLoop = this.HasSelfIntersection;
             Push_NoEvent(p);
@@ -216,15 +197,15 @@ namespace Geometry
             }
         }
 
-        private void Push_NoEvent(GridVector2 p)
+        private void Push_NoEvent(Vector2 p)
         {
             bool FoundLoop = CheckForSelfIntersectionBeforePush(p);  //If we don't already have a self intersection detected, check if this creates one. Do this before adding a new segment
 
             //Add the new line segment to our list
             if (this.Points.Count > 0)
             {
-                GridVector2 lastPoint = this.Peek();
-                GridLineSegment newSegment = new GridLineSegment(p, lastPoint);
+                Vector2 lastPoint = this.Peek();
+                LineSegment newSegment = new(p, lastPoint);
 #if DEBUG
                 if (_Segments.Count > 0)
                 {
@@ -241,10 +222,10 @@ namespace Geometry
             System.Diagnostics.Debug.Assert(_Segments.Count == this.Points.Count - 1);
         }
 
-        public GridVector2 Pop()
+        public Vector2 Pop()
         {
             bool HasLoop = this.HasSelfIntersection;
-            GridVector2 removed = this.Pop_NoEvent();
+            Vector2 removed = this.Pop_NoEvent();
             bool HasLoopAfterPush = this.HasSelfIntersection;
 
             FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removed, 0));
@@ -257,11 +238,11 @@ namespace Geometry
             return removed;
         }
 
-        private GridVector2 Pop_NoEvent()
+        private Vector2 Pop_NoEvent()
         {
             CheckForSelfIntersectionLossBeforePop();
 
-            GridVector2 p = this.Points.First();
+            Vector2 p = this.Points.First();
             this.Points.RemoveAt(this.Points.Count - 1);
 
             if (this._Segments.Count > 0)
@@ -276,16 +257,13 @@ namespace Geometry
             return p;
         }
 
-        public GridVector2 Peek()
-        {
-            return this.Points[this.Points.Count - 1];
-        }
+        public Vector2 Peek() => this.Points[this.Points.Count - 1];
 
         public void Clear()
         {
             bool HadLoop = this.HasSelfIntersection;
 
-            Points = new List<GridVector2>();
+            Points = [];
             _SimplifiedPath = null;
             ResetLoop();
             FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -308,7 +286,7 @@ namespace Geometry
                 bool HadLoop = this.HasSelfIntersection;
 
                 int NumExpectedToDelete = Points.Count - iDeletePoint;
-                GridVector2[] removedEntries = new GridVector2[NumExpectedToDelete];
+                Vector2[] removedEntries = new Vector2[NumExpectedToDelete];
                 Points.CopyTo(iDeletePoint, removedEntries, 0, NumExpectedToDelete);
 
                 int NumDeleted = 0;
@@ -339,9 +317,9 @@ namespace Geometry
         /// </summary>
         /// <param name="p"></param>
         /// <returns>True if part of the path was erased</returns>
-        public bool Erase(GridVector2 input)
+        public bool Erase(Vector2 input)
         {
-            double[] distances = Points.Select(v => GridVector2.Distance(v, input)).ToArray();
+            double[] distances = [.. Points.Select(v => Vector2.Distance(v, input))];
             double min_distance = distances.Min();
 
             int iDeletePoint = Array.IndexOf(distances, distances.Min());
@@ -353,14 +331,14 @@ namespace Geometry
         /// Replace the top of the path with the new value
         /// </summary>
         /// <param name="p"></param>
-        public void Replace(GridVector2 p)
+        public void Replace(Vector2 p)
         {
             if (p == this.Peek())
                 return; //Do nothing if the points are the same
 
             bool HadLoop = this.HasSelfIntersection;
 
-            GridVector2 oldValue = this.Pop_NoEvent();
+            Vector2 oldValue = this.Pop_NoEvent();
             bool HadLoopAfterPop = this.HasSelfIntersection;
             this.Push_NoEvent(p);
 
@@ -376,11 +354,11 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Resets the lopos stored in this path
+        /// Resets the loops stored in this path
         /// </summary>
-        private void SetLoop(List<GridVector2> loopPoints)
+        private void SetLoop(List<Vector2> loopPoints)
         {
-            this._Loop = loopPoints.EnsureClosedRing().ToArray();
+            this._Loop = [.. loopPoints.EnsureClosedRing()];
             this._LoopSegments = this._Loop.ToLineSegments();
             this._SimplifiedLoop = null; //Recalculated on demand
             this._SimplifiedLoopSegments = null; //Recalculated on demand
@@ -388,7 +366,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Resets the lopos stored in this path
+        /// Resets the loops stored in this path
         /// </summary>
         private void ResetLoop()
         {
@@ -404,7 +382,7 @@ namespace Geometry
         /// </summary>
         /// <param name="new_point"></param>
         /// <returns>True if a NEW loop was found</returns>
-        public bool CheckForSelfIntersectionBeforePush(in GridVector2 p)
+        public bool CheckForSelfIntersectionBeforePush(in Vector2 p)
         {
             if (HasSelfIntersection)
             {
@@ -419,18 +397,18 @@ namespace Geometry
 
             this._LoopSegments = null;
             this._SimplifiedLoopSegments = null;
-            GridLineSegment newSegment = new GridLineSegment(p, this.Peek());
-            List<GridLineSegment> loopSegments = new List<GridLineSegment>(this._Segments.Count);
+            LineSegment newSegment = new(p, this.Peek());
+            List<LineSegment> loopSegments = new(this._Segments.Count);
 
-            List<GridVector2> loopPoints = new List<GridVector2>();
+            List<Vector2> loopPoints = [];
 
             //This function looks odd because the lines are reversed. A is closer to the most recently placed point in the path
 
             int IntersectionCount = 0;
             for (int iPathLine = 0; iPathLine < this._Segments.Count; iPathLine++)
             {
-                GridLineSegment path_line = this._Segments[iPathLine];
-                if (newSegment.Intersects(path_line, out GridVector2 intersection))
+                LineSegment path_line = this._Segments[iPathLine];
+                if (newSegment.Intersects(path_line, out Vector2 intersection))
                 {
                     IntersectionCount += 1;
 
@@ -489,7 +467,7 @@ namespace Geometry
                         else
                         {
                             //Add the part from the start of our line to the intersection
-                            loop_segment = new GridLineSegment(path_line.B, intersection);
+                            loop_segment = new LineSegment(path_line.B, intersection);
                             loopSegments.Add(loop_segment);
                             break;
                         */
@@ -517,14 +495,14 @@ namespace Geometry
                 return false;
             }
 
-            //List<GridLineSegment> intersectingSegments = newSegment.Intersections(this.Segments, false, out GridVector2[] intersectionPoints);
+            //List<LineSegment> intersectingSegments = newSegment.Intersections(this.Segments, false, out Vector2[] intersectionPoints);
             //intersectionPoints = intersectionPoints.Where(p => newSegment.B != p).ToArray(); //We know that the most recent point in the path will share an endpoint, so remove these from results
             //intersectingSegments = intersectingSegments.Where(s => s != this.NewestSegent).ToList();
             //if (intersectionPoints.Length > 0)
             //{
             //    System.Diagnostics.Debug.Assert(intersectionPoints.Length == 1); //We should only find one self intersection, then stop looking
 
-            //    this.FirstSelfIntersectingSegmentPair = new GridLineSegment[] { intersectingSegments[0], newSegment };
+            //    this.FirstSelfIntersectingSegmentPair = new LineSegment[] { intersectingSegments[0], newSegment };
 
             //    return true;
             //}
@@ -544,7 +522,7 @@ namespace Geometry
                 return false;
             }
 
-            GridLineSegment lostSegment = this.NewestSegment;
+            LineSegment lostSegment = this.NewestSegment;
             if (false == this.HasSelfIntersection)
             {
                 return false;
@@ -560,7 +538,7 @@ namespace Geometry
             return false;
         }
 
-        public double Distance(in GridVector2 p)
+        public double Distance(in Vector2 p)
         {
             if (this.Points.Count == 0)
             {
@@ -568,17 +546,17 @@ namespace Geometry
             }
             else if (this.Points.Count == 1)
             {
-                return GridVector2.Distance(this.Points[0], in p);
+                return Vector2.Distance(this.Points[0], in p);
             }
             else
             {
-                GridVector2 pnt = p;
+                Vector2 pnt = p;
                 return this.Segments.Min(seg => seg.DistanceToPoint(pnt));
             }
         }
 
         #region IPolyLine2D
-        public GridRectangle BoundingBox
+        public Rectangle BoundingBox
         {
             get
             {
@@ -587,7 +565,7 @@ namespace Geometry
                 double MinY = Points.Min(p => p.Y);
                 double MaxY = Points.Max(p => p.Y);
 
-                return new GridRectangle(MinX, MaxX, MinY, MaxY);
+                return new Rectangle(MinX, MaxX, MinY, MaxY);
             }
         }
 
@@ -596,24 +574,22 @@ namespace Geometry
         {
             get
             {
-                List<ILineSegment2D> listSegments = new List<ILineSegment2D>(this.Points.Count - 1);
+                List<ILineSegment2D> listSegments = new(this.Points.Count - 1);
 
                 for (int i = 0; i < Points.Count - 1; i++)
                 {
-                    listSegments.Add(new GridLineSegment(Points[i], Points[i + 1]));
+                    listSegments.Add(new LineSegment(Points[i], Points[i + 1]));
                 }
 
                 return listSegments;
             }
         }
 
-        IReadOnlyList<IPoint2D> IPolyLine2D.Points => this.Points.Select(p => (IPoint2D)p).ToList();
+        IReadOnlyList<IPoint2D> IPolyLine2D.Points => [.. this.Points.Select(p => (IPoint2D)p)];
 
-        public ShapeType2D ShapeType => ShapeType2D.POLYLINE;
+        public ShapeType2D ShapeType => ShapeType2D.Polyline;
 
         public double Area => throw new ArgumentException("No area for Polyline");
-
-        GridVector2 IShape2D.Centroid => GridVector2.Average(Segments.Select(s => s.PointAlongLine(0.5)));
 
         bool IShape2D.Contains(in IPoint2D p)
         {
@@ -621,22 +597,78 @@ namespace Geometry
             return this.Segments.Any(line => line.Contains(pnt));
         }
 
-        bool IShape2D.Intersects(in IShape2D shape)
+        bool IShape2D.Covers(in IPoint2D p)
         {
-            IShape2D shp = shape;
-            return this.Segments.Any(line => line.Intersects(shp));
+            IPoint2D pnt = p;
+            return this.Segments.Any(line => line.Covers(pnt));
         }
+
+        ShapeRelation IShape2D.GetRelation(in IPoint2D p)
+        {
+            IPoint2D pnt = p;
+            if (!this.Segments.Any(line => line.Covers(pnt)))
+                return ShapeRelation.None;
+
+            Vector2 v = pnt.ToVector2();
+            if (Points.Count > 0 &&
+                (Vector2.DistanceSquared(v, Points[0]) <= Tolerance.EpsilonSquared ||
+                 Vector2.DistanceSquared(v, Points[Points.Count - 1]) <= Tolerance.EpsilonSquared))
+                return ShapeRelation.Touching;
+
+            return ShapeRelation.Contained;
+        }
+
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line)
+        {
+            ShapeRelation output = ShapeRelation.None;
+            if (this.BoundingBox.GetRelation(line) == ShapeRelation.None)
+                return ShapeRelation.None;
+
+            const ShapeRelation exitCondition = ShapeRelation.Intersecting | ShapeRelation.Touching;
+            foreach (LineSegment seg in this.LoopSegments)
+            {
+                output |= seg.GetRelation(line);
+                if (output.HasFlag(exitCondition))
+                    return output;
+            }
+
+            return output;
+        }
+
+        bool IShape2D.Contains(in IShape2D other) => ((IShape2D)this).GetRelation(other).IsContains();
+
+        bool IShape2D.Covers(in IShape2D other) => ((IShape2D)this).GetRelation(other).IsCovers();
+
+        ShapeRelation IShape2D.GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            IShape2D self = this;
+            if (other.ShapeType == ShapeType2D.Point)
+                return self.GetRelation((IPoint2D)other);
+            if (other.ShapeType == ShapeType2D.Line)
+                return self.GetRelation((ILineSegment2D)other);
+
+            List<ShapeRelation> parts = new(Segments.Count);
+            foreach (LineSegment seg in Segments)
+                parts.Add(seg.GetRelation(other));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
+        bool IShape2D.Intersects(in IShape2D shape) =>
+            ((IShape2D)this).GetRelation(shape) != ShapeRelation.None;
 
         IShape2D IShape2D.Translate(in IPoint2D offset)
         {
-            List<IPoint2D> translatedPoints = new List<Geometry.IPoint2D>(this.Points.Count);
+            List<IPoint2D> translatedPoints = new(this.Points.Count);
 
             var X = offset.X;
             var Y = offset.Y;
-            translatedPoints = this.Points.Select(p => new GridVector2(p.X + X, p.Y + Y)).Cast<IPoint2D>().ToList();
+            translatedPoints = [.. this.Points.Select(p => new Vector2(p.X + X, p.Y + Y)).Cast<IPoint2D>()];
 
-            return new GridPolyline(translatedPoints);
-        } 
+            return new Polyline(translatedPoints);
+        }
 
         public bool Equals(IShape2D other)
         {
@@ -667,7 +699,7 @@ namespace Geometry
         }
 
         public bool Equals(IPolyLine2D other)
-        { 
+        {
             if (this.Points.Count != other.Points.Count)
                 return false;
 
@@ -677,7 +709,7 @@ namespace Geometry
                     return false;
             }
 
-            return true;  
+            return true;
         }
 
         #endregion

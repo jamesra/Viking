@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -21,7 +21,7 @@ namespace WebAnnotationModel.gRPC
     }
 
     /// <summary>
-    /// Updates structures with structurelinks when the structure link store is updated
+    /// Attaches permitted-link rules to StructureTypeObj when PermittedStructureLinkStore changes.
     /// </summary>
     class PermittedStructureLinkToStructureUpdater
     {
@@ -37,31 +37,39 @@ namespace WebAnnotationModel.gRPC
             permittedStructureLinkStore.CollectionChanged += OnPermittedStructureLinkCollectionChanged;
         }
 
-        private void OnPermittedStructureLinkCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnPermittedStructureLinkCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) =>
+            _ = ApplyCollectionChangeAsync(e);
+
+        /// <summary>
+        /// Applies permitted-link add/remove off the CollectionChanged thread. Add has null OldItems; Remove has null NewItems.
+        /// </summary>
+        private async Task ApplyCollectionChangeAsync(NotifyCollectionChangedEventArgs e)
         {
-            var Tasks = new List<Task>();
-            foreach (var sl in e.OldItems.Cast<PermittedStructureLinkObj>())
+            try
             {
-                Tasks.Add(RemovePermittedLinkToStructureTypes(sl.ID, CancellationToken.None));
+                if (e.OldItems != null)
+                {
+                    await Task.WhenAll(e.OldItems.Cast<PermittedStructureLinkObj>()
+                        .Select(sl => RemovePermittedLinkToStructureTypes(sl.ID, CancellationToken.None))).ConfigureAwait(false);
+                }
+
+                if (e.NewItems != null)
+                {
+                    await Task.WhenAll(e.NewItems.Cast<PermittedStructureLinkObj>()
+                        .Select(sl => AddPermittedLinkToStructureTypes(sl, CancellationToken.None))).ConfigureAwait(false);
+                }
             }
-
-            Task.WaitAll(Tasks.ToArray());
-            Tasks.Clear();
-
-            foreach (var sl in e.NewItems.Cast<PermittedStructureLinkObj>())
+            catch (Exception ex)
             {
-                Tasks.Add(AddPermittedLinkToStructureTypes(sl, CancellationToken.None));
+                Trace.WriteLine(ex);
             }
-
-            Task.WaitAll(Tasks.ToArray());
-            Tasks.Clear();
         }
 
         private async Task<bool> AddPermittedLinkToStructureTypes(PermittedStructureLinkObj  link, CancellationToken token)
         {
-            var structureTypes = await StructureTypeStore.GetObjectsByIDs(new long[] { link.SourceTypeID, link.TargetTypeID }, AskServer: true, token).ConfigureAwait(false);
+            var structureTypes = await StructureTypeStore.GetObjectsByIDs(new long[] { link.SourceTypeID, link.TargetTypeID }, token).ConfigureAwait(false);
 
-            foreach (var t in structureTypes)
+            foreach (var t in structureTypes.Found)
             {
                 await t.TryAddPermittedLink(link).ConfigureAwait(false);
             }
@@ -71,9 +79,9 @@ namespace WebAnnotationModel.gRPC
 
         private async Task<bool> RemovePermittedLinkToStructureTypes(PermittedStructureLinkKey link, CancellationToken token)
         {
-            var structureTypes = await StructureTypeStore.GetObjectsByIDs(new long[] { link.SourceTypeID, link.TargetTypeID }, AskServer: true, token).ConfigureAwait(false);
+            var structureTypes = await StructureTypeStore.GetObjectsByIDs(new long[] { link.SourceTypeID, link.TargetTypeID }, token).ConfigureAwait(false);
 
-            foreach (var t in structureTypes)
+            foreach (var t in structureTypes.Found)
             {
                 await t.TryRemovePermittedLink(link).ConfigureAwait(false);
             }

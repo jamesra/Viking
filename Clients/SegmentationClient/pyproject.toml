@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SegmentationClient"
+version = "0.1.0"
+description = "Client for the segmentation service"
+authors = [
+    {name = "James Anderson"}
+]
+requires-python = ">=3.7"
+dependencies = [
+    "grpcio",
+    "grpcio-tools",
+    "protobuf",
+    "numpy",
+    "pillow",
+    "matplotlib",
+    "opencv-python",
+    "segmentation_grpc",
+]
+
+[project.scripts]
+segmentation-client = "SegmentationClient.client_example:main"
+test-segmentation-service = "SegmentationClient.test_service:test_service"
+
+[tool.setuptools]
+packages = ["SegmentationClient"]

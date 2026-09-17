@@ -16,16 +16,16 @@ namespace AnnotationService.Types
         [DataMember]
         public Int64 SourceID
         {
-            get { return _SourceID; }
-            set { _SourceID = value; }
+            get => _SourceID;
+            set => _SourceID = value;
         }
 
         [ProtoMember(2)]
         [DataMember]
         public Int64 TargetID
         {
-            get { return _TargetID; }
-            set { _TargetID = value; }
+            get => _TargetID;
+            set => _TargetID = value;
         }
 
         /*

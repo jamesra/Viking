@@ -4,7 +4,7 @@ using System.ServiceModel;
 namespace AnnotationService.Interfaces
 {
     [ServiceContract]
-    interface IVolumeMeta
+    public interface IVolumeMeta
     {
         [OperationContract]
         Scale GetScale();

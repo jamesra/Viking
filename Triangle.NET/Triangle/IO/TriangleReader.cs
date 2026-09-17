@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TriangleReader.cs" company="">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -18,7 +18,7 @@ namespace TriangleNet.IO
     /// </summary>
     public class TriangleReader
     {
-        static NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
+        static readonly NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
 
         int startIndex = 0;
 
@@ -45,7 +45,7 @@ namespace TriangleNet.IO
                 line = reader.ReadLine().Trim();
             }
 
-            token = line.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            token = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
 
             return true;
         }
@@ -63,7 +63,7 @@ namespace TriangleNet.IO
             double x = double.Parse(line[1], nfi);
             double y = double.Parse(line[2], nfi);
 
-            var v = new Vertex(x, y);
+            Vertex v = new(x, y);
 
             // Read a vertex marker.
             if (marks > 0 && line.Length > 3 + attributes)
@@ -138,9 +138,7 @@ namespace TriangleNet.IO
         /// </summary>
         public IPolygon Read(string filename)
         {
-            Polygon geometry = null;
-
-            Read(filename, out geometry);
+            Read(filename, out var geometry);
 
             return geometry;
         }
@@ -152,10 +150,7 @@ namespace TriangleNet.IO
         /// </summary>
         /// <param name="nodefilename"></param>
         /// <remarks>Will NOT read associated .ele by default.</remarks>
-        public Polygon ReadNodeFile(string nodefilename)
-        {
-            return ReadNodeFile(nodefilename, false);
-        }
+        public Polygon ReadNodeFile(string nodefilename) => ReadNodeFile(nodefilename, false);
 
         /// <summary>
         /// Read the vertices from a file, which may be a .node or .poly file.
@@ -168,12 +163,11 @@ namespace TriangleNet.IO
 
             startIndex = 0;
 
-            string[] line;
             int invertices = 0, attributes = 0, nodemarkers = 0;
 
-            using (var reader = new StreamReader(nodefilename))
+            using (StreamReader reader = new(nodefilename))
             {
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file.");
                 }
@@ -250,10 +244,7 @@ namespace TriangleNet.IO
         /// </summary>
         /// <param name="polyfilename"></param>
         /// <remarks>Will NOT read associated .ele by default.</remarks>
-        public Polygon ReadPolyFile(string polyfilename)
-        {
-            return ReadPolyFile(polyfilename, false, false);
-        }
+        public Polygon ReadPolyFile(string polyfilename) => ReadPolyFile(polyfilename, false, false);
 
         /// <summary>
         /// Read the vertices and segments from a .poly file.
@@ -261,10 +252,7 @@ namespace TriangleNet.IO
         /// <param name="polyfilename"></param>
         /// <param name="readElements">If true, look for an associated .ele file.</param>
         /// <remarks>Will NOT read associated .area by default.</remarks>
-        public Polygon ReadPolyFile(string polyfilename, bool readElements)
-        {
-            return ReadPolyFile(polyfilename, readElements, false);
-        }
+        public Polygon ReadPolyFile(string polyfilename, bool readElements) => ReadPolyFile(polyfilename, readElements, false);
 
         /// <summary>
         /// Read the vertices and segments from a .poly file.
@@ -279,12 +267,11 @@ namespace TriangleNet.IO
 
             startIndex = 0;
 
-            string[] line;
             int invertices = 0, attributes = 0, nodemarkers = 0;
 
-            using (var reader = new StreamReader(polyfilename))
+            using (StreamReader reader = new(polyfilename))
             {
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file.");
                 }
@@ -446,7 +433,7 @@ namespace TriangleNet.IO
                 // Read area constraints (optional).
                 if (TryReadLine(reader, out line))
                 {
-                    int id, regions = int.Parse(line[0]);
+                    var regions = int.Parse(line[0]);
 
                     if (regions > 0)
                     {
@@ -462,7 +449,7 @@ namespace TriangleNet.IO
                                 throw new Exception("Invalid region attributes.");
                             }
 
-                            if (!int.TryParse(line[3], out id))
+                            if (!int.TryParse(line[3], out var id))
                             {
                                 id = i;
                             }
@@ -511,10 +498,7 @@ namespace TriangleNet.IO
         /// </summary>
         /// <param name="elefilename">The file name.</param>
         /// <returns>A list of triangles.</returns>
-        public List<ITriangle> ReadEleFile(string elefilename)
-        {
-            return ReadEleFile(elefilename, false);
-        }
+        public List<ITriangle> ReadEleFile(string elefilename) => ReadEleFile(elefilename, false);
 
         /// <summary>
         /// Read the elements from an .ele file.
@@ -528,13 +512,12 @@ namespace TriangleNet.IO
 
             List<ITriangle> triangles;
 
-            using (var reader = new StreamReader(elefilename))
+            using (StreamReader reader = new(elefilename))
             {
                 // Read number of elements and number of attributes.
-                string[] line;
                 bool validRegion = false;
 
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file (elements).");
                 }
@@ -580,8 +563,7 @@ namespace TriangleNet.IO
                     // Read triangle region
                     if (attributes > 0 && validRegion)
                     {
-                        int region = 0;
-                        validRegion = int.TryParse(line[4], out region);
+                        validRegion = int.TryParse(line[4], out var region);
                         tri.label = region;
                     }
 
@@ -612,11 +594,9 @@ namespace TriangleNet.IO
         {
             double[] data = null;
 
-            using (var reader = new StreamReader(areafilename))
+            using (StreamReader reader = new(areafilename))
             {
-                string[] line;
-
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file (area).");
                 }
@@ -663,14 +643,12 @@ namespace TriangleNet.IO
 
             startIndex = 0;
 
-            string[] line;
-
-            using (var reader = new StreamReader(edgeFile))
+            using (StreamReader reader = new(edgeFile))
             {
                 // Read the edges from a .edge file.
 
                 // Read number of segments and number of boundary markers.
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file (segments).");
                 }

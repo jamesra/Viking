@@ -10,7 +10,7 @@ namespace WebAnnotation
     /// <summary>
     /// This class draws LocationObj's
     /// </summary>
-    static class LocationObjRenderer
+    internal static class LocationObjRenderer
     {
         /// <summary>
         /// Draw the list of locations as they should appear for the given section number.
@@ -29,7 +29,9 @@ namespace WebAnnotation
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
             if (listToDraw.Count == 0)
+            {
                 return;
+            }
 
             int MaxCanvasViewDepth = listToDraw.Max(l => l.ParentDepth);
 
@@ -38,13 +40,13 @@ namespace WebAnnotation
             int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * MaxCanvasViewDepth);
             int DepthStencilValue = EndingDepthStencilValue;
 
-            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
+            IEnumerable<IGrouping<int, LocationCanvasView>> depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
 
             DeviceStateManager.SaveDeviceState(graphicsDevice);
 
             DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
 
-            foreach (var depthGroup in depthGroups)
+            foreach (IGrouping<int, LocationCanvasView> depthGroup in depthGroups)
             {
                 //We render twice.  The first time we only update the Z-buffer. 
                 //The second time we write colors, but only when the Z-buffer is equal to the objects Z-value.
@@ -66,7 +68,7 @@ namespace WebAnnotation
                 //Draw backgrounds again and only update colors where the depth and stencil values match
                 DrawBackgroundsAtDepth(depthGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
 
-                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
+                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
 
                 DepthStencilValue -= DepthStencilStepSize;
             }
@@ -83,35 +85,35 @@ namespace WebAnnotation
         {
             IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = depthGroup.GroupBy(l => l.GetType());
 
-            foreach (var typeGroup in typeGroups)
+            foreach (IGrouping<Type, LocationCanvasView> typeGroup in typeGroups)
             {
                 if (typeGroup.Key == typeof(LocationOpenCurveView))
                 {
-                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationOpenCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationClosedCurveView))
                 {
-                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationClosedCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationPolygonView))
                 {
-                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationPolygonView>().ToArray());
+                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationPolygonView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationLineView))
                 {
-                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationLineView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationCircleView))
                 {
-                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationCircleView>()]);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
                 {
-                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationCircleView>()], VisibleSectionNumber);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationLineView))
                 {
-                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationLineView>()], VisibleSectionNumber);
                 }
                 else
                 {
@@ -127,35 +129,35 @@ namespace WebAnnotation
         {
             IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = views.GroupBy(l => l.GetType());
 
-            foreach (var typeGroup in typeGroups)
+            foreach (IGrouping<Type, LocationCanvasView> typeGroup in typeGroups)
             {
                 if (typeGroup.Key == typeof(LocationOpenCurveView))
                 {
-                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationOpenCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationClosedCurveView))
                 {
-                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationClosedCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationPolygonView))
                 {
-                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationPolygonView>().ToArray());
+                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationPolygonView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationLineView))
                 {
-                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationLineView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationCircleView))
                 {
-                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationCircleView>()]);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
                 {
-                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationCircleView>()], VisibleSectionNumber);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationLineView))
                 {
-                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationLineView>()], VisibleSectionNumber);
                 }
                 else
                 {
@@ -177,30 +179,40 @@ namespace WebAnnotation
             string[] labelParts = label.Split();
 
             if (labelParts.Length <= 2)
+            {
                 return labelParts;
+            }
 
             foreach (string word in labelParts)
             {
                 if (topRow.Length + word.Length + 1 <= (label.Length / 2))
                 {
                     if (topRow.Length == 0)
+                    {
                         topRow += word;
+                    }
                     else
+                    {
                         topRow += " " + word;
+                    }
                 }
                 else
                 {
                     if (bottomRow.Length == 0)
+                    {
                         bottomRow += word;
+                    }
                     else
+                    {
                         bottomRow += " " + word;
+                    }
                 }
             }
 
             topRow = topRow.TrimEnd();
             bottomRow = bottomRow.TrimEnd();
 
-            return new String[] { topRow, bottomRow };
+            return [topRow, bottomRow];
         }
     }
 }

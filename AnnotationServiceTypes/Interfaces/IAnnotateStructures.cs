@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.ServiceModel;
 
@@ -16,7 +16,7 @@ namespace AnnotationService.Interfaces
         /// <returns>Return new Structure object with Database generated ID</returns>
         [OperationContract]
         CreateStructureRetval CreateStructure(Structure structure, Location location);
-         
+
         /// <summary>
         /// Return all structures from the Database
         /// </summary>
@@ -52,7 +52,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Structure[] GetStructuresForSectionInVolumeRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64 ModifiedAfterThisTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
-        
+
         /// <summary>
         /// Return a single structure from the Database
         /// </summary>
@@ -114,9 +114,9 @@ namespace AnnotationService.Interfaces
         /// <param name="structureID"></param>
         /// <returns></returns>
         [OperationContract]
-        Int64 NumberOfLocationsForStructure(Int64 structureID); 
+        Int64 NumberOfLocationsForStructure(Int64 structureID);
 
-        
+
 
         /// <summary>
         /// Updates or creates a new structure 
@@ -125,7 +125,7 @@ namespace AnnotationService.Interfaces
         /// <returns>IDs of updated</returns.
         [OperationContract]
         Int64[] UpdateStructures(Structure[] structure);
-         
+
 
         /// <summary>
         /// Updates or creates structure links
@@ -203,5 +203,5 @@ namespace AnnotationService.Interfaces
         [OperationContract]
         Structure[] GetStructureChangeLog(Int64? structure_id, DateTime? begin_time, DateTime? end_time);
     }
-     
+
 }

@@ -1,77 +1,63 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace Viking.VolumeModel
 {
     /// <summary>
     /// A tile pyramid is a list of all tiles visible within a bounding box at each of the requested resolutions
     /// </summary>
-    public class TilePyramid
+    public class TilePyramid(Geometry.Rectangle bounds)
     {
         /// <summary>
         /// The boundary of all tiles contained in the pyramid
         /// </summary>
-        public readonly Geometry.GridRectangle Bounds;
+        public readonly Geometry.Rectangle Bounds = bounds;
 
         /// <summary>
-        /// A list of downsample levels, each entry is a sorted list using the tile names as the key and the tile object as data
+        /// A list of downsample levels, each entry is a sorted list using the tile unique key and the tile object as data
         /// </summary>
-        private readonly SortedDictionary<int, SortedDictionary<string, Tile>> TilesAtLevel = new SortedDictionary<int, SortedDictionary<string, Tile>>();
+        private readonly SortedDictionary<int, SortedDictionary<TileUniqueKey, TileViewModel>> TilesAtLevel = new();
 
-        public TilePyramid(Geometry.GridRectangle bounds)
+        public void AddTile(int downsample, TileViewModel tileViewModel)
         {
-            Bounds = bounds;
-        }
-
-        public void AddTile(int downsample, Tile tile)
-        {
-            SortedDictionary<string, Tile> tiles;
-
-            if (TilesAtLevel.ContainsKey(downsample) == false)
+            var key = tileViewModel.UniqueKey;
+            if (TilesAtLevel.TryGetValue(downsample, out SortedDictionary<TileUniqueKey, TileViewModel> tiles))
             {
-                tiles = new SortedDictionary<string, Tile>
+                if (tiles.ContainsKey(key))
+                    return;
+                tiles.Add(key, tileViewModel);
+            }
+            else
+            {
+                tiles = new SortedDictionary<TileUniqueKey, TileViewModel>
                 {
-                    { tile.ToString(), tile }
+                    { key, tileViewModel }
                 };
                 TilesAtLevel.Add(downsample, tiles);
             }
-            else
-            {
-                tiles = TilesAtLevel[downsample];
-                Debug.Assert(false == tiles.ContainsKey(tile.ToString()));
-                tiles.Add(tile.ToString(), tile);
-            }
         }
 
-        public void AddTiles(int downsample, IEnumerable<Tile> AddedTileArray)
+        public void AddTiles(int downsample, IEnumerable<TileViewModel> AddedTileArray)
         {
-            SortedDictionary<string, Tile> tiles;
+            SortedDictionary<TileUniqueKey, TileViewModel> tiles;
 
-            if (TilesAtLevel.ContainsKey(downsample) == false)
+            if (TilesAtLevel.TryGetValue(downsample, out var value))
             {
-                tiles = new SortedDictionary<string, Tile>();
+                tiles = value;
+            }
+            else
+            {
+                tiles = new SortedDictionary<TileUniqueKey, TileViewModel>();
                 TilesAtLevel.Add(downsample, tiles);
             }
-            else
-            {
-                tiles = TilesAtLevel[downsample];
-            }
 
-            foreach (Tile t in AddedTileArray)
+            foreach (TileViewModel t in AddedTileArray)
             {
-                tiles.Add(t.ToString(), t);
+                if (!tiles.ContainsKey(t.UniqueKey))
+                    tiles.Add(t.UniqueKey, t);
             }
         }
 
-        public SortedDictionary<string, Tile> GetTilesForLevel(int downsample)
-        {
-            if (TilesAtLevel.ContainsKey(downsample) == false)
-            {
-                return new SortedDictionary<string, Tile>();
-            }
-
-            return TilesAtLevel[downsample];
-        }
+        public SortedDictionary<TileUniqueKey, TileViewModel> GetTilesForLevel(int downsample) => TilesAtLevel.TryGetValue(downsample, out var level) ? level : new SortedDictionary<TileUniqueKey, TileViewModel>();
 
         public int[] AvailableLevels
         {

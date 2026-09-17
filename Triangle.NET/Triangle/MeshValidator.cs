@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="MeshValidator.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -13,7 +13,7 @@ namespace TriangleNet
 
     public static class MeshValidator
     {
-        private static RobustPredicates predicates = RobustPredicates.Default;
+        private static readonly RobustPredicates predicates = RobustPredicates.Default;
 
         /// <summary>
         /// Test the mesh for topological consistency.
@@ -98,7 +98,7 @@ namespace TriangleNet
             mesh.MakeVertexMap();
             foreach (var v in mesh.vertices.Values)
             {
-                if (v.tri.tri == null && Log.Verbose)
+                if (v.tri.tri is null && Log.Verbose)
                 {
                     logger.Warning("Vertex (ID " + v.id + ") not connected to mesh (duplicate input vertex?)",
                                 "MeshValidator.IsConsistent()");
@@ -114,18 +114,12 @@ namespace TriangleNet
         /// <summary>
         /// Check if the mesh is (conforming) Delaunay.
         /// </summary>
-        public static bool IsDelaunay(Mesh mesh)
-        {
-            return IsDelaunay(mesh, false);
-        }
+        public static bool IsDelaunay(Mesh mesh) => IsDelaunay(mesh, false);
 
         /// <summary>
         /// Check if that the mesh is (constrained) Delaunay.
         /// </summary>
-        public static bool IsConstrainedDelaunay(Mesh mesh)
-        {
-            return IsDelaunay(mesh, true);
-        }
+        public static bool IsConstrainedDelaunay(Mesh mesh) => IsDelaunay(mesh, true);
 
         /// <summary>
         /// Ensure that the mesh is (constrained) Delaunay.

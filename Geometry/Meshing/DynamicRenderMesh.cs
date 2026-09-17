@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -30,7 +30,7 @@ namespace Geometry.Meshing
     public abstract class MeshBase3D<VERTEX> : MeshBase<VERTEX>, IMesh3D<VERTEX>
         where VERTEX : IVertex3D
     {
-        public GridBox BoundingBox { get; private set; }
+        public Box BoundingBox { get; private set; }
 
         protected MeshBase3D()
         {
@@ -50,18 +50,18 @@ namespace Geometry.Meshing
 
         public void Scale(double scalar)
         {
-            GridVector3 minCorner = BoundingBox.MinCorner;
-            GridVector3 scaledCorner = minCorner.Scale(scalar);
+            Vector3 minCorner = BoundingBox.MinCorner;
+            Vector3 scaledCorner = minCorner.Scale(scalar);
 
-            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar)); 
-            BoundingBox = new GridBox(scaledCorner, BoundingBox.Scale(scalar).dimensions);
+            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar));
+            BoundingBox = new Box(scaledCorner, BoundingBox.Scale(scalar).dimensions);
 
             ValidateBoundingBox();
         }
 
-        public void Translate(GridVector3 translate)
+        public void Translate(Vector3 translate)
         {
-            foreach (VERTEX v in _Verticies)
+            foreach (IVertex3D v in _Verticies)
             {
                 v.Position += translate;
             }
@@ -71,25 +71,12 @@ namespace Geometry.Meshing
             ValidateBoundingBox();
         }
 
-        protected override void UpdateBoundingBox(VERTEX v)
-        {
-            if (BoundingBox.minVals == null)
-                BoundingBox = new GridBox(v.Position, 0);
-            else
-            {
-                BoundingBox = BoundingBox.Union(v.Position, out _);
-            }
-        }
+        protected override void UpdateBoundingBox(VERTEX v) => BoundingBox = BoundingBox.MinVals is null ? new Box(v.Position, 0) : BoundingBox.Union(v.Position, out _);
 
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
-            GridVector3[] points = verts.Select(v => v.Position).ToArray();
-            if (BoundingBox.minVals == null)
-                BoundingBox = points.BoundingBox();
-            else
-            {
-                BoundingBox = BoundingBox.Union(points, out _);
-            }
+            Vector3[] points = [.. verts.Select(v => v.Position)];
+            BoundingBox = BoundingBox.MinVals is null ? points.BoundingBox() : BoundingBox.Union(points, out _);
         }
 
         /// <summary>
@@ -101,38 +88,35 @@ namespace Geometry.Meshing
         {
             long iVertMergeStart = this._Verticies.Count;
 
-            this.AddVerticies(other.Verticies);
+            this.AddVerticies(other.Vertices);
 
-            IFace[] duplicateFaces = other.Faces.Select(f => other.CreateOffsetFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart))).ToArray();
+            IFace[] duplicateFaces = [.. other.Faces.Select(f => other.CreateOffsetFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart)))];
             this.AddFaces(duplicateFaces);
 
             return iVertMergeStart;
         }
 
-        public GridLineSegment ToSegment(IEdgeKey e)
-        {
-            return new GridLineSegment(_Verticies[e.A].Position.XY(), _Verticies[e.B].Position.XY());
-        }
+        public LineSegment ToSegment(IEdgeKey e) => new LineSegment(_Verticies[e.A].Position.XY(), _Verticies[e.B].Position.XY());
 
-        public GridTriangle ToTriangle(IFace f)
+        public Triangle ToTriangle(IFace f)
         {
             if (false == f.IsTriangle())
                 throw new InvalidOperationException("Face is not a triangle: " + f.iVerts.ToString());
 
-            return new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
+            return new Triangle([.. this[f.iVerts].Select(v => v.Position.XY())]);
         }
 
-        public GridVector2 GetCentroid(IFace f)
+        public Vector2 GetCentroid(IFace f)
         {
-            GridVector2[] verts = this[f.iVerts].Select(v => v.Position.XY()).ToArray();
+            Vector2[] verts = [.. this[f.iVerts].Select(v => v.Position.XY())];
             if (f.IsQuad())
             {
-                GridPolygon poly = new GridPolygon(verts);
+                Polygon poly = new(verts);
                 return poly.Centroid;
             }
             else if (f.IsTriangle())
             {
-                GridTriangle tri = new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
+                Triangle tri = new([.. this[f.iVerts].Select(v => v.Position.XY())]);
                 return tri.Centroid;
             }
             else
@@ -147,10 +131,10 @@ namespace Geometry.Meshing
         /// <param name="FaceDuplicator">Constructor to use when replacing the original face with the new split face</param>
         public void ConvertAllFacesToTriangles()
         {
-            if (CreateOffsetFace == null)
+            if (CreateOffsetFace is null)
                 throw new InvalidOperationException("No duplication method in DynamicRenderMesh specified for faces");
 
-            IEnumerable<IFace> quadFaces = this.Faces.Where(f => !f.IsTriangle()).ToList();
+            IEnumerable<IFace> quadFaces = [.. this.Faces.Where(f => !f.IsTriangle())];
 
             foreach (IFace f in quadFaces)
             {
@@ -167,25 +151,25 @@ namespace Geometry.Meshing
         public static IFace[] SplitFace(Mesh3D mesh, IFace face)
         {
             if (face.IsTriangle())
-                return new IFace[] { face };
+                return [face];
 
             if (face.IsQuad())
             {
 
-                GridVector3[] positions = mesh[face.iVerts].Select(v => v.Position).ToArray();
-                if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
+                Vector3[] positions = [.. mesh[face.iVerts].Select(v => v.Position)];
+                if (Vector3.Distance(positions[0], positions[2]) < Vector3.Distance(positions[1], positions[3]))
                 {
-                    IFace ABC = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
-                    IFace ACD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    IFace ABC = mesh.CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[2]]);
+                    IFace ACD = mesh.CreateFace([face.iVerts[0], face.iVerts[2], face.iVerts[3]]);
 
-                    return new IFace[] { ABC, ACD };
+                    return [ABC, ACD];
                 }
                 else
                 {
-                    IFace ABD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
-                    IFace BCD = mesh.CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    IFace ABD = mesh.CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[3]]);
+                    IFace BCD = mesh.CreateFace([face.iVerts[1], face.iVerts[2], face.iVerts[3]]);
 
-                    return new IFace[] { ABD, BCD };
+                    return [ABD, BCD];
                 }
             }
 
@@ -207,14 +191,14 @@ namespace Geometry.Meshing
             {
                 RemoveFace(face);
 
-                GridVector3[] positions = this[face.iVerts].Select(v => v.Position).ToArray();
-                if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
+                Vector3[] positions = [.. this[face.iVerts].Select(v => v.Position)];
+                if (Vector3.Distance(positions[0], positions[2]) < Vector3.Distance(positions[1], positions[3]))
                 {
                     //Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
                     //Face ACD = new Face(face.iVerts[0], face.iVerts[2], face.iVerts[3]);
 
-                    IFace ABC = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
-                    IFace ACD = CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    IFace ABC = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[2]]);
+                    IFace ACD = CreateFace([face.iVerts[0], face.iVerts[2], face.iVerts[3]]);
                     AddFace(ABC);
                     AddFace(ACD);
                 }
@@ -223,8 +207,8 @@ namespace Geometry.Meshing
                     //Face ABD = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[3]);
                     //Face BCD = new Face(face.iVerts[1], face.iVerts[2], face.iVerts[3]);
 
-                    IFace ABD = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
-                    IFace BCD = CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    IFace ABD = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[3]]);
+                    IFace BCD = CreateFace([face.iVerts[1], face.iVerts[2], face.iVerts[3]]);
                     AddFace(ABD);
                     AddFace(BCD);
                 }
@@ -236,15 +220,14 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="f"></param>
         /// <returns></returns>
-        public GridVector3 Normal(IEnumerable<int> iVerts)
+        public Vector3 Normal(IEnumerable<int> iVerts)
         {
-            VERTEX[] verticies = this[iVerts].ToArray();
+            VERTEX[] verticies = [.. this[iVerts]];
             if (verticies.Length != 3)
                 throw new NotImplementedException("Normal calculation for non-triangular faces not possible.");
 
-            GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
-            normal.Normalize();
-            return normal;
+            Vector3 normal = Vector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
+            return Vector3.Normalize(normal);
         }
 
         /// <summary>
@@ -252,15 +235,14 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="f"></param>
         /// <returns></returns>
-        public GridVector3 Normal(IFace f)
+        public Vector3 Normal(IFace f)
         {
             if (f.IsTriangle() == false)
                 throw new NotImplementedException("Normal calculation for non-triangular faces not possible.");
 
-            VERTEX[] verticies = this[f.iVerts].ToArray();
-            GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
-            normal.Normalize();
-            return normal;
+            VERTEX[] verticies = [.. this[f.iVerts]];
+            Vector3 normal = Vector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
+            return Vector3.Normalize(normal);
         }
 
 
@@ -280,7 +262,7 @@ namespace Geometry.Meshing
             {
                 IVertex3D next = this[iVerts[i]];
 
-                totalDistance += GridVector3.Distance(origin.Position, next.Position);
+                totalDistance += Vector3.Distance(origin.Position, next.Position);
                 origin = next;
             }
 
@@ -290,30 +272,19 @@ namespace Geometry.Meshing
         /// <summary>
         /// This cache needs more careful analysis in the profiler
         /// </summary>
-        readonly Dictionary<IFace, GridVector3> face_normals_cache = new Dictionary<Meshing.IFace, Geometry.GridVector3>();
+        readonly Dictionary<IFace, Vector3> face_normals_cache = [];
 
         /// <summary>
-        /// Recalculate normals based on the faces touching each vertex
+        /// Recalculate normals based on the faces touching each vertex.
+        /// The cache is keyed by <see cref="IFace"/> equality, which ignores winding, so it is cleared first:
+        /// otherwise a reversed face keeps the pre-flip normal and lighting stays checkerboard.
         /// </summary>
         public void RecalculateNormals()
         {
-            //Calculate normals for all faces
-
-            if (face_normals_cache.Count == 0)
+            face_normals_cache.Clear();
+            foreach (IFace f in this.Faces)
             {
-                foreach (IFace f in this.Faces)
-                {
-                    GridVector3 normal = Normal(f);
-                    face_normals_cache.Add(f, normal);
-                }
-            }
-            else
-            {
-                foreach (IFace f in this.Faces.Where(face => face_normals_cache.ContainsKey(face) == false))
-                {
-                    GridVector3 normal = Normal(f);
-                    face_normals_cache.Add(f, normal);
-                }
+                face_normals_cache.Add(f, Normal(f));
             }
 
             /*
@@ -321,14 +292,14 @@ namespace Geometry.Meshing
             for(int i = 0; i < Faces.Count; i++)
             {
                 Face f = this.Faces.ElementAt(i);
-                GridVector3 normal = Normal(f);
+                Vector3 normal = Normal(f);
                 normals.Add(f, normal);
             }
             */
 
             for (int i = 0; i < _Verticies.Count; i++)
             {
-                SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
+                SortedSet<IFace> vertFaces = [];
                 IVertex3D v = this[i];
 
                 foreach (IEdgeKey ek in v.Edges)
@@ -336,65 +307,63 @@ namespace Geometry.Meshing
                     vertFaces.UnionWith(Edges[ek].Faces);
                 }
 
-                GridVector3 avgNormal = GridVector3.Zero;
+                Vector3 avgNormal = Vector3.Zero;
                 foreach (IFace f in vertFaces)
                 {
                     avgNormal += face_normals_cache[f];
                 }
 
-                avgNormal.Normalize();
+                avgNormal = Vector3.Normalize(avgNormal);
 
                 v.Normal = avgNormal;
             }
         }
 
         /// <summary>
-        /// Recalculate normals based on the faces touching each vertex
+        /// Recalculate normals for <paramref name="verticies"/> only.  A vertex normal can only change when a
+        /// face touching it was added or rewound, so callers merging a sub-mesh in pass the indicies the
+        /// incoming geometry mapped to and the cost stays proportional to the merged side rather than to the
+        /// whole composite.
+        ///
+        /// <see cref="Face.Equals(IFace)"/> ignores winding, so a reversed face would otherwise keep its
+        /// pre-flip cached normal.  The parameterless overload clears the entire cache for that reason; here
+        /// only the faces incident to the listed vertices are evicted, which covers every face that could have
+        /// changed while leaving the rest of the composite's cache intact.
         /// </summary>
         public void RecalculateNormals(IEnumerable<int> verticies)
         {
-            //Calculate normals for all faces
-            //Dictionary<IFace, GridVector3> normals = new Dictionary<Meshing.IFace, Geometry.GridVector3>(this.Faces.Count);
-            /*
-            foreach (IFace f in this.Faces)
-            {
-                GridVector3 normal = Normal(f);
-                normals.Add(f, normal);
-            }
-            */
-            /*
-             * Profiling showed this implementation to be much slower
-            for(int i = 0; i < Faces.Count; i++)
-            {
-                Face f = this.Faces.ElementAt(i);
-                GridVector3 normal = Normal(f);
-                normals.Add(f, normal);
-            }
-            */
+            HashSet<int> affected = verticies as HashSet<int> ?? [.. verticies];
 
-            for (int i = 0; i < _Verticies.Count; i++)
+            //Accumulate in the same order as the parameterless overload so both produce identical sums.
+            SortedSet<IFace> vertFaces = [];
+            HashSet<IFace> evicted = [];
+
+            foreach (int i in affected)
             {
-                //SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
 
-                IFace[] vertFaces = this[v.Edges].SelectMany(e => e.Faces).Distinct().ToArray();
-
-                GridVector3 avgNormal = GridVector3.Zero;
-                for (int iFace = 0; iFace < vertFaces.Length; iFace++)
+                vertFaces.Clear();
+                foreach (IEdgeKey ek in v.Edges)
                 {
-                    IFace f = vertFaces[iFace];
+                    vertFaces.UnionWith(Edges[ek].Faces);
+                }
 
-                    bool face_has_normal = face_normals_cache.TryGetValue(f, out GridVector3 normal);
-                    if (face_has_normal == false)
+                Vector3 avgNormal = Vector3.Zero;
+                foreach (IFace f in vertFaces)
+                {
+                    if (evicted.Add(f))
+                        face_normals_cache.Remove(f);
+
+                    if (face_normals_cache.TryGetValue(f, out Vector3 normal) == false)
                     {
                         normal = Normal(f);
-                        face_normals_cache.Add(f, normal); //Populate the cache
+                        face_normals_cache.Add(f, normal);
                     }
 
                     avgNormal += normal;
                 }
 
-                avgNormal.Normalize();
+                avgNormal = Vector3.Normalize(avgNormal);
 
                 v.Normal = avgNormal;
             }
@@ -411,12 +380,11 @@ namespace Geometry.Meshing
         public virtual int Append(MeshBase3D<VERTEX> other)
         {
             int startingAppendIndex = this._Verticies.Count;
-            this.AddVerticies(other.Verticies.Select(v =>
+            this.AddVerticies([.. other.Vertices.Select(v =>
             {
-                IVertex copy = v.ShallowCopy();
-                copy.Index += startingAppendIndex;
+                IVertex copy = v.ShallowCopy(v.Index + startingAppendIndex);
                 return (VERTEX)copy;
-            }).ToList());
+            })]);
 
             foreach (IEdge e in other.Edges.Values)
             {
@@ -443,7 +411,7 @@ namespace Geometry.Meshing
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        public bool Intersects(IFace face, GridVector3 A, GridVector3 B)
+        public bool Intersects(IFace face, Vector3 A, Vector3 B)
         {
             Debug.Assert(face.iVerts.Length == 3);
             if (face.iVerts.Length != 3)
@@ -451,18 +419,18 @@ namespace Geometry.Meshing
                 throw new ArgumentException("Intersects requires a triangular face");
             }
 
-            GridVector3 v0 = this[face.iVerts[0]].Position;
-            GridVector3 v1 = this[face.iVerts[1]].Position;
-            GridVector3 v2 = this[face.iVerts[2]].Position;
+            Vector3 v0 = this[face.iVerts[0]].Position;
+            Vector3 v1 = this[face.iVerts[1]].Position;
+            Vector3 v2 = this[face.iVerts[2]].Position;
 
-            GridVector3 direction = B - A;
-            GridVector3 origin = A;
+            Vector3 direction = B - A;
+            Vector3 origin = A;
 
-            GridVector3 v1_v0 = v1 - v0;
-            GridVector3 v2_v0 = v2 - v0;
+            Vector3 v1_v0 = v1 - v0;
+            Vector3 v2_v0 = v2 - v0;
 
-            GridVector3 d_e2_cross = GridVector3.Cross(direction, v2_v0);
-            double dotProduct = GridVector3.Dot(v1_v0, d_e2_cross);
+            Vector3 d_e2_cross = Vector3.Cross(direction, v2_v0);
+            double dotProduct = Vector3.Dot(v1_v0, d_e2_cross);
 
             //Check for invalid triangle
             if (dotProduct < Global.Epsilon && dotProduct > -Global.Epsilon)
@@ -470,22 +438,22 @@ namespace Geometry.Meshing
 
             double f = 1.0 / dotProduct;
 
-            GridVector3 A_v0 = A - v0;
+            Vector3 A_v0 = A - v0;
 
-            double u = f * GridVector3.Dot(A_v0, d_e2_cross);
+            double u = f * Vector3.Dot(A_v0, d_e2_cross);
 
             //Check for invalid triangle
             if (u < 0 || u > 1.0)
                 return false;
 
-            GridVector3 A_ = GridVector3.Cross(A_v0, v1_v0);
-            double v = f = GridVector3.Dot(direction, v1_v0);
+            Vector3 A_ = Vector3.Cross(A_v0, v1_v0);
+            double v = f = Vector3.Dot(direction, v1_v0);
 
             if (v < 0 || v + u > 1.0)
                 return false;
 
             //Find intersection point on the line
-            double t = f * GridVector3.Dot(v2_v0, d_e2_cross);
+            double t = f * Vector3.Dot(v2_v0, d_e2_cross);
 
             if (t >= 0 && t <= 1.0) //For Ray intersection don't check t <= 1.0;
             {

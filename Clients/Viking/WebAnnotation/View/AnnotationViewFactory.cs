@@ -1,14 +1,14 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
 using SqlGeometryUtils;
 using System;
 using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
-    static class AnnotationViewFactory
+    internal static class AnnotationViewFactory
     {
         /*
         /// <summary>
@@ -35,6 +35,7 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
+        /// <summary>On-section view matching TypeCode. POINT uses LocationCircleView.</summary>
         public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
             switch (obj.TypeCode)
@@ -45,11 +46,11 @@ namespace WebAnnotation.View
                     return new LocationOpenCurveView(obj, mapping);
                 case LocationType.CURVEPOLYGON:
                 case LocationType.POLYGON:
-                {
-                    var polyview = new LocationPolygonView(obj, mapping);
-                    Task.Run(() => polyview.Initialize());
-                    return polyview;
-                } 
+                    {
+                        LocationPolygonView polyview = new(obj, mapping);
+                        Task.Run(() => polyview.Initialize());
+                        return polyview;
+                    }
                 case LocationType.CLOSEDCURVE:
                     return new LocationClosedCurveView(obj, mapping);
                 case LocationType.POLYLINE:
@@ -67,6 +68,9 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
+        /// <summary>
+        /// Adjacent-section proxy. Polygons and closed curves become an inscribed-circle AdjacentLocationCircleView, not a full polygon.
+        /// </summary>
         public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
 
@@ -91,13 +95,15 @@ namespace WebAnnotation.View
                 case LocationType.CURVEPOLYGON:
                 case LocationType.CLOSEDCURVE:
                     {
-                        AdjacentLocationCircleView view = new AdjacentLocationCircleView(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);
+                        AdjacentLocationCircleView view = new(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);
                         return view;
                     }
                 case LocationType.POLYLINE:
                     {
-                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj, mapping);
-                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        AdjacentLocationLineView view = new(obj, mapping)
+                        {
+                            Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f)
+                        };
                         return view;
                     }
                 default:
@@ -118,14 +124,16 @@ namespace WebAnnotation.View
 
             //If the location types don't match then use the default circle view, which all annotations are compatible with
             if (sourceLocation.TypeCode != targetLocation.TypeCode)
+            {
                 return new StructureLinkCirclesView(key, mapper);
+            }
 
             switch (sourceLocation.TypeCode)
             {
                 case LocationType.CIRCLE:
                     return new StructureLinkCirclesView(key, mapper);
                 case LocationType.OPENCURVE:
-                    StructureLinkCurvesView view = new StructureLinkCurvesView(key, mapper);
+                    StructureLinkCurvesView view = new(key, mapper);
                     return view;
                 case LocationType.POLYLINE:
                     return new StructureLinkCurvesView(key, mapper);

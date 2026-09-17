@@ -38,7 +38,7 @@
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public IEnumerable<LocationLinkView> VisibleLocationLinks(int sectionNumber, GridRectangle bounds)
+        public IEnumerable<LocationLinkView> VisibleLocationLinks(int sectionNumber, Rectangle bounds)
         {
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(sectionNumber);
 
@@ -71,12 +71,12 @@
             return success; 
         }
 
-        public IUIObjectBasic GetNearestLink(int SectionNumber, GridVector2 WorldPosition, out double distance)
+        public IUIObjectBasic GetNearestLink(int SectionNumber, Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue; 
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(SectionNumber);
 
-            if (searchGrid == null)
+            if (searchGrid is null)
                 return null; 
 
 //            IEnumerable<LocationLink> intersectingObjs = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.LineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
@@ -117,7 +117,7 @@
                    loc.VolumePosition.Y < 0)
                     continue; 
 
-                foreach (long linkID in loc.CreateCopyAsync)
+                foreach (long linkID in loc.LinksCopy)
                 {
                     AddLocationLink(new LocationLinkKey(loc.ID, linkID));
                 }
@@ -134,13 +134,13 @@
             }
 
             //Trace.WriteLine("Add Link " + key.A.ToString() + " -> " + key.B.ToString());
-            LocationObj AObj = Store.Locations.GetObjectByID(key.A, false);
-            LocationObj BObj = Store.Locations.GetObjectByID(key.B, false);
+            Store.Locations.TryGetObjectByID(key.A, out LocationObj AObj);
+            Store.Locations.TryGetObjectByID(key.B, out LocationObj BObj);
 
-            if (AObj == null)
+            if (AObj is null)
                 return false;
 
-            if (BObj == null)
+            if (BObj is null)
                 return false;            
             
             if (!(AObj.VolumePositionHasBeenCalculated && BObj.VolumePositionHasBeenCalculated))
@@ -165,7 +165,7 @@
             int minSection = linkView.MinSection;
             int maxSection = linkView.MaxSection;
 
-            GridLineSegment lineSegment = new GridLineSegment(AObj.VolumePosition, BObj.VolumePosition);
+            LineSegment lineSegment = new LineSegment(AObj.VolumePosition, BObj.VolumePosition);
 
             bool success = false;
             //Add a grid line segment to each section the link intersects
@@ -257,7 +257,7 @@
         {
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(SectionNumber);
 
-            if (searchGrid == null)
+            if (searchGrid is null)
                 return false;
 
             LocationLinkView line;
@@ -314,7 +314,7 @@
         private void OnLinkedLocationPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             LocationObj loc = sender as LocationObj;
-            if (loc == null)
+            if (loc is null)
                 return;
 
             //Update if a position or everything has changed
@@ -322,7 +322,7 @@
             {
 //                Trace.WriteLine("Linked Location property changed: " + loc.ToString() + " property: " + e.PropertyName);
 
-                foreach (long linkID in loc.CreateCopyAsync)
+                foreach (long linkID in loc.LinksCopy)
                 {
                     LocationLinkKey key = new LocationLinkKey(loc.ID, linkID);
                     RemoveLocationLinks(key);
@@ -388,7 +388,7 @@
         public void OnLocationLinksChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             LocationObj source = sender as LocationObj;
-            if (source == null)
+            if (source is null)
                 return; 
 
             switch (e.Action)
@@ -410,7 +410,7 @@
 
         public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
-            if (sender == null)
+            if (sender is null)
                 throw new ArgumentNullException("sender"); 
 
             System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs = e as System.Collections.Specialized.NotifyCollectionChangedEventArgs;

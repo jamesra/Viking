@@ -1,9 +1,12 @@
-﻿using Annotation;
+using Annotation;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+#if NET48
+using System.Data.Entity;
+#endif
 
 namespace AnnotationService.Types
 {
@@ -14,22 +17,24 @@ namespace AnnotationService.Types
         AnnotationPoint _Position;
         private double _Radius;
 
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         [DataMember]
         public AnnotationPoint Position
         {
-            get { return _Position; }
-            set { _Position = value; }
+            get => _Position;
+            set => _Position = value;
         }
 
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         [DataMember]
         [Column("Radius")]
         public double Radius
         {
-            get { return _Radius; }
-            set { _Radius = value; }
+            get => _Radius;
+            set => _Radius = value;
         }
+
+
     }
 
 
@@ -52,24 +57,26 @@ namespace AnnotationService.Types
         private Int64 _LastModified;
         private string _Username;
         private string _Xml;
+#if NET48
         private System.Data.Entity.Spatial.DbGeometry _MosaicShape;
         private System.Data.Entity.Spatial.DbGeometry _VolumeShape;
+#endif
         private byte[] _MosaicShapeWKB;
         private byte[] _VolumeShapeWKB;
 
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         [DataMember]
         public Int64 ParentID
         {
-            get { return _ParentID; }
-            set { _ParentID = value; }
+            get => _ParentID;
+            set => _ParentID = value;
         }
 
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         [DataMember]
         public Int64 Section
         {
-            get { return _Section; }
+            get => _Section;
             set
             {
                 _Section = value;
@@ -77,29 +84,30 @@ namespace AnnotationService.Types
             }
         }
 
-        [ProtoMember(3)]
+        [ProtoMember(12)]
         [DataMember]
         public AnnotationPoint Position
         {
-            get { return _Position; }
-            set { _Position = value; }
+            get => _Position;
+            set => _Position = value;
         }
 
-        [ProtoMember(4)]
+        [ProtoMember(13)]
         [DataMember]
         public AnnotationPoint VolumePosition
         {
-            get { return _VolumePosition; }
-            set { _VolumePosition = value; }
+            get => _VolumePosition;
+            set => _VolumePosition = value;
         }
 
         //[ProtoMember(5)]
         //[DataMember]
+#if NET48
         public System.Data.Entity.Spatial.DbGeometry MosaicShape
         {
             get
             {
-                if (_MosaicShape == null && _MosaicShapeWKB != null)
+                if (_MosaicShape is null && _MosaicShapeWKB != null)
                 {
                     _MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_MosaicShapeWKB);
                 }
@@ -114,7 +122,7 @@ namespace AnnotationService.Types
         {
             get
             {
-                if (_VolumeShape == null && _VolumeShapeWKB != null)
+                if (_VolumeShape is null && _VolumeShapeWKB != null)
                 {
                     _VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_VolumeShapeWKB);
                 }
@@ -123,142 +131,137 @@ namespace AnnotationService.Types
             //set { _VolumeShape = value; }
 
         }
+#endif
 
-        [ProtoMember(7)]
+        [ProtoMember(14)]
         [DataMember]
         public byte[] MosaicShapeWKB
         {
-            get { return _MosaicShapeWKB; }
+            get => _MosaicShapeWKB;
             set
             {
                 _MosaicShapeWKB = value;
+#if NET48
                 _MosaicShape = null;
+#endif
             }
         }
 
-        [ProtoMember(8)]
+        [ProtoMember(15)]
         [DataMember]
         public byte[] VolumeShapeWKB
         {
-            get { return _VolumeShapeWKB; }
+            get => _VolumeShapeWKB;
             set
             {
                 _VolumeShapeWKB = value;
+#if NET48
                 _VolumeShape = null;
+#endif
             }
         }
 
-        [ProtoMember(9)]
+        [ProtoMember(16)]
         [DataMember]
         [Column("Closed")]
         public bool Closed
         {
-            get { return _Closed; }
-            set { _Closed = value; }
+            get => _Closed;
+            set => _Closed = value;
         }
 
-        [ProtoMember(10)]
+        [ProtoMember(17)]
         [DataMember]
         public string AttributesXml
         {
-            get { return _Xml; }
-            set { _Xml = value; }
+            get => _Xml;
+            set => _Xml = value;
         }
 
-        [ProtoMember(11)]
+        [ProtoMember(18)]
         [DataMember]
         [Column("Links")]
         public Int64[] Links
         {
             get
             {
-                if (_Links == null)
+                if (_Links is null)
                     return null;
                 if (_Links.Count == 0)
                     return null;
                 else
-                    return _Links.ToArray();
+                    return [.. _Links];
             }
-            set
-            {
-                if (value == null)
-                {
-                    _Links = null;
-                }
-                else
-                {
-                    _Links = new SortedSet<Int64>(value);
-                }
-            }
+            set => _Links = value is null ? null : [.. value];
         }
 
-        [ProtoMember(12)]
+        [ProtoMember(19)]
         [DataMember]
         [Column("Extensible")]
         public bool Terminal
         {
-            get { return _Terminal; }
-            set { _Terminal = value; }
+            get => _Terminal;
+            set => _Terminal = value;
         }
 
-        [ProtoMember(13)]
+        [ProtoMember(20)]
         [DataMember]
         [Column("OffEdge")]
         public bool OffEdge
         {
-            get { return _OffEdge; }
-            set { _OffEdge = value; }
+            get => _OffEdge;
+            set => _OffEdge = value;
         }
 
-        [ProtoMember(14)]
+        [ProtoMember(21)]
         [DataMember]
         [Column("Radius")]
         public double Radius
         {
-            get { return _Radius; }
-            set { _Radius = value; }
+            get => _Radius;
+            set => _Radius = value;
         }
 
-        [ProtoMember(15)]
+        [ProtoMember(22)]
         [DataMember]
         [Column("Width")]
         public double? Width
         {
-            get { return _Width; }
-            set { _Width = value; }
+            get => _Width;
+            set => _Width = value;
         }
 
-        [ProtoMember(16)]
+        [ProtoMember(23)]
         [DataMember]
         [Column("TypeCode")]
         public short TypeCode
         {
-            get { return _TypeCode; }
-            set { _TypeCode = value; }
+            get => _TypeCode;
+            set => _TypeCode = value;
         }
 
-        [ProtoMember(17)]
+        [ProtoMember(24)]
         [DataMember]
         [Column("LastModified")]
         public Int64 LastModified
         {
-            get { return _LastModified; }
-            set { _LastModified = value; }
+            get => _LastModified;
+            set => _LastModified = value;
         }
 
-        [ProtoMember(18)]
+        [ProtoMember(25)]
         [DataMember]
         [Column("Username")]
         public string Username
         {
-            get { return _Username; }
-            set { _Username = value; }
+            get => _Username;
+            set => _Username = value;
         }
 
         public void AddLink(Int64 linkedID)
         {
-            if (this._Links == null)
-                _Links = new SortedSet<Int64>();
+            if (this._Links is null)
+                _Links = [];
             if (linkedID == this.ID)
             {
                 throw new ArgumentException("Cannot link location to itself: ID = " + this.ID.ToString());
@@ -269,8 +272,8 @@ namespace AnnotationService.Types
 
         public void AddLinks(SortedSet<Int64> linkIDs)
         {
-            if (this._Links == null)
-                _Links = new SortedSet<Int64>();
+            if (this._Links is null)
+                _Links = [];
 
             if (linkIDs.Contains(this.ID))
             {
@@ -289,53 +292,47 @@ namespace AnnotationService.Types
 
         public static Int64 MeasureEncodedObjectSize(Location loc)
         {
-            DataContractSerializer ds = new DataContractSerializer(loc.GetType());
+            DataContractSerializer ds = new(loc.GetType());
 
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                ds.WriteObject(ms, loc);
-                // Spit out
+            using System.IO.MemoryStream ms = new();
+            ds.WriteObject(ms, loc);
+            // Spit out
 
-                string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-                System.Diagnostics.Trace.WriteLine("Output: " + payload);
-                System.Diagnostics.Trace.WriteLine("Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
+            string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            System.Diagnostics.Trace.WriteLine("Output: " + payload);
+            System.Diagnostics.Trace.WriteLine("Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
 
-                return ms.Length;
-            }
+            return ms.Length;
         }
 
         public static Int64 MeasureProtobufEncodedObjectSize(Location loc)
         {
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                Serializer.Serialize(ms, loc);
-                //ds.WriteObject(ms, loc);
-                // Spit out
+            using System.IO.MemoryStream ms = new();
+            Serializer.Serialize(ms, loc);
+            //ds.WriteObject(ms, loc);
+            // Spit out
 
-                string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-                System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
-                System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
+            string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
+            System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
 
-                return ms.Length;
-            }
+            return ms.Length;
         }
 
         public static Location VerifyProtobufEncodedObject(Location loc)
         {
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                Serializer.Serialize(ms, loc);
-                //ds.WriteObject(ms, loc);
-                // Spit out
+            using System.IO.MemoryStream ms = new();
+            Serializer.Serialize(ms, loc);
+            //ds.WriteObject(ms, loc);
+            // Spit out
 
-                string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-                System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
-                System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
+            string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
+            System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
 
-                Location output = Serializer.Deserialize<Location>(ms);
+            Location output = Serializer.Deserialize<Location>(ms);
 
-                return output;
-            }
+            return output;
 
 
         }
@@ -348,19 +345,13 @@ namespace AnnotationService.Types
     {
         private Int64 _ChangedColumnMask = 0;
 
-        [ProtoMember(1)]
+        [ProtoMember(30)]
         [DataMember]
         [Column("ChangedColumnMask")]
         public Int64 ChangedColumnMask
         {
-            get
-            {
-                return _ChangedColumnMask;
-            }
-            set
-            {
-                _ChangedColumnMask = value;
-            }
+            get => _ChangedColumnMask;
+            set => _ChangedColumnMask = value;
         }
     }
 }

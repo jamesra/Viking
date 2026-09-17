@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -17,7 +17,7 @@ namespace Viking.UI.BaseClasses
         [Category("Data")]
         public System.Type DisplayType
         {
-            get { return _DisplayType; }
+            get => _DisplayType;
             set
             {
                 if (_DisplayType != value)
@@ -29,47 +29,39 @@ namespace Viking.UI.BaseClasses
         }
 
         [Serializable()]
-        public struct ColumnVisibilitySetting
+        public struct ColumnVisibilitySetting(bool isVisibile, int width)
         {
-            public ColumnVisibilitySetting(bool isVisibile, int width)
-            {
-                this.isVisibile = isVisibile;
-                this.width = width;
-            }
-            public bool isVisibile;
-            public int width;
+            public bool isVisibile = isVisibile;
+            public int width = width;
         }
 
         [Browsable(true)]
         public bool ShowPropertiesOnDoubleClick = true;
 
-        public System.EventHandler OnContextMenuNewClick = null;
-        public System.EventHandler OnContextMenuRemoveClick = null;
+        public System.EventHandler? OnContextMenuNewClick = null;
+        public System.EventHandler? OnContextMenuRemoveClick = null;
 
-        private PropertyInfo[] ColumnProperties = new PropertyInfo[0];
+        private PropertyInfo[] ColumnProperties = [];
 
-        private System.EventHandler OnObjectSaveHandler = null;
-        private System.EventHandler OnObjectDeleteHandler = null;
-        private System.ComponentModel.PropertyChangedEventHandler OnObjectValueChangedHandler = null;
-        private EventHandler OnContextColumnMenuHandler = null;
+        private readonly System.EventHandler? OnObjectSaveHandler = null;
+        private readonly System.EventHandler? OnObjectDeleteHandler = null;
+        private readonly System.ComponentModel.PropertyChangedEventHandler? OnObjectValueChangedHandler = null;
+        private readonly EventHandler? OnContextColumnMenuHandler = null;
 
-        private System.Type _DisplayType = null;
+        private System.Type? _DisplayType = null;
 
-        /// <summary>
-        /// holds the menu items from when the context menu is assigned to
-        /// </summary>
-        private MenuItem[] menuItemsFromHost = new MenuItem[0];
+
         /// <summary>
         /// saves the args from the last mouse up event
         /// </summary>
-        private MouseEventArgs lastMouseUpEventArgs = null;
+        private MouseEventArgs? lastMouseUpEventArgs = null;
 
         /// <summary>
         /// stores the columnsetting structs for the columns
         /// </summary>
-        private Dictionary<string, ColumnVisibilitySetting> _ColumnSettingsHashtable = null;
+        private Dictionary<string, ColumnVisibilitySetting>? _ColumnSettingsHashtable = null;
 
-        private int _ColumnDefaultWidth = 75;
+        private readonly int _ColumnDefaultWidth = 75;
 
         public ObjectListView()
         {
@@ -98,9 +90,9 @@ namespace Viking.UI.BaseClasses
         /// <param name="ObjType"></param>
 		public void SetDisplayType(System.Type ObjType)
         {
-            List<string> ColumnList = new List<String>();
+            List<string> ColumnList = [];
             PropertyInfo[] Properties = ObjType.GetProperties();
-            List<PropertyInfo> listPropInfoForColumn = new List<PropertyInfo>();
+            List<PropertyInfo> listPropInfoForColumn = [];
             foreach (PropertyInfo Property in Properties)
             {
                 ColumnAttribute[] Attributes = Property.GetCustomAttributes(typeof(ColumnAttribute), true) as ColumnAttribute[];
@@ -133,7 +125,7 @@ namespace Viking.UI.BaseClasses
 
             this.EndUpdate();
 
-            this.ColumnProperties = listPropInfoForColumn.ToArray();
+            this.ColumnProperties = [.. listPropInfoForColumn];
             /*
 			this.ColumnProperties = new PropertyInfo[ColumnList.Count]; 
 			for(int iColumn = 0; iColumn < ColumnList.Count; iColumn++)
@@ -147,20 +139,14 @@ namespace Viking.UI.BaseClasses
             LoadColumnVisibilitySettings();
         }
 
-        protected System.Type GetTypeForArray(object[] Objects)
-        {
-            if (Objects == null)
-                return null;
-
-            return Objects.GetType().GetElementType();
-        }
+        protected System.Type GetTypeForArray(object[] Objects) => Objects?.GetType().GetElementType();
 
         [Browsable(false)]
         public Viking.Common.IUIObject[] SelectedObjects
         {
             get
             {
-                IUIObject[] Objs = new IUIObject[this.SelectedItems.Count];
+                IUIObject?[] Objs = new IUIObject?[this.SelectedItems.Count];
 
                 for (int i = 0; i < SelectedItems.Count; i++)
                 {
@@ -185,22 +171,14 @@ namespace Viking.UI.BaseClasses
 
                 return Objs;
             }
-            set
-            {
-                DisplayObjects(value);
-            }
+            set => DisplayObjects(value);
         }
 
         public void SelectObject(object Object)
         {
             foreach (ListViewItem Item in this.Items)
             {
-                if (Item.Tag.Equals(Object) == true)
-                {
-                    Item.Selected = true;
-                }
-                else
-                    Item.Selected = false;
+                Item.Selected = Item.Tag.Equals(Object) == true;
             }
         }
 
@@ -238,7 +216,7 @@ namespace Viking.UI.BaseClasses
         public ListViewItem AddObject(object Object)
         {
             Debug.Assert(Object != null);
-            if (Object == null)
+            if (Object is null)
                 return null;
 
             //If we haven't initialized the columns then do so.
@@ -252,8 +230,10 @@ namespace Viking.UI.BaseClasses
 
             Debug.Assert(this.Columns.Count > 0);
 
-            SubItems[0] = new ListViewItem.ListViewSubItem();
-            SubItems[0].Text = Object.ToString();
+            SubItems[0] = new ListViewItem.ListViewSubItem
+            {
+                Text = Object.ToString()
+            };
 
             for (int iColumn = 0; iColumn < this.ColumnProperties.Length; iColumn++)
             {
@@ -261,8 +241,10 @@ namespace Viking.UI.BaseClasses
                 //TODO: Does this work if Object is cast to an interface?
                 object Value = Property.GetValue(Object, null);
 
-                SubItems[iColumn + 1] = new ListViewItem.ListViewSubItem();
-                SubItems[iColumn + 1].Text = "";
+                SubItems[iColumn + 1] = new ListViewItem.ListViewSubItem
+                {
+                    Text = ""
+                };
 
                 if (Value != null)
                 {
@@ -277,8 +259,10 @@ namespace Viking.UI.BaseClasses
 
             //Removed until I add images again
             //			ListViewItem Item = new ListViewItem(SubItems, Object.TreeImageIndex);
-            ListViewItem Item = new ListViewItem(SubItems, null);
-            Item.Tag = Object;
+            ListViewItem Item = new(SubItems, null)
+            {
+                Tag = Object
+            };
             this.Items.Add(Item);
 
             AddObjectEvents(Object);
@@ -289,11 +273,11 @@ namespace Viking.UI.BaseClasses
         public void RemoveObject(Viking.Common.IUIObject Object)
         {
             Debug.Assert(Object != null);
-            if (Object == null)
+            if (Object is null)
                 return;
 
             ListViewItem Item = ItemForObject(Object);
-            if (Item == null)
+            if (Item is null)
             {
                 Debug.Write("Calling DataObjectListView::RemoveObject for object not in list");
                 return;
@@ -349,136 +333,209 @@ namespace Viking.UI.BaseClasses
             // save these args for the column click and context menu
             lastMouseUpEventArgs = e;
 
+            // Show context menu on right-click
             if (e.Button == MouseButtons.Right)
             {
-                this.ContextMenu.Show(this, new Point(e.X, e.Y));
+                var contextMenu = BuildContextMenuStrip();
+                if (contextMenu != null && contextMenu.Items.Count > 0)
+                {
+                    contextMenu.Show(this, new Point(e.X, e.Y));
+                }
             }
 
             base.OnMouseUp(e);
         }
 
 
-        private System.Windows.Forms.ContextMenu _ContextMenu = null;
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        // Modern ContextMenuStrip implementation for .NET 9.0 compatibility
+        private readonly System.Windows.Forms.ContextMenuStrip? _ContextMenuStrip = null;
+        private System.Windows.Forms.ToolStripItem[] menuItemsFromHost = [];
+
+        /// <summary>
+        /// Property to set context menu items from host controls
+        /// </summary>
+        public System.Windows.Forms.ContextMenuStrip HostContextMenuStrip
         {
-            get
-            {
-                if (_ContextMenu == null)
-                    _ContextMenu = new ContextMenu();
-
-                // clear our menu items so they don't get added twice
-                _ContextMenu.MenuItems.Clear();
-
-                // find the item we clicked on
-                ListViewItem listItem = null;
-                if (lastMouseUpEventArgs != null)
-                    listItem = GetItemAt(lastMouseUpEventArgs.X, lastMouseUpEventArgs.Y);
-
-                // if there was an item for that location
-                if (listItem != null)
-                {
-                    IUIObject ContextObj = ObjectForItem(listItem);
-                    if (ContextObj != null)
-                    {
-                        using (ContextMenu ObjectContextMenu = ContextObj.ContextMenu)
-                        {
-                            if (ObjectContextMenu != null)
-                                _ContextMenu.MergeMenu(ObjectContextMenu);
-                        }
-                    }
-                }
-
-                // if someone is going to handle the click for New add that
-                if (OnContextMenuNewClick != null)
-                    _ContextMenu.MenuItems.Add("New", this.OnContextMenuNewClick);
-
-                // if someone is handling remove add the menu item
-                if (OnContextMenuRemoveClick != null)
-                    _ContextMenu.MenuItems.Add("Remove", this.OnContextMenuRemoveClick);
-
-                // add the original menu items back to the menu
-                foreach (MenuItem item in menuItemsFromHost)
-                    _ContextMenu.MenuItems.Add(item);
-
-                // add our menu to show/hide columns
-                using (ContextMenu ColumnMenu = this.ColumnMenu)
-                {
-                    if (null != ColumnMenu)
-                    {
-                        if (ColumnMenu.MenuItems.Count > 1)
-                        {
-                            MenuItem ColumnMenuItem = new MenuItem("Columns");
-                            ColumnMenuItem.MergeMenu(ColumnMenu);
-                            _ContextMenu.MenuItems.Add(ColumnMenuItem);
-                        }
-                    }
-                }
-
-                return _ContextMenu;
-            }
+            get => _ContextMenuStrip;
             set
             {
-                if (value == null)
+                if (value is null)
                 {
-                    _ContextMenu = new ContextMenu();
+                    menuItemsFromHost = [];
                 }
                 else
                 {
-                    menuItemsFromHost = new MenuItem[value.MenuItems.Count];
-                    value.MenuItems.CopyTo(menuItemsFromHost, 0);
-                    _ContextMenu = value;
+                    // Copy menu items from host
+                    menuItemsFromHost = new System.Windows.Forms.ToolStripItem[value.Items.Count];
+                    for (int i = 0; i < value.Items.Count; i++)
+                    {
+                        menuItemsFromHost[i] = value.Items[i];
+                    }
                 }
             }
         }
 
-        private ContextMenu ColumnMenu
+        /// <summary>
+        /// Builds the context menu strip dynamically based on current state
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip()
         {
-            get
+            ContextMenuStrip contextMenu = new();
+
+            // find the item we clicked on
+            ListViewItem listItem = null;
+            if (lastMouseUpEventArgs != null)
+                listItem = GetItemAt(lastMouseUpEventArgs.X, lastMouseUpEventArgs.Y);
+
+            // if there was an item for that location, add object-specific menu items
+            if (listItem != null)
             {
-                if (_ColumnSettingsHashtable == null)
-                    return null;
-
-                // a list to sort our columns
-                List<string> list = new List<string>(this.Columns.Count);
-
-                // update the visibility settings and add the columns to the list
-                foreach (ColumnHeader column in this.Columns)
+                var contextObj = ContextMenuForItem(listItem);
+                if (contextObj != null)
                 {
-                    list.Add(column.Text);
-
-                    // setting for this column
-                    ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[column.Text];
-
-                    // updating the settings if they changed the visibility of a column by means other
-                    // then the context menu
-                    setting.isVisibile = (column.Width > 0);
-                    if (column.Width > 0)
-                        setting.width = column.Width;
-
-                    _ColumnSettingsHashtable[column.Text] = setting;
+                    ContextMenuStrip objectContextMenu = contextObj.ContextMenu;
+                    if (objectContextMenu != null)
+                    {
+                        // Copy items from the object's context menu
+                        foreach (System.Windows.Forms.ToolStripItem item in objectContextMenu.Items)
+                        {
+                            if (item is System.Windows.Forms.ToolStripMenuItem menuItem)
+                            {
+                                contextMenu.Items.Add(CloneToolStripMenuItem(menuItem));
+                            }
+                            else if (item is System.Windows.Forms.ToolStripSeparator)
+                            {
+                                contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+                            }
+                        }
+                    }
                 }
-
-                list.Sort();
-
-                ContextMenu menu = new ContextMenu();
-
-                // create the menu items
-                foreach (object obj in list)
-                {
-                    string str = obj as string;
-                    MenuItem newMenuItem = new MenuItem(str, OnContextColumnMenuHandler);
-
-                    // get the setting so we know if the column is visibile
-                    ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[str];
-
-                    // checked?
-                    newMenuItem.Checked = setting.isVisibile;
-
-                    menu.MenuItems.Add(newMenuItem);
-                }
-
-                return menu;
             }
+
+            // if someone is going to handle the click for New add that
+            if (OnContextMenuNewClick != null)
+            {
+                ToolStripMenuItem newItem = new("New");
+                newItem.Click += OnContextMenuNewClick;
+                contextMenu.Items.Add(newItem);
+            }
+
+            // if someone is handling remove add the menu item
+            if (OnContextMenuRemoveClick != null)
+            {
+                ToolStripMenuItem removeItem = new("Remove");
+                removeItem.Click += OnContextMenuRemoveClick;
+                contextMenu.Items.Add(removeItem);
+            }
+
+            // add the original menu items back to the menu
+            foreach (System.Windows.Forms.ToolStripItem item in menuItemsFromHost)
+            {
+                contextMenu.Items.Add(item);
+            }
+
+            // add our menu to show/hide columns
+            var columnMenuStrip = BuildColumnMenuStrip();
+            if (columnMenuStrip != null && columnMenuStrip.Items.Count > 1)
+            {
+                ToolStripMenuItem columnMenuItem = new("Columns");
+                // Copy column menu items to the submenu
+                foreach (System.Windows.Forms.ToolStripItem item in columnMenuStrip.Items)
+                {
+                    if (item is System.Windows.Forms.ToolStripMenuItem menuItem)
+                    {
+                        columnMenuItem.DropDownItems.Add(CloneToolStripMenuItem(menuItem));
+                    }
+                }
+                contextMenu.Items.Add(columnMenuItem);
+            }
+
+            return contextMenu;
+        }
+
+
+        /// <summary>
+        /// Extension method to clone a ToolStripMenuItem
+        /// </summary>
+        private System.Windows.Forms.ToolStripMenuItem CloneToolStripMenuItem(System.Windows.Forms.ToolStripMenuItem original)
+        {
+            ToolStripMenuItem clone = new(original.Text)
+            {
+                Enabled = original.Enabled,
+                Checked = original.Checked,
+                Image = original.Image,
+                Tag = original.Tag
+            };
+
+            // Clone event handlers by creating a lambda that calls the original's PerformClick
+            clone.Click += (sender, e) => original.PerformClick();
+
+            // Clone sub-menu items recursively
+            foreach (System.Windows.Forms.ToolStripItem subItem in original.DropDownItems)
+            {
+                if (subItem is System.Windows.Forms.ToolStripMenuItem subMenuItem)
+                {
+                    clone.DropDownItems.Add(CloneToolStripMenuItem(subMenuItem));
+                }
+                else
+                {
+                    // For non-menu items like separators, create new instances
+                    clone.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+                }
+            }
+
+            return clone;
+        }
+
+        /// <summary>
+        /// Builds the column visibility context menu strip
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip BuildColumnMenuStrip()
+        {
+            if (_ColumnSettingsHashtable is null)
+                return null;
+
+            // a list to sort our columns
+            List<string> list = new(this.Columns.Count);
+
+            // update the visibility settings and add the columns to the list
+            foreach (ColumnHeader column in this.Columns)
+            {
+                list.Add(column.Text);
+
+                // setting for this column
+                ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[column.Text];
+
+                // updating the settings if they changed the visibility of a column by means other
+                // then the context menu
+                setting.isVisibile = (column.Width > 0);
+                if (column.Width > 0)
+                    setting.width = column.Width;
+
+                _ColumnSettingsHashtable[column.Text] = setting;
+            }
+
+            list.Sort();
+
+            ContextMenuStrip menuStrip = new();
+
+            // create the menu items
+            foreach (object obj in list)
+            {
+                string str = obj as string;
+                ToolStripMenuItem newMenuItem = new(str);
+                newMenuItem.Click += OnContextColumnMenuHandler;
+
+                // get the setting so we know if the column is visibile
+                ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[str];
+
+                // checked?
+                newMenuItem.Checked = setting.isVisibile;
+
+                menuStrip.Items.Add(newMenuItem);
+            }
+
+            return menuStrip;
         }
 
         protected override void OnDoubleClick(System.EventArgs e)
@@ -495,22 +552,17 @@ namespace Viking.UI.BaseClasses
             base.OnDoubleClick(e);
         }
 
-        private Viking.Common.IUIObject ObjectForItem(ListViewItem Item)
-        {
-            if (Item == null)
-                return null;
+        private Viking.Common.IUIObject ObjectForItem(ListViewItem Item) => Item?.Tag as IUIObject;
 
-            return Item.Tag as IUIObject;
-        }
+        private Viking.Common.IContextMenu ContextMenuForItem(ListViewItem Item) => Item?.Tag as IContextMenu;
 
         protected override void OnColumnClick(System.Windows.Forms.ColumnClickEventArgs e)
         {
-            ListViewColumnSorter Sorter = this.ListViewItemSorter as ListViewColumnSorter;
             Type ColumnType = null;
             if (e.Column > 0)
                 ColumnType = this.ColumnProperties[e.Column - 1]?.PropertyType;
 
-            if (Sorter == null)
+            if (this.ListViewItemSorter is not ListViewColumnSorter Sorter)
             {
 
                 Sorter = new ListViewColumnSorter(e.Column, ColumnType);
@@ -535,7 +587,7 @@ namespace Viking.UI.BaseClasses
             IUIObject Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
-            if (this.ItemForObject(Obj) == null)
+            if (this.ItemForObject(Obj) is null)
                 return;
 
             this.BeginUpdate();
@@ -553,7 +605,7 @@ namespace Viking.UI.BaseClasses
             IUIObject Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
-            if (this.ItemForObject(Obj) == null)
+            if (this.ItemForObject(Obj) is null)
                 return;
 
             this.BeginUpdate();
@@ -586,7 +638,7 @@ namespace Viking.UI.BaseClasses
 
         protected void OnContextMenuColumnVisibility(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem;
+            System.Windows.Forms.MenuItem item = sender as System.Windows.Forms.MenuItem;
 
             Debug.Assert(item != null);
             Debug.Assert(_ColumnSettingsHashtable.ContainsKey(item.Text));
@@ -606,10 +658,7 @@ namespace Viking.UI.BaseClasses
                 // is this our column?
                 if (column.Text == item.Text)
                 {
-                    if (visSetting.isVisibile)
-                        column.Width = visSetting.width;
-                    else
-                        column.Width = 0;
+                    column.Width = visSetting.isVisibile ? visSetting.width : 0;
 
                     // end the loop
                     break;
@@ -625,7 +674,7 @@ namespace Viking.UI.BaseClasses
                 //				string key = this.ControlKey;
 
                 // load the settings from the user preferences
-                _ColumnSettingsHashtable = new Dictionary<string, ColumnVisibilitySetting>();
+                _ColumnSettingsHashtable = [];
 
                 /*
 				if(Global.CurrentUser != null)
@@ -641,10 +690,7 @@ namespace Viking.UI.BaseClasses
                     if (_ColumnSettingsHashtable.ContainsKey(header.Text))
                     {
                         ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[header.Text];
-                        if (setting.isVisibile)
-                            header.Width = setting.width;
-                        else
-                            header.Width = 0;
+                        header.Width = setting.isVisibile ? setting.width : 0;
                     }
                     else
                         _ColumnSettingsHashtable.Add(header.Text, new ColumnVisibilitySetting(true, _ColumnDefaultWidth));
@@ -666,10 +712,7 @@ namespace Viking.UI.BaseClasses
                     (ColumnVisibilitySetting)_ColumnSettingsHashtable[column.Text];
 
                 visSetting.isVisibile = (column.Width != 0);
-                if (column.Width > 0)
-                    visSetting.width = column.Width;
-                else
-                    visSetting.width = _ColumnDefaultWidth;
+                visSetting.width = column.Width > 0 ? column.Width : _ColumnDefaultWidth;
 
                 _ColumnSettingsHashtable[column.Text] = visSetting;
             }
@@ -686,7 +729,7 @@ namespace Viking.UI.BaseClasses
             get
             {
                 // building a key by appending all the control names together
-                System.Text.StringBuilder key = new System.Text.StringBuilder();
+                System.Text.StringBuilder key = new();
 
                 // columns depend on display type
                 if (_DisplayType != null)
@@ -710,17 +753,10 @@ namespace Viking.UI.BaseClasses
         /// </summary>
         /// <param name="Obj"></param>
         /// <returns></returns>
-        public bool ContainsObj(object Obj)
-        {
-            return ItemForObject(Obj) != null;
-        }
+        public bool ContainsObj(object Obj) => ItemForObject(Obj) != null;
 
 
-        public void ExportToExcel()
-        {
-            throw new NotImplementedException("Coming soon");
-            //PlantMap.Utils.OfficeDocExporter.ToExcel(this);
-        }
+        public void ExportToExcel() => throw new NotImplementedException("Coming soon");//PlantMap.Utils.OfficeDocExporter.ToExcel(this);
 
 
         #endregion
@@ -734,18 +770,18 @@ namespace Viking.UI.BaseClasses
         }
 
 
-        private CancelEventHandler OnParentFormClosing = null;
-        private Form _ParentForm = null;
+        private readonly CancelEventHandler? OnParentFormClosing = null;
+        private readonly Form? _ParentForm = null;
 
         protected override void OnParentBindingContextChanged(EventArgs e)
         {
             // do we have a parent?
-            if (this.Parent == null)
+            if (this.Parent is null)
                 return;
 
             // walk up parents looking for a form
             Control currentControl = this;
-            while (currentControl != null && (currentControl as Form) == null)
+            while (currentControl != null && (currentControl as Form) is null)
                 currentControl = currentControl.Parent;
 
             // did we find a form?

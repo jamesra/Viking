@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
@@ -357,41 +359,45 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="ID"></param>
         /// <returns></returns>
-        public OBJECT GetObjectByID(KEY ID)
+        public OBJECT this[KEY key]
         {
-            return GetObjectByID(ID, true);
-        }
-
-        public OBJECT this[KEY index]
-        {
-            get { return IDToObject[index]; }
-        }
-
-        /// <summary>
-        /// Gets the requested location, first checking locally, then asking the server
-        /// </summary>
-        /// <param name="ID"></param>
-        /// <param name="AskServer">If false only the local cache is checked</param>
-        /// <param name="ForceRefreshFromServer">If true we ignore local data and refresh from the server</param>
-        /// <returns></returns>
-        public OBJECT GetObjectByID(KEY ID, bool AskServer, bool ForceRefreshFromServer = false)
-        {
-            OBJECT newObj = null;
-
-            if (ForceRefreshFromServer)
-                AskServer = true;
-
-            if (!ForceRefreshFromServer)
+            get
             {
-                bool Success = IDToObject.TryGetValue(ID, out newObj);
-                if (Success)
-                    return newObj;
+                if (IDToObject.TryGetValue(key, out OBJECT obj))
+                    return obj;
+                throw new KeyNotFoundException(
+                    $"{typeof(OBJECT).Name} with key {key} is not in the local cache. Use TryGetObjectByID when a miss is possible, or GetObjectByID to fetch from the server.");
+            }
+        }
+
+        public bool TryGetObjectByID(KEY key, out OBJECT obj) => IDToObject.TryGetValue(key, out obj);
+
+        public bool TryGetObjectsByIDs(ICollection<KEY> keys, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing)
+        {
+            if (keys == null || keys.Count == 0)
+            {
+                found = Array.Empty<OBJECT>();
+                missing = Array.Empty<KEY>();
+                return true;
             }
 
-            if (!AskServer)
-                return null;
+            List<OBJECT> localObjs = GetLocalObjects(keys, out List<KEY> notFound);
+            found = localObjs;
+            missing = notFound;
+            return notFound.Count == 0;
+        }
 
-            //If not check if the server knows what we're asking for
+        public Task<OBJECT> GetObjectByID(KEY ID, CancellationToken token = default)
+        {
+            if (IDToObject.TryGetValue(ID, out OBJECT cached))
+                return Task.FromResult(cached);
+
+            return Task.FromResult(FetchObjectByID(ID));
+        }
+
+        private OBJECT FetchObjectByID(KEY ID)
+        {
+            OBJECT newObj = null;
             WCFOBJECT data = null;
             var proxy = CreateProxy();
             try
@@ -420,51 +426,39 @@ namespace WebAnnotationModel
             return newObj;
         }
 
-        /// <summary>
-        /// Get objects with the specified ID.  Change notifications are sent for objects fetched from server.
-        /// </summary>
-        /// <param name="IDs"></param>
-        /// <param name="AskServer"></param>
-        /// <returns></returns>
-        public List<OBJECT> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer)
+        public Task<GetByIDResult<KEY, OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token = default)
         {
-            ChangeInventory<OBJECT> inventory = InternalGetObjectsByIDs(IDs, AskServer);
+            if (IDs == null || IDs.Count == 0)
+                return Task.FromResult(GetByIDResult<KEY, OBJECT>.Empty);
 
+            TryGetObjectsByIDs(IDs, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing);
+            if (missing.Count == 0)
+                return Task.FromResult(new GetByIDResult<KEY, OBJECT>(found, missing));
+
+            ChangeInventory<OBJECT> inventory = InternalGetObjectsByIDs(missing as ICollection<KEY> ?? missing.ToList());
             CallOnCollectionChanged(inventory);
 
-            return inventory.ObjectsInStore;
+            TryGetObjectsByIDs(IDs, out found, out missing);
+            return Task.FromResult(new GetByIDResult<KEY, OBJECT>(found, missing));
         }
 
-
-        /// <summary>
-        /// Does not fire collection change events
-        /// </summary>
-        /// <param name="IDs"></param>
-        /// <param name="AskServer"></param>
-        /// <returns></returns>
-        protected ChangeInventory<OBJECT> InternalGetObjectsByIDs(ICollection<KEY> IDs, bool AskServer)
+        protected ChangeInventory<OBJECT> InternalGetObjectsByIDs(ICollection<KEY> IDs)
         {
-            //Objects not cached locally
             List<KEY> listRemoteObjs;
-
-            //Objects we've already fetched
             List<OBJECT> listLocalObjs = GetLocalObjects(IDs, out listRemoteObjs);
 
-            if (!AskServer || listRemoteObjs.Count == 0)
+            if (listRemoteObjs.Count == 0)
             {
                 ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>(IDs.Count);
                 inventory.UnchangedObjects.AddRange(listLocalObjs);
                 return inventory;
             }
 
-            //If not check if the server knows what we're asking for
             WCFOBJECT[] listServerObjs = null;
             IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
-                //Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
-
                 listServerObjs = ProxyGetByIDs((INTERFACE)proxy, listRemoteObjs.ToArray());
             }
             catch (Exception e)
@@ -483,9 +477,7 @@ namespace WebAnnotationModel
             }
 
             ChangeInventory<OBJECT> server_inventory = ParseQuery(listServerObjs, new KEY[0], null);
-
             server_inventory.UnchangedObjects.AddRange(listLocalObjs);
-
             return server_inventory;
         }
 
@@ -1273,24 +1265,21 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public virtual OBJECT Refresh(KEY key)
+        public virtual Task<OBJECT> Refresh(KEY key, CancellationToken token = default)
         {
-            List<OBJECT> listForgotten = Refresh(new KEY[] { key });
-            return listForgotten.First();
+            return Refresh((ICollection<KEY>)new KEY[] { key }, token)
+                .ContinueWith(t => t.Result.Found.Count > 0 ? t.Result.Found[0] : default, token);
         }
 
-        /// <summary>
-        /// Delete data for an object from our client and request new data from the server
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public virtual List<OBJECT> Refresh(KEY[] keys)
+        public virtual Task<GetByIDResult<KEY, OBJECT>> Refresh(ICollection<KEY> keys, CancellationToken token = default)
         {
+            if (keys == null || keys.Count == 0)
+                return Task.FromResult(GetByIDResult<KEY, OBJECT>.Empty);
 
-            List<OBJECT> listForgotten = InternalDelete(keys);
+            KEY[] keyArray = keys as KEY[] ?? keys.ToArray();
+            List<OBJECT> listForgotten = InternalDelete(keyArray);
             CallOnCollectionChangedForDelete(listForgotten);
-
-            return this.GetObjectsByIDs(keys, true);
+            return GetObjectsByIDs(keys, token);
         }
 
         /// <summary>

@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using Viking.Common;
 
 namespace Viking
@@ -10,19 +12,25 @@ namespace Viking
     /// public global variables are stored in the UI.State class, but that is not consistent with naming 
     /// conventions used in all extension modules I've written. 
     /// </summary>
-    internal class Global
+    internal static class Global
     {
-        static public Defaults Default = new Defaults();
+        /// <summary>
+        /// Shared instance of an HttpClient, using this facilitates KeepAlive use for reusing TCP connections
+        /// </summary>
+        public static HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
 
-        static public LocalTextureCache TextureCache = new LocalTextureCache();
 
-        static public TileViewModelCache TileViewModelCache = new TileViewModelCache();
+        public static Defaults Default = new();
 
-        static private Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
+        public static LocalTextureCache TextureCache => TileLoadEnvironment.TextureCache;
 
-        static public bool TracePenEvents = false;
+        public static TileViewModelCache TileViewModelCache => TileLoadEnvironment.TileViewModelCache;
 
-        static public void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
+        private static readonly Dictionary<int, string> AllocatedTextures = [];
+
+        public static bool TracePenEvents = false;
+
+        public static void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture: " + tex.GetHashCode().ToString(), "TextureUse");
             /*
@@ -35,7 +43,7 @@ namespace Viking
              */
         }
 
-        static public void RemoveTexture(Microsoft.Xna.Framework.Graphics.Texture tex)
+        public static void RemoveTexture(Microsoft.Xna.Framework.Graphics.Texture tex)
         {
 
             //            Trace.WriteLine("Removing Texture: " + tex.GetHashCode().ToString(), "TextureUse");
@@ -49,14 +57,14 @@ namespace Viking
              */
         }
 
-        static public void PrintAllocatedTextures()
+        public static void PrintAllocatedTextures()
         {
             Trace.WriteLine("Allocated textures", "TextureUse");
 
             List<string> values;
             lock (Global.AllocatedTextures)
             {
-                values = Global.AllocatedTextures.Values.ToList<string>();
+                values = [.. Global.AllocatedTextures.Values];
             }
 
             values.Sort();
@@ -67,23 +75,22 @@ namespace Viking
             }
         }
 
-        static private Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
+        private static readonly Dictionary<int, string> AllocatedTextureReaders = [];
 
-        static public void AddTextureReader(object tex, string msg)
+        public static void AddTextureReader(object tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
-
+            // Skip add if key exists (two readers can share the same GetHashCode(); avoid ArgumentException).
             lock (Global.AllocatedTextureReaders)
             {
-                if (Global.AllocatedTextureReaders.ContainsKey(tex.GetHashCode()) == false)
-                    Global.AllocatedTextureReaders.Add(tex.GetHashCode(), msg);
+                int key = tex.GetHashCode();
+                if (!Global.AllocatedTextureReaders.ContainsKey(key))
+                    Global.AllocatedTextureReaders.Add(key, msg);
+                _TexturesLoading = true;
             }
-
-            _TexturesLoading = true;
-
         }
 
-        static public void RemoveTextureReader(object tex)
+        public static void RemoveTextureReader(object tex)
         {
 
             //            Trace.WriteLine("Removing Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
@@ -97,15 +104,15 @@ namespace Viking
         /// <summary>
         /// Set to true if textures were loading last time we asked if we needed to refresh
         /// </summary>
-        static private bool _TexturesLoading = true;
+        private static bool _TexturesLoading = true;
 
-        static public bool TexturesLoadedNeedRefresh
+        public static bool TexturesLoadedNeedRefresh
         {
             get
             {
                 lock (Global.AllocatedTextureReaders)
                 {
-                    if (Global.AllocatedTextureReaders.Keys.Count > 0)
+                    if (Global.AllocatedTextureReaders.Count > 0)
                     {
                         _TexturesLoading = true;
                         return true;
@@ -127,13 +134,13 @@ namespace Viking
 
         }
 
-        static public void PrintAllocatedTextureReaders()
+        public static void PrintAllocatedTextureReaders()
         {
             Trace.WriteLine("Allocated Texture  Readers", "TextureUse");
             List<string> values;
             lock (Global.AllocatedTextureReaders)
             {
-                values = Global.AllocatedTextureReaders.Values.ToList<string>();
+                values = [.. Global.AllocatedTextureReaders.Values];
             }
 
             values.Sort();

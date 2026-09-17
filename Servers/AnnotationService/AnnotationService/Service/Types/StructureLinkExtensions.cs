@@ -1,10 +1,10 @@
-﻿namespace AnnotationService.Types
+namespace AnnotationService.Types
 {
     public static class StructureLinkExtensions
     {
         public static StructureLink Create(this ConnectomeDataModel.StructureLink obj)
         {
-            StructureLink sl = new StructureLink();
+            StructureLink sl = new();
             ConnectomeDataModel.StructureLink db = obj;
 
             sl.SourceID = db.SourceID;
@@ -13,7 +13,7 @@
             sl.Tags = db.Tags;
             sl.Username = db.Username;
 
-            return sl; 
+            return sl;
         }
 
         public static void Sync(this StructureLink sl, ConnectomeDataModel.StructureLink db)

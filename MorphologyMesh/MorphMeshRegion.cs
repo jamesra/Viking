@@ -1,0 +1,374 @@
+using Geometry;
+using Geometry.Meshing;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
+
+namespace MorphologyMesh
+{
+    /// <summary>
+    /// A set of faces that represent a region which needs to be mapped to the adjacent section or triangulated and assigned a flat mesh
+    /// </summary>
+    public class MorphMeshRegion : IComparable<MorphMeshRegion>, IEquatable<MorphMeshRegion>
+
+    {
+        private readonly MorphRenderMesh ParentMesh;
+
+        private readonly ImmutableSortedSet<MorphMeshFace> _Faces;
+        public ImmutableSortedSet<MorphMeshFace> Faces => _Faces;
+
+        public RegionType Type { get; private set; }
+
+        public MorphMeshRegion(MorphRenderMesh mesh, IEnumerable<MorphMeshFace> faces, RegionType type)
+        {
+
+            ParentMesh = mesh;
+            SortedSet<MorphMeshFace> f = [.. faces];
+            _Faces = [.. f];
+
+            Debug.Assert(_Faces.IsEmpty == false, "Region should not have zero faces otherwise it is not really a region is it?");
+            Type = type;
+        }
+
+
+        /// <summary>
+        /// Invaginations must have only one open end.  There are times when edges are reported as invaginations when in fact they are bridges which are not true regions. 
+        /// HOwever bridges have two edges that are 
+        /// </summary>
+        /// <param name="region"></param>
+        /// <returns></returns>
+        internal static bool IsValidInvagination(MorphMeshRegion region)
+        {
+            Debug.Assert(region.Type == RegionType.INVAGINATION);
+
+            IEnumerable<MorphMeshEdge> RegionEdges = region.Faces.SelectMany(f => f.Edges).Distinct().Select(key => (MorphMeshEdge)region.ParentMesh.Edges[key]);
+
+            //We are looking for two region faces that have an edge with a non-region face or only one face (On the convex hull).  If there are two this is a bridge and not an invagination
+            IEnumerable<MorphMeshEdge> CandidateEdges = RegionEdges.Where(e => e.Type != EdgeType.CONTOUR);
+
+            List<MorphMeshEdge> ExposedEdges = [.. CandidateEdges.Where(e => e.Faces.Count == 1 || e.Faces.Any(face => !region.Contains(face)))];
+
+            if (ExposedEdges.Count > 1)
+                return false;
+
+            return true;
+        }
+
+        private ImmutableSortedSet<double> _Z;
+        public ImmutableSortedSet<double> ZLevel
+        {
+            get
+            {
+                if (Faces.Count == 0)
+                    throw new ArgumentException("No faces in region");
+
+                if (_Z is null)
+                {
+                    SortedSet<double> builder = [];
+                    var Z = this.VertPositions.Select(v => v.Z).Distinct();
+                    builder.UnionWith(Z);
+                    _Z = [.. builder];
+                }
+
+                return _Z;
+            }
+        }
+
+        private Polygon _Polygon = null;
+
+        public Polygon Polygon
+        {
+            get
+            {
+                if (_Polygon != null)
+                    return _Polygon;
+
+                //A corresponding pair on the perimeter is two mesh verticies at one XY (different Z).  Polygon
+                //rejects the duplicate, which made every region touching such a pair unclosable (RPC1 83717/83724),
+                //so the ring is built from the distinct XY run; the mesh verticies themselves are untouched.
+                List<Vector2> poly_verts = new(this.RegionPerimeter.Length);
+                foreach (MorphMeshVertex v in this.RegionPerimeter)
+                {
+                    Vector2 xy = v.Position.XY();
+                    if (poly_verts.Count > 0 && poly_verts[^1] == xy)
+                        continue;
+                    poly_verts.Add(xy);
+                }
+
+                while (poly_verts.Count > 1 && poly_verts[0] == poly_verts[^1])
+                    poly_verts.RemoveAt(poly_verts.Count - 1);
+
+                _Polygon = new Polygon(poly_verts.EnsureClosedRing().ToArray());
+
+                return _Polygon;
+            }
+        }
+
+        private MorphMeshVertex[] _RegionPerimeter = null; //The region indicies organized so they progress in order around the perimeter of the region
+
+        /// <summary>
+        /// Returns a closed loop of verticies that define the region's perimeter
+        /// </summary>
+        public MorphMeshVertex[] RegionPerimeter
+        {
+            get
+            {
+                if (_RegionPerimeter != null)
+                    return _RegionPerimeter;
+
+                PolygonIndex[] polyIndicies = [.. Vertices.Select(v => ((MorphMeshVertex)ParentMesh.Vertices[v]).ShapeIndex).Where(v => v is PolygonIndex).Cast<PolygonIndex>()];
+
+                List<IEdgeKey> all_region_face_edges = [.. this.Faces.SelectMany(f => f.Edges)];
+                Dictionary<IEdgeKey, int> edgeCounts = new(all_region_face_edges.Count);
+                foreach (IEdgeKey e in all_region_face_edges)
+                {
+                    edgeCounts.TryGetValue(e, out int count);
+                    edgeCounts[e] = count + 1;
+                }
+
+                List<IEdgeKey> all_exterior_edges = new(edgeCounts.Count);
+                foreach (KeyValuePair<IEdgeKey, int> kvp in edgeCounts)
+                {
+                    if (kvp.Value == 1)
+                        all_exterior_edges.Add(kvp.Key);
+                }
+
+                //Identify all of the edges that are already in the mesh as 
+                //var all_exterior_edges = all_possible_edges.Where(e => this.ParentMesh.Contains(e) && ParentMesh[e].Faces.Intersect(this.Faces).Count == 1).ToList();
+                //var startingedge = all_exterior_edges.First();
+
+                List<int> OrderedBoundaryVerts = new(all_exterior_edges.Count + 1)
+                {
+                    all_exterior_edges[0].A,
+                    all_exterior_edges[0].B
+                };
+                all_exterior_edges.RemoveAt(0);
+
+                while (all_exterior_edges.Any())
+                {
+                    int FirstVertIndex = OrderedBoundaryVerts.First();
+                    int LastVertIndex = OrderedBoundaryVerts.Last();
+
+                    IEdgeKey connected_edge = all_exterior_edges.FirstOrDefault(e => e.A == LastVertIndex || e.B == LastVertIndex || e.A == FirstVertIndex || e.B == FirstVertIndex);
+                    if (connected_edge is null)
+                    {
+#if DEBUG
+                        throw new InvalidOperationException("We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges");
+#else
+                        break; //In Release just use what we found
+#endif
+                    }
+                    else if (connected_edge.A == LastVertIndex || connected_edge.B == LastVertIndex)
+                    {
+                        OrderedBoundaryVerts.Add(connected_edge.OppositeEnd(LastVertIndex));
+                    }
+                    else
+                    {
+                        OrderedBoundaryVerts.Insert(0, connected_edge.OppositeEnd(FirstVertIndex));
+                    }
+
+                    all_exterior_edges.Remove(connected_edge);
+                }
+
+                _RegionPerimeter = [.. OrderedBoundaryVerts.Select(i => (MorphMeshVertex)ParentMesh.Vertices[i])];
+
+                return _RegionPerimeter;
+            }
+        }
+
+        private static List<PolygonIndex[]> IdentifyContours(PolygonIndex[] polyIndicies)
+        {
+            //Make sure we don't have artificial jumps in the array at 0 indicies. i.e. A line that wraps around the end to the beginning of the ring
+            polyIndicies = PolygonIndex.SortByRing(polyIndicies);
+
+            List<PolygonIndex[]> listContours = [];
+
+            List<PolygonIndex> contour =
+            [
+                polyIndicies[0]
+            ];
+            for (int i = 1; i < polyIndicies.Length; i++)
+            {
+                PolygonIndex lastCountourPoint = contour.Last();
+                PolygonIndex pi = polyIndicies[i];
+                //if (pi.InnerShapeIndex != lastCountourPoint.InnerShapeIndex || pi.ShapeIndex != lastCountourPoint.ShapeIndex)
+                if (!lastCountourPoint.AreAdjacent(pi))
+                {
+                    listContours.Add([.. contour]);
+                    contour =
+                    [
+                        pi
+                    ];
+                }
+                else
+                {
+                    contour.Add(pi);
+                }
+            }
+
+            //If we started in the middle of a contour due to the indicies wrapping around we prepend the last contour
+            //to the first contour in the list
+            if (contour.Last().AreAdjacent(listContours.First()[0]))
+                _ = listContours.First().Union(contour);
+            else
+                listContours.Add([.. contour]);
+
+            return listContours;
+        }
+
+        /// <summary>
+        /// Returns an open ring of points.
+        /// </summary>
+        /// <param name="contours"></param>
+        /// <param name="PolyIndexToMeshIndex"></param>
+        /// <returns></returns>
+        private PolygonIndex[] ConnectContours(List<PolygonIndex[]> contours, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)
+        {
+            List<PolygonIndex> AssembledContour = [];
+
+            PolygonIndex[] lastContour = contours[0];
+            AssembledContour.AddRange(lastContour);
+
+            Vector2[] lastContourEndpoints = ContourEndpoints(lastContour, PolyIndexToMeshIndex);
+
+            for (int i = 1; i < contours.Count; i++)
+            {
+                PolygonIndex[] Contour = contours[i];
+                if (Contour.Length == 1)
+                {
+                    AssembledContour.AddRange(Contour);
+                }
+                else
+                {
+                    Vector2[] Endpoints = ContourEndpoints(Contour, PolyIndexToMeshIndex);
+                    lastContour = OrderContourToAvoidCrossing(
+                        Contour,
+                        lastContourEndpoints[0],
+                        lastContourEndpoints[1],
+                        Endpoints[0],
+                        Endpoints[1]);
+                    AssembledContour.AddRange(lastContour);
+                }
+
+                lastContourEndpoints = ContourEndpoints(AssembledContour, PolyIndexToMeshIndex);
+            }
+
+            return [.. AssembledContour];
+        }
+
+        /// <summary>
+        /// Reverses <paramref name="incomingContour"/> when the joiners from the previous fragment would cross,
+        /// which would hourglass the assembled region perimeter. Called by ConnectContours while stitching
+        /// open contour fragments. Enumerable.Reverse is a no-op here because it does not mutate the array.
+        /// </summary>
+        /// <returns>The incoming contour, or a reversed copy when the joiners intersect.</returns>
+        internal static PolygonIndex[] OrderContourToAvoidCrossing(
+            PolygonIndex[] incomingContour,
+            Vector2 previousStart,
+            Vector2 previousEnd,
+            Vector2 incomingStart,
+            Vector2 incomingEnd)
+        {
+            LineSegment joinPreviousStartToIncomingEnd = new(previousStart, incomingEnd);
+            LineSegment joinPreviousEndToIncomingStart = new(previousEnd, incomingStart);
+            if (!joinPreviousStartToIncomingEnd.Intersects(joinPreviousEndToIncomingStart))
+                return incomingContour;
+
+            PolygonIndex[] reversed = new PolygonIndex[incomingContour.Length];
+            Array.Copy(incomingContour, reversed, incomingContour.Length);
+            Array.Reverse(reversed);
+            return reversed;
+        }
+
+        Vector2[] ContourEndpoints(IReadOnlyList<PolygonIndex> contour, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)
+        {
+            int iStart = PolyIndexToMeshIndex[contour[0]];
+            int iEnd = PolyIndexToMeshIndex[contour.Last()];
+
+            return
+                [ this.ParentMesh.Vertices[iStart].Position.XY(),
+                  this.ParentMesh.Vertices[iEnd].Position.XY() ];
+        }
+
+        private int[] _Verticies = null;
+        /// <summary>
+        /// Return region verticies in no particular order
+        /// </summary>
+        public int[] Vertices
+        {
+            get
+            {
+                _Verticies ??= [.. Faces.SelectMany(f => f.iVerts).Distinct()];
+
+                return _Verticies;
+            }
+        }
+
+        public Vector3[] VertPositions => [.. Vertices.Select(v => ParentMesh.Vertices[v].Position)];
+
+        /// <summary>
+        /// Return true if this regions polygons is entirely outside any polygons on the adjacent section
+        /// </summary>
+        /// <returns></returns>
+        public bool IsExposed(MorphRenderMesh mesh)
+        {
+            Polygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false && p is Polygon).Cast<Polygon>()];
+
+            if (AdjacentPolys.Any(p => p.Covers(this.Polygon)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Return true if this regions polygons is entirely outside any polygons on the adjacent section
+        /// </summary>
+        /// <returns></returns>
+        public bool IsPartlyExposed(MorphRenderMesh mesh)
+        {
+            Polygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false).Cast<Polygon>()];
+            if (AdjacentPolys.Any(p => p.Intersects(this.Polygon) && !p.Covers(this.Polygon)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+
+
+        public double NearestDistance(MorphMeshRegion other) => this.Polygon.Distance(other.Polygon);
+
+        public bool Contains(IFace face) => this.Faces.Contains(face);
+
+        public int CompareTo(MorphMeshRegion other)
+        {
+            if (this.Faces.Count != other.Faces.Count)
+            {
+                return other.Faces.Count - this.Faces.Count;
+            }
+
+            MorphMeshFace[] Mine = [.. Faces];
+            MorphMeshFace[] Theirs = [.. other.Faces];
+
+            for (int i = 0; i < this.Faces.Count; i++)
+            {
+                int comparison = Mine[i].CompareTo(Theirs[i]);
+                if (comparison != 0)
+                    return comparison;
+            }
+
+            return 0;
+        }
+
+        public bool Equals(MorphMeshRegion other) => this.Faces.SetEquals(other.Faces);
+
+        public override string ToString() => string.Format("Reg: {0} {1} {2}", this.Faces.First(), this.Faces.Count, this.Type.ToString());
+    }
+
+}
+

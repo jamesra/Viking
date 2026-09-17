@@ -1,0 +1,6 @@
+---
+description: Conventions for OData clients and factories in this solution
+globs: ["**/*OData*/**", "**/AnnotationVizLibODataClient/**", "**/*OpenData*/**"]
+alwaysApply: false
+---
+When adding or changing OData clients or factories: follow existing patterns (e.g. ODataMorphologyFactory). Use the configured OData base URL and avoid hardcoding endpoints. Ensure odata queries handle paging and error responses consistently.  Favor async patterns.

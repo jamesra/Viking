@@ -3,42 +3,19 @@ using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureLinkAdapter : IStructureLinkReadOnly
+    class WCFStructureLinkAdapter(StructureLink sl) : IStructureLink
     {
-        private StructureLink structureLink;
+        private readonly StructureLink structureLink = sl;
 
-        public WCFStructureLinkAdapter(StructureLink sl)
-        {
-            this.structureLink = sl;
-        }
+        public bool Directional => !structureLink.Bidirectional;
 
-        public bool Directional
-        {
-            get
-            {
-                return !structureLink.Bidirectional;
-            }
-        }
+        public ulong SourceID => (ulong)structureLink.SourceID;
 
-        public ulong SourceID
-        {
-            get
-            {
-                return (ulong)structureLink.SourceID;
-            }
-        }
+        public ulong TargetID => (ulong)structureLink.TargetID;
 
-        public ulong TargetID
+        public bool Equals(IStructureLink other)
         {
-            get
-            {
-                return (ulong)structureLink.TargetID;
-            }
-        }
-
-        public bool Equals(IStructureLinkReadOnly other)
-        {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.SourceID == this.SourceID &&

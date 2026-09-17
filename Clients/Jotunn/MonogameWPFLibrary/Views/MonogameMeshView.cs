@@ -8,6 +8,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
+// using VikingXNAGraphics; // Commented out due to framework compatibility (Monographics targets net9.0, this project targets net48)
 
 
 namespace MonogameWPFLibrary.Views
@@ -21,7 +24,8 @@ namespace MonogameWPFLibrary.Views
         private static RoutedUICommand resetRotationCommand;
         private static RoutedUICommand translateCameraPositionCommand;
 
-        private VikingXNAGraphics.CircleView cView = new VikingXNAGraphics.CircleView(new Geometry.GridCircle(new Geometry.GridVector2(0, 0), 25), Color.Goldenrod);
+        // TODO: CircleView is not accessible from net48 project (Monographics targets net9.0)
+        // private CircleView cView = new CircleView(new Geometry.Circle(new Geometry.Vector2(0, 0), 25), Color.Goldenrod);
           
         /// <summary>
         /// Increment the center number
@@ -46,15 +50,15 @@ namespace MonogameWPFLibrary.Views
         }
          
 
-        public Geometry.GridBox BoundingBox
+        public Geometry.Box BoundingBox
         {
-            get { return (Geometry.GridBox)GetValue(BoundingBoxProperty); }
+            get { return (Geometry.Box)GetValue(BoundingBoxProperty); }
             protected set { SetValue(BoundingBoxPropertyKey, value); }
         }
 
         // Using a DependencyProperty as the backing store for View.  This enables animation, styling, binding, etc...
-        protected static readonly DependencyPropertyKey BoundingBoxPropertyKey = DependencyProperty.RegisterReadOnly("BoundingBox", typeof(Geometry.GridBox), typeof(MeshView), 
-                                                                                                                     new PropertyMetadata(new Geometry.GridBox(new double[] { 0, 0, 0 }, new double[] { 1, 1, 1 })));
+        protected static readonly DependencyPropertyKey BoundingBoxPropertyKey = DependencyProperty.RegisterReadOnly("BoundingBox", typeof(Geometry.Box), typeof(MeshView), 
+                                                                                                                     new PropertyMetadata(new Geometry.Box(new double[] { 0, 0, 0 }, new double[] { 1, 1, 1 })));
 
         public static readonly DependencyProperty BoundingBoxProperty = BoundingBoxPropertyKey.DependencyProperty;
         
@@ -74,7 +78,7 @@ namespace MonogameWPFLibrary.Views
             MeshView view = o as MeshView;
             if (view != null)
             {
-                view.BoundingBox = view.Models.Select(m => m.BoundingBox).Aggregate((a, b) => Geometry.GridBox.Union(a, b));
+                view.BoundingBox = view.Models.Select(m => m.BoundingBox).Aggregate((a, b) => Geometry.Box.Union(a, b));
             }
         }
 
@@ -194,15 +198,16 @@ namespace MonogameWPFLibrary.Views
                     {
                         pass.Apply();
 
-                        device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, meshViewModel.Verticies, 0, meshViewModel.Verticies.Length, meshViewModel.Faces, 0, meshViewModel.Faces.Length / 3);
+                        device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, meshViewModel.Vertices, 0, meshViewModel.Vertices.Length, meshViewModel.Faces, 0, meshViewModel.Faces.Length / 3);
                     }
                 }
                 /*
                 Effect AnnotationOverlayShader = this.Content.Load<Effect>("AnnotationOverlayShader");
                 VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = new AnnotationOverBackgroundLumaEffect(AnnotationOverlayShader);
                 VikingXNA.Scene scene = new VikingXNA.Scene(device.Viewport, new VikingXNA.Camera());
-                scene.Camera.LookAt = cView.Circle.Center.ToXNAVector2();
-                VikingXNAGraphics.CircleView.Draw(device, scene, effect, overlayEffect, new VikingXNAGraphics.CircleView[] { cView });
+                // TODO: cView is commented out due to framework compatibility issue
+                // scene.Camera.LookAt = cView.Circle.Center.ToXNAVector2();
+                // VikingXNAGraphics.CircleView.Draw(device, scene, effect, overlayEffect, new VikingXNAGraphics.CircleView[] { cView });
                 */
             }
 

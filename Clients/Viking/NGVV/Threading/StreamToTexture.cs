@@ -122,7 +122,7 @@
                     pixelBytes[iDestByte++] = rgbValues[iSourceByte];
                 }
 
-                if (graphicsdevice == null)
+                if (graphicsdevice is null)
                     return null;
 
                 if (graphicsdevice.IsDisposed)

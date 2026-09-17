@@ -7,8 +7,8 @@ namespace Viking.Common
 {
     public static class GetTypeExtensions
     {
-        public static HashSet<Type> NumericTypes = new HashSet<Type>
-        {
+        public static HashSet<Type> NumericTypes =
+        [
             typeof(Byte),
             typeof(SByte),
             typeof(UInt16),
@@ -20,11 +20,11 @@ namespace Viking.Common
             typeof(Double),
             typeof(Single),
             typeof(Decimal)
-        };
+        ];
 
         public static bool IsNumericType(this Type t)
         {
-            if (t == null)
+            if (t is null)
                 return false;
 
             if (GetTypeExtensions.NumericTypes.Contains(t))
@@ -40,17 +40,11 @@ namespace Viking.Common
     /// <summary>
     /// Summary description for ListViewColumnSorter.
     /// </summary>
-    public class ListViewColumnSorter : IComparer
+    public class ListViewColumnSorter(int SortOnIndex, Type ColumnType) : IComparer
     {
-        public int SortIndex = 0;
+        public int SortIndex = SortOnIndex;
         public bool AscendingSort = true;
-        public Type ColumnType = null;
-
-        public ListViewColumnSorter(int SortOnIndex, Type ColumnType)
-        {
-            this.SortIndex = SortOnIndex;
-            this.ColumnType = ColumnType;
-        }
+        public Type? ColumnType = ColumnType;
 
         int IComparer.Compare(object A, object B)
         {
@@ -60,29 +54,26 @@ namespace Viking.Common
             ItemA = A as ListViewItem;
             ItemB = B as ListViewItem;
 
-            if (ItemA == null && ItemB == null)
+            if (ItemA is null && ItemB is null)
                 return 0;
-            if (ItemA == null)
+            if (ItemA is null)
                 return 1;
-            if (ItemB == null)
+            if (ItemB is null)
                 return -1;
 
             ListViewItem.ListViewSubItem SubA = ItemA.SubItems[SortIndex];
             ListViewItem.ListViewSubItem SubB = ItemB.SubItems[SortIndex];
 
-            if (SubA == null && SubB == null)
+            if (SubA is null && SubB is null)
                 return 0;
-            if (SubA == null)
+            if (SubA is null)
                 return 1;
-            if (SubB == null)
+            if (SubB is null)
                 return -1;
 
-            if (ColumnType.IsNumericType())
+            if (ColumnType != null && ColumnType.IsNumericType())
             {
-                IConvertible convA = SubA.Tag as IConvertible;
-                IConvertible convB = SubB.Tag as IConvertible;
-
-                if (convA != null && convB != null)
+                if (SubA.Tag is IConvertible convA && SubB.Tag is IConvertible convB)
                 {
                     Decimal ValA = convA.ToDecimal(null);
                     Decimal ValB = convB.ToDecimal(null);

@@ -1,25 +1,19 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Geometry.Transforms
 {
     [Serializable]
-    public readonly struct RBFTransformComponents
+    public readonly struct RBFTransformComponents(TransformBasicInfo info, float[] CtoM, float[] MtoC)
     {
-        public readonly TransformBasicInfo Info;
-        public readonly float[] ControlToMappedSpaceWeights;
-        public readonly float[] MappedToControlSpaceWeights;
-
-        public RBFTransformComponents(TransformBasicInfo info, float[] CtoM, float[] MtoC)
-        {
-            Info = info;
-            ControlToMappedSpaceWeights = CtoM;
-            MappedToControlSpaceWeights = MtoC;
-        }
+        public readonly TransformBasicInfo Info = info;
+        public readonly float[] ControlToMappedSpaceWeights = CtoM;
+        public readonly float[] MappedToControlSpaceWeights = MtoC;
     }
 
 
@@ -28,22 +22,22 @@ namespace Geometry.Transforms
     {
         public delegate double BasisFunctionDelegate(double distance);
 
-        readonly BasisFunctionDelegate BasisFunction = new BasisFunctionDelegate(StandardBasisFunction);
+        readonly BasisFunctionDelegate BasisFunction = new(StandardBasisFunction);
 
         private float[] _ControlToMappedSpaceWeights = null;
         private float[] ControlToMappedSpaceWeights
         {
             get
             {
-                if (_ControlToMappedSpaceWeights == null)
+                if (_ControlToMappedSpaceWeights is null)
                 {
                     lock (this)
                     {
                         if (_ControlToMappedSpaceWeights != null)
                             return _ControlToMappedSpaceWeights;
 
-                        _ControlToMappedSpaceWeights = CalculateRBFWeights(MappingGridVector2.ControlPoints(this.MapPoints),
-                                                                           MappingGridVector2.MappedPoints(this.MapPoints),
+                        _ControlToMappedSpaceWeights = CalculateRBFWeights(MappingVector2.ControlPoints(this.MapPoints),
+                                                                           MappingVector2.MappedPoints(this.MapPoints),
                                                                            null);
                     }
                 }
@@ -57,18 +51,18 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (_MappedToControlSpaceWeights == null)
+                if (_MappedToControlSpaceWeights is null)
                 {
                     lock (this)
                     {
-                        if (_MappedToControlSpaceWeights != null)
+                        if (_MappedToControlSpaceWeights is not null)
                             return _MappedToControlSpaceWeights;
 
-                        //double[,] BetaMatrixControlToMapped = CreateBetaMatrixWithLinear(MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
-                        //double[] ResultMatrixControlToMapped = CreateSolutionMatrixWithLinear(MappingGridVector2.ControlPoints(this.MapPoints));
+                        //double[,] BetaMatrixControlToMapped = CreateBetaMatrixWithLinear(MappingVector2.MappedPoints(this.MapPoints), this.BasisFunction);
+                        //double[] ResultMatrixControlToMapped = CreateSolutionMatrixWithLinear(MappingVector2.ControlPoints(this.MapPoints));
                         //_MappedToControlSpaceWeights = GridMatrix.LinSolve(BetaMatrixControlToMapped, ResultMatrixControlToMapped);
-                        _MappedToControlSpaceWeights = CalculateRBFWeights(MappingGridVector2.MappedPoints(this.MapPoints),
-                                                                           MappingGridVector2.ControlPoints(this.MapPoints),
+                        _MappedToControlSpaceWeights = CalculateRBFWeights(MappingVector2.MappedPoints(this.MapPoints),
+                                                                           MappingVector2.ControlPoints(this.MapPoints),
                                                                            null);
                     }
                 }
@@ -85,14 +79,14 @@ namespace Geometry.Transforms
             return distance * distance * Math.Log(distance);
         }
 
-        public RBFTransform(MappingGridVector2[] points, TransformBasicInfo info)
+        public RBFTransform(MappingVector2[] points, TransformBasicInfo info)
             : base(points, info)
         {
         }
 
         protected RBFTransform(SerializationInfo info, StreamingContext context) : base(info, context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             _ControlToMappedSpaceWeights = info.GetValue("_ControlToMappedSpaceWeights", typeof(float[])) as float[];
@@ -108,18 +102,15 @@ namespace Geometry.Transforms
             base.GetObjectData(info, context);
         }
 
-        public override bool CanTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public override bool CanTransform(in Vector2 Point) => true;
 
-        public static GridVector2 Transform(GridVector2 Point, float[] Weights, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
+        public static Vector2 Transform(Vector2 Point, float[] Weights, Vector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (ControlPoints == null)
-                throw new ArgumentException(nameof(ControlPoints));
-            if (Weights == null)
-                throw new ArgumentException(nameof(Weights));
-            if(BasisFunction == null)
+            if (ControlPoints is null)
+                throw new ArgumentNullException(nameof(ControlPoints));
+            if (Weights is null)
+                throw new ArgumentNullException(nameof(Weights));
+            if (BasisFunction is null)
                 throw new ArgumentNullException(nameof(BasisFunction));
 
             int nPoints = ControlPoints.Length;
@@ -131,74 +122,65 @@ namespace Geometry.Transforms
 
             for (int i = 0; i < distances.Length; i++)
             {
-                double dist = GridVector2.Distance(ControlPoints[i], Point);
+                double dist = Vector2.Distance(ControlPoints[i], Point);
                 double funcVal = BasisFunction(dist);
                 distances[i] = dist;
                 functionValues[i] = funcVal;
 
-                WeightSumX = WeightSumX + (Weights[i] * funcVal);
-                WeightSumY = WeightSumY + (Weights[i + 3 + nPoints] * funcVal);
+                WeightSumX += (Weights[i] * funcVal);
+                WeightSumY += (Weights[i + 3 + nPoints] * funcVal);
             }
 
             double X = WeightSumX + (Point.Y * Weights[nPoints]) + (Point.X * Weights[nPoints + 1]) + Weights[nPoints + 2];
             double Y = WeightSumY + (Point.Y * Weights[nPoints + 3 + nPoints]) + (Point.X * Weights[nPoints + nPoints + 3 + 1]) + Weights[nPoints + nPoints + 3 + 2];
 
-            return new GridVector2(X, Y).Round(Global.TransformSignificantDigits);
+            return new Vector2(X, Y).Round(Global.TransformSignificantDigits);
         }
 
-        public override GridVector2 Transform(in GridVector2 Point)
-        {
-            return RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
-        }
+        public override Vector2 Transform(in Vector2 Point) => RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingVector2.MappedPoints(this.MapPoints), this.BasisFunction);
 
-        public override GridVector2[] Transform(in GridVector2[] Points)
+        public override Vector2[] Transform(in Vector2[] Points)
         {
-            var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
+            var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingVector2.MappedPoints(this.MapPoints), this.BasisFunction);
             return Output.ToArray();
         }
 
-        public override bool TryTransform(in GridVector2 Point, out GridVector2 v)
+        public override bool TryTransform(in Vector2 Point, out Vector2 v)
         {
             v = Transform(Point);
             return true;
         }
-        public override bool[] TryTransform(in GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryTransform(in Vector2[] Points, out Vector2[] Output)
         {
             Output = this.Transform(Points);
-            return Points.Select(p => true).ToArray();
+            return [.. Points.Select(p => true)];
         }
 
-        public override bool CanInverseTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public override bool CanInverseTransform(in Vector2 Point) => true;
 
-        public override GridVector2 InverseTransform(in GridVector2 Point)
-        {
-            return RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
-        }
+        public override Vector2 InverseTransform(in Vector2 Point) => RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingVector2.ControlPoints(this.MapPoints), this.BasisFunction);
 
-        public override GridVector2[] InverseTransform(in GridVector2[] Points)
+        public override Vector2[] InverseTransform(in Vector2[] Points)
         {
-            var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
+            var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingVector2.ControlPoints(this.MapPoints), this.BasisFunction);
             return Output.ToArray();
         }
 
-        public override bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
+        public override bool TryInverseTransform(in Vector2 Point, out Vector2 v)
         {
             v = InverseTransform(Point);
             return true;
         }
 
-        public override bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] Output)
         {
             Output = this.InverseTransform(Points);
-            return Points.Select(p => true).ToArray();
+            return [.. Points.Select(p => true)];
         }
 
-        public static float[] CreateSolutionMatrixWithLinear(GridVector2[] ControlPoints)
+        public static float[] CreateSolutionMatrixWithLinear(Vector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -214,9 +196,9 @@ namespace Geometry.Transforms
             return ResultMatrix;
         }
 
-        public static Vector<float> CreateSolutionMatrix_X_WithLinear(GridVector2[] ControlPoints)
+        public static Vector<float> CreateSolutionMatrix_X_WithLinear(Vector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -232,9 +214,9 @@ namespace Geometry.Transforms
         }
 
         /*
-        public static float[] CreateSolutionMatrix_X_WithLinear(GridVector2[] ControlPoints)
+        public static float[] CreateSolutionMatrix_X_WithLinear(Vector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException();
 
             int NumPts = ControlPoints.Length;
@@ -250,9 +232,9 @@ namespace Geometry.Transforms
         }
         */
 
-        public static Vector<float> CreateSolutionMatrix_Y_WithLinear(GridVector2[] ControlPoints)
+        public static Vector<float> CreateSolutionMatrix_Y_WithLinear(Vector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -268,9 +250,9 @@ namespace Geometry.Transforms
         }
 
         /*
-        public static float[] CreateSolutionMatrix_Y_WithLinear(GridVector2[] ControlPoints)
+        public static float[] CreateSolutionMatrix_Y_WithLinear(Vector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException();
 
             int NumPts = ControlPoints.Length;
@@ -292,9 +274,9 @@ namespace Geometry.Transforms
         /// <param name="ControlPoints"></param>
         /// <param name="BasisFunction">How to weight pairs of points, if null, use Euclidean distance</param>
         /// <returns></returns>
-        public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
+        public static Matrix<float> CreateBetaMatrixWithLinear(Vector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -311,13 +293,13 @@ namespace Geometry.Transforms
                     double value;
                     if (BasisFunction != null)
                     {
-                        double dist = GridVector2.Distance(ControlPoints[iPointA], ControlPoints[iPointB]);
+                        double dist = Vector2.Distance(ControlPoints[iPointA], ControlPoints[iPointB]);
                         value = BasisFunction(dist);
                     }
                     else
                     {
-                        double dist_squared = GridVector2.DistanceSquared(ControlPoints[iPointA], ControlPoints[iPointB]);
-                        value = dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
+                        double dist_squared = Vector2.DistanceSquared(ControlPoints[iPointA], ControlPoints[iPointB]);
+                        value = dist_squared <= 0 ? 0 : dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
                     }
                     BetaMatrix[iRow, iCol] = (float)value;
                     BetaMatrix[iCol + 3, iRow - 3] = (float)value;
@@ -345,9 +327,9 @@ namespace Geometry.Transforms
         /// <param name="ControlPoints"></param>
         /// <param name="BasisFunction"></param>
         /// <returns></returns>
-        public static float[,] CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
+        public static float[,] CreateBetaMatrixWithLinear(Vector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(); 
 
             int NumPts = ControlPoints.Length;
@@ -364,13 +346,13 @@ namespace Geometry.Transforms
                     double value;
                     if (BasisFunction != null)
                     {
-                        double dist = GridVector2.Distance(ControlPoints[iPointA], ControlPoints[iPointB]);
+                        double dist = Vector2.Distance(ControlPoints[iPointA], ControlPoints[iPointB]);
                         value = BasisFunction(dist);
                     }
                     else
                     {
-                        double dist_squared = GridVector2.DistanceSquared(ControlPoints[iPointA], ControlPoints[iPointB]);
-                        value = dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
+                        double dist_squared = Vector2.DistanceSquared(ControlPoints[iPointA], ControlPoints[iPointB]);
+                        value = dist_squared <= 0 ? 0 : dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
                     }
                     BetaMatrix[iRow, iCol] = (float)value;
                     BetaMatrix[iCol+3, iRow-3] = (float)value;
@@ -392,18 +374,18 @@ namespace Geometry.Transforms
         }
         */
 
-        public static float[] CalculateRBFWeights(GridVector2[] MappedPoints, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
+        public static float[] CalculateRBFWeights(Vector2[] MappedPoints, Vector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (MappedPoints == null)
+            if (MappedPoints is null)
                 throw new ArgumentNullException(nameof(MappedPoints));
-            if(ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             Debug.Assert(MappedPoints.Length == ControlPoints.Length);
 
             Matrix<float> NumericsBetaMatrix = CreateBetaMatrixWithLinear(MappedPoints, BasisFunction);
-            float[] WeightsX = NumericsBetaMatrix.Solve(CreateSolutionMatrix_X_WithLinear(ControlPoints)).ToArray();
-            float[] WeightsY = NumericsBetaMatrix.Solve(CreateSolutionMatrix_Y_WithLinear(ControlPoints)).ToArray();
+            float[] WeightsX = [.. NumericsBetaMatrix.Solve(CreateSolutionMatrix_X_WithLinear(ControlPoints))];
+            float[] WeightsY = [.. NumericsBetaMatrix.Solve(CreateSolutionMatrix_Y_WithLinear(ControlPoints))];
             NumericsBetaMatrix = null;
             float[] Weights = new float[WeightsX.Length + WeightsY.Length];
 
@@ -428,18 +410,16 @@ namespace Geometry.Transforms
         /// <returns></returns>
         private bool SerializeTransformComponents()
         {
-            if (!(Info is ITransformCacheInfo cacheInfo))
+            if (Info is not ITransformCacheInfo cacheInfo)
                 return false;
 
-            using (Stream binFile = System.IO.File.OpenWrite(cacheInfo.CacheFullPath))
-            {
-                var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                RBFTransformComponents components = new RBFTransformComponents(this.Info,
-                                                                                   ControlToMappedSpaceWeights,
-                                                                                   MappedToControlSpaceWeights);
+            using Stream binFile = System.IO.File.OpenWrite(cacheInfo.CacheFullPath);
+            BinaryFormatter binaryFormatter = new();
+            RBFTransformComponents components = new(this.Info,
+                                                                               ControlToMappedSpaceWeights,
+                                                                               MappedToControlSpaceWeights);
 
-                binaryFormatter.Serialize(binFile, components);
-            }
+            binaryFormatter.Serialize(binFile, components);
 
             return true;
         }
@@ -451,7 +431,7 @@ namespace Geometry.Transforms
         private bool TryLoadSerializedTransformComponents()
         {
             if (Info is ITransformCacheInfo cacheInfo)
-            { 
+            {
                 if (!System.IO.File.Exists(cacheInfo.CacheFullPath))
                     return false;
 
@@ -459,19 +439,16 @@ namespace Geometry.Transforms
                 try
                 {
 
-                    using (Stream binFile = System.IO.File.OpenRead(cacheInfo.CacheFullPath))
+                    using Stream binFile = System.IO.File.OpenRead(cacheInfo.CacheFullPath);
+                    BinaryFormatter binaryFormatter = new();
+                    RBFTransformComponents components =
+                        (RBFTransformComponents)binaryFormatter.Deserialize(binFile);
+
+                    CacheInvalid = components.Info.LastModified < this.Info.LastModified;
+                    if (!CacheInvalid)
                     {
-                        var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                        RBFTransformComponents components =
-                            (RBFTransformComponents)binaryFormatter.Deserialize(binFile);
-
-                        CacheInvalid = components.Info.LastModified < this.Info.LastModified;
-                        if (!CacheInvalid)
-                        {
-                            this._MappedToControlSpaceWeights = components.MappedToControlSpaceWeights;
-                            this._ControlToMappedSpaceWeights = components.ControlToMappedSpaceWeights;
-                        }
-
+                        this._MappedToControlSpaceWeights = components.MappedToControlSpaceWeights;
+                        this._ControlToMappedSpaceWeights = components.ControlToMappedSpaceWeights;
                     }
                 }
                 catch (System.Runtime.Serialization.SerializationException e)
@@ -496,10 +473,7 @@ namespace Geometry.Transforms
             return false;
         }
 
-        void IContinuousTransform.Translate(in GridVector2 vector)
-        {
-            throw new NotImplementedException();
-        }
+        void IContinuousTransform.Translate(in Vector2 vector) => throw new NotImplementedException();
     }
 }
 

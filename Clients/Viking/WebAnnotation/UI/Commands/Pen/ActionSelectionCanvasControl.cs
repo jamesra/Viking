@@ -1,4 +1,5 @@
-﻿using Geometry;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -15,6 +16,8 @@ using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
 using WebAnnotation.UI.Actions;
 using WebAnnotation.UI.ActionViews;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -22,22 +25,20 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// Presents a set of overlays on a canvas that allow the user to select an action
     /// </summary>
-    class ActionSelectionCanvasControl : Viking.UI.Commands.Command
+    internal class ActionSelectionCanvasControl : Viking.UI.Commands.Command
     {
         /// <summary>
         /// Maintains the set of interactable elements associated with each action. 
         /// This is used when we transition from active/passive view states for actions
         /// </summary>
-        Dictionary<IAction, List<IHitTesting>> ActionInteractables = new Dictionary<IAction, List<IHitTesting>>();
+        private readonly Dictionary<IAction, List<IHitTesting>> ActionInteractables = [];
 
         /// <summary>
         /// A per-action set of objects that either support IRenderable or IActionView
         /// </summary>
-        Dictionary<IAction, List<object>> ActionViews = new Dictionary<IAction, List<object>>();
-
-        CircularButton CancelButton;
-
-        Dictionary<IAction, IIconTexture> _ActionIcona = new Dictionary<IAction, IIconTexture>();
+        private readonly Dictionary<IAction, List<object>> ActionViews = [];
+        private CircularButton CancelButton;
+        private readonly Dictionary<IAction, IIconTexture> _ActionIcona = [];
 
         //        IReadOnlyDictionary<IAction, CircularButton> _actionButtons = new Dictionary<IAction, CircularButton>();
 
@@ -57,21 +58,22 @@ namespace WebAnnotation.UI.Commands
     }
     */
 
-        CircularButton[] _Buttons = Array.Empty<CircularButton>();
+        private CircularButton[] _Buttons = [];
 
-        CircularButton[] Buttons { get => _Buttons; }
+        private CircularButton[] Buttons => _Buttons;
 
 
 
         public delegate void OnCommandSuccess();
-        OnCommandSuccess SuccessCallback = null;
 
-        private GridRectangle BoundingBox;
+        private readonly OnCommandSuccess? SuccessCallback = null;
+
+        private Rectangle BoundingBox;
 
         /// <summary>
         /// If the mouse or pen hover over a button we only display the active animation for the button if it exists
         /// </summary>
-        private IAction active_action = null;
+        private IAction? active_action = null;
 
         /// <summary>
         /// True if the input device is over the cancel button
@@ -81,9 +83,9 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Fraction of the total shape area a button should occupy by default
         /// </summary>
-        double CircleAreaScalar = 10;
+        private readonly double CircleAreaScalar = 10;
 
-        private ActionSelectionCanvasControl(SectionViewerControl parent, OnCommandSuccess success_callback = null) : base(parent)
+        private ActionSelectionCanvasControl(SectionViewerControl parent, OnCommandSuccess? success_callback = null) : base(parent)
         {
             //BoundingBox = bounding_box;
             //AvailableActions = actions;
@@ -111,29 +113,23 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void GenerateActionButtons(Dictionary<IAction, IIconTexture> actionIcons)
         {
-            this.BoundingBox = CalculateBoundingBox(ActionInteractables);
+            BoundingBox = CalculateBoundingBox(ActionInteractables);
 
-            var buttons = new List<CircularButton>(actionIcons.Count);
+            List<CircularButton> buttons = new(actionIcons.Count);
 
-            foreach (var item in actionIcons)
+            foreach (KeyValuePair<IAction, IIconTexture> item in actionIcons)
             {
-                var action = item.Key;
-                var value = item.Value;
+                IAction action = item.Key;
+                IIconTexture value = item.Value;
 
                 CircleView btnView = null;
 
-                IColorView colorView = value as IColorView;
-                Color color = colorView == null ? Color.Green : colorView.Color;
+                Color color = value is not IColorView colorView ? Color.Green : colorView.Color;
 
-                var circle = new GridCircle(GridVector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
-                if (value.Icon != BuiltinTexture.None)
-                {
-                    btnView = new TextureCircleView(value.Icon.GetTexture(), circle, color);
-                }
-                else
-                {
-                    btnView = new CircleView(circle, color);
-                }
+                Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
+                btnView = value.Icon != BuiltinTexture.None
+                    ? new TextureCircleView(value.Icon.GetTexture(), circle, color)
+                    : new CircleView(circle, color);
 
                 //TODO: Sort and Map visuals on the circlular buttons according to action types
                 CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
@@ -145,11 +141,11 @@ namespace WebAnnotation.UI.Commands
                 }
                 else
                 {
-                    ActionInteractables.Add(action, new List<IHitTesting>(new CircularButton[] { circularButton }));
+                    ActionInteractables.Add(action, [circularButton]);
                 }
             }
 
-            this._Buttons = buttons.ToArray();
+            _Buttons = [.. buttons];
 
             AppendCancelButton();
 
@@ -157,50 +153,43 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        private GridRectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
+        private Rectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
         {
-            GridRectangle output = new GridRectangle();
+            Rectangle output = new();
 
             bool First = true;
-            foreach (var controls in ActionInteractables.Values)
+            foreach (List<IHitTesting> controls in ActionInteractables.Values)
             {
-                foreach (var control in controls)
+                foreach (IHitTesting control in controls)
                 {
-                    if (First)
-                    {
-                        output = control.BoundingBox;
-                    }
-                    else
-                    {
-                        output = GridRectangle.Union(output, control.BoundingBox);
-                    }
+                    output = First ? control.BoundingBox : Rectangle.Union(output, control.BoundingBox);
                 }
             }
 
             //Check that the bounding box is not too large
-            var renderTargetBounds = this.Parent.RenderTargetBounds();
+            Rectangle renderTargetBounds = Parent.RenderTargetBounds();
             if (output.Width > renderTargetBounds.Width)
             {
-                output = new GridRectangle(renderTargetBounds.Left, renderTargetBounds.Right, output.Bottom,
+                output = new Rectangle(renderTargetBounds.Left, renderTargetBounds.Right, output.Bottom,
                     output.Top);
             }
-             
+
             if (output.Height > renderTargetBounds.Height)
             {
-                output = new GridRectangle(output.Left, output.Right, renderTargetBounds.Bottom,
+                output = new Rectangle(output.Left, output.Right, renderTargetBounds.Bottom,
                     renderTargetBounds.Top);
             }
 
             //Check that the bounding box is not too small
             if (output.Width < renderTargetBounds.Width / 5)
             {
-                output = new GridRectangle(output.Left, output.Left + renderTargetBounds.Width / 5, output.Bottom,
+                output = new Rectangle(output.Left, output.Left + renderTargetBounds.Width / 5, output.Bottom,
                     output.Top);
             }
 
             if (output.Height < renderTargetBounds.Height / 5)
             {
-                output = new GridRectangle(output.Left, output.Right, output.Bottom,
+                output = new Rectangle(output.Left, output.Right, output.Bottom,
                     output.Bottom + renderTargetBounds.Height / 5);
             }
 
@@ -212,25 +201,29 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void LayoutButtons()
         {
-            GridRectangle bbox = BoundingBox;
+            Rectangle bbox = BoundingBox;
             //TODO: Ensure buttons are visible on the screen
 
             double Radius = GetButtonRadius(BoundingBox, CircleAreaScalar);
 
-            GridVector2 Origin = bbox.UpperLeft;
-            Origin = bbox.UpperLeft - new GridVector2(Radius, Radius);
+            Geometry.Vector2 Origin = bbox.UpperLeft;
+            Origin = bbox.UpperLeft - new Geometry.Vector2(Radius, Radius);
 
-            GridRectangle visible_world = this.Parent.Scene.VisibleWorldBounds;
+            Rectangle visible_world = Parent.Scene.VisibleWorldBounds;
 
             if (visible_world.Left > Origin.X)
-                Origin.X = visible_world.Left;
+            {
+                Origin = new Geometry.Vector2(visible_world.Left, Origin.Y);
+            }
 
             if (visible_world.Bottom > Origin.Y)
-                Origin.Y = visible_world.Bottom;
+            {
+                Origin = new Geometry.Vector2(Origin.X, visible_world.Bottom);
+            }
 
-            //Origin = Origin - new GridVector2(Radius, 0);
+            //Origin = Origin - new Geometry.Vector2(Radius, 0);
 
-            GridVector2 NextPosition = Origin;
+            Geometry.Vector2 NextPosition = Origin;
             double HorizontalSpacing = Radius * 3;
             double VerticalSpacing = Radius * 3;
             //Place everything but the cancel button, which is the last button in the list.  The cancel button
@@ -241,22 +234,22 @@ namespace WebAnnotation.UI.Commands
 
             for (int i = 0; i < Buttons.Length - 1; i++)
             {
-                NextPosition = Origin + new GridVector2((iCol) * HorizontalSpacing, 0 - (VerticalSpacing * iRow));
-                Buttons[i].Circle = new GridCircle(NextPosition, Radius);
+                NextPosition = Origin + new Geometry.Vector2((iCol) * HorizontalSpacing, 0 - (VerticalSpacing * iRow));
+                Buttons[i].Circle = new Circle(NextPosition, Radius);
                 iCol++;
 
                 if (iCol > nCols)
                 {
                     iRow -= 1;
                     iCol = 0;
-                    //    NextPosition = new GridVector2(Origin.X - Radius, NextPosition.Y);
+                    //    NextPosition = new Geometry.Vector2(Origin.X - Radius, NextPosition.Y);
                 }
                 Trace.WriteLine(NextPosition);
             }
 
             //Place the cancel button one row up and one column right of the normal button positions
-            NextPosition = Origin + new GridVector2((nCols + 1) * HorizontalSpacing, 0 - (VerticalSpacing * -1));
-            Buttons[Buttons.Length - 1].Circle = new GridCircle(NextPosition, Radius);
+            NextPosition = Origin + new Geometry.Vector2((nCols + 1) * HorizontalSpacing, 0 - (VerticalSpacing * -1));
+            Buttons[Buttons.Length - 1].Circle = new Circle(NextPosition, Radius);
         }
 
         /// <summary>
@@ -264,55 +257,58 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void AppendCancelButton()
         {
-            GridVector2 ButtonCenter = BoundingBox.UpperRight;
+            Geometry.Vector2 ButtonCenter = BoundingBox.UpperRight;
             double CancelCircleRadius = GetButtonRadius(BoundingBox, CircleAreaScalar);
-            ButtonCenter = ButtonCenter + new GridVector2(CancelCircleRadius, CancelCircleRadius);
-            GridCircle ButtonCircle = new GridCircle(ButtonCenter, CancelCircleRadius);
+            ButtonCenter = ButtonCenter + new Geometry.Vector2(CancelCircleRadius, CancelCircleRadius);
+            Circle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
 
             //CancelView = new CircularButton(ButtonCircle, Color.Magenta);
-            var cancelBtnView = new TextureCircleView(BuiltinTexture.X.GetTexture(), ButtonCircle, Color.Magenta);
+            TextureCircleView cancelBtnView = new(BuiltinTexture.X.GetTexture(), ButtonCircle, Color.Magenta);
             CancelButton = CircularButton.CreateSimple(cancelBtnView, () => { return; });
 
-            this._Buttons = Buttons.Add(CancelButton);
+            _Buttons = Buttons.Add(CancelButton);
         }
 
-        public override void OnActivate()
-        {
-            base.OnActivate();
-        }
+        public override void OnActivate() => base.OnActivate();
 
         public override void OnDraw(GraphicsDevice graphicsDevice, Scene scene, BasicEffect basicEffect)
         {
-            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, Buttons.Select(b => b.circleView).ToArray());
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, [.. Buttons.Select(b => b.circleView)]);
 
             if (CancelHover)
+            {
                 return;
+            }
 
             List<object> view_list;
-            if (active_action == null)
+            if (active_action is null)
             {
-                view_list = ActionViews.Values.SelectMany(v => v).ToList();
-                foreach (var view in view_list)
+                view_list = [.. ActionViews.Values.SelectMany(v => v)];
+                foreach (object view in view_list)
+                {
                     DrawView(graphicsDevice, scene, view, false);
+                }
             }
             else
             {
                 if (ActionViews.ContainsKey(active_action))
                 {
                     view_list = ActionViews[active_action];
-                    foreach (var view in view_list)
+                    foreach (object view in view_list)
+                    {
                         DrawView(graphicsDevice, scene, view, true);
+                    }
                 }
                 else
                 {
-                    view_list = new List<object>();
+                    view_list = [];
                 }
             }
 
             //Show the passive views for all buttons if there is no active view
 
             /*
-            if (active_action_view == null)
+            if (active_action_view is null)
             {
                 foreach (IActionView action in this.action_views.Where(av => av.Passive != null))
                 {
@@ -333,100 +329,72 @@ namespace WebAnnotation.UI.Commands
         {
             if (action is IActionView)
             {
-                var view = (IActionView)action;
-                if (UseActive == false || view.Active == null)
+                IActionView view = (IActionView)action;
+                if (UseActive == false || view.Active is null)
                 {
-                    if (view.Passive != null)
-                        view.Passive.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                    view.Passive?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
                 }
                 else if (view.Active != null && UseActive)
+                {
                     view.Active.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                }
             }
-            else if (action is IRenderable)
+            else if (action is IRenderable view)
             {
-                var view = (IRenderable)action;
                 view.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
         }
 
-        public override void Redo()
-        {
-            base.Redo();
-        }
+        public override void Redo() => base.Redo();
 
-        public override string ToString()
-        {
-            return base.ToString();
-        }
+        public override string ToString() => base.ToString();
 
-        public override void Undo()
-        {
-            base.Undo();
-        }
+        public override void Undo() => base.Undo();
 
         protected override void Execute()
         {
             if (SuccessCallback != null)
+            {
                 SuccessCallback();
+            }
 
             base.Execute();
         }
 
 
-        protected override void OnCameraChanged(object sender, PropertyChangedEventArgs e)
-        {
-            base.OnCameraChanged(sender, e);
-        }
+        protected override void OnCameraChanged(object sender, PropertyChangedEventArgs e) => base.OnCameraChanged(sender, e);
 
-        protected override void OnDeactivate()
-        {
-            base.OnDeactivate();
-        }
+        protected override void OnDeactivate() => base.OnDeactivate();
 
-        protected override void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            base.OnKeyDown(sender, e);
-        }
+        protected override void OnKeyDown(object sender, KeyEventArgs e) => base.OnKeyDown(sender, e);
 
-        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
-        {
-            base.OnKeyPress(sender, e);
-        }
+        protected override void OnKeyPress(object sender, KeyPressEventArgs e) => base.OnKeyPress(sender, e);
 
-        protected override void OnKeyUp(object sender, KeyEventArgs e)
-        {
-            base.OnKeyUp(sender, e);
-        }
+        protected override void OnKeyUp(object sender, KeyEventArgs e) => base.OnKeyUp(sender, e);
 
-        protected override void OnMouseClick(object sender, MouseEventArgs e)
-        {
-            base.OnMouseClick(sender, e);
-        }
+        protected override void OnMouseClick(object sender, MouseEventArgs e) => base.OnMouseClick(sender, e);
 
-        protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            base.OnMouseDoubleClick(sender, e);
-        }
+        protected override void OnMouseDoubleClick(object sender, MouseEventArgs e) => base.OnMouseDoubleClick(sender, e);
 
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
             base.OnMouseDown(sender, e);
 
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             if (CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
             {
-                this.Deactivated = true;
+                Deactivated = true;
                 return;
             }
 
-            foreach (var actionInteractables in ActionInteractables.Values)
+            foreach (List<IHitTesting> actionInteractables in ActionInteractables.Values)
             {
-                foreach (var interactable in actionInteractables)
+                foreach (IHitTesting interactable in actionInteractables.Where(ai => ai is IClickable).Where(ai => ai.Contains(WorldPosition)))
                 {
                     IClickable clickable = interactable as IClickable;
-                    if (clickable != null && clickable.Contains(WorldPosition) && clickable.OnClick(clickable, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
+                    if (clickable.OnClick(clickable, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
                     {
-                        this.Deactivated = true;
+                        Deactivated = true;
                         return;
                     }
                 }
@@ -435,62 +403,46 @@ namespace WebAnnotation.UI.Commands
 
 
             /*
-            if (VolumeShape.Contains(WorldPosition))
+            if (VolumeShape.Covers(WorldPosition))
             {
                 this.Execute();
             }
             */
         }
 
-        protected override void OnMouseEnter(object sender, EventArgs e)
-        {
-            base.OnMouseEnter(sender, e);
-        }
+        protected override void OnMouseEnter(object sender, EventArgs e) => base.OnMouseEnter(sender, e);
 
-        protected override void OnMouseHover(object sender, EventArgs e)
-        {
-            base.OnMouseHover(sender, e);
-        }
+        protected override void OnMouseHover(object sender, EventArgs e) => base.OnMouseHover(sender, e);
 
-        protected override void OnMouseLeave(object sender, EventArgs e)
-        {
-            base.OnMouseLeave(sender, e);
-        }
+        protected override void OnMouseLeave(object sender, EventArgs e) => base.OnMouseLeave(sender, e);
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             UpdateActiveView(WorldPosition);
         }
 
-        protected override void OnMouseUp(object sender, MouseEventArgs e)
-        {
-            base.OnMouseUp(sender, e);
-        }
+        protected override void OnMouseUp(object sender, MouseEventArgs e) => base.OnMouseUp(sender, e);
 
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            base.OnMouseWheel(sender, e);
-        }
+        protected override void OnMouseWheel(object sender, MouseEventArgs e) => base.OnMouseWheel(sender, e);
 
         protected override void OnPenContact(object sender, PenEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             if (CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Pen, e))
             {
-                this.Deactivated = true;
+                Deactivated = true;
                 return;
             }
 
-            foreach (var actionInteractables in ActionInteractables.Values)
+            foreach (List<IHitTesting> actionInteractables in ActionInteractables.Values)
             {
-                foreach (var interactable in actionInteractables)
+                foreach (IHitTesting interactable in actionInteractables)
                 {
-                    IClickable clickable = interactable as IClickable;
-                    if (clickable != null && clickable.Contains(WorldPosition) && clickable.OnClick(clickable, WorldPosition, InputDevice.Pen, e))
+                    if (interactable is IClickable clickable && clickable.Contains(WorldPosition) && clickable.OnClick(clickable, WorldPosition, InputDevice.Pen, e))
                     {
-                        this.Deactivated = true;
+                        Deactivated = true;
                         return;
                     }
                 }
@@ -499,7 +451,7 @@ namespace WebAnnotation.UI.Commands
 
 
             /*
-            if (BoundingBox.Contains(WorldPosition))
+            if (BoundingBox.Covers(WorldPosition))
             {
                 this.Execute();
             }
@@ -508,43 +460,28 @@ namespace WebAnnotation.UI.Commands
             base.OnPenContact(sender, e);
         }
 
-        protected override void OnPenEnterRange(object sender, PenEventArgs e)
-        {
-            base.OnPenEnterRange(sender, e);
-        }
+        protected override void OnPenEnterRange(object sender, PenEventArgs e) => base.OnPenEnterRange(sender, e);
 
-        protected override void OnPenLeaveContact(object sender, PenEventArgs e)
-        {
-            base.OnPenLeaveContact(sender, e);
-        }
+        protected override void OnPenLeaveContact(object sender, PenEventArgs e) => base.OnPenLeaveContact(sender, e);
 
-        protected override void OnPenLeaveRange(object sender, PenEventArgs e)
-        {
-            base.OnPenLeaveRange(sender, e);
-        }
+        protected override void OnPenLeaveRange(object sender, PenEventArgs e) => base.OnPenLeaveRange(sender, e);
 
         protected override void OnPenMove(object sender, PenEventArgs e)
         {
             if (e.InContact == false)
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 UpdateActiveView(WorldPosition);
             }
 
             base.OnPenMove(sender, e);
         }
 
-        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-        {
-            base.OnPropertyChanged(e);
-        }
+        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e) => base.OnPropertyChanged(e);
 
-        protected override bool ShouldSerializeProperty(DependencyProperty dp)
-        {
-            return base.ShouldSerializeProperty(dp);
-        }
+        protected override bool ShouldSerializeProperty(DependencyProperty dp) => base.ShouldSerializeProperty(dp);
 
-        protected void UpdateActiveView(GridVector2 WorldPosition)
+        protected void UpdateActiveView(Geometry.Vector2 WorldPosition)
         {
             if (CancelButton.Contains(WorldPosition))
             {
@@ -556,16 +493,19 @@ namespace WebAnnotation.UI.Commands
 
             CancelHover = false;
 
-            foreach (var action in ActionInteractables.Keys)
+            foreach (IAction action in ActionInteractables.Keys)
             {
-                var interactables = ActionInteractables[action].Where(i => i is CircularButton);
+                IEnumerable<IHitTesting> interactables = ActionInteractables[action].Where(i => i is CircularButton);
 
-                foreach (var interactable in interactables)
+                foreach (IHitTesting interactable in interactables)
                 {
                     if (interactable.Contains(WorldPosition))
                     {
                         if (active_action != action)
-                            Trace.WriteLine(string.Format("Hover Action: {0}", action));
+                        {
+                            Trace.WriteLine($"Hover Action: {action}");
+                        }
+
                         active_action = action;
                         return;
                     }
@@ -581,51 +521,45 @@ namespace WebAnnotation.UI.Commands
             return;
         }
 
-        public static ActionSelectionCanvasControl CreateViews(SectionViewerControl parent, IAction[] actions, OnCommandSuccess success_callback = null)
+        public static ActionSelectionCanvasControl CreateViews(SectionViewerControl parent, IAction[] actions, OnCommandSuccess? success_callback = null)
         {
-            List<IClickable> clickables = new List<IClickable>();
-            List<IActionView> views = new List<IActionView>();
+            List<IClickable> clickables = [];
+            List<IActionView> views = [];
 
-            ActionSelectionCanvasControl control = new ActionSelectionCanvasControl(parent, success_callback);
+            ActionSelectionCanvasControl control = new(parent, success_callback);
 
-            Dictionary<IAction, IIconTexture> actionButtons = new Dictionary<IAction, IIconTexture>();
+            Dictionary<IAction, IIconTexture> actionButtons = [];
 
             foreach (IAction a in actions)
             {
-                var actionSelectors = new List<IHitTesting>();
+                List<IHitTesting> actionSelectors = [];
                 control.ActionInteractables.Add(a, actionSelectors);
 
-                var actionViews = new List<object>();
+                List<object> actionViews = [];
                 control.ActionViews.Add(a, actionViews);
 
-                if (a is Change2DContourAction)
+                if (a is Change2DContourAction change2D)
                 {
-                    var action = a as Change2DContourAction;
-
-                    var view = new Change2DContourActionView(action);
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.NewSmoothedVolumePolygon, a.Execute);
+                    Change2DContourActionView view = new(change2D);
+                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(change2D.NewSmoothedVolumePolygon, a.Execute);
 
                     actionSelectors.Add(clickable);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
-                else if (a is Change1DContourAction)
+                else if (a is Change1DContourAction change1D)
                 {
-                    var action = a as Change1DContourAction;
-
-                    var view = new Change1DContourActionView(action);
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.NewSmoothVolumePolyline, a.Execute);
+                    Change1DContourActionView view = new(change1D);
+                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(change1D.NewSmoothVolumePolyline, a.Execute);
 
                     actionSelectors.Add(clickable);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
-                else if (a is CutHoleAction)
+                else if (a is CutHoleAction cutHole)
                 {
-                    var action = a as CutHoleAction;
-
-                    var view = new CutHoleActionView(action);
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.NewSmoothVolumeInteriorPolygon, a.Execute);
+                    CutHoleActionView view = new(cutHole);
+                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(cutHole.NewSmoothVolumeInteriorPolygon, a.Execute);
 
                     actionSelectors.Add(clickable);
                     actionViews.Add(view);
@@ -635,23 +569,23 @@ namespace WebAnnotation.UI.Commands
                 {
                     LinkLocationAction action = a as LinkLocationAction;
 
-                    var view = new LinkLocationActionView(action);
+                    LinkLocationActionView view = new(action);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
                 else if (a is LinkStructureAction)
                 {
-                    var action = a as LinkStructureAction;
+                    LinkStructureAction action = a as LinkStructureAction;
 
-                    var view = new LinkStructureActionView(action);
+                    LinkStructureActionView view = new(action);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
                 else if (a is RemoveHoleAction)
                 {
-                    var action = a as RemoveHoleAction;
+                    RemoveHoleAction action = a as RemoveHoleAction;
 
-                    var view = new RemoveHoleActionView(action);
+                    RemoveHoleActionView view = new(action);
 
                     ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.VolumePolygonToRemove, a.Execute);
 
@@ -659,34 +593,29 @@ namespace WebAnnotation.UI.Commands
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
-                else if (a is ChangeToPolygonAction)
+                else if (a is ChangeToPolygonAction changeToPolygon)
                 {
-                    var action = a as ChangeToPolygonAction;
+                    ChangeToPolygonActionView view = new(changeToPolygon);
 
-                    var view = new ChangeToPolygonActionView(action);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.NewSmoothVolumePolygon, a.Execute);
+                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(changeToPolygon.NewSmoothVolumePolygon, a.Execute);
 
                     actionSelectors.Add(clickable);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
-                else if (a is ChangeToPolylineAction)
+                else if (a is ChangeToPolylineAction changeToPolyline)
                 {
-                    var action = a as ChangeToPolylineAction;
+                    ChangeToPolylineActionView view = new(changeToPolyline);
 
-                    var view = new ChangeToPolylineActionView(action);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.NewSmoothVolumePolyline, a.Execute);
+                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(changeToPolyline.NewSmoothVolumePolyline, a.Execute);
 
                     actionSelectors.Add(clickable);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
-                else if (a is CreateStructureActionBase)
+                else if (a is CreateStructureActionBase createStructure)
                 {
-                    var action = a as CreateStructureActionBase;
-                    var view = new CreateStructureActionView(action);
+                    CreateStructureActionView view = new(createStructure);
 
                     ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(view.Shape, a.Execute);
 
@@ -694,10 +623,9 @@ namespace WebAnnotation.UI.Commands
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
-                else if (a is CreateNewLinkedLocationAction)
+                else if (a is CreateNewLinkedLocationAction createLinked)
                 {
-                    var action = a as CreateNewLinkedLocationAction;
-                    var view = new CreateNewLinkedLocationActionView(action);
+                    CreateNewLinkedLocationActionView view = new(createLinked);
 
                     ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(view.Shape, a.Execute);
 

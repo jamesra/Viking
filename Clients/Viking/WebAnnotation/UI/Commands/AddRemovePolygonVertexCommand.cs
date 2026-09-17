@@ -6,61 +6,60 @@ using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class AddPolygonVertexCommand : AnnotationCommandBase
+    internal class AddPolygonVertexCommand : AnnotationCommandBase
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
+        private Polygon UpdatedVolumePolygon;
 
-        GridPolygon UpdatedVolumePolygon;
-
-        private int iNewControlPoint = -1;
+        private readonly int iNewControlPoint = -1;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
         /// </summary>
         /// <param name="MosaicPolygon"></param>
         /// <param name="VolumePolygon"></param>
-        public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
-        OnCommandSuccess success_callback;
+        public delegate void OnCommandSuccess(Polygon MosaicPolygon, Polygon VolumePolygon);
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly OnCommandSuccess success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public AddPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
 
             this.success_callback = success_callback;
         }
 
-        public static GridPolygon AddControlPoint(GridPolygon polygon, GridVector2 NewControlPointPosition)
+        public static Polygon AddControlPoint(Polygon polygon, Vector2 NewControlPointPosition)
         {
             /*
-            GridPolygon intersectingPolygon;
+            Polygon intersectingPolygon;
             polygon.NearestPolygonSegment(NewControlPointPosition, out intersectingPolygon);
             intersectingPolygon.AddVertex(NewControlPointPosition);
             */
 
-            //return polygon.Clone() as GridPolygon;
-            GridPolygon newPoly = (GridPolygon)polygon.Clone();
+            //return polygon.Clone() as Polygon;
+            Polygon newPoly = (Polygon)polygon.Clone();
             newPoly.AddVertex(NewControlPointPosition);
             return newPoly;
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 NewControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
-            this.UpdatedVolumePolygon = AddPolygonVertexCommand.AddControlPoint(OriginalVolumePolygon, NewControlPointPosition);
+            Vector2 NewControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
+            UpdatedVolumePolygon = AddPolygonVertexCommand.AddControlPoint(OriginalVolumePolygon, NewControlPointPosition);
             base.OnMouseMove(sender, e);
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
         protected override void Execute()
         {
-            GridPolygon mosaic_polygon;
+            Polygon mosaic_polygon;
             try
             {
                 mosaic_polygon = mapping.TryMapShapeVolumeToSection(UpdatedVolumePolygon);
@@ -71,60 +70,64 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(mosaic_polygon, UpdatedVolumePolygon);
+            success_callback(mosaic_polygon, UpdatedVolumePolygon);
 
             base.Execute();
         }
     }
 
-    class RemovePolygonVertexCommand : AnnotationCommandBase
+    internal class RemovePolygonVertexCommand : AnnotationCommandBase
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
-        GridPolygon UpdatedVolumePolygon;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
+        private Polygon UpdatedVolumePolygon;
 
-        public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
-        OnCommandSuccess success_callback;
-        readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        public delegate void OnCommandSuccess(Polygon MosaicPolygon, Polygon VolumePolygon);
+
+        private readonly OnCommandSuccess success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public RemovePolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             this.success_callback = success_callback;
 
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
         }
 
-        public static GridPolygon RemoveControlPoint(GridPolygon polygon, GridVector2 RemovedControlPointPosition)
+        public static Polygon RemoveControlPoint(Polygon polygon, Vector2 RemovedControlPointPosition)
         {
-            GridPolygon intersectingPolygon;
-            polygon.PointIntersectsAnyPolygonSegment(RemovedControlPointPosition, Global.DefaultClosedLineWidth, out intersectingPolygon);
-            if (intersectingPolygon == null)
+            polygon.PointIntersectsAnyPolygonSegment(RemovedControlPointPosition, Global.DefaultClosedLineWidth, out Polygon intersectingPolygon);
+            if (intersectingPolygon is null)
+            {
                 return null;
+            }
 
             if (intersectingPolygon.ExteriorRing.Length <= 4) //Closed rings in polygons mean 3 point poly's have 4 points
+            {
                 return null;
+            }
 
             intersectingPolygon.RemoveVertex(RemovedControlPointPosition);
 
-            return polygon.Clone() as GridPolygon;
+            return polygon.Clone() as Polygon;
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 OldControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
-            this.UpdatedVolumePolygon = RemovePolygonVertexCommand.RemoveControlPoint(OriginalVolumePolygon, OldControlPointPosition);
+            Vector2 OldControlPointPosition = Parent.ScreenToWorld(e.X, e.Y);
+            UpdatedVolumePolygon = RemovePolygonVertexCommand.RemoveControlPoint(OriginalVolumePolygon, OldControlPointPosition);
             base.OnMouseMove(sender, e);
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
         protected override void Execute()
         {
-            GridPolygon mosaic_polygon;
-            if (UpdatedVolumePolygon == null)
+            Polygon mosaic_polygon;
+            if (UpdatedVolumePolygon is null)
             {
                 base.Execute();
                 return;
@@ -140,7 +143,7 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(mosaic_polygon, UpdatedVolumePolygon);
+            success_callback(mosaic_polygon, UpdatedVolumePolygon);
 
             base.Execute();
         }

@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,8 +9,8 @@ namespace GraphLibTest
     {
         public static SimpleGraph CreateGraphWithIsolations()
         {
-            SimpleGraph graph = new GraphLibTest.SimpleGraph();
-            
+            SimpleGraph graph = new();
+
             graph.AddNode(1);
             graph.AddNode(2);
             graph.AddNode(3);
@@ -19,11 +19,11 @@ namespace GraphLibTest
             graph.AddNode(12);
             graph.AddNode(13);
 
-            graph.AddEdge(1,2);
-            graph.AddEdge(2,3);
+            graph.AddEdge(1, 2);
+            graph.AddEdge(2, 3);
 
-            graph.AddEdge(11,12);
-            graph.AddEdge(12,13);
+            graph.AddEdge(11, 12);
+            graph.AddEdge(12, 13);
 
             return graph;
         }
@@ -31,23 +31,23 @@ namespace GraphLibTest
         [TestMethod]
         public void TestIsolatedSubgraphButEmpty()
         {
-            SimpleGraph graph = new GraphLibTest.SimpleGraph();
+            SimpleGraph graph = new();
             IList<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
 
-            Assert.AreEqual(subgraphs.Count, 0);
+            Assert.AreEqual(0, subgraphs.Count);
         }
 
         [TestMethod]
         public void TestIsolatedSubgraphButOneNode()
         {
-            SimpleGraph graph = new GraphLibTest.SimpleGraph();
-            SimpleNode A1 = new SimpleNode(1);
+            SimpleGraph graph = new();
+            SimpleNode A1 = new(1);
             graph.AddNode(A1);
 
             IList<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
 
-            Assert.AreEqual(subgraphs.Count, 1);
-            Assert.AreEqual(subgraphs[0].Count, 1);
+            Assert.AreEqual(1, subgraphs.Count);
+            Assert.AreEqual(1, subgraphs[0].Count);
         }
 
 
@@ -58,9 +58,9 @@ namespace GraphLibTest
 
             IList<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
 
-            Assert.AreEqual(subgraphs.Count, 2);
-            Assert.AreEqual(subgraphs[0].Count, 3);
-            Assert.AreEqual(subgraphs[1].Count, 3);
+            Assert.AreEqual(2, subgraphs.Count);
+            Assert.AreEqual(3, subgraphs[0].Count);
+            Assert.AreEqual(3, subgraphs[1].Count);
 
             long TotalNodes = subgraphs.Select(L => L.Count).Sum();
             Assert.AreEqual(TotalNodes, graph.Nodes.Count);

@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using Viking.Common;
 
@@ -22,6 +23,10 @@ namespace Viking.UI.Forms
             //            this.MdiParent = UI.State.Appwindow;
 
             InitializeComponent();
+
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.MinimumSize = new System.Drawing.Size(400, 440);
         }
 
         #region Variables
@@ -32,23 +37,20 @@ namespace Viking.UI.Forms
         /// Mapping of DBObject.Row instances to property sheets. Used so we only display one property sheet
         /// for any given object
         /// </summary>
-        static private Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
+        private static readonly Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = [];
 
         #endregion
 
         #region Static Methods
 
-        public static PropertySheetForm Show(IUIObjectBasic Object)
-        {
-            return PropertySheetForm.Show(Object, UI.State.Appwindow);
-        }
+        public static PropertySheetForm Show(IUIObjectBasic Object) => PropertySheetForm.Show(Object, UI.State.Appwindow);
 
         public static PropertySheetForm Show(IUIObjectBasic Object, System.Windows.Forms.Form ParentForm)
         {
             PropertySheetForm PropertyForm;
 
             Debug.Assert(Object != null, "Cannot display properties for null object");
-            if (Object == null)
+            if (Object is null)
                 return null;
 
             //return PropertySheetForm.Show(Object.Row, ParentForm);
@@ -71,24 +73,22 @@ namespace Viking.UI.Forms
 
         public static PropertySheetForm[] Show(IUIObjectBasic[] Objects, System.Windows.Forms.Form ParentForm)
         {
-            List<PropertySheetForm> Forms = new List<PropertySheetForm>(Objects.Length);
-            foreach (IUIObject Obj in Objects)
+            List<PropertySheetForm> Forms = new(Objects.Length);
+            foreach (IUIObject Obj in Objects.Cast<IUIObject>())
             {
                 PropertySheetForm Form = Show(Obj, ParentForm);
                 Forms.Add(Form);
             }
 
-            return Forms.ToArray();
+            return [.. Forms];
         }
 
         public static System.Windows.Forms.DialogResult ShowDialog(IUIObjectBasic Object, System.Windows.Forms.Form ParentForm)
         {
             //If we aren't showing those properties, create a new property sheet and show it.
-            using (PropertySheetForm PropertyForm = new PropertySheetForm(Object))
-            {
-                PropertyForm.Owner = ParentForm;
-                return PropertyForm.ShowDialog();
-            }
+            using PropertySheetForm PropertyForm = new(Object);
+            PropertyForm.Owner = ParentForm;
+            return PropertyForm.ShowDialog();
         }
 
         #endregion
@@ -150,22 +150,33 @@ namespace Viking.UI.Forms
         {
             //if (TabsProperty.IPropertyPages.Length > 1)
             {
-                Size MaxTabSize = TabsProperty.MaxTabSize;
+                Size MaxTabSize = TabsProperty.RecalculateMaxTabSize();
 
-                Size Margin = new Size();
-                Margin.Width = this.Width - TabsProperty.Width;
-                Margin.Height = this.Height - TabsProperty.Height;
+                Size Margin = new()
+                {
+                    Width = this.Width - TabsProperty.Width,
+                    Height = this.Height - TabsProperty.Height
+                };
 
-                this.Width = MaxTabSize.Width + Margin.Width;
-                this.Height = MaxTabSize.Height + Margin.Height;
+                int targetClientWidth = MaxTabSize.Width + Margin.Width;
+                int targetClientHeight = MaxTabSize.Height + Margin.Height;
+
+                if (targetClientWidth < this.ClientSize.Width)
+                {
+                    targetClientWidth = this.ClientSize.Width;
+                }
+
+                if (targetClientHeight < this.ClientSize.Height)
+                {
+                    targetClientHeight = this.ClientSize.Height;
+                }
+
+                this.ClientSize = new System.Drawing.Size(targetClientWidth, targetClientHeight);
 
                 foreach (IPropertyPage IPage in TabsProperty.IPropertyPages)
                 {
                     IToolBarButtons IButtons = IPage as IToolBarButtons;
-                    if (IButtons != null)
-                    {
-                        IButtons.AddButtons(this.Tools);
-                    }
+                    IButtons?.AddButtons(this.Tools);
                 }
             }
         }

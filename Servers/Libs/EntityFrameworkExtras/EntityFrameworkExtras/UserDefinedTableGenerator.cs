@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -7,27 +7,14 @@ using System.Reflection;
 
 namespace EntityFrameworkExtras
 {
-    public class UserDefinedTableGenerator
+    public class UserDefinedTableGenerator(Type type, object value)
     {
-        private readonly Type _type;
-        private readonly object _value;
+        private readonly Type _type = type ?? throw new ArgumentNullException("type");
+        private readonly object _value = value ?? throw new ArgumentNullException("value");
 
-        public UserDefinedTableGenerator(Type type, object value)
-        {
-            if (type == null)
-                throw new ArgumentNullException("type");
-
-            if (value == null)
-                throw new ArgumentNullException("value");
-
-            _type = type;
-            _value = value;
-        }
-
-        
         public DataTable GenerateTable()
         {
-            var dt = new DataTable();
+            DataTable dt = new();
 
             List<ColumnInformation> columns = GetColumnInformation();
 
@@ -43,11 +30,11 @@ namespace EntityFrameworkExtras
             {
                 Type type = column.Property.PropertyType;
 
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>))
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
                     type = type.GetGenericArguments()[0];
                 }
-                
+
                 dt.Columns.Add(column.Name, type);
             }
         }
@@ -69,7 +56,7 @@ namespace EntityFrameworkExtras
 
         private List<ColumnInformation> GetColumnInformation()
         {
-            var columns = new List<ColumnInformation>();
+            List<ColumnInformation> columns = [];
 
             foreach (PropertyInfo propertyInfo in _type.GetProperties())
             {
@@ -77,16 +64,18 @@ namespace EntityFrameworkExtras
 
                 if (attribute != null)
                 {
-                    var column = new ColumnInformation();
-                    column.Name = attribute.Name ?? propertyInfo.Name;
-                    column.Property = propertyInfo;
-                    column.Order = attribute.Order;
+                    ColumnInformation column = new()
+                    {
+                        Name = attribute.Name ?? propertyInfo.Name,
+                        Property = propertyInfo,
+                        Order = attribute.Order
+                    };
 
                     columns.Add(column);
                 }
             }
 
-            return columns.OrderBy(info => info.Order).ToList();
+            return [.. columns.OrderBy(info => info.Order)];
 
         }
     }

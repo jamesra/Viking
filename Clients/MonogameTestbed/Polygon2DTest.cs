@@ -1,10 +1,13 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TriangleNet;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -12,34 +15,34 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
-        public static GridVector2[] CreateTestPolygon(GridVector2? offset = new GridVector2?())
+        public static Geometry.Vector2[] CreateTestPolygon(Geometry.Vector2? offset = new Geometry.Vector2?())
         {
-            GridVector2[] output = new GridVector2[] {new GridVector2(10,10),
-                                      new GridVector2(5, 20),
-                                      new GridVector2(15, 30),
-                                      new GridVector2(30, 30),
-                                      new GridVector2(25, 15),
-                                      new GridVector2(45, 15),
-                                      new GridVector2(45, 10),
-                                      new GridVector2(55, 0),
-                                      new GridVector2(25, 5)};
-            if(offset.HasValue)
-                output = output.Select(p => p + offset.Value).ToArray();
+            Geometry.Vector2[] output = [new(10,10),
+                                      new(5, 20),
+                                      new(15, 30),
+                                      new(30, 30),
+                                      new(25, 15),
+                                      new(45, 15),
+                                      new(45, 10),
+                                      new(55, 0),
+                                      new(25, 5)];
+            if (offset.HasValue)
+                output = [.. output.Select(p => p + offset.Value)];
 
             return output;
         }
 
-        public static GridVector2[] CreateInteriorRing(GridVector2? offset = new GridVector2?())
+        public static Geometry.Vector2[] CreateInteriorRing(Geometry.Vector2? offset = new Geometry.Vector2?())
         {
-            GridVector2[] output = new GridVector2[] {new GridVector2(12.5,12.5),
-                                      new GridVector2(22.5, 12.5),
-                                      new GridVector2(24.5, 17.5),
-                                      new GridVector2(12.5, 17.5)};
+            Geometry.Vector2[] output = [new(12.5,12.5),
+                                      new(22.5, 12.5),
+                                      new(24.5, 17.5),
+                                      new(12.5, 17.5)];
 
             if (offset.HasValue)
-                output = output.Select(p => p + offset.Value).ToArray();
+                output = [.. output.Select(p => p + offset.Value)];
 
             return output;
         }
@@ -48,43 +51,45 @@ namespace MonogameTestbed
 
         public Task Init(MonoTestbed window)
         {
-            _initialized = true; 
-            GridVector2[] cps = CreateTestPolygon(new GridVector2(-50, 0));
+            _initialized = true;
+            Geometry.Vector2[] cps = CreateTestPolygon(new Geometry.Vector2(-50, 0));
 
-            //GridVector2[] ordered_cps = cps.OrderBy((v) => v).ToArray();
-            
+            //Geometry.Vector2[] ordered_cps = cps.OrderBy((v) => v).ToArray();
+
             this.meshView = new MeshView<VertexPositionColor>();
-            
+
             MeshModel<VertexPositionColor> model = TriangleNetExtensions.CreateMeshForPolygon2D(cps, null, Color.Goldenrod);
             this.meshView.models.Add(model);
 
-            GridVector2[] holy_cps = CreateTestPolygon();
-            GridVector2[] holy_hole = CreateInteriorRing();
+            Geometry.Vector2[] holy_cps = CreateTestPolygon();
+            Geometry.Vector2[] holy_hole = CreateInteriorRing();
 
-            List<GridVector2[]> listInnerRings = new List<GridVector2[]>();
-            listInnerRings.Add(holy_hole);
+            List<Geometry.Vector2[]> listInnerRings =
+            [
+                holy_hole
+            ];
             MeshModel<VertexPositionColor> holy_model = TriangleNetExtensions.CreateMeshForPolygon2D(holy_cps, listInnerRings, Color.Aquamarine);
             this.meshView.models.Add(holy_model);
 
-            int[] Convex_hull_idx;
-            GridVector2[] cv_output_points = holy_cps.ConvexHull(out Convex_hull_idx);
+            Geometry.Vector2[] cv_output_points = holy_cps.ConvexHull(out int[] Convex_hull_idx);
 
-            List<GridVector2> listCvPoints = new List<GridVector2>(Convex_hull_idx.Select(i => holy_cps[i]));
-            GridPolygon convex_hull_poly = new GridPolygon(listCvPoints.ToArray());
+            List<Geometry.Vector2> listCvPoints = [.. Convex_hull_idx.Select(i => holy_cps[i])];
+            Polygon convex_hull_poly = new(listCvPoints.ToArray());
 
-            convex_hull_poly = convex_hull_poly.Translate(new GridVector2(0, 40));
+            convex_hull_poly = convex_hull_poly.Translate(new Geometry.Vector2(0, 40));
 
             MeshModel<VertexPositionColor> cv_model = TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
             this.meshView.models.Add(cv_model);
-            
-            MeshModel<VertexPositionColor> circle_cv_model = BuildCircleConvexHull(new GridCircle(new GridVector2(35, -35), 25));
+            /*
+            MeshModel<VertexPositionColor> circle_cv_model = BuildCircleConvexHull(new Circle(new Geometry.Vector2(35, -35), 25));
             this.meshView.models.Add(circle_cv_model);
 
-            MeshModel<VertexPositionColor> circle_cv_model2 = BuildCircleConvexHull(new GridCircle(new GridVector2(70, -15), 10));
+            MeshModel<VertexPositionColor> circle_cv_model2 = BuildCircleConvexHull(new Circle(new Geometry.Vector2(70, -15), 10));
             this.meshView.models.Add(circle_cv_model2);
             
-            MeshModel<VertexPositionColor> circle_cv_model3 = BuildCircleConvexHull(new GridCircle(new GridVector2(-100, 0), 40));
+            MeshModel<VertexPositionColor> circle_cv_model3 = BuildCircleConvexHull(new Circle(new Geometry.Vector2(-100, 0), 40));
             this.meshView.models.Add(circle_cv_model3);
+            */
 
             meshView.WireFrame = false;
 
@@ -93,28 +98,26 @@ namespace MonogameTestbed
 
         public void UnloadContent(MonoTestbed window)
         {
-            
+
         }
 
+        /*
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         {
 
-            GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
-              
-            int[] cv_idx;
-            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+            Geometry.Vector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, Geometry.Vector3.Zero).Select(v => new Geometry.Vector2(v.Position.X, v.Position.Y)).ToArray();
 
-            GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
+            Geometry.Vector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
+
+            Polygon convex_hull_poly = new Polygon(cv_verticies);
             return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
         }
+        */
 
         public void Update()
         {
         }
 
-        public void Draw(MonoTestbed window)
-        {
-            meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
-        }
+        public void Draw(MonoTestbed window) => meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
     }
 }

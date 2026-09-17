@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -22,11 +22,11 @@ namespace WebAnnotationModel
         where WCFOBJECT : AnnotationService.Types.DataObjectWithParentOfLong, new()
     {
 
-        protected ReaderWriterLockSlim _rwLockRootObjects = new ReaderWriterLockSlim();
+        protected ReaderWriterLockSlim _rwLockRootObjects = new();
         /// <summary>
         /// Known objects with no parent object
         /// </summary>
-        private readonly ObservableCollection<KEY> _rootObjects = new ObservableCollection<KEY>();
+        private readonly ObservableCollection<KEY> _rootObjects = [];
         private KEY[] _readOnlyRootObjects;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -51,7 +51,7 @@ namespace WebAnnotationModel
                             return _readOnlyRootObjects;
                         }
 
-                        _readOnlyRootObjects = _rootObjects.ToArray();
+                        _readOnlyRootObjects = [.. _rootObjects];
                         return _readOnlyRootObjects;
                     }
                     finally
@@ -158,10 +158,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        protected override ChangeInventory<OBJECT> InternalAdd(OBJECT[] newType)
-        {
-            return InternalAdd(newType, false);
-        }
+        protected override ChangeInventory<OBJECT> InternalAdd(OBJECT[] newType) => InternalAdd(newType, false);
 
         /// <summary>
         /// Used to populate cache when a call returns from the server
@@ -170,15 +167,15 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] addObjs, bool LoadParents)
         {
-            List<OBJECT> listAddedObj = new List<OBJECT>(addObjs.Length);
+            List<OBJECT> listAddedObj = new(addObjs.Length);
 
             //This list records objects we can't add which must be updated instead
-            List<OBJECT> listUpdateObj = new List<OBJECT>(addObjs.Length);
+            List<OBJECT> listUpdateObj = new(addObjs.Length);
 
             //List of all parent objects which are missing.  These need to be loaded.
-            List<KEY> listMissingParents = new List<KEY>(addObjs.Length);
+            List<KEY> listMissingParents = new(addObjs.Length);
 
-            List<OBJECT> listObjNeedingParents = new List<OBJECT>(addObjs.Length);
+            List<OBJECT> listObjNeedingParents = new(addObjs.Length);
 
             for (int iObj = 0; iObj < addObjs.Length; iObj++)
             {
@@ -199,9 +196,10 @@ namespace WebAnnotationModel
                     else
                     {
                         //Added the false for dynamic structure loading change, may cause bugs
-                        OBJECT parent = GetObjectByID(newObj.ParentID.Value, false);
+                        OBJECT parent;
+                        TryGetObjectByID(newObj.ParentID.Value, out parent);
                         //Don't use newObj.Parent in if test because get method will fetch parent
-                        if (parent == null)
+                        if (parent is null)
                         {
                             //If it is a new parentID then add it
                             if (listMissingParents.Contains(newObj.ParentID.Value) == false)
@@ -222,20 +220,20 @@ namespace WebAnnotationModel
                 }
             }
 
-            ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>();
+            ChangeInventory<OBJECT> inventory = new();
             inventory.AddedObjects.AddRange(listAddedObj);
 
             //Go find all of the missing parent objects and make sure they have been downloaded
             if (listMissingParents.Count > 0)
             {
-                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs(listMissingParents.ToArray(), true);
+                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs([.. listMissingParents]);
                 inventory.Add(parent_inventory);
             }
 
 
             if (listUpdateObj.Count > 0)
             {
-                OBJECT[] updatedObjs = InternalUpdate(listUpdateObj.ToArray());
+                OBJECT[] updatedObjs = InternalUpdate([.. listUpdateObj]);
                 inventory.UpdatedObjects.AddRange(updatedObjs);
             }
 
@@ -243,7 +241,8 @@ namespace WebAnnotationModel
             foreach (OBJECT newObj in listObjNeedingParents)
             {
                 //Added the false for dynamic structure loading change, may cause bugs
-                newObj.Parent = GetObjectByID(newObj.ParentID.Value, false);
+                TryGetObjectByID(newObj.ParentID.Value, out OBJECT parent);
+                newObj.Parent = parent;
                 if (newObj.Parent != null)
                 {
                     //TODO: This shouldn't happen unless the parent was somehow deleted from the server...
@@ -254,10 +253,7 @@ namespace WebAnnotationModel
             return inventory;
         }
 
-        protected override OBJECT[] InternalUpdate(OBJECT[] newObjs)
-        {
-            return InternalUpdate(newObjs, false);
-        }
+        protected override OBJECT[] InternalUpdate(OBJECT[] newObjs) => InternalUpdate(newObjs, false);
 
         /// <summary>
         /// Used to populate cache when a call returns from the server
@@ -266,57 +262,55 @@ namespace WebAnnotationModel
         /// <returns></returns>
         internal virtual OBJECT[] InternalUpdate(OBJECT[] updateObjs, bool LoadParent)
         {
-            List<OBJECT> listUpdatedObjs = new List<OBJECT>(updateObjs.Length);
-            List<OBJECT> listOldObjs = new List<OBJECT>(updateObjs.Length);
+            List<OBJECT> listUpdatedObjs = new(updateObjs.Length);
+            List<OBJECT> listOldObjs = new(updateObjs.Length);
 
             for (int iObj = 0; iObj < updateObjs.Length; iObj++)
             {
-                OBJECT existingObj;
-                OBJECT updateObj = updateObjs[iObj];
-                bool Success = IDToObject.TryGetValue(updateObj.ID, out existingObj);
+                var updateObj = updateObjs[iObj];
+                bool Success = IDToObject.TryGetValue(updateObj.ID, out var existingObj);
 
-                if (Success)
+                if (!Success) continue;
+
+                OBJECT oldObj = existingObj.Clone() as OBJECT;
+                Debug.Assert(oldObj != null);
+
+                listOldObjs.Add(oldObj);
+
+                //Remove ourselves from the root list if we have a ParentID
+                if (false == existingObj.ParentID.Equals(updateObj.ParentID))
                 {
-                    OBJECT oldObj = existingObj.Clone() as OBJECT;
-                    Debug.Assert(oldObj != null);
-
-                    listOldObjs.Add(oldObj);
-
-                    //Remove ourselves from the root list if we have a ParentID
-                    if (false == existingObj.ParentID.Equals(updateObj.ParentID))
+                    if (existingObj.ParentID.HasValue)
                     {
-                        if (existingObj.ParentID.HasValue)
-                        {
-                            TryRemoveRootObject(existingObj.ID);
-                        }
-                        else
-                        {
-                            //Remove ourselves from our parent object
-                            existingObj.Parent = null;
-                        }
+                        TryRemoveRootObject(existingObj.ID);
                     }
-
-                    existingObj.Update(updateObj.GetData());
-
-                    listUpdatedObjs.Add(existingObj);
-
-                    //Add ourselves from the root list if we do not have a ParentID
-                    if (!existingObj.ParentID.HasValue)
+                    else
                     {
-                        TryAddRootObject(existingObj.ID);
+                        //Remove ourselves from our parent object
+                        existingObj.Parent = null;
                     }
-                    else if (LoadParent)
-                    {
-                        //Make sure the structure object points to the correct parent
-                        existingObj.Parent = GetObjectByID(existingObj.ParentID.Value);
+                }
 
-                        //If it returns null we couldn't find the parent on the server, what the hell?
-                        Debug.Assert(existingObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
-                    }
+                existingObj.Update(updateObj.GetData());
+
+                listUpdatedObjs.Add(existingObj);
+
+                //Add ourselves from the root list if we do not have a ParentID
+                if (!existingObj.ParentID.HasValue)
+                {
+                    TryAddRootObject(existingObj.ID);
+                }
+                else if (LoadParent)
+                {
+                    //Make sure the structure object points to the correct parent
+                    existingObj.Parent = GetObjectByID(existingObj.ParentID.Value).GetAwaiter().GetResult();
+
+                    //If it returns null we couldn't find the parent on the server, what the hell?
+                    Debug.Assert(existingObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
                 }
             }
 
-            return listUpdatedObjs.ToArray();
+            return [.. listUpdatedObjs];
         }
 
 
@@ -328,7 +322,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected override List<OBJECT> InternalDelete(KEY[] IDs)
         {
-            List<OBJECT> listDeleted = new List<OBJECT>(IDs.Length);
+            List<OBJECT> listDeleted = new(IDs.Length);
 
             for (int iObj = 0; iObj < IDs.Length; iObj++)
             {
@@ -346,9 +340,7 @@ namespace WebAnnotationModel
 
         protected override OBJECT TryRemoveObject(KEY key)
         {
-            OBJECT existingObj;
-            bool success = IDToObject.TryRemove(key, out existingObj);
-            if (success)
+            if (IDToObject.TryRemove(key, out var existingObj))
             {
                 existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
                 //existingObj.Dispose(); 
@@ -373,8 +365,7 @@ namespace WebAnnotationModel
             else
             {
                 //Long winded way of removing ourselves from our parents list
-                if (obj.Parent != null)
-                    obj.Parent.RemoveChild(obj);
+                obj.Parent?.RemoveChild(obj);
             }
 
         }

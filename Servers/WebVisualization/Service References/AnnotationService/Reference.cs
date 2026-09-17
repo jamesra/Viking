@@ -574,14 +574,14 @@ namespace ConnectomeViz.AnnotationService {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public ConnectomeViz.AnnotationService.AnnotationPoint[] Verticies {
+        public ConnectomeViz.AnnotationService.AnnotationPoint[] Vertices {
             get {
                 return this.VerticiesField;
             }
             set {
                 if ((object.ReferenceEquals(this.VerticiesField, value) != true)) {
                     this.VerticiesField = value;
-                    this.RaisePropertyChanged("Verticies");
+                    this.RaisePropertyChanged("Vertices");
                 }
             }
         }

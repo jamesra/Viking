@@ -12,6 +12,9 @@ using Viking.AnnotationServiceTypes;
 
 namespace WebAnnotationModel.Objects
 {
+    /// <summary>
+    /// One traced object spanning sections. Locations live in Store.Locations by ParentID, not on this instance.
+    /// </summary>
     public class StructureObj : AnnotationModelObjBaseWithParent<long, IStructure, StructureObj>, IDataObjectLinks<StructureLinkKey, StructureLinkObj>, IEquatable<StructureObj>, IStructureReadOnly
     {
         private readonly long _ID;
@@ -28,7 +31,7 @@ namespace WebAnnotationModel.Objects
                     OnPropertyChanging(nameof(ParentID));
 
                     _ParentID = value;
-                    Parent = null;
+                    Parent = null; // Drop the cached object so the next Parent get re-resolves.
 
                     SetDBActionForChange();
                     OnPropertyChanged(nameof(ParentID));
@@ -36,6 +39,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>Immutable after construction. Change type by creating a new structure, not by assigning here.</summary>
         public long TypeID
         {
             get;
@@ -217,6 +221,11 @@ namespace WebAnnotationModel.Objects
             return _Links.CreateCopyAsync();
         }
 
+        /// <summary>
+        /// Snapshot of structure links. Uses a sync lock, not <see cref="CopyLinksAsync"/>.
+        /// </summary>
+        public StructureLinkObj[] LinksCopy => _Links.CreateCopy();
+
 
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created.
@@ -251,21 +260,33 @@ namespace WebAnnotationModel.Objects
         public StructureObj()
         {
             //_ID = Store.Structures.NextKey();
+            _Attributes = new ConcurrentObservableAttributeSet();
         }
 
         internal StructureObj(long typeid)
         {
             //_ID = Store.Structures.NextKey();
             TypeID = typeid;
+            _Attributes = new ConcurrentObservableAttributeSet();
         }
 
         public StructureObj(long id, long typeid)
         {
             _ID = id;
             TypeID = typeid;
+            _Attributes = new ConcurrentObservableAttributeSet();
         }
 
         public StructureObj(long id, StructureTypeObj type) : this(id, type.ID)
+        {
+            _Type = type;
+        }
+
+        /// <summary>
+        /// Create a new, not-yet-persisted structure of the given type.  The server assigns the real ID
+        /// when the structure is created (see IStructureStore.Create).
+        /// </summary>
+        public StructureObj(StructureTypeObj type) : this(type.ID)
         {
             _Type = type;
         }
@@ -292,11 +313,11 @@ namespace WebAnnotationModel.Objects
         {
             if (Interlocked.Exchange(ref Initialized, 1) == 0)
             {
-                _Type = await stores.StructureTypes.GetObjectByID(TypeID, true, false, token);
+                _Type = await stores.StructureTypes.GetObjectByID(TypeID, token);
 
                 List<Task> tasks = new List<Task>();
                 if (ParentID.HasValue)
-                    this.Parent = await stores.Structures.GetObjectByID(ParentID.Value, true, false, token); 
+                    this.Parent = await stores.Structures.GetObjectByID(ParentID.Value, token); 
             }
         }
           
@@ -337,30 +358,28 @@ namespace WebAnnotationModel.Objects
         }
 
         private StructureTypeObj _Type = null;
+
+        /// <summary>
+        /// Structure type from the table loaded at startup. gRPC conversion only sets TypeID, so this
+        /// resolves the object from <see cref="Store.StructureTypes"/> on first access.
+        /// </summary>
         public StructureTypeObj Type
         {
-            get => _Type;
-            /*
-            set
+            get
             {
-                Debug.Assert(value != null);
-                if (value.ID == TypeID)
-                    return;
+                if (_Type != null)
+                    return _Type;
 
-                if (value != null)
-                {
-                    OnPropertyChanging("Type");
-                    TypeID = value.ID;
-                    _Type = value;
+                if (!Store.IsInitialized || TypeID == 0)
+                    return null;
 
-                    SetDBActionForChange();
-
-                    OnPropertyChanged("Type");
-                }
+                Store.StructureTypes.TryGetObjectByID(TypeID, out _Type);
+                return _Type;
             }
-            */
+            internal set => _Type = value;
         }
 
+        // Recursive getter — do not treat as a working export of attributes.
         public string TagsXML => this.TagsXML;
 
         ulong IStructureReadOnly.ID => (ulong)ID;

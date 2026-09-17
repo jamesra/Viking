@@ -1,77 +1,60 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using VikingXNA; 
-using Microsoft.Xna.Framework.Graphics; 
+using VikingXNA;
+using Microsoft.Xna.Framework.Graphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
     [Flags]
     public enum PointLabelType
     {
-        NONE =    0b0000_0000,
-        INDEX =   0b0000_0001, //The index of the point in the collection
-        POSITION =0b0000_0010 //The position of the point
+        NONE = 0b0000_0000,
+        INDEX = 0b0000_0001, //The index of the point in the collection
+        POSITION = 0b0000_0010 //The position of the point
     }
 
     /// <summary>
     /// Draw a collection of points, optionally labeling by position, index, or both
     /// </summary>
     public class PointSetView : PointViewBase
-    { 
-        public CircleView[] PointViews = new CircleView[0];
-        public LabelView[] LabelViews = new LabelView[0]; 
+    {
+        public CircleView[] PointViews = [];
+        public LabelView[] LabelViews = [];
         private double _PointRadius = 1.0;
 
         private PointLabelType _LabelType = PointLabelType.NONE;
         public PointLabelType LabelType
         {
-            get { return _LabelType; }
-            set {
+            get => _LabelType;
+            set
+            {
                 _LabelType = value;
                 UpdateViews();
             }
         }
-         
+
         public bool LabelIndex
         {
-            get
-            {
-                return (_LabelType & PointLabelType.INDEX) > 0;
-            }
+            get => (_LabelType & PointLabelType.INDEX) > 0;
             set
             {
-                if (value)
-                {
-                    LabelType = _LabelType | PointLabelType.INDEX;
-                }
-                else
-                {
-                    LabelType = _LabelType & ~PointLabelType.INDEX;
-                }
-                 
+                LabelType = value ? _LabelType | PointLabelType.INDEX : _LabelType & ~PointLabelType.INDEX;
+
             }
         }
-          
+
         public bool LabelPosition
         {
-            get
-            {
-                return (_LabelType & PointLabelType.POSITION) > 0;
-            }
+            get => (_LabelType & PointLabelType.POSITION) > 0;
             set
             {
-                if (value)
-                {
-                    LabelType = _LabelType | PointLabelType.POSITION;
-                }
-                else
-                {
-                    LabelType = _LabelType & ~PointLabelType.POSITION;
-                }
+                LabelType = value ? _LabelType | PointLabelType.POSITION : _LabelType & ~PointLabelType.POSITION;
 
             }
         }
@@ -80,10 +63,7 @@ namespace VikingXNAGraphics
 
         public Color LabelColor
         {
-            get
-            {
-                return _LabelColor;
-            }
+            get => _LabelColor;
 
             set
             {
@@ -92,10 +72,26 @@ namespace VikingXNAGraphics
             }
         }
 
+        /// <summary>
+        /// Optional per-point colour.  When set, markers and labels use the colour at their index instead of the
+        /// uniform <see cref="Color"/> / <see cref="LabelColor"/>.  Survives <see cref="UpdateViews"/> so a later
+        /// radius change does not flatten a upper/lower contour colouring.
+        /// </summary>
+        private Color[] _PointColors;
+
+        public Color[] PointColors
+        {
+            get => _PointColors;
+            set
+            {
+                _PointColors = value;
+                UpdateViews();
+            }
+        }
 
         public double PointRadius
         {
-            get { return _PointRadius; }
+            get => _PointRadius;
             set
             {
                 _PointRadius = value;
@@ -103,11 +99,21 @@ namespace VikingXNAGraphics
             }
         }
 
+        private Color ColorForPoint(int index) =>
+            _PointColors is { Length: > 0 } && index >= 0 && index < _PointColors.Length
+                ? _PointColors[index]
+                : Color;
+
+        private Color ColorForLabel(int index) =>
+            _PointColors is { Length: > 0 } && index >= 0 && index < _PointColors.Length
+                ? _PointColors[index]
+                : LabelColor;
+
         public PointSetView(double defaultRadius = 1.0) : this(Color.Gold, defaultRadius)
         {
         }
 
-        public PointSetView(Color defaultColor, double defaultRadius=1.0)
+        public PointSetView(Color defaultColor, double defaultRadius = 1.0)
         {
             base.Color = defaultColor;
             _PointRadius = defaultRadius;
@@ -115,30 +121,36 @@ namespace VikingXNAGraphics
 
         public override void UpdateViews()
         {
-            if (Points == null)
+            if (Points is null)
             {
-                PointViews = new CircleView[0];
-                LabelViews = new LabelView[0];
+                PointViews = [];
+                LabelViews = [];
                 return;
             }
 
-            PointViews = Points.Select(p => new CircleView(new GridCircle(p, PointRadius), Color)).ToArray();
-            GridVector2[] point_array = Points.ToArray();
+            Geometry.Vector2[] point_array = [.. Points];
+            PointViews = [.. point_array.Select((p, i) => new CircleView(new Circle(p, PointRadius), ColorForPoint(i)))];
 
-            //Figure out if we have duplicate points and offset labels as needed
-            var DuplicatePointsAddedCount = new QuadTree<int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
-            var KnownPoints = new List<GridVector2>();
-            foreach(GridVector2 p in point_array)
+            if (!LabelIndex && !LabelPosition)
             {
-                if(KnownPoints.Contains(p))
+                //No need to adjust labels if there are no labels
+                LabelViews = null;
+                return;
+            }
+                //Figure out if we have duplicate points and offset labels as needed
+                QuadTree<int> DuplicatePointsAddedCount = new(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            List<Geometry.Vector2> KnownPoints = [];
+            foreach (Geometry.Vector2 p in point_array)
+            {
+                if (KnownPoints.Contains(p))
                 {
-                    if (DuplicatePointsAddedCount.ContainsKey(p))
-                        DuplicatePointsAddedCount[p] = DuplicatePointsAddedCount[p] + 1; //Increment the count
+                    if (DuplicatePointsAddedCount.TryGetValue(p, out var count))
+                        DuplicatePointsAddedCount[p] = count + 1; //Increment the count
                     else
                     {
                         DuplicatePointsAddedCount.Add(p, 0); //Set the counter to 0 for when we use it later
                     }
-                    
+
                 }
                 else
                 {
@@ -146,43 +158,39 @@ namespace VikingXNAGraphics
                 }
             }
 
-            if (!LabelIndex && !LabelPosition)
+            if (LabelIndex && !LabelPosition)
             {
-                LabelViews = null;
+                LabelViews = [.. point_array.Select((p, i) => new LabelView(i.ToString(), p, fontSize: this.PointRadius * 2))];
             }
-            else if (LabelIndex && !LabelPosition)
+            else if(LabelPosition)
             {
-                LabelViews = point_array.Select((p, i) => new LabelView(i.ToString(), p, fontSize: this.PointRadius * 2)).ToArray();
-            }
-            else if (!LabelIndex && LabelPosition)
-            {
-                LabelViews = point_array.Select(p => new LabelView(p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
+                LabelViews = !LabelIndex && LabelPosition
+                    ? [.. point_array.Select(p => new LabelView(p.ToLabel(), p, fontSize: this.PointRadius * 2))]
+                    : [.. point_array.Select((p, i) => new LabelView(i.ToString() + "\n" + p.ToLabel(), p, fontSize: this.PointRadius * 2))];
             }
             else
             {
-                LabelViews = point_array.Select((p, i) => new LabelView(i.ToString() + "\n" + p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
+                throw new ArgumentException("Cannot label index and position");
             }
-             
+
             if (LabelViews != null)
             {
-                for(int i = 0; i < LabelViews.Length; i++)
+                for (int i = 0; i < LabelViews.Length; i++)
                 {
                     LabelView label = LabelViews[i];
                     label.FontSize = this.PointRadius * 2.0;
-                    label.Color = this.LabelColor;
+                    label.Color = ColorForLabel(i);
 
-                    if(DuplicatePointsAddedCount.ContainsKey(point_array[i]))
+                    if (DuplicatePointsAddedCount.TryGetValue(point_array[i], out var count))
                     {
-                        //label.Position = label.Position + new GridVector2(0,PointRadius * (DuplicatePointsAddedCount[point_array[i]]-1));
-                        
+                        //label.Position = label.Position + new Geometry.Vector2(0,PointRadius * (DuplicatePointsAddedCount[point_array[i]]-1));
+
                         //label.Position = label.Position + label.
                         string prepended_newlines = "";
-                        for (int iLine = 0; iLine < DuplicatePointsAddedCount[point_array[i]]; iLine++)
-                            prepended_newlines += "|\n\r"; 
+                        for (int iLine = 0; iLine < count; iLine++)
+                            prepended_newlines += "|\n\r";
 
                         label.Text = prepended_newlines + label.Text; //Prepend a line
-                        
-                        DuplicatePointsAddedCount[point_array[i]] = DuplicatePointsAddedCount[point_array[i]] + 1;
                     }
                 }
             }
@@ -196,20 +204,18 @@ namespace VikingXNAGraphics
             if (LabelViews != null)
                 LabelView.Draw(window.spriteBatch, window.font, scene, LabelViews);
         }*/
-         
-        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
-        {
-            throw new NotImplementedException();
-        }
+
+        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => throw new NotImplementedException();
 
         public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle overlayStyle)
         {
-            if(PointViews != null)
+            if (PointViews != null)
             {
+                // Circles are batch-rendered via CircleView's instanced shader when CircleInstancedEffect is available.
                 CircleView.Draw(device, scene, overlayStyle, PointViews);
             }
 
-            if(LabelViews != null)
+            if (LabelViews != null)
             {
                 var fontData = DeviceFontStore.TryGet(device);
                 LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, LabelViews);
@@ -217,28 +223,30 @@ namespace VikingXNAGraphics
         }
 
         public static PointSetView CreateFor(IReadOnlyMesh2D<IVertex2D> mesh)
-        {    
-            PointSetView psv = new PointSetView(Color.Gray);
-
-            psv.LabelColor = Color.White;
-            psv.PointRadius = 2;
-            psv.Points = mesh.Verticies.Select(p => p.Position).ToArray();
-            psv.LabelIndex = true;
-            psv.LabelPosition = false;
+        {
+            PointSetView psv = new(Color.Gray)
+            {
+                LabelColor = Color.White,
+                PointRadius = 2,
+                Points = [.. mesh.Vertices.Select(p => p.Position)],
+                LabelIndex = true,
+                LabelPosition = false
+            };
             psv.UpdateViews();
-              
+
             return psv;
         }
 
         public static PointSetView CreateFor(IReadOnlyMesh3D<IVertex3D> mesh)
         {
-            PointSetView psv = new PointSetView(Color.Gray);
-
-            psv.LabelColor = Color.White;
-            psv.PointRadius = 2;
-            psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
-            psv.LabelIndex = true;
-            psv.LabelPosition = false;
+            PointSetView psv = new(Color.Gray)
+            {
+                LabelColor = Color.White,
+                PointRadius = 2,
+                Points = [.. mesh.Vertices.Select(p => p.Position.XY())],
+                LabelIndex = true,
+                LabelPosition = false
+            };
             psv.UpdateViews();
 
             return psv;

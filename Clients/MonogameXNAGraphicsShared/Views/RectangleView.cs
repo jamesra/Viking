@@ -1,4 +1,5 @@
-﻿using Geometry;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,58 +7,52 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
     public class RectangleView : BillboardViewBase, IHitTesting
     {
-        private GridRectangle _BoundingRect;
+        private Rectangle _BoundingRect;
 
-        public override GridRectangle BoundingRect
+        public override Rectangle BoundingRect
         {
-            get { return _BoundingRect; }
-            set {
-                if(_BoundingRect != value)
+            get => _BoundingRect;
+            set
+            {
+                if (_BoundingRect != value)
                 {
                     _BoundingRect = value;
                     ClearCachedData();
-                } 
+                }
             }
         }
 
-        public override GridVector2 Position
+        public override Geometry.Vector2 Position
         {
-            get
-            {
-                return BoundingRect.Center;
-            }
+            get => BoundingRect.Center;
 
             set
             {
-                GridVector2 Offset = BoundingRect.Center - BoundingRect.LowerLeft;
-                _BoundingRect = new GridRectangle(value - Offset, _BoundingRect.Width, _BoundingRect.Height);
+                Geometry.Vector2 Offset = BoundingRect.Center - BoundingRect.LowerLeft;
+                _BoundingRect = new Rectangle(value - Offset, _BoundingRect.Width, _BoundingRect.Height);
                 ClearCachedData();
             }
         }
 
         public override IShape2D Shape => BoundingRect;
 
-        public GridRectangle BoundingBox => BoundingRect;
+        public Rectangle BoundingBox => BoundingRect;
 
-        public RectangleView(GridRectangle boundingRect, Color color) : base(color)
+        public RectangleView(Rectangle boundingRect, Color color) : base(color)
         {
             this.BoundingRect = boundingRect;
         }
 
-        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
-        {
-            RectangleView.Draw(device, scene, Overlay, items.Select(i => i as RectangleView).Where(i => i != null).ToArray());
-        }
+        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => RectangleView.Draw(device, scene, Overlay, [.. items.Select(i => i as RectangleView).Where(i => i != null)]);
 
-        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
-        {
-            RectangleView.Draw(device, scene, Overlay, new RectangleView[] { this });
-        }
+        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay) => RectangleView.Draw(device, scene, Overlay, [this]);
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.IScene scene,
@@ -72,13 +67,13 @@ namespace VikingXNAGraphics
             //BillboardViewBase.SetupGraphicsDevice(device, basicEffect, overlayEffect);
 
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
-            if (overlayEffect == null)
+            if (overlayEffect is null)
                 return;
-            
+
             BlendState originalState = device.BlendState;
             device.BlendState = BlendState.NonPremultiplied;
 
-            RectangleView[] views = listToDraw.Where(v => v != null).ToArray();
+            RectangleView[] views = [.. listToDraw.Where(v => v != null)];
             //overlayEffect.AnnotateWithTexture(null);
             overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
                 OverlayShaderEffect.Techniques.SingleColorAlphaOverlayEffect :
@@ -94,21 +89,18 @@ namespace VikingXNAGraphics
                 {
                     pass.Apply();
 
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
                         0,
-                        0, 
-                        6, 
+                        0,
+                        6,
                         0,
                         2);
                 }
             }
 
-            device.BlendState = originalState; 
+            device.BlendState = originalState;
         }
 
-        public bool Contains(GridVector2 Position)
-        {
-            return BoundingRect.Contains(Position);
-        }
+        public bool Contains(Geometry.Vector2 Position) => BoundingRect.Covers(Position);
     }
 }

@@ -1,0 +1,14 @@
+# Copy to D:\Docker\Builds\AnnotationSql\.env and set a strong SA password.
+# (Renamed to .txt here because .env* is repo-gitignored; rename to ".env" on copy.)
+#
+# Used by docker-compose.annotation-db.yml (annotation-sql service) and by
+# Start-AnnotationTestStack.ps1 via: docker compose --env-file <this file> ...
+
+ACCEPT_EULA=Y
+MSSQL_PID=Developer
+
+# SA password: >= 8 chars, upper + lower + digit + symbol
+MSSQL_SA_PASSWORD=AnnotationT3st!SaPass
+
+# Database created/used by minimal-schema.sql and the gRPC test connection string
+ANNOTATION_DATABASE=AnnotationTest

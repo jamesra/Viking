@@ -1,8 +1,8 @@
-﻿ 
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using System; 
+using System;
 
 
 namespace VikingXNAGraphics
@@ -19,7 +19,7 @@ namespace VikingXNAGraphics
         public Effect effect;
 
         private EffectParameter _WorldViewProjMatrix;
-        private EffectParameter _RenderTargetSize; 
+        private EffectParameter _RenderTargetSize;
 
         private EffectParameter _BackgroundTexture;
         private EffectParameter _AnnotationTexture;
@@ -27,7 +27,7 @@ namespace VikingXNAGraphics
         private EffectParameter _BackgroundSize;
 
         private EffectParameter _RadiusSquared;
-        private EffectParameter _BorderStartRadius; 
+        private EffectParameter _BorderStartRadius;
         private EffectParameter _BorderStartSquared;
 
         private EffectParameter _BorderBlendStartRadius;
@@ -37,64 +37,45 @@ namespace VikingXNAGraphics
 
         public Viewport RenderTargetSize
         {
-            set
-            { 
-               _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height)); 
-            }
-
+            set => _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
         }
 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
 
         public Texture LumaTexture
         {
-            set
-            {
-                _BackgroundTexture.SetValue(value);
-            }
+            set => _BackgroundTexture.SetValue(value);
         }
 
         public Techniques Technique
         {
             set
             {
-                switch (value)
+                effect.CurrentTechnique = value switch
                 {
-                    case Techniques.RGBCircleOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"];
-                        break;
-                    case Techniques.RGBTextureOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBTextureOverBackgroundValueOverlayEffect"];
-                        break;
-                    default:
-                        throw new ArgumentException("Unknown technique");
-                }
+                    Techniques.RGBCircleOverBackgroundValueOverlayEffect => effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"],
+                    Techniques.RGBTextureOverBackgroundValueOverlayEffect => effect.Techniques["RGBTextureOverBackgroundValueOverlayEffect"],
+                    _ => throw new ArgumentException("Unknown technique"),
+                };
             }
-        } 
-
-        public EffectTechnique CurrentTechnique
-        {
-            get
-            {
-                return this.effect.CurrentTechnique;
-            }
-
         }
 
+        public EffectTechnique CurrentTechnique => this.effect.CurrentTechnique;
+
         public void AnnotateWithTexture(Texture2D AnnotationTexture)
-        {            
+        {
             _AnnotationTexture.SetValue(AnnotationTexture);
             Technique = Techniques.RGBTextureOverBackgroundValueOverlayEffect;
         }
 
         public float InputLumaAlphaValue
         {
-            get { return _InputLumaAlpha.GetValueSingle(); }
-            set { _InputLumaAlpha.SetValue(value); }
+            get => _InputLumaAlpha.GetValueSingle();
+            set => _InputLumaAlpha.SetValue(value);
         }
 
         public void AnnotateWithCircle(float BorderRatio, float inputLumaAlphaValue)

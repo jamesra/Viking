@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace VikingXNAGraphics
 {
@@ -15,7 +15,7 @@ namespace VikingXNAGraphics
         TOP,
         BOTTOM
     };
-   
+
 
     /// <summary>
     /// Supports specifying where a view is drawn relative to a position.
@@ -66,16 +66,13 @@ namespace VikingXNAGraphics
         HorizontalAlignment _Horizontal = HorizontalAlignment.CENTER;
         public HorizontalAlignment Horizontal
         {
-            get { return _Horizontal; }
+            get => _Horizontal;
             set
             {
                 if (_Horizontal != value)
                 {
                     _Horizontal = value;
-                    if (OnChange != null)
-                    {
-                        OnChange();
-                    }
+                    OnChange?.Invoke();
                 }
             }
         }
@@ -83,33 +80,30 @@ namespace VikingXNAGraphics
         VerticalAlignment _Vertical = VerticalAlignment.CENTER;
         public VerticalAlignment Vertical
         {
-            get { return _Vertical; }
+            get => _Vertical;
             set
             {
                 if (_Vertical != value)
                 {
                     _Vertical = value;
-                    if (OnChange != null)
-                    {
-                        OnChange();
-                    }
+                    OnChange?.Invoke();
                 }
             }
         }
 
         public Action OnChange = null;
 
-        public override string ToString()
-        {
-            return string.Format("{0} {1}", _Vertical, _Horizontal);
-        }
+        public override string ToString() => string.Format("{0} {1}", _Vertical, _Horizontal);
 
         public override bool Equals(object obj)
         {
-            var @base = obj as AlignmentBase;
-            return @base != null &&
-                   _Horizontal == @base._Horizontal &&
-                   _Vertical == @base._Vertical;
+            if (obj is AlignmentBase alignbase)
+            {
+                return _Horizontal == alignbase._Horizontal &&
+                   _Vertical == alignbase._Vertical;
+            }
+
+            return base.Equals(obj);
         }
 
         public override int GetHashCode()
@@ -124,30 +118,30 @@ namespace VikingXNAGraphics
 
     public class Anchor : AlignmentBase, IAnchor
     {
-        public static Anchor TopLeft => new Anchor {Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.TOP };
-        public static Anchor TopCenter => new Anchor { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.TOP };
-        public static Anchor TopRight => new Anchor { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.TOP };
-        public static Anchor CenterLeft => new Anchor { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.CENTER };
-        public static Anchor CenterCenter => new Anchor { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER };
-        public static Anchor CenterRight => new Anchor { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.CENTER };
-        public static Anchor BottomLeft => new Anchor { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.BOTTOM };
-        public static Anchor BottomCenter => new Anchor { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.BOTTOM };
-        public static Anchor BottomRight => new Anchor { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.BOTTOM };
+        public static Anchor TopLeft => new() { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.TOP };
+        public static Anchor TopCenter => new() { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.TOP };
+        public static Anchor TopRight => new() { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.TOP };
+        public static Anchor CenterLeft => new() { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.CENTER };
+        public static Anchor CenterCenter => new() { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER };
+        public static Anchor CenterRight => new() { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.CENTER };
+        public static Anchor BottomLeft => new() { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.BOTTOM };
+        public static Anchor BottomCenter => new() { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.BOTTOM };
+        public static Anchor BottomRight => new() { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.BOTTOM };
 
-        
+
     }
 
     public class Alignment : AlignmentBase, IAlignment
     {
-        public static Alignment TopLeft => new Alignment { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.TOP };
-        public static Alignment TopCenter => new Alignment { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.TOP };
-        public static Alignment TopRight => new Alignment { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.TOP };
-        public static Alignment CenterLeft => new Alignment { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.CENTER };
-        public static Alignment CenterCenter => new Alignment { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER };
-        public static Alignment CenterRight => new Alignment { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.CENTER };
-        public static Alignment BottomLeft => new Alignment { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.BOTTOM };
-        public static Alignment BottomCenter => new Alignment { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.BOTTOM };
-        public static Alignment BottomRight => new Alignment { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.BOTTOM }; 
+        public static Alignment TopLeft => new() { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.TOP };
+        public static Alignment TopCenter => new() { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.TOP };
+        public static Alignment TopRight => new() { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.TOP };
+        public static Alignment CenterLeft => new() { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.CENTER };
+        public static Alignment CenterCenter => new() { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER };
+        public static Alignment CenterRight => new() { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.CENTER };
+        public static Alignment BottomLeft => new() { Horizontal = HorizontalAlignment.LEFT, Vertical = VerticalAlignment.BOTTOM };
+        public static Alignment BottomCenter => new() { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.BOTTOM };
+        public static Alignment BottomRight => new() { Horizontal = HorizontalAlignment.RIGHT, Vertical = VerticalAlignment.BOTTOM };
     }
 
 

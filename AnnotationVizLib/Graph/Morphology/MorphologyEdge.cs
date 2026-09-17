@@ -1,28 +1,16 @@
-﻿using Geometry;
+using Geometry;
 using GraphLib;
 using System;
 
 namespace AnnotationVizLib
 {
     [Serializable]
-    public class MorphologyEdge : Edge<ulong>
+    public class MorphologyEdge(MorphologyGraph graph, ulong A, ulong B) : Edge<ulong>(A < B ? A : B, A < B ? B : A, false)
     {
         //Structure this edge is part of
-        public MorphologyGraph Graph;
+        public MorphologyGraph Graph = graph;
 
-        public override bool Directional
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public MorphologyEdge(MorphologyGraph graph, ulong A, ulong B)
-            : base(A < B ? A : B, A < B ? B : A, false)
-        {
-            this.Graph = graph;
-        }
+        public override bool Directional => false;
 
         public MorphologyEdge(MorphologyGraph graph, long A, long B)
             : this(graph, (ulong)A, (ulong)B)
@@ -44,10 +32,7 @@ namespace AnnotationVizLib
             return SourceNodeKey == key ? TargetNodeKey : SourceNodeKey;
         }
 
-        public override string ToString()
-        {
-            return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
-        }
+        public override string ToString() => this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
 
         private double? _DistanceCenterToCenter = new double?(); //Distance between node centers
         /// <summary>
@@ -59,7 +44,7 @@ namespace AnnotationVizLib
             {
                 if (!_DistanceCenterToCenter.HasValue)
                 {
-                    _DistanceCenterToCenter = GridVector3.Distance(Graph.Nodes[this.SourceNodeKey].Center,
+                    _DistanceCenterToCenter = Vector3.Distance(Graph.Nodes[this.SourceNodeKey].Center,
                                                                    Graph.Nodes[this.TargetNodeKey].Center);
                 }
 

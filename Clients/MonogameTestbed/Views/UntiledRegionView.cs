@@ -6,6 +6,8 @@ using System.Linq;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -14,22 +16,22 @@ namespace MonogameTestbed
     /// </summary>
     class UntiledRegionView
     {
-        public List<PointSet> Sets = new List<PointSet>();
+        public List<PointSet> Sets = [];
 
-        public List<GridPolygon> Shapes = new List<GridPolygon>();
+        public List<Polygon> Shapes = [];
 
         public TriangleNet.Voronoi.VoronoiBase Voronoi;
 
-        public List<LineSetView> PolygonViews = new List<LineSetView>();
-        public LineSetView VoronoiView = new LineSetView();
-        public LineSetView DelaunayView = new LineSetView();
-        public LineSetView BoundaryView = new LineSetView();
+        public List<LineSetView> PolygonViews = [];
+        public LineSetView VoronoiView = new();
+        public LineSetView DelaunayView = new();
+        public LineSetView BoundaryView = new();
 
-        public List<LabelView> listLabels = new List<LabelView>();
+        public List<LabelView> listLabels = [];
 
         public Color Color
         {
-            get { return BoundaryView.color; }
+            get => BoundaryView.color;
             set
             {
                 BoundaryView.color = value;
@@ -41,7 +43,7 @@ namespace MonogameTestbed
         {
             Sets.Add(set);
             Shapes.Add(null);
-            LineSetView newView = new MonogameTestbed.LineSetView
+            LineSetView newView = new()
             {
                 color = new Color().Random()
             };
@@ -62,7 +64,7 @@ namespace MonogameTestbed
         /// </summary>
         public void UpdateSet(PointSet ps, int i)
         {
-            int[] original_indicies;
+            int[] originalIndices;
 
             Sets[i] = ps;
 
@@ -77,7 +79,7 @@ namespace MonogameTestbed
 
             if (ps.Points.Count >= 3)
             {
-                Shapes[i] = new GridPolygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out original_indicies);
+                Shapes[i] = new Polygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out originalIndices);
             }
             else
             {
@@ -86,7 +88,7 @@ namespace MonogameTestbed
 
             PolygonViews[i].UpdateViews(Shapes[i]);
 
-            GridPolygon[] ShapeArray = Shapes.Where(s => s != null).ToArray();
+            Polygon[] ShapeArray = [.. Shapes.Where(s => s != null)];
 
             TriangleNet.Meshing.IMesh mesh = null;
             try
@@ -98,23 +100,23 @@ namespace MonogameTestbed
 
             }
 
-            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
+            //List<LineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
 
-            if (mesh == null)
-                DelaunayView.UpdateViews(Array.Empty<GridVector2>());
+            if (mesh is null)
+                DelaunayView.UpdateViews(Array.Empty<Geometry.Vector2>());
             else
                 DelaunayView.UpdateViews(mesh.ToLines());
 
             Voronoi = Shapes.Voronoi();
 
-            List<GridLineSegment> listVoronoiLines = BoundaryFinder.StripNonBoundaryLines(Voronoi, ShapeArray);
+            List<LineSegment> listVoronoiLines = BoundaryFinder.StripNonBoundaryLines(Voronoi, ShapeArray);
             VoronoiView.UpdateViews(listVoronoiLines);
 
             //DetermineBoundary
-            List<GridLineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(ShapeArray);
+            List<LineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(ShapeArray);
             BoundaryView.UpdateViews(listBoundaryLines);
 
-            listLabels = listBoundaryLines.Select(line => new LabelView(line.A.ToLabel(), line.A)).ToList();
+            listLabels = [.. listBoundaryLines.Select(line => new LabelView(line.A.ToLabel(), line.A))];
             listLabels.ForEach(label =>
             {
                 label.FontSize = 2;
@@ -129,21 +131,20 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="PointSets"></param>
         /// <returns></returns>
-        private TriangleNet.Meshing.IMesh TriangulatePolygons(List<GridVector2[]> PointSets)
+        private static TriangleNet.Meshing.IMesh TriangulatePolygons(List<Geometry.Vector2[]> PointSets)
         {
-            GridVector2[] AllPoints = PointSets.SelectMany(ps => ps.EnsureOpenRing()).ToArray();
+            Geometry.Vector2[] AllPoints = [.. PointSets.SelectMany(ps => ps.EnsureOpenRing())];
 
             if (AllPoints.Length < 3)
                 return null;
 
-            int[] original_indicies;
-            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out original_indicies);
+            Geometry.Vector2[] EntireSetConvexHull = AllPoints.ConvexHull(out int[] originalIndices);
 
             TriangleNet.Geometry.Polygon poly = TriangleExtensions.CreatePolygon(EntireSetConvexHull);
 
-            foreach (GridVector2[] points in PointSets)
+            foreach (Geometry.Vector2[] points in PointSets)
             {
-                if (points == null || points.Length < 4)
+                if (points is null || points.Length < 4)
                     continue;
 
                 poly.AppendCountour(points);
@@ -156,24 +157,24 @@ namespace MonogameTestbed
             return mesh;
         }
 
-        private List<LabelView> LabelDistances(IReadOnlyList<GridPolygon> shapes)
+        private static List<LabelView> LabelDistances(IReadOnlyList<Polygon> shapes)
         {
-            List<LabelView> labels = new List<LabelView>();
+            List<LabelView> labels = [];
             for (int i = 0; i < shapes.Count; i++)
             {
-                GridPolygon iPoly = shapes[i];
-                if (iPoly == null)
+                Polygon iPoly = shapes[i];
+                if (iPoly is null)
                     continue;
 
                 for (int j = i + 1; j < shapes.Count; j++)
                 {
-                    GridPolygon jPoly = shapes[j];
-                    if (jPoly == null)
+                    Polygon jPoly = shapes[j];
+                    if (jPoly is null)
                         continue;
 
                     double minDistance = iPoly.Distance(jPoly);
 
-                    LabelView newLabel = new LabelView(minDistance.ToString(), (iPoly.Centroid + jPoly.Centroid) / 2.0);
+                    LabelView newLabel = new(minDistance.ToString(), (iPoly.Centroid + jPoly.Centroid) / 2.0);
                     newLabel.FontSize /= 4.0;
 
                     labels.Add(newLabel);
@@ -186,15 +187,15 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window, Scene scene)
         {
             if (BoundaryView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BoundaryView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. BoundaryView.LineViews]);
 
             if (DelaunayView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, DelaunayView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. DelaunayView.LineViews]);
 
             if (VoronoiView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. VoronoiView.LineViews]);
 
-            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews).ToArray());
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews)]);
 
             if (listLabels != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, listLabels);

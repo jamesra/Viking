@@ -1,4 +1,4 @@
-﻿namespace Viking.UI.Controls
+namespace Viking.UI.Controls
 {
     partial class SectionViewerControl
     {
@@ -13,20 +13,26 @@
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                UnsubscribeAndCancelTokens();
+                InvalidateSectionTextureCache();
+
+                if (components != null)
+                    components.Dispose();
 
                 if(_OverlayBackgroundDepthState != null)
                     _OverlayBackgroundDepthState.Dispose();
-                if (_DrawSectionDepthState != null)
-                    _DrawSectionDepthState.Dispose();
+                foreach (var state in _overlayDepthStateCache.Values)
+                    state?.Dispose();
+                _overlayDepthStateCache.Clear();
+                foreach (var state in _downsampleDepthStateCache.Values)
+                    state?.Dispose();
+                _downsampleDepthStateCache.Clear();
                 if (_DepthDisabledState != null)
                     _DepthDisabledState.Dispose();
-                if (_OverlayDepthState != null)
-                    _OverlayDepthState.Dispose();
                 if (_defaultDepthState != null)
-                    _defaultDepthState.Dispose(); 
+                    _defaultDepthState.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -61,12 +67,15 @@
             this.menuExportTiles = new System.Windows.Forms.ToolStripMenuItem();
             this.timerHelpTextChange = new System.Windows.Forms.Timer(this.components);
             this.menuShowCommandHelp = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuPreferences = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuVikingPreferences = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // timer
             // 
             this.timer.Enabled = true;
+            this.timer.Interval = 25;
             this.timer.Tick += new System.EventHandler(this.timer_Tick);
             // 
             // timerTileCacheCheckpoint
@@ -80,7 +89,8 @@
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.menuVolume,
             this.menuSection,
-            this.menuCommands});
+            this.menuCommands,
+            this.menuPreferences});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(284, 24);
@@ -228,6 +238,21 @@
             this.menuShowCommandHelp.Text = "Show Command Help";
             this.menuShowCommandHelp.Click += new System.EventHandler(this.menuShowCommandHelp_Click);
             // 
+            // menuPreferences
+            // 
+            this.menuPreferences.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuVikingPreferences});
+            this.menuPreferences.Name = "menuPreferences";
+            this.menuPreferences.Size = new System.Drawing.Size(80, 20);
+            this.menuPreferences.Text = "Preferences";
+            // 
+            // menuVikingPreferences
+            // 
+            this.menuVikingPreferences.Name = "menuVikingPreferences";
+            this.menuVikingPreferences.Size = new System.Drawing.Size(180, 22);
+            this.menuVikingPreferences.Text = "Viking...";
+            this.menuVikingPreferences.Click += new System.EventHandler(this.menuViewerPreferences_Click);
+            // 
             // SectionViewerControl
             // 
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.SectionViewerControl_KeyDown);
@@ -261,5 +286,7 @@
         private System.Windows.Forms.ToolStripMenuItem menuClearCache;
         private System.Windows.Forms.Timer timerHelpTextChange;
         private System.Windows.Forms.ToolStripMenuItem menuShowCommandHelp;
+        private System.Windows.Forms.ToolStripMenuItem menuPreferences;
+        private System.Windows.Forms.ToolStripMenuItem menuVikingPreferences;
     }
 }

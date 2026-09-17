@@ -17,13 +17,15 @@ namespace WebAnnotationModel
     {
         public DateTime? LastQuery { get; private set; } = DateTime.MinValue;
 
+        public void ClearLastQuery() => LastQuery = null;
+
         /// <summary>
         /// This lock should be taken by callers before calling public methods.
         /// Internally this lock should be taken by async Task methods
         /// </summary>
         public readonly SemaphoreSlim Lock = new SemaphoreSlim(1);
 
-        public readonly GridRectangle Bounds;
+        public readonly Rectangle Bounds;
 
 #if DEBUG
         private static int NumOutstandingQueries = 0;
@@ -45,7 +47,10 @@ namespace WebAnnotationModel
         public bool OutstandingQuery => QueryTask != null
                                         && QueryCancellationToken.IsCancellationRequested == false;
 
+        public Task CurrentQuery => QueryTask;
+
         private Task QueryTask = null;
+        private CancellationTokenSource QueryCts;
         private CancellationToken QueryCancellationToken = CancellationToken.None;
 
         /// <summary>
@@ -53,22 +58,35 @@ namespace WebAnnotationModel
         /// </summary>
         private readonly List<Action<ICollection<OBJECT>>> OnCompletionCallbacks; 
 
-        public RegionRequestData(GridRectangle bounds)
+        public RegionRequestData(Rectangle bounds)
         {
             Bounds = bounds;
             OnCompletionCallbacks = new List<Action<ICollection<OBJECT>>>();
         }
 
         /// <summary>
-        /// Set the Task which is making a server request for this region
+        /// Arm this cell's cancel source before the stream starts so off-screen cancel can see it immediately.
         /// </summary>
-        /// <param name="queryTask"></param>
-        public void SetQuery(Task queryTask, CancellationToken aToken)
+        public void PrepareQuery(CancellationTokenSource cts)
+        {
+            Debug.Assert(QueryTask == null, $"{nameof(QueryTask)} should be null before preparing a new query");
+            QueryCts = cts;
+            QueryCancellationToken = cts != null ? cts.Token : CancellationToken.None;
+        }
+
+        /// <summary>
+        /// Bind this cell to an in-flight server stream. The stream is cancelled only via
+        /// <see cref="CancelQuery"/> when the cell leaves the padded visible region.
+        /// </summary>
+        public void SetQuery(Task queryTask, CancellationTokenSource cts)
         {
             Debug.Assert(QueryTask == null, $"{nameof(QueryTask)} should be null before setting a new task");
-            this.QueryTask = queryTask;
-            this.LastQuery = DateTime.UtcNow;
-            this.QueryCancellationToken = aToken;
+            QueryTask = queryTask;
+            if (cts != null)
+            {
+                QueryCts = cts;
+                QueryCancellationToken = cts.Token;
+            }
 
 #if DEBUG
             System.Threading.Interlocked.Increment(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
@@ -82,17 +100,55 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
+        /// Abort this cell's stream because it is no longer in the padded visible region.
+        /// Pan/zoom wait tokens must not call this for cells that still intersect that region.
+        /// </summary>
+        public void CancelQuery()
+        {
+            CancellationTokenSource cts = QueryCts;
+            if (cts == null)
+                return;
+
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
+        /// <summary>
         /// Indicates a new query can be started for this cell
         /// </summary>
         public void SetQueryCompletedOrAborted()
-        { 
+        {
+            if (QueryTask == null && QueryCts == null)
+                return;
+
+            bool hadTrackedQuery = QueryTask != null;
             OnCompletionCallbacks.Clear();
             QueryTask = null;
             QueryCancellationToken = CancellationToken.None;
+            CancellationTokenSource cts = QueryCts;
+            QueryCts = null;
 #if DEBUG
-            System.Threading.Interlocked.Decrement(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
-            ActiveRequests.TryRemove(DebugMessage, out var removed_message);
+            if (hadTrackedQuery)
+            {
+                System.Threading.Interlocked.Decrement(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
+                ActiveRequests.TryRemove(DebugMessage, out var removed_message);
+            }
 #endif
+            if (cts == null)
+                return;
+
+            try
+            {
+                cts.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         /// <summary>
@@ -114,10 +170,12 @@ namespace WebAnnotationModel
         public async Task OnLoadCompleted(ICollection<OBJECT> inventory, DateTime queryCompletionTime)
         {
             var tasks = new List<Task>(OnCompletionCallbacks.Count);
+            bool locked = false;
 
             try
             {
                 await Lock.WaitAsync(QueryCancellationToken);
+                locked = true;
                 LastQuery = queryCompletionTime;
                 
                 foreach (var cb in OnCompletionCallbacks)
@@ -134,7 +192,8 @@ namespace WebAnnotationModel
 #if DEBUG
                 ReportQueryStats();
 #endif 
-                Lock.Release();
+                if (locked)
+                    Lock.Release();
             }
 
             Task.WaitAll(tasks.ToArray(), QueryCancellationToken);

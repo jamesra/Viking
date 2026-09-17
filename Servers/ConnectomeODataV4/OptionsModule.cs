@@ -1,4 +1,4 @@
-﻿using System.Web;
+using System.Web;
 
 namespace ConnectomeODataV4
 {
@@ -8,7 +8,7 @@ namespace ConnectomeODataV4
         {
             context.BeginRequest += (sender, args) =>
             {
-                var app = (HttpApplication)sender;
+                HttpApplication app = (HttpApplication)sender;
 
                 if (app.Request.HttpMethod == "OPTIONS")
                 {
@@ -24,7 +24,7 @@ namespace ConnectomeODataV4
                     }
                     catch (System.Threading.ThreadAbortException)
                     { }
-                    
+
                 }
                 /*
                 else

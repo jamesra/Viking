@@ -1,40 +1,22 @@
-﻿using System.IO;
+using System.IO;
 
 namespace Viking.VolumeModel
 {
-    public class VolumePaths
+    public class VolumePaths(string localCachePath, string VolumeName)
     {
         /// <summary>
         /// The path we use to cache data on the local drive
         /// </summary>
-        internal readonly string LocalCachePath;
+        internal readonly string LocalCachePath = localCachePath;
 
-        internal readonly string Name;
+        internal readonly string Name = VolumeName;
 
-        public VolumePaths(string localCachePath, string VolumeName)
-        {
-            this.LocalCachePath = localCachePath;
-            this.Name = VolumeName;
-        }
-
-        private string VolumeCachePath
-        {
-            get
-            {
-                return this.LocalCachePath + System.IO.Path.DirectorySeparatorChar + this.Name;
-            }
-        }
+        private string VolumeCachePath => this.LocalCachePath + System.IO.Path.DirectorySeparatorChar + this.Name;
 
         /// <summary>
         /// Server-side stos files loaded from .zip file listed in .vikingxml file
         /// </summary>
-        public string ServerStosCachePath
-        {
-            get
-            {
-                return this.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "StosZip";
-            }
-        }
+        public string ServerStosCachePath => this.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "StosZip";
 
 
         string _LocalVolumeDir = null;
@@ -46,7 +28,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                if (_LocalVolumeDir == null)
+                if (_LocalVolumeDir is null)
                 {
                     _LocalVolumeDir = System.IO.Path.Combine(LocalCachePath, this.Name) + System.IO.Path.DirectorySeparatorChar;
                     if (!System.IO.Directory.Exists(_LocalVolumeDir))
@@ -67,7 +49,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                if (_StosCacheDir == null)
+                if (_StosCacheDir is null)
                 {
                     _StosCacheDir = System.IO.Path.Combine(this.LocalVolumeDir, "Stos");
                     if (!System.IO.Directory.Exists(_StosCacheDir))
@@ -80,20 +62,11 @@ namespace Viking.VolumeModel
             }
         }
 
-        public string GetStosCacheName(long mappedSection, long controlSection, string extension)
-        {
-            return System.IO.Path.Combine(this.StosCacheDir, mappedSection.ToString() + "-" + controlSection.ToString() + extension);
-        }
+        public string GetStosCacheName(long mappedSection, long controlSection, string extension) => System.IO.Path.Combine(this.StosCacheDir, mappedSection.ToString() + "-" + controlSection.ToString() + extension);
 
-        public string GetITKSCacheName(long mappedSection, long controlSection)
-        {
-            return GetStosCacheName(mappedSection, controlSection, ".stos");
-        }
+        public string GetITKSCacheName(long mappedSection, long controlSection) => GetStosCacheName(mappedSection, controlSection, ".stos");
 
-        public string GetSerializerCacheName(long mappedSection, long controlSection)
-        {
-            return GetStosCacheName(mappedSection, controlSection, ".stos_bin");
-        }
+        public string GetSerializerCacheName(long mappedSection, long controlSection) => GetStosCacheName(mappedSection, controlSection, ".stos_bin");
 
         public static void CreateDirectories(VolumePaths paths)
         {

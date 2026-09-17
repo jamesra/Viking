@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,60 +9,36 @@ namespace Viking.UI.BaseClasses
 {
     public partial class DockingListControl : Viking.UI.BaseClasses.DockableUserControl
     {
-        public object SelectedObject = null;
+        public object? SelectedObject = null;
 
         #region Colors
 
         [Browsable(true)]
         public System.Drawing.Color ListForeColor
         {
-            get
-            {
-                return this.ListItems.ForeColor;
-            }
-            set
-            {
-                this.ListItems.ForeColor = value;
-            }
+            get => this.ListItems.ForeColor;
+            set => this.ListItems.ForeColor = value;
         }
 
         [Browsable(true)]
         public System.Drawing.Color ListBackColor
         {
-            get
-            {
-                return this.ListItems.BackColor;
-            }
-            set
-            {
-                this.ListItems.BackColor = value;
-            }
+            get => this.ListItems.BackColor;
+            set => this.ListItems.BackColor = value;
         }
 
         [Browsable(true)]
         public System.Drawing.Color TitleForeColor
         {
-            get
-            {
-                return this.LabelTitle.ForeColor;
-            }
-            set
-            {
-                this.LabelTitle.ForeColor = value;
-            }
+            get => this.LabelTitle.ForeColor;
+            set => this.LabelTitle.ForeColor = value;
         }
 
         [Browsable(true)]
         public System.Drawing.Color TitleBackColor
         {
-            get
-            {
-                return this.LabelTitle.BackColor;
-            }
-            set
-            {
-                this.LabelTitle.BackColor = value;
-            }
+            get => this.LabelTitle.BackColor;
+            set => this.LabelTitle.BackColor = value;
         }
 
         #endregion
@@ -94,8 +70,7 @@ namespace Viking.UI.BaseClasses
             if (List.SelectedItems.Count > 0)
             {
                 ListViewItem SelectedItem = List.SelectedItems[0];
-                IUIObject Obj = SelectedItem.Tag as IUIObject;
-                if (Obj != null)
+                if (SelectedItem.Tag is IUIObject Obj)
                 {
                     Viking.UI.State.SelectedObject = Obj;
                     this.SelectedObject = Obj;
@@ -105,13 +80,12 @@ namespace Viking.UI.BaseClasses
 
         public ListViewItem FindItem(IUIObject Obj)
         {
-            if (Obj == null)
+            if (Obj is null)
                 return null;
 
             foreach (ListViewItem Item in ListItems.Items)
             {
-                IUIObject ItemObj = Item.Tag as IUIObject;
-                if (ItemObj != null && Obj == ItemObj)
+                if (Item.Tag is IUIObject ItemObj && Obj == ItemObj)
                     return Item;
             }
 
@@ -157,69 +131,44 @@ namespace Viking.UI.BaseClasses
             if (e.Button == MouseButtons.Right)
             {
                 ListViewItem Item = ListItems.GetItemAt(e.X, e.Y);
-                IUIObject ContextObj = null;
-                if (Item == null)
-                    ContextObj = this.DefaultContextMenuObject;
-                else
-                    ContextObj = Item.Tag as IUIObject;
+                IContextMenu ObjContextMenu = Item?.Tag as IContextMenu;
 
                 //If we clicked an item on the list, show the context menu for the item.
                 //Otherwise, show the generic context menu for the item type the list shows. 
-                if (ContextObj != null)
-                {
-                    //	ListItems.ContextMenu = ContextObj.ContextMenu;
-                    //ContextMenu NewMenu = SharedContextMenu.BuildMenuFor(ContextObj);
-                    //ListItems.ContextMenu = NewMenu; 
-                }
-                else
-                {
-                    //					SupportedUITypesAttribute[] ListTypes = this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) as SupportedUITypesAttribute[]; 
-                    //					if(ListTypes != null && ListTypes.Length > 0)
-                    //					{
-                    //                        SupportedUITypesAttribute ListType = ListTypes[0]; 
-
-                    //ListItems.ContextMenu = SharedContextMenu.BuildMenuFor(ListType.ListType); 						
-                    //					}
-                }
+                ContextMenuStrip menu = new();
+                menu = ExtensionManager.CreateContextMenuFromProviders(Item?.Tag, menu);
+                menu = ExtensionManager.CreateContextMenuFromProviders(this.GetType(), menu);
+                menu.Show(this, PointToScreen(e.Location));
             }
         }
 
-        public void DisplayObjects(IUIObject[] Objects)
-        {
-            ListItems.DisplayObjects(Objects);
-        }
+        public void DisplayObjects(IUIObject[] Objects) => ListItems.DisplayObjects(Objects);
 
         private void ListItems_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             ListViewItem item = this.ListItems.GetItemAt(e.X, e.Y);
-            if (item == null)
-                return;
 
-            IUIObject obj = item.Tag as IUIObject;
-            if (obj == null)
+            if (item?.Tag is not IUIObject obj)
                 return;
 
             OnObjectDoubleClick(obj);
 
         }
 
-        private CancelEventHandler OnParentFormClosing = null;
-        private Form _ParentForm = null;
+        private readonly CancelEventHandler? OnParentFormClosing = null;
+        private readonly Form? _ParentForm = null;
 
-        protected virtual void parentForm_Closing(object sender, CancelEventArgs e)
-        {
-            this.ClearItems();
-        }
+        protected virtual void parentForm_Closing(object sender, CancelEventArgs e) => this.ClearItems();
 
         protected override void OnParentBindingContextChanged(EventArgs e)
         {
             // do we have a parent?
-            if (this.Parent == null)
+            if (this.Parent is null)
                 return;
 
             // walk up parents looking for a form
             Control currentControl = this;
-            while (currentControl != null && (currentControl as Form) == null)
+            while (currentControl != null && (currentControl as Form) is null)
                 currentControl = currentControl.Parent;
 
             // did we find a form?

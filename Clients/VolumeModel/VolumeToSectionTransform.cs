@@ -1,32 +1,21 @@
-﻿using Geometry;
+using Geometry;
 
 namespace Viking.VolumeModel
 {
-    public class VolumeToSectionTransform : IVolumeToSectionTransform
+    /// <summary>
+    /// Wraps one section's stos. ITransform.Transform is section→volume; ControlBounds is volume, MappedBounds is mosaic.
+    /// </summary>
+    public class VolumeToSectionTransform(string Name, ITransform transform) : IVolumeToSectionTransform
     {
-        readonly string _Name;
-        readonly Geometry.ITransform Transform;
+        readonly string _Name = Name;
+        readonly Geometry.ITransform Transform = transform;
 
-        public VolumeToSectionTransform(string Name, ITransform transform)
-        {
-            this._Name = Name;
-            this.Transform = transform;
-        }
+        public override string ToString() => _Name;
 
-        public override string ToString()
-        {
-            return _Name;
-        }
+        public long ID => _Name.GetHashCode();
 
-        public long ID
-        {
-            get
-            {
-                return _Name.GetHashCode();
-            }
-        }
-
-        public GridRectangle? SectionBounds
+        /// <summary>Mosaic-space hull (stos MappedBounds). Null when the transform is continuous.</summary>
+        public Rectangle? SectionBounds
         {
             get
             {
@@ -36,12 +25,13 @@ namespace Viking.VolumeModel
                 }
                 else
                 {
-                    return new GridRectangle?();
+                    return new Rectangle?();
                 }
             }
         }
 
-        public GridRectangle? VolumeBounds
+        /// <summary>Volume-space hull (stos ControlBounds). Null when the transform is continuous.</summary>
+        public Rectangle? VolumeBounds
         {
             get
             {
@@ -51,49 +41,25 @@ namespace Viking.VolumeModel
                 }
                 else
                 {
-                    return new GridRectangle?();
+                    return new Rectangle?();
                 }
             }
         }
 
-        public GridVector2[] SectionToVolume(GridVector2[] Points)
-        {
-            return Transform.Transform(Points);
-        }
+        public Vector2[] SectionToVolume(Vector2[] Points) => Transform.Transform(Points);
 
-        public GridVector2 SectionToVolume(GridVector2 P)
-        {
-            return Transform.Transform(P);
-        }
+        public Vector2 SectionToVolume(Vector2 P) => Transform.Transform(P);
 
-        public bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP)
-        {
-            return Transform.TryTransform(Points, out transformedP);
-        }
+        public bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP) => Transform.TryTransform(Points, out transformedP);
 
-        public bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
-        {
-            return Transform.TryTransform(P, out transformedP);
-        }
+        public bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => Transform.TryTransform(P, out transformedP);
 
-        public bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP)
-        {
-            return Transform.TryInverseTransform(Points, out transformedP);
-        }
+        public bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP) => Transform.TryInverseTransform(Points, out transformedP);
 
-        public bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
-        {
-            return Transform.TryInverseTransform(P, out transformedP);
-        }
+        public bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => Transform.TryInverseTransform(P, out transformedP);
 
-        public GridVector2[] VolumeToSection(GridVector2[] Points)
-        {
-            return Transform.InverseTransform(Points);
-        }
+        public Vector2[] VolumeToSection(Vector2[] Points) => Transform.InverseTransform(Points);
 
-        public GridVector2 VolumeToSection(GridVector2 P)
-        {
-            return Transform.InverseTransform(P);
-        }
+        public Vector2 VolumeToSection(Vector2 P) => Transform.InverseTransform(P);
     }
 }

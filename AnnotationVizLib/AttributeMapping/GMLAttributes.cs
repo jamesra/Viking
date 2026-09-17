@@ -2,20 +2,14 @@
 
 namespace AnnotationVizLib
 {
-    public struct GMLAttribute
+    public struct GMLAttribute(string type, string d)
     {
-        public string Type;
-        public string Default;
-
-        public GMLAttribute(string type, string d)
-        {
-            this.Type = type;
-            this.Default = d;
-        }
+        public string Type = type;
+        public string Default = d;
     }
     public static class GMLAttributes
     {
-        public static SortedDictionary<string, GMLAttribute> GMLTypeForAttribute = new SortedDictionary<string, GMLAttribute>()
+        public static SortedDictionary<string, GMLAttribute> GMLTypeForAttribute = new()
         {
             {"Label", new GMLAttribute("string", null) },
             {"Radius", new GMLAttribute("double","0")},

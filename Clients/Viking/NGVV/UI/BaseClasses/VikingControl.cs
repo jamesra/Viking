@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace Viking.UI.BaseClasses
 {
+    /// <summary>
+    /// Controls wanting to implement context menus should also inherit from IContextMenuProvider
+    /// </summary>
     public class VikingControl : System.Windows.Forms.UserControl
     {
         /// <summary> 
 		/// Required designer variable.
 		/// </summary>
-		private System.ComponentModel.Container components = null;
+		private readonly System.ComponentModel.Container? components = null;
 
         public VikingControl()
         {
@@ -33,10 +37,7 @@ namespace Viking.UI.BaseClasses
         {
             if (disposing)
             {
-                if (components != null)
-                {
-                    components.Dispose();
-                }
+                components?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -49,6 +50,12 @@ namespace Viking.UI.BaseClasses
         private void InitializeComponent()
         {
             this.SuspendLayout();
+            // 
+            // Scaling
+            // 
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.Font = SystemFonts.MessageBoxFont;
             // 
             // NGVVControl
             // 

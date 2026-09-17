@@ -1,55 +1,38 @@
-﻿using System.Runtime.Serialization;
+using System.Runtime.Serialization;
 
 namespace AnnotationService.Types
 {
     [DataContract]
-    public class Edgex
+    public class Edgex(long SourceParentID, long TargetParentID, StructureLink link, string SourceTypeName)
     {
         [DataMember]
-        public long SourceParentID;
+        public long SourceParentID = SourceParentID;
         [DataMember]
-        public long TargetParentID;
+        public long TargetParentID = TargetParentID;
         [DataMember]
-        public StructureLink Link;
+        public StructureLink Link = link;
         [DataMember]
-        public string SourceTypeName;
+        public string SourceTypeName = SourceTypeName;
 
         [DataMember]
         public long SourceID
         {
-            get { return Link.SourceID; }
+            get => Link.SourceID;
             set { }
         }
 
         [DataMember]
         public long TargetID
         {
-            get { return Link.TargetID; }
+            get => Link.TargetID;
             set { }
-        }
-
-
-        public Edgex(long SourceParentID, long TargetParentID, StructureLink link, string SourceTypeName)
-        {
-            this.SourceParentID = SourceParentID;
-            this.TargetParentID = TargetParentID;
-            this.Link = link;
-            this.SourceTypeName = SourceTypeName;
-
         }
 
         /// <summary>
         /// This string lists the parent structures connected, i.e. cells
         /// </summary>
 
-        public string KeyString
-        {
-            get
-            {
-                return SourceParentID + "-" + TargetParentID + "," + SourceTypeName;
-            }
-
-        }
+        public string KeyString => SourceParentID + "-" + TargetParentID + "," + SourceTypeName;
 
         /// <summary>
         /// This string lists the actual structures connection, i.e. synapses and gap junction ID's
@@ -69,13 +52,18 @@ namespace AnnotationService.Types
 
         public override int GetHashCode()
         {
-            return System.Convert.ToInt32(SourceID);
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + SourceID.GetHashCode();
+                hash = hash * 23 + TargetID.GetHashCode();
+                return hash;
+            }
         }
 
         public override bool Equals(object obj)
         {
-            Edgex E = obj as Edgex;
-            if (E == null)
+            if (obj is not Edgex E)
                 return false;
 
             return SourceID == E.SourceID &&

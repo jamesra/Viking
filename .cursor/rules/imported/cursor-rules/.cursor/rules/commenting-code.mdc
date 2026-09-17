@@ -1,0 +1,11 @@
+---
+name: "Commenting rules"
+alwaysApply: True
+---
+# Commenting Code
+- No obvious comments: Do not write inline comments for self-explanatory code (e.g., // increment i by 1).
+- Explain the "why", not the "what": Restrict comments to complex business logic, edge cases, the purpose of the object if not self-documenting, or non-obvious architectural decisions.
+- Future-pass AI: Add a comment when it would meaningfully reduce work on a later edit — a non-obvious invariant, which of several similar methods to call, a pitfall not visible from the signature, or a contract that would otherwise have to be rediscovered from callers and history. Do not add comments that only restate the code.
+- Preserve existing comments: Do not delete comments if the comments are still correct, if you are unable to determine, prefix them with ?? AI Changed Code after comment ?? -  If you know they are no longer correct, try to update them, if that is not possible, delete them.
+- TODO formatting: When leaving unfinished logic or temporary workarounds, format them strictly as # TODO: [explanation] or // TODO:
+- Follow the standard commenting conventions for the language (i.e. If in python, refer to PEP sources)

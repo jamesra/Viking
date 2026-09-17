@@ -6,21 +6,17 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    abstract class RotateTranslateScaleCommand : TranslateScaleCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.Vector2 VolumePosition) : TranslateScaleCommandBase(parent, VolumePosition), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        public new static string[] DefaultMouseHelpStrings = new string[]
-        {
+        public new static string[] DefaultMouseHelpStrings =
+        [
             "Hold Right click and drag: Rotate"
-        };
-
-        public RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.GridVector2 VolumePosition) : base(parent, VolumePosition)
-        {
-        }
+        ];
 
         /// <summary>
         /// This is the center point about which we are rotating.  Usually the center of the shape
         /// </summary>
-        protected abstract GridVector2 VolumeRotationOrigin
+        protected abstract Vector2 VolumeRotationOrigin
         { get; }
 
         /// <summary>
@@ -32,7 +28,7 @@ namespace WebAnnotation.UI.Commands
 
         protected double Angle
         {
-            get { return _Angle; }
+            get => _Angle;
             set
             {
                 _Angle = value;
@@ -47,11 +43,11 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                List<string> s = new List<string>(RotateTranslateScaleCommand.DefaultMouseHelpStrings);
+                List<string> s = [.. RotateTranslateScaleCommand.DefaultMouseHelpStrings];
                 s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 s.Sort();
-                return s.ToArray();
+                return [.. s];
             }
         }
 
@@ -60,14 +56,14 @@ namespace WebAnnotation.UI.Commands
             //Reset size scale if the middle mouse button is pushed
             if (e.Button.Middle())
             {
-                this.SizeScale = 1.0;
+                SizeScale = 1.0;
                 return;
             }
             else if (e.Button.Right())
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                // GridVector2 Center = this.TranslatedVolumePosition;
-                this._AngleOffset = GridVector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
+                Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                // Vector2 Center = this.TranslatedVolumePosition;
+                _AngleOffset = Vector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
             }
             else
             {
@@ -79,14 +75,16 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.Button.Right())
             {
-                GridVector2 worldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                //GridVector2 origin = this.TranslatedVolumePosition;
-                //GridVector2 centroid = this.OriginalVolumePosition;
+                Vector2 worldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                //Vector2 origin = this.TranslatedVolumePosition;
+                //Vector2 centroid = this.OriginalVolumePosition;
 
                 if (VolumeRotationOrigin == worldPosition)
+                {
                     return;
+                }
 
-                this.Angle = GridVector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
+                Angle = Vector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
 
                 //Save as old mouse position so location doesn't jump when we release the right mouse button
                 SaveAsOldMousePosition(e);
@@ -97,12 +95,6 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
     }
 }

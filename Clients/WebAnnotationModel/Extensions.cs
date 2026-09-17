@@ -11,7 +11,7 @@ namespace WebAnnotationModel
     public static class Extensions
     {  
         /*
-        public static SqlGeometry ToGeometry(GridVector2[] points, double Z, double radius, LocationType type)
+        public static SqlGeometry ToGeometry(Vector2[] points, double Z, double radius, LocationType type)
         {
             if (points is null)
             {

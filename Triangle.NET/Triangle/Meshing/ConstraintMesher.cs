@@ -14,30 +14,17 @@ namespace TriangleNet.Meshing
     using TriangleNet.Meshing.Iterators;
     using TriangleNet.Topology;
 
-    internal class ConstraintMesher
+    internal class ConstraintMesher(Mesh mesh, Configuration config)
     {
-        IPredicates predicates;
+        readonly IPredicates predicates = config.Predicates();
 
-        Mesh mesh;
-        Behavior behavior;
-        TriangleLocator locator;
+        readonly Mesh mesh = mesh;
+        readonly Behavior behavior = mesh.behavior;
+        readonly TriangleLocator locator = mesh.locator;
 
-        List<Triangle> viri;
+        readonly List<Triangle> viri = [];
 
-        ILog<LogItem> logger;
-
-        public ConstraintMesher(Mesh mesh, Configuration config)
-        {
-            this.mesh = mesh;
-            this.predicates = config.Predicates();
-
-            this.behavior = mesh.behavior;
-            this.locator = mesh.locator;
-
-            this.viri = new List<Triangle>();
-
-            logger = Log.Instance;
-        }
+        readonly ILog<LogItem> logger = Log.Instance;
 
 
         /// <summary>
@@ -203,7 +190,7 @@ namespace TriangleNet.Meshing
 
             if (regionTris != null)
             {
-                var iterator = new RegionIterator(mesh);
+                RegionIterator iterator = new(mesh);
 
                 for (int i = 0; i < regionTris.Length; i++)
                 {
@@ -707,9 +694,10 @@ namespace TriangleNet.Meshing
 #if USE_ATTRIBS
                 , mesh.nextras
 #endif
-                );
-
-            newvertex.hash = mesh.hash_vtx++;
+                )
+            {
+                hash = mesh.hash_vtx++
+            };
             newvertex.id = newvertex.hash;
 
 #if USE_ATTRIBS

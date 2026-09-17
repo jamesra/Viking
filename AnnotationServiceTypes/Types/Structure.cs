@@ -1,4 +1,4 @@
-﻿using Annotation;
+using Annotation;
 using ProtoBuf;
 using System;
 using System.Runtime.Serialization;
@@ -15,11 +15,19 @@ namespace AnnotationService.Types
 
         [ProtoMember(1)]
         [DataMember]
-        public Structure structure { get { return _structure; } set { _structure = value; } }
+        public Structure structure
+        {
+            get => _structure;
+            set => _structure = value;
+        }
 
         [ProtoMember(2)]
         [DataMember]
-        public Location location { get { return _location; } set { _location = value; } }
+        public Location location
+        {
+            get => _location;
+            set => _location = value;
+        }
 
         public CreateStructureRetval(Structure s, Location l)
         {
@@ -47,27 +55,27 @@ namespace AnnotationService.Types
         private string _Xml;
 
         [DataMember]
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         public Int64 TypeID
         {
-            get { return _Type; }
-            set { _Type = value; }
+            get => _Type;
+            set => _Type = value;
         }
 
         [DataMember]
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         public string Notes
         {
-            get { return _Notes; }
-            set { _Notes = value; }
+            get => _Notes;
+            set => _Notes = value;
         }
 
         [DataMember]
-        [ProtoMember(3)]
+        [ProtoMember(12)]
         public bool Verified
         {
-            get { return _Verified; }
-            set { _Verified = value; }
+            get => _Verified;
+            set => _Verified = value;
         }
 
         /*
@@ -80,52 +88,52 @@ namespace AnnotationService.Types
         */
 
         [DataMember]
-        [ProtoMember(4)]
+        [ProtoMember(13)]
         public string AttributesXml
         {
-            get { return _Xml; }
-            set { _Xml = value; }
+            get => _Xml;
+            set => _Xml = value;
         }
 
         [DataMember]
-        [ProtoMember(5)]
+        [ProtoMember(14)]
         public double Confidence
         {
-            get { return _Confidence; }
-            set { _Confidence = value; }
+            get => _Confidence;
+            set => _Confidence = value;
         }
 
         [DataMember]
-        [ProtoMember(6)]
+        [ProtoMember(15)]
         public StructureLink[] Links
         {
-            get { return _Links; }
-            set { _Links = value; }
+            get => _Links;
+            set => _Links = value;
         }
 
         [DataMember]
-        [ProtoMember(7)]
+        [ProtoMember(16)]
         public Int64[] ChildIDs
         {
-            get { return _ChildIDs; }
-            set { _ChildIDs = value; }
+            get => _ChildIDs;
+            set => _ChildIDs = value;
         }
 
         [DataMember]
-        [ProtoMember(8)]
+        [ProtoMember(17)]
         public string Label
         {
-            get { return _Label; }
-            set { _Label = value; }
+            get => _Label;
+            set => _Label = value;
         }
 
         [DataMember]
-        [ProtoMember(9)]
+        [ProtoMember(18)]
         [Column("Username")]
         public string Username
         {
-            get { return _Username; }
-            set { _Username = value; }
+            get => _Username;
+            set => _Username = value;
         }
 
 

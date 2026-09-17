@@ -10,15 +10,15 @@ uniform const texture AnnotationTexture;
 
 uniform const float Radius; 
 
-uniform const float radiusSquared = 0.5*0.5;
+uniform const float radiusSquared;
 
-uniform const float borderStartRadius = 0.475; 
-uniform const float borderStartSquared = 0.475 * 0.475;
+static const float borderStartRadius = 0.475; 
+static const float borderStartSquared = 0.475 * 0.475;
 
-uniform const float borderBlendStartRadius = 0.45;
-uniform const float borderBlendStartSquared = 0.45 * 0.45;
+static const float borderBlendStartRadius = 0.45;
+static const float borderBlendStartSquared = 0.45 * 0.45;
 
-uniform const float InputLumaAlpha = 1.0f; //Defines how we weight blending the input and existing background luma values by default.
+static const float InputLumaAlpha = 1.0f; //Defines how we weight blending the input and existing background luma values by default.
 
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.

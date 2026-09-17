@@ -1,5 +1,9 @@
-﻿namespace gRPCAnnotationService.Protos
+namespace gRPCAnnotationService.Protos
 {
+    /// <summary>
+    /// StructureType proto ↔ EF. HasParentId distinguishes "no parent" from proto3 default 0.
+    /// Color is stored signed in SQL and sent unsigned on the wire (unchecked cast).
+    /// </summary>
     public static class StructureTypeEFExtensions
     {
         public static Viking.DataModel.Annotation.StructureType ToStructureType(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType src)
@@ -7,18 +11,21 @@
             var converted = new Viking.DataModel.Annotation.StructureType
             {
                 Id = src.Id,
-                ParentId = src.HasParentId ? src.ParentId : default,
-                Created = src.Created.ToDateTime(),
-                LastModified = src.LastModified.ToDateTime(),
+                // Ternary must use (long?)null — bare `default` promotes to 0L and breaks the FK.
+                ParentId = src.HasParentId ? src.ParentId : (long?)null,
+                // Store Save / Sync may omit timestamps.
+                Created = src.Created?.ToDateTime() ?? default,
+                LastModified = src.LastModified?.ToDateTime() ?? default,
                 Notes = src.Notes,
                 Username = src.Username,
-                Tags = src.Attributes,
+                Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = (int)src.Color,
+                Color = unchecked((int)src.Color),
                 Name = src.Name,
-                StructureTags = src.StructureAttributes,
-                //MarkupType = src.M
+                StructureTags = string.IsNullOrWhiteSpace(src.StructureAttributes) ? null : src.StructureAttributes,
+                MarkupType = "Point",
+                HotKey = "\0",
             }; 
 
             /*
@@ -36,18 +43,21 @@
           ref Viking.DataModel.Annotation.StructureType converted)
         {
                 converted.Id = src.Id;
-                converted.ParentId = src.HasParentId ? src.ParentId : default;
-                converted.Created = src.Created.ToDateTime();
-                converted.LastModified = src.LastModified.ToDateTime();
+                converted.ParentId = src.HasParentId ? src.ParentId : (long?)null;
+                if (src.Created != null)
+                    converted.Created = src.Created.ToDateTime();
+                if (src.LastModified != null)
+                    converted.LastModified = src.LastModified.ToDateTime();
+                else
+                    converted.LastModified = System.DateTime.UtcNow;
                 converted.Notes = src.Notes;
                 converted.Username = src.Username;
-                converted.Tags = src.Attributes;
+                converted.Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes;
                 converted.Abstract = src.Abstract;
                 converted.Code = src.Code;
-                converted.Color = (int)src.Color;
+                converted.Color = unchecked((int)src.Color);
                 converted.Name = src.Name;
-                converted.StructureTags = src.StructureAttributes;
-                //MarkupType = src.M 
+                converted.StructureTags = string.IsNullOrWhiteSpace(src.StructureAttributes) ? null : src.StructureAttributes;
         }
 
 
@@ -60,16 +70,16 @@
             {  
                 Id = src.Id,
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,
-                Created = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.Created),
-                LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
-                Notes = src.Notes,
-                Username = src.Username,
-                Attributes = src.Tags,
+                Created = ToUtcTimestamp(src.Created),
+                LastModified = ToUtcTimestamp(src.LastModified),
+                Notes = src.Notes ?? string.Empty,
+                Username = src.Username ?? string.Empty,
+                Attributes = src.Tags ?? string.Empty,
                 Abstract = src.Abstract,
-                Code = src.Code,
-                Color = (uint)src.Color,
-                Name = src.Name,
-                StructureAttributes = src.StructureTags,
+                Code = src.Code ?? string.Empty,
+                Color = unchecked((uint)src.Color),
+                Name = src.Name ?? string.Empty,
+                StructureAttributes = src.StructureTags ?? string.Empty,
                 //Markuptype = src.MarkupType
             };
 
@@ -81,5 +91,8 @@
             return value;
         }
 
+        private static Google.Protobuf.WellKnownTypes.Timestamp ToUtcTimestamp(System.DateTime dateTime) =>
+            Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
+                System.DateTime.SpecifyKind(dateTime, System.DateTimeKind.Utc));
     }
 }

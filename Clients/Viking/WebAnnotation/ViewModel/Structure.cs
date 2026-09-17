@@ -1,32 +1,32 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+#if NETFRAMEWORK
 using System.Windows.Forms;
+#endif
+using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Structure : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>
+    public class Structure(StructureObj data) : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>
+#if NETFRAMEWORK
+        , IContextMenu
+#endif
     {
-        public StructureObj modelObj;
+        public StructureObj modelObj = data;
 
-        public override string ToString()
-        {
-            return modelObj.ToString();
-        }
+        public override string ToString() => modelObj.ToString();
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
-            Structure Obj = obj as Structure;
-            if (Obj != null)
+            if (obj is Structure Obj)
             {
                 return modelObj.Equals(Obj.modelObj);
             }
@@ -40,17 +40,14 @@ namespace WebAnnotation.ViewModel
             return false;
         }
 
-        public Structure(StructureObj data)
-        {
-            this.modelObj = data;
-        }
-
         public Structure Parent
         {
             get
             {
-                if (modelObj.Parent == null)
+                if (modelObj.Parent is null)
+                {
                     return null;
+                }
 
                 return new Structure(modelObj.Parent);
             }
@@ -59,112 +56,74 @@ namespace WebAnnotation.ViewModel
         [Column("Label")]
         public string InfoLabel
         {
-            get { return modelObj.Label; }
-            set
-            {
-                modelObj.Label = value;
-            }
+            get => modelObj.Label;
+            set => modelObj.Label = value;
         }
 
         //        [Column("ID")] This is covered by the ToString method in UI's
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
         [Column("ParentID")]
-        public long? ParentID
-        {
-
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
         [Column("Last Editor")]
-        public string Username
-        {
-            get { return modelObj.Username; }
-        }
+        public string Username => modelObj.Username;
 
         [Column("Num Links")]
-        public int NumLinks
-        {
-            get { return modelObj.NumLinks; }
-        }
+        public int NumLinks => modelObj.NumLinks;
 
 
         [Column("Verified")]
         public bool Verified
         {
-            get { return modelObj.Verified; }
-            set
-            {
-                modelObj.Verified = value;
-            }
+            get => modelObj.Verified;
+            set => modelObj.Verified = value;
         }
 
         [Column("Confidence")]
         public double Confidence
         {
-            get { return modelObj.Confidence; }
-            set
-            {
-                modelObj.Confidence = value;
-            }
+            get => modelObj.Confidence;
+            set => modelObj.Confidence = value;
         }
 
         [Column("Attributes")]
         public IEnumerable<ObjAttribute> Attributes
         {
-            get { return modelObj.Attributes; }
-            set
-            {
-                modelObj.Attributes = new List<ObjAttribute>(value);
-            }
+            get => modelObj.Attributes;
+            set => _ = modelObj.SetAttributes(value);
         }
 
         [Column("Notes")]
         public string Notes
         {
-            get { return modelObj.Notes; }
-            set
-            {
-                modelObj.Notes = value;
-            }
+            get => modelObj.Notes;
+            set => modelObj.Notes = value;
         }
 
         [Column("Type")]
-        public StructureType Type
+        public StructureType Type => new(modelObj.Type);
+
+
+
+        public static Task ToggleAttribute(StructureObj structObj, string tag)
         {
-            get
-            {
-                return new StructureType(modelObj.Type);
-            }
+            return structObj.ToggleAttribute(tag);
         }
 
+        /// <summary>
+        /// Navigation heuristic: radius-weighted volume mean, then nearest location. Not a morphology centroid. Cache-only; use GetCenterAsync to include the server.
+        /// </summary>
+        public LocationObj Center => CenterFromLocations(Store.Locations.GetLocalObjectsForStructure(ID));
 
-
-        public static void ToggleAttribute(StructureObj structObj, string tag)
+        public async System.Threading.Tasks.Task<LocationObj> GetCenterAsync()
         {
-            ObjAttribute attrib = new ObjAttribute(tag, null);
-            List<ObjAttribute> listAttributes = structObj.Attributes.ToList();
-            if (listAttributes.Contains(attrib))
-            {
-                listAttributes.Remove(attrib);
-            }
-            else
-            {
-                listAttributes.Add(attrib);
-            }
-
-            structObj.Attributes = listAttributes;
+            var locations = await Store.Locations.GetStructureLocations(ID, QueryTargets.Server);
+            return CenterFromLocations(locations?.ToArray() ?? []);
         }
 
-        public LocationObj Center
+        static LocationObj CenterFromLocations(LocationObj[] locations)
         {
-            get
-            {
-                LocationObj[] locations = Store.Locations.GetLocationsForStructure(ID).ToArray<LocationObj>();
-
                 if (locations != null && locations.Length > 0)
                 {
                     double sumX = 0;
@@ -188,18 +147,17 @@ namespace WebAnnotation.ViewModel
                     double meanY = (sumY) * Global.Scale.Y;
                     double meanZ = (sumZ) * Global.Scale.Z;
 
-                    Geometry.GridVector3 MeanPosition = new Geometry.GridVector3(meanX, meanY, meanZ);
+                    Geometry.Vector3 MeanPosition = new(meanX, meanY, meanZ);
 
-                    //Find the location closest to the mean position
                     double minDistance = double.MaxValue;
                     int iClosest = 0;
                     for (int iLoc = 0; iLoc < locations.Length; iLoc++)
                     {
-                        Geometry.GridVector3 locPosition = new Geometry.GridVector3(locations[iLoc].VolumePosition.X * Global.Scale.X,
+                        Geometry.Vector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
                                                                                     locations[iLoc].VolumePosition.Y * Global.Scale.Y,
                                                                                     locations[iLoc].Z * Global.Scale.Z);
 
-                        double distance = Geometry.GridVector3.Distance(MeanPosition, locPosition);
+                        double distance = Geometry.Vector3.Distance(MeanPosition, locPosition);
                         if (distance < minDistance)
                         {
                             iClosest = iLoc;
@@ -211,166 +169,163 @@ namespace WebAnnotation.ViewModel
                 }
 
                 return null;
-            }
         }
 
         #region IUIObject Members : IUIObject
 
         public new event PropertyChangedEventHandler ValueChanged
         {
-            add { modelObj.PropertyChanged += value; }
-            remove { modelObj.PropertyChanged -= value; }
+            add => modelObj.PropertyChanged += value;
+            remove => modelObj.PropertyChanged -= value;
         }
 
-        public override ContextMenu ContextMenu
+#if NETFRAMEWORK
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
+                ContextMenuStrip menu = new();
                 if (Global.Export != null)
                 {
-                    menu.MenuItems.Add("Export Morphology To Tulip", ContextMenu_OnMorphology);
+                    ToolStripMenuItem exportItem = new("Export Morphology To Tulip");
+                    exportItem.Click += ContextMenu_OnMorphology;
+                    menu.Items.Add(exportItem);
                 }
 
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
-                menu.MenuItems.Add("");
-                menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
+                ToolStripMenuItem propertiesItem = new("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
+
+                long? cellId = SbfsemToolsLauncher.GetRootStructureId(modelObj);
+                if (cellId.HasValue)
+                    SbfsemToolsLauncher.AddOpenMenuItem(menu, cellId.Value, locationId: null);
+
+                menu.Items.Add(new ToolStripSeparator());
+                ToolStripMenuItem deleteItem = new("Delete");
+                deleteItem.Click += ContextMenu_OnDelete;
+                menu.Items.Add(deleteItem);
 
                 return menu;
             }
         }
 
-        public override void Save()
+#endif
+
+        public override void Save() => _ = SaveAsync();
+
+        async Task SaveAsync()
         {
+#if NETFRAMEWORK
+            await AnnotationOverlay.SaveStructuresWithMessageBoxOnError();
+#else
             try
             {
-                Store.Structures.Save();
+                if (!await Store.Structures.Save())
+                    System.Diagnostics.Trace.WriteLine("Structure save was not confirmed by the server.");
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                System.Diagnostics.Trace.WriteLine(e);
             }
-
+#endif
         }
 
-        public override Viking.UI.Controls.GenericTreeNode CreateNode()
-        {
-            return new Viking.UI.Controls.GenericTreeNode(this);
-        }
+#if NETFRAMEWORK
+        public override Viking.UI.Controls.GenericTreeNode CreateNode() => new Viking.UI.Controls.GenericTreeNode(this);
+#endif
 
-        public override Type[] AssignableParentTypes
-        {
-            get { return new System.Type[] { typeof(StructureObj) }; }
-        }
+        public override Type[] AssignableParentTypes => [typeof(StructureObj)];
 
-        public long[] UnfinishedBranches()
-        {
-            return Store.Structures.GetUnfinishedBranches(this.ID);
-        }
+        public System.Threading.Tasks.Task<long[]> UnfinishedBranches() => Store.Structures.GetUnfinishedBranches(ID);
 
         #endregion
 
-        protected void ContextMenu_OnMorphology(object sender, EventArgs e)
-        {
-            Global.Export.OpenMorphology(this.ID);
-        }
+#if NETFRAMEWORK
+        protected void ContextMenu_OnMorphology(object sender, EventArgs e) => Global.Export.OpenMorphology(ID);
 
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(this);
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 
-        public ContextMenu ContextMenu_AddUnverifiedBranchTerminals(ContextMenu menu)
+        public ContextMenuStrip ContextMenu_AddUnverifiedBranchTerminals(ContextMenuStrip menu)
         {
-            MenuItem menuUnverifiedBranchTerminals = new MenuItem("Unmarked process terminals");
-            menuUnverifiedBranchTerminals.MenuItems.Add(new MenuItem());
-            menuUnverifiedBranchTerminals.Select += this.OnSelectUnverifiedBranchTerminals;
-            menu.MenuItems.Add(menuUnverifiedBranchTerminals);
+            ToolStripMenuItem menuUnverifiedBranchTerminals = new("Unmarked process terminals");
+            menuUnverifiedBranchTerminals.DropDownOpening += OnDropDownOpeningUnverifiedBranchTerminals;
+            menu.Items.Add(menuUnverifiedBranchTerminals);
 
 
             return menu;
         }
 
-        private void OnSelectUnverifiedBranchTerminals(object sender, EventArgs e)
+        private async void OnDropDownOpeningUnverifiedBranchTerminals(object sender, EventArgs e)
         {
-            MenuItem menuUnverifiedBranchTerminals = sender as MenuItem;
-            menuUnverifiedBranchTerminals.MenuItems.Clear();
-            menuUnverifiedBranchTerminals.Select -= this.OnSelectUnverifiedBranchTerminals;
-            bool HasMenuItems = _PopulateUnverifiedBranchTerminalsContextMenu(menuUnverifiedBranchTerminals);
+            ToolStripMenuItem menuUnverifiedBranchTerminals = sender as ToolStripMenuItem;
+            menuUnverifiedBranchTerminals.DropDownItems.Clear();
+            bool HasMenuItems = await PopulateUnverifiedBranchTerminalsContextMenuAsync(menuUnverifiedBranchTerminals);
 
             menuUnverifiedBranchTerminals.Enabled = HasMenuItems;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="rootMenuItem"></param>
-        /// <returns>True if the menu was populated, otherwise false.</returns>
-        protected bool _PopulateUnverifiedBranchTerminalsContextMenu(MenuItem rootMenuItem)
+        protected async System.Threading.Tasks.Task<bool> PopulateUnverifiedBranchTerminalsContextMenuAsync(ToolStripMenuItem rootMenuItem)
         {
-            //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
-            //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
+            WebAnnotationModel.LocationPositionOnly[] LocationArray = await Store.Structures.GetUnfinishedBranchesWithPosition(ID);
 
-            AnnotationService.Types.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(this.ID);
+            Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> dictSectionToLocations = MapLocationsToSections(LocationArray);
 
-            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = this.MapLocationsToSections(LocationArray);
-
-            List<double> levels = new List<double>(dictSectionToLocations.Keys);
+            List<double> levels = [.. dictSectionToLocations.Keys];
             levels.Sort();
             foreach (double level in levels)
             {
-                MenuItem levelMenus = BuildContextMenusForLevel((long)level, dictSectionToLocations[level]);
-                rootMenuItem.MenuItems.Add(levelMenus);
+                ToolStripMenuItem levelMenus = BuildContextMenusForLevel((long)level, dictSectionToLocations[level]);
+                rootMenuItem.DropDownItems.Add(levelMenus);
             }
 
             return levels.Count > 0;
         }
 
-        private string _LocationToString(AnnotationService.Types.LocationPositionOnly loc)
-        {
-            return "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
-        }
+        private string _LocationToString(WebAnnotationModel.LocationPositionOnly loc) => "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
 
-        private MenuItem BuildContextMenusForLevel(long level, List<AnnotationService.Types.LocationPositionOnly> listObjs)
+        private ToolStripMenuItem BuildContextMenusForLevel(long level, List<WebAnnotationModel.LocationPositionOnly> listObjs)
         {
-            MenuItem rootMenuItem = null;
+            ToolStripMenuItem rootMenuItem = null;
             if (listObjs.Count == 1)
             {
-                AnnotationService.Types.LocationPositionOnly locObj = listObjs[0];
+                WebAnnotationModel.LocationPositionOnly locObj = listObjs[0];
                 //For a single item do not create a submenu
                 string locString = _LocationToString(locObj);
-                rootMenuItem = new MenuItem(level.ToString("D4") + " - " + locString, ContextMenu_SelectUnbranchedLocation);
-                rootMenuItem.Tag = locObj.ID;
+                rootMenuItem = new ToolStripMenuItem(level.ToString("D4") + " - " + locString)
+                {
+                    Tag = locObj.ID
+                };
+                rootMenuItem.Click += ContextMenu_SelectUnbranchedLocation;
             }
             else
             {
-                rootMenuItem = new MenuItem(level.ToString("D4"));
-                foreach (AnnotationService.Types.LocationPositionOnly locObj in listObjs)
+                rootMenuItem = new ToolStripMenuItem(level.ToString("D4"));
+                foreach (WebAnnotationModel.LocationPositionOnly locObj in listObjs)
                 {
                     string locString = _LocationToString(locObj);
-                    MenuItem subItem = new MenuItem(locString, ContextMenu_SelectUnbranchedLocation);
-                    subItem.Tag = locObj.ID;
-                    rootMenuItem.MenuItems.Add(subItem);
+                    ToolStripMenuItem subItem = new(locString)
+                    {
+                        Tag = locObj.ID
+                    };
+                    subItem.Click += ContextMenu_SelectUnbranchedLocation;
+                    rootMenuItem.DropDownItems.Add(subItem);
                 }
             }
 
             return rootMenuItem;
         }
 
-        private Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> MapLocationsToSections(IEnumerable<AnnotationService.Types.LocationPositionOnly> locations)
+        private Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> MapLocationsToSections(IEnumerable<WebAnnotationModel.LocationPositionOnly> locations)
         {
-            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = new Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>>();
-            foreach (AnnotationService.Types.LocationPositionOnly loc in locations)
+            Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> dictSectionToLocations = [];
+            foreach (WebAnnotationModel.LocationPositionOnly loc in locations)
             {
                 if (!dictSectionToLocations.ContainsKey(loc.Position.Z))
                 {
-                    dictSectionToLocations[loc.Position.Z] = new List<AnnotationService.Types.LocationPositionOnly>();
+                    dictSectionToLocations[loc.Position.Z] = [];
                 }
 
                 dictSectionToLocations[loc.Position.Z].Add(loc);
@@ -379,51 +334,28 @@ namespace WebAnnotation.ViewModel
             return dictSectionToLocations;
         }
 
-        protected void ContextMenu_SelectUnbranchedLocation(object sender, EventArgs e)
+        protected async void ContextMenu_SelectUnbranchedLocation(object sender, EventArgs e)
         {
-            MenuItem menu = sender as MenuItem;
+            ToolStripMenuItem menu = sender as ToolStripMenuItem;
             long locationID = (long)menu.Tag;
 
-            LocationObj loc = Store.Locations.GetObjectByID(locationID);
+            LocationObj loc = await Store.Locations.GetObjectByID(locationID);
 
             AnnotationOverlay.GoToLocation(loc);
         }
+#endif
 
-        public override void Delete()
+        public override void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            Store.Structures.Remove(modelObj);
-
-            /*
-            Structure OriginalParent = this.Parent;
-            this.Parent = null;
-
-            DBACTION originalAction = this.DBAction;
-            this.DBAction = DBACTION.DELETE;
-
-            bool success = Store.Structures.Save();
-            if (!success)
-            {
-                //Write straight to data since we have an assert to check whether an object is being deleted, but
-                //in this case we know it is ok
-                this.Data.DBAction = originalAction;
-                this.Parent = OriginalParent;
-            }
-            */
+            await Store.Structures.Remove(modelObj);
         }
 
-        bool IEquatable<Structure>.Equals(Structure other)
-        {
-            return this.modelObj.ID == other.modelObj.ID;
-        }
+        bool IEquatable<Structure>.Equals(Structure other) => modelObj.ID == other.modelObj.ID;
 
-        public bool Equals(Structure x, Structure y)
-        {
-            return x.modelObj.ID == y.modelObj.ID;
-        }
+        public bool Equals(Structure x, Structure y) => x.modelObj.ID == y.modelObj.ID;
 
-        public int GetHashCode(Structure obj)
-        {
-            return obj.modelObj.GetHashCode();
-        }
+        public int GetHashCode(Structure obj) => obj.modelObj.GetHashCode();
     }
 }

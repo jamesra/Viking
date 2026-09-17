@@ -1,29 +1,26 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>Viking.DataModel.Annotation</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Partials\**" />
-    <EmbeddedResource Remove="Partials\**" />
-    <None Remove="Partials\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Viking\DataModel\Annotation\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="EfCore.SchemaCompare" Version="6.0.0" />
-    <PackageReference Include="EntityFrameworkExtras.EFCore" Version="6.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.4">
+    <PackageReference Include="EntityFrameworkExtras.EFCore" Version="10.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" Version="6.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <PackageReference Include="NetTopologySuite" Version="2.6.0" />
+    <PackageReference Include="NetTopologySuite.IO.SqlServerBytes" Version="2.1.0" />
+    <PackageReference Include="NetTopologySuite.Features" Version="2.2.0" />
   </ItemGroup>
 
 </Project>

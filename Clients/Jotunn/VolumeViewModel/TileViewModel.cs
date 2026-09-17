@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Threading;
 using System.Windows;
@@ -15,18 +15,18 @@ namespace Viking.VolumeViewModel
     /// <summary>
     /// Represents Tiles to the view
     /// </summary>
-    public class TileViewModel : DependencyObject, IComparable<TileViewModel>, IComparable<Tile>
+    public class TileViewModel : DependencyObject, IComparable<TileViewModel>, IComparable<Viking.VolumeModel.TileViewModel>
     {
-        protected readonly Tile Tile; 
+        protected readonly Viking.VolumeModel.TileViewModel Tile; 
        
-        public string UniqueKey
+        public TileUniqueKey UniqueKey
         {
             get { return Tile.UniqueKey; }
         }
 
         public override string ToString()
         {
-            return Tile.UniqueKey; 
+            return Tile.UniqueKey.ToString();
         }
         
         public int Downsample
@@ -40,8 +40,8 @@ namespace Viking.VolumeViewModel
         /// <summary>
         /// Updated when the Mesh changes
         /// </summary>
-        GridRectangle _Bounds; 
-        public GridRectangle Bounds
+        Rectangle _Bounds; 
+        public Rectangle Bounds
         {
             get
             {
@@ -122,7 +122,7 @@ namespace Viking.VolumeViewModel
 
         private static System.Windows.Threading.Dispatcher _MainUIDispatcher = null;
         
-        public TileViewModel(Tile t, string TilePath)
+        public TileViewModel(Viking.VolumeModel.TileViewModel t, string TilePath)
         {
             OnDownloadCompletedEventHandler = new EventHandler(DownloadCompleted);
             OnDownloadFailedEventHandler = new EventHandler<ExceptionEventArgs>(DownloadFailed);
@@ -181,7 +181,7 @@ namespace Viking.VolumeViewModel
         }
 
 
-        protected void CreateMesh(Tile t)
+        protected void CreateMesh(Viking.VolumeModel.TileViewModel t)
         {
             MeshGeometry3D mesh = null;
             
@@ -195,7 +195,7 @@ namespace Viking.VolumeViewModel
             //(Action)(() => { mesh = new MeshGeometry3D(); }));
             mesh = new MeshGeometry3D();
 
-            foreach(PositionNormalTextureVertex v in t.Verticies)
+            foreach(PositionNormalTextureVertex v in t.Vertices)
             {
                 mesh.Positions.Add(new Point3D(v.Position.X, v.Position.Y, v.Position.Z));
                 mesh.Normals.Add(new Vector3D(v.Normal.X, v.Normal.Y, v.Normal.Z));
@@ -364,10 +364,10 @@ namespace Viking.VolumeViewModel
         protected void MeshChanged(MeshGeometry3D newMesh)
         {
             if (newMesh == null)
-                _Bounds = new GridRectangle();
+                _Bounds = new Rectangle();
 
             Rect3D boundRect3D = newMesh.Bounds;
-            _Bounds = new GridRectangle();
+            _Bounds = new Rectangle();
         }
 
         #region IComparable<TileViewModel> Members
@@ -390,9 +390,9 @@ namespace Viking.VolumeViewModel
 
         #endregion
 
-        #region IComparable<Tile> Members
+        #region IComparable<TileViewModel> Members
 
-        int IComparable<Tile>.CompareTo(Tile other)
+        int IComparable<Viking.VolumeModel.TileViewModel>.CompareTo(Viking.VolumeModel.TileViewModel other)
         {
             if (this.Tile == null && other == null)
                 return 0;

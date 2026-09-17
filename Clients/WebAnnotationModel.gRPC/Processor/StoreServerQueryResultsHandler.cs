@@ -8,6 +8,9 @@ using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel.gRPC
 {
+    /// <summary>
+    /// Applies a server add/update/delete payload to the store dictionary without raising store events.
+    /// </summary>
     public class StoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT> : IStoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY> 
         where OBJECT : AnnotationModelObjBaseWithKey<KEY, SERVER_OBJECT>, IEquatable<OBJECT>, IDataObjectWithKey<KEY>
@@ -51,6 +54,9 @@ namespace WebAnnotationModel.gRPC
                 update.DeletedIDs);
         }
 
+        /// <summary>
+        /// Mutates the store, then returns an inventory. Does not raise store events.
+        /// </summary>
         public async Task<ChangeInventory<OBJECT>> ProcessServerObjects(SERVER_OBJECT[] addorupdateObjs, KEY[] deletedIds)
         {
             var inventory = new ChangeInventory<OBJECT>();
@@ -63,6 +69,9 @@ namespace WebAnnotationModel.gRPC
         {
             if (inventory is null)
                 inventory = new ChangeInventory<OBJECT>();
+
+            if (serverObjs is null || serverObjs.Length == 0)
+                return inventory;
               
             var results = new ProcessResult[serverObjs.Length];
             var tasks = new Task<OBJECT>[serverObjs.Length];
@@ -70,6 +79,7 @@ namespace WebAnnotationModel.gRPC
             async Task<OBJECT> GetOrAddTask(SERVER_OBJECT u, int i)
             {
                 var added = false;
+                // IStoreEditor.GetOrAdd: cache only. Events fire when the store calls CallOnCollectionChanged.
                 var co = _StoreEditor.GetOrAdd(u.ID, (k) =>
                 {
                     added = true;
@@ -97,19 +107,22 @@ namespace WebAnnotationModel.gRPC
                 var j = i;
                 tasks[i] = Task.Run(async () => await GetOrAddTask(o, j));
             }
-             
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
             for (int i = 0; i < serverObjs.Length; i++)
             {
+                var obj = await tasks[i].ConfigureAwait(false);
                 switch (results[i])
                 {
                     case ProcessResult.Add:
-                        inventory.AddedObjects.Add(await tasks[i]);
+                        inventory.AddedObjects.Add(obj);
                         break;
                     case ProcessResult.Update:
-                        inventory.UpdatedObjects.Add(await tasks[i]);
+                        inventory.UpdatedObjects.Add(obj);
                         break;
                     case ProcessResult.Unchanged:
-                        inventory.UnchangedObjects.Add(await tasks[i]);
+                        inventory.UnchangedObjects.Add(obj);
                         break;
                     default:
                         throw new NotImplementedException($"Unexpected result {results[i]}");
@@ -164,6 +177,10 @@ namespace WebAnnotationModel.gRPC
             return listDeleted;
         }
 
+        /// <summary>
+        /// Forwards to IStoreEditor.EndBatch, which skips parent/root wiring.
+        /// Use the store's CallOnCollectionChanged for StructureTypeStore / StructureStore.
+        /// </summary>
         public Task EndBatch(ChangeInventory<OBJECT> changes)
         {
             return _StoreEditor.EndBatch(changes);

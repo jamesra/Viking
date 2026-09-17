@@ -9,38 +9,25 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFLocationAdapter : ILocationReadOnly
+    class WCFLocationAdapter(Location l, IScale scale) : ILocationReadOnly
     {
-        private readonly Location loc;
-        public readonly IScale scale;
+        private readonly Location loc = l;
+        public readonly IScale scale = scale;
 
-        public WCFLocationAdapter(Location l, IScale scale)
-        {
-            this.loc = l;
-            this.scale = scale;
-        }
-
-        public IDictionary<string, string> Attributes
-        {
-            get
-            {
-                return null;
-            }
-        }
+        public IDictionary<string, string> Attributes => null;
 
         private SqlGeometry _VolumeShape = null;
-        public SqlGeometry VolumeGeometry
+        public SqlGeometry Geometry
         {
             get
             {
-                if (_VolumeShape == null)
+                if (_VolumeShape is null)
                 {
                     if (loc.VolumeShape.WellKnownValue.WellKnownBinary != null)
                         _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.WellKnownValue.WellKnownBinary), loc.VolumeShape.CoordinateSystemId);
-                    else if (loc.VolumeShape.WellKnownValue.WellKnownText != null)
-                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.WellKnownValue.WellKnownText), loc.VolumeShape.CoordinateSystemId);
-                    else
-                        throw new InvalidOperationException("No well known text or binary to create SQLGeometry object: Location ID = " + loc.ID.ToString());
+                    else _VolumeShape = loc.VolumeShape.WellKnownValue.WellKnownText != null
+                        ? Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.WellKnownValue.WellKnownText), loc.VolumeShape.CoordinateSystemId)
+                        : throw new InvalidOperationException("No well known text or binary to create SQLGeometry object: Location ID = " + loc.ID.ToString());
 
                     _VolumeShape = _VolumeShape.Scale(scale);
                 }
@@ -48,10 +35,7 @@ namespace AnnotationVizLib.WCFClient
                 return _VolumeShape;
             }
 
-            set
-            {
-                _VolumeShape = value;
-            }
+            set => _VolumeShape = value;
         }
 
         private SqlGeometry _MosaicShape = null;
@@ -59,14 +43,13 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                if (_MosaicShape == null)
+                if (_MosaicShape is null)
                 {
                     if (loc.MosaicShape.WellKnownValue.WellKnownBinary != null)
                         _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.MosaicShape.WellKnownValue.WellKnownBinary), loc.MosaicShape.CoordinateSystemId);
-                    else if (loc.MosaicShape.WellKnownValue.WellKnownText != null)
-                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.MosaicShape.WellKnownValue.WellKnownText), loc.MosaicShape.CoordinateSystemId);
-                    else
-                        throw new InvalidOperationException("No well known text or binary to create SQLGeometry object: Location ID = " + loc.ID.ToString());
+                    else _VolumeShape = loc.MosaicShape.WellKnownValue.WellKnownText != null
+                        ? Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.MosaicShape.WellKnownValue.WellKnownText), loc.MosaicShape.CoordinateSystemId)
+                        : throw new InvalidOperationException("No well known text or binary to create SQLGeometry object: Location ID = " + loc.ID.ToString());
 
                     _MosaicShape = _MosaicShape.Scale(scale);
                 }
@@ -74,110 +57,47 @@ namespace AnnotationVizLib.WCFClient
                 return _MosaicShape;
             }
 
-            set
-            {
-                _MosaicShape = value;
-            }
+            set => _MosaicShape = value;
         }
 
-        public ulong ID
+        public ulong ID => (ulong)loc.ID;
+
+        public bool IsUntraceable => loc.IsUntraceable();
+
+        public bool IsVericosityCap => loc.IsVericosityCap();
+
+        public bool OffEdge => loc.OffEdge;
+
+        public ulong ParentID => (ulong)loc.ParentID;
+
+        public bool Terminal => loc.Terminal;
+
+        public double Z => (double)loc.VolumePosition.Z * scale.Z.Value;
+
+        public long UnscaledZ => (long)loc.VolumePosition.Z;
+
+        public string TagsXml => loc.AttributesXml;
+
+        public LocationType TypeCode => (LocationType)loc.TypeCode;
+
+        Box? _BoundingBox = null;
+        public Box BoundingBox
         {
             get
             {
-                return (ulong)loc.ID;
-            }
-        }
-
-        public bool IsUntraceable
-        {
-            get
-            {
-                return loc.IsUntraceable();
-            }
-        }
-
-        public bool IsVericosityCap
-        {
-            get
-            {
-                return loc.IsVericosityCap();
-            }
-        }
-
-        public bool OffEdge
-        {
-            get
-            {
-                return loc.OffEdge;
-            }
-        }
-
-        public ulong ParentID
-        {
-            get
-            {
-                return (ulong)loc.ParentID;
-            }
-        }
-
-        public bool Terminal
-        {
-            get
-            {
-                return loc.Terminal;
-            }
-        }
-
-        public double Z
-        {
-            get
-            {
-                return (double)loc.VolumePosition.Z * scale.Z.Value;
-            }
-        }
-
-        public long UnscaledZ
-        {
-            get
-            {
-                return (long)loc.VolumePosition.Z;
-            }
-        }
-
-        public string TagsXml
-        {
-            get
-            {
-                return loc.AttributesXml;
-            }
-        }
-
-        public LocationType TypeCode
-        {
-            get
-            {
-                return (LocationType)loc.TypeCode;
-            }
-        }
-
-        GridBox _BoundingBox = default;
-        public GridBox BoundingBox
-        {
-            get
-            {
-                if (_BoundingBox == null)
+                if (!_BoundingBox.HasValue)
                 {
-                    GridRectangle bound_rect = VolumeGeometry.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
+                    Rectangle bound_rect = Geometry.BoundingBox();
+                    _BoundingBox = new Box(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 
-                return _BoundingBox;
+                return _BoundingBox.Value;
             }
         }
 
         public bool Equals(ILocationReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)

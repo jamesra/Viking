@@ -5,13 +5,13 @@ namespace WebAnnotation.Actions
     /// <summary>
     /// Fades an IColorView object 
     /// </summary>
-    class MouseOverLocationCanvasViewEffect
+    internal class MouseOverLocationCanvasViewEffect
     {
-        private object _viewObj = null;
+        private object? _viewObj = null;
 
         public object viewObj
         {
-            get { return _viewObj; }
+            get => _viewObj;
             set
             {
                 if (_viewObj != null)
@@ -27,7 +27,7 @@ namespace WebAnnotation.Actions
             }
         }
 
-        float OriginalAlpha;
+        private float OriginalAlpha;
 
         public MouseOverLocationCanvasViewEffect()
         {
@@ -35,20 +35,18 @@ namespace WebAnnotation.Actions
 
         protected void ApplyEffect(object view_obj)
         {
-            IColorView cView = view_obj as IColorView;
-            if (cView != null)
+            if (view_obj is IColorView cView)
             {
-                this.OriginalAlpha = cView.Alpha;
+                OriginalAlpha = cView.Alpha;
                 cView.Alpha /= 2.0f;
             }
         }
 
         protected void RemoveEffect(object view_obj)
         {
-            IColorView cView = view_obj as IColorView;
-            if (cView != null)
+            if (view_obj is IColorView cView)
             {
-                cView.Alpha = this.OriginalAlpha;
+                cView.Alpha = OriginalAlpha;
             }
         }
     }

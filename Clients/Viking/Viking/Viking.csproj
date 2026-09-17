@@ -1,436 +1,244 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
-    <LargeAddressAware>true</LargeAddressAware>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{006AE0D6-265F-41B2-9D37-DED07E6279B4}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net48</TargetFramework>
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>Viking</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <IsWebBootstrapper>true</IsWebBootstrapper>
     <ApplicationIcon>Viking.ico</ApplicationIcon>
-    <ManifestCertificateThumbprint>2AA32CFAA1A0853BB33F258D4B9A5905AD36C32A</ManifestCertificateThumbprint>
-    <ManifestKeyFile>
-    </ManifestKeyFile>
-    <GenerateManifests>true</GenerateManifests>
-    <SignManifests>true</SignManifests>
-    <TargetZone>LocalIntranet</TargetZone>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <OldToolsVersion>3.5</OldToolsVersion>
-    <UpgradeBackupLocation />
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-    <PublishUrl>C:\Src\git\VikingLegacy\Publish\</PublishUrl>
-    <Install>true</Install>
-    <InstallFrom>Web</InstallFrom>
-    <UpdateEnabled>true</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>true</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
-    <InstallUrl>https://internal.connectomes.utah.edu/Software/Viking/</InstallUrl>
-    <SupportUrl>http://connectomes.utah.edu/</SupportUrl>
-    <ErrorReportUrl>http://connectomes.utah.edu/client/installationerror.html</ErrorReportUrl>
-    <TargetCulture>en</TargetCulture>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <SignAssembly>False</SignAssembly>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <MinimumRequiredVersion>1.1.0.270</MinimumRequiredVersion>
-    <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
-    <WebPage>Viking.html</WebPage>
-    <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>308</ApplicationRevision>
-    <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <CreateDesktopShortcut>true</CreateDesktopShortcut>
-    <PublishWizardCompleted>true</PublishWizardCompleted>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <PlatformTarget>x86</PlatformTarget>
-    <LargeAddressAware>true</LargeAddressAware>
-    <CodeAnalysisRuleSet>Main.ruleset</CodeAnalysisRuleSet>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <RunCodeAnalysis>false</RunCodeAnalysis>
-    <Prefer32Bit>true</Prefer32Bit>
-    <UseVSHostingProcess>false</UseVSHostingProcess>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <PlatformTarget>x86</PlatformTarget>
-    <LargeAddressAware>true</LargeAddressAware>
-    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-    <UseVSHostingProcess>true</UseVSHostingProcess>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
-    <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|AnyCPU'">
-    <OutputPath>bin\ReleaseWithSymbols\</OutputPath>
-    <DefineConstants>CODE_ANALYSIS;TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
-    <CodeAnalysisLogFile>bin\Release\Viking.exe.CodeAnalysisLog.xml</CodeAnalysisLogFile>
-    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
-    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
-    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
-    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
-    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
-    <DebugSymbols>true</DebugSymbols>
-    <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
+    <ApplicationVersion>1.2.60.0</ApplicationVersion>
+    <FileVersion>1.2.60.0</FileVersion>
+    <AssemblyVersion>1.2.60.0</AssemblyVersion>
+    <Deterministic>True</Deterministic>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
+    <!-- Enable automatic binding redirects -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System" />
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Web" />
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="LinqToXsd" Version="2.0.2" />
+    <PackageReference Include="protobuf-net" Version="3.2.56" />
+    <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Settings.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
-    <Content Include="Content\AnnotationOverlayShader.fx" />
-    <Content Include="Content\ChannelOverlayShader.fx" />
-    <Content Include="Content\MergeHSVImages.fx" />
-    <Content Include="Content\RGBToHSV.fx" />
-    <Content Include="Content\RoundCurve.fx" />
-    <Content Include="Content\RoundCurveHSV.fx" />
-    <Content Include="Content\RoundLine.fx" />
-    <Content Include="Content\RoundLineHSV.fx" />
-    <Content Include="Content\TileLayout.fx" />
-    <Content Include="Modules\LocalBookmarks\XOTask.dll" />
-    <Content Include="Modules\WebAnnotation\Annotation.ViewModels.dll" />
-    <Content Include="Modules\WebAnnotation\AnnotationInterfaces.dll" />
-    <Content Include="Modules\WebAnnotation\AnnotationServiceTypes.dll" />
-    <Content Include="Modules\WebAnnotation\protobuf-net.dll" />
-    <Content Include="Modules\WebAnnotation\SqlGeometryAnnotationExtensions.dll" />
-    <Content Include="Modules\WebAnnotation\WebAnnotationWPFControls.dll" />
-    <Content Include="Modules\WebAnnotation\Xceed.Wpf.AvalonDock.dll" />
-    <Content Include="Modules\WebAnnotation\Xceed.Wpf.AvalonDock.Themes.Aero.dll" />
-    <Content Include="Modules\WebAnnotation\Xceed.Wpf.AvalonDock.Themes.Metro.dll" />
-    <Content Include="Modules\WebAnnotation\Xceed.Wpf.AvalonDock.Themes.VS2010.dll" />
-    <Content Include="Modules\WebAnnotation\Xceed.Wpf.Toolkit.dll" />
-    <Content Include="x86\libiomp5md.dll" />
-    <Content Include="x86\MathNet.Numerics.MKL.dll" />
-    <Content Include="SqlServerTypes\x86\msvcr120.dll">
+    <ProjectReference Include="..\NGVV\VikingCore.csproj" />
+    <ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
+    <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
+    <!-- Ensure MGCB content is built before Viking copies graphics assets to output -->
+    <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <!-- Module projects - built as plugins, not direct references -->
+    <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\LocalBookmarks\LocalBookmarks.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\MeasurementExtension\Measurement.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Modules\**\System.Memory.dll" />
+    <None Remove="System.Memory.4.6.3\**" />
+    <None Remove="System.Runtime.CompilerServices.Unsafe.6.1.2\**" />
+    <None Remove="System.Numerics.Vectors.4.6.1\**" />
+    <None Remove="System.Buffers.4.6.1\**" />
+  </ItemGroup>
+  <!-- Ensure native SQL Server Types DLLs are copied to output -->
+  <ItemGroup>
+    <None Include="SqlServerTypes\x64\msvcr120.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-      <DesignTime>True</DesignTime>
-    </Compile>
-    <None Include="app.config">
-      <SubType>Designer</SubType>
     </None>
-    <Content Include="Content\Arrow.xnb" />
-    <Content Include="Content\Ring.xnb" />
-    <Content Include="Content\Star.xnb" />
-    <Content Include="Content\AnnotationOverlayShader.xnb" />
-    <Content Include="Content\Arial.spritefont" />
-    <Content Include="Content\Arial.xnb" />
-    <Content Include="Content\BillboardAnnotation.xnb" />
-    <Content Include="Content\ChannelOverlayShader.xnb" />
-    <Content Include="Content\Circle.xnb" />
-    <Content Include="Content\CircleChain.xnb" />
-    <Content Include="Content\CircleConnect.xnb" />
-    <Content Include="Content\CircleMask.xnb" />
-    <Content Include="Content\CircleMinus.xnb" />
-    <Content Include="Content\CirclePlus.xnb" />
-    <Content Include="Content\CircleX.xnb" />
-    <Content Include="Content\DownArrowV2.xnb" />
-    <Content Include="Content\MergeHSVImages.xnb" />
-    <Content Include="Content\PolygonOverlayShader.xnb" />
-    <Content Include="Content\RGBToHSV.xnb" />
-    <Content Include="Content\RoundCurve.xnb" />
-    <Content Include="Content\RoundCurveHSV.xnb" />
-    <Content Include="Content\RoundLine.xnb" />
-    <Content Include="Content\RoundLineHSV.xnb" />
-    <Content Include="Content\TileLayout.xnb" />
-    <Content Include="Content\UpArrowMask.xnb" />
-    <Content Include="Content\UpArrowV2.xnb" />
-    <None Include="Modules\WebAnnotation\Annotation.ViewModels.dll.config" />
-    <None Include="Modules\WebAnnotation\WebAnnotationWPFControls.dll.config" />
-    <None Include="Properties\app.manifest" />
-    <None Include="Properties\Settings.settings">
+    <None Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x64\SqlServerSpatial160.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\SqlServerSpatial160.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="build.log">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <None Include="Viking_TemporaryKey.pfx" />
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
   </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
-      <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.SqlServer.SQLSysClrTypes.12.0.x86">
-      <Visible>False</Visible>
-      <ProductName>Microsoft® System CLR Types for SQL Server® 2014 %28x86%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Windows.Installer.4.5">
-      <Visible>False</Visible>
-      <ProductName>Windows Installer 4.5</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Xna.Framework.4.0">
-      <Visible>False</Visible>
-      <ProductName>Microsoft XNA Framework Redistributable 4.0</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Modules\LocalBookmarks\LocalBookmarks.dll" />
-    <Content Include="Modules\LocalBookmarks\Xml.Schema.Linq.dll" />
-    <Content Include="Modules\Measurement\Measurement.dll" />
-    <Content Include="Modules\WebAnnotation\EntityFramework.dll" />
-    <Content Include="Modules\WebAnnotation\EntityFramework.SqlServer.dll" />
-    <Content Include="Modules\WebAnnotation\EntityFramework.SqlServer.xml" />
-    <Content Include="Modules\WebAnnotation\EntityFramework.xml" />
-    <Content Include="Modules\WebAnnotation\log4net.dll" />
-    <Content Include="Modules\WebAnnotation\SqlGeometryUtils.dll" />
-    <Content Include="Modules\WebAnnotation\WebAnnotation.dll" />
-    <Content Include="Modules\WebAnnotation\WebAnnotationModel.dll" />
-    <Content Include="Modules\WebAnnotation\Xml.Schema.Linq.dll" />
-    <Content Include="Viking.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <PublishFile Include="Modules\WebAnnotation\EntityFramework.dll">
-      <Visible>False</Visible>
-      <Group>
-      </Group>
-      <TargetPath>
-      </TargetPath>
-      <PublishState>Exclude</PublishState>
-      <IncludeHash>True</IncludeHash>
-      <FileType>File</FileType>
-    </PublishFile>
-    <PublishFile Include="Modules\WebAnnotation\EntityFramework.SqlServer.dll">
-      <Visible>False</Visible>
-      <Group>
-      </Group>
-      <TargetPath>
-      </TargetPath>
-      <PublishState>Exclude</PublishState>
-      <IncludeHash>True</IncludeHash>
-      <FileType>File</FileType>
-    </PublishFile>
-    <PublishFile Include="Modules\WebAnnotation\EntityFramework.SqlServer.xml">
-      <Visible>False</Visible>
-      <Group>
-      </Group>
-      <TargetPath>
-      </TargetPath>
-      <PublishState>Exclude</PublishState>
-      <IncludeHash>True</IncludeHash>
-      <FileType>File</FileType>
-    </PublishFile>
-    <PublishFile Include="Modules\WebAnnotation\EntityFramework.xml">
-      <Visible>False</Visible>
-      <Group>
-      </Group>
-      <TargetPath>
-      </TargetPath>
-      <PublishState>Exclude</PublishState>
-      <IncludeHash>True</IncludeHash>
-      <FileType>File</FileType>
-    </PublishFile>
-    <PublishFile Include="Modules\WebAnnotation\log4net.dll">
-      <Visible>False</Visible>
-      <Group>
-      </Group>
-      <TargetPath>
-      </TargetPath>
-      <PublishState>Exclude</PublishState>
-      <IncludeHash>True</IncludeHash>
-      <FileType>File</FileType>
-    </PublishFile>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="CommandLineParser">
-      <Version>2.8.0</Version>
-    </PackageReference>
-    <PackageReference Include="EntityFramework">
-      <Version>6.4.4</Version>
-    </PackageReference>
-    <PackageReference Include="IdentityModel">
-      <Version>5.2.0</Version>
-    </PackageReference>
-    <PackageReference Include="LargeAddressAware">
-      <Version>1.0.5</Version>
-    </PackageReference>
-    <PackageReference Include="MathNet.Numerics">
-      <Version>4.15.0</Version>
-    </PackageReference>
-    <PackageReference Include="MathNet.Numerics.MKL.Win">
-      <Version>2.5.0</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection">
-      <Version>5.0.2</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Hosting">
-      <Version>5.0.0</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SqlServer.Types">
-      <Version>14.0.1016.290</Version>
-    </PackageReference>
-    <PackageReference Include="Newtonsoft.Json">
-      <Version>13.0.1</Version>
-    </PackageReference>
-    <PackageReference Include="protobuf-net">
-      <Version>2.0.0.668</Version>
-    </PackageReference>
-    <PackageReference Include="System.Net.Http">
-      <Version>4.3.4</Version>
-    </PackageReference>
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe">
-      <Version>5.0.0</Version>
-    </PackageReference>
-    <PackageReference Include="System.Security.Cryptography.Algorithms">
-      <Version>4.3.1</Version>
-    </PackageReference>
-    <PackageReference Include="System.Security.Cryptography.X509Certificates">
-      <Version>4.3.2</Version>
-    </PackageReference>
-    <PackageReference Include="System.Text.Encodings.Web">
-      <Version>5.0.1</Version>
-    </PackageReference>
-    <PackageReference Include="System.ValueTuple">
-      <Version>4.5.0</Version>
-    </PackageReference>
-    <PackageReference Include="Thinktecture.IdentityModel.Client">
-      <Version>4.0.1</Version>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
-      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
-      <Name>Geometry</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj">
-      <Project>{0b489584-5d3e-4fb4-8a3d-77b7030e2994}</Project>
-      <Name>SIMeasurement</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\UnitsAndScale\UnitsAndScale.csproj">
-      <Project>{54a855c6-e843-4079-85a9-57157662d7e6}</Project>
-      <Name>UnitsAndScale</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj">
-      <Project>{61452f17-ca41-4bbe-8d20-3c6339cd4626}</Project>
-      <Name>WCFTokenInjector</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NGVV\VikingCore.csproj">
-      <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
-      <Name>VikingCore</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
+  <!--
+
+	<PropertyGroup>
+
+		<TargetDir>$(MSBuildProjectDirectory)\bin\$(\$(OutputPath)</TargetDir>
+
+	</PropertyGroup>
+
+	-->
+  <!-- Post-build event to create debug output file -->
+  <Target Name="CreateDebugOutputFile" AfterTargets="Build">
+    <WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
   </Target>
-  <Target Name="AfterBuild">
+  <PropertyGroup>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Title>Viking</Title>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsPublishable>True</IsPublishable>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <IsPublishable>True</IsPublishable>
+  </PropertyGroup>
+  <Target Name="CopyGraphicsContent" AfterTargets="Build" BeforeTargets="PrepareForRun" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_GraphicsBuildConfig Condition="'$(Configuration)' != ''">$(Configuration)</_GraphicsBuildConfig>
+      <_GraphicsBuildConfig Condition="'$(_GraphicsBuildConfig)' == ''">Debug</_GraphicsBuildConfig>
+      <_GraphicsContentSourceDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\bin\$(_GraphicsBuildConfig)\net48\Content\</_GraphicsContentSourceDir>
+      <_GraphicsContentFallbackDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\Content\bin\Windows\</_GraphicsContentFallbackDir>
+      <_GraphicsContentDestDir>$(OutputPath)Content\</_GraphicsContentDestDir>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_GraphicsContentSourceDir)')">
+      <GraphicsContent Include="$(_GraphicsContentSourceDir)**\*.xnb" />
+    </ItemGroup>
+    <ItemGroup Condition="'@(GraphicsContent)' == '' and Exists('$(_GraphicsContentFallbackDir)')">
+      <GraphicsContent Include="$(_GraphicsContentFallbackDir)*.xnb" />
+    </ItemGroup>
+    <MakeDir Directories="$(_GraphicsContentDestDir)" />
+    <Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(_GraphicsContentDestDir)%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Message Text="Copied @(GraphicsContent-&gt;Count()) graphics content file(s) to $(_GraphicsContentDestDir)" Importance="high" />
+    <Error Text="No graphics content (.xnb) was copied to Viking output. Build Clients\VikingXNAGraphics\MonographicsNet48.csproj and ensure MGCB is installed at '$(MGCBPath)'." Condition="'@(GraphicsContent)' == ''" />
   </Target>
-  -->
-  <PropertyGroup>
-    <PostBuildEvent>robocopy $(ProjectDir)Content $(TargetDir)Content *.* /PURGE
-robocopy $(ProjectDir)Modules $(TargetDir)Modules *.* /MIR
-del $(TargetDir)Modules\WebAnnotation\UnitsAndScale.*
-del $(TargetDir)Modules\WebAnnotation\SIMeasurement.*
-IF %25ERRORLEVEL%25 LEQ 8 exit 0</PostBuildEvent>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PreBuildEvent>del $(ProjectDir)Content\*.* /Q
-copy $(ProjectDir)Content\LocalBookmarks\* $(ProjectDir)Content\* 
-copy $(ProjectDir)Content\VikingXNAGraphics\* $(ProjectDir)Content\*</PreBuildEvent>
-  </PropertyGroup>
+  <!-- Define the list of modules to process -->
+  <ItemGroup>
+    <ModuleToCopy Include="LocalBookmarks" />
+    <ModuleToCopy Include="Measurement" />
+    <ModuleToCopy Include="WebAnnotation" />
+  </ItemGroup>
+  <!-- Main target that processes each module using item batching -->
+  <!-- Run after Build and ensure project references are built first -->
+  <Target Name="CopyModules" AfterTargets="Build">
+    <!-- Process each module by calling CopySingleModule with the module name -->
+    <MSBuild Projects="$(MSBuildProjectFile)" Targets="CopySingleModule" Properties="ModuleName=%(ModuleToCopy.Identity)" />
+    <!-- Copy shared DLLs once after all modules are processed -->
+    <PropertyGroup>
+      <ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
+    </PropertyGroup>
+    <!-- Copy Xml.Schema.Linq.dll to main output directory if it exists in any module -->
+    <ItemGroup>
+      <XmlSchemaLinqFiles Include="$(ModulesSourceDir)\**\Xml.Schema.Linq.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(XmlSchemaLinqFiles)" DestinationFolder="$(TargetDir)" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+    <Message Text="Copied Xml.Schema.Linq.dll to main output directory" Importance="normal" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+    <!-- Copy System.Memory.dll to main output directory if it exists in any module -->
+    <ItemGroup>
+      <SystemMemoryFiles Include="$(ModulesSourceDir)\**\System.Memory.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" Condition="'@(SystemMemoryFiles)' != ''" />
+    <Message Text="Copied System.Memory.dll to main output directory" Importance="normal" Condition="'@(SystemMemoryFiles)' != ''" />
+    <!-- Remove duplicate shared DLLs from modules (once after all modules) -->
+    <CallTarget Targets="RemoveDuplicateDlls" />
+  </Target>
+  <!-- Target to copy a single module's files -->
+  <Target Name="CopySingleModule">
+    <PropertyGroup>
+      <ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
+      <ModulesTargetDir>$(TargetDir)\Modules</ModulesTargetDir>
+      <SourcePath>$(ModulesSourceDir)\$(ModuleName)\$(Configuration)\$(TargetFramework)</SourcePath>
+      <TargetPath>$(ModulesTargetDir)\$(ModuleName)</TargetPath>
+    </PropertyGroup>
+    <Message Text="Processing module: $(ModuleName)" Importance="high" />
+    <Message Text="Source: $(SourcePath) -&gt; Target: $(TargetPath)" Importance="high" />
+    <!-- Check if module source exists -->
+    <Message Text="Warning: $(ModuleName) module not found at $(SourcePath)" Importance="high" Condition="!Exists('$(SourcePath)')" />
+    <!-- Copy module files -->
+    <ItemGroup Condition="Exists('$(SourcePath)')">
+      <ModuleFilesToCopy Include="$(SourcePath)\**\*" Exclude="$(SourcePath)\**\*.pdb" />
+    </ItemGroup>
+    <Message Text="Found @(ModuleFilesToCopy-&gt;Count()) files for $(ModuleName)" Importance="high" Condition="Exists('$(SourcePath)')" />
+    <MakeDir Directories="$(TargetPath)" Condition="Exists('$(SourcePath)')" />
+    <RemoveDir Directories="$(TargetPath)\$(TargetFramework)\Modules" ContinueOnError="true" Condition="Exists('$(SourcePath)')" />
+    <Copy SourceFiles="@(ModuleFilesToCopy)" DestinationFolder="$(TargetPath)\%(RecursiveDir)" Condition="'@(ModuleFilesToCopy)' != ''" SkipUnchangedFiles="true" />
+    <!-- Copy module content files -->
+    <ItemGroup Condition="Exists('$(SourcePath)\Content')">
+      <ModuleContentToCopy Include="$(SourcePath)\Content\**" />
+    </ItemGroup>
+    <Message Text="Copying $(SourcePath)\Content to $(TargetDir)\Content" Importance="high" Condition="Exists('$(SourcePath)\Content')" />
+    <Copy SourceFiles="@(ModuleContentToCopy)" DestinationFolder="$(TargetDir)\Content" Condition="'@(ModuleContentToCopy)' != ''" />
+    <Message Text="Copied $(ModuleName) module files" Importance="normal" Condition="Exists('$(SourcePath)')" />
+  </Target>
+  <!-- Target to remove duplicate DLLs from modules -->
+  <Target Name="RemoveDuplicateDlls" AfterTargets="CopyModules">
+    <PropertyGroup>
+      <ModulesDir>$(TargetDir)\Modules</ModulesDir>
+    </PropertyGroup>
+    <!-- Get all DLLs from the main TargetDir -->
+    <ItemGroup>
+      <MainAppDlls Include="$(TargetDir)*.dll" />
+      <MainAppPdbs Include="$(TargetDir)*.pdb" />
+      <MainAppConfigs Include="$(TargetDir)*.dll.config" />
+    </ItemGroup>
+    <!-- First, collect all DLLs in modules -->
+    <ItemGroup>
+      <AllModuleDlls Include="$(ModulesDir)\**\*.dll" />
+      <AllModulePdbs Include="$(ModulesDir)\**\*.pdb" />
+      <AllModuleConfigs Include="$(ModulesDir)\**\*.dll.config" />
+    </ItemGroup>
+    <!-- Filter to find only those that exist in main app directory -->
+    <ItemGroup>
+      <DuplicateDlls Include="@(AllModuleDlls)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+      <DuplicatePdbs Include="@(AllModulePdbs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+      <DuplicateConfigs Include="@(AllModuleConfigs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Message Text="Found @(MainAppDlls-&gt;Count()) DLLs in main app directory $(TargetDir)" Importance="high" />
+    <Message Text="Found @(DuplicateDlls-&gt;Count()) duplicate DLLs in modules to remove in $(ModulesDir)" Importance="high" />
+    <!-- Delete all duplicate DLLs from modules -->
+    <Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" ContinueOnError="true" />
+    <Message Text="Removed @(DuplicateDlls-&gt;Count()) duplicate DLLs from modules" Importance="high" />
+    <Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" ContinueOnError="true" />
+    <Message Text="Removed @(DuplicatePdbs-&gt;Count()) duplicate PDBs from modules" Importance="high" />
+    <Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" ContinueOnError="true" />
+    <Message Text="Removed @(DuplicateConfigs-&gt;Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
+  </Target>
+  <Target Name="CleanModules" AfterTargets="Clean">
+    <PropertyGroup>
+      <ModulesDir>$(TargetDir)\Modules</ModulesDir>
+    </PropertyGroup>
+    <!-- Remove the project-specific target framework folder -->
+    <RemoveDir Directories="$(ModulesDir)" ContinueOnError="true" />
+  </Target>
 </Project>

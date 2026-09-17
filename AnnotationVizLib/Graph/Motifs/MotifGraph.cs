@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using GraphLib;
 using System;
 using System.Collections.Generic;
@@ -6,79 +6,74 @@ using System.Linq;
 
 namespace AnnotationVizLib
 {
-    public class MotifEdge : Edge<string>, IComparer<MotifEdge>, IComparable<MotifEdge>
+    public class MotifEdge(string SourceKey, string TargetKey, string SynapseType) : Edge<string>(SourceKey, TargetKey, true), IComparer<MotifEdge>, IComparable<MotifEdge>
     {
-        public string SynapseType;
+        public string SynapseType = SynapseType;
 
         /// <summary>
         /// A list of unique values indicating which structures have this type of connection, and a list of the substructures making the connection
         /// </summary>
-        public SortedList<long, SortedSet<long>> SourceStructIDs = new SortedList<long, SortedSet<long>>();
+        public SortedList<long, SortedSet<long>> SourceStructIDs = [];
 
         /// <summary>
         /// A list of unique values indicating which structures have this type of connection, and a list of the substructures making the connection
         /// </summary>
-        public SortedList<long, SortedSet<long>> TargetStructIDs = new SortedList<long, SortedSet<long>>();
+        public SortedList<long, SortedSet<long>> TargetStructIDs = [];
 
         /// <summary>
         /// Number of parent cells for structure links
         /// </summary>
-        public int SourceCellCount { get { return SourceStructIDs.Count; } }
+        public int SourceCellCount => SourceStructIDs.Count;
 
         /// <summary>
         /// Number of structure links
         /// </summary>
-        public int SourceConnectionCount
-        { get { return SourceStructIDs.Values.Sum(links => links.Count); } }
+        public int SourceConnectionCount => SourceStructIDs.Values.Sum(links => links.Count);
 
         /// <summary>
         /// Number of parent cells for structure links
         /// </summary>
-        public int TargetCellCount { get { return TargetStructIDs.Count; } }
+        public int TargetCellCount => TargetStructIDs.Count;
 
         /// <summary>
         /// Number of structure links
         /// </summary>
-        public int TargetConnectionCount
-        { get { return TargetStructIDs.Values.Sum(links => links.Count); } }
+        public int TargetConnectionCount => TargetStructIDs.Values.Sum(links => links.Count);
 
         public void AddEdgeInstance(long SourceParentStructID, long SourceID, long TargetParentStructID, long TargetID)
         {
             if (!SourceStructIDs.ContainsKey(SourceParentStructID))
-                SourceStructIDs.Add(SourceParentStructID, new SortedSet<long>(new long[] { SourceID }));
+                SourceStructIDs.Add(SourceParentStructID, [SourceID]);
             else
                 SourceStructIDs[SourceParentStructID].Add(SourceID);
 
             if (!TargetStructIDs.ContainsKey(TargetParentStructID))
-                TargetStructIDs.Add(TargetParentStructID, new SortedSet<long>(new long[] { TargetID }));
+                TargetStructIDs.Add(TargetParentStructID, [TargetID]);
             else
                 TargetStructIDs[TargetParentStructID].Add(TargetID);
         }
 
-        public MotifEdge(string SourceKey, string TargetKey, string SynapseType)
-            : base(SourceKey, TargetKey, true)
-        {
-            this.SynapseType = SynapseType;
-        }
-
-        public override string ToString()
-        {
-            return this.SourceNodeKey + " -> " + this.TargetNodeKey + " via " + this.SynapseType;
-        }
+        public override string ToString() => this.SourceNodeKey + " -> " + this.TargetNodeKey + " via " + this.SynapseType;
 
         public override int GetHashCode()
         {
-            return this.SourceNodeKey.GetHashCode();
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + SourceNodeKey.GetHashCode();
+                hash = hash * 23 + TargetNodeKey.GetHashCode();
+                return hash;
+            }
         }
 
         public int Compare(MotifEdge x, MotifEdge y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
                 return 0;
 
-            if (x == null)
+            if (x is null)
                 return -1;
-            if (y == null)
+            if (y is null)
                 return 1;
 
             return x.CompareTo(y);
@@ -100,52 +95,24 @@ namespace AnnotationVizLib
         }
     }
 
-    public class MotifNode : Node<string, MotifEdge>
+    public class MotifNode(string key, IEnumerable<IStructureReadOnly> value) : Node<string, MotifEdge>(key)
     {
         //Structures that belong to this node
-        public List<IStructureReadOnly> Structures;
+        public List<IStructureReadOnly> Structures = [.. value];
 
-        public int StructureCount
-        {
-            get { return Structures.Count; }
-        }
-
-        public MotifNode(string key, IEnumerable<IStructureReadOnly> value)
-            : base(key)
-        {
-            this.Structures = new List<IStructureReadOnly>();
-            this.Structures.AddRange(value);
-        }
+        public int StructureCount => Structures.Count;
 
         /// <summary>
         /// The number of individual structure links
         /// </summary>
-        public int OutputEdgesCount
-        {
-            get
-            {
-                return this.Edges.Values.Sum(edges => edges.Where(e => e.SourceNodeKey == this.Key && e.Directional).Sum(e => e.SourceConnectionCount));
-            }
-        }
+        public int OutputEdgesCount => this.Edges.Values.Sum(edges => edges.Where(e => e.SourceNodeKey == this.Key && e.Directional).Sum(e => e.SourceConnectionCount));
 
         /// <summary>
         /// The number of individual structure links
         /// </summary>
-        public int InputEdgesCount
-        {
-            get
-            {
-                return this.Edges.Values.Sum(edges => edges.Where(e => e.TargetNodeKey == this.Key && e.Directional).Sum(e => e.TargetConnectionCount));
-            }
-        }
+        public int InputEdgesCount => this.Edges.Values.Sum(edges => edges.Where(e => e.TargetNodeKey == this.Key && e.Directional).Sum(e => e.TargetConnectionCount));
 
-        public int BidirectionalEdgesCount
-        {
-            get
-            {
-                return this.Edges.Values.Sum(edges => edges.Where(e => !e.Directional).Sum(e => e.SourceConnectionCount));
-            }
-        }
+        public int BidirectionalEdgesCount => this.Edges.Values.Sum(edges => edges.Where(e => !e.Directional).Sum(e => e.SourceConnectionCount));
 
         public override string ToString()
         {
@@ -170,7 +137,7 @@ namespace AnnotationVizLib
 
         public override string ToString()
         {
-            List<string> AlreadyAdded = new List<string>();
+            List<string> AlreadyAdded = [];
 
             foreach (MotifEdge e in this.Edges.Values)
             {

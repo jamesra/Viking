@@ -1,24 +1,29 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 
 namespace VikingXNA
 {
-    public class ChannelOverlayEffect 
+    public class ChannelOverlayEffect
     {
         public Effect effect;
 
-        private EffectParameter _WorldViewProjMatrix;
+        private readonly EffectParameter _WorldViewProjMatrix;
 
-        private EffectParameter _BackgroundTexture;
-        private EffectParameter _OverlayTexture;
+        private readonly EffectParameter _BackgroundTexture;
+        private readonly EffectParameter _OverlayTexture;
 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
+
+
+        public void PrepareHCLToRGB(Texture2D texture) => this.effect.CurrentTechnique = effect.Techniques["HCLToRGB"];
+
+        public void PrepareRGBToHCL(Texture2D texture) => this.effect.CurrentTechnique = effect.Techniques["RGBToHCL"];
 
         public void SetEffectTextures(Texture Background, Texture ColorOverlay)
         {
@@ -26,19 +31,19 @@ namespace VikingXNA
             _OverlayTexture.SetValue(ColorOverlay);
 
             if (Background != null && ColorOverlay != null)
-                effect.CurrentTechnique = effect.Techniques["HSOverBackgroundValueOverlayEffect"];
-            else if (Background == null)
+                effect.CurrentTechnique = effect.Techniques["HSVOverBackgroundValueOverlayEffect"];
+            else if (Background is null)
                 effect.CurrentTechnique = effect.Techniques["HSVOnlyOverlayEffect"];
-            else if (ColorOverlay == null)
-                effect.CurrentTechnique = effect.Techniques["BackgroundOnlyOverlayEffect"]; 
+            else if (ColorOverlay is null)
+                effect.CurrentTechnique = effect.Techniques["BackgroundOnlyOverlayEffect"];
         }
-           
+
         public ChannelOverlayEffect(Effect effect)
         {
             this.effect = effect;
 
             _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"];
-            _BackgroundTexture = effect.Parameters["BackgroundTexture"]; 
+            _BackgroundTexture = effect.Parameters["BackgroundTexture"];
             _OverlayTexture = effect.Parameters["OverlayTexture"];
 
             effect.CurrentTechnique = effect.Techniques["HSOverBackgroundValueOverlayEffect"];

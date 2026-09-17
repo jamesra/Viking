@@ -8,19 +8,23 @@ namespace AnnotationService.Types
     {
         public static LocationPositionOnly Create(this ConnectomeDataModel.SelectUnfinishedStructureBranchesWithPosition_Result db)
         {
-            LocationPositionOnly lpo = new LocationPositionOnly();
-            lpo.ID = db.ID;
-            lpo.Position = new AnnotationPoint(db.X, db.Y, (double)db.Z);
-            lpo.Radius = db.Radius;
+            LocationPositionOnly lpo = new()
+            {
+                ID = db.ID,
+                Position = new AnnotationPoint(db.X, db.Y, (double)db.Z),
+                Radius = db.Radius
+            };
             return lpo;
         }
 
         public static LocationPositionOnly CreatePositionOnly(this ConnectomeDataModel.Location db)
         {
-            LocationPositionOnly lpo = new LocationPositionOnly();
-            lpo.ID = db.ID;
-            lpo.Position = new AnnotationPoint(db.X, db.Y, db.Z);
-            lpo.Radius = db.Radius;
+            LocationPositionOnly lpo = new()
+            {
+                ID = db.ID,
+                Position = new AnnotationPoint(db.X, db.Y, db.Z),
+                Radius = db.Radius
+            };
             return lpo;
         }
     }
@@ -29,17 +33,19 @@ namespace AnnotationService.Types
     {
         public static Location Create(this ConnectomeDataModel.Location db, bool LoadLinks = false)
         {
-            Location loc = new Location();
-            loc.ID = db.ID;
+            Location loc = new()
+            {
+                ID = db.ID,
 
-            loc.ParentID = db.ParentID;
+                ParentID = db.ParentID,
 
-            loc.Section = (long)db.Z;
-            loc.Position = new AnnotationPoint(db.X, db.Y, (int)db.Z);
-            loc.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, (int)db.Z);
-            loc.MosaicShapeWKB = db.MosaicShape.AsBinary();
-            loc.VolumeShapeWKB = db.VolumeShape.AsBinary();
-            loc.Closed = db.Closed;
+                Section = (long)db.Z,
+                Position = new AnnotationPoint(db.X, db.Y, (int)db.Z),
+                VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, (int)db.Z),
+                MosaicShapeWKB = db.MosaicShape.AsBinary(),
+                VolumeShapeWKB = db.VolumeShape.AsBinary(),
+                Closed = db.Closed
+            };
             if (LoadLinks)
                 loc.PopulateLinks(db);
 
@@ -49,7 +55,7 @@ namespace AnnotationService.Types
             loc.Radius = db.Radius;
             loc.Width = db.Width;
 
-            if (db.Tags == null)
+            if (db.Tags is null)
             {
                 //_Tags = new string[0];
                 loc.AttributesXml = null;
@@ -86,27 +92,26 @@ namespace AnnotationService.Types
             UpdateUserName |= db.Z != loc.Position.Z;
             db.Z = (int)loc.Position.Z;
 
-            if (loc.MosaicShape == null)
+            if (loc.MosaicShape is null)
             {
                 System.Data.Entity.Spatial.DbGeometry new_geom = loc.Radius > 0 ? Extensions.ToCircle(loc.Position.X, loc.Position.Y, loc.Position.Z, loc.Radius).ToDbGeometry() :
                                                                                   Extensions.ToGeometryPoint(loc.Position.X, loc.Position.Y).ToDbGeometry();
 
-                UpdateUserName |= db.MosaicShape == null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
+                UpdateUserName |= db.MosaicShape is null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
                 db.MosaicShape = new_geom;
             }
             else
             {
-                UpdateUserName |= db.MosaicShape == null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
+                UpdateUserName |= db.MosaicShape is null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
                 db.MosaicShape = loc.MosaicShape;
             }
 
             //See above comment before adding UpdateUserName test...
             //UpdateUserName |= db.VolumeShape != loc.VolumeShape;
-            if (loc.VolumeShape == null)
-                db.VolumeShape = loc.Radius > 0 ? Extensions.ToCircle(loc.VolumePosition.X, loc.VolumePosition.Y, loc.VolumePosition.Z, loc.Radius).ToDbGeometry() :
-                                                  Extensions.ToGeometryPoint(loc.VolumePosition.X, loc.VolumePosition.Y).ToDbGeometry();
-            else
-                db.VolumeShape = loc.VolumeShape;
+            db.VolumeShape = loc.VolumeShape is null
+                ? loc.Radius > 0 ? Extensions.ToCircle(loc.VolumePosition.X, loc.VolumePosition.Y, loc.VolumePosition.Z, loc.Radius).ToDbGeometry() :
+                                                  Extensions.ToGeometryPoint(loc.VolumePosition.X, loc.VolumePosition.Y).ToDbGeometry()
+                : loc.VolumeShape;
 
             //See above comment before adding UpdateUserName test...
             //db.VolumeX = loc.VolumePosition.X;
@@ -122,10 +127,7 @@ namespace AnnotationService.Types
                     if (!(db.Tags.Length <= 1 && loc.AttributesXml.Length <= 1))
                         UpdateUserName = true;
 
-            if (string.IsNullOrWhiteSpace(loc.AttributesXml))
-                db.Tags = null;
-            else
-                db.Tags = loc.AttributesXml;
+            db.Tags = string.IsNullOrWhiteSpace(loc.AttributesXml) ? null : loc.AttributesXml;
 
             UpdateUserName |= db.Terminal != loc.Terminal;
             db.Terminal = loc.Terminal;
@@ -142,33 +144,28 @@ namespace AnnotationService.Types
             UpdateUserName |= db.Width != loc.Width;
             db.Width = loc.Width;
 
-            UpdateUserName |= db.Username == null;
+            UpdateUserName |= db.Username is null;
 
             if (UpdateUserName)
             {
                 db.Username = Annotation.ServiceModelUtil.GetUserForCall();
             }
-            else if (db.Username == null)
+            else if (db.Username is null)
             {
-                if (loc.Username != null)
-                    db.Username = loc.Username;
-                else
-                    db.Username = Annotation.ServiceModelUtil.GetUserForCall();
+                db.Username = loc.Username != null ? loc.Username : Annotation.ServiceModelUtil.GetUserForCall();
             }
         }
 
         public static void PopulateLinks(Dictionary<long, Location> Locations, IList<ConnectomeDataModel.LocationLink> links)
         {
-            Location A;
-            Location B;
             foreach (ConnectomeDataModel.LocationLink link in links)
             {
-                if (Locations.TryGetValue(link.A, out A))
+                if (Locations.TryGetValue(link.A, out Location A))
                 {
                     A.AddLink(link.B);
                 }
 
-                if (Locations.TryGetValue(link.B, out B))
+                if (Locations.TryGetValue(link.B, out Location B))
                 {
                     B.AddLink(link.A);
                 }
@@ -186,12 +183,12 @@ namespace AnnotationService.Types
                 return;
 
             //long[] _Links = new long[loc.LocationLinksA.Count + loc.LocationLinksB.Count];
-            List<long> retlist = new List<long>(dbLoc.LocationLinksA.Count + dbLoc.LocationLinksB.Count);
+            List<long> retlist = new(dbLoc.LocationLinksA.Count + dbLoc.LocationLinksB.Count);
 
-            retlist.AddRange(dbLoc.LocationLinksA.Select(l => l.B).ToList());
-            retlist.AddRange(dbLoc.LocationLinksB.Select(l => l.A).ToList());
+            retlist.AddRange([.. dbLoc.LocationLinksA.Select(l => l.B)]);
+            retlist.AddRange([.. dbLoc.LocationLinksB.Select(l => l.A)]);
 
-            loc.Links = retlist.ToArray();
+            loc.Links = [.. retlist];
         }
     }
 
@@ -199,28 +196,20 @@ namespace AnnotationService.Types
     {
         public static LocationHistory Create(this ConnectomeDataModel.SelectStructureLocationChangeLog_Result db)
         {
-            LocationHistory loch = new LocationHistory();
-            loch.ID = db.ID.Value;
-            loch.ParentID = db.ParentID.Value;
+            LocationHistory loch = new()
+            {
+                ID = db.ID.Value,
+                ParentID = db.ParentID.Value,
 
-            loch.Section = (long)db.Z;
-            if (db.X != null && db.Y != null)
-            {
-                loch.Position = new AnnotationPoint(db.X.Value, db.Y.Value, db.Z.Value);
-            }
-            else
-            {
-                loch.Position = new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
-            }
+                Section = (long)db.Z
+            };
+            loch.Position = db.X != null && db.Y != null
+                ? new AnnotationPoint(db.X.Value, db.Y.Value, db.Z.Value)
+                : new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
 
-            if (db.VolumeX != null && db.VolumeY != null)
-            {
-                loch.VolumePosition = new AnnotationPoint(db.VolumeX.Value, db.VolumeY.Value, db.Z.Value);
-            }
-            else
-            {
-                loch.VolumePosition = new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
-            }
+            loch.VolumePosition = db.VolumeX != null && db.VolumeY != null
+                ? new AnnotationPoint(db.VolumeX.Value, db.VolumeY.Value, db.Z.Value)
+                : new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
 
             loch.Closed = db.Closed.Value;
             loch.Links = null;
@@ -231,7 +220,7 @@ namespace AnnotationService.Types
             loch.ChangedColumnMask = 0; //TODO: System.Convert.ToUInt64(db.___update_mask); 
 
 
-            if (db.Tags == null)
+            if (db.Tags is null)
             {
                 //_Tags = new string[0];
                 loch.AttributesXml = null;

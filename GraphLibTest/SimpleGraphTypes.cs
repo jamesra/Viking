@@ -1,4 +1,4 @@
-﻿namespace GraphLibTest
+namespace GraphLibTest
 {
     public class SimpleEdge : GraphLib.Edge<long>
     {
@@ -8,35 +8,19 @@
         public SimpleEdge(long Source, long Target, bool Directional) : base(Source, Target, Directional)
         { }
 
-        public override string ToString()
-        {
-            return string.Format("{0} - {1} {2}", SourceNodeKey, TargetNodeKey, Directional ? "D" : "U");
-
-        }
+        public override string ToString() => string.Format("{0} - {1} {2}", SourceNodeKey, TargetNodeKey, Directional ? "D" : "U");
     }
 
-    public class SimpleNode : GraphLib.Node<long, SimpleEdge>
+    public class SimpleNode(long ID) : GraphLib.Node<long, SimpleEdge>(ID)
     {
-        public SimpleNode(long ID) : base(ID)
-        { }
-
-        public override string ToString()
-        {
-            return this.Key.ToString();
-        }
+        public override string ToString() => this.Key.ToString();
     }
 
     public class SimpleGraph : GraphLib.Graph<long, SimpleNode, SimpleEdge>
     {
-        public void AddNode(long ID)
-        {
-            this.AddNode(new SimpleNode(ID));
-        }
+        public void AddNode(long ID) => this.AddNode(new SimpleNode(ID));
 
-        public void AddEdge(long Source, long Target)
-        {
-            this.AddEdge(new SimpleEdge(Source, Target));
-        }
+        public void AddEdge(long Source, long Target) => this.AddEdge(new SimpleEdge(Source, Target));
 
         public static SimpleGraph CreateGraphWithCycle()
         {
@@ -53,7 +37,7 @@
              *     |     | 
              *     10    6
              */
-            SimpleGraph graph = new GraphLibTest.SimpleGraph();
+            SimpleGraph graph = new();
 
             graph.AddNode(1);
             graph.AddNode(2);

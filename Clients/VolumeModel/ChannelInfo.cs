@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml.Linq;
@@ -22,18 +22,9 @@ namespace Viking.VolumeModel
         };
 
         //For compatability with older version of VikingXML, the first channel with a grey color is considered the background for multi-channel blending
-        public bool Greyscale
-        {
-            get
-            {
-                return (Color.B == Color.G) && (Color.B == Color.R);
-            }
-        }
+        public bool Greyscale => (Color.B == Color.G) && (Color.B == Color.R);
 
-        public override string ToString()
-        {
-            return "R: " + this.Color.R.ToString() + " G: " + this.Color.G.ToString() + " B: " + this.Color.B.ToString();
-        }
+        public override string ToString() => "R: " + this.Color.R.ToString() + " G: " + this.Color.G.ToString() + " B: " + this.Color.B.ToString();
 
         /// <summary>
         /// Which section we should load the channel from
@@ -54,7 +45,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The color to map the images to
         /// </summary>
-        public Geometry.Graphics.Color Color = new Geometry.Graphics.Color(1f, 1f, 1f);
+        public Geometry.Graphics.Color Color = new(1f, 1f, 1f);
 
         public System.Drawing.Color FormColor
         {
@@ -67,20 +58,18 @@ namespace Viking.VolumeModel
                 return formColor;
             }
 
-            set
-            {
+            set =>
                 Color = new Geometry.Graphics.Color(value.R,
-                                                                        value.G,
-                                                                        value.B,
-                                                                        value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         #region ICloneable Members
 
         public object Clone()
         {
-            var clone = new ChannelInfo
+            ChannelInfo clone = new()
             {
                 ChannelName = this.ChannelName,
                 Color = this.Color,
@@ -100,13 +89,13 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public static ChannelInfo[] FromXML(XElement elemChannelInfo)
         {
-            if (elemChannelInfo == null)
-                return new ChannelInfo[0];
+            if (elemChannelInfo is null)
+                return [];
 
-            List<ChannelInfo> channels = new List<ChannelInfo>();
+            List<ChannelInfo> channels = [];
             foreach (XNode node in elemChannelInfo.Nodes())
             {
-                if (!(node is XElement elem))
+                if (node is not XElement elem)
                     continue;
 
                 switch (elem.Name.LocalName)
@@ -159,15 +148,14 @@ namespace Viking.VolumeModel
                             Color = elem.GetAttributeCaseInsensitive("Color").Value;
 
                         //Convert the color to a valid value
-                        Geometry.Graphics.Color ChannelColor;
-                        if (!TryParseColor(Color, out ChannelColor))
+                        if (!TryParseColor(Color, out var ChannelColor))
                         {
                             CreateChannel = false;
                         }
 
                         if (CreateChannel)
                         {
-                            var newChannel = new ChannelInfo
+                            ChannelInfo newChannel = new()
                             {
                                 ChannelName = Channel,
                                 Color = ChannelColor,
@@ -180,7 +168,7 @@ namespace Viking.VolumeModel
                 }
             }
 
-            return channels.ToArray();
+            return [.. channels];
         }
 
         public static bool TryParseColor(string Color, out Geometry.Graphics.Color Output)

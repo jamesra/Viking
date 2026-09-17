@@ -1,0 +1,631 @@
+<Window x:Class="WebAnnotation.WPF.Forms.AnnotationPreferencesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:local="clr-namespace:WebAnnotation.WPF.Forms"
+        Title="Annotation Preferences" 
+        Height="750" 
+        Width="520"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        MinHeight="500"
+        MinWidth="480">
+    <Window.Resources>
+        <Style TargetType="Label">
+            <Setter Property="Margin" Value="5,5,5,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="xctk:IntegerUpDown">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Height" Value="25"/>
+        </Style>
+        <Style TargetType="xctk:DoubleUpDown">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Height" Value="25"/>
+        </Style>
+        <Style TargetType="Expander">
+            <Setter Property="Margin" Value="10"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Basic Settings -->
+                <Expander Header="Basic Settings" IsExpanded="True" Margin="10">
+                    <StackPanel Margin="10">
+                        <!-- Num Sections In Memory -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Sections in Memory:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
+                                              Value="{Binding NumSectionsInMemory}" 
+                                              Minimum="1" 
+                                              Maximum="100"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Number of sections to keep in memory. Minimum of 3 recommended for smooth navigation."/>
+                        </Grid>
+
+                        <!-- Num Sections Loading -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Concurrent Section Loads:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
+                                              Value="{Binding NumSectionsLoading}" 
+                                              Minimum="1" 
+                                              Maximum="50"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Maximum number of sections to load simultaneously. Higher values load faster but use more bandwidth."/>
+                        </Grid>
+
+                        <!-- Location Text Scale Factor -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Location Text Scale:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding LocationTextScaleFactor}" 
+                                             Minimum="0.1" 
+                                             Maximum="50.0"
+                                             Increment="0.5"
+                                             FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size multiplier for annotation labels. Increase for better readability on high-resolution displays."/>
+                        </Grid>
+
+                        <!-- Reference Location Text Scale Factor -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Reference Text Scale:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding ReferenceLocationTextScaleFactor}" 
+                                             Minimum="0.1" 
+                                             Maximum="50.0"
+                                             Increment="0.5"
+                                             FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size multiplier for reference location text on adjacent sections."/>
+                        </Grid>
+
+                        <!-- Default Closed Line Width -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Default Line Width:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding DefaultClosedLineWidth}" 
+                                             Minimum="1.0" 
+                                             Maximum="100.0"
+                                             Increment="1.0"
+                                             FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Default width in pixels for newly created closed curve annotations."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Advanced Settings -->
+                <Expander Header="Advanced Settings" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <!-- General -->
+                        <TextBlock Text="General" FontWeight="Bold" Margin="5,5,5,2"/>
+                        <!-- Default Location Jump Downsample -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Jump Zoom Downsample:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding DefaultLocationJumpDownsample}" 
+                                             Minimum="1.0" 
+                                             Maximum="64.0"
+                                             Increment="1.0"
+                                             FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Controls zoom level when jumping to locations. Higher values zoom out more (location occupies 1/8 screen width ÷ this value)."/>
+                        </Grid>
+
+                        <!-- Adjacent Location Radius Scalar -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Adjacent Section Radius:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding AdjacentLocationRadiusScalar}" 
+                                             Minimum="0.1" 
+                                             Maximum="2.0"
+                                             Increment="0.1"
+                                             FormatString="F2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size multiplier for annotations displayed on adjacent sections. Default 0.5 shows them at half size."/>
+                        </Grid>
+
+                        <!-- Polygon Annotations -->
+                        <TextBlock Text="Polygon Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
+                        <!-- Num Curve Interpolation Points -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Curve Display Points:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
+                                              Value="{Binding NumClosedCurveInterpolationPointsForDisplay}" 
+                                              Minimum="2" 
+                                              Maximum="20"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Controls visual smoothness of curves. Higher values produce smoother curves but slower rendering, loading, and manipulation."/>
+                        </Grid>
+
+                        <!-- Pen Simplify Threshold -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Pen Simplify Threshold:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
+                                              Value="{Binding PenSimplifyThreshold}" 
+                                              Minimum="1" 
+                                              Maximum="100"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How close polygon edges must be to the pen stroke. Smaller numbers are more accurate but require more points, negatively impacting performance."/>
+                        </Grid>
+
+                        <!-- Polygon vertex point display diameter info -->
+                        <TextBlock Margin="10,0,10,5" FontSize="10" Foreground="Gray"
+                                   Text="{Binding PolygonVertexDisplayDiameterPx, StringFormat='Current display diameter: {0} px (at current viewport)'}"/>
+
+                        <!-- Polygon Point Diameter -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Diameter:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonPointDiameter, Mode=TwoWay}"
+                                    Minimum="2"
+                                    Maximum="100"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonPointDiameter, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Diameter in world units for control points on polygon annotations. Range: 2 to 100."/>
+                        </Grid>
+
+                        <!-- Vertex points visibility range (RangeSlider) -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Content="Vertex points visible/hidden at width:"/>
+                            <xctk:RangeSlider Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Minimum="0.00005"
+                                    Maximum="0.02"
+                                    LowerValue="{Binding PolygonVertexPointsHiddenAtWidthFraction, Mode=TwoWay}"
+                                    HigherValue="{Binding PolygonVertexPointsVisibleAtWidthFraction, Mode=TwoWay}"
+                                    Step="0.00005"
+                                    Margin="5"/>
+                            <TextBlock Grid.Row="1" Grid.Column="3"
+                                     Text="{Binding VertexVisibilityRangeDisplay}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Left"
+                                     TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Left thumb: hidden below this width fraction. Right thumb: fully visible above this fraction. Pixel values at current viewport width."/>
+                        </Grid>
+
+                        <!-- Polygon Opacity Parentless -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (Parentless):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonOpacityParentless, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonOpacityParentless, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for polygons without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Polygon Opacity With Parent -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (With Parent):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonOpacityWithParent, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonOpacityWithParent, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for polygons with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Annotations -->
+                        <TextBlock Text="Circle Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
+                        <!-- Min Radius -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Minimum Radius:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding MinRadius}" 
+                                             Minimum="0.1" 
+                                             Maximum="10.0"
+                                             Increment="0.1"
+                                             FormatString="F2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Smallest allowed radius for circle annotations."/>
+                        </Grid>
+
+                        <!-- Smallest Rendered Size -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Smallest Rendered Size:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
+                                    Minimum="0.5"
+                                    Maximum="10"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SmallestRenderedSize, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Minimum pixel size for circle diameter before it is hidden. Circles smaller than this value will not be rendered. Range: 0.5 to 10.0 pixels."/>
+                        </Grid>
+
+                        <!-- Circle Opacity Parentless -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (Parentless):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding CircleOpacityParentless, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding CircleOpacityParentless, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for circles without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Opacity With Parent -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (With Parent):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding CircleOpacityWithParent, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding CircleOpacityWithParent, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for circles with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Segmentation Settings -->
+                <Expander Header="Segmentation" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <!-- Segmentation Point Radius -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Point Radius:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
+                                    Minimum="1"
+                                    Maximum="15"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationPointRadius, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Radius in pixels for segmentation points displayed on the image. Range: 1.0 to 15.0. Larger values make points more visible but may overlap."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="Reset to Defaults" 
+                    Width="120" 
+                    Height="30" 
+                    Margin="5"
+                    Click="ResetToDefaultsButton_Click"/>
+            <Button Content="Apply" 
+                    Width="80" 
+                    Height="30" 
+                    Margin="5"
+                    Click="ApplyButton_Click"/>
+            <Button Content="OK" 
+                    Width="80" 
+                    Height="30" 
+                    Margin="5"
+                    Click="OkButton_Click"/>
+            <Button Content="Cancel" 
+                    Width="80" 
+                    Height="30" 
+                    Margin="5"
+                    Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

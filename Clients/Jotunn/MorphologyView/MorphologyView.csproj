@@ -1,222 +1,65 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{11307764-A025-4473-A956-49CF68B83B32}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>MorphologyView</RootNamespace>
     <AssemblyName>MorphologyView</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>..\Jotunn\bin\Debug\Modules\MorphologyView\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <OutputType>Library</OutputType>
+    <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputPath Condition="'$(Configuration)' == 'Debug'">..\Jotunn\bin\Debug\Modules\MorphologyView\</OutputPath>
+    <OutputPath Condition="'$(Configuration)' == 'Release'">..\Jotunn\bin\Release\Modules\MorphologyView\</OutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>..\Jotunn\bin\Release\Modules\MorphologyView\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-  </PropertyGroup>
+  
   <ItemGroup>
-    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="MathNet.Numerics, Version=4.15.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\MathNet.Numerics.4.15.0\lib\net461\MathNet.Numerics.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\CommonServiceLocator.1.3\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\Microsoft.SqlServer.Types.14.0.1016.290\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Xaml.Behaviors, Version=1.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\Microsoft.Xaml.Behaviors.Wpf.1.1.19\lib\net45\Microsoft.Xaml.Behaviors.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoGame.Framework, Version=3.5.1.1679, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\MonoGame.Framework.WindowsDX.3.5.1.1679\lib\net40\MonoGame.Framework.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="MonoGame.Framework.WpfInterop, Version=1.5.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\MonoGame.Framework.WpfInterop.1.5.0\lib\net45\MonoGame.Framework.WpfInterop.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="Prism, Version=6.2.0.0, Culture=neutral, PublicKeyToken=91a96d2a154366d8, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\Prism.Core.6.2.0\lib\net45\Prism.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Prism.Mef.Wpf, Version=6.2.0.0, Culture=neutral, PublicKeyToken=91a96d2a154366d8, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\Prism.Mef.6.2.0\lib\net45\Prism.Mef.Wpf.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Prism.Wpf, Version=6.2.0.0, Culture=neutral, PublicKeyToken=91a96d2a154366d8, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\Prism.Wpf.6.2.0\lib\net45\Prism.Wpf.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Collections.Immutable, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Collections.Immutable.5.0.0\lib\net461\System.Collections.Immutable.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Runtime.CompilerServices.Unsafe.5.0.0\lib\net45\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-    <Reference Include="UIAutomationProvider" />
-    <Reference Include="WindowsBase" />
+    <PackageReference Include="EntityFramework" Version="6.2.0" />
+    <PackageReference Include="MathNet.Numerics" Version="4.15.0" />
+    <PackageReference Include="CommonServiceLocator" Version="1.3" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.19" />
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.5.1.1679" />
+    <PackageReference Include="MonoGame.Framework.WpfInterop" Version="1.5.0" />
+    <PackageReference Include="Prism.Core" Version="6.2.0" />
+    <PackageReference Include="Prism.Mef" Version="6.2.0" />
+    <PackageReference Include="Prism.Wpf" Version="6.2.0" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
   </ItemGroup>
+  
   <ItemGroup>
-    <Compile Include="Converters\DynamicRenderMeshToMeshViewModelConverter.cs" />
-    <Compile Include="Converters\MorphologyNodeToBillboardConverter.cs" />
-    <Compile Include="MorphologyViewer.xaml.cs">
-      <DependentUpon>MorphologyViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="MorphologyViewModule.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SampleData.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
-    <Compile Include="ViewModels\MorphologyGraphViewModel.cs" />
-    <Compile Include="Views\MorphologyStickView.cs" />
+    <ProjectReference Include="..\..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+    <ProjectReference Include="..\..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj" />
+    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\..\..\GraphLib\GraphLib.csproj" />
+    <ProjectReference Include="..\..\..\RTree\RTree.csproj" />
+    <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+    <ProjectReference Include="..\..\Common\Common.csproj" />
+    <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj" />
+    <ProjectReference Include="..\MonogameWPFLibrary\MonogameWPFLibrary.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{660256d5-ae05-48cf-9821-4e5c00131410}</Project>
-      <Name>AnnotationInterfaces</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj">
-      <Project>{b3a4f95d-a8ac-4094-9dda-22dc972d7e5d}</Project>
-      <Name>AnnotationVizLibSimpleODataClient</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\AnnotationVizLib\AnnotationVizLib.csproj">
-      <Project>{a89a628b-3ffa-4271-b99a-e45c3d72d3e3}</Project>
-      <Name>AnnotationVizLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj">
-      <Project>{7214b52d-1309-4ccf-bc68-079e06530711}</Project>
-      <Name>GeometryOGCMapper</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
-      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
-      <Name>Geometry</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\GraphLib\GraphLib.csproj">
-      <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
-      <Name>GraphLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\RTree\RTree.csproj">
-      <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
-      <Name>RTree</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
-      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
-      <Name>SqlGeometryUtils</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Common\Common.csproj">
-      <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
-      <Name>Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj">
-      <Project>{a4e99a73-849c-44d3-8c1a-f0a942c569b4}</Project>
-      <Name>JotunnUICommon</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\MonogameWPFLibrary\MonogameWPFLibrary.csproj">
-      <Project>{dc03688f-0238-445e-8618-a7839575b968}</Project>
-      <Name>MonogameWPFLibrary</Name>
-    </ProjectReference>
-  </ItemGroup>
+  
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Page Include="MorphologyViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Resources\" />
-  </ItemGroup>
+  
   <ItemGroup>
     <Content Include="SqlServerTypes\readme.htm" />
-    <Content Include="SqlServerTypes\x64\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="SqlServerTypes\x86\msvcr120.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>mkdir "$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)"
-copy $(TargetDir)\*.dll "$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)"
-copy $(TargetDir)\*.pdb "$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)"</PostBuildEvent>
-  </PropertyGroup>
+  
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="if not exist &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot; mkdir &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot;" />
+    <Exec Command="copy $(TargetDir)\*.dll &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot;" />
+    <Exec Command="copy $(TargetDir)\*.pdb &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot;" />
+  </Target>
+  
   <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets'))" />
-  </Target>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

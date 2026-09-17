@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -35,64 +35,58 @@ namespace WebAnnotation.UI
 
     public class LocationInteractionLogEvent : InteractionLogEvent
     {
-        public readonly LocationObj location = null;
+        public readonly LocationObj? location = null;
         public LocationInteractionLogEvent(InteractionLogEvent e) : this(e.Interaction, e.Annotation, e.Index)
         {
         }
 
         public LocationInteractionLogEvent(AnnotationRegionInteraction interaction, ICanvasView annotation, int index) : base(interaction, annotation, index)
         {
-            IViewLocation loc = annotation as IViewLocation;
-            if (loc == null)
+            if (annotation is not IViewLocation loc)
+            {
                 return;
+            }
 
-            location = Store.Locations.GetObjectByID(loc.ID);
+            Store.Locations.TryGetObjectByID(loc.ID, out location);
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0} {1} @ {2}", Interaction, Annotation == null ? "null" : Annotation.ToString(), Index);
-        }
+        public override string ToString() => $"{Interaction} {(Annotation is null ? "null" : Annotation.ToString())} @ {Index}";
 
-        public static LocationInteractionLogEvent[] CreateFromLog(IReadOnlyList<InteractionLogEvent> log_entries)
-        {
-            return log_entries.Select(e => new LocationInteractionLogEvent(e)).ToArray();
-        }
+        public static LocationInteractionLogEvent[] CreateFromLog(IReadOnlyList<InteractionLogEvent> log_entries) => [.. log_entries.Select(e => new LocationInteractionLogEvent(e))];
     }
 
-    public class InteractionLogEvent : IEquatable<InteractionLogEvent>
+    public class InteractionLogEvent(AnnotationRegionInteraction interaction, ICanvasView annotation, int index) : IEquatable<InteractionLogEvent>
     {
-        public readonly AnnotationRegionInteraction Interaction;
+        public readonly AnnotationRegionInteraction Interaction = interaction;
 
         /// <summary>
         /// Hit-testing item that we intersected.  Can be null if path moved to a region with no annotations
         /// </summary>
-        public readonly ICanvasView Annotation;
+        public readonly ICanvasView Annotation = annotation;
 
         /// <summary>
         /// Index into the path/polyline where this event occured.
         /// </summary>
-        public readonly int Index;
-
-        public InteractionLogEvent(AnnotationRegionInteraction interaction, ICanvasView annotation, int index)
-        {
-            Interaction = interaction;
-            Annotation = annotation;
-            Index = index;
-        }
+        public readonly int Index = index;
 
         public bool Equals(InteractionLogEvent other)
         {
-            if (this.Index != other.Index)
+            if (Index != other.Index)
+            {
                 return false;
+            }
 
-            if (this.Interaction != other.Interaction)
+            if (Interaction != other.Interaction)
+            {
                 return false;
+            }
 
-            if (object.ReferenceEquals(this.Annotation, other.Annotation))
+            if (object.ReferenceEquals(Annotation, other.Annotation))
+            {
                 return true;
+            }
 
-            if (this.Annotation == other.Annotation)
+            if (Annotation == other.Annotation)
             {
                 return true;
             }
@@ -102,22 +96,27 @@ namespace WebAnnotation.UI
 
         public override bool Equals(object obj)
         {
-            InteractionLogEvent e = obj as InteractionLogEvent;
-            if (e == null)
+            if (obj is not InteractionLogEvent e)
+            {
                 return false;
+            }
 
-            return this.Equals(e);
+            return Equals(e);
         }
 
         public override int GetHashCode()
         {
-            return Index;
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + Index;
+                hash = hash * 23 + Interaction.GetHashCode();
+                hash = hash * 23 + (Annotation?.GetHashCode() ?? 0);
+                return hash;
+            }
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0} {1} @ {2}", Interaction, Annotation == null ? "null" : Annotation.ToString(), Index);
-        }
+        public override string ToString() => $"{Interaction} {(Annotation is null ? "null" : Annotation.ToString())} @ {Index}";
     }
 
     /// <summary>
@@ -143,34 +142,23 @@ namespace WebAnnotation.UI
         //12	LOOP		193
         //13	PENUP A   203
 
-        public IReadOnlyList<InteractionLogEvent> Entries
-        {
-            get
-            {
-                return _Entries;
-            }
+        public IReadOnlyList<InteractionLogEvent> Entries => _Entries;
 
-        }
-
-        List<InteractionLogEvent> _Entries = new List<InteractionLogEvent>();
+        private readonly List<InteractionLogEvent> _Entries = [];
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnLogChanged;
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
-            add
-            {
-                this.OnLogChanged += value;
-            }
-            remove
-            {
-                this.OnLogChanged -= value;
-            }
+            add => OnLogChanged += value;
+            remove => OnLogChanged -= value;
         }
 
         public void FireOnLogChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             if (OnLogChanged != null)
+            {
                 OnLogChanged(sender, e);
+            }
         }
 
         public PathAnnotationInteractionLog()
@@ -182,7 +170,9 @@ namespace WebAnnotation.UI
             get
             {
                 if (_Entries.Count == 0)
+                {
                     return null;
+                }
 
                 return _Entries[_Entries.Count - 1];
             }
@@ -196,17 +186,19 @@ namespace WebAnnotation.UI
             get
             {
                 if (_Entries.Count == 0)
+                {
                     return null;
+                }
 
                 return _Entries[_Entries.Count - 1].Annotation;
             }
         }
 
-        public bool Empty { get { return _Entries.Count == 0; } }
+        public bool Empty => _Entries.Count == 0;
 
         public void Add(InteractionLogEvent entry)
         {
-            Trace.WriteLine(string.Format("Add {0}", entry));
+            Trace.WriteLine($"Add {entry}");
             _Entries.Add(entry);
 
             FireOnLogChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, entry));
@@ -219,7 +211,7 @@ namespace WebAnnotation.UI
 
         public InteractionLogEvent Pop()
         {
-            var entry = _Entries.Last();
+            InteractionLogEvent entry = _Entries.Last();
             _Entries.RemoveAt(_Entries.Count - 1);
 
             FireOnLogChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, entry));
@@ -242,18 +234,15 @@ namespace WebAnnotation.UI
         /// <param name="Start"></param>
         /// <param name="Finish"></param>
         /// <returns></returns>
-        public static GridVector2[] PathBetween(this IReadOnlyList<GridVector2> path, InteractionLogEvent Start, InteractionLogEvent Finish)
-        {
-            return PathBetween(path, Start.Index, Finish.Index);
-        }
+        public static Vector2[] PathBetween(this IReadOnlyList<Vector2> path, InteractionLogEvent Start, InteractionLogEvent Finish) => PathBetween(path, Start.Index, Finish.Index);
 
-        public static GridVector2[] PathBetween(this IReadOnlyList<GridVector2> path, int Start, int Finish)
+        public static Vector2[] PathBetween(this IReadOnlyList<Vector2> path, int Start, int Finish)
         {
             int length = (Finish - Start) + 1; //Inclusive, so add 1
 
             Debug.Assert(length > 1, "PathBetween request is inclusive and should have a length greater than 1");
 
-            GridVector2[] output = new GridVector2[length];
+            Vector2[] output = new Vector2[length];
 
             for (int i = Start; i < Finish + 1; i++)
             {
@@ -293,7 +282,7 @@ namespace WebAnnotation.UI
         /// <summary>
         /// The annotations the tip of the path was over the last time we checked
         /// </summary>
-        private List<ICanvasView> CurrentlyIntersected = new List<ICanvasView>();
+        private List<ICanvasView> CurrentlyIntersected = [];
 
         public PathInteractionLogger(Path path, ICanvasViewHitTesting overlay, PathAnnotationInteractionLog log)
         {
@@ -301,8 +290,8 @@ namespace WebAnnotation.UI
             _Path = path;
             Overlay = overlay;
 
-            path.OnPathChanged += this.OnPathChanged;
-            path.OnLoopChanged += this.OnLoopChanged;
+            path.OnPathChanged += OnPathChanged;
+            path.OnLoopChanged += OnLoopChanged;
         }
 
         public PathInteractionLogger(Path path, ICanvasViewHitTesting overlay) : this(path, overlay, new PathAnnotationInteractionLog())
@@ -350,7 +339,7 @@ namespace WebAnnotation.UI
         ///     Enter 2
         ///     
         /// </summary>
-        void AddLogEntriesForNewSegment()
+        private void AddLogEntriesForNewSegment()
         {
             HitTestResult[] candidates = null;
             HitTestResult[] line_intersect_candidates = null; //Canvas entities that intersect the most recent line
@@ -365,13 +354,13 @@ namespace WebAnnotation.UI
                 ///     Exit 0
                 ///     Enter 2 
 
-                GridLineSegment latest = _Path.NewestSegment;
-                candidates = Overlay.GetAnnotations(latest.BoundingBox).ToArray();
+                LineSegment latest = _Path.NewestSegment;
+                candidates = [.. Overlay.GetAnnotations(latest.BoundingBox)];
 
-                point_intersect_candidates = candidates.Where(o => o.obj.Contains(latest.A)).ToArray();
-                point_intersections = point_intersect_candidates.Select(o => (ICanvasView)o.obj).ToArray();
+                point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(latest.A))];
+                point_intersections = [.. point_intersect_candidates.Select(o => (ICanvasView)o.obj)];
 
-                line_intersect_candidates = candidates.Where(o => ((ICanvasView)o.obj).Intersects(latest)).ToArray();
+                line_intersect_candidates = [.. candidates.Where(o => ((ICanvasView)o.obj).Intersects(latest))];
                 //                .Where(o => o.obj.Intersects(latest) || o.obj.Contains(latest.A)).ToArray();
             }
             else
@@ -381,39 +370,41 @@ namespace WebAnnotation.UI
             }
 
             //point_intersect_candidates = point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0]).ToArray();
-            HitTestResult[] expanded_point_intersect_candidates = point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[_Path.Points.Count - 1]).Where(c => c != null).ToArray();
-            ICanvasView[] expanded_point_intersections = expanded_point_intersect_candidates.Select(o => (ICanvasView)o.obj).ToArray();
+            HitTestResult[] expanded_point_intersect_candidates = [.. point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[_Path.Points.Count - 1]).Where(c => c != null)];
+            ICanvasView[] expanded_point_intersections = [.. expanded_point_intersect_candidates.Select(o => (ICanvasView)o.obj)];
             //Contains for LocationPolygonView is semi-broken because we need to select holes in the polygon for UI purposes.  However for pen
             //purposes we want contains to return false.  The workaround is that if the point is inside the interior hole it has a distance > 1
             //where any other annotation that returns contains == true would have a distance == 0
-            List<ICanvasView> new_line_intersections = expanded_point_intersect_candidates.Select(c => c.obj as ICanvasView).ToList();
+            List<ICanvasView> new_line_intersections = [.. expanded_point_intersect_candidates.Select(c => c.obj as ICanvasView)];
             //List<ICanvasView> new_point_intersections = point_intersect_candidates.Select(c => c.obj as ICanvasView).ToList();
 
             /////////Handle Exit cases first (So they appear before Enter entries) ////////////////////
-            foreach (var previous_intersection in this.CurrentlyIntersected)
+            foreach (ICanvasView previous_intersection in CurrentlyIntersected)
             {
                 if (expanded_point_intersections.Contains(previous_intersection))
+                {
                     continue; //No change in intersection status
+                }
 
-                var new_event = new InteractionLogEvent(AnnotationRegionInteraction.EXIT, previous_intersection, _Path.Points.Count - 1);
+                InteractionLogEvent new_event = new(AnnotationRegionInteraction.EXIT, previous_intersection, _Path.Points.Count - 1);
                 Log.Add(new_event);
             }
 
             //Check if we need to log enter/exit of unannotated space
             if (new_line_intersections.Count > 0 && CurrentlyIntersected.Count == 0)
             {
-                var new_event = new InteractionLogEvent(AnnotationRegionInteraction.EXIT, null, _Path.Points.Count - 1);
+                InteractionLogEvent new_event = new(AnnotationRegionInteraction.EXIT, null, _Path.Points.Count - 1);
                 Log.Add(new_event);
             }
             else if (new_line_intersections.Count == 0 && CurrentlyIntersected.Count > 0)
             {
-                var new_event = new InteractionLogEvent(AnnotationRegionInteraction.ENTER, null, _Path.Points.Count - 1);
+                InteractionLogEvent new_event = new(AnnotationRegionInteraction.ENTER, null, _Path.Points.Count - 1);
                 Log.Add(new_event);
             }
             else if (new_line_intersections.Count == 0 && CurrentlyIntersected.Count == 0 && Log.Entries.Count == 0)
             {
                 //Check the case of putting the pen down for the first time in empty space
-                var new_event = new InteractionLogEvent(AnnotationRegionInteraction.ENTER, null, _Path.Points.Count - 1);
+                InteractionLogEvent new_event = new(AnnotationRegionInteraction.ENTER, null, _Path.Points.Count - 1);
                 Log.Add(new_event);
             }
 
@@ -422,9 +413,11 @@ namespace WebAnnotation.UI
             foreach (ICanvasView candidate in expanded_point_intersections)
             {
                 if (CurrentlyIntersected.Contains(candidate))
+                {
                     continue;
+                }
 
-                var new_event = new InteractionLogEvent(AnnotationRegionInteraction.ENTER, candidate, _Path.Points.Count - 1);
+                InteractionLogEvent new_event = new(AnnotationRegionInteraction.ENTER, candidate, _Path.Points.Count - 1);
                 Log.Add(new_event);
             }
 
@@ -433,34 +426,36 @@ namespace WebAnnotation.UI
 
         private void AddLogEntryForFirstPoint()
         {
-            var candidates = Overlay.GetAnnotations(_Path.Points[0]).ToArray();
-            var point_intersect_candidates = candidates.Where(o => o.obj.Contains(_Path.Points[0])).ToArray();
-            point_intersect_candidates = point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0]).ToArray();
+            HitTestResult[] candidates = [.. Overlay.GetAnnotations(_Path.Points[0])];
+            HitTestResult[] point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(_Path.Points[0]))];
+            point_intersect_candidates = [.. point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0])];
 
             if (point_intersect_candidates.Length > 0)
             {
-                foreach (var first_touch_entity in point_intersect_candidates)
+                foreach (HitTestResult first_touch_entity in point_intersect_candidates)
                 {
                     if (CurrentlyIntersected.Contains(first_touch_entity.obj))
+                    {
                         continue;
+                    }
 
-                    var new_event = new InteractionLogEvent(AnnotationRegionInteraction.ENTER, (ICanvasView)first_touch_entity.obj, _Path.Points.Count - 1);
+                    InteractionLogEvent new_event = new(AnnotationRegionInteraction.ENTER, (ICanvasView)first_touch_entity.obj, _Path.Points.Count - 1);
                     Log.Add(new_event);
                 }
             }
             else
             {
-                var new_event = new InteractionLogEvent(AnnotationRegionInteraction.ENTER, null, _Path.Points.Count - 1);
+                InteractionLogEvent new_event = new(AnnotationRegionInteraction.ENTER, null, _Path.Points.Count - 1);
                 Log.Add(new_event);
             }
 
-            CurrentlyIntersected = point_intersect_candidates.Select(c => c.obj as ICanvasView).ToList();
+            CurrentlyIntersected = [.. point_intersect_candidates.Select(c => c.obj as ICanvasView)];
         }
 
         /// <summary>
         /// Removes all entries with an index higher than the path length
         /// </summary>
-        void RemoveLogEntriesAfterErase()
+        private void RemoveLogEntriesAfterErase()
         {
             int max_index = _Path.Points.Count - 1;
             while (Log.Last.Index > max_index && Log.Empty == false)
@@ -469,17 +464,17 @@ namespace WebAnnotation.UI
             }
 
             //Update the current intersection list
-            GridLineSegment latest = _Path.NewestSegment;
-            var candidates = Overlay.GetAnnotations(latest.BoundingBox).Where(o => ((ICanvasView)o.obj).Intersects(latest) || o.obj.Contains(latest.A)).ToArray();
-            List<ICanvasView> newIntersections = candidates.Select(c => c.obj as ICanvasView).ToList();
-            this.CurrentlyIntersected = newIntersections;
+            LineSegment latest = _Path.NewestSegment;
+            HitTestResult[] candidates = [.. Overlay.GetAnnotations(latest.BoundingBox).Where(o => ((ICanvasView)o.obj).Intersects(latest) || o.obj.Contains(latest.A))];
+            List<ICanvasView> newIntersections = [.. candidates.Select(c => c.obj as ICanvasView)];
+            CurrentlyIntersected = newIntersections;
         }
 
         private void OnLoopChanged(object sender, bool has_loop)
         {
             if (has_loop)
             {
-                InteractionLogEvent entry = new InteractionLogEvent(AnnotationRegionInteraction.LOOP, Log.LastEventAnnotation, _Path.Points.Count);
+                InteractionLogEvent entry = new(AnnotationRegionInteraction.LOOP, Log.LastEventAnnotation, _Path.Points.Count);
                 Log.Add(entry);
             }
         }

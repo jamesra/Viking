@@ -10,6 +10,8 @@ using Viking.UI;
 using Viking.UI.Forms;
 using Viking.ViewModels;
 using Viking.VolumeModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking
 {
@@ -20,7 +22,7 @@ namespace Viking
         {
             InitializeComponent();
 
-            TabsModules.TabCategory = TABCATEGORY.ACTION; 
+            TabsModules.TabCategory = TABCATEGORY.ACTION;
         }
 
 
@@ -40,39 +42,23 @@ namespace Viking
             Global.PrintAllocatedTextureReaders();
         }
 
-        Thread DiskCleanupThread = null;
-        Thread TileViewModelThread = null;
-        Thread TileThread = null;
-
-        private Thread CreateThread(string name, ThreadStart ThreadStartingFunction)
-        {
-            Thread T = new Thread(ThreadStartingFunction);
-            T.Name = name;
-            T.IsBackground = true;
-            T.Priority = ThreadPriority.BelowNormal;
-
-            return T;
-        }
-
-        private void FreeThread(Thread T)
-        {
-
-        }
-
         private void CacheCleaningTimer_Tick(object sender, EventArgs e)
         {
             //Fire off a thread to clean the disk
 
-            ThreadPool.QueueUserWorkItem(Global.TextureCache.ReduceCacheFootprint, null);
-            ThreadPool.QueueUserWorkItem(Global.TileViewModelCache.ReduceCacheFootprint, null);
-            ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
+            Global.TextureCache.ReduceCacheFootprint(null);
+            Global.TileViewModelCache.ReduceCacheFootprint(null);
+            Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint(null);
 
-            if (Viking.UI.State.volume != null)
-                ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
+            //ThreadPool.QueueUserWorkItem(Global.TextureCache.ReduceCacheFootprint, null);
+            //ThreadPool.QueueUserWorkItem(, Global.TileViewModelCache.ReduceCacheFootprint, null);
+            //ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
+
+            Viking.UI.State.volume?.ReduceCacheFootprint(null!); // null is valid parameter for this method
 
 
             /*
-            if (DiskCleanupThread == null)
+            if (DiskCleanupThread is null)
             {
                 DiskCleanupThread = CreateThread("Disk Texture Cleanup", new ThreadStart(Global.TextureCache.ReduceCacheFootprint));
                 DiskCleanupThread.Start(); 
@@ -88,7 +74,7 @@ namespace Viking
             
             
             //Fire off a thread to clean tiles
-            if (TileViewModelThread == null)
+            if (TileViewModelThread is null)
             {
                 TileViewModelThread = CreateThread("TileViewModel Cleanup", new ThreadStart(Global.TileViewModelCache.ReduceCacheFootprint));
                 TileViewModelThread.Start();
@@ -104,7 +90,7 @@ namespace Viking
             
             
             //Fire off a thread to clean tiles
-            if (TileThread == null)
+            if (TileThread is null)
             {
                 TileThread = CreateThread("Tile Cleanup", new ThreadStart(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint));
                 TileThread.Start();
@@ -129,14 +115,18 @@ namespace Viking
         /// <param name="e"></param>
         private void VikingMain_Load(object sender, EventArgs e)
         {
-            if (UI.State.volume == null)
+            TextureRequestQueue.StartWorkers();
+            PendingTextureQueue.PostPump(500); //Start the queue to load textures
+            PendingTextureQueue.StartSortTimer();
+
+            if (UI.State.volume is null)
             {
                 return;
             }
 
             bool GestureConfigured = GestureSupport.ConfigureDefaultGestures(this.Handle);
-            Trace.WriteLine($"Gesture support configuration: { (GestureConfigured ? "Successful" : "Failed") } ");
-             
+            Trace.WriteLine($"Gesture support configuration: {(GestureConfigured ? "Successful" : "Failed")} ");
+
             //bool RegisteredTouch = Touch.RegisterTouchWindow(this.Handle, TouchRegisterOptions.None);
 
             //
@@ -146,11 +136,11 @@ namespace Viking
             //However, for some reason setting MouseInPointer allowed the pen buttons to properly set the SecondButtonUp/Down flags in the pointer state.
             //
             bool MouseInPointerEnabled = WinMsgInput.EnableMouseInPointer(true);
-             
+
             this.Text = UI.State.volume.Name;
-             
+
             /* PORT
-            if (UI.State.volume.Sections == null)
+            if (UI.State.volume.Sections is null)
                 return;
 
             if (UI.State.volume.Sections.Length == 0)
@@ -177,12 +167,14 @@ namespace Viking
                     string strY = UI.State.StartupArguments["Y"];
                     string strZ = UI.State.StartupArguments["Z"];
 
-                    if (strX != null && strY != null && strZ != null)
+                    if (strX is null || strY is null || strZ is null)
+                        UseDefaultPosition = true;
+                    else
                     {
                         UseDefaultPosition = false;
-                        float X = System.Convert.ToSingle(strX);
-                        float Y = System.Convert.ToSingle(strY);
-                        int Z = System.Convert.ToInt32(strZ);
+                        float X = System.Convert.ToSingle(strX, System.Globalization.CultureInfo.InvariantCulture);
+                        float Y = System.Convert.ToSingle(strY, System.Globalization.CultureInfo.InvariantCulture);
+                        int Z = System.Convert.ToInt32(strZ, System.Globalization.CultureInfo.InvariantCulture);
 
                         SectionViewer.GoToLocation(new Vector2(X, Y), Z, false);
                     }
@@ -202,7 +194,7 @@ namespace Viking
                 string strDownsample = UI.State.StartupArguments["DS"];
                 if (strDownsample != null)
                 {
-                    float Downsample = System.Convert.ToSingle(strDownsample);
+                    float Downsample = System.Convert.ToSingle(strDownsample, System.Globalization.CultureInfo.InvariantCulture);
                     SectionViewer.CameraDownsample = Downsample;
                 }
                 else
@@ -222,12 +214,13 @@ namespace Viking
                         //default to centering the viewer on startup 
                         MappingBase map = Viking.UI.State.volume.GetTileMapping(
                             Viking.UI.State.volume.DefaultVolumeTransform, DefaultSection.Number, null, null);
-                        if (map.Initialized == false)
-                            await map.Initialize(CancellationToken.None);
 
                         if (map != null)
                         {
-                            Geometry.GridVector2 Center = map.ControlBounds.Center;
+                            if (map.Initialized == false)
+                                await map.Initialize(CancellationToken.None);
+
+                            Geometry.Vector2 Center = map.ControlBounds.Center;
                             await State.MainThreadDispatcher.BeginInvoke(new Action(() =>
                             {
                                 var CameraDownsample = Math.Max(map.ControlBounds.Width / SectionViewer.Width,
@@ -244,19 +237,15 @@ namespace Viking
 
         private void vikingHomepageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process())
-            {
-                WebBrowser.StartInfo.FileName = "http://connectomes.utah.edu/";
-                WebBrowser.Start();
-            }
+            using System.Diagnostics.Process WebBrowser = new();
+            WebBrowser.StartInfo.FileName = "http://connectomes.utah.edu/";
+            WebBrowser.Start();
         }
 
         private void versionInfoToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (AboutBox aboutBox = new AboutBox())
-            {
-                aboutBox.ShowDialog();
-            }
+            using AboutBox aboutBox = new();
+            aboutBox.ShowDialog();
 
             return;
         }

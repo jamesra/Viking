@@ -15,7 +15,7 @@ namespace Geometry.Transforms
     {
         #region Edges
 
-        protected ReaderWriterLockSlim rwLockEdges = new ReaderWriterLockSlim();
+        protected ReaderWriterLockSlim rwLockEdges = new();
         private PairedLineSearchGrid _LineSegmentGrid;
 
         private List<int>[] _edges;
@@ -60,7 +60,7 @@ namespace Geometry.Transforms
 
         #endregion
 
-        public MeshTransform(MappingGridVector2[] points, TransformBasicInfo info) : base(points, info)
+        public MeshTransform(MappingVector2[] points, TransformBasicInfo info) : base(points, info)
         {
 
         }
@@ -68,7 +68,7 @@ namespace Geometry.Transforms
         protected MeshTransform(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             this._edges = info.GetValue("_Edges", typeof(List<int>[])) as List<int>[];
@@ -76,7 +76,7 @@ namespace Geometry.Transforms
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_Edges", _edges);
@@ -98,24 +98,21 @@ namespace Geometry.Transforms
 
         #region ICloneable
 
-        public MeshTransform Copy()
-        {
-            return ((ICloneable)this).Clone() as MeshTransform;
-        }
+        public MeshTransform Copy() => ((ICloneable)this).Clone() as MeshTransform;
 
         object ICloneable.Clone()
         {
             MeshTransform newObj = this.MemberwiseClone() as MeshTransform;
 
-            List<MappingGridVector2> TempList = new List<MappingGridVector2>();
+            List<MappingVector2> TempList = [];
 
-            foreach (MappingGridVector2 pt in MapPoints)
+            foreach (MappingVector2 pt in MapPoints)
             {
-                TempList.Add((MappingGridVector2)pt.Copy());
+                TempList.Add((MappingVector2)pt.Copy());
             }
 
             //Setting the mapPoints will sort and recalculate triangles
-            newObj.MapPoints = TempList.ToArray();
+            newObj.MapPoints = [.. TempList];
 
             return newObj;
         }
@@ -129,7 +126,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetTransform(in GridVector2 Point)
+        internal override MappingTriangle GetTransform(in Vector2 Point)
         {
             //TODO: Optimize the search
 
@@ -137,19 +134,19 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
-            if (!MappedBounds.Contains(Point, epsilon))
+            if (!MappedBounds.Covers(Point, epsilon))
                 return null;
 
             //Fetch a list of triangles from the nearest point
             //double distance;
-            List<MappingGridTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
+            List<MappingTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
 
-            if (triangles == null)
+            if (triangles is null)
                 return null;
-             
-            foreach (MappingGridTriangle t in triangles)
+
+            foreach (MappingTriangle t in triangles)
             {
-                if (!t.MappedBoundingBox.Contains(Point))
+                if (!t.MappedBoundingBox.Covers(Point))
                     continue;
 
                 if (t.CanTransform(Point))
@@ -164,7 +161,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetInverseTransform(in GridVector2 Point)
+        internal override MappingTriangle GetInverseTransform(in Vector2 Point)
         {
             //TODO: Optimize the search
 
@@ -172,19 +169,19 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
-            if (!ControlBounds.Contains(Point, epsilon))
+            if (!ControlBounds.Covers(Point, epsilon))
                 return null;
 
             //Fetch a list of triangles from the nearest point
-            List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
+            List<MappingTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
 
-            if (triangles == null)
+            if (triangles is null)
                 return null;
 
 
-            foreach (MappingGridTriangle t in triangles)
+            foreach (MappingTriangle t in triangles)
             {
-                if (!t.ControlBoundingBox.Contains(Point))
+                if (!t.ControlBoundingBox.Covers(Point))
                     continue;
 
                 if (t.CanInverseTransform(Point))
@@ -280,7 +277,7 @@ namespace Geometry.Transforms
         /// <param name="foundMapLine"></param>
         /// <param name="intersection"></param>
         /// <returns></returns>
-        public override double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection)
+        public override double ConvexHullIntersection(LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection)
         {
             double nearestIntersect = double.MaxValue;
 
@@ -292,18 +289,18 @@ namespace Geometry.Transforms
 
             //For debugging only
             double nearestFailedIntersect = double.MaxValue;
-            GridVector2 nearestFailedPoint = new GridVector2();
+            Vector2 nearestFailedPoint = new();
 
-            foundCtrlLine = new GridLineSegment();
-            foundMapLine = new GridLineSegment();
-            intersection = new GridVector2();
+            foundCtrlLine = new LineSegment();
+            foundMapLine = new LineSegment();
+            intersection = new Vector2();
 
-            IEnumerable<GridLineSegmentPair> _linePairs = _LineSegmentGrid.GetPotentialIntersections(L);
+            IEnumerable<LineSegmentPair> _linePairs = _LineSegmentGrid.GetPotentialIntersections(L);
 
-            foreach (GridLineSegmentPair pair in _linePairs)
+            foreach (LineSegmentPair pair in _linePairs)
             {
                 //Build the edge and find out if it intersects
-                GridLineSegment mapLine = pair.mapLine;
+                LineSegment mapLine = pair.mapLine;
 
                 if (mapLine.MinX > L.MaxX)
                     continue;
@@ -314,8 +311,8 @@ namespace Geometry.Transforms
                 if (mapLine.MaxY < L.MinY)
                     continue;
 
-                bool bIntersected = mapLine.Intersects(L, out GridVector2 result);
-                double distance = GridVector2.Distance(OutsidePoint, result);
+                bool bIntersected = mapLine.Intersects(L, out Vector2 result);
+                double distance = Vector2.Distance(OutsidePoint, result);
                 if (distance < nearestIntersect && bIntersected)
                 {
                     nearestIntersect = distance;
@@ -346,11 +343,8 @@ namespace Geometry.Transforms
         {
             if (disposing)
             {
-                if (rwLockEdges != null)
-                {
-                    rwLockEdges.Dispose();
-                    rwLockEdges = null;
-                }
+                rwLockEdges?.Dispose();
+                rwLockEdges = null;
 
 
             }

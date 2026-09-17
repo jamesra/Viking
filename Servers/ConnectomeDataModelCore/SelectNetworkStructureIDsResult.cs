@@ -7,5 +7,6 @@ namespace Viking.DataModel.Annotation
 {
     public partial class SelectNetworkStructureIDsResult
     {
+        public long ID { get; set; }
     }
 }

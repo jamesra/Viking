@@ -1,0 +1,540 @@
+<Window x:Class="Viking.UI.WPF.Forms.ViewerPreferencesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Viking.UI.WPF.Forms"
+        xmlns:converters="clr-namespace:Viking.UI.WPF.Converters"
+        mc:Ignorable="d"
+        Title="Viewer Preferences" 
+        Height="450" 
+        Width="500"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        MinHeight="350"
+        MinWidth="400">
+    <Window.Resources>
+        <Style TargetType="Label">
+            <Setter Property="Margin" Value="5,5,5,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="Expander">
+            <Setter Property="Margin" Value="10"/>
+        </Style>
+        <converters:Int32Converter x:Key="SectionCountConverter" Minimum="1" Maximum="50"/>
+        <converters:Int32Converter x:Key="TextureLoadingWindowConverter" Minimum="5" Maximum="200"/>
+        <converters:Int32Converter x:Key="MinTexturesToLoadConverter" Minimum="1" Maximum="100"/>
+        <converters:Int32Converter x:Key="VisibleTileSortIntervalConverter" Minimum="200" Maximum="10000"/>
+        <converters:Int32Converter x:Key="MaxConcurrentTextureRequestsConverter" Minimum="0" Maximum="256"/>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Section Number Overlay Settings -->
+                <Expander Header="Section Number Overlay" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <!-- Enabled -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Enable Section Number Overlay:"/>
+                            <CheckBox Grid.Row="0" Grid.Column="1" 
+                                      IsChecked="{Binding SectionNumberOverlayEnabled}"
+                                      VerticalAlignment="Center"
+                                      Margin="5"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Show a vertical column of section numbers on the edge of the screen with smooth scrolling animation."/>
+                        </Grid>
+
+                        <!-- Number of Sections Above/Below -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Sections Above/Below:"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" 
+                                     Text="{Binding SectionNumberOverlayCount, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource SectionCountConverter}}"
+                                     VerticalAlignment="Center"
+                                     Margin="5"
+                                     Height="25"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Number of section numbers to display above and below the current section. Range: 1 to 50."/>
+                        </Grid>
+
+                        <!-- Animation Acceleration -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Animation Acceleration:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SectionNumberOverlayAcceleration, Mode=TwoWay}"
+                                    Minimum="{Binding SectionNumberOverlayAccelerationMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayAccelerationMaximum}"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="False"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding SectionNumberOverlayAcceleration, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Acceleration in screen-heights per second². Higher values make the animation snappier."/>
+                        </Grid>
+
+                        <!-- Opacity -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Opacity:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SectionNumberOverlayOpacity, Mode=TwoWay}"
+                                    Minimum="{Binding SectionNumberOverlayOpacityMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayOpacityMaximum}"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="False"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding SectionNumberOverlayOpacity, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Transparency of the section numbers (0 = invisible, 1 = fully opaque)."/>
+                        </Grid>
+
+                        <!-- Min opacity for non-center sections -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Min opacity (non-center):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay}"
+                                    Minimum="{Binding SectionNumberOverlayMinOpacityNonCenterMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayMinOpacityNonCenterMaximum}"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="False"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Minimum opacity for section numbers away from center (0 to 0.8). Default: 0.5."/>
+                        </Grid>
+
+                        <!-- Center Magnification -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Center Magnification:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay}"
+                                    Minimum="{Binding SectionNumberOverlayCenterMagnificationMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayCenterMagnificationMaximum}"
+                                    TickFrequency="0.25"
+                                    IsSnapToTickEnabled="False"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F1'}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Scale factor for the section number at the center (1 to 4). Default: 3."/>
+                        </Grid>
+
+                        <!-- Edge Position -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Display Edge:"/>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="5">
+                                <RadioButton Content="Left" 
+                                             IsChecked="{Binding IsLeftEdge}"
+                                             Margin="0,0,15,0"
+                                             VerticalAlignment="Center"/>
+                                <RadioButton Content="Right" 
+                                             IsChecked="{Binding IsRightEdge}"
+                                             VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Which edge of the screen to display the section number overlay on."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Texture Loading (Performance) -->
+                <Expander Header="Image Loading (Performance)" IsExpanded="True" Margin="10">
+                    <StackPanel Margin="10">
+                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="10"
+                                   Text="These settings fine-tune loading images. Systems behave differently depending on CPU speed, number of cores, memory, GPU memory, and bandwidth.  Generally, more cores and good bandwidth allow loading more textures concurrently. More GPU memory will allow you to have more textures in memory.  The defaults are typically adequate."/>
+                        
+                        <!-- Load adjacent section textures -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Load textures for adjacent sections when changing section:"/>
+                            <CheckBox Grid.Row="0" Grid.Column="1"
+                                      IsChecked="{Binding LoadAdjacentSectionTextures}"
+                                      VerticalAlignment="Center"
+                                      Margin="5"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                       Margin="10,0,10,10"
+                                       FontSize="10"
+                                       Foreground="Gray"
+                                       TextWrapping="Wrap"
+                                       Text="Checked: images on adjacent sections are pre loaded when idle.  Annotations on adjacent sections are unaffected.  Systems with slower CPUs or less GPU memory may benefit by leaving this unchecked."/>
+                        </Grid>
+
+                        <!-- Loading window and min per window group -->
+                        <Border Margin="0,0,0,10" Padding="10" Background="#F5F5F5" CornerRadius="4" BorderThickness="1" BorderBrush="#E0E0E0">
+                            <StackPanel>
+                                <TextBlock Margin="0,0,0,10" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                           Text="Higher values for these options load images faster but slow UI responsiveness during loading. Low values may increase the amount of time for images to fully load."/>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Grid.Column="0" Content="Image Loading Window (ms):"/>
+                                    <Slider Grid.Column="1"
+                                            Value="{Binding TextureLoadingWindow, Mode=TwoWay}"
+                                            Minimum="{Binding TextureLoadingWindowMinimum}"
+                                            Maximum="{Binding TextureLoadingWindowMaximum}"
+                                            TickFrequency="5"
+                                            IsSnapToTickEnabled="True"
+                                            Margin="5"/>
+                                    <TextBox Grid.Column="2"
+                                             Text="{Binding TextureLoadingWindow, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource TextureLoadingWindowConverter}}"
+                                             Margin="5,0,0,0"
+                                             VerticalAlignment="Center"
+                                             Width="50"
+                                             HorizontalAlignment="Left"/>
+                                </Grid>
+                                <TextBlock Margin="10,2,10,10" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                           Text="A shorter window makes the UI more responsive. A longer window loads the entire scene faster."/>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Grid.Column="0" Content="Min images loaded per window:"/>
+                                    <Slider Grid.Column="1"
+                                            Value="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay}"
+                                            Minimum="{Binding MinTexturesToLoadFromQueueMinimum}"
+                                            Maximum="{Binding MinTexturesToLoadFromQueueMaximum}"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            Margin="5"/>
+                                    <TextBox Grid.Column="2"
+                                             Text="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource MinTexturesToLoadConverter}}"
+                                             Margin="5,0,0,0"
+                                             VerticalAlignment="Center"
+                                             Width="50"
+                                             HorizontalAlignment="Left"/>
+                                </Grid>
+                                <TextBlock Margin="10,2,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                           Text="Slow CPUs may benefit from loading more textures at each opportunity."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Update Visible Tiles in Loading Queue Interval -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Update loading priorities (ms):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding VisibleTileSortIntervalMs, Mode=TwoWay}"
+                                    Minimum="{Binding VisibleTileSortIntervalMsMinimum}"
+                                    Maximum="{Binding VisibleTileSortIntervalMsMaximum}"
+                                    TickFrequency="100"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding VisibleTileSortIntervalMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource VisibleTileSortIntervalConverter}}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How often to re-sort the image loading queue to prioritize visible tiles.  Too often can slow the UI.  Too little can delay loading of the visible images when the view has changed.  (200-10000 ms)."/>
+                        </Grid>
+
+                        <!-- Max Concurrent Texture Requests -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Max Concurrent Texture Requests:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding MaxConcurrentTextureRequests, Mode=TwoWay}"
+                                    Minimum="{Binding MaxConcurrentTextureRequestsMinimum}"
+                                    Maximum="{Binding MaxConcurrentTextureRequestsMaximum}"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding MaxConcurrentTextureRequests, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource MaxConcurrentTextureRequestsConverter}}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <Button Grid.Row="0" Grid.Column="3"
+                                    Content="Default"
+                                    Command="{Binding SetMaxConcurrentTextureRequestsToDefaultCommand}"
+                                    VerticalAlignment="Center"
+                                    Margin="5,0,0,0"
+                                    Padding="10,4"
+                                    MinWidth="60"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     VerticalAlignment="Center"
+                                     Text="Maximum simultaneous HTTP texture downloads. Default is 0 = Auto (based on tile size: (4096 / tile width) × 2). Auto uses 32 threads at 256×256, 16 at 512×512, and 8 at 1024×1024. 1–256 to override. Higher values can speed loading to a point, but too high slows all loading as each request competes for resources."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- PID Controller Settings -->
+                <Expander Header="Animation PID Controller (Advanced)" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                   Text="These parameters control the PID controller that animates the section number scrolling. Adjust with caution."/>
+                        
+                        <!-- Proportional Gain -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Proportional Gain (P):"/>
+                            <Slider Grid.Column="1"
+                                    Value="{Binding PidProportionalGain, Mode=TwoWay}"
+                                    Minimum="{Binding PidProportionalGainMinimum}" Maximum="{Binding PidProportionalGainMaximum}" TickFrequency="0.5"
+                                    IsSnapToTickEnabled="False" Margin="5"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding PidProportionalGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                        </Grid>
+                        
+                        <!-- Integral Gain -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Integral Gain (I):"/>
+                            <Slider Grid.Column="1"
+                                    Value="{Binding PidIntegralGain, Mode=TwoWay}"
+                                    Minimum="{Binding PidIntegralGainMinimum}" Maximum="{Binding PidIntegralGainMaximum}" TickFrequency="0.01"
+                                    IsSnapToTickEnabled="False" Margin="5"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding PidIntegralGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F3'}"
+                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                        </Grid>
+                        
+                        <!-- Derivative Gain -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Derivative Gain (D):"/>
+                            <Slider Grid.Column="1"
+                                    Value="{Binding PidDerivativeGain, Mode=TwoWay}"
+                                    Minimum="{Binding PidDerivativeGainMinimum}" Maximum="{Binding PidDerivativeGainMaximum}" TickFrequency="1"
+                                    IsSnapToTickEnabled="False" Margin="5"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding PidDerivativeGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F0'}"
+                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                        </Grid>
+                        
+                        <!-- Velocity Threshold -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Velocity Threshold:"/>
+                            <Slider Grid.Column="1"
+                                    Value="{Binding PidVelocityThreshold, Mode=TwoWay}"
+                                    Minimum="{Binding PidVelocityThresholdMinimum}" Maximum="{Binding PidVelocityThresholdMaximum}" TickFrequency="0.01"
+                                    IsSnapToTickEnabled="False" Margin="5"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding PidVelocityThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                        </Grid>
+                        
+                        <!-- Position Threshold -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Position Threshold:"/>
+                            <Slider Grid.Column="1"
+                                    Value="{Binding PidPositionThreshold, Mode=TwoWay}"
+                                    Minimum="{Binding PidPositionThresholdMinimum}" Maximum="{Binding PidPositionThresholdMaximum}" TickFrequency="0.005"
+                                    IsSnapToTickEnabled="False" Margin="5"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding PidPositionThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                        </Grid>
+                        
+                        <TextBlock Margin="10,5,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                   Text="P: Response strength. I: Reduces steady-state error. D: Dampens oscillation. Thresholds: When to consider animation complete (in screen-height units)."/>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="Reset to Defaults" 
+                    Width="120" 
+                    Height="30" 
+                    Margin="5"
+                    Click="ResetToDefaultsButton_Click"/>
+            <Button Content="Apply" 
+                    Width="80" 
+                    Height="30" 
+                    Margin="5"
+                    Click="ApplyButton_Click"/>
+            <Button Content="OK" 
+                    Width="80" 
+                    Height="30" 
+                    Margin="5"
+                    Click="OkButton_Click"/>
+            <Button Content="Cancel" 
+                    Width="80" 
+                    Height="30" 
+                    Margin="5"
+                    Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

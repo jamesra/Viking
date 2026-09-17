@@ -1,4 +1,4 @@
-﻿//#define TRACEMESH
+//#define TRACEMESH
 
 using FsCheck;
 using Geometry;
@@ -9,46 +9,34 @@ namespace GeometryTests.FSCheck
     {
         public static void Register()
         {
-            Arb.Register<GridVector2Generators>();
-            Arb.Register<GridLineSegmentGenerators>();
-            Arb.Register<GridPolygonGenerators>();
+            Arb.Register<Vector2Generators>();
+            Arb.Register<LineSegmentGenerators>();
+            Arb.Register<PolygonGenerators>();
 
             Global.ResetRollingSeed();
         }
 
-        public static Arbitrary<GridVector2> PointGenerator()
-        {
-            return GridVector2Generators.ArbRandomPoint();
-        }
+        public static Arbitrary<Vector2> PointGenerator() => Vector2Generators.ArbRandomPoint();
 
-        public static Arbitrary<GridVector2[]> DistinctPointsGenerator()
-        {
-            return GridVector2Generators.ArbRandomDistinctPoints();
-        }
+        public static Arbitrary<Vector2[]> DistinctPointsGenerator() => Vector2Generators.ArbRandomDistinctPoints();
 
-        public static Arbitrary<GridLineSegment> LineSegmentGenerator()
-        {
-            return GridLineSegmentGenerators.ArbRandomLine();
-        }
+        public static Arbitrary<LineSegment> LineSegmentGenerator() => LineSegmentGenerators.ArbRandomLine();
 
-        public static Arbitrary<GridPolyline> PolyLineGenerator()
-        {
-            return GridLineSegmentGenerators.ArbPolyLine();
-        }
+        public static Arbitrary<Polyline> PolyLineGenerator() => LineSegmentGenerators.ArbPolyLine();
     }
 
     /*
-    public class GridPolygonGenerators
+    public class PolygonGenerators
     {
-        public static Arbitrary<GridLineSegment> ArbRandomPolygon()
+        public static Arbitrary<LineSegment> ArbRandomPolygon()
         {
             return Arb.From(GenPoly());
         }
 
-        public static Gen<GridPolygon> GenPoly(int nVerts)
+        public static Gen<Polygon> GenPoly(int nVerts)
         {
             
-            GridVector2Generators.GenDistinctPoints(nVerts).Where()
+            Vector2Generators.GenDistinctPoints(nVerts).Where()
                 
         }
     }

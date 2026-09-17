@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using ODataClient.ConnectomeDataModel;
@@ -10,37 +10,35 @@ using System.Linq;
 namespace AnnotationVizLib.OData
 {
 
-    public class ODataLocationAdapter : ILocationReadOnly
+    public class ODataLocationAdapter(Location l, UnitsAndScale.IScale scale) : ILocationReadOnly, IGeometry
     {
-        private readonly Location loc;
-        public readonly UnitsAndScale.IScale scale;
+        private readonly Location loc = l ?? throw new ArgumentNullException(nameof(l));
+        public readonly UnitsAndScale.IScale scale = scale ?? throw new ArgumentNullException(nameof(scale));
 
-        public ODataLocationAdapter(Location l, UnitsAndScale.IScale scale)
-        {
-            if (l == null)
-                throw new ArgumentNullException();
+        public IReadOnlyDictionary<string, string> Attributes => loc.Attributes().ToDictionary(a => a.Name, a => a.Value);
 
-            if (scale == null)
-                throw new ArgumentNullException();
+        public double? Width => loc.Radius;
 
-            this.loc = l;
-            this.scale = scale;
-        }
+        public string MosaicGeometryWKT => loc.MosaicShape?.Geometry?.WellKnownText;
 
-        public IDictionary<string, string> Attributes => null;
+        public string VolumeGeometryWKT => loc.VolumeShape?.Geometry?.WellKnownText;
 
-        private IShape2D _VolumeShape = null;
-        public IShape2D VolumeGeometry
+        private SqlGeometry _VolumeShape = null;
+        public SqlGeometry Geometry
         {
             get
             {
-                if (_VolumeShape == null)
-                {
-                    _VolumeShape = loc.VolumeShape.Geometry.WellKnownText.ParseWKT();
-                    throw new NotImplementedException("Geometry must be scaled to units");
-                    //_VolumeShape = _VolumeShape.Scale(scale);
-                }
+                if (_VolumeShape != null)
+                    return _VolumeShape;
 
+                if (loc.VolumeShape?.Geometry is null)
+                    return null;
+
+                _VolumeShape = loc.VolumeShape.Geometry.WellKnownBinary != null
+                    ? Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value)
+                    : Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.Geometry.WellKnownText), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
+
+                _VolumeShape = _VolumeShape.Scale(scale);
                 return _VolumeShape;
             }
 
@@ -67,35 +65,28 @@ namespace AnnotationVizLib.OData
 
         public LocationType TypeCode => (LocationType)loc.TypeCode;
 
-        GridBox _BoundingBox = default;
-        public GridBox BoundingBox
+        Box _BoundingBox = default;
+        public Box BoundingBox
         {
             get
             {
                 if (_BoundingBox == default)
                 {
-                    GridRectangle bound_rect = VolumeGeometry.BoundingBox;
-                    _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
+                    SqlGeometry volume = Geometry;
+                    if (volume is null)
+                        return default;
+
+                    Rectangle bound_rect = volume.BoundingBox();
+                    _BoundingBox = new Box(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 
                 return _BoundingBox;
             }
         }
 
-        string ILocationReadOnly.VolumeGeometryWKT => loc.VolumeShape.Geometry.WellKnownText;
-
-        IReadOnlyDictionary<string, string> ILocationReadOnly.Attributes
-        {
-            get { return loc.Attributes().ToDictionary(a => a.Name, a=>a.Value); }
-        }
-
-        public double? Width => loc.Width;
-
-        public string MosaicGeometryWKT => loc.MosaicShape.Geometry.WellKnownText;
-
         public bool Equals(ILocationReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)
@@ -104,12 +95,6 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(Location other)
-        {
-            if (other is null)
-                return false;
-            
-            return other.ID.Equals((long)ID);
-        }
+        public bool Equals(Location other) => this.Equals((ILocationReadOnly)other);
     }
 }

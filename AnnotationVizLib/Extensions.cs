@@ -13,8 +13,8 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public static string AttributesToString(this IDictionary<string, object> dict)
         {
-            StringBuilder sb = new StringBuilder();
-            List<string> keys = dict.Keys.ToList();
+            StringBuilder sb = new();
+            List<string> keys = [.. dict.Keys];
             keys.Sort();
 
             foreach (string key in keys)

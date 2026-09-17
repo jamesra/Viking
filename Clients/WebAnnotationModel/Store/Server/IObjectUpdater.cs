@@ -2,6 +2,7 @@
 
 namespace WebAnnotationModel.ServerInterface
 {
+    /// <summary>Merges UPDATE_SOURCE into an existing UPDATE_TARGET. Use IObjectConverter to construct a new instance.</summary>
     public interface IObjectUpdater<UPDATE_TARGET, UPDATE_SOURCE>
     {
         /// <summary>

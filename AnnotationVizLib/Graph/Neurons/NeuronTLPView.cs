@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,16 +6,9 @@ using System.Text;
 
 namespace AnnotationVizLib
 {
-    public class NeuronTLPView : TLPView<long>
+    public class NeuronTLPView(string VolumeURL) : TLPView<long>(VolumeURL)
     {
-        protected override SortedDictionary<string, string> DefaultAttributes
-        {
-            get { return TLPAttributes.DefaultForAttribute; }
-        }
-
-        public NeuronTLPView(string VolumeURL) : base(VolumeURL)
-        {
-        }
+        protected override SortedDictionary<string, string> DefaultAttributes => TLPAttributes.DefaultForAttribute;
 
         public TLPViewNode CreateTLPNode(NeuronNode node)
         {
@@ -29,7 +22,7 @@ namespace AnnotationVizLib
             }
 
             if (!NodeAttribs.ContainsKey("viewLabel"))
-                NodeAttribs.Add("viewLabel", LabelForNode(node));
+                NodeAttribs.Add("viewLabel", NeuronTLPView.LabelForNode(node));
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
@@ -48,9 +41,9 @@ namespace AnnotationVizLib
             return tlpnode;
         }
 
-        public string LabelForNode(NeuronNode node)
+        public static string LabelForNode(NeuronNode node)
         {
-            if (!string.IsNullOrEmpty(node.Structure.Label))
+            if (node.Structure.Label != null && node.Structure.Label.Length > 0)
                 return node.Structure.Label + "\n" + node.Key.ToString();
 
             return node.Key.ToString();
@@ -58,10 +51,10 @@ namespace AnnotationVizLib
 
         public static string LinkedStructures(NeuronEdge edge)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             //sb.Append(edge.SynapseType);
-            foreach (IStructureLinkKey link in edge.Links)
+            foreach (IStructureLink link in edge.Links)
             {
                 sb.AppendLine("\t" + LinkString(link));
             }
@@ -69,10 +62,7 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        public static string LinkString(IStructureLinkKey link)
-        {
-            return link.SourceID + " -> " + link.TargetID;
-        }
+        public static string LinkString(IStructureLink link) => link.SourceID + " -> " + link.TargetID;
 
         /// <summary>
         /// Create an edge between two nodes.  Returns null if the nodes do not exist
@@ -154,7 +144,7 @@ namespace AnnotationVizLib
 
         public static NeuronTLPView ToTLP(NeuronGraph graph, string VolumeURL, bool IncludeUnlabeled = false)
         {
-            NeuronTLPView view = new NeuronTLPView(VolumeURL);
+            NeuronTLPView view = new(VolumeURL);
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {

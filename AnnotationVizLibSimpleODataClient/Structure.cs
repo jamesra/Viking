@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,30 +9,28 @@ namespace AnnotationVizLib.SimpleOData
     {
         public static Structure FromDictionary(IDictionary<string, object> dict)
         {
-            Structure s = new Structure { ID = System.Convert.ToUInt64(dict["ID"]) };
+            Structure s = new() { ID = System.Convert.ToUInt64(dict["ID"]) };
 
             if (dict.ContainsKey("ParentID"))
             {
-                if (dict["ParentID"] == null)
-                    s.ParentID = new ulong?();
-                else
-                    s.ParentID = System.Convert.ToUInt64(dict["ParentID"]);
+                s.ParentID = dict["ParentID"] is null ? new ulong?() : System.Convert.ToUInt64(dict["ParentID"]);
             }
 
-            if (dict.ContainsKey("Label"))
-                s.Label = (string)dict["Label"];
 
-            if (dict.ContainsKey("Tags"))
-                s.Tags = (string)dict["Tags"];
+            if (dict.TryGetValue("Label", out var label))
+                s.Label = (string)label;
 
-            if (dict.ContainsKey("TypeID"))
-                s.TypeID = System.Convert.ToUInt64(dict["TypeID"]);
+            if (dict.TryGetValue("Tags", out var tags))
+                s.Tags = (string)tags;
 
-            if (dict.ContainsKey("SourceOfLinks"))
-                s.SourceOfLinks = (ICollection<StructureLink>)dict["SourceOfLinks"];
+            if (dict.TryGetValue("TypeID", out var typeid))
+                s.TypeID = System.Convert.ToUInt64(typeid);
 
-            if (dict.ContainsKey("TargetOfLinks"))
-                s.TargetOfLinks = (ICollection<StructureLink>)dict["TargetOfLinks"];
+            if (dict.TryGetValue("SourceOfLinks", out var sourceoflinks))
+                s.SourceOfLinks = (ICollection<StructureLink>)sourceoflinks;
+
+            if (dict.TryGetValue("TargetOfLinks", out var targetoflinks))
+                s.TargetOfLinks = (ICollection<StructureLink>)targetoflinks;
 
             return s;
         }
@@ -62,18 +60,18 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        public ICollection<IStructureLinkKey> Links
+        public ICollection<IStructureLink> Links
         {
             get
             {
-                List<StructureLink> links = new List<StructureLink>();
+                List<StructureLink> links = [];
                 if (this.SourceOfLinks != null)
                     links.AddRange(SourceOfLinks);
 
                 if (TargetOfLinks != null)
                     links.AddRange(TargetOfLinks);
 
-                return links.Select(ll => ll as IStructureLinkKey).ToList();
+                return [.. links.Select(ll => ll as IStructureLink)];
             }
         }
 
@@ -82,20 +80,11 @@ namespace AnnotationVizLib.SimpleOData
             get; private set;
         }
 
-        public string TagsXML
-        {
-            get
-            {
-                return this.Tags;
-            }
-        }
+        public string TagsXML => this.Tags;
 
         private string Tags { get; set; }
 
-        IStructureTypeReadOnly IStructureReadOnly.Type
-        {
-            get { return this.Type; }
-        }
+        IStructureTypeReadOnly IStructureReadOnly.Type => this.Type;
 
         public StructureType Type
         {
@@ -122,29 +111,11 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        public IReadOnlyDictionary<string, string> Attributes
-        {
-            get; internal set;
-        }
-
-        public double Confidence
-        {
-            get; internal set;
-        }
-
-        public string Notes
-        {
-            get; internal set;
-        }
-
-        public override string ToString()
-        {
-            return ID.ToString();
-        }
+        public override string ToString() => ID.ToString();
 
         public bool Equals(IStructureReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)
@@ -153,9 +124,6 @@ namespace AnnotationVizLib.SimpleOData
             return false;
         }
 
-        public bool Equals(Structure other)
-        {
-            return this.Equals((IStructureReadOnly)other);
-        }
+        public bool Equals(Structure other) => this.Equals((IStructureReadOnly)other);
     }
 }

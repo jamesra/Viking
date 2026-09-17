@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
+using Viking.DependencyInjection;
 using Viking.UI.Forms;
+using Microsoft.Xna.Framework;
 
 namespace Viking
 {
@@ -13,44 +16,70 @@ namespace Viking
 
     public class VikingApplicationContext : ApplicationContext
     {
-        public CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        public CancellationTokenSource cancellationTokenSource = new();
 
-        public VikingApplicationContext(string VolumeURL)
+        private readonly ApplicationSettings _settings;
+
+        public VikingApplicationContext(ApplicationSettings settings)
         {
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            if (string.IsNullOrWhiteSpace(_settings.VolumeURL))
+            {
+                throw new ArgumentException("VolumeURL must be provided", nameof(settings));
+            }
+
             UI.State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            TileLoadEnvironment.UiDispatcher = UI.State.MainThreadDispatcher;
+            TileLoadEnvironment.CachePath = UI.State.CachePath;
+            TileLoadEnvironment.GetDevice = () => UI.State.ViewerControl?.Device;
+            TileLoadEnvironment.GetVisibleWorldBounds = () => UI.State.ViewerControl?.Scene?.VisibleWorldBounds ?? default;
+            TileLoadEnvironment.GetSectionNumber = () => UI.State.ViewerControl?.Section?.Number ?? 0;
+            TileLoadEnvironment.VisibleTileSortIntervalMs = Viking.Properties.Settings.Default.VisibleTileSortIntervalMs;
+            TileLoadEnvironment.MinTexturesToLoadFromQueue = Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue;
+            TileLoadEnvironment.TextureLoadingWindowMs = Viking.Properties.Settings.Default.TextureLoadingWindow;
+
+            //Microsoft.Xna.Framework.Content.RootDirectory = "Content";
         }
 
-        public void Initialize(string VolumeURL)
+        public void Initialize()
         {
-            if (VolumeURL is null)
-                throw new ArgumentNullException(nameof(VolumeURL));
+            if (string.IsNullOrWhiteSpace(_settings.VolumeURL))
+                throw new ArgumentNullException(nameof(_settings.VolumeURL));
             //var cancellationTokenSource = new CancellationTokenSource();
 
-            using (SplashForm Splash = new SplashForm())
+            using SplashForm Splash = new();
+            Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(_settings.VolumeURL, Splash.progressReporter, cancellationTokenSource.Token));
+
+            //The splash dialog will run until the Volume is initialized 
+            Splash.ShowDialog();
+
+            DialogResult splashResult = Splash.Result;
+
+            Splash.Close();
+
+            if (Splash.TrackedTask.IsFaulted)
             {
-                Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(VolumeURL, Splash.ProgressReporter, cancellationTokenSource.Token));
+                Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
 
-                //The splash dialog will run until the Volume is initialized 
-                Splash.ShowDialog();
+                Exception? rootCause = Splash.TrackedTask.Exception?.Flatten().InnerException
+                                       ?? Splash.TrackedTask.Exception;
 
-                DialogResult splashResult = Splash.Result;
+                string friendlyMessage =
+                    $"Could not load the volume from:\n{_settings.VolumeURL}\n\n" +
+                    $"Reason: {rootCause?.Message ?? "Unknown error"}\n\n" +
+                    "Please check that the server is reachable and the URL is correct.";
 
-                Splash.Close();
+                MessageBox.Show(friendlyMessage, "Volume Load Failed",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ExitThread();
+                return;
+            }
 
-                if (splashResult == DialogResult.Cancel)
-                {
-                    Trace.WriteLine($"Viking launch cancelled by user");
-                    ExitThread();
-                    return;
-                }
-
-                if (Splash.TrackedTask.IsFaulted)
-                {
-                    Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
-                    MessageBox.Show($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
-                    ExitThread();
-                    return;
-                }
+            if (splashResult == DialogResult.Cancel)
+            {
+                Trace.WriteLine($"Viking launch cancelled by user");
+                ExitThread();
+                return;
             }
 
             Trace.WriteLine($"Showing VikingMain window");
@@ -59,31 +88,93 @@ namespace Viking
             this.MainForm.Show();
         }
 
+        protected override void OnMainFormClosed(object sender, EventArgs e)
+        {
+            base.OnMainFormClosed(sender, e);
+            Global.HttpClient.CancelPendingRequests();
+        }
+
+        private const int VolumeLoadMaxRetries = 3;
+
         private async Task BackgroundLoading(string VolumeURL, Viking.Common.IProgressReporter progressReporter, CancellationToken token)
         {
             if (VolumeURL is null)
                 throw new ArgumentNullException(nameof(VolumeURL));
 
             DateTime startVolume = DateTime.UtcNow;
-            //The constructor populates attributes of the volume element.  Then initialize needs to be called to collect more
-            var Volume = new Viking.VolumeModel.Volume(VolumeURL, UI.State.CachePath, progressReporter);
-            
+            Viking.VolumeModel.Volume Volume = null;
+            Exception lastVolumeException = null;
+
+            for (int attempt = 1; attempt <= VolumeLoadMaxRetries; attempt++)
+            {
+                if (token.IsCancellationRequested)
+                    throw new OperationCanceledException(token);
+
+                try
+                {
+                    if (attempt > 1)
+                    {
+                        Trace.WriteLine($"Volume load retry {attempt}/{VolumeLoadMaxRetries} for {VolumeURL}");
+                        await Task.Delay(2000 * (attempt - 1), token).ConfigureAwait(false);
+                    }
+
+                    Volume = await Viking.VolumeModel.Volume.CreateAsync(VolumeURL, UI.State.CachePath, progressReporter, token).ConfigureAwait(false);
+                    await Volume.Initialize(token, progressReporter).ConfigureAwait(false);
+                    lastVolumeException = null;
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    lastVolumeException = ex;
+                    Trace.WriteLine($"Volume load attempt {attempt} failed: {ex.Message}");
+                    if (attempt == VolumeLoadMaxRetries)
+                        throw;
+                }
+            }
+
+            if (Volume is null && lastVolumeException != null)
+                throw lastVolumeException;
+
             //Start loading textures, this does not need to be done before launching the main app.
             DateTime TextureCacheLoadStart = DateTime.UtcNow;
             var textureCacheTask = Global.TextureCache.PopulateCache(UI.State.GetVolumeCachePath(Volume.Name), token);
 
-            await Volume.Initialize(token, progressReporter);
             DateTime stopVolume = DateTime.UtcNow;
             var elapsedTime = stopVolume - startVolume;
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
+            TextureReaderV2.ApplyMaxConcurrentRequestPreference(
+                Viking.Properties.Settings.Default.MaxConcurrentTextureRequests,
+                Volume.DefaultTileWidth);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
+            TileLoadEnvironment.BindVolume(Volume);
 
             DateTime startExtensions = DateTime.UtcNow;
             Viking.Common.ExtensionManager.LoadExtensions(progressReporter);
             DateTime stopExtensions = DateTime.UtcNow;
             var elapsedExtensionTime = stopExtensions - startExtensions;
             Trace.WriteLine("Extension Load Time: " + elapsedExtensionTime.ToString());
+
+            ServiceCollection services = new();
+            services.AddSingleton(_settings);
+            services.AddSingleton(Volume);
+            services.AddSingleton(UI.State.volume);
+
+            Viking.Common.ExtensionManager.RegisterModuleServices(services);
+
+            if (ServiceLocator.IsInitialized)
+            {
+                ServiceLocator.Reset();
+            }
+
+            var serviceProvider = services.BuildServiceProvider();
+            ServiceLocator.Initialize(serviceProvider, services);
+
+            await Viking.Common.ExtensionManager.InitializeModulesAsync(ServiceLocator.ServiceProvider, token).ConfigureAwait(false);
 
             await textureCacheTask;
             DateTime TextureCacheLoadStop = DateTime.UtcNow;

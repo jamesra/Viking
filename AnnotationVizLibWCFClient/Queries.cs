@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using AnnotationVizLib.WCFClient.AnnotationClient;
 using System;
 using System.Collections.Generic;
@@ -12,8 +12,7 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                if (_IDToStructureType == null)
-                    _IDToStructureType = Queries.GetStructureTypes();
+                _IDToStructureType ??= Queries.GetStructureTypes();
 
                 return _IDToStructureType;
             }
@@ -22,20 +21,14 @@ namespace AnnotationVizLib.WCFClient
         /// <summary>
         /// Ensure the StructureType dictionary is populated
         /// </summary>
-        public static void PopulateStructureTypes()
-        {
-            if (_IDToStructureType == null)
-                _IDToStructureType = Queries.GetStructureTypes();
-        }
+        public static void PopulateStructureTypes() => _IDToStructureType ??= Queries.GetStructureTypes();
 
         private static SortedDictionary<long, StructureType> _IDToStructureType = null;
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap()
         {
-            using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
-            {
-                return LabelToStructuresMap(client);
-            }
+            using AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient();
+            return LabelToStructuresMap(client);
         }
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap(AnnotateStructuresClient client)
@@ -48,26 +41,23 @@ namespace AnnotationVizLib.WCFClient
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap(Structure[] structures)
         {
-            SortedList<string, List<Structure>> dictLabels = new SortedList<string, List<Structure>>();
+            SortedList<string, List<Structure>> dictLabels = [];
             foreach (Structure structure in structures)
             {
-                string Label = BaseLabel(structure.Label);
-                if (Label == null)
-                    Label = "No Label";
-
+                string Label = BaseLabel(structure.Label) ?? "No Label";
                 if (Label.Length == 0)
                     Label = "No Label";
 
-                if (dictLabels.ContainsKey(Label))
+                if (dictLabels.TryGetValue(Label, out var structs))
                 {
-                    dictLabels[Label].Add(structure);
+                    structs.Add(structure);
                 }
                 else
                 {
-                    List<Structure> listIDs = new List<Structure>
-                    {
+                    List<Structure> listIDs =
+                    [
                         structure
-                    };
+                    ];
                     dictLabels.Add(Label, listIDs);
                 }
             }
@@ -83,10 +73,8 @@ namespace AnnotationVizLib.WCFClient
         /// <returns></returns>
         public static Structure[] GetStructuresByIDs(long[] IDs, bool include_children = false)
         {
-            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
-            {
-                return GetStructuresByIDs(proxy, IDs, include_children);
-            }
+            using AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient();
+            return GetStructuresByIDs(proxy, IDs, include_children);
         }
 
         /// <summary>
@@ -99,7 +87,7 @@ namespace AnnotationVizLib.WCFClient
         {
             int i = 0;
             int ChunkSize = 1024 * 8;
-            List<Structure> listStructures = new List<Structure>(IDs.Length);
+            List<Structure> listStructures = new(IDs.Length);
             while (i < IDs.Length)
             {
                 int iEnd = i + ChunkSize < IDs.Length ? i + ChunkSize : IDs.Length;
@@ -113,7 +101,7 @@ namespace AnnotationVizLib.WCFClient
                 i = iEnd;
             }
 
-            return listStructures.ToArray();
+            return [.. listStructures];
         }
 
         /// <summary>
@@ -124,11 +112,9 @@ namespace AnnotationVizLib.WCFClient
         /// <returns></returns>
         public static Structure[] GetNetworkedStructures(long[] IDs, int numHops)
         {
-            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
-            {
-                long[] network_IDs = proxy.GetNetworkedStructures(IDs, numHops);
-                return proxy.GetStructuresByIDs(network_IDs, false);
-            }
+            using AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient();
+            long[] network_IDs = proxy.GetNetworkedStructures(IDs, numHops);
+            return proxy.GetStructuresByIDs(network_IDs, false);
         }
 
         /// <summary>
@@ -139,10 +125,8 @@ namespace AnnotationVizLib.WCFClient
         /// <returns></returns>
         public static Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops)
         {
-            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
-            {
-                return proxy.GetChildStructuresInNetwork(IDs, numHops);
-            }
+            using AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient();
+            return proxy.GetChildStructuresInNetwork(IDs, numHops);
         }
 
         /// <summary>
@@ -153,19 +137,15 @@ namespace AnnotationVizLib.WCFClient
         /// <returns></returns>
         public static StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops)
         {
-            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
-            {
-                return proxy.GetStructureLinksInNetwork(IDs, numHops);
-            }
+            using AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient();
+            return proxy.GetStructureLinksInNetwork(IDs, numHops);
         }
 
         public static Scale GetScale()
         {
-            using (VolumeMetaClient proxy = ConnectionFactory.CreateVolumeMetaClient())
-            {
-                Scale scale = proxy.GetScale();
-                return scale;
-            }
+            using VolumeMetaClient proxy = ConnectionFactory.CreateVolumeMetaClient();
+            Scale scale = proxy.GetScale();
+            return scale;
         }
 
 
@@ -174,17 +154,15 @@ namespace AnnotationVizLib.WCFClient
         * *************************************/
         public static SortedDictionary<long, StructureType> GetStructureTypes()
         {
-            using (AnnotateStructureTypesClient proxy = ConnectionFactory.CreateStructureTypesClient())
-            {
-                proxy.Open();
-                _IDToStructureType = GetStructureTypes(proxy);
-                return _IDToStructureType;
-            }
+            using AnnotateStructureTypesClient proxy = ConnectionFactory.CreateStructureTypesClient();
+            proxy.Open();
+            _IDToStructureType = GetStructureTypes(proxy);
+            return _IDToStructureType;
         }
 
         public static SortedDictionary<long, StructureType> GetStructureTypes(AnnotateStructureTypesClient proxy)
         {
-            SortedDictionary<long, StructureType> dictTypes = new SortedDictionary<long, StructureType>();
+            SortedDictionary<long, StructureType> dictTypes = [];
 
             StructureType[] StructureTypes = proxy.GetStructureTypes();
 
@@ -198,19 +176,15 @@ namespace AnnotationVizLib.WCFClient
 
         public static SortedDictionary<long, List<StructureLink>> GetLinkedStructures()
         {
-            using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
-            {
-                return GetLinkedStructures(client);
-            }
+            using AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient();
+            return GetLinkedStructures(client);
 
         }
 
         public static ICollection<long> GetLinkedStructureParentIDs()
         {
-            using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
-            {
-                return GetLinkedStructureParentIDs(client);
-            }
+            using AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient();
+            return GetLinkedStructureParentIDs(client);
         }
 
         /// <summary>
@@ -222,9 +196,9 @@ namespace AnnotationVizLib.WCFClient
         {
             StructureLink[] LinkedStructures = proxy.GetLinkedStructures();
             SortedDictionary<long, List<StructureLink>> StructureToLinkMap = GetLinkedStructures(LinkedStructures);
-            Structure[] structures = GetStructuresByIDs(proxy, StructureToLinkMap.Keys.ToArray());
+            Structure[] structures = GetStructuresByIDs(proxy, [.. StructureToLinkMap.Keys]);
 
-            SortedSet<long> ParentIDs = new SortedSet<long>();
+            SortedSet<long> ParentIDs = [];
             foreach (Structure linked_struct in structures)
             {
                 if (linked_struct.ParentID.HasValue)
@@ -247,20 +221,20 @@ namespace AnnotationVizLib.WCFClient
 
         public static SortedDictionary<long, List<StructureLink>> GetLinkedStructures(StructureLink[] LinkedStructures)
         {
-            SortedDictionary<long, List<StructureLink>> StructIDToLinks = new SortedDictionary<long, List<StructureLink>>();
+            SortedDictionary<long, List<StructureLink>> StructIDToLinks = [];
             foreach (StructureLink link in LinkedStructures)
             {
-                if (!StructIDToLinks.TryGetValue(link.SourceID, out var SourceIDList))
+                if (!StructIDToLinks.TryGetValue(link.SourceID, out List<StructureLink> SourceIDList))
                 {
-                    SourceIDList = new List<StructureLink>();
+                    SourceIDList = [];
                 }
 
                 SourceIDList.Add(link);
                 StructIDToLinks[link.SourceID] = SourceIDList;
 
-                if (!StructIDToLinks.TryGetValue(link.TargetID, out var TargetIDList))
+                if (!StructIDToLinks.TryGetValue(link.TargetID, out List<StructureLink> TargetIDList))
                 {
-                    TargetIDList = new List<StructureLink>();
+                    TargetIDList = [];
                 }
 
                 TargetIDList.Add(link);
@@ -277,7 +251,7 @@ namespace AnnotationVizLib.WCFClient
         /// <param name="label"></param>
         public static string BaseLabel(string Label)
         {
-            if (Label == null)
+            if (Label is null)
             {
                 return "Unlabeled";
             }

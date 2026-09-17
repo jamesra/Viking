@@ -9,33 +9,30 @@ namespace Geometry
     /// </summary>
     public class Lagrange
     {
-        public static GridVector2[] RecursivelyFitCurve(GridVector2[] cp, SortedSet<double> TPoints = null)
+        public static Vector2[] RecursivelyFitCurve(Vector2[] cp, SortedSet<double> TPoints = null)
         {
             int nPoints = cp.Length;
             int NumInterpolations;
 
-            double[] TValues = cp.Select((p, i) => (double)i / ((double)nPoints - 1)).ToArray();
-            double[] XValues = cp.Select(p => p.X).ToArray();
-            double[] YValues = cp.Select(p => p.Y).ToArray();
+            double[] TValues = [.. cp.Select((p, i) => (double)i / ((double)nPoints - 1))];
+            double[] XValues = [.. cp.Select(p => p.X)];
+            double[] YValues = [.. cp.Select(p => p.Y)];
 
             //Linearly space space the t values along the array
-            if (TPoints == null)
-            {
-                TPoints = GenerateTPoints(TValues, TValues.Length * 2);
-            }
+            TPoints ??= GenerateTPoints(TValues, TValues.Length * 2);
 
             NumInterpolations = TPoints.Count;
 
             double[] TPointsArray = new double[NumInterpolations];
-            TPointsArray = TPoints.ToArray();
+            TPointsArray = [.. TPoints];
 
             double[] XOutput = ValuesAtTPoints(TPointsArray, TValues, XValues);
             double[] YOutput = ValuesAtTPoints(TPointsArray, TValues, YValues);
 
-            GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
+            Vector2[] output = [.. XOutput.Select((x, i) => new Vector2(x, YOutput[i]))];
 
 #if DEBUG
-            foreach (GridVector2 p in cp)
+            foreach (Vector2 p in cp)
             {
                 Debug.Assert(output.Contains(p));
             }
@@ -44,7 +41,7 @@ namespace Geometry
             if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref TPoints))
                 return output;
 
-            return RecursivelyFitCurve(cp, TPoints).RemoveAdjacentDuplicates();
+            return [.. RecursivelyFitCurve(cp, TPoints).RemoveAdjacentDuplicates()];
         }
 
 
@@ -61,8 +58,8 @@ namespace Geometry
             double[] TPointsInterpolated = new double[NumInterpolations];
 
             //The TValues for interpolated points
-            TPointsInterpolated = TPointsInterpolated.Select((t, i) => (double)i / (double)(NumInterpolations - 1)).ToArray();
-            SortedSet<double> TPoints = new SortedSet<double>(TPointsInterpolated);
+            TPointsInterpolated = [.. TPointsInterpolated.Select((t, i) => (double)i / (double)(NumInterpolations - 1))];
+            SortedSet<double> TPoints = [.. TPointsInterpolated];
 
             //Add the points at the actual control points
             TPoints.UnionWith(TValues);
@@ -74,23 +71,23 @@ namespace Geometry
         /// Return points along a curve described by three points
         /// </summary>
         /// <param name="points"></param>
-        public static GridVector2[] FitCurve(GridVector2[] cp, int NumInterpolations)
+        public static Vector2[] FitCurve(Vector2[] cp, int NumInterpolations)
         {
             int nPoints = cp.Length;
             Debug.Assert(nPoints >= 3);
             //Linearly space space the t values along the array
-            double[] TValues = cp.Select((p, i) => (double)i / ((double)nPoints - 1)).ToArray();
-            double[] XValues = cp.Select(p => p.X).ToArray();
-            double[] YValues = cp.Select(p => p.Y).ToArray();
+            double[] TValues = [.. cp.Select((p, i) => (double)i / ((double)nPoints - 1))];
+            double[] XValues = [.. cp.Select(p => p.X)];
+            double[] YValues = [.. cp.Select(p => p.Y)];
 
             SortedSet<double> TPoints = GenerateTPoints(TValues, NumInterpolations);
 
-            double[] TPointsArray = TPoints.ToArray();
+            double[] TPointsArray = [.. TPoints];
 
             double[] XOutput = ValuesAtTPoints(TPointsArray, TValues, XValues);
             double[] YOutput = ValuesAtTPoints(TPointsArray, TValues, YValues);
 
-            GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
+            Vector2[] output = [.. XOutput.Select((x, i) => new Vector2(x, YOutput[i]))];
 
             return output;
         }
@@ -101,12 +98,12 @@ namespace Geometry
             int nPoints = TArray.Count;
 
             double[] Product = new double[TPoints.Length];
-            Product = Product.Select(v => 0.0).ToArray();
+            Product = [.. Product.Select(v => 0.0)];
 
             for (int j = 0; j < nPoints; j++)
             {
-                double[] Weights = TPoints.Select((t, iT) => WeightForT(t, TArray, j) * InputValues[j]).ToArray();
-                Product = Product.Select((p, i) => Weights[i] + Product[i]).ToArray();
+                double[] Weights = [.. TPoints.Select((t, iT) => WeightForT(t, TArray, j) * InputValues[j])];
+                Product = [.. Product.Select((p, i) => Weights[i] + Product[i])];
             }
 
             return Product;

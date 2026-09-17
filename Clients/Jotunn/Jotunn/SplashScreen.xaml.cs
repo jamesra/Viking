@@ -1,46 +1,54 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.Composition;
+﻿using System;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
+using Viking.Common;
 
 namespace Jotunn
 {
-    /// <summary>
-    /// Interaction logic for SplashScreen.xaml
-    /// </summary>
     public partial class SplashScreen : Window
     {
-        [Export("InitializeBackgroundWorker")]
-        public System.ComponentModel.BackgroundWorker InitializeWorker = null;
+        /// <summary>
+        /// Set by App.OnStartup so Cancel stops volume and annotation load instead of racing Shutdown.
+        /// </summary>
+        public CancellationTokenSource LoadCancellation { get; set; }
 
         public SplashScreen()
         {
             InitializeComponent();
-            InitializeWorker = new System.ComponentModel.BackgroundWorker();
-            InitializeWorker.WorkerReportsProgress = true;
-            InitializeWorker.WorkerSupportsCancellation = true;
-            InitializeWorker.ProgressChanged += new ProgressChangedEventHandler(InitializeWorker_ProgressChanged);
+        }
+
+        public void Report(ProgressInfo info)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => Report(info)));
+                return;
+            }
+
+            if (info.MaxProgress > 0)
+                progressBar.Value = (info.Progress / info.MaxProgress) * 100.0;
+            else
+                progressBar.Value = info.Progress;
+
+            TextProgress.Text = info.Message ?? string.Empty;
         }
 
         private void buttonCancel_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
-            Application.Current.Shutdown();
+            LoadCancellation?.Cancel();
+            Close();
         }
 
-        private void InitializeWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void OnChromeMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            this.progressBar.Value = e.ProgressPercentage;
-            string updateString = e.UserState as string;
-            if (updateString == null)
-                updateString = "";
+            if (e.ChangedButton != MouseButton.Left || e.ButtonState != MouseButtonState.Pressed)
+                return;
 
-            TextProgress.Text = updateString;
-        }
+            if (buttonCancel.IsMouseOver)
+                return;
 
-        private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            this.DragMove();
+            DragMove();
         }
     }
 }

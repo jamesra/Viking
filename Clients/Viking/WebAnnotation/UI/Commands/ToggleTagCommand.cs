@@ -1,82 +1,57 @@
-﻿using System;
-using System.ServiceModel;
+using System;
+using System.Threading.Tasks;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ToggleStructureTag : Viking.UI.Commands.Command
+    internal class ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
+        StructureObj structure,
+        string tag, string value) : Viking.UI.Commands.Command(parent)
     {
-        private readonly StructureObj target;
-        private readonly string tag;
-        private readonly string value;
-        
-        public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
-            StructureObj structure,
-            string tag, string value)
-            : base(parent)
-        {
-            this.target = structure;
-            this.tag = tag;
-            this.value = value;
-        }
+        private readonly StructureObj target = structure;
+        private readonly string tag = tag;
+        private readonly string value = value;
 
-        public override void OnActivate()
-        {
-            this.Parent.BeginInvoke((Action)this.Execute);
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag, this.value);
+            _ = ExecuteAsync();
+        }
 
-            try
-            {
-                Store.Structures.Save();
-            }
-            catch (FaultException ex)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(this.tag, this.value);
-            }
+        async Task ExecuteAsync()
+        {
+            await target.ToggleAttribute(tag, value);
+
+            if (!await AnnotationOverlay.SaveStructuresWithMessageBoxOnError())
+                await target.ToggleAttribute(tag, value);
 
             base.Execute();
         }
     }
 
-    class ToggleLocationTag : Viking.UI.Commands.Command
+    internal class ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
+        LocationObj loc,
+        string tag, string value) : Viking.UI.Commands.Command(parent)
     {
-        private readonly LocationObj target;
-        private readonly string tag;
-        private readonly string value;
-        
-        public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
-            LocationObj loc,
-            string tag, string value)
-            : base(parent)
-        {
-            this.target = loc;
-            this.tag = tag;
-            this.value = value;
-        }
+        private readonly LocationObj target = loc;
+        private readonly string tag = tag;
+        private readonly string value = value;
 
-        public override void OnActivate()
-        {
-            this.Parent.BeginInvoke((Action)this.Execute);
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag, this.value);
-            try
-            {
-                Store.Locations.Save();
-            }
-            catch (System.ServiceModel.FaultException ex)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(this.tag, value);
-            }
+            _ = ExecuteAsync();
+        }
+
+        async Task ExecuteAsync()
+        {
+            await target.ToggleAttribute(tag, value);
+
+            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                await target.ToggleAttribute(tag, value);
 
             base.Execute();
         }

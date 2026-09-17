@@ -1,5 +1,4 @@
-﻿using System;
-using System.Drawing;
+using System;
 using System.IO;
 
 namespace VikingXNA
@@ -11,13 +10,13 @@ namespace VikingXNA
     public class BitmapFile
     {
         public readonly Int32 Width;
-        readonly Int32 PaddedWidth; 
+        readonly Int32 PaddedWidth;
         public readonly Int32 Height;
         public readonly Int32 BPP;
-        public readonly Int32 BytesPerPixel; 
+        public readonly Int32 BytesPerPixel;
 
         private FileStream _FileStream;
-        private UInt32 _PixelDataOffset; 
+        private UInt32 _PixelDataOffset;
 
         public BitmapFile(string Filename, Int32 width, Int32 height, Int32 bpp)
         {
@@ -37,9 +36,9 @@ namespace VikingXNA
         public void Close()
         {
             _FileStream.Close();
-            _FileStream = null; 
+            _FileStream = null;
         }
-        
+
         private void WriteBMPHeader()
         {
             MemoryStream stream = null;
@@ -118,20 +117,14 @@ namespace VikingXNA
                 }
                 finally
                 {
-                    if (binaryWriter != null)
-                    {
-                        binaryWriter.Close();
-                        binaryWriter = null; 
-                    }
+                    binaryWriter?.Close();
+                    binaryWriter = null;
                 }
             }
             finally
             {
-                if (stream != null)
-                {
-                    stream.Close();
-                    stream = null; 
-                }
+                stream?.Close();
+                stream = null;
             }
         }
 
@@ -146,50 +139,50 @@ namespace VikingXNA
             long offset = (Y * this.PaddedWidth) + X;
             offset = offset * BytesPerPixel;
             offset += this._PixelDataOffset;
-            
-            return offset; 
+
+            return offset;
         }
-        
-        /// <summary>
-        /// Write the Byte[] to the ROI of the target
-        /// </summary>
-        /// <param name="Target"></param>
-        /// <param name="ROI"></param>
-        /// <param name="Data"></param>
-        public void WriteRectangle(Rectangle ROI, Byte[] Data)
-        {
-            /*Sanity checks*/
-            if (ROI.Width > Width)
-                throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Width exceeds bitmap dimensions"); 
-            if (ROI.Height > Height)
-                throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Height exceeds bitmap dimensions"); 
-            if (ROI.X < 0 || ROI.X > Width)
-                throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, X is outside bitmap bounds");
-            if (ROI.Y < 0 || ROI.Y > Height)
-                throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Y is outside bitmap bounds");
-            if (ROI.X + ROI.Width > Width)
-                throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, X+Width is outside bitmap bounds");
-            if (ROI.Y + ROI.Height > Height)
-                throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Y+Height is outside bitmap bounds");
-            if (ROI.Width * ROI.Height * this.BytesPerPixel != Data.Length)
-                throw new ArgumentException("BitmapFile::WriteRectangle, Data[] size does not match ROI"); 
 
-            //Write each scanline of the BMP
-            for (uint y = (uint)ROI.Y; y < (uint)ROI.Y + (uint)ROI.Height; y++)
-            {
-                //Seek to the start of the scanline
-                long fileOffset = Offset((uint)ROI.X, y);
+        ///// <summary>
+        ///// Write the Byte[] to the ROI of the target
+        ///// </summary>
+        ///// <param name="Target"></param>
+        ///// <param name="ROI"></param>
+        ///// <param name="Data"></param>
+        //public void WriteRectangle(Rectangle ROI, Byte[] Data)
+        //{
+        //    /*Sanity checks*/
+        //    if (ROI.Width > Width)
+        //        throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Width exceeds bitmap dimensions"); 
+        //    if (ROI.Height > Height)
+        //        throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Height exceeds bitmap dimensions"); 
+        //    if (ROI.X < 0 || ROI.X > Width)
+        //        throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, X is outside bitmap bounds");
+        //    if (ROI.Y < 0 || ROI.Y > Height)
+        //        throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Y is outside bitmap bounds");
+        //    if (ROI.X + ROI.Width > Width)
+        //        throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, X+Width is outside bitmap bounds");
+        //    if (ROI.Y + ROI.Height > Height)
+        //        throw new ArgumentOutOfRangeException("ROI", "BitmapFile::WriteRectangle, Y+Height is outside bitmap bounds");
+        //    if (ROI.Width * ROI.Height * this.BytesPerPixel != Data.Length)
+        //        throw new ArgumentException("BitmapFile::WriteRectangle, Data[] size does not match ROI"); 
 
-                //Find the Data[] offset
-                long dataOffset = ((y - ROI.Y) * ROI.Width) * this.BytesPerPixel; 
+        //    //Write each scanline of the BMP
+        //    for (uint y = (uint)ROI.Y; y < (uint)ROI.Y + (uint)ROI.Height; y++)
+        //    {
+        //        //Seek to the start of the scanline
+        //        long fileOffset = Offset((uint)ROI.X, y);
 
-                _FileStream.Seek(fileOffset, SeekOrigin.Begin); 
+        //        //Find the Data[] offset
+        //        long dataOffset = ((y - ROI.Y) * ROI.Width) * this.BytesPerPixel; 
 
-                //Write scanline to the Bitmap
-                _FileStream.Write(Data, (int)dataOffset, ROI.Width * BytesPerPixel); 
-            }
+        //        _FileStream.Seek(fileOffset, SeekOrigin.Begin); 
 
-            _FileStream.Flush(); 
-        }
+        //        //Write scanline to the Bitmap
+        //        _FileStream.Write(Data, (int)dataOffset, ROI.Width * BytesPerPixel); 
+        //    }
+
+        //    _FileStream.Flush(); 
+        //}
     }
 }

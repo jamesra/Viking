@@ -22,8 +22,11 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         }
     }
 
-    public partial class PermittedStructureLink : IPermittedStructureLink
+    public partial class PermittedStructureLink : IPermittedStructureLink, IChangeAction
     {
+        DBACTION _DBAction = DBACTION.NONE;
+        DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
+
         public IPermittedStructureLinkKey ID { get => new PermittedStructureLinkKey(SourceTypeId, TargetTypeId, bidirectional_); set => throw new NotImplementedException(); }
 
         ulong IPermittedStructureLink.SourceTypeID { get => (ulong)SourceTypeId; set => SourceTypeId = (long)value; }
@@ -59,5 +62,22 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
                    (ulong)TargetTypeId == other.TargetTypeID &&
                    Bidirectional != other.Directional;
         } 
+
+        public static explicit operator PermittedStructureLinkChange(PermittedStructureLink src)
+        {
+            switch (src._DBAction)
+            {
+                case DBACTION.NONE:
+                    return null;
+                case DBACTION.INSERT:
+                    return new PermittedStructureLinkChange { Action = DBAction.Insert, Result = src };
+                case DBACTION.UPDATE:
+                    return new PermittedStructureLinkChange { Action = DBAction.Update, Result = src };
+                case DBACTION.DELETE:
+                    return new PermittedStructureLinkChange { Action = DBAction.Delete, Result = src };
+                default:
+                    return null;
+            }
+        }
     }
 }

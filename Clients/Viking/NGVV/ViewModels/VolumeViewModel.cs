@@ -1,7 +1,9 @@
-﻿using Geometry;
+using Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
+using Viking.UI.WPF.Models;
 using Viking.VolumeModel;
 
 namespace Viking.ViewModels
@@ -14,14 +16,13 @@ namespace Viking.ViewModels
 
         public readonly SortedList<int, SectionViewModel> SectionViewModels;
 
-        public string Name { get { return _Volume.Name; } }
+        public string Name => _Volume.Name;
 
-        public bool IsLocal { get { return _Volume.IsLocal; } }
+        public bool IsLocal => _Volume.IsLocal;
 
-        public UnitsAndScale.IAxisUnits DefaultXYScale
-        {
-            get { return _Volume.DefaultXYScale; }
-        }
+        public int? DefaultTileWidth => _Volume.DefaultTileWidth;
+
+        public UnitsAndScale.IAxisUnits DefaultXYScale => _Volume.DefaultXYScale;
 
         public int DefaultSectionNumber
         {
@@ -39,17 +40,21 @@ namespace Viking.ViewModels
             }
         }
 
-        public string DefaultVolumeTransform { get { return _Volume.DefaultVolumeTransform; } }
+        public string DefaultVolumeTransform => _Volume.DefaultVolumeTransform;
 
-        public ChannelInfo[] DefaultChannels { get { return _Volume.DefaultChannels; } set { _Volume.DefaultChannels = value; } }
+        public ChannelInfo[] DefaultChannels
+        {
+            get => _Volume.DefaultChannels;
+            set => _Volume.DefaultChannels = value;
+        }
 
-        public string[] ChannelNames { get { return _Volume.ChannelNames; } }
+        public string[] ChannelNames => Volume.ChannelNames;
 
-        public string[] TransformNames { get { return _Volume.Transforms.Keys.ToArray(); } }
+        public string[] TransformNames => [.. _Volume.Transforms.Keys];
 
-        public XElement VolumeElement { get { return _Volume.VolumeElement; } }
+        public XElement VolumeElement => _Volume.VolumeElement;
 
-        public bool UpdateServerVolumePositions { get { return _Volume.UpdateServerVolumePositions; } }
+        public bool UpdateServerVolumePositions => _Volume.UpdateServerVolumePositions;
 
         public VolumeViewModel(Volume volume)
         {
@@ -61,24 +66,86 @@ namespace Viking.ViewModels
 
             foreach (Section s in _Volume.Sections.Values)
             {
-                SectionViewModel sectionViewModel = new SectionViewModel(this, s);
+                SectionViewModel sectionViewModel = new(this, s);
                 SectionViewModels.Add(s.Number, sectionViewModel);
             }
 
             _ActiveVolumeTransform = this.DefaultVolumeTransform;
+
+            // Apply persisted section reference settings
+            ApplyPersistedSectionReferences();
         }
 
-        public string Host { get { return _Volume.Host; } }
-
-        public MappingBase GetTileMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
+        private void ApplyPersistedSectionReferences()
         {
-            return _MappingManager.GetMapping(VolumeTransformName, SectionNumber, ChannelName, SectionTransformName);
+            try
+            {
+                string volumeLocalDir = _Volume?.LocalVolumeDir;
+                if (string.IsNullOrWhiteSpace(volumeLocalDir))
+                {
+                    return;
+                }
+
+                var allSettings = SectionReferenceSettings.LoadForVolume(volumeLocalDir);
+                if (allSettings is null || allSettings.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (var kvp in allSettings)
+                {
+                    int sectionNumber = kvp.Key;
+                    var references = kvp.Value;
+
+                    if (!SectionViewModels.TryGetValue(sectionNumber, out var sectionViewModel))
+                    {
+                        continue;
+                    }
+
+                    // Apply reference above
+                    if (references.ReferenceAbove.HasValue)
+                    {
+                        if (_Volume.Sections.TryGetValue(references.ReferenceAbove.Value, out var refAbove))
+                        {
+                            sectionViewModel.ReferenceSectionAbove = refAbove;
+                        }
+                    }
+
+                    // Apply reference below
+                    if (references.ReferenceBelow.HasValue)
+                    {
+                        if (_Volume.Sections.TryGetValue(references.ReferenceBelow.Value, out var refBelow))
+                        {
+                            sectionViewModel.ReferenceSectionBelow = refBelow;
+                        }
+                    }
+
+                    // Apply channel settings
+                    if (references.Channels != null && references.Channels.Length > 0)
+                    {
+                        var channels = SectionReferenceSettings.FromDto(references.Channels);
+                        if (channels != null && channels.Length > 0)
+                        {
+                            if (_Volume.Sections.TryGetValue(sectionNumber, out var section))
+                            {
+                                section.ChannelInfoArray = channels;
+                                System.Diagnostics.Trace.WriteLine($"VolumeViewModel: Loaded {channels.Length} channels for section {sectionNumber}", "VolumeViewModel");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Failed to apply persisted section references: {ex.Message}");
+            }
         }
 
-        public MappingBase GetTileMapping(int SectionNumber, string ChannelName, string SectionTransformName)
-        {
-            return _MappingManager.GetMapping(this.ActiveVolumeTransform, SectionNumber, ChannelName, SectionTransformName);
-        }
+        public string Host => _Volume.Host;
+
+        public MappingBase GetTileMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName) => _MappingManager.GetMapping(VolumeTransformName, SectionNumber, ChannelName, SectionTransformName);
+
+        public MappingBase GetTileMapping(int SectionNumber, string ChannelName, string SectionTransformName) => _MappingManager.GetMapping(this.ActiveVolumeTransform, SectionNumber, ChannelName, SectionTransformName);
 
         protected static string BuildTransformKey(string VolumeTransformName, int SectionNumber)
         {
@@ -88,28 +155,26 @@ namespace Viking.ViewModels
 
         public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
         {
-            if (this.ActiveVolumeTransform == null)
+            if (this.ActiveVolumeTransform is null)
             {
                 return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
                                                     new Geometry.Transforms.IdentityTransform());
             }
             else
             {
+
                 SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
 
-                if (SectionTransforms.ContainsKey(SectionNumber))
+                if (SectionTransforms.TryGetValue(SectionNumber, out var transform))
                     return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),
-                                                        SectionTransforms[SectionNumber]);
+                                                        transform);
                 else
                     return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
                                                         new Geometry.Transforms.IdentityTransform());
             }
         }
 
-        public void ReduceCacheFootprint(object state)
-        {
-            _MappingManager.ReduceCacheFootprint();
-        }
+        public void ReduceCacheFootprint(object state) => _MappingManager.ReduceCacheFootprint();
 
         #region Events
 
@@ -124,7 +189,7 @@ namespace Viking.ViewModels
         protected string _ActiveVolumeTransform;
         public string ActiveVolumeTransform
         {
-            get { return _ActiveVolumeTransform; }
+            get => _ActiveVolumeTransform;
             set
             {
                 bool NewValue = value != _ActiveVolumeTransform;
@@ -134,20 +199,11 @@ namespace Viking.ViewModels
                     string OldTransform = _ActiveVolumeTransform;
                     _ActiveVolumeTransform = value;
 
-                    if (TransformChanged != null)
-                    {
-                        TransformChanged(this, new Viking.Common.TransformChangedEventArgs(_ActiveVolumeTransform, OldTransform));
-                    }
+                    TransformChanged?.Invoke(this, new Viking.Common.TransformChangedEventArgs(_ActiveVolumeTransform, OldTransform));
                 }
             }
         }
-         
-        public bool UsingVolumeTransform
-        {
-            get
-            {
-                return ActiveVolumeTransform != null; 
-            }
-        } 
+
+        public bool UsingVolumeTransform => ActiveVolumeTransform != null;
     }
 }

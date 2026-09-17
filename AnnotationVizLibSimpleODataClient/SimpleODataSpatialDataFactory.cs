@@ -13,18 +13,18 @@ namespace AnnotationVizLib.SimpleODataClient
 
         public static void AppendSpatialDataFromOData(NeuronGraph graph, Uri Endpoint, ICollection<long> IDs, uint Hops)
         {
-            ODataClientSettings s = new ODataClientSettings();
-            Simple.OData.Client.ODataClient client = new Simple.OData.Client.ODataClient(Endpoint);
+            ODataClientSettings s = new();
+            Simple.OData.Client.ODataClient client = new(Endpoint);
             AppendAreaToConnections(graph, client, IDs, Hops);
             AppendNeuronSpatialData(graph, client, IDs, Hops);
         }
 
         public static void AppendNeuronSpatialData(NeuronGraph graph, ODataClient client, ICollection<long> IDs, uint Hops)
         {
-            var annotations = new ODataFeedAnnotations();
+            ODataFeedAnnotations annotations = new();
 
             string queryString = null;
-            if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
+            if ((IDs is null || IDs.Count == 0) && graph.Nodes.Count > 0)
             {
                 //If no specific ID requested and there are nodes in the graph then request everything
                 queryString = string.Format("NetworkSpatialData", IDs.ToODataArrayParameterString(), Hops);
@@ -55,7 +55,7 @@ namespace AnnotationVizLib.SimpleODataClient
 
         public static void AppendNeuronSpatialData(NeuronNode node, ODataClient client)
         {
-            var annotations = new ODataFeedAnnotations();
+            ODataFeedAnnotations annotations = new();
             string queryString = string.Format("StructureSpatialCaches({0})", node.Key);
             Task<IDictionary<string, object>> taskStructureDicts = client.FindEntryAsync(queryString);
             Debug.Assert(taskStructureDicts != null);
@@ -76,9 +76,9 @@ namespace AnnotationVizLib.SimpleODataClient
 
                 long ID = System.Convert.ToInt64(dict["ID"]);
 
-                if (graph.Nodes.ContainsKey(ID))
+                if (graph.Nodes.TryGetValue(ID, out var node))
                 {
-                    AppendDictionaryToAttributes(graph.Nodes[ID], dict);
+                    AppendDictionaryToAttributes(node, dict);
                 }
             }
         }
@@ -98,7 +98,7 @@ namespace AnnotationVizLib.SimpleODataClient
 
         private static Dictionary<ulong, long> BuildChildToParentMap(NeuronGraph graph)
         {
-            Dictionary<ulong, long> ChildToParent = new Dictionary<ulong, long>();
+            Dictionary<ulong, long> ChildToParent = [];
             foreach (NeuronNode node in graph.Nodes.Values)
             {
                 foreach (ulong childID in node.EdgeSourceChildStructureIDs)
@@ -120,7 +120,7 @@ namespace AnnotationVizLib.SimpleODataClient
 
         private static Dictionary<ulong, SortedSet<NeuronEdge>> BuildChildToEdgeMap(NeuronGraph graph)
         {
-            Dictionary<ulong, SortedSet<NeuronEdge>> IDToEdge = new Dictionary<ulong, SortedSet<NeuronEdge>>();
+            Dictionary<ulong, SortedSet<NeuronEdge>> IDToEdge = [];
             foreach (NeuronEdge e in graph.Edges.Values)
             {
                 foreach (ulong SourceID in e.SourceIDs)
@@ -141,7 +141,7 @@ namespace AnnotationVizLib.SimpleODataClient
         {
             if (!dict.ContainsKey(ChildID))
             {
-                dict.Add(ChildID, new SortedSet<NeuronEdge>());
+                dict.Add(ChildID, []);
             }
 
             dict[ChildID].Add(value);
@@ -149,10 +149,10 @@ namespace AnnotationVizLib.SimpleODataClient
 
         public static void AppendAreaToConnections(NeuronGraph graph, ODataClient client, ICollection<long> IDs, uint Hops)
         {
-            var annotations = new ODataFeedAnnotations();
+            ODataFeedAnnotations annotations = new();
 
             string queryString = null;
-            if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
+            if ((IDs is null || IDs.Count == 0) && graph.Nodes.Count > 0)
             {
                 //If no specific ID requested and there are nodes in the graph then request everything
                 queryString = string.Format("NetworkEdgeSpatialData", IDs.ToODataArrayParameterString(), Hops);

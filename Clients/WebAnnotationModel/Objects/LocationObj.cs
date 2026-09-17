@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry; 
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,10 @@ using WebAnnotationModel;
 namespace WebAnnotationModel.Objects
 {
 
+    /// <summary>
+    /// Which LocationType values support radius, width, closed/open shapes, or holes.
+    /// Check these before reading or writing those fields.
+    /// </summary>
     public static class LocationTypeExtensions
     {
         public static bool HasRadius(this LocationType value)
@@ -77,12 +81,19 @@ namespace WebAnnotationModel.Objects
         }
     }
 
+    /// <summary>
+    /// One annotation on one section. Edit MosaicShape for the viewer; VolumeShape is a DB hint so
+    /// export tools need not implement stos. Position/Radius are derived from MosaicShape.
+    /// </summary>
     public class LocationObj : AnnotationModelObjBaseWithKey<long, ILocation>, ISectionIndex, IDataObjectLinks<long, long>, IEquatable<LocationObj>, ILocationReadOnly
     {
         private readonly long _ID;
 
         public override long ID => _ID;
 
+        /// <summary>
+        /// True when a PropertyChanged name should trigger a spatial redraw. Empty name means all properties in this category.
+        /// </summary>
         public static bool IsPositionProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -105,6 +116,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>True when the change affects MosaicShape / Radius / Width (not just centroid).</summary>
         public static bool IsGeometryProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -125,6 +137,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>True when Terminal / OffEdge / Attributes changed (branch styling, not geometry).</summary>
         public static bool IsTerminalProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -173,36 +186,36 @@ namespace WebAnnotationModel.Objects
             internal set;
         }
 
-        // private StructureObj _Parent;
+        private StructureObj _Parent;
+
+        /// <summary>
+        /// Structure this location belongs to. Resolved from <see cref="Store.Structures"/>
+        /// using <see cref="ParentID"/> when not already assigned (gRPC/WCF region loads
+        /// set ParentID but not this object).
+        /// </summary>
         public StructureObj Parent
         {
-            get;
-            /*
+            get
             {
-                //       if (_Parent != null)
-                //                    return _Parent;
+                if (_Parent != null)
+                    return _Parent;
 
                 if (ParentID.HasValue == false)
                     return null;
 
-                StructureObj _Parent = Store.Structures.GetObjectByID(ParentID.Value, false).Result;
-
-                //Queue a request for later
-                if (_Parent == null)
-                {
-                    Store.Structures.GetObjectByID(ParentID.Value);
-                    //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
-                    //request.BeginInvoke(ParentID.Value, null, null); 
-                }
-
+                Store.Structures.TryGetObjectByID(ParentID.Value, out _Parent);
                 return _Parent;
-            }*/
+            }
+            internal set => _Parent = value;
         }
 
 
-        private GridVector2? _MosaicPosition;
+        private Vector2? _MosaicPosition;
 
-        public GridVector2 Position
+        /// <summary>
+        /// Mosaic/section centroid, lazily from MosaicShape. Not persisted separately — edit MosaicShape.
+        /// </summary>
+        public Vector2 Position
         {
             get
             {
@@ -210,7 +223,7 @@ namespace WebAnnotationModel.Objects
                 if (!_MosaicPosition.HasValue)
                 {
                     _MosaicPosition = CenterOfLocationShape(this.MosaicShape);
-                    //_MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                    //_MosaicPosition = new Vector2(Data.Position.X, Data.Position.Y);
                 }
                 /*
 
@@ -227,13 +240,13 @@ namespace WebAnnotationModel.Objects
         }
 
 
-        private GridVector2? _VolumePosition;
+        private Vector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
         /// We want the database to have this value so data processing tools don't need to implement the transforms
         /// It should not be used by the viewer since the viewer can calculate the value.*/
         /// </summary>
-        public GridVector2 VolumePosition
+        public Vector2 VolumePosition
         {
             get
             {
@@ -242,7 +255,7 @@ namespace WebAnnotationModel.Objects
                 {
                     _VolumePosition = CenterOfLocationShape(this.VolumeShape);
                     //_VolumePosition = Data.VolumeShape.Centroid();
-                    //_VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                    //_VolumePosition = new Vector2(Data.VolumePosition.X, Data.VolumePosition.Y);
                 }
                 /*
                 if (!_VolumePosition.HasValue)
@@ -253,10 +266,10 @@ namespace WebAnnotationModel.Objects
 
         }
 
-        private static GridVector2 CenterOfLocationShape(IShape2D shape)
+        private static Vector2 CenterOfLocationShape(IShape2D shape)
         {
             if (shape is ICentroid c)
-                return c.Centroid.ToGridVector2();
+                return c.Centroid.ToVector2();
 
             return shape.BoundingBox.Center;
         }
@@ -268,6 +281,10 @@ namespace WebAnnotationModel.Objects
         public double Z => Section;
 
         private IShape2D _VolumeShape;
+
+        /// <summary>
+        /// Volume-space geometry for the database. Do not drive the viewer from this — transform MosaicShape.
+        /// </summary>
         public IShape2D VolumeShape
         {
             get => _VolumeShape;
@@ -284,7 +301,7 @@ namespace WebAnnotationModel.Objects
 
                 OnPropertyChanging(nameof(VolumePosition));
                 if (value is ICentroid c)
-                    _VolumePosition = c.Centroid.ToGridVector2();
+                    _VolumePosition = c.Centroid.ToVector2();
                 else
                     _VolumePosition = value.BoundingBox.Center;
                 OnPropertyChanged(nameof(VolumePosition));
@@ -299,6 +316,10 @@ namespace WebAnnotationModel.Objects
         }
 
         private IShape2D _MosaicShape;
+
+        /// <summary>
+        /// Authoritative 2D geometry in mosaic/section space. Setter updates Position and Radius.
+        /// </summary>
         public IShape2D MosaicShape
         {
             get => _MosaicShape;
@@ -315,7 +336,7 @@ namespace WebAnnotationModel.Objects
 
                 OnPropertyChanging(nameof(Position));
                 if (value is ICentroid c)
-                    _MosaicPosition = c.Centroid.ToGridVector2();
+                    _MosaicPosition = c.Centroid.ToVector2();
                 else
                     _MosaicPosition = value.BoundingBox.Center;
                 OnPropertyChanged(nameof(Position));
@@ -356,11 +377,11 @@ namespace WebAnnotationModel.Objects
             if (shape is ICircle2D circle)
                 return circle.Radius;
 
-            if (shape is IRectangle rect)
+            if (shape is IRectangle2D rect)
                 return Math.Sqrt(rect.Area);
 
             if (shape is ILineSegment2D line)
-                return GridVector2.Distance(line.A, line.B) / 2.0;
+                return Vector2.Distance(line.A, line.B) / 2.0;
 
             if (shape is IPoint2D point)
                 return 8;
@@ -483,10 +504,33 @@ namespace WebAnnotationModel.Objects
         } 
 
         /// <summary>
+        /// Snapshot of peer location IDs. Uses a sync lock, not <see cref="CopyLinksAsync"/>.
+        /// </summary>
+        public long[] LinksCopy => _Links.CreateCopy();
+
+        /// <summary>
         /// This needs sorting out.  Do we need this as an observable collection or should 
         /// we fire our own collection changed events with Add/Remove link calls.
         /// </summary>
         public ReadOnlyObservableCollection<long> Links => _Links.ReadOnlyObservable;
+
+        /// <summary>
+        /// Replace the local peer-ID set from a server location payload.
+        /// Used by gRPC converters so Location.Links survive hydration.
+        /// </summary>
+        internal async Task SetLinksFromServerAsync(IEnumerable<long> peers)
+        {
+            await _Links.ClearAsync().ConfigureAwait(false);
+            if (peers == null)
+                return;
+
+            foreach (long peer in peers)
+            {
+                if (peer == ID)
+                    continue;
+                await _Links.AddAsync(peer).ConfigureAwait(false);
+            }
+        }
 
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created
@@ -633,12 +677,16 @@ namespace WebAnnotationModel.Objects
         public LocationObj(long id)
         {
             _ID = id;
+            _Attributes = new ConcurrentObservableAttributeSet();
+            _Links = new ConcurrentObservableSet<long>();
         }
 
         public LocationObj(long id, long parentid)
         {
             _ID = id;
             ParentID = parentid;
+            _Attributes = new ConcurrentObservableAttributeSet();
+            _Links = new ConcurrentObservableSet<long>();
         }
 
         public LocationObj(StructureObj parent,
@@ -647,6 +695,8 @@ namespace WebAnnotationModel.Objects
             this.DBAction = DBACTION.INSERT;
             //this._ID = Store.Locations.NextKey();
             this.TypeCode = shapeType;
+            _Attributes = new ConcurrentObservableAttributeSet();
+            _Links = new ConcurrentObservableSet<long>();
 
             if (shapeType == LocationType.CIRCLE)
                 this._Radius = 16;
@@ -659,6 +709,7 @@ namespace WebAnnotationModel.Objects
             if (parent != null)
             {
                 this.ParentID = parent.ID;
+                this.Parent = parent;
             } 
         }
 
@@ -669,15 +720,15 @@ namespace WebAnnotationModel.Objects
             //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
             //this.Data.VolumeShape = volumeShape.ToDbGeometry();
 
+            // Parameter names are mosaic then volume; assignment is swapped. Callers that pass
+            // two different shapes must keep this pairing — do not fix one side only.
             this._VolumeShape = mosaicShape;
             this._MosaicShape = volumeShape; 
         }
 
         /// <summary>
-        /// Creates an instance but does not send change events
+        /// Incomplete (Debug.Assert). Prefer Update(ILocation) or the gRPC converter.
         /// </summary>
-        /// <param name="newData"></param>
-        /// <returns></returns>
         internal static async Task<LocationObj> CreateFromServerAsync(ILocation newData)
         {
             LocationObj obj = new LocationObj(newData.ID)
@@ -707,9 +758,8 @@ namespace WebAnnotationModel.Objects
         }
 
         /// <summary>
-        /// Override and write each property individually so we send specific property changed events
+        /// Server merge: sets DBAction.NONE and replaces attributes/links/WKT. Do not call from UI edit paths.
         /// </summary>
-        /// <param name="newdata"></param>
         internal override async Task Update(ILocation newdata)
         {
             Debug.Assert(this.ID == newdata.ID);

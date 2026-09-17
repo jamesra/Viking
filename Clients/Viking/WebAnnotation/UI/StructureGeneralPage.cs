@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -15,51 +15,47 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 1)]
     public partial class StructureGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
-
-        BindingList<WebAnnotationModel.ObjAttribute> ListTags = null;
+        private Structure Obj;
+        private BindingList<WebAnnotationModel.Objects.ObjAttribute>? ListTags = null;
 
         public StructureGeneralPage()
         {
             InitializeComponent();
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
 
-            this.textID.Text = this.Obj.ID.ToString();
-            this.textLabel.Text = this.Obj.InfoLabel;
-            this.linkType.Text = this.Obj.Type.Name;
+            textID.Text = Obj.ID.ToString();
+            textLabel.Text = Obj.InfoLabel;
+            linkType.Text = Obj.Type.Name;
 
-            this.ListTags = new BindingList<WebAnnotationModel.ObjAttribute>(new List<ObjAttribute>(this.Obj.Attributes));
+            ListTags = new BindingList<WebAnnotationModel.Objects.ObjAttribute>([.. Obj.Attributes]);
 
-            this.dataGridTags.DataSource = this.ListTags;
+            dataGridTags.DataSource = ListTags;
         }
 
 
 
         protected override void OnSaveChanges()
         {
-            this.Obj.InfoLabel = this.textLabel.Text;
+            Obj.InfoLabel = textLabel.Text;
 
-            RemoveBlankAttributesFromList(this.ListTags);
+            RemoveBlankAttributesFromList(ListTags);
 
-            this.Obj.Attributes = this.ListTags;
+            Obj.Attributes = ListTags;
         }
 
-        private static void RemoveBlankAttributesFromList(BindingList<WebAnnotationModel.ObjAttribute> list)
+        private static void RemoveBlankAttributesFromList(BindingList<WebAnnotationModel.Objects.ObjAttribute> list)
         {
             for (int i = list.Count - 1; i >= 0; i--)
             {
-                WebAnnotationModel.ObjAttribute item = list[i];
-                if (item.Name == null)
+                WebAnnotationModel.Objects.ObjAttribute item = list[i];
+                if (item.Name is null)
                 {
                     list.RemoveAt(i);
                     continue;
@@ -90,11 +86,13 @@ namespace WebAnnotation.UI
         {
             if (e.KeyCode == Keys.Delete)
             {
-                List<int> iDeleteRowList = new List<int>(dataGridTags.SelectedCells.Count);
+                List<int> iDeleteRowList = new(dataGridTags.SelectedCells.Count);
                 foreach (DataGridViewCell cell in dataGridTags.SelectedCells)
                 {
                     if (iDeleteRowList.Contains(cell.RowIndex))
+                    {
                         continue;
+                    }
 
                     iDeleteRowList.Add(cell.RowIndex);
                 }
@@ -106,7 +104,9 @@ namespace WebAnnotation.UI
                 {
                     //Don't delete the new row, it is an invalid operation.
                     if (dataGridTags.Rows[iDelRow].IsNewRow)
+                    {
                         continue;
+                    }
 
                     dataGridTags.Rows.RemoveAt(iDelRow);
                 }
@@ -129,7 +129,9 @@ namespace WebAnnotation.UI
 
             //Do not allow two tags with the same name
             if (e.ColumnIndex > 0)
+            {
                 return;
+            }
 
             //It is OK to leave a blank, and have multiple blanks. 
             //Blanks/Nulls are removed when the page is saved
@@ -141,34 +143,31 @@ namespace WebAnnotation.UI
             for (int i = 0; i < dataGridTags.Rows.Count; i++)
             {
                 if (i == e.RowIndex)
+                {
                     continue;
+                }
 
-                string compareValue = dataGridTags.Rows[i].Cells[0].Value as string;
-                if (compareValue == null)
+                if (dataGridTags.Rows[i].Cells[0].Value is not string compareValue)
+                {
                     continue;
+                }
 
                 compareValue = compareValue.ToLower();
 
                 if (compareValue == dataval)
                 {
                     e.Cancel = true;
-                    this.dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = "Duplicate tag names are not allowed";
+                    dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = "Duplicate tag names are not allowed";
                     return;
                 }
             }
 
-            this.dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = null;
+            dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = null;
             e.Cancel = false;
         }
 
-        private void dataGridTags_CellErrorTextChanged(object sender, DataGridViewCellEventArgs e)
-        {
-            this.labelDataGridError.Text = this.dataGridTags.Rows[e.RowIndex].Cells[e.ColumnIndex].ErrorText;
-        }
+        private void DataGridTags_CellErrorTextChanged(object sender, DataGridViewCellEventArgs e) => labelDataGridError.Text = dataGridTags.Rows[e.RowIndex].Cells[e.ColumnIndex].ErrorText;
 
-        private void dataGridTags_RowErrorTextChanged(object sender, DataGridViewRowEventArgs e)
-        {
-            this.labelDataGridError.Text = e.Row.ErrorText;
-        }
+        private void DataGridTags_RowErrorTextChanged(object sender, DataGridViewRowEventArgs e) => labelDataGridError.Text = e.Row.ErrorText;
     }
 }

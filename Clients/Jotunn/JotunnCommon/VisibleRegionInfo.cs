@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 
 namespace Jotunn.Common
 {
@@ -56,15 +57,15 @@ namespace Jotunn.Common
             return other.Downsample == Downsample && other.VisibleRect == VisibleRect;
         }
 
-        private int? _HashCode = new int?();
         public override int GetHashCode()
         {
-            if (_HashCode.HasValue == false)
+            unchecked
             {
-                _HashCode = new int?(VisibleRect.GetHashCode());
+                int hash = 17;
+                hash = hash * 23 + VisibleRect.GetHashCode();
+                hash = hash * 23 + Downsample.GetHashCode();
+                return hash;
             }
-
-            return _HashCode.Value;
         }
     }
 }

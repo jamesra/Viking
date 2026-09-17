@@ -24,9 +24,9 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         string ILocation.TagsXml { get => this.Attributes; set => this.Attributes = value;}
         LocationType ILocation.TypeCode { get => (LocationType)(int)this.TypeCode; set => TypeCode = (Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationType)(int)value;}
 
-        GridVector3 ILocation.VolumePosition { get => this.VolumePosition; }
+        Vector3 ILocation.VolumePosition { get => this.VolumePosition; }
 
-        GridVector3 ILocation.MosaicPosition { get => this.MosaicPosition; }
+        Vector3 ILocation.MosaicPosition { get => this.MosaicPosition; }
 
         DateTime ILocation.Created { get => Created.ToDateTime(); }
 

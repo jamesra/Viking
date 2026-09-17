@@ -14,13 +14,14 @@ namespace AnnotationVizLib
 
         }
 
-        static public MotifJSONView ToJSON(MotifGraph graph)
+        public static MotifJSONView ToJSON(MotifGraph graph)
         {
             int edgeCount = 0;
-            MotifJSONView JSONView = new MotifJSONView();
-
-            JSONView.nodesJSON = new JArray();
-            JSONView.edgesJSON = new JArray();
+            MotifJSONView JSONView = new()
+            {
+                nodesJSON = [],
+                edgesJSON = []
+            };
 
             foreach (MotifNode node in graph.Nodes.Values)
             {
@@ -38,7 +39,7 @@ namespace AnnotationVizLib
 
             foreach (MotifEdge edge in graph.Edges.Values)
             {
-                if (edge.SourceNodeKey == null || edge.TargetNodeKey == null)
+                if (edge.SourceNodeKey is null || edge.TargetNodeKey is null)
                     continue;
 
                 MotifNode SourceNode = graph.Nodes[edge.SourceNodeKey];
@@ -77,15 +78,13 @@ namespace AnnotationVizLib
 
         public void SaveJSON(string JSONFileFullPath)
         {
-            using (FileStream fl = new FileStream(JSONFileFullPath, FileMode.Create, FileAccess.Write))
+            using FileStream fl = new(JSONFileFullPath, FileMode.Create, FileAccess.Write);
+            using (StreamWriter write = new(fl))
             {
-                using (StreamWriter write = new StreamWriter(fl))
-                {
-                    write.Write(this.ToString());
-                    write.Close();
-                }
-                fl.Close();
+                write.Write(this.ToString());
+                write.Close();
             }
+            fl.Close();
         }
     }
 }

@@ -80,14 +80,7 @@ namespace TriangleNet
             this.goodAngle = Math.Cos(this.MinAngle * Math.PI / 180.0);
             this.maxGoodAngle = Math.Cos(this.MaxAngle * Math.PI / 180.0);
 
-            if (this.goodAngle == 1.0)
-            {
-                this.offconstant = 0.0;
-            }
-            else
-            {
-                this.offconstant = 0.475 * Math.Sqrt((1.0 + this.goodAngle) / (1.0 - this.goodAngle));
-            }
+            this.offconstant = this.goodAngle == 1.0 ? 0.0 : 0.475 * Math.Sqrt((1.0 + this.goodAngle) / (1.0 - this.goodAngle));
 
             this.goodAngle *= this.goodAngle;
         }
@@ -108,7 +101,7 @@ namespace TriangleNet
         /// </summary>
         public bool Quality
         {
-            get { return quality; }
+            get => quality;
             set
             {
                 quality = value;
@@ -124,7 +117,7 @@ namespace TriangleNet
         /// </summary>
         public double MinAngle
         {
-            get { return minAngle; }
+            get => minAngle;
             set { minAngle = value; Update(); }
         }
 
@@ -133,7 +126,7 @@ namespace TriangleNet
         /// </summary>
         public double MaxAngle
         {
-            get { return maxAngle; }
+            get => maxAngle;
             set { maxAngle = value; Update(); }
         }
 
@@ -142,7 +135,7 @@ namespace TriangleNet
         /// </summary>
         public double MaxArea
         {
-            get { return maxArea; }
+            get => maxArea;
             set
             {
                 maxArea = value;
@@ -155,8 +148,8 @@ namespace TriangleNet
         /// </summary>
         public bool VarArea
         {
-            get { return varArea; }
-            set { varArea = value; }
+            get => varArea;
+            set => varArea = value;
         }
 
         /// <summary>
@@ -164,8 +157,8 @@ namespace TriangleNet
         /// </summary>
         public bool Poly
         {
-            get { return poly; }
-            set { poly = value; }
+            get => poly;
+            set => poly = value;
         }
 
         /// <summary>
@@ -173,8 +166,8 @@ namespace TriangleNet
         /// </summary>
         public Func<ITriangle, double, bool> UserTest
         {
-            get { return usertest; }
-            set { usertest = value; }
+            get => usertest;
+            set => usertest = value;
         }
 
         /// <summary>
@@ -182,8 +175,8 @@ namespace TriangleNet
         /// </summary>
         public bool Convex
         {
-            get { return convex; }
-            set { convex = value; }
+            get => convex;
+            set => convex = value;
         }
 
         /// <summary>
@@ -191,8 +184,8 @@ namespace TriangleNet
         /// </summary>
         public bool ConformingDelaunay
         {
-            get { return conformDel; }
-            set { conformDel = value; }
+            get => conformDel;
+            set => conformDel = value;
         }
 
         /// <summary>
@@ -205,7 +198,7 @@ namespace TriangleNet
         /// </remarks>
         public int NoBisect
         {
-            get { return noBisect; }
+            get => noBisect;
             set
             {
                 noBisect = value;
@@ -221,8 +214,8 @@ namespace TriangleNet
         /// </summary>
         public bool UseBoundaryMarkers
         {
-            get { return boundaryMarkers; }
-            set { boundaryMarkers = value; }
+            get => boundaryMarkers;
+            set => boundaryMarkers = value;
         }
 
         /// <summary>
@@ -230,8 +223,8 @@ namespace TriangleNet
         /// </summary>
         public bool NoHoles
         {
-            get { return noHoles; }
-            set { noHoles = value; }
+            get => noHoles;
+            set => noHoles = value;
         }
 
         /// <summary>
@@ -239,8 +232,8 @@ namespace TriangleNet
         /// </summary>
         public bool Jettison
         {
-            get { return jettison; }
-            set { jettison = value; }
+            get => jettison;
+            set => jettison = value;
         }
 
         #endregion

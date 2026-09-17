@@ -1,35 +1,33 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
     [PropertyPage(typeof(StructureType), 3)]
     public partial class StructureTypeStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        StructureType Obj = null;
-
-        bool listLoaded = false;
+        private StructureType? Obj = null;
+        private bool listLoaded = false;
 
         public StructureTypeStructuresPage()
         {
             InitializeComponent();
 
-            this.Title = "Structures";
+            Title = "Structures";
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as StructureType;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as StructureType;
+            Debug.Assert(Obj != null);
         }
 
         /// <summary>
@@ -37,26 +35,26 @@ namespace WebAnnotation.UI
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void listStructures_VisibleChanged(object sender, EventArgs e)
+        private async void listStructures_VisibleChanged(object sender, EventArgs e)
         {
             if (!listLoaded)
             {
-                this.UseWaitCursor = true;
+                UseWaitCursor = true;
 
-                ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(this.Obj.ID);
+                ICollection<StructureObj> structureObjs = await Store.Structures.GetStructuresOfType(Obj.ID);
 
-                List<Structure> structures = new List<Structure>(structureObjs.Count);
+                List<Structure> structures = new(structureObjs.Count);
 
                 foreach (StructureObj s in structureObjs)
                 {
                     structures.Add(new Structure(s));
                 }
 
-                listStructures.SetStructures(structures.ToArray());
+                listStructures.SetStructures([.. structures]);
 
                 listLoaded = true;
 
-                this.UseWaitCursor = false;
+                UseWaitCursor = false;
             }
 
         }

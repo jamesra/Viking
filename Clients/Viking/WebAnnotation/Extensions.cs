@@ -1,10 +1,13 @@
-﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
+using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using WebAnnotationModel.Objects;
+using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation
 {
@@ -30,21 +33,14 @@ namespace WebAnnotation
 
     public static class KeysExtensions
     {
-        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Control ||
-               ModifierKeys == System.Windows.Forms.Keys.Shift;
-        }
+#if NETFRAMEWORK
+        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys keys) =>
+            keys == System.Windows.Forms.Keys.Control || keys == System.Windows.Forms.Keys.Shift;
 
-        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Shift;
-        }
+        public static bool ShiftPressed(this System.Windows.Forms.Keys keys) => keys == System.Windows.Forms.Keys.Shift;
 
-        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Control;
-        }
+        public static bool CtrlPressed(this System.Windows.Forms.Keys keys) => keys == System.Windows.Forms.Keys.Control;
+#endif
     }
 
     public static class HitTestResultExtensions
@@ -63,14 +59,16 @@ namespace WebAnnotation
         public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(this ICollection<HitTestResult> listHitTestObjects, int SectionNumber)
         {
             if (listHitTestObjects.Count == 0)
+            {
                 return null;
+            }
 
-            List<HitTestResult> listLocations = listHitTestObjects.Where(l => l.obj as IViewLocation != null).ToList();
-            List<HitTestResult> listLocationsOnSection = listLocations.Where(l => l.Z == SectionNumber).ToList();
-            List<HitTestResult> listLocationsOnSectionContainsPoint = listLocationsOnSection.Where(l => l.Distance <= 1.0).ToList();
-            List<HitTestResult> listStructureLinks = listHitTestObjects.Where(h => h.obj as IViewStructureLink != null).ToList();
+            List<HitTestResult> listLocations = [.. listHitTestObjects.Where(l => l.obj as IViewLocation != null)];
+            List<HitTestResult> listLocationsOnSection = [.. listLocations.Where(l => l.Z == SectionNumber)];
+            List<HitTestResult> listLocationsOnSectionContainsPoint = [.. listLocationsOnSection.Where(l => l.Distance <= 1.0)];
+            List<HitTestResult> listStructureLinks = [.. listHitTestObjects.Where(h => h.obj as IViewStructureLink != null)];
 
-            List<HitTestResult> listLocationsOnSectionContainingPointAndStructureLinks = new List<HitTestResult>(listLocationsOnSectionContainsPoint);
+            List<HitTestResult> listLocationsOnSectionContainingPointAndStructureLinks = [.. listLocationsOnSectionContainsPoint];
             listLocationsOnSectionContainingPointAndStructureLinks.AddRange(listStructureLinks);
 
             if (listLocationsOnSectionContainingPointAndStructureLinks.Count > 0)
@@ -79,7 +77,7 @@ namespace WebAnnotation
                 return listLocationsOnSectionContainingPointAndStructureLinks.First();
             }
 
-            List<HitTestResult> listObjectsOnAdjacentSection = listLocations.Where(l => l.Z != SectionNumber).ToList();
+            List<HitTestResult> listObjectsOnAdjacentSection = [.. listLocations.Where(l => l.Z != SectionNumber)];
             if (listObjectsOnAdjacentSection.Count > 0)
             {
                 listObjectsOnAdjacentSection.Sort(new HitTest_Distance_Sorter());
@@ -101,7 +99,7 @@ namespace WebAnnotation
             */
 
             //OK, no locations or structure links, return what is left by distance
-            List<HitTestResult> remaining = new List<HitTestResult>(listHitTestObjects);
+            List<HitTestResult> remaining = [.. listHitTestObjects];
             remaining.Sort(new HitTest_Z_Distance_Sorter());
             return remaining.First();
         }
@@ -112,16 +110,17 @@ namespace WebAnnotation
         /// <param name="listHitTestObjects"></param>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
+        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, Vector2 WorldPos)
         {
-            List<HitTestResult> nestedContainers = listHitTestObjects.Select(lc =>
+            List<HitTestResult> nestedContainers = [.. listHitTestObjects.Select(lc =>
                  {
-                     ICanvasViewContainer container = lc.obj as ICanvasViewContainer;
-                     if (container == null)
+                     if (lc.obj is not ICanvasViewContainer container)
+                     {
                          return lc;
+                     }
 
                      ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
-                     if (nestedObj == null)
+                     if (nestedObj is null)
                      {
                          return null;
                      }
@@ -134,85 +133,69 @@ namespace WebAnnotation
                          return lc;
                      }
 
-                 }).ToList();
+                 })];
 
-            return nestedContainers.ToList();
+            return [.. nestedContainers];
         }
     }
 
-    public static class GridRectangleExtensions
+    public static class RectangleExtensions
     {
-        public static GridRectangle ToMosaicSpace(this in GridRectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        public static Rectangle ToMosaicSpace(this in Rectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
-            GridVector2[] MosaicCorners = mapper.VolumeToSection(new GridVector2[] { volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight });
+            Vector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
 
             double MinX = MosaicCorners.Min(p => p.X);
             double MaxX = MosaicCorners.Max(p => p.X);
             double MinY = MosaicCorners.Min(p => p.Y);
             double MaxY = MosaicCorners.Max(p => p.Y);
 
-            return new GridRectangle(MinX, MaxX, MinY, MaxY);
+            return new Rectangle(MinX, MaxX, MinY, MaxY);
         }
     }
 
     public static class AnnotationExtensions
     {
-        private static LocationType StringToLocationType(string annotationType)
+        private static Viking.AnnotationServiceTypes.Interfaces.LocationType StringToLocationType(string annotationType)
         {
-            switch (annotationType)
+            return annotationType switch
             {
-                case "Circle":
-                    return LocationType.CIRCLE;
-                case "ClosedCurve":
-                    return LocationType.CLOSEDCURVE;
-                case "OpenCurve":
-                    return LocationType.OPENCURVE;
-                case "Polygon":
-                    return LocationType.POLYGON;
-                case "Polyline":
-                    return LocationType.POLYLINE;
-                case "Point":
-                    return LocationType.POINT;
-                case "Ellipse":
-                    return LocationType.ELLIPSE;
-                case "CurvePolygon":
-                    return LocationType.CURVEPOLYGON;
-                default:
-                    return LocationType.CIRCLE;
-            }
-
+                "Circle" => Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE,
+                "ClosedCurve" => Viking.AnnotationServiceTypes.Interfaces.LocationType.CLOSEDCURVE,
+                "OpenCurve" => Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE,
+                "Polygon" => Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON,
+                "Polyline" => Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE,
+                "Point" => Viking.AnnotationServiceTypes.Interfaces.LocationType.POINT,
+                "Ellipse" => Viking.AnnotationServiceTypes.Interfaces.LocationType.ELLIPSE,
+                "CurvePolygon" => Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON,
+                _ => Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE,
+            };
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
-        {
-            return StringToLocationType(command.AnnotationType);
-        }
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command) => StringToLocationType(command.AnnotationType);
 
-        public static LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
-        {
-            return StringToLocationType(command.AnnotationType);
-        }
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
 
-        public static void SubscribeToPropertyChangeEvents(this LocationObj loc, System.Windows.IWeakEventListener listener)
+        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.LocationObj loc, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(loc, listener);
         }
 
-        public static void UnsubscribeToPropertyChangeEvents(this LocationObj loc, System.Windows.IWeakEventListener listener)
+        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.LocationObj loc, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(loc, listener);
         }
 
-        public static void SubscribeToPropertyChangeEvents(this StructureObj s, System.Windows.IWeakEventListener listener)
+        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.StructureObj s, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(s, listener);
         }
 
-        public static void UnsubscribeToPropertyChangeEvents(this StructureObj s, System.Windows.IWeakEventListener listener)
+        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.StructureObj s, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(s, listener);
@@ -221,18 +204,26 @@ namespace WebAnnotation
 
     internal static class LocationObjExtensions
     {
-        public static double DistanceToPoint3D(this LocationObj l, GridVector3 origin)
+        public static double DistanceToPoint3D(this WebAnnotationModel.Objects.LocationObj l, Vector3 origin)
         {
-            Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
-            if (mapper == null)
+            Viking.VolumeModel.IVolumeToSectionTransform mapper =
+                AnnotationBootstrap.Transforms?.GetSectionToVolumeTransform((int)l.Z)
+#if NETFRAMEWORK
+                ?? Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z)
+#endif
+                ;
+            if (mapper is null)
+            {
                 return double.MaxValue;
+            }
 
-            GridVector2 vPos;
-            if (!mapper.TrySectionToVolume(l.Position, out vPos))
+            if (!mapper.TrySectionToVolume(l.Position, out Vector2 vPos))
+            {
                 return double.MaxValue;
+            }
 
-            GridVector3 p = new GridVector3(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
-            return GridVector3.Distance(p, origin);
+            Vector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
+            return Vector3.Distance(p, origin);
         }
 
 
@@ -244,7 +235,7 @@ namespace WebAnnotation
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this WebAnnotationModel.Objects.LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             try
             {
@@ -256,7 +247,7 @@ namespace WebAnnotation
             }
         }
 
-        public static bool IsLastEditedAnnotation(this LocationObj loc)
+        public static bool IsLastEditedAnnotation(this WebAnnotationModel.Objects.LocationObj loc)
         {
             if (!Global.LastEditedAnnotationID.HasValue)
             {
@@ -268,14 +259,91 @@ namespace WebAnnotation
 
     }
 
+    /// <summary>
+    /// Extensions for generating representative points from annotations for segmentation background prompts.
+    /// </summary>
+    public static class AnnotationPointExtensions
+    {
+        /// <summary>
+        /// Returns representative points for a collection of annotations.
+        /// For polygons: centroid if inside polygon, else skipped. For lines/points: vertices. For circles/ellipses: center.
+        /// </summary>
+        /// <param name="annotations">Annotations to extract points from</param>
+        /// <returns>List of points in section/mosaic coordinates</returns>
+        public static IReadOnlyList<Vector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
+        {
+            if (annotations is null)
+                return [];
 
+            List<Vector2> result = [];
+            foreach (LocationObj loc in annotations)
+            {
+                if (loc?.MosaicShape is null)
+                    continue;
+
+                SqlGeometry shape = loc.MosaicShape.ToSqlGeometry();
+                LocationType typeCode = loc.TypeCode;
+
+                switch (typeCode)
+                {
+                    case LocationType.POLYGON:
+                    case LocationType.CURVEPOLYGON:
+                    case LocationType.CLOSEDCURVE:
+                        Vector2? polygonPoint = TryGetPolygonRepresentativePoint(shape);
+                        if (polygonPoint.HasValue)
+                            result.Add(polygonPoint.Value);
+                        break;
+                    case LocationType.POLYLINE:
+                    case LocationType.OPENCURVE:
+                        Vector2[] linePoints = shape.ToPoints();
+                        if (linePoints?.Length > 0)
+                            result.AddRange(linePoints);
+                        break;
+                    case LocationType.POINT:
+                        result.Add(loc.Position);
+                        break;
+                    case LocationType.CIRCLE:
+                    case LocationType.ELLIPSE:
+                        result.Add(shape.BoundingBox().Center);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return result;
+        }
+
+        private static Vector2? TryGetPolygonRepresentativePoint(SqlGeometry shape)
+        {
+            try
+            {
+                if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                    return null;
+
+                Polygon polygon = shape.ToPolygon();
+                Vector2 centroid = polygon.Centroid;
+                return polygon.Contains(centroid) ? centroid : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+    }
 
     public static class LINQLikeExtensions
     {
         public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (action == null) throw new ArgumentNullException("action");
+            if (source is null)
+            {
+                throw new ArgumentNullException("source");
+            }
+
+            if (action is null)
+            {
+                throw new ArgumentNullException("action");
+            }
 
             foreach (T item in source)
             {
@@ -285,8 +353,15 @@ namespace WebAnnotation
 
         public static void ForEach<T>(this IEnumerable<T> source, Action<T, int> action)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (action == null) throw new ArgumentNullException("action");
+            if (source is null)
+            {
+                throw new ArgumentNullException("source");
+            }
+
+            if (action is null)
+            {
+                throw new ArgumentNullException("action");
+            }
 
             int i = 0;
             foreach (T item in source)
@@ -298,8 +373,15 @@ namespace WebAnnotation
 
         public static void ForEach<T>(this T[] source, Action<T, int> action)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (action == null) throw new ArgumentNullException("action");
+            if (source is null)
+            {
+                throw new ArgumentNullException("source");
+            }
+
+            if (action is null)
+            {
+                throw new ArgumentNullException("action");
+            }
 
             for (int i = 0; i < source.Length; i++)
             {

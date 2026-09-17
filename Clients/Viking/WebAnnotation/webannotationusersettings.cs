@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
+namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
     using System;
     using System.Collections;
     using System.Collections.Generic;
@@ -63,18 +63,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public IList<Value> Value {
             get {
-                if ((this.ValueField == null)) {
-                    this.ValueField = new XTypedList<Value>(this, LinqToXsdTypeManager.Instance, XName.Get("Value", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                if ((this.ValueField is null)) {
+                    this.ValueField = new XTypedList<Value>(this, LinqToXsdTypeManager.Instance, XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 }
                 return this.ValueField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.ValueField = null;
                 }
                 else {
-                    if ((this.ValueField == null)) {
-                        this.ValueField = XTypedList<Value>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Value", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ValueField is null)) {
+                        this.ValueField = XTypedList<Value>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     else {
                         XTypedServices.SetList<Value>(this.ValueField, value);
@@ -93,18 +93,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public IList<Action> Action {
             get {
-                if ((this.ActionField == null)) {
-                    this.ActionField = new XTypedList<Action>(this, LinqToXsdTypeManager.Instance, XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                if ((this.ActionField is null)) {
+                    this.ActionField = new XTypedList<Action>(this, LinqToXsdTypeManager.Instance, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 }
                 return this.ActionField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.ActionField = null;
                 }
                 else {
-                    if ((this.ActionField == null)) {
-                        this.ActionField = XTypedList<Action>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ActionField is null)) {
+                        this.ActionField = XTypedList<Action>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     else {
                         XTypedServices.SetList<Action>(this.ActionField, value);
@@ -123,18 +123,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public IList<Variable> Variable {
             get {
-                if ((this.VariableField == null)) {
-                    this.VariableField = new XTypedList<Variable>(this, LinqToXsdTypeManager.Instance, XName.Get("Variable", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                if ((this.VariableField is null)) {
+                    this.VariableField = new XTypedList<Variable>(this, LinqToXsdTypeManager.Instance, XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 }
                 return this.VariableField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.VariableField = null;
                 }
                 else {
-                    if ((this.VariableField == null)) {
-                        this.VariableField = XTypedList<Variable>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Variable", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.VariableField is null)) {
+                        this.VariableField = XTypedList<Variable>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     else {
                         XTypedServices.SetList<Variable>(this.VariableField, value);
@@ -153,7 +153,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -200,9 +200,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         private static void BuildElementDictionary() {
-            localElementDictionary.Add(XName.Get("Value", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Value));
-            localElementDictionary.Add(XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Action));
-            localElementDictionary.Add(XName.Get("Variable", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Variable));
+            localElementDictionary.Add(XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(Value));
+            localElementDictionary.Add(XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(Action));
+            localElementDictionary.Add(XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(Variable));
         }
         
         ContentModelEntity IXMetaData.GetContentModel() {
@@ -274,7 +274,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("Value", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -383,7 +383,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("Variable", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -507,7 +507,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -560,6 +560,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
     
     public partial class ToggleStructureTagCommandAction : XTypedElement, IXMetaData {
         
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private static bool SetValueToUsernameDefaultValue = System.Xml.XmlConvert.ToBoolean("0");
+        
          public static explicit operator ToggleStructureTagCommandAction(XElement xe) { return XTypedServices.ToXTypedElement<ToggleStructureTagCommandAction>(xe,LinqToXsdTypeManager.Instance as ILinqToXsdTypeManager); }
         
         public ToggleStructureTagCommandAction() {
@@ -597,6 +600,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         
         /// <summary>
         /// <para>
+        /// If @Username is the value the current username is used as the value
+        /// </para>
+        /// <para>
         /// Occurrence: optional
         /// </para>
         /// </summary>
@@ -610,10 +616,28 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
         }
         
+        /// <summary>
+        /// <para>
+        /// If true the name of the last modifier of the object will be updated when the tag is applied
+        /// </para>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public bool SetValueToUsername {
+            get {
+                XAttribute x = this.Attribute(XName.Get("SetValueToUsername", ""));
+                return XTypedServices.ParseValue<bool>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Boolean).Datatype, SetValueToUsernameDefaultValue);
+            }
+            set {
+                this.SetAttribute(XName.Get("SetValueToUsername", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Boolean).Datatype);
+            }
+        }
+        
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -703,6 +727,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         
         /// <summary>
         /// <para>
+        /// If @Username is the value the current username is used as the value
+        /// </para>
+        /// <para>
         /// Occurrence: optional
         /// </para>
         /// </summary>
@@ -719,7 +746,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -795,7 +822,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -886,7 +913,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("ChangeLocationAnnotationTypeAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -954,7 +981,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         
         static Action() {
             BuildElementDictionary();
-            contentModel = new SequenceContentModelEntity(new NamedContentModelEntity(XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd")));
+            contentModel = new SequenceContentModelEntity(new NamedContentModelEntity(XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd")));
         }
         
         /// <summary>
@@ -975,11 +1002,11 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public Parameters Parameters {
             get {
-                XElement x = this.GetElement(XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                XElement x = this.GetElement(XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 return ((Parameters)(x));
             }
             set {
-                this.SetElement(XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), value);
+                this.SetElement(XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), value);
             }
         }
         
@@ -1024,7 +1051,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         public System.Nullable<int> Index {
             get {
                 XAttribute x = this.Attribute(XName.Get("Index", ""));
-                if ((x == null)) {
+                if ((x is null)) {
                     return null;
                 }
                 return XTypedServices.ParseValue<int>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Int).Datatype);
@@ -1062,7 +1089,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -1109,7 +1136,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         private static void BuildElementDictionary() {
-            localElementDictionary.Add(XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Parameters));
+            localElementDictionary.Add(XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(Parameters));
         }
         
         ContentModelEntity IXMetaData.GetContentModel() {
@@ -1221,7 +1248,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -1289,7 +1316,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         
         static UserSettings() {
             BuildElementDictionary();
-            contentModel = new SequenceContentModelEntity(new NamedContentModelEntity(XName.Get("Actions", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd")), new NamedContentModelEntity(XName.Get("Shortcuts", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd")));
+            contentModel = new SequenceContentModelEntity(new NamedContentModelEntity(XName.Get("Actions", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd")), new NamedContentModelEntity(XName.Get("Shortcuts", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd")));
         }
         
         /// <summary>
@@ -1310,11 +1337,11 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public ActionsLocalType Actions {
             get {
-                XElement x = this.GetElement(XName.Get("Actions", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                XElement x = this.GetElement(XName.Get("Actions", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 return ((ActionsLocalType)(x));
             }
             set {
-                this.SetElement(XName.Get("Actions", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), value);
+                this.SetElement(XName.Get("Actions", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), value);
             }
         }
         
@@ -1328,11 +1355,11 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public ShortcutsLocalType Shortcuts {
             get {
-                XElement x = this.GetElement(XName.Get("Shortcuts", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                XElement x = this.GetElement(XName.Get("Shortcuts", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 return ((ShortcutsLocalType)(x));
             }
             set {
-                this.SetElement(XName.Get("Shortcuts", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), value);
+                this.SetElement(XName.Get("Shortcuts", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), value);
             }
         }
         
@@ -1346,7 +1373,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
-                return XName.Get("UserSettings", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                return XName.Get("UserSettings", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
             }
         }
         
@@ -1393,8 +1420,8 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         private static void BuildElementDictionary() {
-            localElementDictionary.Add(XName.Get("Actions", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ActionsLocalType));
-            localElementDictionary.Add(XName.Get("Shortcuts", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ShortcutsLocalType));
+            localElementDictionary.Add(XName.Get("Actions", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(ActionsLocalType));
+            localElementDictionary.Add(XName.Get("Shortcuts", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(ShortcutsLocalType));
         }
         
         ContentModelEntity IXMetaData.GetContentModel() {
@@ -1453,18 +1480,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<Action> Action {
                 get {
-                    if ((this.ActionField == null)) {
-                        this.ActionField = new XTypedList<Action>(this, LinqToXsdTypeManager.Instance, XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ActionField is null)) {
+                        this.ActionField = new XTypedList<Action>(this, LinqToXsdTypeManager.Instance, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ActionField = null;
                     }
                     else {
-                        if ((this.ActionField == null)) {
-                            this.ActionField = XTypedList<Action>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.ActionField is null)) {
+                            this.ActionField = XTypedList<Action>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<Action>(this.ActionField, value);
@@ -1483,18 +1510,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<CreateStructureCommandAction> CreateStructureCommandAction {
                 get {
-                    if ((this.CreateStructureCommandActionField == null)) {
-                        this.CreateStructureCommandActionField = new XTypedList<CreateStructureCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.CreateStructureCommandActionField is null)) {
+                        this.CreateStructureCommandActionField = new XTypedList<CreateStructureCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.CreateStructureCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.CreateStructureCommandActionField = null;
                     }
                     else {
-                        if ((this.CreateStructureCommandActionField == null)) {
-                            this.CreateStructureCommandActionField = XTypedList<CreateStructureCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.CreateStructureCommandActionField is null)) {
+                            this.CreateStructureCommandActionField = XTypedList<CreateStructureCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<CreateStructureCommandAction>(this.CreateStructureCommandActionField, value);
@@ -1513,18 +1540,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ToggleStructureTagCommandAction> ToggleStructureTagCommandAction {
                 get {
-                    if ((this.ToggleStructureTagCommandActionField == null)) {
-                        this.ToggleStructureTagCommandActionField = new XTypedList<ToggleStructureTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ToggleStructureTagCommandActionField is null)) {
+                        this.ToggleStructureTagCommandActionField = new XTypedList<ToggleStructureTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ToggleStructureTagCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ToggleStructureTagCommandActionField = null;
                     }
                     else {
-                        if ((this.ToggleStructureTagCommandActionField == null)) {
-                            this.ToggleStructureTagCommandActionField = XTypedList<ToggleStructureTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.ToggleStructureTagCommandActionField is null)) {
+                            this.ToggleStructureTagCommandActionField = XTypedList<ToggleStructureTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<ToggleStructureTagCommandAction>(this.ToggleStructureTagCommandActionField, value);
@@ -1543,18 +1570,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ToggleLocationTagCommandAction> ToggleLocationTagCommandAction {
                 get {
-                    if ((this.ToggleLocationTagCommandActionField == null)) {
-                        this.ToggleLocationTagCommandActionField = new XTypedList<ToggleLocationTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ToggleLocationTagCommandActionField is null)) {
+                        this.ToggleLocationTagCommandActionField = new XTypedList<ToggleLocationTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ToggleLocationTagCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ToggleLocationTagCommandActionField = null;
                     }
                     else {
-                        if ((this.ToggleLocationTagCommandActionField == null)) {
-                            this.ToggleLocationTagCommandActionField = XTypedList<ToggleLocationTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.ToggleLocationTagCommandActionField is null)) {
+                            this.ToggleLocationTagCommandActionField = XTypedList<ToggleLocationTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<ToggleLocationTagCommandAction>(this.ToggleLocationTagCommandActionField, value);
@@ -1573,18 +1600,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ToggleLocationTerminalCommandAction> ToggleLocationTerminalCommandAction {
                 get {
-                    if ((this.ToggleLocationTerminalCommandActionField == null)) {
-                        this.ToggleLocationTerminalCommandActionField = new XTypedList<ToggleLocationTerminalCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ToggleLocationTerminalCommandActionField is null)) {
+                        this.ToggleLocationTerminalCommandActionField = new XTypedList<ToggleLocationTerminalCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ToggleLocationTerminalCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ToggleLocationTerminalCommandActionField = null;
                     }
                     else {
-                        if ((this.ToggleLocationTerminalCommandActionField == null)) {
-                            this.ToggleLocationTerminalCommandActionField = XTypedList<ToggleLocationTerminalCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.ToggleLocationTerminalCommandActionField is null)) {
+                            this.ToggleLocationTerminalCommandActionField = XTypedList<ToggleLocationTerminalCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<ToggleLocationTerminalCommandAction>(this.ToggleLocationTerminalCommandActionField, value);
@@ -1603,18 +1630,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ChangeLocationAnnotationTypeAction> ChangeLocationAnnotationTypeAction {
                 get {
-                    if ((this.ChangeLocationAnnotationTypeActionField == null)) {
-                        this.ChangeLocationAnnotationTypeActionField = new XTypedList<ChangeLocationAnnotationTypeAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ChangeLocationAnnotationTypeAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.ChangeLocationAnnotationTypeActionField is null)) {
+                        this.ChangeLocationAnnotationTypeActionField = new XTypedList<ChangeLocationAnnotationTypeAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ChangeLocationAnnotationTypeActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ChangeLocationAnnotationTypeActionField = null;
                     }
                     else {
-                        if ((this.ChangeLocationAnnotationTypeActionField == null)) {
-                            this.ChangeLocationAnnotationTypeActionField = XTypedList<ChangeLocationAnnotationTypeAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ChangeLocationAnnotationTypeAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.ChangeLocationAnnotationTypeActionField is null)) {
+                            this.ChangeLocationAnnotationTypeActionField = XTypedList<ChangeLocationAnnotationTypeAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<ChangeLocationAnnotationTypeAction>(this.ChangeLocationAnnotationTypeActionField, value);
@@ -1633,7 +1660,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             [DebuggerBrowsable(DebuggerBrowsableState.Never)]
             XName IXMetaData.SchemaName {
                 get {
-                    return XName.Get("Actions", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                    return XName.Get("Actions", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
                 }
             }
             
@@ -1656,12 +1683,12 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
             
             private static void BuildElementDictionary() {
-                localElementDictionary.Add(XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Action));
-                localElementDictionary.Add(XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(CreateStructureCommandAction));
-                localElementDictionary.Add(XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleStructureTagCommandAction));
-                localElementDictionary.Add(XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleLocationTagCommandAction));
-                localElementDictionary.Add(XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleLocationTerminalCommandAction));
-                localElementDictionary.Add(XName.Get("ChangeLocationAnnotationTypeAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ChangeLocationAnnotationTypeAction));
+                localElementDictionary.Add(XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(Action));
+                localElementDictionary.Add(XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(CreateStructureCommandAction));
+                localElementDictionary.Add(XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleStructureTagCommandAction));
+                localElementDictionary.Add(XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleLocationTagCommandAction));
+                localElementDictionary.Add(XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleLocationTerminalCommandAction));
+                localElementDictionary.Add(XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(ChangeLocationAnnotationTypeAction));
             }
             
             ContentModelEntity IXMetaData.GetContentModel() {
@@ -1689,7 +1716,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             
             static ShortcutsLocalType() {
                 BuildElementDictionary();
-                contentModel = new SequenceContentModelEntity(new NamedContentModelEntity(XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd")));
+                contentModel = new SequenceContentModelEntity(new NamedContentModelEntity(XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd")));
             }
             
             /// <summary>
@@ -1710,18 +1737,18 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<Hotkey> Hotkey {
                 get {
-                    if ((this.HotkeyField == null)) {
-                        this.HotkeyField = new XTypedList<Hotkey>(this, LinqToXsdTypeManager.Instance, XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    if ((this.HotkeyField is null)) {
+                        this.HotkeyField = new XTypedList<Hotkey>(this, LinqToXsdTypeManager.Instance, XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.HotkeyField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.HotkeyField = null;
                     }
                     else {
-                        if ((this.HotkeyField == null)) {
-                            this.HotkeyField = XTypedList<Hotkey>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        if ((this.HotkeyField is null)) {
+                            this.HotkeyField = XTypedList<Hotkey>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
                             XTypedServices.SetList<Hotkey>(this.HotkeyField, value);
@@ -1740,7 +1767,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             [DebuggerBrowsable(DebuggerBrowsableState.Never)]
             XName IXMetaData.SchemaName {
                 get {
-                    return XName.Get("Shortcuts", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+                    return XName.Get("Shortcuts", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd");
                 }
             }
             
@@ -1763,7 +1790,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
             
             private static void BuildElementDictionary() {
-                localElementDictionary.Add(XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Hotkey));
+                localElementDictionary.Add(XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(Hotkey));
             }
             
             ContentModelEntity IXMetaData.GetContentModel() {
@@ -1782,7 +1809,8 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
                         "Polygon",
                         "Polyline",
                         "Point",
-                        "Ellipse"}, 0, 0, null, null, 0, null, null, 0, null, 0, XmlSchemaWhiteSpace.Preserve));
+                        "Ellipse",
+                        "CurvePolygon"}, 0, 0, null, null, 0, null, null, 0, null, 0, XmlSchemaWhiteSpace.Preserve));
         
         private AnnotationType() {
         }
@@ -1803,7 +1831,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         
         XmlSchemaSet ILinqToXsdTypeManager.Schemas {
             get {
-                if ((schemaSet == null)) {
+                if ((schemaSet is null)) {
                     XmlSchemaSet tempSet = new XmlSchemaSet();
                     System.Threading.Interlocked.CompareExchange(ref schemaSet, tempSet, null);
                 }
@@ -1839,17 +1867,17 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         private static void BuildElementDictionary() {
-            elementDictionary.Add(XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Parameters));
-            elementDictionary.Add(XName.Get("Value", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Value));
-            elementDictionary.Add(XName.Get("Variable", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Variable));
-            elementDictionary.Add(XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction));
-            elementDictionary.Add(XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction));
-            elementDictionary.Add(XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction));
-            elementDictionary.Add(XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction));
-            elementDictionary.Add(XName.Get("ChangeLocationAnnotationTypeAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction));
-            elementDictionary.Add(XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action));
-            elementDictionary.Add(XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Hotkey));
-            elementDictionary.Add(XName.Get("UserSettings", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.UserSettings));
+            elementDictionary.Add(XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Parameters));
+            elementDictionary.Add(XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Value));
+            elementDictionary.Add(XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Variable));
+            elementDictionary.Add(XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction));
+            elementDictionary.Add(XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction));
+            elementDictionary.Add(XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction));
+            elementDictionary.Add(XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction));
+            elementDictionary.Add(XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction));
+            elementDictionary.Add(XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action));
+            elementDictionary.Add(XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Hotkey));
+            elementDictionary.Add(XName.Get("UserSettings", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"), typeof(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.UserSettings));
         }
         
         protected internal static void AddSchemas(XmlSchemaSet schemas) {
@@ -1857,7 +1885,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         public static System.Type GetRootType() {
-            return elementDictionary[XName.Get("Parameters", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd")];
+            return elementDictionary[XName.Get("Parameters", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd")];
         }
     }
     
@@ -1960,7 +1988,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlFile);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -1971,7 +1999,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlFile, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -1982,7 +2010,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(textReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -1993,7 +2021,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(textReader, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2004,7 +2032,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2015,7 +2043,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Parse(text);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2026,7 +2054,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Parse(text, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2063,82 +2091,82 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         private XTypedElement rootObject;
         
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Parameters Parameters {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Parameters; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Parameters Parameters {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Parameters; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Value Value {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Value; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Value Value {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Value; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Variable Variable {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Variable; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Variable Variable {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Variable; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction CreateStructureCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction CreateStructureCommandAction {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction ToggleStructureTagCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction ToggleStructureTagCommandAction {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction ToggleLocationTagCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction ToggleLocationTagCommandAction {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction ToggleLocationTerminalCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction ToggleLocationTerminalCommandAction {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction ChangeLocationAnnotationTypeAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction ChangeLocationAnnotationTypeAction {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action Action {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action Action {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Hotkey Hotkey {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Hotkey; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Hotkey Hotkey {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Hotkey; } }
 
-    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.UserSettings UserSettings {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.UserSettings; } }
+    public global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.UserSettings UserSettings {  get {return rootObject as global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.UserSettings; } }
         
         private XRoot() {
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Parameters root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Parameters root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Value root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Value root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Variable root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Variable root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Hotkey root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Hotkey root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
         
-        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.UserSettings root) {
+        public XRoot(global::rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.UserSettings root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
@@ -2153,7 +2181,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlFile);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2164,7 +2192,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlFile, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2175,7 +2203,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(textReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2186,7 +2214,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(textReader, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2197,7 +2225,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2208,7 +2236,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Parse(text);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2219,7 +2247,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Parse(text, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;

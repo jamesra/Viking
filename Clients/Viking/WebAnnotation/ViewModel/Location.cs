@@ -1,11 +1,6 @@
 ﻿namespace WebAnnotation.ViewModel
 {
-    public class Location_PropertyPageViewModel : Location_ViewModelBase
+    public class Location_PropertyPageViewModel(long locationID) : Location_ViewModelBase(locationID)
     {
-        public Location_PropertyPageViewModel(long locationID)
-            : base(locationID)
-        {
-
-        }
     }
 }

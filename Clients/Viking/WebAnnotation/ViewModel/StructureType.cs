@@ -1,6 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
+using System.Threading.Tasks;
+#if NETFRAMEWORK
 using System.Windows.Forms;
+#endif
 using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
@@ -9,19 +12,18 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation.ViewModel
 {
     [Viking.Common.UI.TreeViewVisible]
-    public class StructureType : Viking.Objects.UIObjBase, IViewStructureType
+    public class StructureType(StructureTypeObj data) : Viking.Objects.UIObjBase, IViewStructureType
+#if NETFRAMEWORK
+        , IContextMenu
+#endif
     {
-        public StructureTypeObj modelObj;
+        public StructureTypeObj modelObj = data;
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
-            StructureType Obj = obj as StructureType;
-            if (Obj != null)
+            if (obj is StructureType Obj)
             {
                 return modelObj.Equals(Obj.modelObj);
             }
@@ -35,17 +37,16 @@ namespace WebAnnotation.ViewModel
             return false;
         }
 
-        public override string ToString()
-        {
-            return modelObj.Name;
-        }
+        public override string ToString() => modelObj.Name;
 
         public StructureType Parent
         {
             get
             {
                 if (modelObj.ParentID.HasValue == false)
+                {
                     return null;
+                }
 
                 return new StructureType(modelObj.Parent);
             }
@@ -68,159 +69,139 @@ namespace WebAnnotation.ViewModel
 
         public override event NotifyCollectionChangedEventHandler ChildChanged
         {
-            add { modelObj.ChildChanged += value; }
-            remove { modelObj.ChildChanged += value; }
+            add => modelObj.ChildChanged += value;
+            remove => modelObj.ChildChanged += value;
         }
 
         [Column("ID")]
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
 
         [Column("ParentID")]
-        public long? ParentID
-        {
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
         [Column("Name")]
         public string Name
         {
-            get { return modelObj.Name; }
-            set
-            {
-                modelObj.Name = value;
-            }
+            get => modelObj.Name;
+            set => modelObj.Name = value;
         }
 
         [Column("Notes")]
         public string Notes
         {
-            get { return modelObj.Notes; }
-            set
-            {
-                modelObj.Notes = value;
-            }
+            get => modelObj.Notes;
+            set => modelObj.Notes = value;
         }
 
         [Column("Color")]
         public System.Drawing.Color Color
         {
-            get { return System.Drawing.Color.FromArgb((int)modelObj.Color); }
-            set
-            {
-                modelObj.Color = (uint)value.ToArgb();
-            }
+            get => System.Drawing.Color.FromArgb((int)modelObj.Color);
+            set => modelObj.Color = (uint)value.ToArgb();
         }
 
         [Column("Code")]
         public string Code
         {
-            get { return modelObj.Code; }
-            set
-            {
-                modelObj.Code = value;
-            }
-        }
-
-        public StructureType(StructureTypeObj data)
-        {
-            this.modelObj = data;
+            get => modelObj.Code;
+            set => modelObj.Code = value;
         }
 
         #region IUIObject Members
 
-        public override System.Windows.Forms.ContextMenu ContextMenu
+#if NETFRAMEWORK
+        public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
+                ContextMenuStrip menu = new();
 
-                MenuItem newMenuItem = new MenuItem("New");
-                menu.MenuItems.Add(newMenuItem);
+                ToolStripMenuItem newMenuItem = new("New");
+                menu.Items.Add(newMenuItem);
 
-                newMenuItem.MenuItems.Add("Structure Type", ContextMenu_OnNewStructureType);
+                ToolStripMenuItem structureTypeItem = new("Structure Type");
+                structureTypeItem.Click += ContextMenu_OnNewStructureType;
+                newMenuItem.DropDownItems.Add(structureTypeItem);
 
                 if (modelObj.Children.Length == 0)
-                    menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
+                {
+                    ToolStripMenuItem deleteItem = new("Delete");
+                    deleteItem.Click += ContextMenu_OnDelete;
+                    menu.Items.Add(deleteItem);
+                }
 
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ToolStripMenuItem propertiesItem = new("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
                 return menu;
             }
         }
+#endif
 
-        public override System.Drawing.Image SmallThumbnail
-        {
-            get { return null; }
-        }
+        public override System.Drawing.Image SmallThumbnail => null;
 
-        public override string ToolTip
-        {
-            get { return this.Name; }
-        }
+        public override string ToolTip => Name;
 
-        public override void Save()
+        public override void Save() => _ = SaveAsync();
+
+        async Task SaveAsync()
         {
             try
             {
-                Store.StructureTypes.Save();
+                await Store.StructureTypes.Save();
             }
             catch (System.ServiceModel.FaultException ex)
             {
+#if NETFRAMEWORK
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+#else
+                System.Diagnostics.Trace.WriteLine(ex);
+#endif
             }
         }
 
-        public override Viking.UI.Controls.GenericTreeNode CreateNode()
-        {
-            return new Viking.UI.Controls.GenericTreeNode(this);
-        }
+#if NETFRAMEWORK
+        public override Viking.UI.Controls.GenericTreeNode CreateNode() => new Viking.UI.Controls.GenericTreeNode(this);
+#endif
 
-        public override int TreeImageIndex
-        {
-            get { return 0; }
-        }
+        public override int TreeImageIndex => 0;
 
-        public override int TreeSelectedImageIndex
-        {
-            get { return 0; }
-        }
+        public override int TreeSelectedImageIndex => 0;
 
-        public override Type[] AssignableParentTypes
-        {
-            get { return new Type[] { typeof(StructureType) }; }
-        }
+        public override Type[] AssignableParentTypes => [typeof(StructureType)];
 
+#if NETFRAMEWORK
         public override void SetParent(IUIObject parent)
         {
             StructureType newParent = (StructureType)parent;
-            if (parent != this.Parent)
+            if (parent != Parent)
             {
                 //      this.Parent.CallOnChildChanged(new ChildChangeEventArgs(this, CHANGEACTION.BEFOREADD)); 
-                this.modelObj.Parent = newParent.modelObj;
+                modelObj.Parent = newParent.modelObj;
                 //      this.Parent.CallOnChildChanged(new ChildChangeEventArgs(this, CHANGEACTION.ADD));
 
                 //  Store.StructureTypes.Save(); 
             }
         }
+#endif
 
         #endregion
 
-        protected void ContextMenu_OnNewStructureType(object sender, EventArgs e)
+#if NETFRAMEWORK
+        protected async void ContextMenu_OnNewStructureType(object sender, EventArgs e)
         {
-            StructureTypeObj newType = new StructureTypeObj(this.modelObj);
-            StructureType newTypeView = new StructureType(newType);
+            StructureTypeObj newType = new(modelObj);
+            StructureType newTypeView = new(newType);
             DialogResult result = Viking.UI.Forms.PropertySheetForm.ShowDialog(newTypeView, null);
 
             if (result != DialogResult.Cancel)
             {
                 try
                 {
-                    newType = Store.StructureTypes.Create(newType);
-                    Store.StructureTypes.Save();
+                    newType = await Store.StructureTypes.Create(newType);
+                    await Store.StructureTypes.Save();
                 }
                 catch (System.ServiceModel.FaultException ex)
                 {
@@ -231,46 +212,27 @@ namespace WebAnnotation.ViewModel
         }
 
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
+        protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(this);
+
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
+#endif
+
+        public override void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
-
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
-
-        public override void Delete()
-        {
-            //            StructureTypeObj OriginalParent = this.Parent;
-            //            this.Parent = null;
-
-            /*
-            DBACTION originalAction = this.DBAction;
-            this.DBAction = DBACTION.DELETE;
-
-            bool success = Store.StructureTypes.Save();
-            if (!success)
-            {
-                //Write straight to data since we have an assert to check whether an object is being deleted, but
-                //in this case we know it is ok
-                this.Data.DBAction = originalAction;
-                this.Parent = OriginalParent;
-            }
-             */
-
             //This is a hack because not every control may be subscribing to the same object, but the 
             //alternative is a huge rewrite which I am doing with Jotunn
-            this.CallBeforeDelete();
+            CallBeforeDelete();
 
-            Store.StructureTypes.Remove(this.modelObj);
-            Store.StructureTypes.Save();
+            await Store.StructureTypes.Remove(modelObj);
+            await Store.StructureTypes.Save();
 
-            this.CallAfterDelete();
+            CallAfterDelete();
 
+#if NETFRAMEWORK
             Viking.UI.State.SelectedObject = null;
-
+#endif
         }
     }
 }

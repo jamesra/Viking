@@ -1,0 +1,647 @@
+-- Minimal annotation schema for gRPC integration / CRUD smoke tests.
+-- Not a substitute for the full AnnotationDatabase SSDT publish.
+-- Idempotent: safe to re-run against AnnotationTest.
+
+IF DB_ID(N'AnnotationTest') IS NULL
+BEGIN
+    CREATE DATABASE [AnnotationTest];
+END
+GO
+
+USE [AnnotationTest];
+GO
+
+-- Required for persisted computed columns / geometry expressions.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF OBJECT_ID(N'dbo.StructureType', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[StructureType] (
+        [ID]            BIGINT IDENTITY (1, 1) NOT NULL,
+        [ParentID]      BIGINT NULL,
+        [Name]          NCHAR (128) NOT NULL,
+        [Notes]         NVARCHAR (MAX) NULL,
+        [MarkupType]    NCHAR (16) CONSTRAINT [DF_StructureType_MarkupType] DEFAULT (N'Point') NOT NULL,
+        [Tags]          XML NULL,
+        [StructureTags] XML NULL,
+        [Abstract]      BIT CONSTRAINT [DF_StructureType_Abstract] DEFAULT ((0)) NOT NULL,
+        [Color]         INT CONSTRAINT [DF_StructureType_Color] DEFAULT (0xFFFFFF) NOT NULL,
+        [Version]       ROWVERSION NOT NULL,
+        [Code]          NCHAR (16) CONSTRAINT [DF_StructureType_Code] DEFAULT (N'No Code') NOT NULL,
+        [HotKey]        CHAR (1) CONSTRAINT [DF_StructureType_HotKey] DEFAULT (CHAR(0)) NOT NULL,
+        [Username]      NVARCHAR (254) CONSTRAINT [DF_StructureType_Username] DEFAULT (N'') NOT NULL,
+        [LastModified]  DATETIME CONSTRAINT [DF_StructureType_LastModified] DEFAULT (getutcdate()) NOT NULL,
+        [Created]       DATETIME CONSTRAINT [DF_StructureType_Created] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_StructureType] PRIMARY KEY CLUSTERED ([ID] ASC),
+        CONSTRAINT [FK_StructureType_StructureType] FOREIGN KEY ([ParentID]) REFERENCES [dbo].[StructureType] ([ID])
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.Structure', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[Structure] (
+        [ID]           BIGINT IDENTITY (1, 1) NOT NULL,
+        [TypeID]       BIGINT NOT NULL,
+        [Notes]        NVARCHAR (MAX) NULL,
+        [Verified]     BIT CONSTRAINT [DF_StructureBase_Verified] DEFAULT ((0)) NOT NULL,
+        [Tags]         XML NULL,
+        [Confidence]   FLOAT (53) CONSTRAINT [DF_StructureBase_Confidence] DEFAULT ((0.5)) NOT NULL,
+        [Version]      ROWVERSION NOT NULL,
+        [ParentID]     BIGINT NULL,
+        [Created]      DATETIME CONSTRAINT [DF_Structure_Created] DEFAULT (getutcdate()) NOT NULL,
+        [Label]        VARCHAR (64) NULL,
+        [Username]     NVARCHAR (254) CONSTRAINT [DF_Structure_Username] DEFAULT (N'') NOT NULL,
+        [LastModified] DATETIME CONSTRAINT [DF_Structure_LastModified] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_StructureBase] PRIMARY KEY CLUSTERED ([ID] ASC),
+        CONSTRAINT [FK_Structure_Structure] FOREIGN KEY ([ParentID]) REFERENCES [dbo].[Structure] ([ID]),
+        CONSTRAINT [FK_StructureBase_StructureType] FOREIGN KEY ([TypeID]) REFERENCES [dbo].[StructureType] ([ID])
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.DeletedLocations', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[DeletedLocations] (
+        [ID]        BIGINT NOT NULL,
+        [Z]         BIGINT NULL,
+        [DeletedOn] DATETIME CONSTRAINT [DF_DeletedLocations_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_DeletedLocations] PRIMARY KEY CLUSTERED ([ID] ASC)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.DeletedStructures', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[DeletedStructures] (
+        [ID]        BIGINT NOT NULL,
+        [DeletedOn] DATETIME CONSTRAINT [DF_DeletedStructures_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_DeletedStructures] PRIMARY KEY CLUSTERED ([ID] ASC)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.DeletedLocationLinks', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[DeletedLocationLinks] (
+        [A]         BIGINT NOT NULL,
+        [B]         BIGINT NOT NULL,
+        [AZ]        BIGINT NULL,
+        [BZ]        BIGINT NULL,
+        [DeletedOn] DATETIME CONSTRAINT [DF_DeletedLocationLinks_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_DeletedLocationLinks] PRIMARY KEY CLUSTERED ([A] ASC, [B] ASC)
+    );
+END
+GO
+
+IF COL_LENGTH(N'dbo.DeletedLocations', N'Z') IS NULL
+    ALTER TABLE dbo.DeletedLocations ADD [Z] BIGINT NULL;
+GO
+
+IF COL_LENGTH(N'dbo.DeletedLocationLinks', N'AZ') IS NULL
+    ALTER TABLE dbo.DeletedLocationLinks ADD [AZ] BIGINT NULL;
+GO
+
+IF COL_LENGTH(N'dbo.DeletedLocationLinks', N'BZ') IS NULL
+    ALTER TABLE dbo.DeletedLocationLinks ADD [BZ] BIGINT NULL;
+GO
+
+IF OBJECT_ID(N'dbo.Location', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[Location] (
+        [ID]           BIGINT IDENTITY (1, 1) NOT NULL,
+        [ParentID]     BIGINT NOT NULL,
+        [Z]            BIGINT NOT NULL,
+        [Closed]       BIT CONSTRAINT [DF_Location_Closed] DEFAULT ((0)) NOT NULL,
+        [Version]      ROWVERSION NOT NULL,
+        [Overlay]      VARBINARY (MAX) NULL,
+        [Tags]         XML NULL,
+        [Terminal]     BIT CONSTRAINT [DF_Location_Flagged] DEFAULT ((0)) NOT NULL,
+        [OffEdge]      BIT CONSTRAINT [DF_Location_OffEdge] DEFAULT ((0)) NOT NULL,
+        [TypeCode]     SMALLINT CONSTRAINT [DF_Location_TypeCode] DEFAULT ((1)) NOT NULL,
+        [LastModified] DATETIME CONSTRAINT [DF_Location_LastModified] DEFAULT (getutcdate()) NOT NULL,
+        [Created]      DATETIME CONSTRAINT [DF_Location_Created] DEFAULT (getutcdate()) NOT NULL,
+        [Username]     NVARCHAR (254) CONSTRAINT [DF_Location_Username] DEFAULT (N'') NOT NULL,
+        [MosaicShape]  [sys].[geometry] NOT NULL,
+        [VolumeShape]  [sys].[geometry] NOT NULL,
+        [X]            AS (isnull([MosaicShape].[STCentroid]().STX, isnull([MosaicShape].[STX], (0)))) PERSISTED NOT NULL,
+        [Y]            AS (isnull([MosaicShape].[STCentroid]().STY, isnull([MosaicShape].[STY], (0)))) PERSISTED NOT NULL,
+        [VolumeX]      AS (isnull([VolumeShape].[STCentroid]().STX, isnull([VolumeShape].[STX], isnull([VolumeShape].[STEnvelope]().STCentroid().STX, (0))))) PERSISTED NOT NULL,
+        [VolumeY]      AS (isnull([VolumeShape].[STCentroid]().STY, isnull([VolumeShape].[STY], isnull([VolumeShape].[STEnvelope]().STCentroid().STY, (0))))) PERSISTED NOT NULL,
+        [Width]        FLOAT (53) NULL,
+        [Radius]       AS (case [MosaicShape].[STDimension]() when (0) then (0) when (1) then [MosaicShape].[STLength]() / (2.0) when (2) then sqrt([MosaicShape].[STArea]() / pi()) end) PERSISTED NOT NULL,
+        CONSTRAINT [PK_Location] PRIMARY KEY CLUSTERED ([ID] ASC),
+        CONSTRAINT [FK_Location_StructureBase1] FOREIGN KEY ([ParentID]) REFERENCES [dbo].[Structure] ([ID]) ON DELETE CASCADE
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.LocationLink', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[LocationLink] (
+        [A]        BIGINT NOT NULL,
+        [B]        BIGINT NOT NULL,
+        [Username] NVARCHAR (254) CONSTRAINT [DF_LocationLink_Username] DEFAULT (N'') NOT NULL,
+        [Created]  DATETIME CONSTRAINT [DF_LocationLink_Created] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_LocationLink] PRIMARY KEY CLUSTERED ([A] ASC, [B] ASC),
+        CONSTRAINT [chk_LocationLink_Self] CHECK ([A] <> [B]),
+        CONSTRAINT [FK_LocationLink_Location] FOREIGN KEY ([A]) REFERENCES [dbo].[Location] ([ID]),
+        CONSTRAINT [FK_LocationLink_Location1] FOREIGN KEY ([B]) REFERENCES [dbo].[Location] ([ID])
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.StructureLink', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[StructureLink] (
+        [SourceID]      BIGINT NOT NULL,
+        [TargetID]      BIGINT NOT NULL,
+        [Bidirectional] BIT CONSTRAINT [DF_StructureLink_Bidirectional] DEFAULT ((0)) NOT NULL,
+        [Tags]          XML NULL,
+        [Username]      NVARCHAR (254) CONSTRAINT [DF_StructureLink_Username] DEFAULT (N'') NOT NULL,
+        [Created]       DATETIME CONSTRAINT [DF_StructureLink_Created] DEFAULT (getutcdate()) NOT NULL,
+        [LastModified]  DATETIME CONSTRAINT [DF_StructureLink_LastModified] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [chk_StructureLink_Self] CHECK ([SourceID] <> [TargetID]),
+        CONSTRAINT [FK_StructureLinkSource_StructureBaseID] FOREIGN KEY ([SourceID]) REFERENCES [dbo].[Structure] ([ID]),
+        CONSTRAINT [FK_StructureLinkTarget_StructureBaseID] FOREIGN KEY ([TargetID]) REFERENCES [dbo].[Structure] ([ID]),
+        CONSTRAINT [source_target_unique] UNIQUE NONCLUSTERED ([SourceID] ASC, [TargetID] ASC)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.PermittedStructureLink', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[PermittedStructureLink] (
+        [SourceTypeID]  BIGINT NOT NULL,
+        [TargetTypeID]  BIGINT NOT NULL,
+        [Bidirectional] BIT NOT NULL,
+        CONSTRAINT [PK_PermittedStructureLink] PRIMARY KEY CLUSTERED ([SourceTypeID] ASC, [TargetTypeID] ASC),
+        CONSTRAINT [FK_PermittedStructureLink_SourceType] FOREIGN KEY ([SourceTypeID]) REFERENCES [dbo].[StructureType] ([ID]),
+        CONSTRAINT [FK_PermittedStructureLink_TargetType] FOREIGN KEY ([TargetTypeID]) REFERENCES [dbo].[StructureType] ([ID])
+    );
+END
+GO
+
+-- EF Core DELETE uses OUTPUT, which cannot coexist with FOR DELETE triggers on
+-- Location. Audit DeletedLocations from DeepDeleteStructure / LocationService instead.
+IF OBJECT_ID(N'dbo.Location_delete', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.Location_delete;
+GO
+
+-- Simplified DeepDeleteStructure (full SSDT version also clears children/links).
+-- Required by StructureService.Update delete path. Recreate so AnnotationTest picks
+-- up DeletedLocations logging even if an older lean proc already exists.
+IF OBJECT_ID(N'dbo.DeepDeleteStructure', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.DeepDeleteStructure;
+GO
+
+EXEC(N'
+CREATE PROCEDURE dbo.DeepDeleteStructure
+    @DeleteID bigint
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF OBJECT_ID(''tempdb..#StructuresToDelete'') IS NOT NULL
+        DROP TABLE #StructuresToDelete;
+
+    SELECT ID INTO #StructuresToDelete
+    FROM dbo.Structure
+    WHERE ID = @DeleteID OR ParentID = @DeleteID;
+
+    INSERT INTO dbo.DeletedLocationLinks (A, B, AZ, BZ)
+    SELECT LL.A, LL.B, LA.Z, LB.Z
+    FROM dbo.LocationLink LL
+    INNER JOIN dbo.Location LA ON LA.ID = LL.A
+    INNER JOIN dbo.Location LB ON LB.ID = LL.B
+    WHERE (LL.A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
+        OR LL.B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete)))
+      AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocationLinks DL WHERE DL.A = LL.A AND DL.B = LL.B);
+
+    DELETE FROM dbo.LocationLink
+    WHERE A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
+       OR B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete));
+
+    INSERT INTO dbo.DeletedLocations (ID, Z)
+    SELECT L.ID, L.Z
+    FROM dbo.Location L
+    WHERE L.ParentID IN (SELECT ID FROM #StructuresToDelete)
+      AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocations DL WHERE DL.ID = L.ID);
+
+    INSERT INTO dbo.DeletedStructures (ID)
+    SELECT S.ID
+    FROM #StructuresToDelete S
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.DeletedStructures DS WHERE DS.ID = S.ID);
+
+    DELETE FROM dbo.Location
+    WHERE ParentID IN (SELECT ID FROM #StructuresToDelete);
+
+    DELETE FROM dbo.StructureLink
+    WHERE SourceID IN (SELECT ID FROM #StructuresToDelete)
+       OR TargetID IN (SELECT ID FROM #StructuresToDelete);
+
+    DELETE FROM dbo.Structure WHERE ParentID = @DeleteID;
+    DELETE FROM dbo.Structure WHERE ID = @DeleteID;
+
+    IF OBJECT_ID(''tempdb..#StructuresToDelete'') IS NOT NULL
+        DROP TABLE #StructuresToDelete;
+END');
+GO
+
+-- MergeStructures (subset of full SSDT proc; enough for gRPC Merge RPC tests).
+-- Recreate so AnnotationTest picks up DeletedStructures logging.
+IF OBJECT_ID(N'dbo.MergeStructures', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.MergeStructures;
+GO
+
+EXEC(N'
+CREATE PROCEDURE dbo.MergeStructures
+    @KeepStructureID bigint,
+    @MergeStructureID bigint
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @MergeNotes nvarchar(max) =
+        (SELECT Notes FROM dbo.Structure WHERE ID = @MergeStructureID);
+
+    UPDATE dbo.Location
+    SET ParentID = @KeepStructureID
+    WHERE ParentID = @MergeStructureID;
+
+    UPDATE dbo.Structure
+    SET ParentID = @KeepStructureID
+    WHERE ParentID = @MergeStructureID;
+
+    IF NOT (@MergeNotes IS NULL OR @MergeNotes = N'''')
+    BEGIN
+        DECLARE @crlf nvarchar(2) = CHAR(13) + CHAR(10);
+        DECLARE @MergeHeader nvarchar(80) =
+            N''*****BEGIN MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
+        DECLARE @MergeFooter nvarchar(80) =
+            N''*****END MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
+
+        UPDATE dbo.Structure
+        SET Notes = ISNULL(Notes, N'''') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
+        WHERE ID = @KeepStructureID;
+    END
+
+    DELETE FROM dbo.StructureLink
+    WHERE (SourceID = @KeepStructureID AND TargetID = @MergeStructureID)
+       OR (TargetID = @KeepStructureID AND SourceID = @MergeStructureID);
+
+    UPDATE dbo.StructureLink SET TargetID = @KeepStructureID WHERE TargetID = @MergeStructureID;
+    UPDATE dbo.StructureLink SET SourceID = @KeepStructureID WHERE SourceID = @MergeStructureID;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.DeletedStructures WHERE ID = @MergeStructureID)
+        INSERT INTO dbo.DeletedStructures (ID) VALUES (@MergeStructureID);
+
+    DELETE FROM dbo.Structure WHERE ID = @MergeStructureID;
+END');
+GO
+
+-- Unfinished branch queries used by StructureService.
+IF OBJECT_ID(N'dbo.SelectUnfinishedStructureBranches', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectUnfinishedStructureBranches
+        @StructureID bigint
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        SELECT ID FROM
+            (SELECT LocationID, COUNT(LocationID) AS NumLinks FROM
+                (
+                    SELECT A AS LocationID FROM dbo.LocationLink
+                    WHERE A IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                    UNION ALL
+                    SELECT B AS LocationID FROM dbo.LocationLink
+                    WHERE B IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                ) AS LinkedIDs
+                GROUP BY LocationID) AS AllLocationLinks
+            INNER JOIN
+                (SELECT ID FROM dbo.Location WHERE Terminal = 0 AND OffEdge = 0) L
+            ON AllLocationLinks.LocationID = L.ID
+            WHERE AllLocationLinks.NumLinks <= 1
+            ORDER BY ID;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectUnfinishedStructureBranchesWithPosition', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectUnfinishedStructureBranchesWithPosition
+        @StructureID bigint
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        SELECT ID, X, Y, Z, Radius FROM
+            (SELECT LocationID, COUNT(LocationID) AS NumLinks FROM
+                (
+                    SELECT A AS LocationID FROM dbo.LocationLink
+                    WHERE A IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                    UNION ALL
+                    SELECT B AS LocationID FROM dbo.LocationLink
+                    WHERE B IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                ) AS LinkedIDs
+                GROUP BY LocationID) AS AllLocationLinks
+            INNER JOIN
+                (SELECT ID, X, Y, Z, Radius FROM dbo.Location WHERE Terminal = 0 AND OffEdge = 0) L
+            ON AllLocationLinks.LocationID = L.ID
+            WHERE AllLocationLinks.NumLinks <= 1
+            ORDER BY ID;
+    END');
+END
+GO
+
+-- Lean SplitStructure: BFS via LocationLink within the keep structure, then
+-- clone the structure row and re-parent the split subgraph. Child-structure
+-- reassignment from the full SSDT proc is omitted (not needed for smoke tests).
+IF OBJECT_ID(N'dbo.SplitStructure', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SplitStructure
+        @LocationIDOfSplitStructure bigint,
+        @SplitStructureID bigint OUTPUT
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        SET @SplitStructureID = 0;
+
+        DECLARE @KeepStructureID bigint =
+            (SELECT ParentID FROM dbo.Location WHERE ID = @LocationIDOfSplitStructure);
+        IF @KeepStructureID IS NULL
+            THROW 50000, N''Location not found'', 1;
+
+        IF OBJECT_ID(''tempdb..#LocationLinkPool'') IS NOT NULL DROP TABLE #LocationLinkPool;
+        IF OBJECT_ID(''tempdb..#LocationsInSplitSubGraph'') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph;
+        IF OBJECT_ID(''tempdb..#LocationsInKeepSubGraph'') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph;
+
+        SELECT LL.A, LL.B
+        INTO #LocationLinkPool
+        FROM dbo.LocationLink LL
+        INNER JOIN dbo.Location LA ON LA.ID = LL.A
+        INNER JOIN dbo.Location LB ON LB.ID = LL.B
+        WHERE LA.ParentID = @KeepStructureID AND LB.ParentID = @KeepStructureID;
+
+        CREATE TABLE #LocationsInSplitSubGraph (ID bigint PRIMARY KEY);
+        INSERT INTO #LocationsInSplitSubGraph (ID) VALUES (@LocationIDOfSplitStructure);
+
+        DECLARE @RowsAdded bigint = 1;
+        WHILE @RowsAdded > 0
+        BEGIN
+            INSERT INTO #LocationsInSplitSubGraph (ID)
+            SELECT DISTINCT Candidate.ID
+            FROM (
+                SELECT B AS ID FROM #LocationLinkPool WHERE A IN (SELECT ID FROM #LocationsInSplitSubGraph)
+                UNION
+                SELECT A AS ID FROM #LocationLinkPool WHERE B IN (SELECT ID FROM #LocationsInSplitSubGraph)
+            ) Candidate
+            WHERE Candidate.ID NOT IN (SELECT ID FROM #LocationsInSplitSubGraph);
+
+            SET @RowsAdded = @@ROWCOUNT;
+
+            DELETE LLP
+            FROM #LocationLinkPool LLP
+            INNER JOIN #LocationsInSplitSubGraph SA ON SA.ID = LLP.A
+            INNER JOIN #LocationsInSplitSubGraph SB ON SB.ID = LLP.B;
+        END
+
+        SELECT ID INTO #LocationsInKeepSubGraph
+        FROM dbo.Location
+        WHERE ParentID = @KeepStructureID
+          AND ID NOT IN (SELECT ID FROM #LocationsInSplitSubGraph);
+
+        IF (SELECT COUNT(*) FROM #LocationsInKeepSubGraph) = 0
+            THROW 50000, N''The split structure is connected to the entire keep cell. Break a location link to create two subgraphs and try again'', 1;
+
+        INSERT INTO dbo.Structure (TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified)
+        SELECT TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified
+        FROM dbo.Structure WHERE ID = @KeepStructureID;
+        SET @SplitStructureID = SCOPE_IDENTITY();
+
+        UPDATE L
+        SET ParentID = @SplitStructureID
+        FROM dbo.Location L
+        INNER JOIN #LocationsInSplitSubGraph S ON S.ID = L.ID;
+
+        IF OBJECT_ID(''tempdb..#LocationLinkPool'') IS NOT NULL DROP TABLE #LocationLinkPool;
+        IF OBJECT_ID(''tempdb..#LocationsInSplitSubGraph'') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph;
+        IF OBJECT_ID(''tempdb..#LocationsInKeepSubGraph'') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SplitStructureAtLocationLink', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SplitStructureAtLocationLink
+        @LocationIDOfKeepStructure bigint,
+        @LocationIDOfSplitStructure bigint,
+        @SplitStructureID bigint OUTPUT
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        SET @SplitStructureID = 0;
+
+        IF (0 = (SELECT COUNT(*) FROM dbo.LocationLink
+                 WHERE (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure)
+                    OR (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)))
+            THROW 50000, N''The Split and Keep Location IDs must be linked'', 1;
+
+        BEGIN TRANSACTION split_at_link;
+            DELETE FROM dbo.LocationLink
+            WHERE (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure)
+               OR (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure);
+
+            EXEC dbo.SplitStructure @LocationIDOfSplitStructure, @SplitStructureID OUTPUT;
+        COMMIT TRANSACTION split_at_link;
+    END');
+END
+GO
+
+-- Volume scale scalars used by AnnotateMetaData.Scale.
+IF OBJECT_ID(N'dbo.XYScale', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.XYScale() RETURNS float AS BEGIN RETURN 2.176 END');
+GO
+IF OBJECT_ID(N'dbo.ZScale', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.ZScale() RETURNS float AS BEGIN RETURN 90.0 END');
+GO
+IF OBJECT_ID(N'dbo.XYScaleUnits', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.XYScaleUnits() RETURNS varchar(MAX) AS BEGIN RETURN ''nm'' END');
+GO
+IF OBJECT_ID(N'dbo.ZScaleUnits', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.ZScaleUnits() RETURNS varchar(MAX) AS BEGIN RETURN ''nm'' END');
+GO
+
+-- Network hop queries (TVF + procs) used by StructureService.GetNetworked*.
+IF TYPE_ID(N'dbo.integer_list') IS NULL
+    CREATE TYPE [dbo].[integer_list] AS TABLE (
+        [ID] BIGINT NOT NULL,
+        PRIMARY KEY CLUSTERED ([ID] ASC));
+GO
+
+IF OBJECT_ID(N'dbo.NetworkStructureIDs', N'TF') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE FUNCTION dbo.NetworkStructureIDs
+    (
+        @IDs integer_list READONLY,
+        @Hops int
+    )
+    RETURNS @CellsInNetwork TABLE
+    (
+        ID bigint PRIMARY KEY
+    )
+    AS
+    BEGIN
+        DECLARE @HopSeedCells integer_list;
+
+        INSERT INTO @HopSeedCells SELECT ID FROM @IDs;
+        INSERT INTO @CellsInNetwork SELECT ID FROM @IDs;
+
+        WHILE @Hops > 0
+        BEGIN
+            DECLARE @HopSeedCellsChildStructures integer_list;
+            DECLARE @ChildStructurePartners integer_list;
+            DECLARE @HopCellsFound integer_list;
+
+            INSERT INTO @HopSeedCellsChildStructures
+                SELECT DISTINCT Child.ID FROM dbo.Structure Parent
+                    INNER JOIN dbo.Structure Child ON Child.ParentID = Parent.ID
+                    INNER JOIN @HopSeedCells Cells ON Cells.ID = Parent.ID;
+
+            INSERT INTO @ChildStructurePartners
+                SELECT DISTINCT SL.TargetID FROM dbo.StructureLink SL
+                    INNER JOIN @HopSeedCellsChildStructures C ON C.ID = SL.SourceID
+                UNION
+                SELECT DISTINCT SL.SourceID FROM dbo.StructureLink SL
+                    INNER JOIN @HopSeedCellsChildStructures C ON C.ID = SL.TargetID;
+
+            INSERT INTO @HopCellsFound
+                SELECT DISTINCT Parent.ID FROM dbo.Structure Parent
+                    INNER JOIN dbo.Structure Child ON Child.ParentID = Parent.ID
+                    INNER JOIN @ChildStructurePartners Partners ON Partners.ID = Child.ID
+                WHERE Parent.ID NOT IN (SELECT ID FROM @CellsInNetwork UNION SELECT ID FROM @HopSeedCells);
+
+            DELETE S FROM @HopSeedCells S;
+
+            INSERT INTO @HopSeedCells
+                SELECT ID FROM @HopCellsFound
+                WHERE ID NOT IN (SELECT ID FROM @CellsInNetwork);
+
+            INSERT INTO @CellsInNetwork
+                SELECT ID FROM @HopCellsFound
+                WHERE ID NOT IN (SELECT ID FROM @CellsInNetwork);
+
+            DELETE FROM @ChildStructurePartners;
+            DELETE FROM @HopCellsFound;
+
+            SET @Hops = @Hops - 1;
+        END
+
+        RETURN;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.NetworkChildStructureIDs', N'TF') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE FUNCTION dbo.NetworkChildStructureIDs
+    (
+        @IDs integer_list READONLY,
+        @Hops int
+    )
+    RETURNS @ChildStructuresInNetwork TABLE
+    (
+        ID bigint PRIMARY KEY
+    )
+    AS
+    BEGIN
+        DECLARE @ChildIDsInNetwork integer_list;
+
+        INSERT INTO @ChildIDsInNetwork
+            SELECT ChildStruct.ID FROM dbo.Structure S
+            INNER JOIN dbo.NetworkStructureIDs(@IDs, @Hops) N ON S.ID = N.ID
+            INNER JOIN dbo.Structure ChildStruct ON ChildStruct.ParentID = N.ID;
+
+        INSERT INTO @ChildStructuresInNetwork
+            SELECT SL.SourceID AS ID FROM dbo.StructureLink SL
+                WHERE SL.SourceID IN (SELECT ID FROM @ChildIDsInNetwork)
+            UNION
+            SELECT SL.TargetID AS ID FROM dbo.StructureLink SL
+                WHERE SL.TargetID IN (SELECT ID FROM @ChildIDsInNetwork);
+
+        RETURN;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectNetworkStructureIDs', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectNetworkStructureIDs
+        @IDs integer_list READONLY,
+        @Hops int
+    AS
+    BEGIN
+        SELECT N.ID AS ID FROM dbo.NetworkStructureIDs(@IDs, @Hops) N;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectNetworkChildStructures', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectNetworkChildStructures
+        @IDs integer_list READONLY,
+        @Hops int
+    AS
+    BEGIN
+        SELECT S.* FROM dbo.Structure S
+            INNER JOIN dbo.NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectNetworkStructureLinks', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectNetworkStructureLinks
+        @IDs integer_list READONLY,
+        @Hops int
+    AS
+    BEGIN
+        SELECT SL.* FROM dbo.StructureLink SL
+            WHERE SL.SourceID IN (SELECT ID FROM dbo.NetworkChildStructureIDs(@IDs, @Hops))
+               OR SL.TargetID IN (SELECT ID FROM dbo.NetworkChildStructureIDs(@IDs, @Hops));
+    END');
+END
+GO
+
+-- Seed one StructureType → Structure → Location when the DB is empty (ids become 1).
+IF NOT EXISTS (SELECT 1 FROM dbo.StructureType)
+BEGIN
+    INSERT INTO dbo.StructureType ([Name], [Notes], [MarkupType], [Code], [Username])
+    VALUES (N'Test Neuron', N'Seed type for gRPC tests', N'Point', N'N', N'seed');
+
+    INSERT INTO dbo.Structure ([TypeID], [Notes], [Label], [Username], [Confidence])
+    VALUES (1, N'Seed structure', 'seed-1', N'seed', 0.5);
+
+    INSERT INTO dbo.Location ([ParentID], [Z], [TypeCode], [Username], [MosaicShape], [VolumeShape])
+    VALUES (
+        1,
+        1,
+        1,
+        N'seed',
+        geometry::STGeomFromText('POINT (100 200)', 0),
+        geometry::STGeomFromText('POINT (100 200)', 0)
+    );
+END
+GO

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Threading;
 using System.Windows.Data;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -14,13 +15,13 @@ namespace WebAnnotation.WPF.Converters
                 return null;
 
             StructureTypeObj typeObj = value as StructureTypeObj;
-            if (typeObj == null && (value is long || value is int || value is ulong || value is uint))
+            if (typeObj is null && (value is long || value is int || value is ulong || value is uint))
             {
                 long ID = System.Convert.ToInt64(value);
-                typeObj = Store.StructureTypes.GetObjectByID(ID, true);
+                Store.StructureTypes.TryGetObjectByID(ID, out typeObj);
             }
 
-            if (typeObj == null)
+            if (typeObj is null)
                 throw new ArgumentException(string.Format("Expected a StructureTypeObj, got {0}", value));
 
             return new Annotation.ViewModels.StructureTypeObjViewModel(typeObj);

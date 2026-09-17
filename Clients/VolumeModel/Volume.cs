@@ -14,6 +14,8 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using UnitsAndScale;
 using Utils;
+using VolumeModel;
+using Viking.Common;
 
 namespace Viking.VolumeModel
 {
@@ -35,24 +37,17 @@ namespace Viking.VolumeModel
         }
     }
 
-    public class EndpointInformation
+    public class EndpointInformation(string Authentication, string Endpoint, string exportURL)
     {
-        public readonly Uri AuthenticationURL;
-        public readonly Uri EndpointURL;
-        public readonly Uri ExportURL;
-
-        public EndpointInformation(string Authentication, string Endpoint, string exportURL)
-        {
-            AuthenticationURL = new Uri(Authentication);
-            EndpointURL = new Uri(Endpoint);
-            this.ExportURL = new Uri(exportURL);
-        }
+        public readonly Uri AuthenticationURL = new(Authentication);
+        public readonly Uri EndpointURL = new(Endpoint);
+        public readonly Uri ExportURL = exportURL is null ? null : new Uri(exportURL);
 
         internal static EndpointInformation CreateFromElement(XElement elem)
         {
             return new EndpointInformation(elem.GetAttributeCaseInsensitive("authentication").Value,
-                                           elem.GetAttributeCaseInsensitive("endpoint").Value, 
-                                           elem.GetAttributeCaseInsensitive("exporturl").Value);
+                                           elem.GetAttributeCaseInsensitive("endpoint").Value,
+                                           elem.GetAttributeCaseInsensitive("exporturl")?.Value);
         }
     }
 
@@ -72,32 +67,34 @@ namespace Viking.VolumeModel
 
         public static TileServerInfo CreateFromElement(XElement node)
         {
-            TileServerInfo info = new TileServerInfo();
+            TileServerInfo info = new()
+            {
+                TileXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileXDim").Value),
+                TileYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileYDim").Value),
+                GridXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridXDim").Value),
+                GridYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridYDim").Value),
+                MaxLevel = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("MaxLevel").Value),
+                FilePrefix = node.GetAttributeCaseInsensitive("FilePrefix").Value,
+                FilePostfix = node.GetAttributeCaseInsensitive("FilePostfix").Value,
+                Host = node.GetAttributeCaseInsensitive("host").Value,
+                CoordSpaceName = node.GetAttributeCaseInsensitive("coordspacename").Value,
 
-            info.TileXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileXDim").Value);
-            info.TileYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileYDim").Value);
-            info.GridXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridXDim").Value);
-            info.GridYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridYDim").Value);
-            info.MaxLevel = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("MaxLevel").Value);
-            info.FilePrefix = node.GetAttributeCaseInsensitive("FilePrefix").Value;
-            info.FilePostfix = node.GetAttributeCaseInsensitive("FilePostfix").Value;
-            info.Host = node.GetAttributeCaseInsensitive("host").Value;
-            info.CoordSpaceName = node.GetAttributeCaseInsensitive("coordspacename").Value;
-
-            info.Channels = node.Elements().Where(e => e.Name == "Channel").Select(e => new OCPChannelInfo(e)).ToList(); 
+                Channels = [.. node.Elements().Where(e => e.Name == "Channel").Select(e => new OCPChannelInfo(e))]
+            };
             return info;
         }
 
         protected TileServerInfo()
         {
+
         }
     }
 
 
 
     /// <summary>
-    /// Collection of volumes, sections and tiles. There is only one dataset loaded at a time.
-    /// TODO: Split parsing the VikingXML into a separate class
+    /// One open dataset: VikingXML, sections, and stos groups. CreateAsync parses the XML;
+    /// Initialize loads sections and stos. Only one Volume is open at a time.
     /// </summary>
     public class Volume
     {
@@ -107,22 +104,22 @@ namespace Viking.VolumeModel
         public string Name = "";
 
         /// <summary>
-        /// Name of the volume transform to use by default
+        /// Volume.Transforms key passed to MappingManager / VolumeTransformProvider. "None" is mosaic-only.
         /// </summary>
         public string DefaultVolumeTransform = null;
 
         /// <summary>
-        /// Name of the default stos group
+        /// VikingXML stosgroup used when DefaultVolumeTransform is not set.
         /// </summary>
         public string DefaultStosGroup = null;
 
         /// <summary>
-        /// Name of the default image pyramid
+        /// Fallback pyramid name when a section has no DefaultPyramid.
         /// </summary>
         public string DefaultImagePyramid = null;
 
         /// <summary>
-        /// Name of the default tile-to-mosaic transform when using pyramids
+        /// Fallback mosaic stos name (Section.DefaultPyramidTransform) for pyramid channels.
         /// </summary>
         public string DefaultMosaicTransform = null;
 
@@ -136,52 +133,42 @@ namespace Viking.VolumeModel
         /// </summary>
         public bool UpdateServerVolumePositions = false;
 
+        /// <summary>
+        /// Annotation / identity / export URLs from VikingXML. Tile HTTP still uses Host + UserCredentials.
+        /// </summary>
         public EndpointInformation Endpoint = null;
 
         private string _UniqueID = "";
         /// <summary>
         /// Unique ID for this volume on the server
         /// </summary>
-        public string UniqueID
-        {
-            get { return _UniqueID; }
-        }
+        public string UniqueID => _UniqueID;
 
         /// <summary>
         /// Set to true if the volume is located on the local drive
         /// False if over a network
         /// </summary>
         private readonly bool _IsLocal;
-        public bool IsLocal
-        {
-            get { return _IsLocal; }
-
-        }
+        public bool IsLocal => _IsLocal;
 
         /// <summary>
-        /// Credentials to use during web requests
+        /// HTTP credentials for VikingXML, stos, and tiles. Annotation gRPC uses IAnnotationAccessTokenProvider, not this.
         /// </summary>
-        public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public System.Net.NetworkCredential UserCredentials = new("anonymous", "connectome");
 
         private readonly XElement _VolumeElement;
 
         /// <summary>
         /// The XML document used to initialize the volume.  Contains all configuration settings from the server.
         /// </summary>
-        public XElement VolumeElement
-        {
-            get
-            {
-                return _VolumeElement;
-            }
-        }
+        public XElement VolumeElement => _VolumeElement;
 
         /// <summary>
         /// Names of transform groups that can be used to register images into the volume
         /// </summary>
-        public List<string> VolumeTransformNames = new List<string>(new string[] { "None" });
+        public List<string> VolumeTransformNames = ["None"];
 
-        private readonly Dictionary<int, int> SectionToReferenceSectionBelow = new Dictionary<int, int>();
+        private readonly Dictionary<int, int> SectionToReferenceSectionBelow = [];
 
         /// <summary>
         /// Specified during loading, if the <DefaultTileset> element exists we assign all sections containing that tileset to use it as the default transform
@@ -192,10 +179,7 @@ namespace Viking.VolumeModel
         /// The server the volume transforms and image data is located on
         /// </summary>
         private string _Host;
-        public string Host
-        {
-            get { return _Host; }
-        }
+        public string Host => _Host;
 
 
         /// <summary>
@@ -204,46 +188,44 @@ namespace Viking.VolumeModel
         internal readonly VolumePaths Paths;
 
         /// <summary>
+        /// The local directory where volume-specific data is cached
+        /// </summary>
+        public string LocalVolumeDir => Paths?.LocalVolumeDir;
+
+        /// <summary>
         /// Maps a section number to its section object
         /// </summary>
-        public SortedList<int, Section> Sections = new SortedList<int, Section>();
+        public SortedList<int, Section> Sections = [];
 
         private long _Initialized = 0;
         /// <summary>
         /// Set to true if the Initialize() method has previously completed for this instance
         /// </summary>
-        public bool IsInitialized
-        {
-            get => Interlocked.Read(ref _Initialized) > 0;
-        }
+        public bool IsInitialized => Interlocked.Read(ref _Initialized) > 0;
 
         /// <summary>
-        /// Sorted list containing the transforms for each volume transform we find
-        /// Key = Downsample level
-        /// Value = Dictionary mapping each section number to a stos transform.  This is because section numbers may not be continuos
+        /// Stos groups: outer key is the volume-transform / stosgroup name (not downsample).
+        /// Inner key is section number — numbers may have gaps.
         /// </summary>
-        public SortedList<string, SortedList<int, ITransform>> Transforms = new SortedList<string, SortedList<int, ITransform>>();
+        public SortedList<string, SortedList<int, ITransform>> Transforms = [];
 
-        public int NumSections
-        {
-            get { return Sections.Count; }
-        }
+        public int NumSections => Sections.Count;
 
         private IAxisUnits _DefaultXYScale;
 
-        public IAxisUnits DefaultXYScale
-        {
-            get { return _DefaultXYScale;}
-        }
+        public IAxisUnits DefaultXYScale => _DefaultXYScale;
 
         /// <summary>
-        /// Returns the section that the passed section was registered to
+        /// This task is set to completed when the volume is initialized.
         /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
+        public Task InitializationTask { get; private set; }
+
+        /// <summary>
+        /// Nearest loaded section with a smaller number. Not the stos parent — use RegistrationTree for that.
+        /// </summary>
         public Section GetReferenceSectionBelow(Section section)
         {
-            if (section == null)
+            if (section is null)
                 return null;
 
             //Optimistic implementation that looks at section immediately above
@@ -251,8 +233,8 @@ namespace Viking.VolumeModel
             int minSectionNumber = Sections.Keys.Min();
             while (refnumber >= minSectionNumber)
             {
-                if (Sections.ContainsKey(refnumber))
-                    return Sections[refnumber];
+                if (Sections.TryGetValue(refnumber, out var below))
+                    return below;
                 refnumber--;
             }
 
@@ -260,13 +242,11 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Returns the section that the passed section was registered to
+        /// Nearest loaded section with a larger number. Not the stos parent — use RegistrationTree for that.
         /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
         public Section GetReferenceSectionAbove(Section section)
         {
-            if (section == null)
+            if (section is null)
                 return null;
 
             //Optimistic implementation that looks at section immediately above
@@ -274,46 +254,64 @@ namespace Viking.VolumeModel
             int maxSectionNumber = Sections.Keys.Max();
             while (refnumber <= maxSectionNumber)
             {
-                if (Sections.ContainsKey(refnumber))
-                    return Sections[refnumber];
+                if (Sections.TryGetValue(refnumber, out var above))
+                    return above;
                 refnumber++;
             }
 
             return null;
         }
 
-        private readonly List<TileServerInfo> TileServerList = new List<TileServerInfo>();
+        private readonly List<TileServerInfo> TileServerList = [];
+
+        /// <summary>
+        /// Tile pixel width from the first tile server, or null if no tile servers are configured.
+        /// Used to compute the max concurrent texture request limit.
+        /// </summary>
+        public int? DefaultTileWidth => TileServerList.Count > 0 ? TileServerList[0].TileXDim : null;
 
         private XDocument VolumeXML;
 
         /// <summary>
-        /// 
+        /// Reads VikingXML defaults only. Sections and stos stay empty until Initialize.
         /// </summary>
-        /// <param name="path">The host and path to the volume, no filenames</param>
-        /// <param name="localCachePath">LocaL cache path corresponding to the path</param>
-        /// <param name="workerThread">optional worker thread to report progress</param>
-        public Volume(string path, string localCachePath, Viking.Common.IProgressReporter workerThread)
+        /// <param name="path"></param>
+        /// <param name="localCachePath"></param>
+        /// <param name="workerThread"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="TaskCanceledException"></exception>
+        public static async Task<Volume> CreateAsync(string path, string localCachePath, IProgress<ProgressInfo> workerThread, CancellationToken token)
         {
             if (path is null)
                 throw new ArgumentNullException(nameof(path));
 
-            //Load the default settings from user preferences
-            //            ChannelInfo DefaultChannel = new ChannelInfo();
-            DefaultChannels = new ChannelInfo[0];
+            var document = await LoadXDocumentAsync(path, token, null, workerThread).ConfigureAwait(false);
+            Volume output = new(path, localCachePath, document);
 
-            VolumeXML = LoadXDocument(path, null, workerThread);
-            if(IsVolumePathLocal(path))
+            if (token.IsCancellationRequested)
+                throw new TaskCanceledException();
+
+            return output;
+        }
+
+        private Volume(string path, string localCachePath, XDocument VolumeXML)
+        {
+            DefaultChannels = [];
+
+            if (IsVolumePathLocal(path))
             {
                 //This code remains, but the value is replaced if a value is found in the XML file
                 this._Host = RemoveXMLExtension(path);
                 this._IsLocal = false;
             }
 
+            this._Host = path;
             this._VolumeElement = GetVolumeElement(VolumeXML);
             LoadDefaultsFromVolumeElement(_VolumeElement);
             LoadDefaultsFromXML(_VolumeElement);
-
-            this.Paths = new VolumePaths(localCachePath, this.Name); 
+            this.Paths = new VolumePaths(localCachePath, this.Name);
         }
 
         /// <summary>
@@ -322,11 +320,11 @@ namespace Viking.VolumeModel
         /// <param name="path">The host and path to the volume, no filenames</param>
         /// <param name="localCachePath">LocaL cache path corresponding to the path</param>
         /// <param name="workerThread">optional worker thread to report progress</param>
-        public Volume(string path, string localCachePath, XDocument VolumeXML, Viking.Common.IProgressReporter workerThread)
+        public Volume(string path, string localCachePath, XDocument VolumeXML, IProgress<ProgressInfo> workerThread)
         {
             //Load the default settings from user preferences
             //ChannelInfo DefaultChannel = new ChannelInfo();
-            DefaultChannels = new ChannelInfo[0];
+            DefaultChannels = [];
 
             this._Host = path;
             this._VolumeElement = GetVolumeElement(VolumeXML);
@@ -341,16 +339,16 @@ namespace Viking.VolumeModel
 
         #region Channels
 
-        private ChannelInfo[] _DefaultChannels = new ChannelInfo[0];
+        private ChannelInfo[] _DefaultChannels = [];
 
         public ChannelInfo[] DefaultChannels
         {
-            get { return _DefaultChannels; }
+            get => _DefaultChannels;
             set
             {
                 if (null == value)
                 {
-                    _DefaultChannels = new ChannelInfo[0];
+                    _DefaultChannels = [];
                     return;
                 }
 
@@ -360,17 +358,14 @@ namespace Viking.VolumeModel
 
         //A list of all channel names found in the volume
         //TODO: Modify to a per section basis?
-        private static readonly List<string> _ChannelNames = new List<String>();
+        private static readonly List<string> _ChannelNames = [];
 
         /// <summary>
         /// A list of all channel names found on sections in the volume
         /// </summary>
-        public string[] ChannelNames
-        {
-            get { return _ChannelNames.ToArray(); }
-        }
+        public static string[] ChannelNames => [.. _ChannelNames];
 
-        private void AddChannel(string name)
+        private static void AddChannel(string name)
         {
             //TODO: This needs a more thorough fix.  Sections are created on threads and they race to add entries to this list.
             //We should import all sections and then build the list from the results
@@ -381,7 +376,7 @@ namespace Viking.VolumeModel
             }
         }
 
-        public void RemoveChannel(string name)
+        public static void RemoveChannel(string name)
         {
             if (false == _ChannelNames.Contains(name))
                 return;
@@ -393,13 +388,14 @@ namespace Viking.VolumeModel
 
         public static bool IsVolumePathLocal(string path)
         {
-            Uri uri = new Uri(path);
+            Uri uri = new(path);
             if (uri.Scheme == "http" || uri.Scheme == "https")
                 return false;
 
-            return true; 
+            return true;
         }
 
+        /*
         /// <summary>
         /// Loads a path, determines whether path refers to XML file or a local directory
         /// </summary>
@@ -410,19 +406,38 @@ namespace Viking.VolumeModel
                 throw new ArgumentNullException(nameof(path));
             Uri uri = new Uri(path);
 
-            if(workerThread != null)
-                workerThread.ReportProgress(0, $"Requesting {path}");
+            workerThread?.Report(0, $"Requesting {path}");
 
             XDocument XMLInitData;
             if (uri.Scheme == "http" || uri.Scheme == "https")
-                XMLInitData = LoadHTTP(path, UserCredentials);
+                XMLInitData = LoadHttp(path, UserCredentials);
             else
                 XMLInitData = LoadLocal(uri.LocalPath);
 
             return XMLInitData;
         }
+        */
 
-        protected static string RemoveXMLExtension(string path)
+        /// <summary>
+        /// Loads a path, determines whether path refers to XML file or a local directory
+        /// </summary>
+        /// <param name="path"></param>
+        public static Task<XDocument> LoadXDocumentAsync(string path, CancellationToken token, System.Net.NetworkCredential UserCredentials = null, IProgress<ProgressInfo> workerThread = null)
+        {
+            if (path is null)
+                throw new ArgumentNullException(nameof(path));
+            Uri uri = new(path);
+
+            workerThread?.Report(new ProgressInfo($"Requesting {path}", 0, 100));
+
+            XDocument XMLInitData;
+            if (uri.Scheme == "http" || uri.Scheme == "https")
+                return LoadHTTPAsync(path, UserCredentials, token);
+            else
+                return LoadLocalAsync(uri.LocalPath, token);
+        }
+
+        static string RemoveXMLExtension(string path)
         {
             //Remove the .xml file from the path
             int iRemove = path.LastIndexOf('/');
@@ -434,102 +449,126 @@ namespace Viking.VolumeModel
 
             return VolumePath;
         }
-        
 
-        protected static XDocument LoadHTTP(string path, System.Net.NetworkCredential UserCredentials)
-        { 
-            Uri pathURI = new Uri(path);
+        private const int VolumeXmlRequestTimeoutSeconds = 60;
+        private const int VolumeXmlMaxRetries = 3;
 
-            HttpWebRequest request = WebRequest.Create(pathURI) as HttpWebRequest;
-            if (pathURI.Scheme.ToLower() == "https")
-                request.Credentials = UserCredentials;
+        protected static async Task<XDocument> LoadHTTPAsync(string path, System.Net.NetworkCredential UserCredentials, CancellationToken token)
+        {
+            Uri pathURI = new(path);
 
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-             
-            XDocument reader = null;
-            try
-            {
-                using (WebResponse response = request.GetResponse())
+            HttpClientHandler handler = pathURI.Scheme.ToLower() == "https" && UserCredentials != null
+                ? new HttpClientHandler
                 {
+                    Credentials = UserCredentials
+                }
+                : new HttpClientHandler
+                {
+                    UseDefaultCredentials = true
+                };
 
-                    Stream responseStream = response.GetResponseStream();
+            Exception lastException = null;
+            for (int attempt = 0; attempt <= VolumeXmlMaxRetries; attempt++)
+            {
+                if (token.IsCancellationRequested)
+                    throw new TaskCanceledException("LoadHttpAsync cancelled by token");
 
-                    using (StreamReader XMLStream = new StreamReader(responseStream))
-                    {
+                if (attempt > 0)
+                {
+                    Trace.WriteLine($"Volume XML load retry {attempt}/{VolumeXmlMaxRetries} for {path}");
+                    await Task.Delay(1000 * attempt, token).ConfigureAwait(false);
+                }
 
-                        reader = XDocument.Parse(XMLStream.ReadToEnd());
-                    }
+                using HttpClient httpClient = new(handler);
+                httpClient.Timeout = TimeSpan.FromSeconds(VolumeXmlRequestTimeoutSeconds);
+                try
+                {
+                    var response = await httpClient.GetAsync(pathURI, token).ConfigureAwait(false);
+                    response.EnsureSuccessStatusCode();
+
+                    if (token.IsCancellationRequested)
+                        throw new TaskCanceledException("LoadHttpAsync cancelled by token");
+
+                    var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (token.IsCancellationRequested)
+                        throw new TaskCanceledException("LoadHttpAsync cancelled by token");
+
+                    return XDocument.Parse(content);
+                }
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+                {
+                    lastException = e;
+                    if (attempt == VolumeXmlMaxRetries)
+                        throw new WebException($"Error connecting to volume server after {VolumeXmlMaxRetries + 1} attempts: \n{path}\n{e.Message}", e);
                 }
             }
-            catch (WebException e)
-            {
-                /*PORT: Don't have forms, throw a better exception*/
-                throw new WebException($"Error connecting to volume server: \n{path}\n{e.Message}", e);
-            }
-            
-            return reader;
-        }
 
+            if (lastException != null)
+                throw new WebException($"Error connecting to volume server: \n{path}\n{lastException.Message}", lastException);
+            throw new WebException($"Error connecting to volume server: \n{path}", null);
+        }
 
         protected static XDocument LoadLocal(string path)
         {
             XDocument reader = null;
-            using (FileStream f = File.OpenRead(path))
-            {
-                using (StreamReader XMLStreamReader = new StreamReader(f))
-                {
-                    string text = XMLStreamReader.ReadToEnd();
-                    reader = XDocument.Parse(text);
-                }
-            }
+            using FileStream f = File.OpenRead(path);
+            using StreamReader XMLStreamReader = new(f);
+            string text = XMLStreamReader.ReadToEnd();
+            return XDocument.Parse(text);
+        }
 
-            return reader;
+
+        protected static async Task<XDocument> LoadLocalAsync(string path, CancellationToken token)
+        {
+            XDocument reader = null;
+            using FileStream f = File.OpenRead(path);
+            using StreamReader XMLStreamReader = new(f);
+            string text = await XMLStreamReader.ReadToEndAsync().ConfigureAwait(false);
+            if (token.IsCancellationRequested)
+                throw new TaskCanceledException("LoadLocalAsync cancelled by token");
+            return XDocument.Parse(text);
         }
 
         private static async Task<bool> FetchStosZip(Uri StosZipPath, System.Net.NetworkCredential UserCredentials, string LocalCachePath)
         {
-            var request = new HttpClient()
+            HttpClient request = new()
             {
                 BaseAddress = StosZipPath
             };
-            
+
             //HttpWebRequest request = WebRequest.Create(StosZipPath) as HttpWebRequest;
             //if (StosZipPath.Scheme.ToLower() == "https")
-                //request.Credentials = UserCredentials;
-            
+            //request.Credentials = UserCredentials;
+
 
             //request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
 
             try
-            { 
-                using (Stream responseStream = await request.GetStreamAsync(StosZipPath))
-                {
-                    /*
+            {
+                using Stream responseStream = await request.GetStreamAsync(StosZipPath).ConfigureAwait(false);
+                /*
                     Byte[] buffer = responseStream.ReadToBuffer(responseStream.Length);
                     using (MemoryStream memStream = new MemoryStream(buffer))
                     */
-                    using (ZipArchive archive = new ZipArchive(responseStream, ZipArchiveMode.Read))
-                    {
-                        if(false == System.IO.Directory.Exists(LocalCachePath))
-                            archive.ExtractToDirectory(LocalCachePath);
-                        else
-                        {
+                using ZipArchive archive = new(responseStream, ZipArchiveMode.Read);
+                if (false == System.IO.Directory.Exists(LocalCachePath))
+                    archive.ExtractToDirectory(LocalCachePath);
+                else
+                {
 
-                            foreach (var entry in archive.Entries)
-                            {
-                                var entryWriteTimeUTC = entry.LastWriteTime.DateTime.ToUniversalTime();
-                                var expectedCachePath = System.IO.Path.Combine(LocalCachePath, entry.FullName);
-                                var info = new System.IO.FileInfo(expectedCachePath);
-                                if (info.Exists == false)
-                                {
-                                    entry.ExtractToFile(expectedCachePath);
-                                }
-                                else if (info.LastWriteTimeUtc < entryWriteTimeUTC)
-                                {
-                                    System.IO.File.Delete(expectedCachePath);
-                                    entry.ExtractToFile(expectedCachePath);
-                                }
-                            }
+                    foreach (var entry in archive.Entries)
+                    {
+                        var entryWriteTimeUTC = entry.LastWriteTime.DateTime.ToUniversalTime();
+                        var expectedCachePath = System.IO.Path.Combine(LocalCachePath, entry.FullName);
+                        FileInfo info = new(expectedCachePath);
+                        if (info.Exists == false)
+                        {
+                            entry.ExtractToFile(expectedCachePath);
+                        }
+                        else if (info.LastWriteTimeUtc < entryWriteTimeUTC)
+                        {
+                            System.IO.File.Delete(expectedCachePath);
+                            entry.ExtractToFile(expectedCachePath);
                         }
                     }
                 }
@@ -541,7 +580,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception e)
             {
-                Trace.WriteLine(string.Format("Could not open StosZip file: {0}", StosZipPath), "VolumeModel");
+                Trace.WriteLine($"Could not open StosZip file: {StosZipPath}", "VolumeModel");
             }
 
             return true;
@@ -556,7 +595,7 @@ namespace Viking.VolumeModel
         {
             foreach (XNode node in volumeElement.Nodes().Where(n => n.NodeType == System.Xml.XmlNodeType.Element).ToList<XNode>())
             {
-                if (!(node is XElement elem))
+                if (node is not XElement elem)
                     continue;
 
                 //Fetch the name if we know it
@@ -579,48 +618,55 @@ namespace Viking.VolumeModel
         {
             this.Name = volumeElement.GetAttributeCaseInsensitive("Name").Value;
 
-            XAttribute defaulttileset = volumeElement.GetAttributeCaseInsensitive("defaulttileset");
-            if (defaulttileset != null)
+            try
             {
-                this.DefaultTileset = defaulttileset.Value;
+                this.DefaultTileset = volumeElement.GetAttributeCaseInsensitive("defaulttileset").Value;
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultimagepyramid = volumeElement.GetAttributeCaseInsensitive("defaultimagepyramid");
-            if (defaultimagepyramid != null)
+            try
             {
-                this.DefaultImagePyramid = defaultimagepyramid.Value;
+                this.DefaultImagePyramid = volumeElement.GetAttributeCaseInsensitive("defaultimagepyramid").Value;
+
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultmosaictransform = volumeElement.GetAttributeCaseInsensitive("defaultmosaictransform");
-            if (defaultmosaictransform != null)
+            try
             {
-                this.DefaultMosaicTransform = defaultmosaictransform.Value;
+                this.DefaultMosaicTransform = volumeElement.GetAttributeCaseInsensitive("defaultmosaictransform").Value;
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultstosgroup = volumeElement.GetAttributeCaseInsensitive("defaultstosgroup");
-            if (defaultstosgroup != null)
+            try
             {
-                this.DefaultTileset = defaultstosgroup.Value;
+                XAttribute defaultstosgroup = volumeElement.GetAttributeCaseInsensitive("defaultstosgroup");
+                this.DefaultStosGroup = defaultstosgroup.Value;
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute updateVolumePositions = volumeElement.GetAttributeCaseInsensitive("updateservervolumepositions");
-            if (updateVolumePositions != null)
+            try
             {
+                XAttribute updateVolumePositions = volumeElement.GetAttributeCaseInsensitive("updateservervolumepositions");
                 this.UpdateServerVolumePositions = Convert.ToBoolean(updateVolumePositions.Value);
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultsection = volumeElement.GetAttributeCaseInsensitive("defaultsection");
-            if (defaultsection != null)
+            try
             {
-                try
+                XAttribute defaultsection = volumeElement.GetAttributeCaseInsensitive("defaultsection");
+                if (defaultsection != null)
                 {
-                    this.DefaultSectionNumber = new int?(Convert.ToInt32(defaultsection.Value));
-                }
-                catch (FormatException)
-                {
-                    Trace.WriteLine($"Unable to parse default section: {defaultsection.Value}");
+                    try
+                    {
+                        this.DefaultSectionNumber = new int?(Convert.ToInt32(defaultsection.Value));
+                    }
+                    catch (FormatException)
+                    {
+                        Trace.WriteLine($"Unable to parse default section: {defaultsection.Value}");
+                    }
                 }
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
             XAttribute VolumePathAttrib = volumeElement.GetAttributeCaseInsensitive("path");
             if (VolumePathAttrib != null)
@@ -629,7 +675,7 @@ namespace Viking.VolumeModel
             {
                 /* PORT
                 System.Windows.Forms.MessageBox.Show("Could locate path attribute for volume.  Chances are the XML definitation for this volume has not been updated. Contact administrator to update the VikingXML file.", "Error", System.Windows.Forms.MessageBoxButtons.OK);
-                if (this._Host == null) //If we don't know a path throw an exception to kill the process
+                if (this._Host is null) //If we don't know a path throw an exception to kill the process
                     throw new ArgumentException("Could locate path attribute for volume.  Chances are the XML definitation for this volume has not been updated. Contact administrator to update the VikingXML file.");
                  */
             }
@@ -638,8 +684,12 @@ namespace Viking.VolumeModel
             if (this._Host.EndsWith("/"))
                 this._Host = this._Host.TrimEnd('/');
 
-            if (volumeElement.GetAttributeCaseInsensitive("UniqueID") != null)
-                this._UniqueID = volumeElement.GetAttributeCaseInsensitive("UniqueID").Value;
+            try
+            {
+                if (volumeElement.GetAttributeCaseInsensitive("UniqueID") != null)
+                    this._UniqueID = volumeElement.GetAttributeCaseInsensitive("UniqueID").Value;
+            }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
             return;
         }
@@ -665,33 +715,50 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Only allow one initialization at a time
         /// </summary>
-        private SemaphoreSlim InitializeLock = new SemaphoreSlim(1);
-        public async Task Initialize(CancellationToken token, Viking.Common.IProgressReporter workerThread=null)
+        private readonly SemaphoreSlim InitializeLock = new(1);
+
+        /// <summary>
+        /// Loads sections and stos into Sections / Transforms. Safe to call twice — returns if IsInitialized.
+        /// CreateAsync does not call this.
+        /// </summary>
+        public async Task Initialize(CancellationToken token, IProgress<ProgressInfo> workerThread = null)
         {
-            
+
             if (IsInitialized)
                 return;
 
             try
             {
-                await InitializeLock.WaitAsync(token); 
+                await InitializeLock.WaitAsync(token).ConfigureAwait(false);
                 if (IsInitialized || token.IsCancellationRequested)
                     return;
 
                 XDocument reader = this.VolumeXML;
-                 
+
                 int NumStosFiles = System.Convert.ToInt32(VolumeElement.GetAttributeCaseInsensitive("num_stos").Value);
                 int NumSections = System.Convert.ToInt32(VolumeElement.GetAttributeCaseInsensitive("num_sections").Value);
 
-                var ListSectionLoadingTasks = new List<Task<Section>>(NumSections);
-                var ListStosLoadingTasks = new List<Task<LoadStosResult>>(NumStosFiles);
+                List<Task<Section>> ListSectionLoadingTasks = new(NumSections);
+                List<Task<LoadStosResult>> ListStosLoadingTasks = new(NumStosFiles);
 
-                bool HaveStosZip = false;
-                if (VolumeElement.GetAttributeCaseInsensitive("StosZip") != null)
+                bool HaveVolumeStosZip = false;
+                try
                 {
-                    string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
-                    workerThread?.ReportProgress(0, $"Loading compressed transform file {StosZipFileName}");
-                    HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath);
+                    if (VolumeElement.HasAttributeCaseInsensitive("StosZip"))
+                    {
+                        string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
+                        workerThread?.Report(new ProgressInfo($"Loading compressed transform file {StosZipFileName}", 0));
+                        HaveVolumeStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath).ConfigureAwait(false);
+                    }
+                }
+                catch (XMLMissingDataException e)
+                {
+                    Trace.WriteLine($"Optional {e.Message}");
+                }
+                catch (Exception e)
+                {
+                    Trace.WriteLine($"FetchStosZip failed, falling back to normal STOS loading: {e.Message}");
+                    HaveVolumeStosZip = false;
                 }
 
                 int countStos = 0;
@@ -707,45 +774,26 @@ namespace Viking.VolumeModel
                     if (node.NodeType == System.Xml.XmlNodeType.Whitespace)
                         continue;
 
-                    XElement elem = node as XElement;
-                    if (elem == null)
+                    if (node is not XElement elem)
                         continue;
 
                     //Fetch the name if we know it
                     switch (elem.Name.LocalName.ToLower())
                     {
+                        case "stosgroup":
+                            countStos = await QueueStosGroupAsync(elem, ListStosLoadingTasks, NumStosFiles, countStos, workerThread).ConfigureAwait(false);
+                            break;
                         case "stos":
-
-                            string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
-                            Uri stosPath = new Uri(this.Host + System.IO.Path.DirectorySeparatorChar + stosFileName);
-                            //      int pixelSpacing = System.Convert.ToInt32(GetAttributeCaseInsensitive(elem,"pixelSpacing").Value);
-                            int ProgressPercent = (countStos * 100) / NumStosFiles;
-                            countStos++;
-                            workerThread?.ReportProgress(ProgressPercent, $"Loading {stosFileName}");
-                            
-                            ListStosLoadingTasks.Add( LoadStos(elem, HaveStosZip));
-
+                            QueueStosLoad(elem, HaveVolumeStosZip, stosGroupName: null, ListStosLoadingTasks, NumStosFiles, ref countStos, workerThread);
+                            break;
+                        case "sections":
+                            foreach (XElement sectionElem in elem.Elements().Where(e => string.Equals(e.Name.LocalName, "Section", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                QueueSectionLoad(sectionElem, ListSectionLoadingTasks, NumSections, ref countSections, workerThread, token);
+                            }
                             break;
                         case "section":
-                            //string SectionPath = VolumePath + '/' + GetAttributeCaseInsensitive(elem,"path").Value;
-                            string SectionPath = elem.HasAttributeCaseInsensitive("path") ? elem.GetAttributeCaseInsensitive("path").Value : "";
-
-                            if (NumSections > 0)
-                            {
-                                ProgressPercent = (countSections * 100) / NumSections;
-                            }
-                            else
-                            {
-                                ProgressPercent = 100;
-                            }
-
-                            countSections++;
-                            workerThread?.ReportProgress(ProgressPercent, $"Queueing {SectionPath}");
-
-                            var newSection = new Section(this, SectionPath, elem);
-                            var task = newSection.InitializeFromXML(elem, token);
-                            ListSectionLoadingTasks.Add(task);
-                            //await task;
+                            QueueSectionLoad(elem, ListSectionLoadingTasks, NumSections, ref countSections, workerThread, token);
                             break;
                         case "ocptileserver":
                             TileServerInfo info = TileServerInfo.CreateFromElement(elem);
@@ -761,13 +809,13 @@ namespace Viking.VolumeModel
                     }
                 }
 
-                await WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread);
+                await WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread, token).ConfigureAwait(false);
 
-                await WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread); 
+                await WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread, token).ConfigureAwait(false);
 
                 CreateVolumeTransforms(workerThread);
 
-                workerThread?.ReportProgress(101, "Done!");
+                workerThread?.Report(new ProgressInfo("Done!", 100, 100));
 
                 Interlocked.Exchange(ref _Initialized, 1);
             }
@@ -775,14 +823,75 @@ namespace Viking.VolumeModel
             {
                 VolumeXML = null;
                 InitializeLock.Release();
-            } 
+            }
         }
 
-        private async Task<LoadStosResult> LoadStos(XElement elem, bool HaveStosCache)
+        private async Task<int> QueueStosGroupAsync(
+            XElement stosGroupElem,
+            List<Task<LoadStosResult>> listStosLoadingTasks,
+            int numStosFiles,
+            int countStos,
+            IProgress<ProgressInfo> workerThread)
+        {
+            string groupName = stosGroupElem.GetAttributeCaseInsensitive("Name").Value;
+
+            bool haveGroupZip = false;
+            if (stosGroupElem.HasAttributeCaseInsensitive("zip"))
+            {
+                string zipFileName = stosGroupElem.GetAttributeCaseInsensitive("zip").Value;
+                workerThread?.Report(new ProgressInfo($"Loading compressed transform file {zipFileName}", 0));
+                haveGroupZip = await FetchStosZip(
+                    new Uri($"{Host}/{zipFileName}"),
+                    this.UserCredentials,
+                    this.Paths.ServerStosCachePath).ConfigureAwait(false);
+            }
+
+            foreach (XElement stosElem in stosGroupElem.Elements().Where(e => string.Equals(e.Name.LocalName, "stos", StringComparison.OrdinalIgnoreCase)))
+            {
+                QueueStosLoad(stosElem, haveGroupZip, groupName, listStosLoadingTasks, numStosFiles, ref countStos, workerThread);
+            }
+
+            return countStos;
+        }
+
+        private void QueueStosLoad(
+            XElement elem,
+            bool haveStosCache,
+            string stosGroupName,
+            List<Task<LoadStosResult>> listStosLoadingTasks,
+            int numStosFiles,
+            ref int countStos,
+            IProgress<ProgressInfo> workerThread)
+        {
+            string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
+            int progressPercent = numStosFiles > 0 ? (countStos * 100) / numStosFiles : 100;
+            countStos++;
+            workerThread?.Report(new ProgressInfo($"Loading {stosFileName}", progressPercent));
+            listStosLoadingTasks.Add(LoadStos(elem, haveStosCache, stosGroupName));
+        }
+
+        private void QueueSectionLoad(
+            XElement elem,
+            List<Task<Section>> listSectionLoadingTasks,
+            int numSections,
+            ref int countSections,
+            IProgress<ProgressInfo> workerThread,
+            CancellationToken token)
+        {
+            string sectionPath = elem.HasAttributeCaseInsensitive("path") ? elem.GetAttributeCaseInsensitive("path").Value : "";
+            int progressPercent = numSections > 0 ? (countSections * 100) / numSections : 100;
+            countSections++;
+            workerThread?.Report(new ProgressInfo($"Queueing {sectionPath}", progressPercent));
+
+            Section newSection = new(this, sectionPath, elem);
+            listSectionLoadingTasks.Add(newSection.InitializeFromXML(elem, token));
+        }
+
+        private async Task<LoadStosResult> LoadStos(XElement elem, bool HaveStosCache, string stosGroupName = null)
         {
             LoadStosResult result = null;
             string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
-            Uri stosPath = new Uri(this.Host + System.IO.Path.DirectorySeparatorChar + stosFileName);
+            Uri stosPath = new(this.Host + System.IO.Path.DirectorySeparatorChar + stosFileName);
 
             try
             {
@@ -791,26 +900,44 @@ namespace Viking.VolumeModel
                     var stosFileCacheFullPath = System.IO.Path.Combine(this.Paths.ServerStosCachePath, stosFileName);
                     if (System.IO.File.Exists(stosFileCacheFullPath))
                     {
-                        result = await LoadStosResult.LoadAsync(stosFileCacheFullPath, elem);
+                        try
+                        {
+                            result = await LoadStosResult.LoadAsync(stosFileCacheFullPath, elem).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"Exception loading {stosFileCacheFullPath}.\n{e?.InnerException}");
+                            Trace.WriteLine($"Exception loading {stosFileCacheFullPath}.\n{e?.InnerException}");
+                            throw;
+                        }
                     }
                 }
 
                 //Load from server if it is not in the zip
-                if (result == null)
+                if (result is null)
                 {
                     //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
-                    result = await LoadStosResult.LoadAsync(stosPath, this.UserCredentials, elem).ConfigureAwait(false);
+                    try
+                    {
+                        result = await LoadStosResult.LoadAsync(stosPath, this.UserCredentials, elem).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
+                        Trace.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
+                        throw;
+                    }
                 }
             }
             finally
             {
             }
 
-            if (result != null)
+            if (result?.Transform != null)
             {
                 try
                 {
-                    await OnStosTransformLoadComplete(result.Transform, result.element).ConfigureAwait(false);
+                    await OnStosTransformLoadComplete(result.Transform, result.element, stosGroupName).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -820,21 +947,29 @@ namespace Viking.VolumeModel
             return result;
         }
 
-        private readonly SemaphoreSlim StosTransformLoadSemaphore = new SemaphoreSlim(1);
-        private async Task OnStosTransformLoadComplete(ITransform Transform, XElement element)
+        private readonly SemaphoreSlim StosTransformLoadSemaphore = new(1);
+        private async Task OnStosTransformLoadComplete(ITransform Transform, XElement element, string stosGroupName = null)
         {
             try
             {
-                await StosTransformLoadSemaphore.WaitAsync();
-                int pixelSpacing =
-                    System.Convert.ToInt32(element.GetAttributeCaseInsensitive("pixelSpacing").Value);
-                string type = element.GetAttributeCaseInsensitive("type").Value;
-                string groupName = $"{type} {pixelSpacing}";
-
-                XAttribute GroupNameAttribute = element.Attribute("GroupName");
-                if (GroupNameAttribute != null)
+                await StosTransformLoadSemaphore.WaitAsync().ConfigureAwait(false);
+                string groupName;
+                if (!string.IsNullOrEmpty(stosGroupName))
                 {
-                    groupName = GroupNameAttribute.Value;
+                    groupName = stosGroupName;
+                }
+                else
+                {
+                    int pixelSpacing =
+                        System.Convert.ToInt32(element.GetAttributeCaseInsensitive("pixelSpacing").Value);
+                    string type = element.GetAttributeCaseInsensitive("type").Value;
+                    groupName = $"{type} {pixelSpacing}";
+
+                    XAttribute GroupNameAttribute = element.Attribute("GroupName");
+                    if (GroupNameAttribute != null)
+                    {
+                        groupName = GroupNameAttribute.Value;
+                    }
                 }
 
                 if (false == VolumeTransformNames.Contains(groupName))
@@ -842,7 +977,7 @@ namespace Viking.VolumeModel
                     VolumeTransformNames.Add(groupName);
                 }
 
-                if (this.DefaultVolumeTransform == null || this.DefaultVolumeTransform == "None")
+                if (this.DefaultVolumeTransform is null || this.DefaultVolumeTransform == "None")
                     this.DefaultVolumeTransform = groupName;
 
                 if (Transform != null)
@@ -851,13 +986,13 @@ namespace Viking.VolumeModel
                     ITransform stosTransform = Transform;
                     StosTransformInfo info = (stosTransform as ITransformInfo)?.Info as StosTransformInfo;
                     SortedList<int, ITransform> transformDict = null;
-                    if (this.Transforms.ContainsKey(groupName))
+                    if (this.Transforms.TryGetValue(groupName, out var transform))
                     {
-                        transformDict = this.Transforms[groupName];
+                        transformDict = transform;
                     }
                     else
                     {
-                        transformDict = new SortedList<int, ITransform>();
+                        transformDict = [];
                         Transforms.Add(groupName, transformDict);
                     }
 
@@ -880,14 +1015,14 @@ namespace Viking.VolumeModel
                 StosTransformLoadSemaphore.Release();
             }
         }
-        
+
 
         private IContinuousTransform EnsureTransformIsContinuous(ITransform transform)
         {
-            if(transform as IContinuousTransform == null)
+            if (transform as IContinuousTransform is null)
             {
                 Geometry.Transforms.StosTransformInfo info = ((ITransformInfo)transform).Info as Geometry.Transforms.StosTransformInfo;
-                string SerializerCacheFullPath = System.IO.Path.Combine(this.Paths.StosCacheDir, info.GetCacheFilename(".stos_bin")); 
+                string SerializerCacheFullPath = System.IO.Path.Combine(this.Paths.StosCacheDir, info.GetCacheFilename(".stos_bin"));
                 return Serialization.LoadOrCreateContinuousTransform(SerializerCacheFullPath, transform as IDiscreteTransform);
             }
 
@@ -899,19 +1034,23 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="ListSectionThreadingObj"></param>
         /// <param name="workerThread"></param>
-        private static async Task WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, Viking.Common.IProgressReporter workerThread)
+        private static async Task WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, IProgress<ProgressInfo> workerThread, CancellationToken token)
         {
-            workerThread?.ReportProgress(0, "Waiting for Stos Transform Loading Threads");
+            workerThread?.Report(new ProgressInfo("Waiting for Stos Transform Loading Threads", 0));
             int countFinished = 0;
             int NumStosFiles = ListStosTransformTasks.Count;
 
             while (ListStosTransformTasks.Count > 0)
-            {  
-                Task<LoadStosResult>[] stosTasks = ListStosTransformTasks.ToArray();
+            {
+                Task<LoadStosResult>[] stosTasks = [.. ListStosTransformTasks];
 
-                int iObj = System.Threading.Tasks.Task.WaitAny(stosTasks);
-                LoadStosResult result = stosTasks[iObj].Result;
-                ListStosTransformTasks.RemoveAt(iObj);
+                var completedTask = await System.Threading.Tasks.Task.WhenAny(stosTasks).ConfigureAwait(false);
+
+                if (token.IsCancellationRequested)
+                    throw new TaskCanceledException("WaitForLoadStosTransformThreads cancelled by token");
+
+                LoadStosResult result = completedTask.Result;
+                ListStosTransformTasks.Remove(completedTask);
 
                 /*
                 LoadStosResult result = await stosTasks[0];
@@ -920,20 +1059,15 @@ namespace Viking.VolumeModel
 
                 //Test to see if the wait state is set 
                 countFinished++;
-                int Progress;
-                if (NumStosFiles > 0)
-                    Progress = (countFinished * 100) / NumStosFiles;
-                else
-                    Progress = 100;
-
-                if (result.Transform == null)
+                int Progress = NumStosFiles > 0 ? (countFinished * 100) / NumStosFiles : 100;
+                if (result.Transform is null)
                 {
-                    workerThread?.ReportProgress(Progress, $"Failed Loading {result.element}");
+                    workerThread?.Report(new ProgressInfo($"Failed Loading {result.element}", Progress, 100));
                     continue;
                 }
                 else
                 {
-                    workerThread?.ReportProgress(Progress, $"Loaded {result.Transform}");
+                    workerThread?.Report(new ProgressInfo($"Loaded {result.Transform}", Progress, 100));
                 }
             }
         }
@@ -944,31 +1078,27 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="ListSectionThreadingObj"></param>
         /// <param name="workerThread"></param>
-        private async Task WaitForCreateSectionThreads(List<Task<Section>> ListSectionThreadingObj, Viking.Common.IProgressReporter workerThread)
+        private async Task WaitForCreateSectionThreads(List<Task<Section>> ListSectionThreadingObj, IProgress<ProgressInfo> workerThread, CancellationToken token)
         {
-            workerThread.ReportProgress(0, "Waiting for Section Loading Threads");
+            workerThread.Report(new ProgressInfo("Waiting for Section Loading Threads", 0));
 
             var taskArray = ListSectionThreadingObj.ToArray();
             int countFinished = 0;
             int NumSections = taskArray.Length;
             while (taskArray.Length > 0)
             {
-                int iCompleted = Task.WaitAny(taskArray);
+                int iCompleted = Task.WaitAny(taskArray, token);
                 var Section = taskArray[iCompleted].Result;
-                taskArray = taskArray.RemoveAt(iCompleted); 
-                
+                taskArray = taskArray.RemoveAt(iCompleted);
+
                 //var Section = await taskArray[0];
                 //taskArray = taskArray.RemoveAt(0);
 
                 countFinished++;
-                int Progress;
-                if (NumSections > 0)
-                    Progress = (countFinished * 100) / NumSections;
-                else
-                    Progress = 100;
+                int Progress = NumSections > 0 ? (countFinished * 100) / NumSections : 100;
 
                 OnSectionLoadComplete(Section);
-                workerThread?.ReportProgress(Progress, $"Loaded {Section}");
+                workerThread?.Report(new ProgressInfo($"Loaded {Section}", Progress));
             }
         }
 
@@ -985,7 +1115,8 @@ namespace Viking.VolumeModel
 
                 foreach (string name in section.ChannelNames)
                 {
-                    this.AddChannel(name);
+                    AddChannel(name);
+                    Volume.AddChannel(name);
                 }
 
                 this.AddTileServerToSectionMappings(section);
@@ -1017,21 +1148,20 @@ namespace Viking.VolumeModel
         }
 
 
-        private static ITransform LoadSerializedTransformFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
+        private static ITransform LoadSerializedTransformFromCache(string CacheStosPath, StosTransformInfo _ControlToVolumeInfo, StosTransformInfo _SectionToControlInfo)
         {
             ITransform cachedTransform = null;
 
+            throw new NotImplementedException("This path needs to be updated so binary encoded transforms are written and read");
+
             try
             {
-                if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified, Global.OldestValidCachedTransform }))
+                if (Geometry.Global.IsCacheFileValid(CacheStosPath, [_ControlToVolumeInfo.LastModified, _SectionToControlInfo.LastModified, Global.OldestValidCachedTransform]))
                 {
-                    string outString = $"Loading from binary cache: {SectionToControlInfo.MappedSection} to {ControlToVolumeInfo.ControlSection}";
+                    string outString = $"Loading from JSON cache: {_SectionToControlInfo.MappedSection} to {_ControlToVolumeInfo.ControlSection}";
                     Trace.WriteLine(outString);
-                    using (Stream binFile = System.IO.File.OpenRead(CacheStosPath))
-                    {
-                        var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                        cachedTransform = binaryFormatter.Deserialize(binFile) as ITransform;
-                    }
+                    using Stream binFile = System.IO.File.OpenRead(CacheStosPath);
+                    //cachedTransform = JsonTransformSerializer.Deserialize(binFile); 
                 }
                 else
                 {
@@ -1049,31 +1179,32 @@ namespace Viking.VolumeModel
             return cachedTransform;
         }
 
-        private static IContinuousTransform LoadStosFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
+        private static async Task<IContinuousTransform> LoadStosFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
         {
-            IDiscreteTransform cachedTransform = null;
             DiscreteTransformWithContinuousFallback continuousTransform = null;
             try
             {
-                if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified, Global.OldestValidCachedTransform }))
+                if (Geometry.Global.IsCacheFileValid(CacheStosPath, [ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified, Global.OldestValidCachedTransform]))
                 {
                     string outString =
                         $"Loading from ITK string cache: {SectionToControlInfo.MappedSection} to {ControlToVolumeInfo.ControlSection}";
                     Trace.WriteLine(outString);
                     DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
-                    StosTransformInfo stosInfo = new StosTransformInfo(ControlToVolumeInfo.ControlSection, SectionToControlInfo.MappedSection, CacheLastModifiedUtc);
-                    using (Stream stostext = System.IO.File.OpenRead(CacheStosPath) as Stream)
-                    {
-                        var cachedTransformTask = TransformFactory.ParseStos(stostext,
-                                                                        stosInfo,
-                                                                            1);
+                    StosTransformInfo stosInfo = new(ControlToVolumeInfo.ControlSection, SectionToControlInfo.MappedSection, CacheLastModifiedUtc);
+                    using Stream stostext = System.IO.File.OpenRead(CacheStosPath) as Stream;
+                    var cachedTransform = await TransformFactory.ParseStos(stostext,
+                        stosInfo,
+                        1).ConfigureAwait(false);
 
-                        cachedTransform = cachedTransformTask.Result as TriangulationTransform;
+                    if (cachedTransform is IContinuousTransform transform)
+                        return transform;
 
-                        continuousTransform = new DiscreteTransformWithContinuousFallback(cachedTransform,
-                                                                                            new RBFTransform(((ITransformControlPoints)cachedTransform).MapPoints, stosInfo),
-                                                                                            stosInfo);
-                    }
+                    if (cachedTransform is not IDiscreteTransform)
+                        throw new NullReferenceException($"Unable to load {stostext} for {stosInfo}");
+
+                    continuousTransform = new DiscreteTransformWithContinuousFallback(cachedTransform as IDiscreteTransform,
+                        new RBFTransform(((ITransformControlPoints)cachedTransform).MapPoints, stosInfo),
+                        stosInfo);
                 }
                 else
                 {
@@ -1082,7 +1213,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception)
             {
-                Trace.WriteLine(string.Format("Exception loading {0}, deleting", CacheStosPath));
+                Trace.WriteLine($"Exception loading {CacheStosPath}, deleting");
                 Geometry.Global.TryDeleteCacheFile(CacheStosPath);
 
                 return null;
@@ -1091,47 +1222,56 @@ namespace Viking.VolumeModel
             return continuousTransform;
         }
 
-        private static void SaveSerializedTransformToCache(string CacheStosPath, object itkTransform)
+        /// <summary>
+        /// Write the straight ITK format transform to the cache file
+        /// </summary>
+        /// <param name="CacheStosPath"></param>
+        /// <param name="itkTransform"></param>
+        /// <returns></returns>
+        private static void SaveSerializedTransformToCache(string CacheStosPath, IITKSerialization itkTransform)
         {
-            using (Stream binFile = System.IO.File.OpenWrite(CacheStosPath))
+            //TODO: This was a binary formatted file before the port to being a modern SDK project.  It should be converted to a binary format again, or the serialization should be updated to use a more efficient format.
+
+            using Stream binFile = System.IO.File.OpenWrite(CacheStosPath);
+            using StreamWriter streamWriter = new(binFile, System.Text.Encoding.UTF8, 1024, true)
             {
-                var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                binaryFormatter.Serialize(binFile, itkTransform);
-            }
+                AutoFlush = true
+            };
+
+            string itk = itkTransform.GetITKTransform();
+            streamWriter.Write(itk);
         }
 
         private static void SaveStosToCache(string CacheStosPath, IITKSerialization itkTransform, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
         {
-            using (StreamWriter fs = System.IO.File.CreateText(CacheStosPath))
-            {
-                fs.WriteLine(ControlToVolumeInfo.ToString());
-                fs.WriteLine(SectionToControlInfo.ToString());
+            using StreamWriter fs = System.IO.File.CreateText(CacheStosPath);
+            fs.WriteLine(ControlToVolumeInfo.ToString());
+            fs.WriteLine(SectionToControlInfo.ToString());
 
-                itkTransform.WriteITKTransform(fs);
-            }
+            string itk = itkTransform.GetITKTransform();
+            fs.WriteLine(itk);
         }
-         
+
 
         /// <summary>
         /// Adds a transform to each section mapping it into each of the volume spaces we found
         /// </summary>
-        public void CreateVolumeTransforms(Viking.Common.IProgressReporter workerThread)
+        public void CreateVolumeTransforms(IProgress<ProgressInfo> workerThread)
         {
-            int iSectionProgress = 0;
-            foreach (string TransformKey in Transforms.Keys)
+            foreach (string transformKey in Transforms.Keys)
             {
                 //The transform list is sorted by which section the transform maps from. 
                 //Next we'll add transfroms so every transform maps from the mapped section to section #1
-                SortedList<int, ITransform> TList = Transforms[TransformKey];
+                SortedList<int, ITransform> TList = Transforms[transformKey];
 
                 //Create a registration chain so we know what order to register the sections in
                 RegistrationTree tree = RegistrationTree.Build(TList, Sections.Keys);
 
-                iSectionProgress = 0;
+                int iSectionProgress = 0;
                 //OK, walk the tree, adding from the root nodes down
                 foreach (RegistrationTreeNode rootnode in tree.RootNodes.Values)
                 {
-                    Queue<int> SafeNodes = new Queue<int>();
+                    Queue<int> SafeNodes = new();
                     SafeNodes.Enqueue(rootnode.SectionNumber);
 
                     while (SafeNodes.Count > 0)
@@ -1143,18 +1283,18 @@ namespace Viking.VolumeModel
                         IContinuousTransform ContinuousControlTransform = null;
 
                         //Find the section that can map our transform
-                        if (TList.ContainsKey(ControlNode.SectionNumber))
+                        if (TList.TryGetValue(ControlNode.SectionNumber, out var value))
                         {
                             //string outString = "Loading continuous transform for control section: " + ControlSection.ToString();
-                            //workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
-                            ControlTrans = TList[ControlNode.SectionNumber];
+                            //workerThread.Report((iSectionProgress * 100) / TList.Count, outString);
+                            ControlTrans = value;
                         }
 
                         foreach (int childSection in ControlNode.Children)
                         {
                             iSectionProgress++;
                             ITransform trans = TList[childSection];
-                            if (!(((ITransformInfo)trans)?.Info is StosTransformInfo info))
+                            if (((ITransformInfo)trans)?.Info is not StosTransformInfo info)
                                 continue;
 
                             if (false == Sections.ContainsKey(info.MappedSection))
@@ -1174,17 +1314,17 @@ namespace Viking.VolumeModel
 
                             if (ControlTrans != null)
                             {
-                                var ControlInfo = ((ITransformInfo)ControlTrans)?.Info as StosTransformInfo;
+                                StosTransformInfo ControlInfo = ((ITransformInfo)ControlTrans)?.Info as StosTransformInfo;
                                 var transformInfo = ((ITransformInfo)trans)?.Info;
                                 string CacheStosPath = Paths.GetITKSCacheName(info.MappedSection, ControlInfo.ControlSection);
                                 string CacheSerializedPath = Paths.GetSerializerCacheName(info.MappedSection, ControlInfo.ControlSection);
-                                //TList[childSection] = LoadStosFromCache(CacheStosPath, ControlInfo, info);
-                                TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
+                                TList[childSection] = LoadStosFromCache(CacheStosPath, ControlInfo, info).GetAwaiter().GetResult();
+                                //TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
 
                                 //CalculateSliceToVolume = true; 
-                                if (TList[childSection] == null)
+                                if (TList[childSection] is null)
                                 {
-                                    if(ContinuousControlTransform == null)
+                                    if (ContinuousControlTransform is null)
                                     {
                                         //This line creating continuous transforms can be slow.
                                         ContinuousControlTransform = EnsureTransformIsContinuous(ControlTrans);
@@ -1195,7 +1335,7 @@ namespace Viking.VolumeModel
                                     try
                                     {
                                         string outString = $"Adding transforms: {trans} to {ControlTrans}";
-                                        workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
+                                        workerThread.Report(new ProgressInfo(outString, (iSectionProgress * 100) / TList.Count, 100));
 
                                         TList[childSection] = ContinuousControlTransform.TransformTransform((trans as ITransformControlPoints), trans.GetType());
 
@@ -1209,20 +1349,29 @@ namespace Viking.VolumeModel
                                     }
                                     catch (Exception)
                                     {
-                                        Trace.WriteLine(string.Format("Exception adding transforms {0} to {1}", trans.ToString(), ControlTrans.ToString()));
+                                        Trace.WriteLine(
+                                            $"Exception adding transforms {trans} to {ControlTrans}");
                                         trans = TList[childSection];
                                     }
 
                                     if (TList[childSection] is IITKSerialization itkTransform)
                                     {
-                                        SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
+                                        try
+                                        {
+                                            SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
+                                        }
+                                        catch (System.Text.Json.JsonException e)
+                                        {
+
+                                            System.Diagnostics.Debugger.Break();
+                                        }
                                         SaveStosToCache(CacheStosPath, itkTransform, ControlInfo, info);
                                     }
                                 }
                                 else
                                 {
                                     string outString = $"Loading transforms from Cache: {trans} to {ControlTrans}";
-                                    workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
+                                    workerThread.Report(new ProgressInfo(outString, (iSectionProgress * 100) / TList.Count, 100));
                                 }
                             }
 

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Windows;
 
 namespace SOTC_BindingErrorTracer
 {

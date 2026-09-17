@@ -14,13 +14,14 @@ namespace AnnotationVizLib
 
         }
 
-        static public NeuronJSONView ToJSON(NeuronGraph graph)
+        public static NeuronJSONView ToJSON(NeuronGraph graph)
         {
             int edgeCount = 0;
-            NeuronJSONView JSONView = new NeuronJSONView();
-
-            JSONView.nodesJSON = new JArray();
-            JSONView.edgesJSON = new JArray();
+            NeuronJSONView JSONView = new()
+            {
+                nodesJSON = [],
+                edgesJSON = []
+            };
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {
@@ -90,14 +91,7 @@ namespace AnnotationVizLib
             foreach (string key in attribs.Keys)
             {
                 object value = attribs[key];
-                JToken token;
-                if (value is JToken jt)
-                    token = jt;
-                else
-                {
-                    token = JToken.FromObject(value);
-                }
-
+                JToken token = value as JToken != null ? (JToken)value : JToken.FromObject(value);
                 obj[key] = token;
             }
         }
@@ -113,15 +107,13 @@ namespace AnnotationVizLib
 
         public void SaveJSON(string JSONFileFullPath)
         {
-            using (FileStream fl = new FileStream(JSONFileFullPath, FileMode.Create, FileAccess.Write))
+            using FileStream fl = new(JSONFileFullPath, FileMode.Create, FileAccess.Write);
+            using (StreamWriter write = new(fl))
             {
-                using (StreamWriter write = new StreamWriter(fl))
-                {
-                    write.Write(this.ToString());
-                    write.Close();
-                }
-                fl.Close();
+                write.Write(this.ToString());
+                write.Close();
             }
+            fl.Close();
         }
     }
 }

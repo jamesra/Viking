@@ -1,9 +1,12 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -12,7 +15,7 @@ namespace VikingXNAGraphics
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture
         {
-            get { return _ControlPointTexture; }
+            get => _ControlPointTexture;
             set
             {
                 _ControlPointTexture = value;
@@ -22,40 +25,33 @@ namespace VikingXNAGraphics
 
         public bool ShowControlPoints { get; set; } = true;
 
-        private List<GridVector2> _ControlPoints = null;
+        private List<Geometry.Vector2> _ControlPoints = null;
 
-        public IList<GridVector2> ControlPoints
+        public IList<Geometry.Vector2> ControlPoints
         {
-            get { return _ControlPoints; }
+            get => _ControlPoints;
             set
             {
-                if (value == null)
-                {
-                    _ControlPoints = new List<GridVector2>();
-                }
-                else
-                {
-                    _ControlPoints = new List<GridVector2>(value);
-                }
+                _ControlPoints = value is null ? [] : [.. value];
 
                 UpdateAllViews();
             }
         }
 
-        public void SetPoint(int i, GridVector2 value)
+        public void SetPoint(int i, Geometry.Vector2 value)
         {
             _ControlPoints[i] = value;
             this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, this.ControlPointTexture);
-            this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
+            this.LineViews = CreateLineViews([.. this.ControlPoints], this.LineWidth, this.Color, this.Style);
         }
 
-        private LineStyle _Style; 
+        private LineStyle _Style;
         public LineStyle Style
         {
-            get { return _Style; }
+            get => _Style;
             set
             {
-                if(value != _Style)
+                if (value != _Style)
                 {
                     _Style = value;
                     UpdateAllViews();
@@ -70,10 +66,10 @@ namespace VikingXNAGraphics
         private double _LineWidth;
         public double LineWidth
         {
-            get { return _LineWidth; }
+            get => _LineWidth;
             set
             {
-                if(value != _LineWidth)
+                if (value != _LineWidth)
                 {
                     _LineWidth = value;
 
@@ -85,9 +81,7 @@ namespace VikingXNAGraphics
         private double? _ControlPointRadius;
         public double ControlPointRadius
         {
-            get {
-                return _ControlPointRadius.HasValue ? _ControlPointRadius.Value : _LineWidth;
-                }
+            get => _ControlPointRadius ?? _LineWidth;
             set
             {
                 if (value != _ControlPointRadius)
@@ -103,22 +97,20 @@ namespace VikingXNAGraphics
         private float? _DashLength;
         public float? DashLength
         {
-            get {
+            get
+            {
                 //Only return a DashLength for Styles that use it
-                switch (this.Style)
+                return this.Style switch
                 {
-                    case LineStyle.Ladder:
-                    case LineStyle.Dashed:
-                        return _DashLength;
-                    default:
-                        return new float?();
-                }
+                    LineStyle.Ladder or LineStyle.Dashed => _DashLength,
+                    _ => new float?(),
+                };
             }
             set
             {
                 if (value != _DashLength)
                 {
-                    _DashLength = value; 
+                    _DashLength = value;
                 }
             }
         }
@@ -128,11 +120,11 @@ namespace VikingXNAGraphics
         private Color _HSLColor;
         public Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set
             {
                 _Color = value;
-                _HSLColor = value.ConvertToHSL();
+                _HSLColor = value.ConvertToHCL();
                 if (ControlPointViews != null)
                 {
                     foreach (CircleView cpv in ControlPointViews)
@@ -151,26 +143,23 @@ namespace VikingXNAGraphics
             }
         }
 
-        internal Color HSLColor
-        {
-            get { return _HSLColor; }
-        }
+        internal Color HSLColor => _HSLColor;
 
         public float Alpha
         {
-            get { return _Color.GetAlpha(); }
-            set { Color = _Color.SetAlpha(value); }
+            get => _Color.GetAlpha();
+            set => Color = _Color.SetAlpha(value);
         }
 
-        public PolyLineView(Microsoft.Xna.Framework.Color color, 
+        public PolyLineView(Microsoft.Xna.Framework.Color color,
                             Texture2D texture = null,
                             double lineWidth = 16.0,
-                            LineStyle lineStyle = LineStyle.Standard) 
-            : this(null as GridVector2[], color, texture, lineWidth, lineStyle)
+                            LineStyle lineStyle = LineStyle.Standard)
+            : this(null as Geometry.Vector2[], color, texture, lineWidth, lineStyle)
         {
         }
 
-        public PolyLineView(GridPolyline polyline, 
+        public PolyLineView(Polyline polyline,
                             Microsoft.Xna.Framework.Color color,
                             Texture2D texture = null,
                             double lineWidth = 16.0,
@@ -179,7 +168,7 @@ namespace VikingXNAGraphics
         {
         }
 
-        public PolyLineView(IEnumerable<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
+        public PolyLineView(IEnumerable<Geometry.Vector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
         {
             this._ControlPointTexture = texture;
             this.LineWidth = lineWidth;
@@ -191,7 +180,7 @@ namespace VikingXNAGraphics
         }
 
         public PolyLineView(IEnumerable<IPoint2D> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard) :
-            this(controlPoints.Select(p => new GridVector2(p.X, p.Y)), color, texture, lineWidth, lineStyle)
+            this(controlPoints.Select(p => new Geometry.Vector2(p.X, p.Y)), color, texture, lineWidth, lineStyle)
         {
         }
 
@@ -199,26 +188,26 @@ namespace VikingXNAGraphics
         /// Add a single control point without recalculating all of the existing views
         /// </summary>
         /// <param name="p"></param>
-        public void Add(GridVector2 p)
+        public void Add(Geometry.Vector2 p)
         {
-            if(this.ControlPoints == null)
+            if (this.ControlPoints is null)
             {
-                this._ControlPoints = new List<GridVector2>();
+                this._ControlPoints = [];
             }
 
             this.ControlPoints.Add(p);
-            
+
             //Create the view for the control point
-            List<CircleView> listControlPointViews = ControlPointViews == null ? new List<CircleView>() : ControlPointViews.ToList();
+            List<CircleView> listControlPointViews = ControlPointViews is null ? [] : [.. ControlPointViews];
             listControlPointViews.Add(CreateControlPointView(p, this.ControlPointRadius, this.Color, this.ControlPointTexture));
-            this.ControlPointViews = listControlPointViews.ToArray();
+            this.ControlPointViews = [.. listControlPointViews];
 
             //Create the view for the line
             if (this.ControlPoints.Count >= 2)
             {
-                List<LineView> listLineViews = LineViews == null ? new List<LineView>() : LineViews.ToList();
-                listLineViews.Add(new LineView(ControlPoints[ControlPoints.Count-2], ControlPoints[ControlPoints.Count - 1], LineWidth, Color, this.Style));
-                this.LineViews = listLineViews.ToArray();
+                List<LineView> listLineViews = LineViews is null ? [] : [.. LineViews];
+                listLineViews.Add(new LineView(ControlPoints[ControlPoints.Count - 2], ControlPoints[ControlPoints.Count - 1], LineWidth, Color, this.Style));
+                this.LineViews = [.. listLineViews];
             }
         }
 
@@ -228,22 +217,22 @@ namespace VikingXNAGraphics
         /// <param name="p"></param>
         public void Remove()
         {
-            if (this.ControlPoints == null || this.ControlPoints.Count == 0)
+            if (this.ControlPoints is null || this.ControlPoints.Count == 0)
                 return;
 
-            this.ControlPoints.RemoveAt(this.ControlPoints.Count-1);
+            this.ControlPoints.RemoveAt(this.ControlPoints.Count - 1);
 
             //Remove the view for the control point
-            List<CircleView> listControlPointViews = ControlPointViews.ToList();
+            List<CircleView> listControlPointViews = [.. ControlPointViews];
             listControlPointViews.RemoveAt(listControlPointViews.Count - 1);
-            this.ControlPointViews = listControlPointViews.ToArray();
+            this.ControlPointViews = [.. listControlPointViews];
 
             //Remove the view for the line
             if (LineViews.Length >= 1)
             {
-                List<LineView> listLineViews = LineViews.ToList();
+                List<LineView> listLineViews = [.. LineViews];
                 listLineViews.RemoveAt(listLineViews.Count - 1);
-                this.LineViews = listLineViews.ToArray();
+                this.LineViews = [.. listLineViews];
             }
         }
 
@@ -252,7 +241,7 @@ namespace VikingXNAGraphics
         /// </summary>
         private void UpdateAllViews()
         {
-            if (_ControlPoints == null || _ControlPoints.Count == 0)
+            if (_ControlPoints is null || _ControlPoints.Count == 0)
             {
                 this.ControlPointViews = null;
                 this.LineViews = null;
@@ -264,41 +253,41 @@ namespace VikingXNAGraphics
             }
             else
             {
-                this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
+                this.LineViews = CreateLineViews([.. this.ControlPoints], this.LineWidth, this.Color, this.Style);
 
                 //Don't create a duplicate circle view if we are drawing a loop
                 if (_ControlPoints.First() == _ControlPoints.Last())
                     _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
 
                 this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, this.Color, this.ControlPointTexture);
-                
+
             }
         }
 
-        private static CircleView[] CreateControlPointViews(IList<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        private static CircleView[] CreateControlPointViews(IList<Geometry.Vector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
-            if(ControlPoints == null)
+            if (ControlPoints is null)
             {
-                return new CircleView[0];
+                return [];
             }
 
-            return ControlPoints.Select(cp => CreateControlPointView(cp, Radius, color, texture)).ToArray();
+            return [.. ControlPoints.Select(cp => CreateControlPointView(cp, Radius, color, texture))];
         }
 
-        private static CircleView CreateControlPointView(GridVector2 ControlPoint, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        private static CircleView CreateControlPointView(Geometry.Vector2 ControlPoint, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
             if (texture != null)
-                return new TextureCircleView(texture, new GridCircle(ControlPoint, Radius), color);
+                return new TextureCircleView(texture, new Circle(ControlPoint, Radius), color);
             else
-                return new CircleView(new GridCircle(ControlPoint, Radius), color);
+                return new CircleView(new Circle(ControlPoint, Radius), color);
         }
 
 
-        private static LineView[] CreateLineViews(IList<GridVector2> points, double LineWidth, Color color, LineStyle style)
+        private static LineView[] CreateLineViews(IList<Geometry.Vector2> points, double LineWidth, Color color, LineStyle style)
         {
-            if (points == null || points.Count < 2)
+            if (points is null || points.Count < 2)
             {
-                return new LineView[0];
+                return [];
             }
 
             LineView[] lineViews = new LineView[points.Count - 1];
@@ -315,11 +304,7 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="color"></param>
         /// <returns></returns>
-        private static Microsoft.Xna.Framework.Color ControlPointColor(Microsoft.Xna.Framework.Color color)
-        {
-            return new Microsoft.Xna.Framework.Color(255 - (int)color.R, 255 - (int)color.G, 255 - (int)color.B, (int)color.A / 2f);
-            //return color;
-        }
+        private static Microsoft.Xna.Framework.Color ControlPointColor(Microsoft.Xna.Framework.Color color) => new Microsoft.Xna.Framework.Color(255 - (int)color.R, 255 - (int)color.G, 255 - (int)color.B, (int)color.A / 2f);//return color;
 
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -373,19 +358,13 @@ namespace VikingXNAGraphics
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue + 1);
 
             IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints && cv.ControlPointViews != null).SelectMany(cv => cv.ControlPointViews);
-            CircleView.Draw(device, scene, Overlay, controlPointViews.ToArray());
-                 
+            CircleView.Draw(device, scene, Overlay, [.. controlPointViews]);
+
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
         }
 
-        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
-        {
-            PolyLineView.Draw(device, scene, Overlay, items.Select(i => i as PolyLineView).Where(i => i != null).ToArray());
-        }
+        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => PolyLineView.Draw(device, scene, Overlay, [.. items.Select(i => i as PolyLineView).Where(i => i != null)]);
 
-        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
-        {
-            PolyLineView.Draw(device, scene, Overlay, new PolyLineView[] { this });
-        }
+        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay) => PolyLineView.Draw(device, scene, Overlay, [this]);
     }
 }

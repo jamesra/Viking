@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System.ServiceModel;
 
 
@@ -19,6 +19,6 @@ namespace AnnotationService.Interfaces
         /// <param name="structType"></param>
         /// <returns>IDs of updated</returns.
         [OperationContract]
-        void UpdatePermittedStructureLinks(PermittedStructureLink[] permittedStructureLinks); 
+        void UpdatePermittedStructureLinks(PermittedStructureLink[] permittedStructureLinks);
     }
 }

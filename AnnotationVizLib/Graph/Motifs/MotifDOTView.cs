@@ -13,7 +13,7 @@ namespace AnnotationVizLib
 
         public static MotifDOTView ToDOT(MotifGraph graph, bool IncludeUnlabeled = false)
         {
-            MotifDOTView DotGraph = new MotifDOTView();
+            MotifDOTView DotGraph = new();
 
             DotGraph.AddStandardizedAttributes(DOTAttributes.StandardGraphDOTAttributes);
 
@@ -55,7 +55,7 @@ namespace AnnotationVizLib
 
             IDictionary<string, string> AttribsForLabel = AttributeMapper.AttribsForLabel(DotNode.label, DOTAttributes.StandardLabelToNodeDOTAppearance);
 
-            if (AttribsForLabel == null)
+            if (AttribsForLabel is null)
             {
                 if (label.Length > 0)
                     DotNode.Attributes.Add("fillcolor", "grey");
@@ -75,10 +75,10 @@ namespace AnnotationVizLib
             foreach (IStructureReadOnly s in node.Structures)
             {
                 if (!firstentry)
-                    ToolTipStr = ToolTipStr + ", ";
+                    ToolTipStr += ", ";
 
                 firstentry = false;
-                ToolTipStr = ToolTipStr + s.ID.ToString();
+                ToolTipStr += s.ID.ToString();
             }
 
             DotNode.Attributes.Add("tooltip", ToolTipStr);
@@ -88,7 +88,7 @@ namespace AnnotationVizLib
 
         public static GraphViewEdge<string> GraphVizEdgeFromMotifEdge(GraphViewEngine<string> DotEngine, MotifGraph graph, MotifEdge edge)
         {
-            GraphVizEdge<string> DotEdge = new GraphVizEdge<string>();
+            GraphVizEdge<string> DotEdge = new();
             float additionFactor = 1f;
             float mulFactor = 0.5f;
             float arrowsize = additionFactor;
@@ -99,7 +99,7 @@ namespace AnnotationVizLib
             IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType.ToUpper(),
                                                                                      DOTAttributes.StandardEdgeSourceLabelToDOTAppearance);
 
-            if (EdgeAttribs == null)
+            if (EdgeAttribs is null)
             {
                 return null;
             }
@@ -108,11 +108,11 @@ namespace AnnotationVizLib
                 DotEdge.AddStandardizedAttributes(EdgeAttribs);
             }
 
-            arrowsize = arrowsize * (float)(Math.Sqrt(edge.Weight) * mulFactor);
+            arrowsize *= (float)(Math.Sqrt(edge.Weight) * mulFactor);
             if (arrowsize < 1)
                 arrowsize = 1;
 
-            pensize = pensize * (float)Math.Sqrt(edge.Weight);
+            pensize *= (float)Math.Sqrt(edge.Weight);
 
             DotEdge.Attributes.Add("tailclip", "true");
             //DotEdge.Attributes.Add("color", color);

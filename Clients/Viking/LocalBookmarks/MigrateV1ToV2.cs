@@ -6,14 +6,14 @@ namespace LocalBookmarks
 {
     static class MigrateV1ToV2
     {
-        public static connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.XRoot Migrate(string BookmarkPath)
+        public static connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.XRoot? Migrate(string BookmarkPath)
         {
             connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkPath);
 
             if (!TryCreatingMigrationBackup(BookmarkPath))
                 return null;
 
-            XRoot newRoot = new XRoot(MigrateFolder(oldRoot.Folder));
+            XRoot newRoot = new(MigrateFolder(oldRoot.Folder));
             newRoot.Folder.Shape = ShapeType.STAR.ToShapeString();
 
             return newRoot;
@@ -21,9 +21,11 @@ namespace LocalBookmarks
 
         private static Folder MigrateFolder(connectomes.utah.edu.XSD.BookmarkSchema.xsd.Folder oldFolder)
         {
-            Folder newFolder = new Folder();
-            newFolder.Name = oldFolder.name;
-            newFolder.Shape = ShapeType.INHERIT.ToShapeString();
+            Folder newFolder = new()
+            {
+                Name = oldFolder.name,
+                Shape = ShapeType.INHERIT.ToShapeString()
+            };
 
             foreach (var oldBookmark in oldFolder.Bookmarks)
             {
@@ -48,18 +50,21 @@ namespace LocalBookmarks
 
         private static Bookmark MigrateBookmark(connectomes.utah.edu.XSD.BookmarkSchema.xsd.Bookmark oldBookmark)
         {
-            Bookmark newBookmark = new Bookmark();
-            newBookmark.Name = oldBookmark.name;
-            newBookmark.Z = oldBookmark.Position.Z;
-            newBookmark.VolumePosition = new Point2D(oldBookmark.Position.X, oldBookmark.Position.Y);
-            newBookmark.View = new View();
-            newBookmark.View.Downsample = oldBookmark.View.Downsample;
-            newBookmark.Comment = oldBookmark.Comment;
+            Bookmark newBookmark = new()
+            {
+                Name = oldBookmark.name,
+                Z = oldBookmark.Position.Z,
+                VolumePosition = new Point2D(oldBookmark.Position.X, oldBookmark.Position.Y),
+                View = new View
+                {
+                    Downsample = oldBookmark.View.Downsample
+                },
+                Comment = oldBookmark.Comment
+            };
 
             Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)newBookmark.Z);
 
-            GridVector2 MosaicPosition;
-            if (transform.TryVolumeToSection(oldBookmark.Position.ToGridVector2(), out MosaicPosition))
+            if (transform.TryVolumeToSection(oldBookmark.Position.ToVector2(), out Vector2 MosaicPosition))
             {
                 newBookmark.MosaicPosition = new connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.Point2D(MosaicPosition);
             }

@@ -53,9 +53,9 @@ namespace TriangleNet.Tools
     /// </remarks>
     public class QualityMeasure
     {
-        AreaMeasure areaMeasure;
-        AlphaMeasure alphaMeasure;
-        Q_Measure qMeasure;
+        readonly AreaMeasure areaMeasure;
+        readonly AlphaMeasure alphaMeasure;
+        readonly Q_Measure qMeasure;
 
         Mesh mesh;
 
@@ -71,90 +71,57 @@ namespace TriangleNet.Tools
         /// <summary>
         /// Minimum triangle area.
         /// </summary>
-        public double AreaMinimum
-        {
-            get { return areaMeasure.area_min; }
-        }
+        public double AreaMinimum => areaMeasure.area_min;
 
         /// <summary>
         /// Maximum triangle area.
         /// </summary>
-        public double AreaMaximum
-        {
-            get { return areaMeasure.area_max; }
-        }
+        public double AreaMaximum => areaMeasure.area_max;
 
         /// <summary>
         /// Ratio of maximum and minimum triangle area.
         /// </summary>
-        public double AreaRatio
-        {
-            get { return areaMeasure.area_max / areaMeasure.area_min; }
-        }
+        public double AreaRatio => areaMeasure.area_max / areaMeasure.area_min;
 
         /// <summary>
         /// Smallest angle.
         /// </summary>
-        public double AlphaMinimum
-        {
-            get { return alphaMeasure.alpha_min; }
-        }
+        public double AlphaMinimum => alphaMeasure.alpha_min;
 
         /// <summary>
         /// Maximum smallest angle.
         /// </summary>
-        public double AlphaMaximum
-        {
-            get { return alphaMeasure.alpha_max; }
-        }
+        public double AlphaMaximum => alphaMeasure.alpha_max;
 
         /// <summary>
         /// Average angle.
         /// </summary>
-        public double AlphaAverage
-        {
-            get { return alphaMeasure.alpha_ave; }
-        }
+        public double AlphaAverage => alphaMeasure.alpha_ave;
 
         /// <summary>
         /// Average angle weighted by area.
         /// </summary>
-        public double AlphaArea
-        {
-            get { return alphaMeasure.alpha_area; }
-        }
+        public double AlphaArea => alphaMeasure.alpha_area;
 
         /// <summary>
         /// Smallest aspect ratio.
         /// </summary>
-        public double Q_Minimum
-        {
-            get { return qMeasure.q_min; }
-        }
+        public double Q_Minimum => qMeasure.q_min;
 
         /// <summary>
         /// Largest aspect ratio.
         /// </summary>
-        public double Q_Maximum
-        {
-            get { return qMeasure.q_max; }
-        }
+        public double Q_Maximum => qMeasure.q_max;
 
         /// <summary>
         /// Average aspect ratio.
         /// </summary>
-        public double Q_Average
-        {
-            get { return qMeasure.q_ave; }
-        }
+        public double Q_Average => qMeasure.q_ave;
 
         /// <summary>
         /// Average aspect ratio weighted by area.
         /// </summary>
-        public double Q_Area
-        {
-            get { return qMeasure.q_area; }
-        }
+        public double Q_Area => qMeasure.q_area;
 
         #endregion
 
@@ -237,7 +204,7 @@ namespace TriangleNet.Tools
         /// </remarks>
         public int Bandwidth()
         {
-            if (mesh == null) return 0;
+            if (mesh is null) return 0;
 
             // Lower and upper bandwidth of the matrix
             int ml = 0, mu = 0;
@@ -302,7 +269,7 @@ namespace TriangleNet.Tools
 
                 if (area == 0.0)
                 {
-                    area_zero = area_zero + 1;
+                    area_zero++;
                 }
 
                 return area;
@@ -388,32 +355,11 @@ namespace TriangleNet.Tools
                 }
                 else
                 {
-                    if (ca == 0.0 || ab == 0.0)
-                    {
-                        a_angle = Math.PI;
-                    }
-                    else
-                    {
-                        a_angle = acos((ca2 + ab2 - bc2) / (2.0 * ca * ab));
-                    }
+                    a_angle = ca == 0.0 || ab == 0.0 ? Math.PI : acos((ca2 + ab2 - bc2) / (2.0 * ca * ab));
 
-                    if (ab == 0.0 || bc == 0.0)
-                    {
-                        b_angle = Math.PI;
-                    }
-                    else
-                    {
-                        b_angle = acos((ab2 + bc2 - ca2) / (2.0 * ab * bc));
-                    }
+                    b_angle = ab == 0.0 || bc == 0.0 ? Math.PI : acos((ab2 + bc2 - ca2) / (2.0 * ab * bc));
 
-                    if (bc == 0.0 || ca == 0.0)
-                    {
-                        c_angle = Math.PI;
-                    }
-                    else
-                    {
-                        c_angle = acos((bc2 + ca2 - ab2) / (2.0 * bc * ca));
-                    }
+                    c_angle = bc == 0.0 || ca == 0.0 ? Math.PI : acos((bc2 + ca2 - ab2) / (2.0 * bc * ca));
                 }
 
                 alpha = Math.Min(alpha, a_angle);

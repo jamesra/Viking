@@ -1,6 +1,8 @@
-﻿using System;
+using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -11,56 +13,71 @@ namespace WebAnnotation.UI.Controls
     [Viking.Common.SupportedUITypes(typeof(StructureObj))]
     public partial class ListStructures : Viking.UI.BaseClasses.DockingListControl
     {
-        Structure[] _structures;
-
-        EventHandler StructureCreateEventHandler;
+        private Structure[] _structures;
+        private readonly NotifyCollectionChangedEventHandler StructureCreateEventHandler;
 
         public ListStructures()
         {
             InitializeComponent();
 
-            this.ListItems.ShowPropertiesOnDoubleClick = false;
+            ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
-            StructureCreateEventHandler = new EventHandler(OnLocationCreate);
-            LocationObj.Create += StructureCreateEventHandler;
+            StructureCreateEventHandler = new NotifyCollectionChangedEventHandler(OnStructuresCollectionChanged);
+            Store.Structures.OnCollectionChanged += StructureCreateEventHandler;
         }
 
         public void SetStructures(Structure[] structures)
         {
-            this._structures = structures;
+            _structures = structures;
 
-            this.ListItems.DisplayObjects(_structures);
+            ListItems.DisplayObjects(_structures);
         }
 
-        protected override void OnObjectDoubleClick(IUIObject obj)
+        protected override async void OnObjectDoubleClick(IUIObject obj)
         {
             Structure s = obj as Structure;
             Debug.Assert(s != null);
 
-            LocationObj centerLoc = s.Center;
+            LocationObj centerLoc = await s.GetCenterAsync();
             if (centerLoc != null)
+            {
                 AnnotationOverlay.GoToLocation(centerLoc);
+            }
         }
 
-        public void OnLocationCreate(object sender, EventArgs e)
+        private void OnStructuresCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            Structure structure = sender as Structure;
+            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems is null)
+            {
+                return;
+            }
+
+            foreach (StructureObj addedObj in e.NewItems)
+            {
+                OnStructureCreate(new Structure(addedObj));
+            }
+        }
+
+        private void OnStructureCreate(Structure structure)
+        {
             Debug.Assert(structure != null);
             if (structure != null)
+            {
                 if (InvokeRequired)
                 {
-                    this.ListItems.Invoke(new Action(() => this.ListItems.AddObject(structure)));
+                    ListItems.Invoke(new Action(() => ListItems.AddObject(structure)));
                 }
                 else
                 {
-                    this.ListItems.AddObject(structure);
+                    ListItems.AddObject(structure);
                 }
+            }
         }
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)
         {
-            LocationObj.Create -= StructureCreateEventHandler;
+            Store.Structures.OnCollectionChanged -= StructureCreateEventHandler;
 
             base.parentForm_Closing(sender, e);
         }

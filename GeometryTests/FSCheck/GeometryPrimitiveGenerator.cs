@@ -1,4 +1,4 @@
-﻿//#define TRACEMESH
+//#define TRACEMESH
 
 using FsCheck;
 using Geometry;
@@ -11,29 +11,23 @@ using System.Linq;
 namespace GeometryTests.FSCheck
 {
 
-    public class GridLineSegmentGenerators
+    public class LineSegmentGenerators
     {
-        public static Arbitrary<GridLineSegment> ArbRandomLine()
-        {
-            return Arb.From(GenLine());
-        }
+        public static Arbitrary<LineSegment> ArbRandomLine() => Arb.From(GenLine());
 
-        public static Arbitrary<GridPolyline> ArbPolyLine()
-        {
-            return Arb.From(Fresh());
-        }
+        public static Arbitrary<Polyline> ArbPolyLine() => Arb.From(Fresh());
 
-        public static Gen<GridLineSegment> GenLine()
+        public static Gen<LineSegment> GenLine()
         {
-            return GridVector2Generators.Fresh()
+            return Vector2Generators.Fresh()
                 .Two()
                 .Where(t => t.Item1 != t.Item2)
-                .Select(t => new GridLineSegment(t.Item1, t.Item2));
+                .Select(t => new LineSegment(t.Item1, t.Item2));
 
 
             var coords = Arb.Default.NormalFloat().Generator.Four();
-            return coords.Select(t => new GridLineSegment(new GridVector2((double)t.Item1, (double)t.Item2),
-                                                           new GridVector2((double)t.Item3, (double)t.Item4)));
+            return coords.Select(t => new LineSegment(new Vector2((double)t.Item1, (double)t.Item2),
+                                                           new Vector2((double)t.Item3, (double)t.Item4)));
         }
 
         /*
@@ -42,22 +36,22 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        public static Gen<GridVector2[]> GenOpenPolyline(int nLines)
+        public static Gen<Vector2[]> GenOpenPolyline(int nLines)
         {
             int nPoints = nLines + 1;
-            List<GridVector2> polyLinePts = new List<GridVector2>(nPoints);
-            List<GridLineSegment> polyLine = new List<GridLineSegment>(nLines);
+            List<Vector2> polyLinePts = new List<Vector2>(nPoints);
+            List<LineSegment> polyLine = new List<LineSegment>(nLines);
 
             while(polyLine.Count < nLines+1)
             {
-                var pts = GridVector2Generators.GenDistinctPoints(nPoints-polyLinePts.Count);
+                var pts = Vector2Generators.GenDistinctPoints(nPoints-polyLinePts.Count);
                 pts.Where(array => array.Where((p) => 
                     {
                         if (polyLine.Count == 0)
                             return true;
 
-                        GridLineSegment ls = new GridLineSegment(polyLinePts.Last(), p);
-                        GridPolyline 
+                        LineSegment ls = new LineSegment(polyLinePts.Last(), p);
+                        Polyline 
                         if(polyLine.IntersectionPoint(ls, true))
                     }
                 )
@@ -72,17 +66,14 @@ namespace GeometryTests.FSCheck
 
         }*/
 
-        public static Gen<GridPolyline> Fresh()
-        {
-            return Gen.Sized(size => GenOpenPolylineSmart(size));
-        }
+        public static Gen<Polyline> Fresh() => Gen.Sized(size => GenOpenPolylineSmart(size));
 
         /*
 
-        private static Gen<GridPolyline> GenOpenPolylineFast(int nLines)
+        private static Gen<Polyline> GenOpenPolylineFast(int nLines)
         {
             //Oversample the points in the mesh to speed up the process of locating a non-intersecting path
-            return (from points in GridVector2Generators.GenDistinctPoints(nLines + 1)
+            return (from points in Vector2Generators.GenDistinctPoints(nLines + 1)
                     from polyline in GenOpenPolylineFast(points)
                     select polyline);
         }
@@ -92,16 +83,16 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static Gen<GridPolyline> GenOpenPolylineFast(GridVector2[] points)
+        private static Gen<Polyline> GenOpenPolylineFast(Vector2[] points)
         {
             if (points.Length <= 0)
             {
-                return Gen.Constant<GridPolyline>(new GridPolyline());
+                return Gen.Constant<Polyline>(new Polyline());
             }
             else if(points.Length <= 3)
             {
                 //Any 3 distinct points will not intersect
-                return Gen.Constant<GridPolyline>(new GridPolyline(points));
+                return Gen.Constant<Polyline>(new Polyline(points));
             }
             else
             {
@@ -109,7 +100,7 @@ namespace GeometryTests.FSCheck
                               let lastPoint = shuffled_points.Last()
                               from polyline_subset in GenOpenPolylineFast(shuffled_points.ToList().GetRange(0, points.Length - 1).ToArray())
                               where polyline_subset.CanAdd(lastPoint)
-                              select new GridPolyline(shuffled_points));
+                              select new Polyline(shuffled_points));
                 return polyline;
             }
         }
@@ -122,10 +113,10 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static Gen<GridPolyline> GenOpenPolylineSmart(int nLines)
+        private static Gen<Polyline> GenOpenPolylineSmart(int nLines)
         {
             ///Generate a large set of points, then find a path of the correct length using those points
-            return (from points in GridVector2Generators.GenDistinctPoints((nLines + 1) * 3)
+            return (from points in Vector2Generators.GenDistinctPoints((nLines + 1) * 3)
                     from polyline in GenOpenPolylineSmart(points, nLines > 50 ? (int)Math.Round(Math.Sqrt(nLines - 50) + 50) : nLines)
                     select polyline);
         }
@@ -137,27 +128,27 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        internal static Gen<GridPolyline> GenOpenPolylineSmart(GridVector2[] points, int nLines)
+        internal static Gen<Polyline> GenOpenPolylineSmart(Vector2[] points, int nLines)
         {
             if (points.Length <= 0)
             {
-                return Gen.Constant<GridPolyline>(new GridPolyline());
+                return Gen.Constant<Polyline>(new Polyline());
             }
             else if (points.Length <= 3)
             {
                 //Any 3 distinct points will not intersect
-                return Gen.Constant<GridPolyline>(new GridPolyline(points));
+                return Gen.Constant<Polyline>(new Polyline(points));
             }
             else
             {
-                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
+                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh([.. points.Select(p => new Vertex2D(p))]);
 
                 //Use verticies on the convex hull as starting points for our search
                 //var startingPoints = mesh.Edges.Values.Where(e => e.Faces.Count == 1).SelectMany(e => new int[] { e.A, e.B }).Distinct();
 
-                foreach (var startingVert in mesh.Verticies)
+                foreach (var startingVert in mesh.Vertices)
                 {
-                    Stack<int> VertStack = new Stack<int>();
+                    Stack<int> VertStack = new();
                     VertStack.Push(startingVert.Index);
                     bool FoundPath = FindNonSelfIntersectingPath(mesh,
                                                                 ref VertStack,
@@ -166,12 +157,12 @@ namespace GeometryTests.FSCheck
 
                     if (FoundPath)
                     {
-                        return Gen.Constant(new GridPolyline(VertStack.Select(v => mesh[v].Position)));
+                        return Gen.Constant(new Polyline(VertStack.Select(v => mesh[v].Position)));
                     }
                 }
 
                 throw new Exception("Unexpectedly unable to generate path from a set of points");
-                return Gen.Constant<GridPolyline>(new GridPolyline());
+                return Gen.Constant<Polyline>(new Polyline());
             }
         }
 
@@ -190,7 +181,7 @@ namespace GeometryTests.FSCheck
                 return true;
             }
 
-            Debug.Assert(nLines < mesh.Verticies.Count);
+            Debug.Assert(nLines < mesh.Vertices.Count);
             int currentVert = path.Peek();
             IVertex2D vertex = mesh[currentVert];
 
@@ -242,9 +233,9 @@ namespace GeometryTests.FSCheck
             int currentVert = path.Peek();
             IVertex2D vertex = mesh[currentVert];
 
-            var edgeKeyGen = Gen.OneOf(Gen.Shuffle(vertex.Edges));
+            Gen<IEdgeKey[]> edgeKeyGen = Gen.OneOf(Gen.Shuffle(vertex.Edges));
 
-            foreach (var edgeKey in edgeKeyGen.Eval(mesh.Verticies.Count, Global.StdGenSeed))
+            foreach (var edgeKey in edgeKeyGen.Eval(mesh.Vertices.Count, Global.StdGenSeed))
             {
                 int candidateVert = edgeKey.OppositeEnd(currentVert);
 
@@ -280,10 +271,7 @@ namespace GeometryTests.FSCheck
         /// <param name="path"></param>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static bool PathLengthCriteria(TriangulationMesh<IVertex2D> mesh, Stack<int> path, int nLines)
-        {
-            return path.Count == nLines + 1;
-        }
+        private static bool PathLengthCriteria(TriangulationMesh<IVertex2D> mesh, Stack<int> path, int nLines) => path.Count == nLines + 1;
 
         /// <summary>
         /// Return true if the path can be closed using an edge in the mesh
@@ -311,20 +299,20 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static Gen<GridPolyline> GenOpenPolyline(int nLines)
+        private static Gen<Polyline> GenOpenPolyline(int nLines)
         {
-            return (from points in GridVector2Generators.GenDistinctPoints(nLines + 1)
+            return (from points in Vector2Generators.GenDistinctPoints(nLines + 1)
                     from shuffled_points in Gen.Shuffle(points)
-                    where GridLineSegment.SegmentsFromPoints(shuffled_points).SelfIntersects(LineSetOrdering.POLYLINE) == false
-                    select new GridPolyline(shuffled_points));
+                    where LineSegment.SegmentsFromPoints(shuffled_points).SelfIntersects(LineSetOrdering.Polyline) == false
+                    select new Polyline(shuffled_points));
         }
 
         /*
             int nPoints = nLines + 1;
 
-            GridPolyline polyLine = new GridPolyline(nLines, AllowSelfIntersection: false);
+            Polyline polyLine = new Polyline(nLines, AllowSelfIntersection: false);
 
-            var pGen = GridVector2Generators.Fresh();
+            var pGen = Vector2Generators.Fresh();
 
             while (polyLine.LineCount < nLines)
             { 
@@ -343,7 +331,7 @@ namespace GeometryTests.FSCheck
                 );
                 */
         /*
-        var pts = GridVector2Generators.GenDistinctPoints((nLines - polyLine.LineCount));
+        var pts = Vector2Generators.GenDistinctPoints((nLines - polyLine.LineCount));
         pts.Select((arr) =>
             arr.Where((p) =>
             {
@@ -360,7 +348,7 @@ namespace GeometryTests.FSCheck
         /*
     }
 
-    return Gen.Constant<GridPolyline>(polyLine);
+    return Gen.Constant<Polyline>(polyLine);
 }
 */
 
@@ -370,7 +358,7 @@ namespace GeometryTests.FSCheck
     /// </summary>
     /// <param name="nLines"></param>
     /// <returns></returns>
-    internal static Gen<GridPolygon> GenClosedPolylineSmart(GridVector2[] points, int nLines)
+    internal static Gen<Polygon> GenClosedPolylineSmart(Vector2[] points, int nLines)
     {
         if (points.Length < 3)
         {
@@ -379,13 +367,13 @@ namespace GeometryTests.FSCheck
         else if (points.Length == 3)
         {
             //Any 3 distinct points will not intersect
-            return Gen.Constant<GridPolygon>(new GridPolygon(points.EnsureClosedRing()));
+            return Gen.Constant<Polygon>(new Polygon(points.EnsureClosedRing()));
         }
         else
         {
             var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
 
-            foreach (var startingVert in mesh.Verticies)
+            foreach (var startingVert in mesh.Vertices)
             {
                 Stack<int> VertStack = new Stack<int>();
                 VertStack.Push(startingVert.Index);
@@ -403,7 +391,7 @@ namespace GeometryTests.FSCheck
                                                              meets_path_completion_criteria: (mesh_, path_) => PathClosedCriteria(mesh_, path_));
                     if (FoundClosure)
                     {
-                        return Gen.Constant(new GridPolygon(VertStack.Select(v => mesh[v].Position).ToArray().EnsureClosedRing() ));
+                        return Gen.Constant(new Polygon(VertStack.Select(v => mesh[v].Position).ToArray().EnsureClosedRing() ));
                     }
                     else
                     {
@@ -413,7 +401,7 @@ namespace GeometryTests.FSCheck
             }
 
             throw new Exception("Unexpectedly unable to generate path from a set of points");
-            //return Gen.Constant<GridPolygon>(new GridPolygon());
+            //return Gen.Constant<Polygon>(new Polygon());
         }
     }
     */
@@ -424,7 +412,7 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        internal static Gen<GridPolygon> GenConvexPolygonSmarter(GridVector2[] points, int nLines)
+        internal static Gen<Polygon> GenConvexPolygonSmarter(Vector2[] points, int nLines)
         {
             if (points.Length < 3)
             {
@@ -433,9 +421,9 @@ namespace GeometryTests.FSCheck
             else if (points.Length == 3)
             {
                 //Any 3 distinct points will not intersect
-                var output = new GridPolygon(points.EnsureClosedRing());
+                var output = new Polygon(points.EnsureClosedRing());
                 Debug.Assert(output.IsValid(), "Invalid polygon generated");
-                return Gen.Constant<GridPolygon>(output);
+                return Gen.Constant<Polygon>(output);
             }
             else
             {
@@ -448,12 +436,12 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert);
                 var convexHull = FindNonSelfIntersectingPath(mesh, 
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
 
-                var output = new GridPolygon(path.Select(v => mesh[v].Position).ToArray());
+                var output = new Polygon(path.Select(v => mesh[v].Position).ToArray());
 
                 Debug.Assert(output.IsValid(), "Invalid polygon generated");
                 //TODO: Remove edges from Convex hull to generate a concave polygon of arbitrary size, doubles as a shrinker function?
@@ -468,7 +456,7 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        internal static GridPolygon GenConcavePolygonFromPoints(GridVector2[] points, int nLines)
+        internal static Polygon GenConcavePolygonFromPoints(Vector2[] points, int nLines)
         {
             if (points.Length < 3)
             {
@@ -477,14 +465,14 @@ namespace GeometryTests.FSCheck
             else if (points.Length == 3)
             {
                 //Any 3 distinct points will not intersect
-                var output = new GridPolygon(points.EnsureClosedRing());
+                Polygon output = new(points.EnsureClosedRing());
                 Debug.Assert(output.IsValid(), "Invalid polygon generated");
                 return output;
             }
             else
             {
-                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
-                GridPolygon output = GenConcavePolygonFromMesh(mesh, nLines, false, out TriangulationMesh<IVertex2D> output_mesh);
+                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh([.. points.Select(p => new Vertex2D(p))]);
+                Polygon output = GenConcavePolygonFromMesh(mesh, nLines, false, out TriangulationMesh<IVertex2D> output_mesh);
                 return output;
 
                 /*
@@ -495,19 +483,19 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert); 
                 var convexHull = FindNonSelfIntersectingPath(mesh, 
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
 
-                GridPolygon initial_output = new GridPolygon(path.Select(v => mesh[v].Position).ToArray());
+                Polygon initial_output = new Polygon(path.Select(v => mesh[v].Position).ToArray());
                 if (initial_output.IsValid() == false)
                     throw new ArgumentException("Invalid polygon generated");
 
                 Stack<int> concave_path = GenConcavePolygon(mesh, path, nLines);
 
                 //TODO: Remove edges from Convex hull to generate a concave polygon of arbitrary size, doubles as a shrinker function?
-                GridPolygon output = new GridPolygon(concave_path.Select(v => mesh[v].Position).ToArray());
+                Polygon output = new Polygon(concave_path.Select(v => mesh[v].Position).ToArray());
                 if (output.IsValid() == false)
                     throw new ArgumentException("Invalid polygon generated");
 
@@ -521,7 +509,7 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        internal static GridPolygon GenConcavePolygonWithInteriorHolesFromPoints(GridVector2[] points, int nLines)
+        internal static Polygon GenConcavePolygonWithInteriorHolesFromPoints(Vector2[] points, int nLines)
         {
             if (points.Length < 3)
             {
@@ -530,8 +518,8 @@ namespace GeometryTests.FSCheck
             else if (points.Length == 3)
             {
                 //Any 3 distinct points will not intersect
-                var output = new GridPolygon(points.EnsureClosedRing());
-                if (output == null || output.Area < Geometry.Global.Epsilon)
+                Polygon output = new(points.EnsureClosedRing());
+                if (output is null || output.Area < Geometry.Global.Epsilon)
                 {
                     return null;
                 }
@@ -541,21 +529,21 @@ namespace GeometryTests.FSCheck
             }
             else
             {
-                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
-                GridPolygon output = GenConcavePolygonFromMesh(mesh, nLines, false, out TriangulationMesh<IVertex2D> output_mesh);
-                if (output == null || output.Area < Geometry.Global.Epsilon)
+                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh([.. points.Select(p => new Vertex2D(p))]);
+                Polygon output = GenConcavePolygonFromMesh(mesh, nLines, false, out TriangulationMesh<IVertex2D> output_mesh);
+                if (output is null || output.Area < Geometry.Global.Epsilon)
                 {
                     return null;
                 }
 
                 int maxHoles = (int)Math.Floor(Math.Sqrt(nLines));
-                int maxInnerLines = (int)Math.Ceiling(Math.Sqrt(output_mesh.Verticies.Count));
+                int maxInnerLines = (int)Math.Ceiling(Math.Sqrt(output_mesh.Vertices.Count));
                 maxInnerLines = maxInnerLines < 3 ? 3 : maxInnerLines;
 
                 while (output_mesh.Faces.Count > 0 && output.InteriorPolygons.Count < maxHoles)
                 {
-                    GridPolygon inner = GenConcavePolygonFromMesh(output_mesh, maxInnerLines, true, out output_mesh);
-                    if (inner == null || inner.Area < Geometry.Global.Epsilon)
+                    Polygon inner = GenConcavePolygonFromMesh(output_mesh, maxInnerLines, true, out output_mesh);
+                    if (inner is null || inner.Area < Geometry.Global.Epsilon)
                     {
                         continue;
                     }
@@ -581,19 +569,19 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert); 
                 var convexHull = FindNonSelfIntersectingPath(mesh, 
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
 
-                GridPolygon initial_output = new GridPolygon(path.Select(v => mesh[v].Position).ToArray());
+                Polygon initial_output = new Polygon(path.Select(v => mesh[v].Position).ToArray());
                 if (initial_output.IsValid() == false)
                     throw new ArgumentException("Invalid polygon generated");
 
                 Stack<int> concave_path = GenConcavePolygon(mesh, path, nLines);
 
                 //TODO: Remove edges from Convex hull to generate a concave polygon of arbitrary size, doubles as a shrinker function?
-                GridPolygon output = new GridPolygon(concave_path.Select(v => mesh[v].Position).ToArray());
+                Polygon output = new Polygon(concave_path.Select(v => mesh[v].Position).ToArray());
                 if (output.IsValid() == false)
                     throw new ArgumentException("Invalid polygon generated");
 
@@ -609,23 +597,23 @@ namespace GeometryTests.FSCheck
         /// <param name="nConcaveCreationAttempts"></param>
         /// <param name="output_mesh"></param>
         /// <returns></returns>
-        internal static GridPolygon GenConcavePolygonFromMesh(TriangulationMesh<IVertex2D> mesh, int nConcaveCreationAttempts, bool GenerateInnerPolygon, out TriangulationMesh<IVertex2D> output_mesh_final)
+        internal static Polygon GenConcavePolygonFromMesh(TriangulationMesh<IVertex2D> mesh, int nConcaveCreationAttempts, bool GenerateInnerPolygon, out TriangulationMesh<IVertex2D> output_mesh_final)
         {
-            if (mesh.Verticies.Count < 3 || mesh.Faces.Count == 0)
+            if (mesh.Vertices.Count < 3 || mesh.Faces.Count == 0)
             {
                 throw new ArgumentException("Mesh does not contain a polygon");
             }
             else if (mesh.Faces.Count == 1)
             {
-                var output = new GridPolygon(mesh.Faces.First().iVerts.Select(v => mesh[v].Position).ToArray().EnsureClosedRing());
+                Polygon output = new(mesh.Faces.First().iVerts.Select(v => mesh[v].Position).ToArray().EnsureClosedRing());
                 Debug.Assert(output.IsValid(), "Invalid polygon generated");
                 output_mesh_final = new TriangulationMesh<IVertex2D>();
                 return output;
             }
-            /*else if (mesh.Verticies.Count == 3) //With making meshes for interior polygons we can have verticies that are not connected, we should not make polygons if they don't form a face
+            /*else if (mesh.Vertices.Count == 3) //With making meshes for interior polygons we can have verticies that are not connected, we should not make polygons if they don't form a face
             {
                 //Any 3 distinct points will not intersect
-                var output = new GridPolygon(mesh.Verticies.Select(v => v.Position).ToArray().EnsureClosedRing());
+                var output = new Polygon(mesh.Vertices.Select(v => v.Position).ToArray().EnsureClosedRing());
                 Debug.Assert(output.IsValid(), "Invalid polygon generated");
                 output_mesh_final = new TriangulationMesh<IVertex2D>();
                 return output;
@@ -637,23 +625,23 @@ namespace GeometryTests.FSCheck
                 var startingEdge = mesh.Edges.Values.First(e => e.Faces.Count == 1);
                 var targetVert = startingEdge.B;
                 var startVert = startingEdge.A;
-                Stack<int> path = new Stack<int>();
+                Stack<int> path = new();
                 path.Push(startVert);
                 var convexHull = FindNonSelfIntersectingPath(mesh,
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true : mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null || (mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false)), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
 
-                GridPolygon initial_output = new GridPolygon(path.Select(v => mesh[v].Position).ToArray());
+                Polygon initial_output = new(path.Select(v => mesh[v].Position).ToArray());
                 if (initial_output.IsValid() == false)
                     throw new ArgumentException("Invalid convex polygon generated");
 
                 Stack<int> concave_path = GenConcavePolygon(mesh, path, nConcaveCreationAttempts);
 
                 //TODO: Remove edges from Convex hull to generate a concave polygon of arbitrary size, doubles as a shrinker function?
-                GridPolygon output = new GridPolygon(concave_path.Select(v => mesh[v].Position).ToArray());
+                Polygon output = new(concave_path.Select(v => mesh[v].Position).ToArray());
                 if (output.IsValid() == false)
                     throw new ArgumentException("Invalid concave polygon generated");
 
@@ -672,21 +660,21 @@ namespace GeometryTests.FSCheck
         /// <param name="path"></param>
         /// <param name="poly"></param>
         /// <returns></returns>
-        private static TriangulationMesh<IVertex2D> CalculateRemainderMeshAfterOuterGeneration(TriangulationMesh<IVertex2D> mesh, Stack<int> path, GridPolygon poly)
+        private static TriangulationMesh<IVertex2D> CalculateRemainderMeshAfterOuterGeneration(TriangulationMesh<IVertex2D> mesh, Stack<int> path, Polygon poly)
         {
-            int maxRemainingMeshVerts = mesh.Verticies.Count - (path.Count - 1); //-1 because the path is a closed loop
+            int maxRemainingMeshVerts = mesh.Vertices.Count - (path.Count - 1); //-1 because the path is a closed loop
             if (maxRemainingMeshVerts < 3)
                 return new TriangulationMesh<IVertex2D>(); //No reason to return a mesh that cannot generate a polygon
 
             //Remove edges from all verticies on or outside the polygon.
-            List<IVertex2D> vertsToKeep = new List<IVertex2D>(maxRemainingMeshVerts);
-            for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            List<IVertex2D> vertsToKeep = new(maxRemainingMeshVerts);
+            for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 bool removeVert = path.Contains(iVert);
                 if (removeVert == false)
                 {
                     //Remove exterior verticies
-                    removeVert = poly.ContainsExt(mesh[iVert].Position) != OverlapType.CONTAINED;
+                    removeVert = poly.GetRelation(mesh[iVert].Position) != ShapeRelation.Contained;
                 }
 
                 if (removeVert == false)
@@ -705,22 +693,22 @@ namespace GeometryTests.FSCheck
         /// <param name="path"></param>
         /// <param name="poly"></param>
         /// <returns></returns>
-        private static TriangulationMesh<IVertex2D> CalculateRemainderMeshAfterInnerGeneration(TriangulationMesh<IVertex2D> mesh, Stack<int> path, GridPolygon poly)
+        private static TriangulationMesh<IVertex2D> CalculateRemainderMeshAfterInnerGeneration(TriangulationMesh<IVertex2D> mesh, Stack<int> path, Polygon poly)
         {
             //Remove edges from all verticies on or outside the polygon.
-            int maxRemainingMeshVerts = mesh.Verticies.Count - (path.Count - 1); //-1 because the path is a closed loop
+            int maxRemainingMeshVerts = mesh.Vertices.Count - (path.Count - 1); //-1 because the path is a closed loop
             if (maxRemainingMeshVerts < 3)
                 return new TriangulationMesh<IVertex2D>(); //No reason to return a mesh that cannot generate a polygon
 
             //Remove edges from all verticies on or outside the polygon.
-            List<IVertex2D> vertsToKeep = new List<IVertex2D>(maxRemainingMeshVerts);
-            for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            List<IVertex2D> vertsToKeep = new(maxRemainingMeshVerts);
+            for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 bool removeVert = path.Contains(iVert);
                 if (removeVert == false)
                 {
                     //Remove  verticies inside the polygon
-                    removeVert = poly.ContainsExt(mesh[iVert].Position) != OverlapType.NONE;
+                    removeVert = poly.GetRelation(mesh[iVert].Position) != ShapeRelation.None;
                 }
 
                 if (removeVert == false)
@@ -740,16 +728,16 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         private static TriangulationMesh<IVertex2D> CreateMeshSubset(TriangulationMesh<IVertex2D> mesh, List<IVertex2D> vertsToKeep)
         {
-            int[] input_to_output = mesh.Verticies.Select((v, i) => -1).ToArray();
-            TriangulationMesh<IVertex2D> output_mesh = new TriangulationMesh<IVertex2D>();
-            output_mesh.AddVerticies(vertsToKeep.Select(v => new TriangulationVertex(v.Position)).ToArray());
+            int[] input_to_output = [.. mesh.Vertices.Select((v, i) => -1)];
+            TriangulationMesh<IVertex2D> output_mesh = new();
+            output_mesh.AddVerticies([.. vertsToKeep.Select(v => new TriangulationVertex(v.Position))]);
             for (int iOut = 0; iOut < vertsToKeep.Count; iOut++)
             {
                 var input_vert = vertsToKeep[iOut];
                 input_to_output[input_vert.Index] = iOut;
             }
 
-            List<IEdge> edgesKept = new List<IEdge>();
+            List<IEdge> edgesKept = [];
             for (int iOut = 0; iOut < vertsToKeep.Count; iOut++)
             {
                 var input_vert = vertsToKeep[iOut];
@@ -763,7 +751,7 @@ namespace GeometryTests.FSCheck
                         continue;
                     }
 
-                    Edge out_edge = new Edge(A, B);
+                    Edge out_edge = new(A, B);
                     edgesKept.Add(mesh[key]);
                     output_mesh.AddEdge(out_edge);
                 }
@@ -775,13 +763,13 @@ namespace GeometryTests.FSCheck
                 {
                     TriangleFace triFace = f as TriangleFace;
 
-                    int[] new_face = triFace.iVerts.Select(iVert => input_to_output[iVert]).ToArray();
+                    int[] new_face = [.. triFace.iVerts.Select(iVert => input_to_output[iVert])];
 
                     //Skip faces with verts that are not in the output mesh
                     if (new_face.Any(iVert => iVert < 0))
                         continue;
 
-                    TriangleFace newFace = new TriangleFace(new_face);
+                    TriangleFace newFace = new(new_face);
                     output_mesh.AddFace(newFace);
                 }
             }
@@ -806,7 +794,7 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         private static Stack<int> GenConcavePolygon(TriangulationMesh<IVertex2D> mesh, Stack<int> ExteriorPolyRing, int nMaxRemovals)
         {
-            List<int> ring = ExteriorPolyRing.ToList();
+            List<int> ring = [.. ExteriorPolyRing];
 
             TriangulatedMeshGenerators.OnProgress?.Invoke(mesh);
 
@@ -819,7 +807,7 @@ namespace GeometryTests.FSCheck
                     //No removable edge found, stop looking
                     break;
                 }
-                  
+
                 IEdge edge = mesh[edgeToRemove];
                 TriangleFace face = edge.Faces.First() as TriangleFace;
                 int oppVert = face.OppositeVertex(edge);
@@ -861,12 +849,12 @@ namespace GeometryTests.FSCheck
 
                 Debug.Assert(ring.IsValidClosedRing(), "Ring should be valid after adjustment");
 
-                GridPolygon output = new GridPolygon(ring.Select(v => mesh[v].Position).ToArray());
+                Polygon output = new(ring.Select(v => mesh[v].Position).ToArray());
                 if (output.IsValid() == false)
                     throw new ArgumentException("Invalid polygon generated from edge removal, this is a problem in the polygon ");
             }
             while (nRemoved < nMaxRemovals);
-             
+
             return new Stack<int>(ring);
         }
 
@@ -881,7 +869,7 @@ namespace GeometryTests.FSCheck
         private static bool TryFindRemovableEdge(TriangulationMesh<IVertex2D> mesh, IReadOnlyList<int> ring, out IEdgeKey toRemove)
         {
             var edges = ring.ToEdgeKeys();
-            var ShuffledEdgesGen = Gen.Shuffle(edges);
+            Gen<EdgeKey[]> ShuffledEdgesGen = Gen.Shuffle(edges);
             EdgeKey[] shuffledEdges = ShuffledEdgesGen.Eval(1, Global.StdGenSeed); //Spec a seed so the shuffle is predictable
             toRemove = shuffledEdges.FirstOrDefault(edge => CanEdgeBeRemovedFromPoly(mesh, ring, edge));
             return toRemove.A != default;
@@ -910,17 +898,11 @@ namespace GeometryTests.FSCheck
 
 
 
-    public class GridPolygonGenerators
+    public class PolygonGenerators
     {
-        public static Arbitrary<GridPolygon> ArbPolygon()
-        {
-            return Arb.From(GenPolygon(), PolygonShrinker);
-        }
+        public static Arbitrary<Polygon> ArbPolygon() => Arb.From(GenPolygon(), PolygonShrinker);
 
-        public static Gen<GridPolygon> GenPolygon()
-        {
-            return Gen.Sized(size => GenClosedPolylineSmart(size));
-        }
+        public static Gen<Polygon> GenPolygon() => Gen.Sized(size => GenClosedPolylineSmart(size));
 
 
         /// <summary>
@@ -930,12 +912,12 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static Gen<GridPolygon> GenClosedPolylineSmart(int nLines)
+        private static Gen<Polygon> GenClosedPolylineSmart(int nLines)
         {
             ///Generate a large set of points, then find a path of the correct length using those points
-            return (from points in GridVector2Generators.GenDistinctPoints((nLines + 1) * 3)
-                        //from polygon in Gen.Constant(GridLineSegmentGenerators.GenConcavePolygonFromPoints(points, nLines))
-                    from polygon in Gen.Constant(GridLineSegmentGenerators.GenConcavePolygonWithInteriorHolesFromPoints(points, nLines))
+            return (from points in Vector2Generators.GenDistinctPoints((nLines + 1) * 3)
+                        //from polygon in Gen.Constant(LineSegmentGenerators.GenConcavePolygonFromPoints(points, nLines))
+                    from polygon in Gen.Constant(LineSegmentGenerators.GenConcavePolygonWithInteriorHolesFromPoints(points, nLines))
                     select polygon);
         }
 
@@ -946,12 +928,12 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static Gen<GridPolygon> GenPolygonWithInteriorHoles(int nLines)
+        private static Gen<Polygon> GenPolygonWithInteriorHoles(int nLines)
         {
 
             ///Generate a large set of points, then find a path of the correct length using those points
-            return (from points in GridVector2Generators.GenDistinctPoints((nLines + 1) * 3)
-                    from polygon in Gen.Constant(GridLineSegmentGenerators.GenConcavePolygonFromPoints(points, nLines))
+            return (from points in Vector2Generators.GenDistinctPoints((nLines + 1) * 3)
+                    from polygon in Gen.Constant(LineSegmentGenerators.GenConcavePolygonFromPoints(points, nLines))
                     select polygon);
         }
         /*
@@ -962,7 +944,7 @@ namespace GeometryTests.FSCheck
         /// </summary>
         /// <param name="nLines"></param>
         /// <returns></returns>
-        private static Gen<GridPolygon> GenPolygon(int nLines)
+        private static Gen<Polygon> GenPolygon(int nLines)
         {
             if(nLines < 3)
             {
@@ -970,24 +952,24 @@ namespace GeometryTests.FSCheck
             }
 
             ///Generate a large set of points, then find a path of the correct length using those points
-            return (from points in GridVector2Generators.GenDistinctPoints((nLines + 1) * 3)
-                    from polygon in GridLineSegmentGenerators.GenConvexPolygonSmarter(points, nLines)
+            return (from points in Vector2Generators.GenDistinctPoints((nLines + 1) * 3)
+                    from polygon in LineSegmentGenerators.GenConvexPolygonSmarter(points, nLines)
                     select polygon);
         }*/
 
-        public static IEnumerable<GridPolygon> PolygonShrinker(GridPolygon poly)
+        public static IEnumerable<Polygon> PolygonShrinker(Polygon poly)
         {
-            GridPolygon copy = null;
+            Polygon copy = null;
 
             for (int iInner = poly.InteriorRings.Count - 1; iInner >= 0; iInner--)
             {
-                GridPolygon inner_copy = (GridPolygon)poly.InteriorPolygons[iInner].Clone();
-                foreach (GridPolygon shrunk_inner in PolygonShrinker(inner_copy))
+                Polygon inner_copy = (Polygon)poly.InteriorPolygons[iInner].Clone();
+                foreach (Polygon shrunk_inner in PolygonShrinker(inner_copy))
                 {
-                    if(shrunk_inner is null)
+                    if (shrunk_inner is null)
                         continue;
-                    
-                    copy = (GridPolygon)poly.Clone();
+
+                    copy = (Polygon)poly.Clone();
                     try
                     {
                         copy.ReplaceInteriorRing(iInner, shrunk_inner);
@@ -1003,28 +985,28 @@ namespace GeometryTests.FSCheck
                 }
 
                 //Try to remove the polygon as well
-                copy = (GridPolygon)poly.Clone();
+                copy = (Polygon)poly.Clone();
                 copy.RemoveInteriorRing(iInner);
                 yield return copy;
             }
 
             //We cannot shrink a polygon with 3 verticies
-            if (poly.TotalUniqueVerticies <= 3)
+            if (poly.TotalUniqueVertices <= 3)
                 yield break;
 
-            var iVertList = poly.ExteriorRing.Select((v, i) => i).ToList();
+            List<int> iVertList = [.. poly.ExteriorRing.Select((v, i) => i)];
             iVertList.RemoveAt(iVertList.Count - 1);
 
             int[] iShuffledVerts = Gen.Shuffle<int>(iVertList).Eval(1, Global.StdGenSeed);
 
-            GridVector2[] exterior_ring = poly.ExteriorRing;
+            Vector2[] exterior_ring = poly.ExteriorRing;
             //Shrink a polygon by randomly removing verticies
             for (int i = 0; i < poly.ExteriorRing.Length - 1; i++)
             {
                 if (poly.ExteriorRing.Length <= 4)
-                    break; 
+                    break;
 
-                copy = (GridPolygon)poly.Clone();
+                copy = (Polygon)poly.Clone();
                 //Trace.WriteLine(string.Format("Try remove {0} from {1}", i, copy));
 
                 try
@@ -1044,28 +1026,22 @@ namespace GeometryTests.FSCheck
         }
     }
 
-    public class GridVector2Generators
+    public class Vector2Generators
     {
         public static int maxDimValue = 100;
-        public static IRange GeneratedArraySize = new RangeValue(0, 1000);
+        public static IRange GeneratedArraySize = new Geometry.Range(0, 1000);
 
-        static readonly Gen<GridVector2> GridPoints = ChooseFrom(PointsOnGrid1D((maxDimValue * 2) + 1,
+        static readonly Gen<Vector2> GridPoints = ChooseFrom(PointsOnGrid1D((maxDimValue * 2) + 1,
                                                                        (maxDimValue * 2) + 1,
-                                                                       new GridRectangle(-maxDimValue, maxDimValue, -maxDimValue, maxDimValue)));
+                                                                       new Rectangle(-maxDimValue, maxDimValue, -maxDimValue, maxDimValue)));
 
-        public static Arbitrary<GridVector2> ArbRandomPoint()
-        {
-            return Arb.From(Fresh());
-        }
+        public static Arbitrary<Vector2> ArbRandomPoint() => Arb.From(Fresh());
 
-        public static Arbitrary<GridVector2[]> ArbRandomDistinctPoints()
-        {
-            return Arb.From(GenDistinctPoints(), Arb.Default.Array<GridVector2>().Shrinker);
-        }
+        public static Arbitrary<Vector2[]> ArbRandomDistinctPoints() => Arb.From(GenDistinctPoints(), Arb.Default.Array<Vector2>().Shrinker);
 
-        public static Gen<GridVector2> Fresh()
+        public static Gen<Vector2> Fresh()
         {
-            //return Gen<GridVector2> RandPoints = GenPoint();
+            //return Gen<Vector2> RandPoints = GenPoint();
             //return GenPoint();
             //return GridPoints;
             return Gen.Frequency(
@@ -1074,10 +1050,10 @@ namespace GeometryTests.FSCheck
 
         }
 
-        private static GridVector2[] PointsOnGrid1D(int GridDimX, int GridDimY, GridRectangle bounds)
+        private static Vector2[] PointsOnGrid1D(int GridDimX, int GridDimY, Rectangle bounds)
         {
-            GridVector2[,] points = PointsOnGrid(GridDimX, GridDimY, bounds);
-            List<GridVector2> listPoints = new List<GridVector2>(GridDimX * GridDimY);
+            Vector2[,] points = PointsOnGrid(GridDimX, GridDimY, bounds);
+            List<Vector2> listPoints = new(GridDimX * GridDimY);
 
             for (int i = 0; i < points.GetLength(0); i += 5)
             {
@@ -1087,12 +1063,12 @@ namespace GeometryTests.FSCheck
                 }
             }
 
-            return listPoints.ToArray();
+            return [.. listPoints];
         }
 
-        private static GridVector2[,] PointsOnGrid(int GridDimX, int GridDimY, GridRectangle bounds)
+        private static Vector2[,] PointsOnGrid(int GridDimX, int GridDimY, Rectangle bounds)
         {
-            GridVector2[,] points = new GridVector2[GridDimX, GridDimY];
+            Vector2[,] points = new Vector2[GridDimX, GridDimY];
             double XStep = bounds.Width / (GridDimX - 1);
             double YStep = bounds.Height / (GridDimY - 1);
 
@@ -1102,7 +1078,7 @@ namespace GeometryTests.FSCheck
                 double Y = bounds.Bottom;
                 for (int iY = 0; iY < GridDimY; iY++)
                 {
-                    points[iX, iY] = new GridVector2(X, Y);
+                    points[iX, iY] = new Vector2(X, Y);
                     Y += YStep;
                 }
 
@@ -1111,30 +1087,21 @@ namespace GeometryTests.FSCheck
 
             return points;
         }
-        public static Gen<GridVector2[]> GenDistinctPoints()
+        public static Gen<Vector2[]> GenDistinctPoints() => Gen.Sized(GenDistinctPoints);
+
+        public static Gen<Vector2[]> GenDistinctPoints(int nPoints) =>
+            //List<Vector2> points = new List<Vector2>(nPoints);
+            Gen.Fresh<Vector2[]>(() => DistinctPointsGenerator(nPoints));//return Gen.GrowingElements< Vector2[]>(DistinctPointsGeneratorFunc(nPoints));//return Fresh().ArrayOf(nPoints).Where(points => points.Distinct().Count() == nPoints);
+
+        private static IEnumerable<Vector2[]> DistinctPointsGeneratorFunc(int nPoints)
         {
-            return Gen.Sized(GenDistinctPoints);
-        }
-
-        public static Gen<GridVector2[]> GenDistinctPoints(int nPoints)
-        {
-            //List<GridVector2> points = new List<GridVector2>(nPoints);
-            return Gen.Fresh<GridVector2[]>(() => DistinctPointsGenerator(nPoints));
-
-            //return Gen.GrowingElements< GridVector2[]>(DistinctPointsGeneratorFunc(nPoints));
-
-            //return Fresh().ArrayOf(nPoints).Where(points => points.Distinct().Count() == nPoints);
-        }
-
-        private static IEnumerable<GridVector2[]> DistinctPointsGeneratorFunc(int nPoints)
-        {
-            //List<GridVector2> points = new List<GridVector2>(nPoints);
-            HashSet<GridVector2> points = new HashSet<GridVector2>();
+            //List<Vector2> points = new List<Vector2>(nPoints);
+            HashSet<Vector2> points = [];
             while (true)
             {
                 int neededPoints = nPoints - points.Count;
                 var generated_points = GenPoint().ArrayOf(neededPoints).Eval(maxDimValue, Global.RollingStdGenSeed);
-                foreach (GridVector2 genPoint in generated_points)
+                foreach (Vector2 genPoint in generated_points)
                 {
                     if (points.Contains(genPoint))
                         continue;
@@ -1158,15 +1125,15 @@ namespace GeometryTests.FSCheck
             //return Fresh().ArrayOf(nPoints).Where(points => points.Distinct().Count() == nPoints);
         }
 
-        private static GridVector2[] DistinctPointsGenerator(int nPoints)
+        private static Vector2[] DistinctPointsGenerator(int nPoints)
         {
-            //List<GridVector2> points = new List<GridVector2>(nPoints);
-            HashSet<GridVector2> points = new HashSet<GridVector2>();
+            //List<Vector2> points = new List<Vector2>(nPoints);
+            HashSet<Vector2> points = [];
             while (true)
             {
                 int neededPoints = nPoints - points.Count;
                 var generated_points = Fresh().ArrayOf(neededPoints).Eval(maxDimValue, Global.RollingStdGenSeed);
-                foreach (GridVector2 genPoint in generated_points)
+                foreach (Vector2 genPoint in generated_points)
                 {
                     if (points.Contains(genPoint))
                         continue;
@@ -1183,84 +1150,82 @@ namespace GeometryTests.FSCheck
                     else if (nPoints > 1)
                         Trace.WriteLine(string.Format("{0}: {1} ... {2}", nPoints, points.First(), points.Last()));
                         */
-                    return points.ToArray();
+                    return [.. points];
                 }
             }
 
             //return Fresh().ArrayOf(nPoints).Where(points => points.Distinct().Count() == nPoints);
         }
 
-        public static Gen<GridVector2> ChooseFrom(GridVector2[] items)
+        public static Gen<Vector2> ChooseFrom(Vector2[] items)
         {
             return from i in Gen.Choose(0, items.Length - 1)
                    select items[i];
         }
 
-        private static Arbitrary<NormalFloat> floatArb = Arb.Default.NormalFloat();
-        private static Arbitrary<int> intArb = Arb.Default.Int32();
+        private static readonly Arbitrary<NormalFloat> floatArb = Arb.Default.NormalFloat();
+        private static readonly Arbitrary<int> intArb = Arb.Default.Int32();
 
-        private static Gen<NormalFloat> floatGen = floatArb.Generator;
-        private static Gen<int> intGen = intArb.Generator;
+        private static readonly Gen<NormalFloat> floatGen = floatArb.Generator;
+        private static readonly Gen<int> intGen = intArb.Generator;
 
 
-        private static Gen<GridVector2> pointGen = null;
-        private static Gen<GridVector2> GenPoint()
-        {
+        //private static readonly Gen<Vector2> pointGen = null;
+        private static Gen<Vector2> GenPoint() =>
             /*
-            var coords = floatArb.Generator.Two();
-            var point = coords.Select(t => new GridVector2((double)t.Item1, (double)t.Item2));
-            Trace.WriteLine(string.Format("Point Generator: {0}", point));
-            return point;
-            */
+var coords = floatArb.Generator.Two();
+var point = coords.Select(t => new Vector2((double)t.Item1, (double)t.Item2));
+Trace.WriteLine(string.Format("Point Generator: {0}", point));
+return point;
+*/
             /*
             Trace.WriteLine(string.Format("Test: {0}", intGen.Eval(1000, Global.StdGenSeed)));
-            if(pointGen == null)
+            if(pointGen is null)
             {
-                //pointGen = Gen.Fresh<GridVector2>(() => new GridVector2((double)floatGen.Eval(maxDimValue, Global.StdGenSeed),
+                //pointGen = Gen.Fresh<Vector2>(() => new Vector2((double)floatGen.Eval(maxDimValue, Global.StdGenSeed),
                 //(double)floatGen.Eval(maxDimValue, Global.StdGenSeed)));
-                pointGen = Gen.Fresh<GridVector2>(GenPointObj);
+                pointGen = Gen.Fresh<Vector2>(GenPointObj);
             }
 
             return pointGen;*/
 
-            /*return Gen.Fresh(() => new GridVector2((double)floatGen.Eval(maxDimValue, Global.StdGenSeed),
+            /*return Gen.Fresh(() => new Vector2((double)floatGen.Eval(maxDimValue, Global.StdGenSeed),
                                                                            (double)floatGen.Eval(maxDimValue,
                                                                            Global.StdGenSeed)));*/
 
-            //Arb.Default.NormalFloat().Generator.ArrayOf(2).Select(t => new GridVector2((double)t[0], (double)t[1]));
+            //Arb.Default.NormalFloat().Generator.ArrayOf(2).Select(t => new Vector2((double)t[0], (double)t[1]));
             /*
-            if(pointGen == null)
-                pointGen = Arb.Default.NormalFloat().Generator.ArrayOf(2).Select(t => new GridVector2((double)t[0], (double)t[1]));
+            if(pointGen is null)
+                pointGen = Arb.Default.NormalFloat().Generator.ArrayOf(2).Select(t => new Vector2((double)t[0], (double)t[1]));
 
             return pointGen;
             */
 
 
             //var coords = Arb.Default.NormalFloat().Generator.Two();
-            //return coords.Select(t => new GridVector2((double)t.Item1, (double)t.Item2)); 
-            //return floatGen.Two().Select((t) => new GridVector2((double)t.Item1, (double)t.Item2));
-            return Arb.Default.NormalFloat().Generator.Two().Select((t) => new GridVector2((double)t.Item1, (double)t.Item2));
-        }
+            //return coords.Select(t => new Vector2((double)t.Item1, (double)t.Item2)); 
+            //return floatGen.Two().Select((t) => new Vector2((double)t.Item1, (double)t.Item2));
+            Arb.Default.NormalFloat().Generator.Two().Select((t) => new Vector2((double)t.Item1, (double)t.Item2));
 
         /*
-        private static GridVector2 GenPointObj()
+        private static Vector2 GenPointObj()
         {
-            return floatGen.Two().Select((t) => new GridVector2((double)t.Item1, (double)t.Item2));
+            return floatGen.Two().Select((t) => new Vector2((double)t.Item1, (double)t.Item2));
         }*/
     }
 
     /*
-    public class GridPolygonGenerators
+    public class PolygonGenerators
     {
-        public static Arbitrary<GridLineSegment> ArbRandomPolygon()
+        public static Arbitrary<LineSegment> ArbRandomPolygon()
         {
             return Arb.From(GenPoly());
         }
 
-        public static Gen<GridPolygon> GenPoly(int nVerts)
+        public static Gen<Polygon> GenPoly(int nVerts)
         {
             
-            GridVector2Generators.GenDistinctPoints(nVerts).Where()
+            Vector2Generators.GenDistinctPoints(nVerts).Where()
                 
         }
     }

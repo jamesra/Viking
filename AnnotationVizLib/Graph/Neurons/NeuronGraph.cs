@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using GraphLib;
 using System;
 using System.Collections.Generic;
@@ -7,15 +7,15 @@ using System.Linq;
 
 namespace AnnotationVizLib
 {
-    public class StructureLinkComparer : Comparer<IStructureLinkKey>
+    public class StructureLinkComparer : Comparer<IStructureLink>
     {
-        public override int Compare(IStructureLinkKey x, IStructureLinkKey y)
+        public override int Compare(IStructureLink x, IStructureLink y)
         {
             if (object.ReferenceEquals(x, y))
                 return 0;
 
-            bool XIsNull = (object)x == null;
-            bool YIsNull = (object)y == null;
+            bool XIsNull = x is null;
+            bool YIsNull = y is null;
 
             if (XIsNull)
                 return -1;
@@ -40,7 +40,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// List of child structures involved in the link
         /// </summary>
-        public SortedSet<IStructureLinkKey> Links = new SortedSet<IStructureLinkKey>(new StructureLinkComparer());
+        public SortedSet<IStructureLink> Links = new(new StructureLinkComparer());
 
         public double TotalSourceArea
         {
@@ -53,10 +53,7 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["TotalSourceArea"]);
             }
-            set
-            {
-                Attributes["TotalSourceArea"] = value;
-            }
+            set => Attributes["TotalSourceArea"] = value;
         }
 
         public double TotalTargetArea
@@ -70,10 +67,7 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["TotalTargetArea"]);
             }
-            set
-            {
-                Attributes["TotalTargetArea"] = value;
-            }
+            set => Attributes["TotalTargetArea"] = value;
         }
 
         public double MinZ
@@ -87,10 +81,7 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["MinZ"]);
             }
-            set
-            {
-                Attributes["MinZ"] = value;
-            }
+            set => Attributes["MinZ"] = value;
         }
 
         public double MaxZ
@@ -104,44 +95,23 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["MaxZ"]);
             }
-            set
-            {
-                Attributes["MaxZ"] = value;
-            }
+            set => Attributes["MaxZ"] = value;
         }
 
-        public override double Weight
-        {
-            get
-            {
-                return (double)Links.Count;
-            }
-        }
+        public override double Weight => (double)Links.Count;
 
-        public ulong[] SourceIDs
-        {
-            get
-            {
-                return Links.Select(l => l.SourceID).ToArray();
-            }
-        }
+        public ulong[] SourceIDs => [.. Links.Select(l => l.SourceID)];
 
-        public ulong[] TargetIDs
-        {
-            get
-            {
-                return Links.Select(l => l.TargetID).ToArray();
-            }
-        }
+        public ulong[] TargetIDs => [.. Links.Select(l => l.TargetID)];
 
-        public NeuronEdge(long SourceKey, long TargetKey, IStructureLinkKey Link, string SynapseType)
+        public NeuronEdge(long SourceKey, long TargetKey, IStructureLink Link, string SynapseType)
             : base(SourceKey, TargetKey, Link.Directional)
         {
             this.Links.Add(Link);
             this.SynapseType = SynapseType;
         }
 
-        public void AddLink(IStructureLinkKey link)
+        public void AddLink(IStructureLink link)
         {
             Debug.Assert(!Links.Contains(link));
             Debug.Assert(this.Directional == link.Directional);
@@ -153,7 +123,7 @@ namespace AnnotationVizLib
         {
             string output = "";
             bool first = true;
-            foreach (IStructureLinkKey link in Links)
+            foreach (IStructureLink link in Links)
             {
                 if (!first)
                 {
@@ -168,10 +138,7 @@ namespace AnnotationVizLib
             return output;
         }
 
-        public override string ToString()
-        {
-            return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString() + " via " + this.SynapseType + " " + PrintChildLinks();
-        }
+        public override string ToString() => this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString() + " via " + this.SynapseType + " " + PrintChildLinks();
 
         public int Compare(NeuronEdge x, NeuronEdge y)
         {
@@ -179,7 +146,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if ((object)x != null && (object)y != null)
+            if (x is not null && y is not null)
             {
                 return string.Compare(x.SynapseType, y.SynapseType);
             }
@@ -193,7 +160,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if ((object)other != null)
+            if (other is not null)
             {
                 return this.SynapseType.CompareTo(other.SynapseType);
             }
@@ -204,7 +171,7 @@ namespace AnnotationVizLib
         public bool Equals(NeuronEdge other)
         {
             bool baseEquals = base.Equals(other);
-            if (baseEquals && ((object)other != null))
+            if (baseEquals && (other is not null))
             {
                 return this.SynapseType.Equals(other.SynapseType);
             }
@@ -213,25 +180,15 @@ namespace AnnotationVizLib
         }
     }
 
-    public class NeuronNode : Node<long, NeuronEdge>
+    public class NeuronNode(long key, IStructureReadOnly value) : Node<long, NeuronEdge>(key)
     {
         //Structure this node represents
-        public IStructureReadOnly Structure;
+        public IStructureReadOnly Structure = value;
 
-        public IEnumerable<ulong> EdgeSourceChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs)); } }
-        public IEnumerable<ulong> EdgeTargetChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs)); } }
+        public IEnumerable<ulong> EdgeSourceChildStructureIDs => this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs));
+        public IEnumerable<ulong> EdgeTargetChildStructureIDs => this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs));
 
-        public NeuronNode(long key, IStructureReadOnly value)
-            : base(key)
-        {
-            this.Structure = value;
-
-        }
-
-        public override string ToString()
-        {
-            return this.Key.ToString() + " : " + Structure.Label;
-        }
+        public override string ToString() => this.Key.ToString() + " : " + Structure.Label;
     }
 
     public class NeuronGraph : Graph<long, NeuronNode, NeuronEdge>

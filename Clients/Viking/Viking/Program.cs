@@ -1,94 +1,106 @@
-﻿//#define USEASPMEMBERSHIP
+// #define USEASPMEMBERSHIP
 
 using CommandLine;
 using IdentityModel.Client;
 using System;
+using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using CommandLine.Text;
+using Newtonsoft.Json;
 using Viking.UI.Forms;
+using VikingCoreResources = Viking.Properties.Resources;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+using Viking.UI.WPF;
+using Viking.Services;
+using Velopack;
+using Newtonsoft.Json.Linq;
+
 
 namespace Viking
 {
     class CommandLineOptions
     {
         [Option('v', "Volume", Required = true, HelpText = "URL of VolumeXML file")]
-        public string VolumeURL { get; set; }
+        public string VolumeURL { get; set; } = string.Empty;
 
         [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "URL of VolumeXML file")]
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
-        public string Password { get; set; }
-         
-        //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")]
-        
+        public string Password { get; set; } = string.Empty;
+
+        //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")] 
     }
 
     static class Program
     {
-        static System.IO.StreamWriter DebugLogFile = null;
-        public static TextWriter SynchronizedDebugWriter = null;
+        /// <summary>
+        /// Pre-filled on the login volume stage when no <c>-v</c> argument is given
+        /// (Viking No Args). Used by this branch to target the local gRPC test endpoint
+        /// declared in VolumeTest.xml.
+        /// </summary>
+        internal const string DefaultVolumeUrl = "http://rogue1.codepharm.net/RABBIT/VolumeTest.xml";
+
+        static System.IO.StreamWriter? DebugLogFile = null;
+        public static TextWriter? SynchronizedDebugWriter = null;
 
         public static string AppWebsite = "";
-
-        /// <summary>
-        /// From Stack Overflow: http://stackoverflow.com/questions/8301587/how-to-detect-xna-version-at-runtime
-        /// </summary>
-        /// <param name="ok"></param>
-        /// <returns></returns>
-        public static bool XNAFrameworkInstalled(string baseKeyName)
-        {
-            Microsoft.Win32.RegistryKey FrameworkKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKeyName);
-
-            if (FrameworkKey == null)
-            {
-                return false;
-            }
-
-            if (FrameworkKey.GetValueKind("Installed") != Microsoft.Win32.RegistryValueKind.DWord)
-            {
-                return false;
-            }
-
-            int installedValue = Convert.ToInt32(FrameworkKey.GetValue("Installed"));
-
-            return installedValue != 0;
-        }
 
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
         static void Main(string[] args)
-        {
+        { 
+            // Velopack must run first to handle setup/uninstall/update hooks
+            // Note: Velopack version 0.0.1298 doesn't have OnFirstRun/OnAfterUpdate hooks
+            // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version
+            VelopackApp.Build().Run();
+            
+            // Upgrade settings from previous versions (preserves user settings across updates)
+            SettingsManager.UpgradeSettingsIfNeeded();
+
+            // Register viking:// URL protocol so the OS launches Viking when the user clicks a viking:// link
+            VikingProtocolRegistration.RegisterIfNeeded();
+
+            ConfigureHighDpiMode();
+            Application.EnableVisualStyles();
+
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+            // Remove the DefaultTraceListener so nothing writes to OutputDebugString.
+            // In Debug builds CreateDebugListener() re-adds a file-based listener.
+#if !DEBUG
+            Trace.Listeners.Clear();
+#endif
             CreateDebugListener();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
             Trace.WriteLine("Application Directory: " + execAssembly.Location, "Viking");
+
+            CultureInfo culture = CultureInfo.CreateSpecificCulture("en-US");
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+
 #if DEBUG
             //          System.Diagnostics.Debugger.Break();
 #endif
 
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            //System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            //SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
+            SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
-            try
-            {
-                MathNet.Numerics.Control.UseNativeMKL();
-            }
-            catch (Exception e)
-            {
-                Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
-            }
 
             System.Threading.ThreadPool.GetMaxThreads(out int workThreads, out int portThreads);
             System.Net.ServicePointManager.DefaultConnectionLimit = workThreads;
@@ -96,395 +108,505 @@ namespace Viking
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            string website = null;
+            // Check for updates before showing login dialog
+            // This runs on the UI thread with proper message pumping
+            UpdateService.CheckForUpdatesAtStartup();
 
-            if (!(XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
-                 XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Game Studio\v4.0") ||
-                 XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Framework\v4.0") ||
-                 XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Framework\v4.0")))
-            {
-                MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
-            }
+            ApplicationSettings? appSettings = null;
 
-            if (args.Length > 0 && args[0].StartsWith("viking://", StringComparison.OrdinalIgnoreCase))
+            // Handle viking://open?code=...&volume=...&location=... protocol (one-use launch code)
+            if (TryHandleVikingOpenUrl(args, out appSettings))
             {
-                website = TryOpenFromVikingProtocol(args[0]);
-                if (website is null)
-                    return;
-                if (UI.State.UserBearerToken == null || string.IsNullOrEmpty(UI.State.UserBearerToken.AccessToken))
-                {
-                    website = ShowLoginWindow(website);
-                    if (website is null)
-                        return;
-                }
+                // appSettings set by TryHandleVikingOpenUrl; continue to volume load below
             }
             else
             {
-            var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+                var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
-            /*
-            if (args.Length > 0)
-            {
-                website = args[0];
-            }
-            else
-            { 
-                bool ShowUsage = true;
-                
-                if (AppDomain.CurrentDomain.SetupInformation.ActivationArguments != null)
+                options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
                 {
-                    string[] ClickOnceArgs = AppDomain.CurrentDomain.SetupInformation.ActivationArguments.ActivationData;
-                    if (ClickOnceArgs != null && ClickOnceArgs.Length > 0)
+                    // Create a new help text with error information
+                    HelpText errorHelpText = HelpText.AutoBuild(options);
+                    errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+                    errorHelpText.AddPreOptionsLine("The following errors occurred:");
+
+                    foreach (var error in errors)
                     {
-                        Trace.WriteLine("ActivationArguments: ");
-                        foreach (string arg in ClickOnceArgs)
-                            Trace.WriteLine(arg, "Viking");
-
-                        string FirstArg = System.Web.HttpUtility.HtmlDecode(ClickOnceArgs[0]);
-                        string[] Args = FirstArg.Split('?');
-
-                        Program.AppWebsite = Args[0]; //The website we use to launch Viking
-                        Trace.WriteLine("Application Website: " + Program.AppWebsite, "Viking");
-
-                        if (Args.Length == 0)
-                        {
-                            //Sometimes the only argument passed is the application directory
-                            if (!Args[0].ToLower().EndsWith(".application"))
-                            {
-                                website = Args[1];
-                                ShowUsage = false;
-                            }
-                        }
-                        //Parse the arguments
-                        else if (Args.Length > 1)
-                        {
-                            System.Collections.Specialized.NameValueCollection QueryTable = System.Web.HttpUtility.ParseQueryString(Args[1]);
-
-                            if (QueryTable.HasKeys())
-                            {
-                                UI.State.StartupArguments = QueryTable;
-                                string VolumeValue = QueryTable["Volume"];
-                                if (VolumeValue != null)
-                                {
-                                    website = VolumeValue;
-                                    ShowUsage = false;
-                                }
-                            }
-                            else
-                            {
-                                website = Args[1];
-                                ShowUsage = false;
-                            }
-                        }
+                        errorHelpText.AddPreOptionsLine($"  {error}");
                     }
-                }
 
-                if (ShowUsage)
-                {
-                    //Launch the viking home page and exit
-                    //System.Windows.Forms.MessageBox.Show("No volume definition file was specified.  Loading RC1 by default.  You can pass a website as the first argument to launch a different volume, or select a volume definition from the website: http://connectomes.utah.edu/", "Viking", MessageBoxButtons.OK);
-                    //System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process();
-                    //WebBrowser.StartInfo.FileName = homepage;
-                    //WebBrowser.Start();
-                } 
-            }
-            */
-            // ----------------------------------------------------------------------------
-            //   Logon nag screen, I've only added this tiny code here, and made a logon form in 
-            //  Viking/UI/forms
+                    errorHelpText.AddPreOptionsLine("");
+                    Console.WriteLine(errorHelpText);
 
-            options.WithParsed((o) =>
-            {
-                website = o.VolumeURL;
-                TryBypassSplash(o);
-            });
-
-            options.WithNotParsed((o) => { website = ShowLoginWindow(website); });
+                    // Show login window as fallback
+                    appSettings = ShowLoginWindow(null, null, null);
+                });
             }
 
-            //Close the program if no website is configured
-            if (website is null)
+            //Close the program if no settings were provided or the volume is missing
+            if (appSettings is null || string.IsNullOrWhiteSpace(appSettings.VolumeURL))
                 return;
-            /*
-#if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon(website))
-            {
-                vikingLogon.ShowDialog();
 
-                if (vikingLogon.Result == DialogResult.Cancel)
-                { 
-                    return;
-                }
+            //Make sure the volume URL includes a file, if it does not then include Volume.VikingXML by default
+            appSettings.VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(appSettings.VolumeURL);
+            Trace.WriteLine($"Loading: {appSettings.VolumeURL}", "Viking");
 
-                website = vikingLogon.VolumeURL;
-
-                UI.State.UserBearerToken = vikingLogon.BearerToken;
-                UI.State.UserCredentials = vikingLogon.Credentials;
-
-                Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://identity.connectomes.utah.edu";
-            }
-#else
-            using (LogonASPMembership vikingLogon = new LogonASPMembership(website))
-            {
-                vikingLogon.ShowDialog();
-
-                if (vikingLogon.Result == DialogResult.Cancel)
-                {
-                    return;
-                }
-
-                website = vikingLogon.VolumeURL;
-                UI.State.UserCredentials = vikingLogon.Credentials;
-            }
-#endif 
-            */
-
-            //Make sure the website includes a file, if it does not then include Volume.VikingXML by default
-            website = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(website);
+            // Populate annotation URL asynchronously (fire-and-forget, errors are logged)
+            var populateTask = Task.Run(async () =>
+                await PopulateAnnotationUrlFromVolumeAsync(appSettings).ConfigureAwait(false));
+            populateTask.GetAwaiter().GetResult();
 
             // --------------------------------------------------------------------------------------
 
-            Trace.WriteLine($"Loading: {website}", "Viking");
-
-            /*
-
-            using (SplashForm Splash = new SplashForm(website))
-            {
-                UI.State.volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, progressReporter);
-                Splash.ShowDialog();
-                DialogResult splashResult = Splash.Result;
-
-                if (splashResult == DialogResult.Cancel)
-                {
-                    return;
-                }
-            }
-            */
-
-            VikingApplicationContext context = new VikingApplicationContext(website);
-            context.Initialize(website);
+            VikingApplicationContext context = new(appSettings);
+            context.Initialize();
             Application.Run(context);
+             
+            // Shutdown WPF Application instance if it exists
+            System.Windows.Application.Current?.Shutdown();
 
-            if (SynchronizedDebugWriter != null)
-                SynchronizedDebugWriter.Close();
+            SynchronizedDebugWriter?.Close();
+            DebugLogFile?.Close();
+        }
 
-            if (DebugLogFile != null)
-                DebugLogFile.Close();
+        private static ApplicationSettings TryBypassSplash(CommandLineOptions options)
+        {
+            if (!string.IsNullOrWhiteSpace(options.VolumeURL) &&
+                !string.IsNullOrWhiteSpace(options.Username) &&
+                !string.IsNullOrWhiteSpace(options.Password))
+            {
+                UI.State.UserCredentials = new System.Net.NetworkCredential(options.Username, options.Password);
+                return new ApplicationSettings
+                {
+                    VolumeURL = options.VolumeURL
+                };
+            }
+
+            return ShowLoginWindow(options.VolumeURL, options.Username, options.Password);
         }
 
         /// <summary>
-        /// Handles viking://open?code=&amp;volume=&amp;location=&amp;api= from Identity CreateCode / SBFSEM-tools.
-        /// Location may be a Location ID or x,y,z[,downsample]. Volume is required for an unambiguous open.
+        /// Handles viking://open?code=...&volume=...&location=... protocol.
+        /// Returns true if args contained a viking:// URL and it was handled (appSettings may be null if user cancelled).
         /// </summary>
-        private static string TryOpenFromVikingProtocol(string vikingUri)
+        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings)
         {
-            Trace.WriteLine("Protocol launch: " + vikingUri, "Viking");
-            Uri uri;
-            try
-            {
-                uri = new Uri(vikingUri);
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine("Invalid viking:// URI: " + ex.Message, "Viking");
-                MessageBox.Show("Could not parse the Viking launch link.", "Viking", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return null;
-            }
+            appSettings = null;
+            string? vikingUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
+            if (string.IsNullOrEmpty(vikingUrl))
+                return false;
 
-            var query = System.Web.HttpUtility.ParseQueryString(uri.Query ?? "");
-            UI.State.StartupArguments = query;
+            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
+                return false;
 
-            ApplyLocationStartupArguments(query["location"] ?? query["Location"]);
+            var query = ParseQueryString(uri.Query);
+            ApplyStartupPlaceArguments(query);
 
-            var volume = query["volume"] ?? query["Volume"];
-            if (string.IsNullOrWhiteSpace(volume))
+            string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
+            string? volume = query.TryGetValue("volume", out var v) ? v?.Trim() : null;
+
+            if (!string.IsNullOrEmpty(code))
             {
-                MessageBox.Show("The Viking launch link did not include a volume. Volume is required.", "Viking", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return null;
-            }
-
-            var code = query["code"] ?? query["Code"];
-            var apiBase = query["api"] ?? query["Api"];
-            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(apiBase))
-            {
-                try
+                string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
+                if (string.IsNullOrEmpty(baseUrl))
                 {
-                    if (!TryExchangeLaunchCode(apiBase.Trim(), code.Trim(), out var exchangedVolume, out var identityUrl, out var exchangedVolumeName))
-                    {
-                        Trace.WriteLine("Launch code exchange failed; falling back to login.", "Viking");
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrWhiteSpace(exchangedVolume))
-                            volume = exchangedVolume;
-                        if (!string.IsNullOrWhiteSpace(exchangedVolumeName))
-                            UI.State.StartupArguments["volumeName"] = exchangedVolumeName;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(identityUrl))
-                        Viking.Tokens.TokenInjector.BearerTokenAuthority = identityUrl;
-                }
-                catch (Exception ex)
-                {
-                    Trace.WriteLine("Launch code exchange exception: " + ex.Message, "Viking");
-                }
-            }
-
-            return volume.Trim();
-        }
-
-        private static void ApplyLocationStartupArguments(string location)
-        {
-            if (string.IsNullOrWhiteSpace(location))
-                return;
-
-            location = location.Trim();
-            if (long.TryParse(location, out _))
-            {
-                UI.State.StartupArguments["location"] = location;
-                return;
-            }
-
-            // x,y,z[,downsample] — same shape as the SBFSEM-tools pick readout
-            var parts = location.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 3)
-            {
-                UI.State.StartupArguments["X"] = parts[0].Trim();
-                UI.State.StartupArguments["Y"] = parts[1].Trim();
-                UI.State.StartupArguments["Z"] = parts[2].Trim();
-                if (parts.Length >= 4)
-                    UI.State.StartupArguments["DS"] = parts[3].Trim();
-            }
-            else
-            {
-                UI.State.StartupArguments["location"] = location;
-            }
-        }
-
-        private static bool TryExchangeLaunchCode(string apiBase, string code, out string volumeUrl, out string identityServerUrl, out string volumeName)
-        {
-            volumeUrl = null;
-            identityServerUrl = null;
-            volumeName = null;
-
-            var exchangeUrl = apiBase.TrimEnd('/') + "/api/viking/launch-exchange";
-            using (var client = new HttpClient())
-            {
-                client.Timeout = TimeSpan.FromSeconds(30);
-                var body = new StringContent("{\"code\":\"" + code.Replace("\"", "") + "\"}", Encoding.UTF8, "application/json");
-                var response = client.PostAsync(exchangeUrl, body).GetAwaiter().GetResult();
-                var json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                if (!response.IsSuccessStatusCode)
-                {
-                    Trace.WriteLine($"Launch exchange HTTP {(int)response.StatusCode}: {json}", "Viking");
+                    Trace.WriteLine("[Viking] viking://open with code ignored: LaunchExchangeBaseUrl not configured.", "Viking");
                     return false;
                 }
 
-                using (var doc = Newtonsoft.Json.Linq.JObject.Parse(json))
+                var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
+                (string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName) = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
+                if (accessToken == null)
                 {
-                    string accessToken = (string)(doc["accessToken"] ?? doc["access_token"]);
-                    volumeUrl = (string)(doc["volumeUrl"] ?? doc["volume_url"]);
-                    identityServerUrl = (string)(doc["identityServerUrl"] ?? doc["identity_server_url"]);
-                    volumeName = (string)(doc["volumeName"] ?? doc["volume_name"]);
-
-                    if (string.IsNullOrEmpty(accessToken))
-                        return false;
-
-                    var oauthJson = "{\"access_token\":\"" + accessToken.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\",\"token_type\":\"Bearer\"}";
-                    var oauthResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(oauthJson, Encoding.UTF8, "application/json")
-                    };
-                    var tokenResponse = ProtocolResponse.FromHttpResponseAsync<TokenResponse>(oauthResponse).GetAwaiter().GetResult();
-                    UI.State.UserBearerToken = tokenResponse;
-                    Viking.Tokens.TokenInjector.BearerToken = tokenResponse;
+                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
+                    appSettings = ShowLoginWindow(volume, null, null);
                     return true;
                 }
+                string? initialVolume = !string.IsNullOrEmpty(volumeUrl) ? volumeUrl : volume;
+                appSettings = ShowLoginWindowWithLaunchResult(accessToken, identityServerUrl ?? "", initialVolume, volumeName);
+                return true;
             }
+
+            if (!string.IsNullOrEmpty(volume))
+            {
+                appSettings = ShowLoginWindow(volume, null, null);
+                return true;
+            }
+
+            appSettings = ShowLoginWindow(null, null, null);
+            return true;
         }
 
-        private static string TryBypassSplash(CommandLineOptions options)
+        /// <summary>
+        /// Copies location / coordinate query params into StartupArguments for post-load navigation.
+        /// Location ID wins over coordinates when both are present.
+        /// </summary>
+        private static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
         {
-            string VolumeURL; 
-            if (options.VolumeURL != null && options.Username != null && options.Password != null)
+            UI.State.StartupArguments = [];
+
+            if (query.TryGetValue("location", out string? locationRaw) && !string.IsNullOrWhiteSpace(locationRaw))
             {
-                UI.State.UserCredentials = new System.Net.NetworkCredential(options.Username, options.Password);
-                VolumeURL = options.VolumeURL;
-            }
-            else
-            {
-                VolumeURL = ShowLoginWindow(options.VolumeURL, options.Username, options.Password); 
-            }
-
-            return VolumeURL;
-        }
-
-        private static string ShowLoginWindow(string VolumePath, string username=null, string password=null)
-        {
-
-#if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon(VolumePath))
-            {
-                vikingLogon.ShowDialog();
-
-                if (vikingLogon.Result == DialogResult.Cancel)
-                { 
-                    return null;
-                } 
-
-                UI.State.UserBearerToken = vikingLogon.BearerToken;
-                UI.State.UserCredentials = vikingLogon.Credentials;
-
-                Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = vikingLogon.AuthenticationServiceURL;
-
-                return vikingLogon.VolumeURL;
-            }
-#else
-            using (LogonASPMembership vikingLogon = new LogonASPMembership(VolumePath, username, password))
-            {
-                vikingLogon.ShowDialog();
-
-                if (vikingLogon.Result == DialogResult.Cancel)
+                locationRaw = locationRaw.Trim();
+                if (long.TryParse(locationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locationId))
                 {
-                    return null;
+                    UI.State.StartupArguments["Location"] = locationId.ToString(CultureInfo.InvariantCulture);
+                    return;
                 }
 
-                
-                UI.State.UserCredentials = vikingLogon.Credentials;
-                return vikingLogon.VolumeURL;
+                // Comma-separated x,y,z[,downsample] from SBFSEM-tools pick readout
+                string[] parts = locationRaw.Split(',');
+                if (parts.Length >= 3)
+                {
+                    UI.State.StartupArguments["X"] = parts[0].Trim();
+                    UI.State.StartupArguments["Y"] = parts[1].Trim();
+                    UI.State.StartupArguments["Z"] = parts[2].Trim();
+                    if (parts.Length >= 4)
+                        UI.State.StartupArguments["DS"] = parts[3].Trim();
+                    return;
+                }
             }
-#endif
-        } 
 
+            CopyQueryKey(query, "x", "X");
+            CopyQueryKey(query, "y", "Y");
+            CopyQueryKey(query, "z", "Z");
+            CopyQueryKey(query, "ds", "DS");
+        }
+
+        private static void CopyQueryKey(Dictionary<string, string> query, string queryKey, string startupKey)
+        {
+            if (query.TryGetValue(queryKey, out string? value) && !string.IsNullOrWhiteSpace(value))
+                UI.State.StartupArguments[startupKey] = value.Trim();
+        }
+
+        private static Dictionary<string, string> ParseQueryString(string query)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(query) || query[0] != '?')
+                return dict;
+            foreach (var pair in query.Substring(1).Split('&'))
+            {
+                var eq = pair.IndexOf('=');
+                if (eq < 0)
+                    continue;
+                var key = Uri.UnescapeDataString(pair.Substring(0, eq).Replace('+', ' '));
+                var value = Uri.UnescapeDataString(pair.Substring(eq + 1).Replace('+', ' '));
+                dict[key] = value;
+            }
+            return dict;
+        }
+
+        private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(15);
+                var body = new { code };
+                var json = JsonConvert.SerializeObject(body);
+                using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                    return (null, null, null, null);
+                var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var obj = JsonConvert.DeserializeObject<JObject>(responseJson);
+                if (obj == null)
+                    return (null, null, null, null);
+                return (
+                    obj["access_token"]?.ToString(),
+                    obj["identity_server_url"]?.ToString(),
+                    obj["volume_url"]?.ToString(),
+                    obj["volume_name"]?.ToString());
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
+                return (null, null, null, null);
+            }
+        }
+
+        private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)
+        {
+            LoginWindow wpfLoginWindow = new();
+            wpfLoginWindow.InitialApiToken = initialApiToken;
+            wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
+            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(initialVolumeUrl) ? null : initialVolumeUrl;
+            wpfLoginWindow.InitialVolumeName = string.IsNullOrWhiteSpace(initialVolumeName) ? null : initialVolumeName;
+            return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
+
+        /// <summary>
+        /// Initialize the Mathnet Numerics lib
+        /// </summary>
+        private static void InitializeMathnet()
+        {
+            int numMathProcs = Environment.ProcessorCount - 1;
+            if (numMathProcs < 1)
+                numMathProcs = 1;
+
+            MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
+            bool MKLSuccess = Geometry.Global.TryUseNativeMKL();
+            if (MKLSuccess)
+                Console.WriteLine("Success loading MKL Library");
+            else
+            {
+                Console.WriteLine("Unable to load MKL Libarry");
+            }
+        }
+
+
+        private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
+        {
+            LoginWindow wpfLoginWindow = new();
+            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? DefaultVolumeUrl : volumePath;
+            return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
+
+        private static ApplicationSettings? ShowLoginWindowFromDialog(LoginWindow wpfLoginWindow)
+        {
+            ApplicationSettings appSettings = new();
+            var settings = Viking.Properties.Settings.Default;
+
+            // Provide recent volume URLs from settings
+            wpfLoginWindow.RecentVolumeUrls = settings.VolumeURLs;
+            wpfLoginWindow.RecentSegmentationServiceUrls = settings.SegmentationServiceUrls;
+
+            var initialSegmentationUrl = settings.LastSegmentationServiceUrl;
+            wpfLoginWindow.InitialSegmentationServiceUrl = string.IsNullOrWhiteSpace(initialSegmentationUrl) ? null : initialSegmentationUrl;
+
+            var result = wpfLoginWindow.ShowDialog();
+
+            if (result != true)
+            {
+                return null;
+            }
+
+            UI.State.UserBearerToken = wpfLoginWindow.BearerToken;
+            UI.State.UserCredentials = wpfLoginWindow.Credentials;
+            UI.State.IdentityVolumeName = string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeName)
+                ? null
+                : wpfLoginWindow.VolumeName;
+            UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)
+                ? "https://sbfsem-tools.com/open"
+                : settings.SbfsemToolsOpenUrl;
+            UI.State.SbfsemToolsIdentityBounceUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsIdentityBounceUrl)
+                ? "https://identity.codepharm.net:4001/SbfsemOpen/Redirect"
+                : settings.SbfsemToolsIdentityBounceUrl;
+
+            if (wpfLoginWindow.BearerToken != null)
+            {
+                Viking.Tokens.TokenStore.BearerToken = wpfLoginWindow.BearerToken;
+                var identityServerUrl = settings.IdentityServerURL ?? wpfLoginWindow.IdentityServerUrl;
+                if (!string.IsNullOrEmpty(identityServerUrl))
+                    Viking.Tokens.TokenStore.BearerTokenAuthority = identityServerUrl;
+            }
+
+            bool settingsChanged = false;
+
+            // Add selected volume to recent volumes
+            appSettings.VolumeURL = wpfLoginWindow.VolumeURL;
+
+            if (!string.IsNullOrEmpty(appSettings.VolumeURL))
+            {
+                if (settings.VolumeURLs is null)
+                {
+                    settings.VolumeURLs = [];
+                    settingsChanged = true;
+                }
+
+                // Remove duplicate entries by URL (checking both "URL" and "URL|Name" formats)
+                var volumeName = wpfLoginWindow.VolumeName;
+                List<string> entriesToRemove = [];
+                foreach (string entry in settings.VolumeURLs)
+                {
+                    if (string.IsNullOrWhiteSpace(entry))
+                        continue;
+
+                    // Parse entry to extract URL
+                    var parts = entry.Split(['|'], 2);
+                    var entryUrl = parts[0];
+
+                    // If URLs match, mark for removal
+                    if (string.Equals(entryUrl, appSettings.VolumeURL, StringComparison.OrdinalIgnoreCase))
+                    {
+                        entriesToRemove.Add(entry);
+                    }
+                }
+
+                foreach (var entry in entriesToRemove)
+                {
+                    settings.VolumeURLs.Remove(entry);
+                }
+
+                // Format entry: "URL|Name" or just "URL" if name is null/empty
+                string entryToAdd = !string.IsNullOrWhiteSpace(volumeName) ? $"{appSettings.VolumeURL}|{volumeName}" : appSettings.VolumeURL;
+
+                // Insert at top of list (most recent)
+                settings.VolumeURLs.Insert(0, entryToAdd);
+                settingsChanged = true;
+
+                System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {entryToAdd}");
+            }
+
+            // Persist segmentation service selection
+            var selectedSegmentationUrl = wpfLoginWindow.SegmentationServiceUrl;
+            appSettings.SegmentationURL = selectedSegmentationUrl;
+            settings.LastSegmentationServiceUrl = selectedSegmentationUrl ?? string.Empty;
+            settingsChanged = true;
+
+            if (!string.IsNullOrWhiteSpace(selectedSegmentationUrl))
+            {
+                var history = settings.SegmentationServiceUrls ?? [];
+                if (history.Contains(selectedSegmentationUrl))
+                {
+                    history.Remove(selectedSegmentationUrl);
+                }
+                history.Insert(0, selectedSegmentationUrl);
+                settings.SegmentationServiceUrls = history;
+                settingsChanged = true;
+            }
+
+            if (settingsChanged)
+            {
+                settings.Save();
+            }
+
+            return appSettings;
+        }
+
+        private static async Task PopulateAnnotationUrlFromVolumeAsync(ApplicationSettings appSettings)
+        {
+            if (appSettings is null ||
+                !string.IsNullOrWhiteSpace(appSettings.AnnotationURL) ||
+                string.IsNullOrWhiteSpace(appSettings.VolumeURL))
+            {
+                return;
+            }
+
+            try
+            {
+                var volumeDocument = await Viking.VolumeModel.Volume.LoadXDocumentAsync(appSettings.VolumeURL, CancellationToken.None, UI.State.UserCredentials).ConfigureAwait(false);
+
+                var volumeElement = Viking.VolumeModel.Volume.GetVolumeElement(volumeDocument);
+                if (volumeElement is null)
+                {
+                    return;
+                }
+
+                var mappingElement = volumeElement
+                    .Elements()
+                    .FirstOrDefault(e => string.Equals(e.Name.LocalName, "VolumeToEndpoint", StringComparison.OrdinalIgnoreCase));
+
+                var endpoint = GetAttributeValueCaseInsensitive(mappingElement, "Endpoint");
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    appSettings.AnnotationURL = endpoint;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Failed to derive annotation endpoint from volume '{appSettings?.VolumeURL}': {ex.Message}");
+            }
+        }
+
+        private static string? GetAttributeValueCaseInsensitive(XElement? element, string attributeName)
+        {
+            return element?
+                .Attributes()
+                .FirstOrDefault(a => string.Equals(a.Name.LocalName, attributeName, StringComparison.OrdinalIgnoreCase))
+                ?.Value;
+        }
 
         [Conditional("DEBUG")]
         private static void CreateDebugListener()
         {
-            return;
-            /*
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
             if (!Directory.Exists(LogPath))
                 Directory.CreateDirectory(LogPath);
 
-            string FileName = LogPath +"\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
+            string FileName = LogPath + "\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
 
             DebugLogFile = System.IO.File.CreateText(FileName);
 
             TextWriter SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
 
-            TextWriterTraceListener Listener = new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener");
-
+            TextWriterTraceListener Listener = new(SynchronizedDebugWriter, "Viking Log Listener");
             Trace.Listeners.Add(Listener);
-            Debug.Listeners.Add(Listener);
-            
-            ConsoleTraceListener DebugOutputListener = new ConsoleTraceListener(true);
-            Trace.Listeners.Add(DebugOutputListener);
-            Debug.Listeners.Add(DebugOutputListener);
 
-            Trace.UseGlobalLock = true; 
-            */
+            Trace.UseGlobalLock = true;
+            TestCultureNumberParsing();
         }
+
+        private static void TestCultureNumberParsing()
+        {
+            NumberFormatInfo current1 = CultureInfo.CurrentCulture.NumberFormat;
+
+            Debug.WriteLine("Decimal separator: " + current1.NumberDecimalSeparator);
+            Debug.WriteLine("Group separator:   " + current1.NumberGroupSeparator);
+
+            string[] testStrings = ["3,800000000000e+01",
+                                    "3.800000000000e+01",
+                                    "3.80e+01",
+                                    "38"];
+
+            foreach (string number in testStrings)
+            {
+                try
+                {
+                    Debug.WriteLine($"Parsing {number} yields {System.Convert.ToDouble(number)}");
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine($"Could not parse {number}\n{e}");
+                }
+            }
+        }
+
+        private static void ConfigureHighDpiMode()
+        {
+            try
+            {
+                var applicationType = typeof(Application);
+                MethodInfo setHighDpiMode = applicationType.GetMethod("SetHighDpiMode", BindingFlags.Public | BindingFlags.Static);
+                if (setHighDpiMode != null)
+                {
+                    Type highDpiModeType = setHighDpiMode.GetParameters()[0].ParameterType;
+                    object perMonitorV2Value = Enum.Parse(highDpiModeType, "PerMonitorV2");
+                    setHighDpiMode.Invoke(null, [perMonitorV2Value]);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Failed to call Application.SetHighDpiMode: {ex.Message}");
+            }
+
+            TrySetPerMonitorDpiAwareness();
+        }
+
+        private static void TrySetPerMonitorDpiAwareness()
+        {
+            try
+            {
+                // PROCESS_PER_MONITOR_DPI_AWARE = 2
+                SetProcessDpiAwareness(2);
+            }
+            catch (DllNotFoundException)
+            {
+                Trace.WriteLine("[Viking] shcore.dll not available for DPI awareness.");
+            }
+            catch (EntryPointNotFoundException)
+            {
+                Trace.WriteLine("[Viking] SetProcessDpiAwareness not available on this OS.");
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Failed to set DPI awareness via shcore.dll: {ex.Message}");
+            }
+        }
+
+        [DllImport("Shcore.dll")]
+        private static extern int SetProcessDpiAwareness(int awareness);
+
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 
 namespace Viking.UI
@@ -50,8 +50,9 @@ namespace Viking.UI
     {
         public System.Drawing.Point Location { get; internal set; }
 
-        public int X { get { return Location.X; } }
-        public int Y { get { return Location.Y; } }
+        public int X => Location.X;
+        public int Y => Location.Y;
+
         /// <summary>
         /// Raw data for our pen state
         /// </summary>
@@ -70,12 +71,12 @@ namespace Viking.UI
             }
         }
 
-        public bool Erase { get { return (Pen.flags & PenFlags.Eraser) > 0; } }
-        public bool Inverted { get { return (Pen.flags & PenFlags.Inverted) > 0; } }
-        public bool Barrel { get { return (Pen.flags & PenFlags.Barrel) > 0; } }
+        public bool Erase => (Pen.flags & PenFlags.Eraser) > 0;
+        public bool Inverted => (Pen.flags & PenFlags.Inverted) > 0;
+        public bool Barrel => (Pen.flags & PenFlags.Barrel) > 0;
 
-        public bool InContact { get { return (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0; } }
-        public bool InRange { get { return (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0; } }
+        public bool InContact => (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0;
+        public bool InRange => (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0;
     }
 
     public delegate void PenEventHandler(object sender, PenEventArgs e);
@@ -116,7 +117,7 @@ namespace Viking.UI
     /// <summary>
     /// This class can be used by a control to support Pen Input Events
     /// </summary>
-    public class PenEventManager : IPenEvents
+    public class PenEventManager(Control parent) : IPenEvents
     {
         public event PenEventHandler OnPenEnterRange;
         public event PenEventHandler OnPenLeaveRange;
@@ -137,12 +138,7 @@ namespace Viking.UI
         PointerPenInfo? previousPenState;
         PointerMessageData? previousPointerState;
 
-        System.Windows.Forms.Control Parent;
-
-        public PenEventManager(Control parent)
-        {
-            Parent = parent;
-        }
+        readonly System.Windows.Forms.Control Parent = parent;
 
         /// <summary>
         /// This function must be called by the host controls WndProc function to process Pen related input events
@@ -188,17 +184,17 @@ namespace Viking.UI
         private void UpdatePenState(ref Message msg)
         {
             TouchMessageType msgType = (TouchMessageType)msg.Msg;
-            PointerMessageData pointerState = new PointerMessageData(msg);
+            PointerMessageData pointerState = new(msg);
             WinMsgInput.GetPointerType(pointerState.PointerID, out PointerType type);
-            WinMsgInput.IsPenEvent(out uint altID);
-            //System.Diagnostics.Debug.Assert(altID == pointerState.PointerID); //WTF if this is wrong
+            WinMsgInput.IsPenEvent(out uint _altID);
+            //System.Diagnostics.Debug.Assert(_altID == pointerState.PointerID); //WTF if this is wrong
             if (type != PointerType.Pen)
             {
                 return;
             }
 
             PointerPenInfo penState = WinMsgInput.GetPenInfo(pointerState.PointerID);
-            if(Global.TracePenEvents)
+            if (Global.TracePenEvents)
                 System.Diagnostics.Trace.WriteLine($"{penState}");
             bool NewPointer = true; //True if we have a new pointer ID than last time.  From what I can tell each time the pen leaves range of the surface a new ID is assigned when moves back into range
 
@@ -213,10 +209,11 @@ namespace Viking.UI
                 }
             }
 
-            PenEventArgs args = new PenEventArgs();
-
-            args.Location = Parent.PointToClient(new System.Drawing.Point(pointerState.X, pointerState.Y));
-            args.Pen = penState;
+            PenEventArgs args = new()
+            {
+                Location = Parent.PointToClient(new System.Drawing.Point(pointerState.X, pointerState.Y)),
+                Pen = penState
+            };
 
             if (pointerState.Flags.New)
             {
@@ -242,7 +239,7 @@ namespace Viking.UI
                 else if (msgType == TouchMessageType.WM_POINTERUPDATE && previousPenState.Value.PositioningChange(penState))
                 {
                     FireOnPenMove(args);
-                } 
+                }
             }
 
             if (pointerState.Flags.InRange == false)

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Point.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -11,13 +11,13 @@ namespace TriangleNet.Geometry
     /// <summary>
     /// Represents a 2D point.
     /// </summary>
-    public class Point : IComparable<Point>, IEquatable<Point>
+    public class Point(double x, double y, int label) : IComparable<Point>, IEquatable<Point>
     {
         internal int id;
-        internal int label;
+        internal int label = label;
 
-        internal double x;
-        internal double y;
+        internal double x = x;
+        internal double y = y;
 #if USE_Z
         internal double z;
 #endif
@@ -32,13 +32,6 @@ namespace TriangleNet.Geometry
         {
         }
 
-        public Point(double x, double y, int label)
-        {
-            this.x = x;
-            this.y = y;
-            this.label = label;
-        }
-
         #region Public properties
 
         /// <summary>
@@ -46,8 +39,8 @@ namespace TriangleNet.Geometry
         /// </summary>
         public int ID
         {
-            get { return this.id; }
-            set { this.id = value; }
+            get => this.id;
+            set => this.id = value;
         }
 
         /// <summary>
@@ -55,8 +48,8 @@ namespace TriangleNet.Geometry
         /// </summary>
         public double X
         {
-            get { return this.x; }
-            set { this.x = value; }
+            get => this.x;
+            set => this.x = value;
         }
 
         /// <summary>
@@ -64,8 +57,8 @@ namespace TriangleNet.Geometry
         /// </summary>
         public double Y
         {
-            get { return this.y; }
-            set { this.y = value; }
+            get => this.y;
+            set => this.y = value;
         }
 
 #if USE_Z
@@ -87,8 +80,8 @@ namespace TriangleNet.Geometry
         /// </remarks>
         public int Label
         {
-            get { return this.label; }
-            set { this.label = value; }
+            get => this.label;
+            set => this.label = value;
         }
 
         #endregion
@@ -107,7 +100,7 @@ namespace TriangleNet.Geometry
             }
 
             // If one is null, but not both, return false.
-            if (((object)a == null) || ((object)b == null))
+            if ((a is null) || (b is null))
             {
                 return false;
             }
@@ -115,22 +108,17 @@ namespace TriangleNet.Geometry
             return a.Equals(b);
         }
 
-        public static bool operator !=(Point a, Point b)
-        {
-            return !(a == b);
-        }
+        public static bool operator !=(Point a, Point b) => !(a == b);
 
         public override bool Equals(object obj)
         {
             // If parameter is null return false.
-            if (obj == null)
+            if (obj is null)
             {
                 return false;
             }
 
-            Point p = obj as Point;
-
-            if ((object)p == null)
+            if (obj is not Point p)
             {
                 return false;
             }
@@ -141,7 +129,7 @@ namespace TriangleNet.Geometry
         public bool Equals(Point p)
         {
             // If vertex is null return false.
-            if ((object)p == null)
+            if (p is null)
             {
                 return false;
             }
@@ -171,9 +159,6 @@ namespace TriangleNet.Geometry
             return hash;
         }
 
-        public override string ToString()
-        {
-            return String.Format("[{0},{1}]", x, y);
-        }
+        public override string ToString() => String.Format("[{0},{1}]", x, y);
     }
 }

@@ -1,6 +1,7 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Globalization;
+using System.Threading;
 using System.Windows.Data;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -11,53 +12,44 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLinkKey link = value as IPermittedStructureLinkKey;
-            if (link == null)
+            if (value is not IPermittedStructureLink link)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
-            return Store.StructureTypes.GetObjectByID((long)link.SourceTypeID);
+            Store.StructureTypes.TryGetObjectByID((long)link.SourceTypeID, out var sourceType);
+            return sourceType;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
     }
 
     internal class PermittedTargetStructureLinkTypeToStructureTypeConverters : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLinkKey link = value as IPermittedStructureLinkKey;
-            if (link == null)
+            if (value is not IPermittedStructureLink link)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
-            return Store.StructureTypes.GetObjectByID((long)link.TargetTypeID);
+            Store.StructureTypes.TryGetObjectByID((long)link.TargetTypeID, out var typeObj);
+            return typeObj;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
     }
 
     internal class PermittedBidirectionalStructureLinkTypeToStructureTypeConverters : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLinkKey link = value as IPermittedStructureLinkKey;
-            if (link == null)
+            if (value is not IPermittedStructureLink link)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
             ulong myTypeID = System.Convert.ToUInt64(parameter);
             ulong otherTypeID = link.SourceTypeID == myTypeID ? link.TargetTypeID : link.SourceTypeID;
-            return Store.StructureTypes.GetObjectByID((long)otherTypeID);
+            Store.StructureTypes.TryGetObjectByID((long)otherTypeID, out var otherType);
+            return otherType;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
     }
 
     internal class StructureTypeObjToPermittedStructureLinksViewModelConverters : IValueConverter
@@ -68,13 +60,13 @@ namespace WebAnnotation.WPF.Converters
                 return null;
 
             StructureTypeObj typeObj = value as StructureTypeObj;
-            if(typeObj == null && (value is long || value is int || value is ulong || value is uint))
+            if (typeObj is null && (value is long || value is int || value is ulong || value is uint))
             {
                 long ID = System.Convert.ToInt64(value);
-                typeObj = Store.StructureTypes.GetObjectByID(ID,true);
+                Store.StructureTypes.TryGetObjectByID(ID, out typeObj);
             }
 
-            if(typeObj == null)
+            if (typeObj is null)
                 throw new ArgumentException(string.Format("Expected a StructureTypeObj, got {0}", value));
 
             return new Annotation.ViewModels.PermittedStructureLinkViewModel(typeObj);
@@ -84,7 +76,7 @@ namespace WebAnnotation.WPF.Converters
         {
             if (value is null)
                 return null;
-             
+
             if (false == value is Annotation.ViewModels.PermittedStructureLinkViewModel)
                 throw new ArgumentException(string.Format("Expected a Annotation.ViewModels.PermittedStructureLinkViewModel, got {0}", value));
 

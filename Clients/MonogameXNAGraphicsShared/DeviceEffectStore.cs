@@ -1,8 +1,8 @@
-﻿using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
@@ -14,46 +14,66 @@ namespace VikingXNAGraphics
     public static class DeviceEffectsStore<T> where
         T : class, IInitEffect, new()
     {
-        private static Dictionary<GraphicsDevice, T> ManagersForDevice = new Dictionary<GraphicsDevice, T>();
-        
+        private static readonly Dictionary<GraphicsDevice, T> ManagersForDevice = [];
+
         public static T GetOrCreateForDevice(GraphicsDevice device, ContentManager content)
         {
-            if (ManagersForDevice.ContainsKey(device))
+            // Check if device is disposed and clear stale entries
+            if (device == null || device.IsDisposed)
+                return null;
+
+            if (ManagersForDevice.TryGetValue(device, out var entry))
             {
-                return ManagersForDevice[device];
+                return entry;
             }
 
-            T manager = new T();
+            T manager = new();
             manager.Init(device, content);
 
             ManagersForDevice[device] = manager;
 
-            //device.DeviceLost += OnDeviceLostOrReset;
-            //device.DeviceResetting += OnDeviceLostOrReset;
             return manager;
         }
 
         public static T TryGet(GraphicsDevice device)
         {
-            if (!ManagersForDevice.ContainsKey(device))
+            if (device == null || device.IsDisposed)
                 return null;
 
-            return ManagersForDevice[device];
+            return ManagersForDevice.TryGetValue(device, out var entry) ? entry : null;
         }
 
-        /*
-        private static void OnDeviceLostOrReset(object sender, EventArgs e)
+        /// <summary>
+        /// Clear all cached entries for a specific device. Call this when the device is reset.
+        /// </summary>
+        /// <param name="device">The device to clear entries for, or null to clear all entries</param>
+        public static void ClearForDevice(GraphicsDevice device)
         {
-            GraphicsDevice device = sender as GraphicsDevice;
-            if (device != null)
+            if (device == null)
             {
-                if (ManagersForDevice.ContainsKey(device))
-                {
-                    ManagersForDevice.Remove(device);
-                    device.DeviceReset -= OnDeviceLostOrReset;
-                    device.DeviceLost -= OnDeviceLostOrReset;
-                }
+                ManagersForDevice.Clear();
+                return;
             }
-        }*/
+
+            if (ManagersForDevice.ContainsKey(device))
+            {
+                ManagersForDevice.Remove(device);
+            }
+
+            // Also clear any entries for disposed devices
+            var disposedDevices = ManagersForDevice.Keys.Where(d => d.IsDisposed).ToList();
+            foreach (var disposedDevice in disposedDevices)
+            {
+                ManagersForDevice.Remove(disposedDevice);
+            }
+        }
+
+        /// <summary>
+        /// Clear all cached entries for all devices. Call this on device reset.
+        /// </summary>
+        public static void ClearAll()
+        {
+            ManagersForDevice.Clear();
+        }
     }
 }

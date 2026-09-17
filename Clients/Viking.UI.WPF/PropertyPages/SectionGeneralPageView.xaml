@@ -1,0 +1,56 @@
+<local:PropertyPageViewBase x:Class="Viking.UI.WPF.PropertyPages.SectionGeneralPageView"
+                             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                             xmlns:local="clr-namespace:Viking.UI.WPF.PropertyPages"
+                             mc:Ignorable="d"
+                             d:DesignHeight="400"
+                             d:DesignWidth="600">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="SectionHeaderText"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   Margin="0,0,0,12" />
+
+        <GroupBox Header="Notes"
+                  Grid.Row="1"
+                  Margin="0,0,0,12">
+            <RichTextBox x:Name="NotesBox"
+                         IsReadOnly="True"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         VerticalScrollBarVisibility="Auto"
+                         MinHeight="80" />
+        </GroupBox>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Reference Above"
+                      Grid.Column="0"
+                      Margin="0,0,16,0">
+                <ListBox x:Name="AboveList"
+                         Margin="0,4,0,0"
+                         SelectionMode="Single" />
+            </GroupBox>
+
+            <GroupBox Header="Reference Below"
+                      Grid.Column="1">
+                <ListBox x:Name="BelowList"
+                         Margin="0,4,0,0"
+                         SelectionMode="Single" />
+            </GroupBox>
+        </Grid>
+    </Grid>
+</local:PropertyPageViewBase>
+

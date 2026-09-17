@@ -36,7 +36,7 @@ namespace AnnotationVizLib.WCFClient
         public static AnnotateStructureTypesClient CreateStructureTypesClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotateStructureTypesClient proxy = new AnnotateStructureTypesClient();
+            AnnotateStructureTypesClient proxy = new();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.UserCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.UserCredentials.Password;
@@ -46,7 +46,7 @@ namespace AnnotationVizLib.WCFClient
         public static AnnotateStructuresClient CreateStructuresClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotateStructuresClient proxy = new AnnotateStructuresClient();
+            AnnotateStructuresClient proxy = new();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.UserCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.UserCredentials.Password;
@@ -56,7 +56,7 @@ namespace AnnotationVizLib.WCFClient
         public static AnnotateLocationsClient CreateLocationsClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotateLocationsClient proxy = new AnnotateLocationsClient();
+            AnnotateLocationsClient proxy = new();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.UserCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.UserCredentials.Password;
@@ -66,7 +66,7 @@ namespace AnnotationVizLib.WCFClient
         public static VolumeMetaClient CreateVolumeMetaClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            VolumeMetaClient proxy = new VolumeMetaClient();
+            VolumeMetaClient proxy = new();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.UserCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.UserCredentials.Password;

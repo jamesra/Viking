@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -14,7 +14,7 @@ namespace AnnotationVizLib
     {
         public string label;
 
-        public SortedDictionary<string, string> Attributes = new SortedDictionary<string, string>();
+        public SortedDictionary<string, string> Attributes = [];
 
         /// <summary>
         /// Add the list of attributes to the node
@@ -22,9 +22,9 @@ namespace AnnotationVizLib
         /// <param name="node"></param>
         /// <param name="attribs"></param>
         /// <returns></returns>
-        public void AddStandardizedAttributes(IDictionary<string, string> attribs)
+        public void AddStandardizedAttributes(System.Collections.Generic.IDictionary<string, string> attribs)
         {
-            if (attribs == null)
+            if (attribs is null)
                 return;
 
             foreach (string key in attribs.Keys)
@@ -38,7 +38,7 @@ namespace AnnotationVizLib
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.AppendLine(label);
             foreach (string key in this.Attributes.Keys)
             {
@@ -82,17 +82,19 @@ namespace AnnotationVizLib
     public class GraphViewEngine<KEY> : GraphViewEntity<KEY>
         where KEY : IComparable<KEY>
     {
-        public SortedDictionary<KEY, GraphViewNode<KEY>> nodes = new SortedDictionary<KEY, GraphViewNode<KEY>>();
-        public SortedDictionary<string, List<KEY>> subgraphs = new SortedDictionary<string, List<KEY>>();
-        public List<GraphViewEdge<KEY>> edges = new List<GraphViewEdge<KEY>>();
+        public SortedDictionary<KEY, GraphViewNode<KEY>> nodes = [];
+        public SortedDictionary<string, List<KEY>> subgraphs = [];
+        public List<GraphViewEdge<KEY>> edges = [];
 
         public void AssignNodeToSubgraph(string subgraphName, KEY NodeID)
         {
             //Determine if we have an entry in our subgraph or if we need to add it.
             if (!this.subgraphs.ContainsKey(subgraphName))
             {
-                List<KEY> listSubgraphNodes = new List<KEY>();
-                listSubgraphNodes.Add(NodeID);
+                List<KEY> listSubgraphNodes =
+                [
+                    NodeID
+                ];
                 subgraphs.Add(subgraphName, listSubgraphNodes);
             }
             else
@@ -104,21 +106,18 @@ namespace AnnotationVizLib
 
         public virtual GraphViewNode<KEY> createNode(KEY ID)
         {
-            GraphViewNode<KEY> tempNode = new GraphViewNode<KEY>(ID);
+            GraphViewNode<KEY> tempNode = new(ID);
             nodes.Add(ID, tempNode);
             return tempNode;
         }
 
-        public virtual void removeNode(KEY k)
+        public virtual void removeNode(KEY label)
         {
-            if (nodes.ContainsKey(k))
-                nodes.Remove(k);
+            if (nodes.ContainsKey(label))
+                nodes.Remove(label);
         }
 
-        public virtual void addEdge(GraphViewEdge<KEY> edge)
-        {
-            edges.Add(edge);
-        }
+        public virtual void addEdge(GraphViewEdge<KEY> edge) => edges.Add(edge);
 
         public virtual void removeEdge(GraphViewEdge<KEY> edge)
         {

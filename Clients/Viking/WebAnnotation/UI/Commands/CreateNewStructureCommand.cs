@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Threading;
 
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -8,32 +9,32 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// This command takes a structureObj and LocationObj defined by other commands and commits them to the database
     /// </summary>
-    class CreateNewStructureCommand : AnnotationCommandBase
+    internal class CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                           StructureObj structure,
+                                           LocationObj location) : AnnotationCommandBase(parent)
     {
-        StructureObj newStruct;
-        LocationObj newLoc;
+        private readonly StructureObj newStruct = structure;
+        private readonly LocationObj newLoc = location;
+        int _started;
 
-        public CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               StructureObj structure,
-                                               LocationObj location)
-            : base(parent)
-        {
-            this.newStruct = structure;
-            this.newLoc = location;
-        }
-
-        public override void OnActivate()
-        {
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
-            //Create the new structure
-            LocationObj unused;
-            Store.Structures.Create(newStruct, newLoc, out unused);
-            if (unused != null)
-                Global.LastEditedAnnotationID = unused.ID;
+            _ = ExecuteAsync();
+        }
+
+        async System.Threading.Tasks.Task ExecuteAsync()
+        {
+            if (Interlocked.Exchange(ref _started, 1) != 0)
+                return;
+
+            var result = await Store.Structures.Create(newStruct, newLoc);
+            if (result.Location != null)
+            {
+                Global.LastEditedAnnotationID = result.Location.ID;
+            }
+
             base.Execute();
         }
     }

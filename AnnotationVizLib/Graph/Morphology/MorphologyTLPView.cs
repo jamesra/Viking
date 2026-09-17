@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using SqlGeometryUtils;
 using System.Collections.Generic;
@@ -13,12 +13,9 @@ namespace AnnotationVizLib
         public readonly IScale scale;
         public readonly System.Drawing.Color structure_color;
 
-        public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = new SortedDictionary<MorphologyEdge, ulong>();
+        public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = [];
 
-        protected override SortedDictionary<string, string> DefaultAttributes
-        {
-            get { return TLPAttributes.DefaultForMorphologyAttribute; }
-        }
+        protected override SortedDictionary<string, string> DefaultAttributes => TLPAttributes.DefaultForMorphologyAttribute;
 
         public MorphologyTLPView(IScale scale, System.Drawing.Color ColorMap, string VolumeURL) : base(VolumeURL)
         {
@@ -31,7 +28,7 @@ namespace AnnotationVizLib
 
         protected new TLPViewNode createNode(ulong ID)
         {
-            TLPViewNode tempNode = new TLPViewNode(ID);
+            TLPViewNode tempNode = new(ID);
             addNode(ID, tempNode);
             return tempNode;
         }
@@ -39,15 +36,12 @@ namespace AnnotationVizLib
         /// <summary>
         /// Does not populate attributes since they are inherited
         /// </summary>
-        public TLPViewNode CreateTLPSubgraphNode(MorphologyNode node)
-        {
-            return createNode(node.Key);
-        }
+        public TLPViewNode CreateTLPSubgraphNode(MorphologyNode node) => createNode(node.Key);
 
         public TLPViewNode CreateTLPNode(MorphologyNode node, System.Drawing.Color color)
         {
             TLPViewNode tlpnode = createNode(node.Key);
-            Dictionary<string, string> NodeAttribs = new Dictionary<string, string>();
+            Dictionary<string, string> NodeAttribs = [];
             /*IDictionary<string, string> NodeAttribs = AttributeMapper.AttribsForLabel(node..Label, TLPAttributes.StandardLabelToNodeTLPAppearance);
 
             if(NodeAttribs.Count == 0)
@@ -68,7 +62,7 @@ namespace AnnotationVizLib
             NodeAttribs.Add("Untraceable", node.Location.IsUntraceable ? "true" : "false");
             NodeAttribs.Add("Vericosity Cap", node.Location.IsVericosityCap ? "true" : "false");
             NodeAttribs.Add("StructureTags", ObjAttribute.AttributesToString(node.Graph.structure.TagsXML));
-            NodeAttribs.Add("Tags", string.Concat(node.Location.Attributes.Values.Select(v => v + ';')));
+            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.TagsXml()));
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));
 
@@ -80,7 +74,7 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewShape", NodeShape(node));
             }
 
-            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Any())
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count > 0)
             {
                 NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count.ToString());
             }
@@ -92,7 +86,7 @@ namespace AnnotationVizLib
 
         public static string NodeShape(MorphologyNode node)
         {
-            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Any())
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count > 0)
                 return TLPAttributes.IntForShape(TLPAttributes.NodeShapes.GlowSphere);
 
             return null;
@@ -101,46 +95,40 @@ namespace AnnotationVizLib
 
         public static string NodeVikingLocation(MorphologyNode node)
         {
-            GridVector2 pos = node.Geometry.Centroid;
+            Vector2 pos = node.Location.Geometry().Centroid();
             return string.Format("X:{0} Y:{1} Z:{2}", pos.X / node.Graph.scale.X.Value, pos.Y / node.Graph.scale.Y.Value, node.UnscaledZ);
         }
 
         public static string NodeLayout(MorphologyNode node)
         {
-            GridVector2 pos = node.Geometry.Centroid;
+            Vector2 pos = node.Location.Geometry().Centroid();
             return string.Format("({0},{1},{2})", pos.X, pos.Y, node.Z);
         }
 
-        public static string NodeSize(MorphologyNode node, IScale scale)
+        public static string NodeSize(MorphologyNode node, UnitsAndScale.IScale scale)
         {
-            GridRectangle bbox = node.Geometry.BoundingBox;
+            Rectangle bbox = node.Geometry.BoundingBox();
             //OK, tulip treats the location property as the center of the shape.  The size is centered on the origin.  So if a cell is centered on 0, and the radius is 50.  We need to use the diamater to ensure the size is correct.
             return string.Format("({0},{1},{2})", bbox.Width, bbox.Height, 1 * scale.Z.Value);
         }
 
-        public string LabelForNode(MorphologyNode node)
-        {
-            return node.Key.ToString();
-        }
+        public static string LabelForNode(MorphologyNode node) => node.Key.ToString();
 
-        public string LabelForStructure(IStructureReadOnly s)
+        public static string LabelForStructure(IStructureReadOnly s)
         {
-            if (s == null)
+            if (s is null)
                 return "";
 
-            if (string.IsNullOrWhiteSpace(s.Label))
+            if (s.Label is null || s.Label.Length == 0)
             {
                 //TODO: Return StructureTypeID
-                return $"{s.TypeID} #{s.ID}";
+                return string.Format("{0} #{1}", s.TypeID, s.ID);
             }
 
-            return $"{s.ID} #{s.Label}";
+            return string.Format("{0} #{1}", s.ID, s.Label);
         }
 
-        public static string LinkString(IStructureLinkKey link)
-        {
-            return link.SourceID + " -> " + link.TargetID;
-        }
+        public static string LinkString(IStructureLink link) => link.SourceID + " -> " + link.TargetID;
 
         /// <summary>
         /// Does not populate attributes since they are inherited
@@ -204,15 +192,15 @@ namespace AnnotationVizLib
 
         public static System.Drawing.Color GetStructureColor(MorphologyGraph graph, StructureMorphologyColorMap colorMap)
         {
-            if (colorMap == null)
+            if (colorMap is null)
                 return System.Drawing.Color.Empty;
 
             return colorMap.GetColor(graph);
         }
 
-        public static MorphologyTLPView ToTLP(MorphologyGraph graph, IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
+        public static MorphologyTLPView ToTLP(MorphologyGraph graph, UnitsAndScale.IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
         {
-            MorphologyTLPView view = new MorphologyTLPView(scale, GetStructureColor(graph, colorMap), VolumeURL);
+            MorphologyTLPView view = new(scale, GetStructureColor(graph, colorMap), VolumeURL);
 
             AddAllSubgraphNodesAndEdges(view, graph, colorMap);
 
@@ -255,9 +243,11 @@ namespace AnnotationVizLib
 
         private static TLPViewSubgraph AssignNodesToSubgraphs(MorphologyTLPView view, MorphologyGraph structuregraph, StructureMorphologyColorMap colorMap)
         {
-            TLPViewSubgraph subgraph_view = new TLPViewSubgraph(view.GenerateNextSubgraphID(),
-                                                                    view.LabelForStructure(structuregraph.structure));
-            subgraph_view.Color = GetStructureColor(structuregraph, colorMap);
+            TLPViewSubgraph subgraph_view = new(view.GenerateNextSubgraphID(),
+                                                                    MorphologyTLPView.LabelForStructure(structuregraph.structure))
+            {
+                Color = GetStructureColor(structuregraph, colorMap)
+            };
 
             foreach (MorphologyNode node in structuregraph.Nodes.Values)
             {

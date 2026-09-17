@@ -1,22 +1,24 @@
 ﻿using Geometry;
 using System.Windows.Forms;
 using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ResizeCircleCommand : Viking.UI.Commands.Command
+    internal class ResizeCircleCommand : Viking.UI.Commands.Command
     {
         public double Radius;
 
-        public GridVector2 Origin;
-        System.Drawing.Color CircleColor;
+        public Vector2 Origin;
+        private readonly System.Drawing.Color CircleColor;
 
         public delegate void OnCommandSuccess(double radius);
-        OnCommandSuccess success_callback;
+
+        private readonly OnCommandSuccess success_callback;
 
         public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
-                                     GridVector2 origin,
+                                     Vector2 origin,
                                      OnCommandSuccess success_callback)
             : base(parent)
         {
@@ -28,9 +30,9 @@ namespace WebAnnotation.UI.Commands
 
         private void UpdateRadius(MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            this.Radius = GridVector2.Distance(Origin, WorldPos);
+            Radius = Vector2.Distance(Origin, WorldPos);
         }
 
         protected override void OnMouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -53,8 +55,10 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            if (this.success_callback != null)
-                this.success_callback(this.Radius);
+            if (success_callback != null)
+            {
+                success_callback(Radius);
+            }
 
             base.Execute();
         }
@@ -66,7 +70,7 @@ namespace WebAnnotation.UI.Commands
                 //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
                 UpdateRadius(e);
 
-                this.Execute();
+                Execute();
             }
 
             base.OnMouseDown(sender, e);
@@ -75,14 +79,11 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             //            double OldRadius = selected.Radius;
-            GridVector2 Pos = Origin;
+            Vector2 Pos = Origin;
 
-            Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color(CircleColor.R,
-                CircleColor.G,
-                CircleColor.B,
-                128);
+            Microsoft.Xna.Framework.Color color = CircleColor.ToXNAColor(0.5f);
 
-            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.Radius, color);
+            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, Radius, color);
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

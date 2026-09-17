@@ -1,19 +1,18 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 
 namespace WebAnnotation
 {
-
-    class SectionAnnotationsViewCacheEntry : CacheEntry<int>
+    internal class SectionAnnotationsViewCacheEntry : CacheEntry<int>
     {
-        public readonly SectionAnnotationsView SLVModel = null;
+        public readonly SectionAnnotationsView? SLVModel = null;
 
         public SectionAnnotationsViewCacheEntry(int key, SectionAnnotationsView model) : base(key)
         {
-            this.SLVModel = model;
-            this.Size = 1;
+            SLVModel = model;
+            Size = 1;
         }
 
         public override void Dispose()
@@ -21,12 +20,11 @@ namespace WebAnnotation
         }
     }
 
-    class SectionAnnotationsViewModelCache : TimeQueueCache<int, SectionAnnotationsViewCacheEntry, SectionAnnotationsView, SectionAnnotationsView>
+    internal class SectionAnnotationsViewModelCache : TimeQueueCache<int, SectionAnnotationsViewCacheEntry, SectionAnnotationsView, SectionAnnotationsView>
     {
         protected override SectionAnnotationsView Fetch(SectionAnnotationsViewCacheEntry key)
         {
-            SectionAnnotationsViewCacheEntry entry = null;
-            bool found = dictEntries.TryGetValue(key.SLVModel.SectionNumber, out entry);
+            bool found = dictEntries.TryGetValue(key.SLVModel.SectionNumber, out SectionAnnotationsViewCacheEntry entry);
             if (found)
             {
                 key.WasUsedSinceLastCheckpoint = true;
@@ -40,35 +38,22 @@ namespace WebAnnotation
 
 
 
-        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, SectionAnnotationsView value)
-        {
-            return new SectionAnnotationsViewCacheEntry(key, value);
-        }
+        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, SectionAnnotationsView value) => new SectionAnnotationsViewCacheEntry(key, value);
 
-        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, Func<int,SectionAnnotationsView> valueFactory)
-        {
-            return new SectionAnnotationsViewCacheEntry(key, valueFactory(key));
-        }
+        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, Func<int, SectionAnnotationsView> valueFactory) => new SectionAnnotationsViewCacheEntry(key, valueFactory(key));
 
-        protected override Task<SectionAnnotationsViewCacheEntry> CreateEntryAsync(int key, SectionAnnotationsView value)
-        {
-            return Task.FromResult(CreateEntry(key, value));
-        }
+        protected override Task<SectionAnnotationsViewCacheEntry> CreateEntryAsync(int key, SectionAnnotationsView value) => Task.FromResult(CreateEntry(key, value));
 
-        public bool RemoveEntry(int key)
-        {
-            SectionAnnotationsViewCacheEntry entry;
-            return this.Remove(key);
-        }
+        public bool RemoveEntry(int key) => Remove(key);
 
         /// <summary>
         /// Remove all cached entries
         /// </summary>
         public void Clear()
         {
-            foreach (var s in this.dictEntries.Keys)
+            foreach (int s in dictEntries.Keys)
             {
-                this.Remove(s);
+                Remove(s);
             }
         }
     }

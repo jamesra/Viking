@@ -1,4 +1,5 @@
-﻿using Geometry;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -8,14 +9,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
-{
-    
-
+{ 
     enum TestMode
     {
         TEXT,
@@ -26,12 +28,12 @@ namespace MonogameTestbed
         LINESTYLES,
         CURVESTYLES,
         CLOSEDCURVE,
-        POLYGON2D, 
+        POLYGON2D,
         POLYGONINTERSECTION,
         MESH,
         GEOMETRY,
         MORPHOLOGY,
-        TRIANGLEALGORITHM, 
+        TRIANGLEALGORITHM,
         BRANCHPORT,
         POLYWRAPPING,
         BRANCHASSIGNMENT,
@@ -45,50 +47,102 @@ namespace MonogameTestbed
     /// <summary>
     /// This is the main type for your game.
     /// </summary>
-    public class MonoTestbed : Game, IRenderInfo
+    public partial class MonoTestbed : Game, IRenderInfo
     {
         readonly GraphicsDeviceManager graphics;
         public SpriteBatch spriteBatch;
 
-        public RoundLineManager lineManager = new RoundLineCode.RoundLineManager();
-        public CurveManager curveManager = new CurveManager();
+        public RoundLineManager lineManager = new();
+        public CurveManager curveManager = new();
         public VikingXNA.Scene Scene;
         public VikingXNA.Camera Camera;
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
         public OverlayShaderEffect overlayEffect;
-        readonly CurveTest curveTest = new CurveTest();
-        readonly CurveViewTest curveViewTest = new CurveViewTest();
-        readonly LabelViewsTest labelTest = new LabelViewsTest();
-        readonly LineViewStylesTest lineStyleTest = new LineViewStylesTest();
-        readonly CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
-        readonly CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
-        readonly ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
-        readonly Polygon2DTest polygon2DTest = new Polygon2DTest();
+        readonly CurveTest curveTest = new();
+        readonly CurveViewTest curveViewTest = new();
+        readonly LabelViewsTest labelTest = new();
+        readonly LineViewStylesTest lineStyleTest = new();
+        readonly CurveViewStylesTest curveStyleTest = new();
+        readonly CurveSimplificationTest curveSimplificationTest = new();
+        readonly ClosedCurveViewTest closedCurveTest = new();
+        readonly Polygon2DTest polygon2DTest = new();
         readonly MeshTest meshTest = new MeshTest();
-        readonly GeometryTest geometryTest = new GeometryTest();
+        readonly GeometryTest geometryTest = new();
         readonly MorphologyTest morphologyTest = new MorphologyTest();
         readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
-        readonly BranchPointTest branchTest = new BranchPointTest();
-        readonly PolywrappingTest polyWrapTest = new PolywrappingTest();
-        readonly BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
-        readonly Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
-        readonly Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
-        readonly BajajAssignmentTest bajajTest = new BajajAssignmentTest();
-        readonly BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
-        readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
-        readonly PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
-        readonly LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
-        readonly SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
+        readonly BranchPointTest branchTest = new();
+        readonly BranchAssignmentTest brachAssignmentTest = new();
+        readonly Delaunay2DTest delaunay2DTest = new();
+        readonly Delaunay3DTest delaunay3DTest = new();
+        readonly BajajAssignmentTest bajajTest = new();
+        readonly BajajMultiAssignmentTest bajajMultiTest = new();
+        readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new();
+        readonly PolygonIntersectionTest polygonIntersectionTest = new();
+        readonly LabeledRectangleTests labeledRectangleTests = new();
+        readonly PolywrappingTest polywrappingTest = new();
+        readonly SortedDictionary<TestMode, IGraphicsTest> listTests = [];
 
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        private TestMode Mode = TestMode.BAJAJMULTITEST;
+        private TestMode Mode = TestMode.BAJAJTEST;
+
+        private readonly object _initLock = new();
+        private readonly HashSet<TestMode> _initStartedModes = [];
+        private readonly HashSet<TestMode> _initFailedModes = [];
+
+        TestbedMenuBar _menuBar;
+        //Quiet (-q) means "quit when the run finishes"; it must not hide the interactive menu.  Screenshots still
+        //suppress it so capture PNGs are not stamped with File/Test/View/Help.
+        bool MenuEnabled => Program.options?.Screenshots != true;
+
+        /// <summary>
+        /// Viewport height at which screen-space HUD text and the menu bar draw at their base size. Taller
+        /// back buffers (maximised on a 4K display) scale up from here so the text stays legible.
+        /// </summary>
+        internal const float HudReferenceHeight = 1200f;
+
+        /// <summary>
+        /// Uniform factor for pixel-sized HUD elements; never shrinks below 1 so small windows keep the base size.
+        /// </summary>
+        internal static float HudSizeFactorFor(int viewportHeight) => Math.Max(1f, viewportHeight / HudReferenceHeight);
+
+        /// <summary>
+        /// Pixels the menu strip occupies along the top of the viewport, or 0 when the menu is disabled.
+        /// Tests that draw screen-space HUD text start below this so the menu does not cover their first line.
+        /// </summary>
+        internal int MenuBarHeight => MenuEnabled && _menuBar != null ? _menuBar.Height : 0;
 
         LabelView testLabel = null;
 
+        /// <summary>1x1 white texture for drawing solid color swatches in the legend HUD.</summary>
+        private Texture2D _whitePixel = null;
+
+        /// <summary>Shared host rasterizer (CullMode.None); allocated once instead of every Draw.</summary>
+        private RasterizerState _noCullRasterizer;
+
+        TestMode _legendCacheMode;
+        float _legendCacheWrapWidth = float.NaN;
+        float _legendCacheHudScale = float.NaN;
+        string _legendCacheDescription;
+        string _legendCacheActiveView;
+        IReadOnlyList<LegendEntry> _legendCacheEntriesSource;
+        List<string> _legendCacheDescriptionLines = [];
+        List<string> _legendCacheActiveViewLines = [];
+
+        /// <summary>
+        /// 1x1 white texture tests can stretch into solid rectangles (crosshairs, bars) via SpriteBatch.
+        /// Null until LoadContent runs.
+        /// </summary>
+        internal Texture2D WhitePixel => _whitePixel;
+
         public static uint NumCurveInterpolations = 10;
+
+        /// <summary>
+        /// Default scene clear: dark grey at 64/256 per channel.
+        /// </summary>
+        public static readonly Color DefaultBackground = new Color(64f / 256f, 64f / 256f, 64f / 256f);
 
         GraphicsDevice IPrimitiveRenderInfo.device => this.GraphicsDevice;
 
@@ -106,16 +160,57 @@ namespace MonogameTestbed
         public MonoTestbed()
         {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-            graphics = new GraphicsDeviceManager(this);
+
+            // Preload MonoGame native DLLs for Visual Studio debugger
+            LoadMonoGameNativeLibraries();
+
+            graphics = new GraphicsDeviceManager(this)
+            {
+                GraphicsProfile = GraphicsProfile.HiDef
+            };
+
+            if (Program.options?.Screenshots == true)
+                ConfigureExportFullscreen();
+
             VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
+
+            if (Program.options?.StartupTestMode is TestMode startup)
+                Mode = startup;
+        }
+
+        private static void LoadMonoGameNativeLibraries()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string sdl2Path = System.IO.Path.Combine(baseDir, "SDL2.dll");
+                string openalPath = System.IO.Path.Combine(baseDir, "openal.dll");
+
+                if (System.IO.File.Exists(sdl2Path))
+                {
+                    System.Runtime.InteropServices.NativeLibrary.Load(sdl2Path);
+                }
+
+                if (System.IO.File.Exists(openalPath))
+                {
+                    System.Runtime.InteropServices.NativeLibrary.Load(openalPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not preload MonoGame native libraries: {ex.Message}");
+            }
         }
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
-        {  
-            graphics.PreferredBackBufferWidth = desired_screen_width;
-            graphics.PreferredBackBufferHeight = desired_screen_height;
+        {
+            if (Program.options?.Screenshots != true)
+            {
+                graphics.PreferredBackBufferWidth = ScaleForDisplayDpi(desired_screen_width);
+                graphics.PreferredBackBufferHeight = ScaleForDisplayDpi(desired_screen_height);
+            }
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -136,15 +231,27 @@ namespace MonogameTestbed
             base.Initialize();
 
             Window.AllowUserResizing = true;
-            this.Window.Title = "Monogame testbed";
+            this.Window.Title = WindowTitleForMode(Mode);
             this.Window.AllowUserResizing = true;
-#if DEBUG
-            this.Window.Position = new Point(-desired_screen_width, 0);
-#else
-            //this.Window.Position = new Point(0, 0);
-#endif
+            if (Program.options?.Screenshots == true)
+                EnsureExportFullscreen();
+            else
+                PositionWindowFullyOnScreen();
 
             this.IsMouseVisible = true;
+
+            // Initialize GPU synchronization after the window and graphics device are set up
+            GpuSynchronizationManager.Initialize();
+        }
+
+        /// <summary>
+        /// Window caption is the testbed name plus the active <see cref="TestMode"/> (BAJAJTEST, BAJAJMULTITEST, …),
+        /// not the IGraphicsTest class name. Called from Initialize and each Update so keyboard mode switches stay in sync.
+        /// </summary>
+        static string WindowTitleForMode(TestMode mode, string status = null)
+        {
+            string title = $"Monogame testbed - {mode}";
+            return string.IsNullOrEmpty(status) ? title : title + status;
         }
 
         /// <summary>
@@ -156,26 +263,28 @@ namespace MonogameTestbed
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
+            // 1x1 white texture used to draw solid color swatches in the legend HUD.
+            _whitePixel = new Texture2D(GraphicsDevice, 1, 1);
+            _whitePixel.SetData([Color.White]);
+
             fontArial = Content.Load<SpriteFont>("Arial");
 
             //Load the default font
             var fontData = DeviceFontStore.GetOrCreateForDevice(GraphicsDevice, Content);
 
-            Camera = new VikingXNA.Camera { Downsample = 256 };
-            Camera.LookAt = new Vector2(0, 0);
-            Camera.Downsample = 0.5;
+            Camera = new VikingXNA.Camera { Downsample = 0.5, LookAt = new Vector2(0, 0) };
             Scene = new VikingXNA.Scene(graphics.GraphicsDevice.Viewport, Camera);
 
             lineManager.Init(GraphicsDevice, Content);
             curveManager.Init(GraphicsDevice, Content);
 
-            RasterizerState state = new RasterizerState
+            _noCullRasterizer = new RasterizerState
             {
                 CullMode = CullMode.None
             };
             //state.FillMode = FillMode.WireFrame;
 
-            GraphicsDevice.RasterizerState = state;
+            GraphicsDevice.RasterizerState = _noCullRasterizer;
 
             InitializeEffects();
 
@@ -189,11 +298,11 @@ namespace MonogameTestbed
             listTests.Add(TestMode.CLOSEDCURVE, closedCurveTest);
             listTests.Add(TestMode.POLYGON2D, polygon2DTest);
             listTests.Add(TestMode.MESH, meshTest);
+            listTests.Add(TestMode.POLYWRAPPING, polywrappingTest);
             listTests.Add(TestMode.GEOMETRY, geometryTest);
             listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
             listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
             listTests.Add(TestMode.BRANCHPORT, branchTest);
-            listTests.Add(TestMode.POLYWRAPPING, polyWrapTest);
             listTests.Add(TestMode.BRANCHASSIGNMENT, brachAssignmentTest);
             listTests.Add(TestMode.DELAUNAY2D, delaunay2DTest);
             listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
@@ -201,7 +310,9 @@ namespace MonogameTestbed
             listTests.Add(TestMode.BAJAJMULTITEST, bajajMultiTest);
             listTests.Add(TestMode.CONSTRAINEDDELAUNAY2D, constrainedDelaunay2DTest);
             listTests.Add(TestMode.POLYGONINTERSECTION, polygonIntersectionTest);
-            
+
+            if (MenuEnabled)
+                _menuBar = new TestbedMenuBar(this);
         }
 
         /// <summary>
@@ -225,7 +336,7 @@ namespace MonogameTestbed
             */
 
             Matrix WorldViewProj = Scene.WorldViewProj;
-            
+
             PolygonOverlayEffect polyEffect = DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.GraphicsDevice, Content);
             polyEffect.WorldViewProjMatrix = WorldViewProj;
 
@@ -242,6 +353,39 @@ namespace MonogameTestbed
             //this.channelEffect.ViewMatrix = viewMatrix;
         }
 
+        /// <summary>
+        /// Activates a registered test mode. Shared by F-key switching and the Test menu.
+        /// </summary>
+        internal void SwitchToTest(TestMode mode)
+        {
+            if (!listTests.ContainsKey(mode))
+            {
+                Console.WriteLine("Test not found: " + mode);
+                return;
+            }
+
+            if (Mode == mode)
+                return;
+
+            Mode = mode;
+            AllowInitRetry(Mode);
+            testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene: true);
+            Window.Title = WindowTitleForMode(Mode);
+            BeginTestInit(Mode);
+        }
+
+        /// <summary>
+        /// Opens the WPF Help dialog for the active test. No-op in quiet/screenshot runs.
+        /// </summary>
+        internal void ShowHotkeyHelp()
+        {
+            if (!MenuEnabled || !listTests.TryGetValue(Mode, out IGraphicsTest test))
+                return;
+
+            var sections = TestHotkeyRegistry.ForTest(Mode, test);
+            WpfDialogHost.ShowHotkeyHelp(test.Title, sections);
+        }
+
         private void ProcessKeyboard()
         {
             KeyboardState keyboardState = Keyboard.GetState();
@@ -249,62 +393,115 @@ namespace MonogameTestbed
             if (pressedKeys.Length == 0)
                 return;
 
-            var StartMode = this.Mode;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F1))
-                this.Mode = TestMode.CURVE;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F2))
-                this.Mode = TestMode.CURVE_LABEL;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F3))
-                this.Mode = TestMode.TEXT;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F4))
-                this.Mode = TestMode.LINESTYLES;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F5))
-                this.Mode = TestMode.CURVESTYLES;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F6))
-                this.Mode = TestMode.CLOSEDCURVE;
+            //Shift+F1 is Help; plain F1 still switches to the Curve test.
+            bool shift = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
+            TestMode? requested = null;
+            if (keyboardState.IsKeyDown(Keys.F1) && !shift)
+                requested = TestMode.CURVE;
+            if (keyboardState.IsKeyDown(Keys.F2))
+                requested = TestMode.CURVE_LABEL;
+            if (keyboardState.IsKeyDown(Keys.F3))
+                requested = TestMode.TEXT;
+            if (keyboardState.IsKeyDown(Keys.F4))
+                requested = TestMode.LINESTYLES;
+            if (keyboardState.IsKeyDown(Keys.F5))
+                requested = TestMode.CURVESTYLES;
+            if (keyboardState.IsKeyDown(Keys.F6))
+                requested = TestMode.CLOSEDCURVE;
             if (keyboardState.IsKeyDown(Keys.F7))
-                this.Mode = TestMode.POLYGON2D;
+                requested = TestMode.POLYGON2D;
             if (keyboardState.IsKeyDown(Keys.F8))
-                this.Mode = TestMode.MESH;
+                requested = TestMode.MESH;
             if (keyboardState.IsKeyDown(Keys.F9))
-                this.Mode = TestMode.GEOMETRY;
+                requested = TestMode.GEOMETRY;
             if (keyboardState.IsKeyDown(Keys.F10))
-                this.Mode = TestMode.MORPHOLOGY;
+                requested = TestMode.MORPHOLOGY;
             if (keyboardState.IsKeyDown(Keys.F11))
-                this.Mode = TestMode.TRIANGLEALGORITHM;
+                requested = TestMode.TRIANGLEALGORITHM;
             if (keyboardState.IsKeyDown(Keys.F12))
-                this.Mode = TestMode.BRANCHPORT;
+                requested = TestMode.BRANCHPORT;
             if (keyboardState.IsKeyDown(Keys.NumPad1) || keyboardState.IsKeyDown(Keys.D1))
-                this.Mode = TestMode.POLYWRAPPING;
+                requested = TestMode.POLYWRAPPING;
             if (keyboardState.IsKeyDown(Keys.NumPad2) || keyboardState.IsKeyDown(Keys.D2))
-                this.Mode = TestMode.BRANCHASSIGNMENT;
+                requested = TestMode.BRANCHASSIGNMENT;
             if (keyboardState.IsKeyDown(Keys.NumPad3) || keyboardState.IsKeyDown(Keys.D3))
-                this.Mode = TestMode.DELAUNAY3D;
+                requested = TestMode.DELAUNAY3D;
             if (keyboardState.IsKeyDown(Keys.NumPad4) || keyboardState.IsKeyDown(Keys.D4))
-                this.Mode = TestMode.BAJAJTEST;
+                requested = TestMode.BAJAJTEST;
             if (keyboardState.IsKeyDown(Keys.NumPad5) || keyboardState.IsKeyDown(Keys.D5))
-                this.Mode = TestMode.DELAUNAY2D;
+                requested = TestMode.DELAUNAY2D;
             if (keyboardState.IsKeyDown(Keys.NumPad6) || keyboardState.IsKeyDown(Keys.D6))
-                this.Mode = TestMode.CURVE_SIMPLIFICATION;
+                requested = TestMode.CURVE_SIMPLIFICATION;
             if (keyboardState.IsKeyDown(Keys.NumPad7) || keyboardState.IsKeyDown(Keys.D7))
-                this.Mode = TestMode.BAJAJMULTITEST;
+                requested = TestMode.BAJAJMULTITEST;
             if (keyboardState.IsKeyDown(Keys.NumPad8) || keyboardState.IsKeyDown(Keys.D8))
-                this.Mode = TestMode.CONSTRAINEDDELAUNAY2D;
+                requested = TestMode.CONSTRAINEDDELAUNAY2D;
             if (keyboardState.IsKeyDown(Keys.NumPad9) || keyboardState.IsKeyDown(Keys.D9))
-                this.Mode = TestMode.POLYGONINTERSECTION;
+                requested = TestMode.POLYGONINTERSECTION;
             if (keyboardState.IsKeyDown(Keys.NumPad0) || keyboardState.IsKeyDown(Keys.D0))
-                this.Mode = TestMode.LABELED_RECTANGLES;
-            
-            if (!listTests[Mode].Initialized)
+                requested = TestMode.LABELED_RECTANGLES;
+
+            if (requested.HasValue)
+                SwitchToTest(requested.Value);
+        }
+
+        /// <summary>
+        /// Starts Init once per mode. Faults are logged and the mode can be retried after switching away and back.
+        /// Synchronous throws from Init are caught so the game loop is not aborted.
+        /// </summary>
+        private void BeginTestInit(TestMode mode)
+        {
+            IGraphicsTest test;
+            lock (_initLock)
             {
-                listTests[Mode].Init(this);
-                Debug.Assert(listTests[Mode].Initialized);
+                if (!listTests.TryGetValue(mode, out test) || test.Initialized)
+                    return;
+                if (_initStartedModes.Contains(mode) || _initFailedModes.Contains(mode))
+                    return;
+                _initStartedModes.Add(mode);
             }
 
-            if(StartMode != this.Mode)
+            try
             {
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene : true);
+                Task initTask = test.Init(this);
+                _ = initTask.ContinueWith(t =>
+                {
+                    lock (_initLock)
+                    {
+                        _initStartedModes.Remove(mode);
+                        _initFailedModes.Add(mode);
+                    }
+
+                    Exception ex = t.Exception?.GetBaseException() ?? t.Exception;
+                    string msg = $"Init failed for {mode}: {ex}";
+                    Console.WriteLine(msg);
+                    Trace.WriteLine(msg);
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             }
+            catch (Exception ex)
+            {
+                lock (_initLock)
+                {
+                    _initStartedModes.Remove(mode);
+                    _initFailedModes.Add(mode);
+                }
+
+                string msg = $"Init failed for {mode}: {ex}";
+                Console.WriteLine(msg);
+                Trace.WriteLine(msg);
+            }
+        }
+
+        private bool IsInitFailed(TestMode mode)
+        {
+            lock (_initLock)
+                return _initFailedModes.Contains(mode);
+        }
+
+        private void AllowInitRetry(TestMode mode)
+        {
+            lock (_initLock)
+                _initFailedModes.Remove(mode);
         }
 
         private void UpdateEffectMatricies(Scene drawnScene)
@@ -323,7 +520,7 @@ namespace MonogameTestbed
         protected override void UnloadContent()
         {
             // TODO: Unload any non ContentManager content here
-            foreach(var test in listTests.Values)
+            foreach (var test in listTests.Values)
             {
                 test.UnloadContent(this);
             }
@@ -338,28 +535,51 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            if (!listTests[Mode].Initialized)
+            if (MenuEnabled)
             {
-                listTests[Mode].Init(this);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight);
-                Debug.Assert(listTests[Mode].Initialized);
+                _menuBar ??= new TestbedMenuBar(this);
+                _menuBar.Update(listTests, Mode);
             }
 
-            listTests[Mode].Update();
-            Window.Title = listTests[Mode].Title;
+            bool menuCaptures = MenuEnabled && _menuBar != null && _menuBar.CapturesInput;
 
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
+            if (!listTests[Mode].Initialized)
             {
-                //Close the game, but Monogame won't allow it?
+                BeginTestInit(Mode);
+            }
+            else if (!menuCaptures)
+            {
+                listTests[Mode].Update();
+            }
+
+            IGraphicsTest current = listTests[Mode];
+            string status = current.Initialized
+                ? null
+                : IsInitFailed(Mode) ? " (init failed)" : " (loading...)";
+            Window.Title = WindowTitleForMode(Mode, status);
+
+            //A batch run has no interactive user to notice the "(init failed)" title, and nothing retries a failed
+            //Init, so continuing to pump the loop means the process never exits.  A whole-cell run whose OData fetch
+            //failed would sit here indefinitely instead of reporting the failure to its caller.
+            if (Program.options.Quiet && IsInitFailed(Mode))
+            {
+                Console.WriteLine($"Exiting: initialization of {Mode} failed and -q was requested.");
+                Console.Out.Flush();
+
+                //Game.Exit() is not reliable here: the OData fetch leaves foreground work outstanding, so the
+                //process can outlive the window and hang a caller waiting on it.
+                Environment.Exit(1);
+            }
+
+            //Escape closes an open Test dropdown first; otherwise it exits the app.
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
+                || (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape) && !menuCaptures))
+            {
                 base.Exit();
             }
 
             ProcessKeyboard();
 
-            //meshView.Update(gameTime); 
-
-            listTests[Mode].Update();
-            
             base.Update(gameTime);
         }
 
@@ -369,7 +589,7 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(new Color(1.0f / 8.0f, 1.0f / 8.0f, 1.0f / 8.0f));
+            GraphicsDevice.Clear(DefaultBackground);
 
             //GraphicsDevice.SetRenderTarget(renderTarget);
             //meshView.Draw(GraphicsDevice);
@@ -383,30 +603,39 @@ namespace MonogameTestbed
 
             // TODO: Add your drawing code here
 
-            RasterizerState state = new RasterizerState
-            {
-                CullMode = CullMode.None
-            };
+            _noCullRasterizer ??= new RasterizerState { CullMode = CullMode.None };
+
+            //The window is resizable, so the shared scene has to follow the back buffer or its projection and any
+            //screen-space label placement drift from what is actually being drawn.
+            SyncSceneViewport();
 
             UpdateEffectMatricies(this.Scene);
 
             //SamplerState sampler = new SamplerState();
-            GraphicsDevice.RasterizerState = state;
-            
-           // spriteBatch.Begin();
-           if(!listTests[Mode].Initialized)
-           {
-                listTests[Mode].Init(this);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight, scaleFontWithScene: false);
-                Debug.Assert(listTests[Mode].Initialized);
-           }
+            GraphicsDevice.RasterizerState = _noCullRasterizer;
 
-            listTests[Mode].Draw(this);
+            // spriteBatch.Begin();
+            if (!listTests[Mode].Initialized)
+            {
+                BeginTestInit(Mode);
+            }
+            else
+            {
+                if (testLabel == null)
+                    testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight, scaleFontWithScene: false);
+                listTests[Mode].Draw(this);
+
+                DrawLegendHUD();
+            }
+
+            if (MenuEnabled && _menuBar != null)
+                _menuBar.Draw(spriteBatch, fontArial, _whitePixel, listTests, Mode);
+
             /*
-            testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new GridVector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
+            testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new Geometry.Vector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;
-            testLabel.HorzAlign = VikingXNAGraphics.HorizontalAlignment.LEFT;
-            testLabel.VertAlign = VikingXNAGraphics.VerticalAlignment.BOTTOM;
+            		testLabel.HorzAlign = Monographics.HorizontalAlignment.LEFT;
+		testLabel.VertAlign = Monographics.VerticalAlignment.BOTTOM;
             LabelView.Draw(this.spriteBatch, this.fontArial, this.Scene, new LabelView[] { testLabel });
             */
             //  spriteBatch.End();
@@ -414,9 +643,188 @@ namespace MonogameTestbed
             base.Draw(gameTime);
         }
 
-        protected RenderTarget2D DrawToRenderTarget(GraphicsDevice device, Action<GraphicsDevice> drawAction)
+        /// <summary>
+        /// Draws an on-screen HUD for the active test (if it implements <see cref="ITestLegend"/>) showing a
+        /// static description, the live enabled sub-views, and a color legend. Rendered in pixel coordinates so
+        /// it is independent of the camera zoom. Description and active-view text sit at the top of the
+        /// render target; the Legend block sits on the bottom edge.
+        /// </summary>
+        internal void DrawLegendHUD()
         {
-            RenderTarget2D target = new RenderTarget2D(device, device.Viewport.Width, device.Viewport.Height);
+            if (listTests[Mode] is not ITestLegend legend)
+                return;
+
+            if (spriteBatch is null || fontArial is null || _whitePixel is null)
+                return;
+
+            // Arial.spritefont is 56pt. 0.125 ≈ 7pt on a 1200px-tall window.
+            const float BaseHudScale = 0.125f;
+            const float ReferenceHeight = HudReferenceHeight;
+
+            //Screenshots are captured borderless-fullscreen at the monitor's native resolution, so a fixed pixel
+            //scale keeps the same absolute text height and shrinks to an unreadable fraction of a large frame.
+            //Scaling with height holds the text at a constant proportion of the image instead.
+            //A capture is read back as an image file, usually rescaled to around a thousand pixels wide, so it gets
+            //a smaller reference height to survive that reduction.
+            const float CaptureReferenceHeight = 576f;
+            float reference = Program.options?.Screenshots == true ? CaptureReferenceHeight : ReferenceHeight;
+            float hudSizeFactor = Math.Max(1f, GraphicsDevice.Viewport.Height / reference);
+            float HudScale = BaseHudScale * hudSizeFactor;
+            float Margin = 8f * hudSizeFactor;
+            float LineSpacing = 2f * hudSizeFactor;
+            float SwatchTextGap = 6f * hudSizeFactor;
+            float SectionGap = 8f * hudSizeFactor;
+            float WrapWidth = Math.Max(200f, (GraphicsDevice.Viewport.Width / 2.0f));
+
+            Color textColor = Color.White;
+            float scaledLineHeight = fontArial.LineSpacing * HudScale;
+            float lineHeight = scaledLineHeight + LineSpacing;
+            float swatchSize = scaledLineHeight * 0.9f;
+
+            string description = legend.ModeDescription ?? string.Empty;
+            string activeView = legend.ActiveViewDescription ?? string.Empty;
+            IReadOnlyList<LegendEntry> entries = legend.LegendEntries ?? [];
+
+            bool legendCacheValid = Mode == _legendCacheMode
+                && WrapWidth == _legendCacheWrapWidth
+                && HudScale == _legendCacheHudScale
+                && description == _legendCacheDescription
+                && activeView == _legendCacheActiveView
+                && ReferenceEquals(entries, _legendCacheEntriesSource);
+
+            if (!legendCacheValid)
+            {
+                _legendCacheDescriptionLines = WrapCached(description, WrapWidth, HudScale);
+                _legendCacheActiveViewLines = [];
+                if (!string.IsNullOrWhiteSpace(activeView))
+                {
+                    _legendCacheActiveViewLines.Add("Active views:");
+                    foreach (string rawLine in activeView.Replace("\r\n", "\n").Split('\n'))
+                    {
+                        if (rawLine.Length == 0)
+                            continue;
+                        foreach (string wrapped in WrapText(rawLine, WrapWidth, HudScale))
+                            _legendCacheActiveViewLines.Add("  " + wrapped);
+                    }
+                }
+
+                _legendCacheMode = Mode;
+                _legendCacheWrapWidth = WrapWidth;
+                _legendCacheHudScale = HudScale;
+                _legendCacheDescription = description;
+                _legendCacheActiveView = activeView;
+                _legendCacheEntriesSource = entries;
+            }
+
+            List<string> descriptionLines = _legendCacheDescriptionLines;
+            List<string> activeViewLines = _legendCacheActiveViewLines;
+            int legendLineCount = entries.Count > 0 ? 1 + entries.Count : 0;
+
+            static float SectionHeight(int lineCount, float scaled, float spacing) =>
+                lineCount <= 0 ? 0 : lineCount * scaled + (lineCount - 1) * spacing;
+
+            float x = Margin;
+
+            void DrawText(string text, float px, float py) =>
+                spriteBatch.DrawString(fontArial, text, new Vector2(px, py), textColor, 0f, Vector2.Zero, HudScale, SpriteEffects.None, 0f);
+
+            void DrawTextSection(IReadOnlyList<string> lines, ref float y)
+            {
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    DrawText(lines[i], x, y);
+                    y += i == lines.Count - 1 ? scaledLineHeight : lineHeight;
+                }
+            }
+
+            spriteBatch.Begin();
+            try
+            {
+                float y = MenuBarHeight + Margin;
+                if (descriptionLines.Count > 0)
+                    DrawTextSection(descriptionLines, ref y);
+
+                if (activeViewLines.Count > 0)
+                {
+                    if (descriptionLines.Count > 0)
+                        y += SectionGap;
+                    DrawTextSection(activeViewLines, ref y);
+                }
+
+                if (legendLineCount > 0)
+                {
+                    float legendHeight = SectionHeight(legendLineCount, scaledLineHeight, LineSpacing);
+                    y = GraphicsDevice.Viewport.Height - legendHeight;
+
+                    DrawText("Legend:", x, y);
+                    y += lineHeight;
+
+                    for (int i = 0; i < entries.Count; i++)
+                    {
+                        LegendEntry entry = entries[i];
+                        float swatchY = y + ((scaledLineHeight - swatchSize) / 2.0f);
+                        Microsoft.Xna.Framework.Rectangle swatchRect = new((int)(x + 2), (int)swatchY, (int)swatchSize, (int)swatchSize);
+                        spriteBatch.Draw(_whitePixel, swatchRect, entry.Color);
+
+                        string entryText = entry.Style.HasValue ? $"{entry.Text} ({entry.Style.Value} line)" : entry.Text;
+                        DrawText(entryText, x + 2 + swatchSize + SwatchTextGap, y);
+                        y += i == entries.Count - 1 ? scaledLineHeight : lineHeight;
+                    }
+                }
+            }
+            finally
+            {
+                spriteBatch.End();
+            }
+        }
+
+        List<string> WrapCached(string text, float wrapWidth, float hudScale)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return [];
+
+            List<string> lines = [];
+            foreach (string rawLine in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                if (rawLine.Length == 0)
+                    continue;
+                lines.AddRange(WrapText(rawLine, wrapWidth, hudScale));
+            }
+            return lines;
+        }
+
+        /// <summary>
+        /// Splits <paramref name="text"/> into lines no wider than <paramref name="maxWidth"/> pixels using the HUD font at the given scale.
+        /// </summary>
+        private IEnumerable<string> WrapText(string text, float maxWidth, float scale)
+        {
+            string[] words = text.Split(' ');
+            System.Text.StringBuilder line = new();
+
+            foreach (string word in words)
+            {
+                string candidate = line.Length == 0 ? word : line + " " + word;
+                if (fontArial.MeasureString(candidate).X * scale > maxWidth && line.Length > 0)
+                {
+                    yield return line.ToString();
+                    line.Clear();
+                    line.Append(word);
+                }
+                else
+                {
+                    if (line.Length > 0)
+                        line.Append(' ');
+                    line.Append(word);
+                }
+            }
+
+            if (line.Length > 0)
+                yield return line.ToString();
+        }
+
+        protected static RenderTarget2D DrawToRenderTarget(GraphicsDevice device, Action<GraphicsDevice> drawAction)
+        {
+            RenderTarget2D target = new(device, device.Viewport.Width, device.Viewport.Height);
 
             RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             device.SetRenderTarget(target);
@@ -440,7 +848,7 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -454,10 +862,7 @@ namespace MonogameTestbed
         {
         }
 
-        public void Update()
-        {
-            CurveAngle += GamePad.GetState(PlayerIndex.One).ThumbSticks.Right.X;
-        }
+        public void Update() => CurveAngle += GamePad.GetState(PlayerIndex.One).ThumbSticks.Right.X;
 
         public void Draw(MonoTestbed window)
         {
@@ -466,28 +871,28 @@ namespace MonogameTestbed
             string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            RoundLine line = new RoundLine(new Vector2((float)(-50.0f * Math.Cos(CurveAngle)), (float)(-50.0f * Math.Sin(CurveAngle)) + 50.0f),
+            RoundLine line = new(new Vector2((float)(-50.0f * Math.Cos(CurveAngle)), (float)(-50.0f * Math.Sin(CurveAngle)) + 50.0f),
                                            new Vector2((float)(50.0f * Math.Cos(CurveAngle)), (float)(50.0f * Math.Sin(CurveAngle)) + 50.0f));
             window.lineManager.Draw(new RoundLine[] { line }, 16, Color.Red, ViewProjMatrix, time, labelTexture);
 
-            GridVector2[] cps = CreateTestCurveLagrange(CurveAngle, 100, new GridVector2(-150, 0));
-            RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(cps, false);
+            Geometry.Vector2[] cps = CreateTestCurveLagrange(CurveAngle, 100, new Geometry.Vector2(-150, 0));
+            RoundCurve.RoundCurve curve = new(cps, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
 
-            GridVector2[] cpsCatmull = CreateTestCurveCatmull(CurveAngle, 100, new GridVector2(150, 0));
-            RoundCurve.RoundCurve CatmullCurve = new RoundCurve.RoundCurve(cpsCatmull, false);
+            Geometry.Vector2[] cpsCatmull = CreateTestCurveCatmull(CurveAngle, 100, new Geometry.Vector2(150, 0));
+            RoundCurve.RoundCurve CatmullCurve = new(cpsCatmull, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
-             
+
         }
 
-        public Texture2D CreateTextureForLabel(string label, GraphicsDevice device,
+        public static Texture2D CreateTextureForLabel(string label, GraphicsDevice device,
                               SpriteBatch spriteBatch,
                               SpriteFont font)
         {
             Vector2 labelDimensions = font.MeasureString(label);
-            RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X * 2, (int)labelDimensions.Y * 2);
+            RenderTarget2D target = new(device, (int)labelDimensions.X * 2, (int)labelDimensions.Y * 2);
 
             RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             device.SetRenderTarget(target);
@@ -502,33 +907,33 @@ namespace MonogameTestbed
             return target;
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(-width,width),
+                                                   new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveLagrange(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
-            GridVector2[] curvePoints = Geometry.Lagrange.FitCurve(cps, 30);
+            Geometry.Vector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
+            Geometry.Vector2[] curvePoints = Geometry.Lagrange.FitCurve(cps, 30);
             return curvePoints.Translate(origin);
         }
 
-        private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveCatmull(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
 
-            GridVector2[] curvePoints = cps.CalculateCurvePoints(30, true);
+            Geometry.Vector2[] curvePoints = cps.CalculateCurvePoints(30, true);
             return curvePoints.Translate(origin);
         }
     }
@@ -546,18 +951,18 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurveLagrange(0, 100, new GridVector2(-100,0));
+            Geometry.Vector2[] cps = CreateTestCurveLagrange(0, 100, new Geometry.Vector2(-100, 0));
             curveViewLagrange = new CurveView(cps, Color.Red, false);
             leftLagrangeCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
             rightLagrangeCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
 
-            GridVector2[] cpsCatmull = CreateTestCurveCatmull(0, 100, new GridVector2(100, 0));
+            Geometry.Vector2[] cpsCatmull = CreateTestCurveCatmull(0, 100, new Geometry.Vector2(100, 0));
             curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true);
             leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, true);
             rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, true);
@@ -585,54 +990,54 @@ namespace MonogameTestbed
             leftLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftLagrangeCurveLabel.Text.Length / totalLabelLength);
             rightLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightLagrangeCurveLabel.Text.Length / totalLabelLength);
 
-            CurveView.Draw(window.GraphicsDevice, scene,  OverlayStyle.Alpha, time, new CurveView[] { curveViewLagrange, curveViewCatmull });
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { leftLagrangeCurveLabel, rightLagrangeCurveLabel, leftCatmullCurveLabel, rightCatmullCurveLabel});
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, [curveViewLagrange, curveViewCatmull]);
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, [leftLagrangeCurveLabel, rightLagrangeCurveLabel, leftCatmullCurveLabel, rightCatmullCurveLabel]);
 
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(-width,width),
+                                                   new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-100,100),
-                                                   new GridVector2(-50, 0),
-                                                   new GridVector2(0,100),
-                                                   new GridVector2(100,0) };
+            Geometry.Vector2[] cps = [new(-100,100),
+                                                   new(-50, 0),
+                                                   new(0,100),
+                                                   new(100,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveLagrange(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps.Translate(origin);
         }
 
-        private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveCatmull(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
-            
+            Geometry.Vector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
+
             return cps.Translate(origin);
         }
     }
@@ -645,15 +1050,15 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurve3(0, 100);
+            Geometry.Vector2[] cps = CreateTestCurve3(0, 100);
             curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
-            labelView = new LabelView("LabelView", new GridVector2(0, 0));
+            labelView = new LabelView("LabelView", new Geometry.Vector2(0, 0));
             return Task.CompletedTask;
         }
 
@@ -676,7 +1081,7 @@ namespace MonogameTestbed
 
             window.spriteBatch.Begin();
 
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, [curveLabel]);
             labelView.Draw(window.spriteBatch, window.fontArial, window.Scene);
 
             window.spriteBatch.End();
@@ -685,29 +1090,29 @@ namespace MonogameTestbed
             labelView.FontSize = (time * 8f) + 8f;
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(-width,width),
+                                                   new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-50, 0),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(100,0) };
+            Geometry.Vector2[] cps = [new(-50, 0),
+                                                   new(0,0),
+                                                   new(100,0) ];
             return cps;
         }
     }
@@ -716,11 +1121,11 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly List<LineView> listLineViews = new List<LineView>();
-        readonly List<LabelView> listLabelViews = new List<LabelView>();
+        readonly List<LineView> listLineViews = [];
+        readonly List<LabelView> listLabelViews = [];
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -739,13 +1144,13 @@ namespace MonogameTestbed
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new GridVector2(MinX, Y);
-                GridVector2 dest = new GridVector2(MaxX, Y);
+                Geometry.Vector2 source = new(MinX, Y);
+                Geometry.Vector2 dest = new(MaxX, Y);
                 listLineViews.Add(new LineView(source, dest, lineWidth, Color.Blue, style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), anchor: Anchor.CenterRight));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-100, 0), anchor: Anchor.CenterRight));
             }
 
             return Task.CompletedTask;
@@ -765,10 +1170,10 @@ namespace MonogameTestbed
             Matrix ViewProjMatrix = scene.ViewProj;
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, listLineViews.ToArray());
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. listLineViews]);
 
             window.spriteBatch.Begin();
-            listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
+            listLabelViews.ForEach(lv => lv.Draw(window.spriteBatch, window.fontArial, scene));
             window.spriteBatch.End();
         }
     }
@@ -778,12 +1183,12 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly List<CurveView> listLineViews = new List<CurveView>();
-        readonly List<LabelView> listLabelViews = new List<LabelView>();
+        readonly List<CurveView> listLineViews = [];
+        readonly List<LabelView> listLabelViews = [];
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -801,15 +1206,15 @@ namespace MonogameTestbed
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new GridVector2(MinX, Y);
-                GridVector2 mid = new GridVector2(MinX + (MaxX - MinX / 2.0), Y - 30);
-                GridVector2 dest = new GridVector2(MaxX, Y);
+                Geometry.Vector2 source = new(MinX, Y);
+                Geometry.Vector2 mid = new(MinX + (MaxX - MinX / 2.0), Y - 30);
+                Geometry.Vector2 dest = new(MaxX, Y);
 
-                listLineViews.Add(new CurveView(new GridVector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: YStep / 1.5, lineStyle: style));
+                listLineViews.Add(new CurveView(new Geometry.Vector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: YStep / 1.5, lineStyle: style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-25, 10)));
             }
             return Task.CompletedTask;
         }
@@ -828,12 +1233,12 @@ namespace MonogameTestbed
             Matrix ViewProjMatrix = scene.ViewProj;
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            
 
-            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, this.listLineViews.ToArray());
+
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, [.. this.listLineViews]);
 
             window.spriteBatch.Begin();
-            listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
+            listLabelViews.ForEach(lv => lv.Draw(window.spriteBatch, window.fontArial, scene));
             window.spriteBatch.End();
         }
     }
@@ -843,24 +1248,21 @@ namespace MonogameTestbed
         public string Title => this.GetType().Name;
         CurveView curveView;
         CurveLabel curveLabel;
-        bool _initialized = false; 
-        public bool Initialized { get { return _initialized; } }
+        bool _initialized = false;
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurve(90, 190);
+            Geometry.Vector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, 10, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
 
             return Task.CompletedTask;
         }
 
-        public void UnloadContent(MonoTestbed window)
-        {
-            window.Scene.SaveCamera(TestMode.CLOSEDCURVE);
-        }
+        public void UnloadContent(MonoTestbed window) => window.Scene.SaveCamera(TestMode.CLOSEDCURVE);
 
         public void Update()
         {
@@ -874,19 +1276,19 @@ namespace MonogameTestbed
 
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
 
-            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, new CurveView[] { curveView });
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, [curveView]);
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, [curveLabel]);
 
         }
 
-        private static GridVector2[] CreateTestCurve(double height, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double height, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,0),
-                                                   new GridVector2(-width / 2.0, -height/4),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width / 2.0, height),
-                                                   new GridVector2(width,0),
-                                                   new GridVector2(0,-height)};
+            Geometry.Vector2[] cps = [new(-width,0),
+                                                   new(-width / 2.0, -height/4),
+                                                   new(0,0),
+                                                   new(width / 2.0, height),
+                                                   new(width,0),
+                                                   new(0,-height)];
             return cps;
         }
     }

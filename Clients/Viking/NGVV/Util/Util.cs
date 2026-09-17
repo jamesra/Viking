@@ -36,7 +36,7 @@ namespace Viking.Common
         /// <summary>
         /// Returns a single attribute of type from an object
         /// </summary>
-        public static Attribute GetAttribute(System.Type ObjType, System.Type AttribType)
+        public static Attribute? GetAttribute(System.Type ObjType, System.Type AttribType)
         {
             MemberInfo info = ObjType;
             Attribute[] aAttributes = (Attribute[])info.GetCustomAttributes(AttribType, true);
@@ -49,17 +49,17 @@ namespace Viking.Common
 
         public static string AppendDefaultVolumeFilenameIfMissing(string url)
         {
-            if (url == null)
+            if (url is null)
                 return null;
 
-            Uri WebsiteURI = new Uri(url);
+            Uri WebsiteURI = new(url);
             string path = WebsiteURI.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
             if (!path.Contains('.'))
             {
                 if (url.EndsWith("/") == false)
-                    url = url + "/";
+                    url += "/";
 
-                url = url + "volume.vikingxml";
+                url += "volume.vikingxml";
             }
 
             return url;
@@ -72,7 +72,7 @@ namespace Viking.Common
             if (!NewURL.ToLower().EndsWith(".vikingxml"))
             {
                 if (NewURL.EndsWith("/") == false)
-                    NewURL = NewURL + '/';
+                    NewURL += '/';
 
                 NewURL += "volume.vikingxml";
             }

@@ -994,7 +994,7 @@ $.extend( $.validator, {
 
 		// convert the value to a number for number inputs, and for text for backwards compability
 		// allows type="date" and others to be compared as strings
-		if ( /min|max/.test( method ) && ( type === null || /number|range|text/.test( type ) ) ) {
+		if ( /min|max/.test( method ) && ( type =is null || /number|range|text/.test( type ) ) ) {
 			value = Number( value );
 
 			// Support Opera Mini, which returns NaN for undefined minlength

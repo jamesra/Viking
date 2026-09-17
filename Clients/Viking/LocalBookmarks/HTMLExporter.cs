@@ -2,20 +2,14 @@
 
 namespace LocalBookmarks
 {
-    class HTMLExporter
+    class HTMLExporter(FolderUIObj root)
     {
         /// <summary>
         /// The top level folder to export
         /// </summary>
-        public FolderUIObj ExportRoot;
+        public FolderUIObj ExportRoot = root;
 
-        public XDocument Document;
-
-        public HTMLExporter(FolderUIObj root)
-        {
-            Document = new XDocument();
-            ExportRoot = root;
-        }
+        public XDocument Document = new();
 
         public void WriteHTML(string Filename)
         {
@@ -28,13 +22,13 @@ namespace LocalBookmarks
 
         private XElement WriteHeader()
         {
-            XDocumentType docType = new XDocumentType("HTML", "-//W3C//DTD HTML 4.0 Transitional//EN", "", "");
+            XDocumentType docType = new("HTML", "-//W3C//DTD HTML 4.0 Transitional//EN", "", "");
             Document.Add(docType);
 
-            XElement Title = new XElement("title");
+            XElement Title = new("title");
             Title.SetValue(ExportRoot.Name);
-            XElement HeadElement = new XElement("head", Title);
-            XElement HtmlElement = new XElement("html", HeadElement);
+            XElement HeadElement = new("head", Title);
+            XElement HtmlElement = new("html", HeadElement);
 
             Document.Add(HtmlElement);
 
@@ -43,16 +37,16 @@ namespace LocalBookmarks
 
         private void WriteBody(XElement HTMLElement)
         {
-            XElement BodyElement = new XElement("body");
+            XElement BodyElement = new("body");
 
             //Include some instructions
-            XElement introParagraph = new XElement("p");
-            XElement partOne = new XElement("p");
+            XElement introParagraph = new("p");
+            XElement partOne = new("p");
             partOne.SetValue("This document is intended to be used in conjunction with Viking.  If you have not installed Viking before you should run the ");
-            XElement vikingAnchor = new XElement("a");
+            XElement vikingAnchor = new("a");
             vikingAnchor.SetAttributeValue("href", "http://connectomes.utah.edu/");
             vikingAnchor.SetValue("installer");
-            XElement partTwo = new XElement("p");
+            XElement partTwo = new("p");
             partTwo.SetValue(" to ensure all prerequisites are installed.");
 
             introParagraph.Add(partOne);
@@ -68,22 +62,22 @@ namespace LocalBookmarks
 
         private void ExportFolder(XElement element, FolderUIObj parent)
         {
-            XElement h4 = new XElement("h4");
+            XElement h4 = new("h4");
             h4.SetValue(parent.Name);
 
             element.Add(h4);
 
-            XElement ul = new XElement("ul");
+            XElement ul = new("ul");
             foreach (BookmarkUIObj bookmark in parent.Bookmarks)
             {
-                XElement li = new XElement("li");
+                XElement li = new("li");
                 ExportBookmark(li, bookmark);
                 ul.Add(li);
             }
 
             foreach (FolderUIObj folder in parent.Folders)
             {
-                XElement li = new XElement("li");
+                XElement li = new("li");
                 ExportFolder(li, folder);
                 ul.Add(li);
             }
@@ -93,8 +87,8 @@ namespace LocalBookmarks
 
         private void ExportBookmark(XElement element, BookmarkUIObj bookmark)
         {
-            XElement bold = new XElement("b");
-            XElement anchor = new XElement("a");
+            XElement bold = new("b");
+            XElement anchor = new("a");
 
             anchor.SetAttributeValue("href", bookmark.URI);
             anchor.SetAttributeValue("target", "Viking");
@@ -104,13 +98,13 @@ namespace LocalBookmarks
             element.Add(bold);
 
             //Add the cut & paste coordinates
-            XElement paragraph = new XElement("p");
-            XElement Coords = new XElement("i");
+            XElement paragraph = new("p");
+            XElement Coords = new("i");
             Coords.SetValue(bookmark.CutPasteCoords);
             paragraph.Add(Coords);
             if (bookmark.Comment != null)
             {
-                XElement commentParagraph = new XElement("p");
+                XElement commentParagraph = new("p");
                 commentParagraph.SetValue(bookmark.Comment);
                 paragraph.Add(commentParagraph);
             }

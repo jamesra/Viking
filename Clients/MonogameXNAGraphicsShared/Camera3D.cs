@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -15,23 +15,23 @@ namespace VikingXNA
 
         private static Vector3 DefaultPositionVector = -Vector3.UnitZ * 5;
         private static Vector3 DefaultLookAtVector = Vector3.Zero;
-        private static Vector3 DefaultUpVector = Vector3.UnitZ;
+        private static readonly Vector3 DefaultUpVector = Vector3.UnitZ;
         public static Vector3 DefaultRotationVector = Vector3.Zero;
-        
-        private Vector3 _LookAt = new Vector3(0, 0, 0);
+
+        private Vector3 _LookAt = new(0, 0, 0);
         private Vector3 _Position = Vector3.Backward;
-        private Vector3 _Up = DefaultUpVector;
+        private readonly Vector3 _Up = DefaultUpVector;
         private Vector3 _Rotation = Vector3.Zero;
 
         private float _Pan = MathHelper.ToRadians(0f);
         private float _Tilt = MathHelper.ToRadians(0f);
-        
-        
+
+
         /// <summary>
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
         private Matrix _View;
-        public Matrix View { get { return _View; } }
+        public Matrix View => _View;
 
         private void UpdateViewMatrix()
         {
@@ -43,17 +43,15 @@ namespace VikingXNA
             {
                 _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Vector3.UnitY);
             }
-            else if(LineOfSightUnitVectorAccountingForRoundingError == -_Up)
-            {
-                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, -Vector3.UnitY);
-            }
             else
             {
-                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Up);
+                _View = LineOfSightUnitVectorAccountingForRoundingError == -_Up
+                    ? Matrix.CreateLookAt(Position, OffsetLookAtVector, -Vector3.UnitY)
+                    : Matrix.CreateLookAt(Position, OffsetLookAtVector, Up);
             }
 
             //_View = Matrix.CreateLookAt(Position, _LookAt, Up);
-            
+
         }
 
         /// <summary>
@@ -61,9 +59,9 @@ namespace VikingXNA
         /// </summary>
         /// <returns></returns>
         private static Vector3 CalculateLineOfSightUnitVector(float yaw, float pitch)
-        { 
+        {
 
-            Vector3 LineOfSightUnitVector = new Vector3(
+            Vector3 LineOfSightUnitVector = new(
                 (float)(Math.Cos(yaw) * Math.Sin(pitch)),
                 (float)(Math.Sin(yaw) * Math.Sin(pitch)),
                 (float)(Math.Cos(pitch)));
@@ -75,19 +73,25 @@ namespace VikingXNA
         }
 
         /// <summary>
-        /// Calculate the lookat vector based on the rotation parameters
+        /// Recover the rotation parameters that <see cref="CalculateLineOfSightUnitVector"/> would turn back into
+        /// <paramref name="v"/>.  These two must stay exact inverses: the view matrix is built from the rotation,
+        /// so any mismatch here silently aims the camera somewhere other than the requested LookAt.
         /// </summary>
-        /// <returns></returns>
-        private static void CalculateRotationFromLineOfSightUnitVector(Vector3 v, out double yaw, out double pitch)
+        private static void CalculateRotationFromLineOfSightUnitVector(Vector3 v, double fallbackYaw, out double yaw, out double pitch)
         {
             v.Normalize();
-            yaw = Math.Asin(-v.Y);
-            pitch = Math.Atan2(v.X, v.Z);
+
+            pitch = Math.Acos(MathHelper.Clamp(v.Z, -1f, 1f));
+
+            //Looking straight along Z leaves yaw unconstrained, and atan2(0,0) would collapse it to zero
+            //rather than leaving the caller's heading alone.
+            double sinPitch = Math.Sin(pitch);
+            yaw = Math.Abs(sinPitch) < 1e-6 ? fallbackYaw : Math.Atan2(v.Y, v.X);
         }
 
         public float Pan
         {
-            get { return MathHelper.ToDegrees(_Pan); }
+            get => MathHelper.ToDegrees(_Pan);
             set
             {
                 _Pan = MathHelper.ToRadians(value);
@@ -97,7 +101,7 @@ namespace VikingXNA
 
         public float Tilt
         {
-            get { return MathHelper.ToDegrees(_Tilt); }
+            get => MathHelper.ToDegrees(_Tilt);
             set
             {
                 if (value >= 90)
@@ -114,10 +118,7 @@ namespace VikingXNA
 
         public Vector3 LookAt
         {
-            get
-            {
-                return _LookAt;
-            }
+            get => _LookAt;
             set
             {
                 if (value == _Position)
@@ -126,20 +127,16 @@ namespace VikingXNA
                 _LookAt = value;
                 var lineOfSightVector = _LookAt - _Position;
 
-                CalculateRotationFromLineOfSightUnitVector(lineOfSightVector, out double yaw, out double pitch);
-                this.Rotation = new Vector3((float)yaw, (float)pitch, (float)this.Rotation.Z);
-                
-                //UpdateViewMatrix();
-                //CallOnPropertyChanged();
+                CalculateRotationFromLineOfSightUnitVector(lineOfSightVector, _Rotation.X, out double yaw, out double pitch);
+
+                //Assigning Rotation rebuilds the view matrix and raises the change notification.
+                this.Rotation = new Vector3((float)yaw, (float)pitch, this.Rotation.Z);
             }
         }
 
         public Vector3 Position
         {
-            get
-            {
-                return _Position;
-            }
+            get => _Position;
             set
             {
                 _Position = value;
@@ -150,10 +147,7 @@ namespace VikingXNA
 
         public Vector3 Rotation
         {
-            get
-            {
-                return _Rotation;
-            }
+            get => _Rotation;
             set
             {
                 _Rotation = value;
@@ -161,10 +155,10 @@ namespace VikingXNA
                 CallOnPropertyChanged();
             }
         }
-         
+
         public double Yaw
         {
-            get { return Rotation.X; }
+            get => Rotation.X;
             set
             {
                 if (double.IsNaN(value) || double.IsInfinity(value))
@@ -182,7 +176,7 @@ namespace VikingXNA
 
         public double Pitch
         {
-            get { return Rotation.Y; }
+            get => Rotation.Y;
             set
             {
                 if (double.IsNaN(value) || double.IsInfinity(value))
@@ -198,19 +192,13 @@ namespace VikingXNA
         }
 
 
-        public Vector3 Up
-        {
-            get { return _Up; }
-        } 
+        public Vector3 Up => _Up;
 
         public Camera3D()
         {
             UpdateViewMatrix();
         }
 
-        protected void CallOnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void CallOnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

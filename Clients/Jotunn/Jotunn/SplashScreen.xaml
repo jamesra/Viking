@@ -23,13 +23,14 @@
         </LinearGradientBrush>
     </Window.Resources>
 
-    <Border BorderThickness="8" CornerRadius="32,32,32,32" BorderBrush="{StaticResource ChromeBorderBrush}" Background="Black" >
-        <Grid>
+    <Border BorderThickness="8" CornerRadius="32,32,32,32" BorderBrush="{StaticResource ChromeBorderBrush}" Background="Black"
+            PreviewMouseLeftButtonDown="OnChromeMouseLeftButtonDown">
+        <Grid Background="Transparent">
             <Grid.RowDefinitions>
                 <RowDefinition Height="6.25*"/>
                 <RowDefinition Height=".75*"/>
             </Grid.RowDefinitions>
-            <Grid ShowGridLines="False" RenderTransformOrigin="0.5,0.5" Grid.Row="0" MouseDown="Grid_MouseDown">
+            <Grid ShowGridLines="False" RenderTransformOrigin="0.5,0.5" Grid.Row="0" Background="Transparent">
                 <Grid.RenderTransform>
                     <RotateTransform x:Name="AnimatedGridTransform" Angle="0" CenterX="0.5" CenterY="0.5"/>
                 </Grid.RenderTransform>
@@ -115,6 +116,7 @@
                     </TextBlock>
                     <ListBox Grid.Row="2"
                              Margin="16,0,16,8"
+                             IsHitTestVisible="False"
                              >           
                     </ListBox>
                     <Label x:Name="LabelProgress"

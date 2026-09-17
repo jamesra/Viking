@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using Viking.Common;
 
@@ -26,7 +26,7 @@ namespace Viking.Objects
             {
                 //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
                 //change state on the main thread 
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnValueChanged, new object[] { this, new PropertyChangedEventArgs(Column) });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnValueChanged, [this, new PropertyChangedEventArgs(Column)]);
             }
         }
 
@@ -35,7 +35,7 @@ namespace Viking.Objects
         {
             if (OnBeforeSave != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeSave, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeSave, [this, null]);
             }
         }
 
@@ -43,7 +43,7 @@ namespace Viking.Objects
         {
             if (OnAfterSave != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterSave, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterSave, [this, null]);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Viking.Objects
         {
             if (OnBeforeDelete != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeDelete, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeDelete, [this, null]);
             }
         }
 
@@ -59,7 +59,7 @@ namespace Viking.Objects
         {
             if (OnAfterDelete != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterDelete, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterDelete, [this, null]);
             }
         }
 
@@ -67,7 +67,7 @@ namespace Viking.Objects
         {
             if (OnChildChanged != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnChildChanged, new object[] { this, args });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnChildChanged, [this, args]);
             }
         }
 
@@ -78,94 +78,61 @@ namespace Viking.Objects
 
         public event PropertyChangedEventHandler ValueChanged
         {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
         }
 
         public event EventHandler BeforeDelete
         {
-            add { OnBeforeDelete += value; }
-            remove { OnBeforeDelete -= value; }
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
         }
 
         public event EventHandler AfterDelete
         {
-            add { OnAfterDelete += value; }
-            remove { OnAfterDelete -= value; }
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
         }
 
         public event EventHandler BeforeSave
         {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
         }
 
         event EventHandler IUIObject.AfterSave
         {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
         }
 
         public virtual event System.Collections.Specialized.NotifyCollectionChangedEventHandler ChildChanged
         {
-            add { OnChildChanged += value; }
-            remove { OnChildChanged -= value; }
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
         }
 
-        public virtual void ShowProperties()
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        public virtual void ShowProperties() => Viking.UI.Forms.PropertySheetForm.Show(this);
 
-        public virtual System.Windows.Forms.DialogResult ShowPropertiesDialog(System.Windows.Forms.Form ParentForm)
-        {
-            return Viking.UI.Forms.PropertySheetForm.ShowDialog(this, ParentForm);
-        }
+        public virtual System.Windows.Forms.DialogResult ShowPropertiesDialog(System.Windows.Forms.Form ParentForm) => Viking.UI.Forms.PropertySheetForm.ShowDialog(this, ParentForm);
 
-        public virtual System.Windows.Forms.ContextMenu ContextMenu
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public virtual System.Windows.Forms.ContextMenuStrip ContextMenu => throw new NotImplementedException();
 
-        public virtual System.Drawing.Image SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public virtual System.Drawing.Image SmallThumbnail => throw new NotImplementedException();
 
-        public virtual string ToolTip
-        {
-            get { return this.ToString(); }
-        }
+        public virtual string ToolTip => this.ToString();
 
-        public virtual void Save()
-        {
-            throw new NotImplementedException();
-        }
+        public virtual void Save() => throw new NotImplementedException();
 
-        public virtual Type[] AssignableParentTypes
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public virtual Type[] AssignableParentTypes => throw new NotImplementedException();
 
-        public virtual void SetParent(IUIObject parent)
-        {
-            throw new NotImplementedException();
-        }
+        public virtual void SetParent(IUIObject? parent) => throw new NotImplementedException();
 
-        public virtual Viking.UI.Controls.GenericTreeNode CreateNode()
-        {
-            throw new NotImplementedException();
-        }
+        public virtual Viking.UI.Controls.GenericTreeNode CreateNode() => throw new NotImplementedException();
 
-        public virtual int TreeImageIndex
-        {
-            get { return 0; }
-        }
+        public virtual int TreeImageIndex => 0;
 
-        public virtual int TreeSelectedImageIndex
-        {
-            get { return 1; }
-        }
+        public virtual int TreeSelectedImageIndex => 1;
 
         #endregion
     }

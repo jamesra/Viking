@@ -1,256 +1,311 @@
-﻿using AnnotationVizLib;
-using AnnotationVizLib.WCFClient;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Web.Mvc;
-using UnitsAndScale;
-using VikingWebAppSettings;
+using AnnotationVizLib;
+using AnnotationVizLib.OData;
+using ODataClient.ConnectomeDataModel;
 
-namespace DataExport.Controllers
+namespace DataExport.Controllers;
+
+/// <summary>
+/// Controller for exporting morphology data in various formats (TLP, JSON, DAE).
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="MorphologyController"/> class.
+/// </remarks>
+/// <param name="env">The web host environment.</param>
+/// <param name="configuration">The configuration service.</param>
+/*
+ * The route prefix deliberately omits [action]. With it, the controller prefix already
+ * resolved to "Morphology/GetTLP" and the action template "tlp" appended to it, so the
+ * only reachable URL was Morphology/GetTLP/tlp with the format named twice. Actions now
+ * carry explicit templates: the short form, and the longer form kept for compatibility.
+ */
+[ApiController]
+[Route("[controller]")]
+public class MorphologyController(IWebHostEnvironment env, IConfiguration configuration) : Controller
 {
-    public class MorphologyController : Controller
+    private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
+    private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+    private UnitsAndScale.Scale? _cachedScale;
+    private readonly SemaphoreSlim _scaleLock = new(1, 1);
+
+    private Uri GetODataUrl()
     {
+        string url = _configuration["AppSettings:ODataURL"]
+            ?? throw new InvalidOperationException("AppSettings:ODataURL not configured");
+        return new Uri(url);
+    }
 
-        public string GetOutputFilename(ICollection<long> requestIDs, string ext)
+    private string GetVolumeUrl()
+    {
+        return _configuration["AppSettings:VolumeURL"]
+            ?? throw new InvalidOperationException("AppSettings:VolumeURL not configured");
+    }
+
+    private async Task<UnitsAndScale.Scale> GetOrFetchScaleAsync()
+    {
+        if (_cachedScale != null)
         {
-            string ID_List = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
-            string date = OutputNameGenerator.GetFileFriendlyDateString();
-            return string.Format("morph-{0} {1}.{2}", ID_List, date, ext);
+            return _cachedScale;
         }
 
-        private ActionResult RedirectToFile(string outputFilename)
+        await _scaleLock.WaitAsync();
+        try
         {
-            Response.StatusCode = (int)System.Net.HttpStatusCode.Created;
-            Uri host = AppSettings.VolumeURI;
-            string url = new Uri(host, Request.ApplicationPath + "/Output/" + outputFilename).ToString();
-            Response.Headers["Location"] = url;
-            Response.Redirect(url, true);
-            return new EmptyResult();
-        }
-
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostTLP()
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-
-            string OutputFile = GetOutputFilename(requestIDs, "tlp");
-            string userOutputDirectory = GetAndCreateOutputDirectories();
-            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-            Scale scale = AppSettings.GetScale();
-
-            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
-                                                                                   GetStructureColorMap(),
-                                                                                   GetColorMapImage());
-
-            MorphologyGraph structure_graph = await GetGraph(requestIDs);
-            if (RequestedStickFigure())
-                structure_graph.ToStickFigure();
-            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
-            TlpGraph.SaveTLP(userOutputFileFullPath);
-
-            return RedirectToFile(OutputFile);
-        }
-
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostJSON()
-        { 
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
-
-            string OutputFile = GetOutputFilename(requestIDs, "json");
-            string userOutputDirectory = GetAndCreateOutputDirectories();
-            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-            Scale scale = AppSettings.GetScale();
-
-            MorphologyGraph structure_graph = await GetGraph(requestIDs);
-            if (RequestedStickFigure())
-                structure_graph.ToStickFigure();
-            MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
-            JSONGraph.SaveJSON(userOutputFileFullPath);
-
-            return RedirectToFile(OutputFile);
-        }
-
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostDAE()
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
-
-            string OutputFile = GetOutputFilename(requestIDs, "dae");
-            string userOutputDirectory = GetAndCreateOutputDirectories();
-            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile); 
-
-            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
-                                                                                   GetStructureColorMap(),
-                                                                                   GetColorMapImage());
-
-            MorphologyGraph structure_graph = await GetGraph(requestIDs);
-            if (RequestedStickFigure())
-                structure_graph.ToStickFigure();
-            MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
-            view.Add(structure_graph);
-            ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, userOutputFileFullPath);
-            
-            return RedirectToFile(OutputFile);
-        }
-
-
-        [ActionName("GetTLP")]
-        public async Task<ActionResult> GetTLP()
-        { 
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-
-            string OutputFile = GetOutputFilename(requestIDs, "tlp");
-            string userOutputDirectory = GetAndCreateOutputDirectories();
-            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-             
-            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
-                                                                                   GetStructureColorMap(),
-                                                                                   GetColorMapImage());
-
-            MorphologyGraph structure_graph = await GetGraph(requestIDs);
-            if (RequestedStickFigure())
-                structure_graph.ToStickFigure();
-            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, structure_graph.scale, colorMap, AppSettings.VolumeURL);
-            TlpGraph.SaveTLP(userOutputFileFullPath);
-
-            return File(userOutputFileFullPath, "text/plain", OutputFile); 
-        }
-
-        [ActionName("GetJSON")]
-        public async Task<ActionResult> GetJSON()
-        {
-
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
-
-            string OutputFile = GetOutputFilename(requestIDs, "json");
-            string userOutputDirectory = GetAndCreateOutputDirectories();
-            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-
-            MorphologyGraph structure_graph = await  GetGraph(requestIDs);
-            if (RequestedStickFigure())
-                structure_graph.ToStickFigure();
-
-            MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
-            JSONGraph.SaveJSON(userOutputFileFullPath);
-
-            return File(userOutputFileFullPath, "application/json", OutputFile);
-        }
-
-        [ActionName("GetDAE")]
-        public async Task<ActionResult> GetDAE()
-        { 
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
-
-            string OutputFile = GetOutputFilename(requestIDs, "dae");
-            string userOutputDirectory = GetAndCreateOutputDirectories();
-            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-            Scale scale = AppSettings.GetScale();
-
-            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
-                                                                                   GetStructureColorMap(),
-                                                                                   GetColorMapImage());
-
-            MorphologyGraph structure_graph = await  GetGraph(requestIDs);
-            if (RequestedStickFigure())
-                structure_graph.ToStickFigure();
-
-            MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
-            view.Add(structure_graph);
-            ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, userOutputFileFullPath);
-            
-            return File(userOutputFileFullPath, "model/vnd.collada+xml", OutputFile);
-        }
-
-        private ColorMapWithImages GetColorMapImage()
-        {
-            string ColorMapImagePath = AppSettings.GetApplicationSetting("DefaultLocationColorMapsPath");
-            if (ColorMapImagePath == null || ColorMapImagePath.Length == 0)
-                return null;
-
-
-            /*try
+            // Double-check after acquiring lock
+            if (_cachedScale != null)
             {
-             */
-                return ColorMapWithImages.CreateFromConfigFile(ColorMapImagePath);
-            /*
-            }
-            catch(System.IO.DirectoryNotFoundException)
-            {}
-            catch (System.IO.FileNotFoundException)
-            { }
-            */
-             
-        }
-
-        private ColorMapWithLong GetStructureColorMap()
-        {
-            string ColorMapPath = AppSettings.GetApplicationSetting("DefaultStructureColorsPath");
-            if (ColorMapPath == null || ColorMapPath.Length == 0)
-                return null;  
-
-            return ColorMapWithLong.CreateFromConfigFile(ColorMapPath); 
-        }
-         
-        private ColorMapWithLong GetStructureTypeColorMap()
-        {
-            string ColorMapPath = AppSettings.GetApplicationSetting("DefaultStructureTypeColorsPath");
-            if (ColorMapPath == null || ColorMapPath.Length == 0)
-                return null; 
-            
-            return ColorMapWithLong.CreateFromConfigFile(ColorMapPath);
-        }
-
-        /// <summary>
-        /// Get output directory for the path, create directories if they do not exist
-        /// </summary>
-        /// <param name="output_path"></param>
-        /// <returns></returns>
-        private string GetAndCreateOutputDirectories()
-        {
-            string output_dir = "~/Output";
-            if (Server != null)
-                output_dir = Server.MapPath(output_dir);
-              
-            if (!System.IO.Directory.Exists(output_dir))
-                System.IO.Directory.CreateDirectory(output_dir);
-
-            return output_dir;
-        }
-          
-        private async Task<MorphologyGraph> GetGraph(ICollection<long> requestIDs)
-        {
-            AnnotationVizLib.WCFClient.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
-
-            if (requestIDs == null || requestIDs.Count == 0)
-                requestIDs = Queries.GetLinkedStructureParentIDs();
-
-            return WCFMorphologyFactory.FromWCF(requestIDs, true, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
-        }
-
-        private bool RequestedStickFigure()
-        {
-            string hopstr = Request.RequestContext.HttpContext.Request.QueryString["stick"];
-            if (hopstr == null)
-            {
-                hopstr = Request.RequestContext.HttpContext.Request.QueryString["Stick"];
-                if (hopstr == null)
-                {
-                    return false;
-                }
+                return _cachedScale;
             }
 
-            try
+            Container container = new(GetODataUrl())
             {
-                return Convert.ToUInt32(hopstr) > 0;
-            }
-            catch (FormatException)
-            {
-                return false;
-            }
+                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+            };
+
+            var scale = await Task.Run(() => container.Scale().GetValue());
+            _cachedScale = scale.ToGeometryScale();
+            return _cachedScale;
         }
+        finally
+        {
+            _scaleLock.Release();
+        }
+    }
+
+    private static string GetOutputFilename(ICollection<long> requestIDs, string ext)
+    {
+        string idList = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
+        string date = OutputNameGenerator.GetFileFriendlyDateString();
+        return $"morph-{idList} {date}.{ext}";
+    }
+
+    private string GetAndCreateOutputDirectory()
+    {
+        string outputDir = Path.Combine(_env.ContentRootPath, "Output");
+        if (!Directory.Exists(outputDir))
+        {
+            Directory.CreateDirectory(outputDir);
+        }
+        return outputDir;
+    }
+
+    /// <summary>
+    /// Exports morphology data in TLP (Tulip) format via POST request.
+    /// </summary>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated TLP file for download.</returns>
+    [HttpPost("tlp")]
+    [HttpPost("PostTLP")]
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
+    public async Task<IActionResult> PostTLP()
+    {
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
+        string outputFile = GetOutputFilename(requestIDs, "tlp");
+        string userOutputDirectory = GetAndCreateOutputDirectory();
+        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
+
+        StructureMorphologyColorMap colorMap = new(GetStructureTypeColorMap(),
+                                                                               GetStructureColorMap(),
+                                                                               GetColorMapImage());
+
+        UnitsAndScale.Scale scale = await GetOrFetchScaleAsync();
+        MorphologyGraph structure_graph = await GetGraphAsync(requestIDs, scale);
+        if (RequestedStickFigure())
+        {
+            structure_graph.ToStickFigure();
+        }
+        MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetVolumeUrl());
+        TlpGraph.SaveTLP(userOutputFileFullPath);
+
+        return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);
+    }
+
+    /// <summary>
+    /// Exports morphology data in JSON format via POST request.
+    /// </summary>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated JSON file for download.</returns>
+    [HttpPost("json")]
+    [HttpPost("PostJSON")]
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
+    public async Task<IActionResult> PostJSON()
+    {
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
+        string outputFile = GetOutputFilename(requestIDs, "json");
+        string userOutputDirectory = GetAndCreateOutputDirectory();
+        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
+
+        UnitsAndScale.Scale scale = await GetOrFetchScaleAsync();
+        MorphologyGraph structure_graph = await GetGraphAsync(requestIDs, scale);
+        if (RequestedStickFigure())
+        {
+            structure_graph.ToStickFigure();
+        }
+        MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
+        JSONGraph.SaveJSON(userOutputFileFullPath);
+
+        return PhysicalFile(userOutputFileFullPath, "application/json", outputFile);
+    }
+
+    /*
+    [HttpPost]
+    public async Task<IActionResult> PostDAE()
+    {
+        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+        string outputFile = GetOutputFilename(requestIDs, "dae");
+        string userOutputDirectory = GetAndCreateOutputDirectory();
+        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
+        Scale scale = AppSettings.GetScale();
+
+        StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
+                                                                               GetStructureColorMap(),
+                                                                               GetColorMapImage());
+
+        MorphologyGraph structure_graph = await GetGraphAsync(requestIDs);
+        if (RequestedStickFigure())
+            structure_graph.ToStickFigure();
+        MorphologyDAEView DaeGraph = MorphologyDAEView.ToDAE(structure_graph, scale, colorMap, AppSettings.VolumeURL);
+        DaeGraph.SaveDAE(userOutputFileFullPath);
+
+        return RedirectToFile(outputFile);
+    }
+    */
+
+    /// <summary>
+    /// Exports morphology data in TLP (Tulip) format via GET request.
+    /// </summary>
+    /// <returns>The generated TLP file for download.</returns>
+    [HttpGet("tlp")]
+    [HttpGet("GetTLP")]
+    [HttpGet("GetTLP/tlp")]
+    public async Task<IActionResult> GetTLP()
+    {
+        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        string outputFile = GetOutputFilename(requestIDs, "tlp");
+        string userOutputDirectory = GetAndCreateOutputDirectory();
+        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
+
+        StructureMorphologyColorMap colorMap = new(GetStructureTypeColorMap(),
+                                                                               GetStructureColorMap(),
+                                                                               GetColorMapImage());
+
+        UnitsAndScale.Scale scale = await GetOrFetchScaleAsync();
+        MorphologyGraph structure_graph = await GetGraphAsync(requestIDs, scale);
+        if (RequestedStickFigure())
+        {
+            structure_graph.ToStickFigure();
+        }
+        MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetVolumeUrl());
+        TlpGraph.SaveTLP(userOutputFileFullPath);
+
+        return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);
+    }
+
+    /// <summary>
+    /// Exports morphology data in JSON format via GET request.
+    /// </summary>
+    /// <returns>The generated JSON file for download.</returns>
+    [HttpGet("json")]
+    [HttpGet("GetJSON")]
+    [HttpGet("GetJSON/json")]
+    public async Task<IActionResult> GetJSON()
+    {
+        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        string outputFile = GetOutputFilename(requestIDs, "json");
+        string userOutputDirectory = GetAndCreateOutputDirectory();
+        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
+
+        UnitsAndScale.Scale scale = await GetOrFetchScaleAsync();
+        MorphologyGraph structure_graph = await GetGraphAsync(requestIDs, scale);
+        if (RequestedStickFigure())
+        {
+            structure_graph.ToStickFigure();
+        }
+
+        MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
+        JSONGraph.SaveJSON(userOutputFileFullPath);
+
+        return PhysicalFile(userOutputFileFullPath, "application/json", outputFile);
+    }
+
+    /*
+    [HttpGet]
+    public async Task<IActionResult> GetDAE()
+    {
+        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+        string outputFile = GetOutputFilename(requestIDs, "dae");
+        string userOutputDirectory = GetAndCreateOutputDirectory();
+        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
+        Scale scale = AppSettings.GetScale();
+
+        StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
+                                                                               GetStructureColorMap(),
+                                                                               GetColorMapImage());
+
+        MorphologyGraph structure_graph = await GetGraphAsync(requestIDs);
+        if (RequestedStickFigure())
+            structure_graph.ToStickFigure();
+        MorphologyDAEView DaeGraph = MorphologyDAEView.ToDAE(structure_graph, scale, colorMap, AppSettings.VolumeURL);
+        DaeGraph.SaveDAE(userOutputFileFullPath);
+
+        return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);
+    }
+    */
+
+    private ColorMapWithLong GetStructureTypeColorMap()
+    {
+        string? path = _configuration["AppSettings:DefaultStructureTypeColorsPath"];
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new InvalidOperationException("AppSettings:DefaultStructureTypeColorsPath not configured");
+        }
+        string fullPath = Path.Combine(_env.ContentRootPath, path);
+        return ColorMapWithLong.CreateFromConfigFile(fullPath);
+    }
+
+    private ColorMapWithLong GetStructureColorMap()
+    {
+        string? path = _configuration["AppSettings:DefaultStructureColorsPath"];
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new InvalidOperationException("AppSettings:DefaultStructureColorsPath not configured");
+        }
+        string fullPath = Path.Combine(_env.ContentRootPath, path);
+        return ColorMapWithLong.CreateFromConfigFile(fullPath);
+    }
+
+    private ColorMapWithImages GetColorMapImage()
+    {
+        string? path = _configuration["AppSettings:DefaultLocationColorMapsPath"];
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new InvalidOperationException("AppSettings:DefaultLocationColorMapsPath not configured");
+        }
+        string fullPath = Path.Combine(_env.ContentRootPath, path);
+        return ColorMapWithImages.CreateFromConfigFile(fullPath);
+    }
+
+    private async Task<MorphologyGraph> GetGraphAsync(ICollection<long> requestIDs, UnitsAndScale.Scale scale)
+    {
+        return await ODataMorphologyFactory.FromODataAsync(
+            requestIDs,
+            include_children: false,
+            GetODataUrl(),
+            scale);
+    }
+
+    private bool RequestedStickFigure()
+    {
+        return (Request.Query.ContainsKey("stick") &&
+                uint.TryParse(Request.Query["stick"], out uint stick) &&
+                stick > 0) ||
+               (Request.Query.ContainsKey("Stick") &&
+                uint.TryParse(Request.Query["Stick"], out uint stickUpper) &&
+                stickUpper > 0);
     }
 }

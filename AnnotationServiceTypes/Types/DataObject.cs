@@ -1,7 +1,8 @@
-﻿using ProtoBuf;
+using ProtoBuf;
 using System;
+using System.ComponentModel;
 using System.Runtime.Serialization;
-using Viking.AnnotationServiceTypes.Interfaces;
+
 
 namespace AnnotationService.Types
 {
@@ -12,25 +13,30 @@ namespace AnnotationService.Types
     /// </summary>
     [DataContract]
     [ProtoContract]
-    [ProtoInclude(1, typeof(LocationLink))]
-    [ProtoInclude(2, typeof(StructureLink))]
-    [ProtoInclude(3, typeof(PermittedStructureLink))]
-    public abstract class DataObject : IChangeAction
+    [ProtoInclude(100, typeof(LocationLink))]
+    [ProtoInclude(101, typeof(StructureLink))]
+    [ProtoInclude(102, typeof(PermittedStructureLink))]
+    [ProtoInclude(103, typeof(DataObjectWithKeyOfLong))]
+    public abstract class DataObject
     {
         private DBACTION _DBAction = DBACTION.NONE;
 
         [DataMember]
-        [ProtoMember(10)]
+        [ProtoMember(1)]
         public DBACTION DBAction
         {
-            get { return _DBAction; }
-            set { _DBAction = value; }
+            get => _DBAction;
+            set => _DBAction = value;
         }
 
-        Viking.AnnotationServiceTypes.Interfaces.DBACTION IChangeAction.DBAction 
+        /// <summary>
+        /// Shadow property for Protobuf serialization - sends DBAction as integer
+        /// </summary>
+        [ProtoMember(2)]
+        public int DBActionAsInt
         {
-            get => (Viking.AnnotationServiceTypes.Interfaces.DBACTION)(int)this.DBAction; 
-            set => this.DBAction = (DBACTION)(int)value;
+            get => (int)_DBAction;
+            set => _DBAction = (DBACTION)value;
         }
     }
 
@@ -39,30 +45,19 @@ namespace AnnotationService.Types
     /// </summary>
     [DataContract]
     [ProtoContract]
-    [ProtoInclude(1, typeof(DataObjectWithParentOfLong))]
-    [ProtoInclude(2, typeof(Location))]
-    [ProtoInclude(3, typeof(LocationPositionOnly))]
-    public class DataObjectWithKeyOfLong : DataObject, IEquatable<DataObjectWithKeyOfLong>, IDataObjectWithKey<Int64>
+    [ProtoInclude(200, typeof(DataObjectWithParentOfLong))]
+    [ProtoInclude(201, typeof(Location))]
+    [ProtoInclude(202, typeof(LocationPositionOnly))]
+    public class DataObjectWithKeyOfLong : DataObject
     {
         private Int64 _ID;
 
-        [ProtoMember(10)]
+        [ProtoMember(3, DataFormat = DataFormat.FixedSize)]
         [DataMember]
         public Int64 ID
         {
-            get { return _ID; }
-            set { _ID = value; }
-        }
-
-        public bool Equals(DataObjectWithKeyOfLong other)
-        {
-            if (object.ReferenceEquals(other, this))
-                return true;
-
-            if (object.ReferenceEquals(other, null))
-                return false;
-
-            return this.ID == other.ID;
+            get => _ID;
+            set => _ID = value;
         }
     }
 
@@ -72,13 +67,13 @@ namespace AnnotationService.Types
     /// </summary>
     [DataContract]
     [ProtoContract]
-    [ProtoInclude(1, typeof(Structure))]
-    [ProtoInclude(2, typeof(StructureType))]
-    public class DataObjectWithParentOfLong : DataObjectWithKeyOfLong, IDataObjectWithParent<Int64>
+    [ProtoInclude(300, typeof(Structure))]
+    [ProtoInclude(301, typeof(StructureType))]
+    public class DataObjectWithParentOfLong : DataObjectWithKeyOfLong
     {
         private Int64? _ParentID;
 
-        [ProtoMember(10)]
+        [ProtoMember(4)]
         [DataMember]
         public Int64? ParentID
         {
@@ -88,10 +83,10 @@ namespace AnnotationService.Types
                     return _ParentID;
                 else
                 {
-                    return new Int64?();
+                    return null;
                 }
             }
-            set { _ParentID = value; }
+            set => _ParentID = value;
         }
     }
 }

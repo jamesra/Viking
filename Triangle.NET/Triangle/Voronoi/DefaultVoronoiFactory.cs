@@ -1,4 +1,4 @@
-﻿
+
 namespace TriangleNet.Voronoi
 {
     using TriangleNet.Topology.DCEL;
@@ -16,19 +16,10 @@ namespace TriangleNet.Voronoi
         {
         }
 
-        public Vertex CreateVertex(double x, double y)
-        {
-            return new Vertex(x, y);
-        }
+        public Vertex CreateVertex(double x, double y) => new Vertex(x, y);
 
-        public HalfEdge CreateHalfEdge(Vertex origin, Face face)
-        {
-            return new HalfEdge(origin, face);
-        }
+        public HalfEdge CreateHalfEdge(Vertex origin, Face face) => new HalfEdge(origin, face);
 
-        public Face CreateFace(Geometry.Vertex vertex)
-        {
-            return new Face(vertex);
-        }
+        public Face CreateFace(Geometry.Vertex vertex) => new Face(vertex);
     }
 }

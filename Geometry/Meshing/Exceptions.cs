@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -64,6 +64,29 @@ namespace Geometry.Meshing
     }
 
     /// <summary>
+    /// Thrown when a constrained triangulation finished without honouring its input ring: a ring edge is missing
+    /// from the mesh, a ring edge is not bordered by exactly one face, or no face was produced at all.  The
+    /// polygon is usually degenerate (self-touching or nearly so) in a way the input cleaning did not remove.
+    /// </summary>
+    public class ConstrainedTriangulationException : GeometryMeshExceptionBase
+    {
+        /// <summary>Ring edges that the finished mesh does not contain.</summary>
+        public IEdgeKey[] MissingConstrainedEdges;
+
+        /// <summary>Ring edges present in the mesh whose face count is not one, paired with that count.</summary>
+        public KeyValuePair<IEdgeKey, int>[] MisboundedConstrainedEdges;
+
+        public int FaceCount;
+
+        public ConstrainedTriangulationException(ICollection<IEdgeKey> missing, ICollection<KeyValuePair<IEdgeKey, int>> misbounded, int faceCount, string msg) : base(msg)
+        {
+            MissingConstrainedEdges = [.. missing];
+            MisboundedConstrainedEdges = [.. misbounded];
+            FaceCount = faceCount;
+        }
+    }
+
+    /// <summary>
     /// Thrown when a delaunay triangulation does not conform to the delaunay requirements
     /// </summary>
     public class EdgesIntersectTriangulationException : GeometryMeshExceptionBase
@@ -74,13 +97,13 @@ namespace Geometry.Meshing
         public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string msg) : base(msg)
         {
             Edge = edge;
-            IntersectedEdges = intersected.ToArray();
+            IntersectedEdges = [.. intersected];
         }
 
         public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string message, Exception innerException) : base(message, innerException)
         {
             Edge = edge;
-            IntersectedEdges = intersected.ToArray();
+            IntersectedEdges = [.. intersected];
         }
     }
 

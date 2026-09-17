@@ -1,84 +1,95 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading.Tasks;
+using VikingXNAGraphics;
 
 namespace Viking.Common
 {
     //This was added as a workaround for the SaveAsPng memory leak in XNA.Texture2D
-    public class BmpWriter
+    public static class BmpWriter
     {
-        byte[] textureData;
-        Bitmap bmp;
-        BitmapData bitmapData;
-        IntPtr safePtr;
-        Rectangle rect;
-        public ImageFormat imageFormat;
-        public BmpWriter(int width, int height)
+        /// <summary>
+        /// Convert a texture to a bitmap
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static Bitmap ToBmp(this Texture2D texture)
         {
-            textureData = new byte[4 * width * height];
-
-            bmp = new System.Drawing.Bitmap(
-                            width, height,
-                            System.Drawing.Imaging.PixelFormat.Format32bppArgb
-                            );
-
-            rect = new System.Drawing.Rectangle(0, 0, width, height);
-
-            imageFormat = System.Drawing.Imaging.ImageFormat.Png;
+            Byte[] textureData = texture.ToRgbBytes();
+            return textureData.ToBmp(texture.Width, texture.Height);
         }
 
-        public void TextureToBmp(Texture2D texture, String filename)
+        /// <summary>
+        /// Convert a texture to a Bitmap
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static Task<Bitmap> ToBmpAsync(this Texture2D texture)
         {
-            texture.GetData<byte>(textureData);
-            byte blue;
-            for (int i = 0; i < textureData.Length; i += 4)
-            {
-                blue = textureData[i];
-                textureData[i] = textureData[i + 2];
-                textureData[i + 2] = blue;
-            }
-
-            bitmapData = bmp.LockBits(
-                            rect,
-                            System.Drawing.Imaging.ImageLockMode.WriteOnly,
-                            System.Drawing.Imaging.PixelFormat.Format32bppArgb
-                            );
-
-            safePtr = bitmapData.Scan0;
-            System.Runtime.InteropServices.Marshal.Copy(textureData, 0, safePtr, textureData.Length);
-            bmp.UnlockBits(bitmapData);
-
-            bmp.Save(filename, imageFormat);
-
+            Byte[] textureData = texture.ToRgbBytes();
+            return ToBmpAsync(textureData, texture.Width, texture.Height);
         }
 
-        static public void TextureToBmpAsync(Texture2D texture, String filename)
+        /// <summary>
+        /// Save a texture as a file
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static void Save(this Texture2D texture, String filename, ImageFormat? format = null)
         {
-            using (Bitmap bmp = new System.Drawing.Bitmap(
-                            texture.Width, texture.Height,
-                            System.Drawing.Imaging.PixelFormat.Format32bppArgb
-                        ))
+            Byte[] textureData = texture.ToRgbBytes();
+            textureData.SaveBmp(texture.Width, texture.Height, filename, format ?? ImageFormat.Png);
+        }
+
+        /// <summary>
+        /// Save a texture as a file
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static Task SaveAsync(this Texture2D texture, String filename, ImageFormat? format = null)
+        {
+            Byte[] textureData = texture.ToRgbBytes();
+            return SaveBmpAsync(textureData, texture.Width, texture.Height, filename, format);
+        }
+
+
+        /// <summary>
+        /// Convert ARGB bytes to a bitmap
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static Bitmap ToBmp(this byte[] textureData, int width, int height)
+        {
+            BitmapData lockedBmpData = null;
+            Bitmap bmp = new(
+                width, height,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
             {
-                Byte[] textureData = new byte[4 * texture.Width * texture.Height];
-                texture.GetData<byte>(textureData);
 
-                /*Reverse the position of the blue channel*/
-                byte blue;
-                for (int i = 0; i < textureData.Length; i += 4)
-                {
-                    blue = textureData[i];
-                    textureData[i] = textureData[i + 2];
-                    textureData[i + 2] = blue;
-                }
-
-                BitmapData lockedBmpData;
-                Rectangle rect = new System.Drawing.Rectangle(0, 0, texture.Width, texture.Height);
+                Rectangle rect = new(0, 0, bmp.Width, bmp.Height);
                 lockedBmpData = bmp.LockBits(
-                                rect,
-                                System.Drawing.Imaging.ImageLockMode.WriteOnly,
-                                System.Drawing.Imaging.PixelFormat.Format32bppArgb
-                                );
+                    rect,
+                    System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                    System.Drawing.Imaging.PixelFormat.Format32bppArgb
+                );
 
                 IntPtr safePtr;
                 safePtr = lockedBmpData.Scan0;
@@ -90,14 +101,50 @@ namespace Viking.Common
                 {
                     for (int iBmpRow = 0; iBmpRow < lockedBmpData.Height; iBmpRow++)
                     {
-                        System.Runtime.InteropServices.Marshal.Copy(textureData, iBmpRow * 4 * texture.Width, lockedBmpData.Scan0 + (lockedBmpData.Stride * iBmpRow), 4 * texture.Width);
+                        System.Runtime.InteropServices.Marshal.Copy(textureData, iBmpRow * 4 * bmp.Width, lockedBmpData.Scan0 + (lockedBmpData.Stride * iBmpRow), 4 * bmp.Width);
                     }
                 }
 
                 bmp.UnlockBits(lockedBmpData);
-
-                bmp.Save(filename, ImageFormat.Png);
+                lockedBmpData = null;
             }
+            catch (Exception e)
+            {
+                if (lockedBmpData != null)
+                    bmp.UnlockBits(lockedBmpData);
+
+                throw;
+            }
+
+            return bmp;
+        }
+
+        /// <summary>
+        /// Convert ARGB bytes to a bitmap
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static Task<Bitmap> ToBmpAsync(this byte[] textureData, int width, int height) => Task.Run(() => ToBmp(textureData, width, height));
+
+        /// <summary>
+        /// Save ARGB bytes to a bitmap file
+        /// </summary>
+        /// <param name="textureData"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static Task SaveBmpAsync(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null) => Task.Run(() => SaveBmp(textureData, width, height, filename, format));
+
+        public static void SaveBmp(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null)
+        {
+            format ??= ImageFormat.Png;
+
+            using Bitmap bmp = textureData.ToBmp(width, height);
+            bmp.Save(filename, format);
         }
     }
 }

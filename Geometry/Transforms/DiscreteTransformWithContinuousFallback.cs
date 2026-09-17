@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -14,39 +14,18 @@ namespace Geometry.Transforms
         readonly IDiscreteTransform DiscreteTransform;
         readonly IContinuousTransform ContinuousTransform;
 
-        public override string ToString()
-        {
-            return this.Info.ToString();
-        }
+        public override string ToString() => this.Info.ToString();
 
         public TransformBasicInfo Info
         {
             get; set;
         }
 
-        public MappingGridVector2[] MapPoints
-        {
-            get
-            {
-                return ((ITransformControlPoints)DiscreteTransform).MapPoints;
-            }
-        }
+        public MappingVector2[] MapPoints => ((ITransformControlPoints)DiscreteTransform).MapPoints;
 
-        public GridRectangle ControlBounds
-        {
-            get
-            {
-                return ((ITransformControlPoints)DiscreteTransform).ControlBounds;
-            }
-        }
+        public Rectangle ControlBounds => ((ITransformControlPoints)DiscreteTransform).ControlBounds;
 
-        public GridRectangle MappedBounds
-        {
-            get
-            {
-                return ((ITransformControlPoints)DiscreteTransform).MappedBounds;
-            }
-        }
+        public Rectangle MappedBounds => ((ITransformControlPoints)DiscreteTransform).MappedBounds;
 
         public int[] TriangleIndicies
         {
@@ -57,7 +36,7 @@ namespace Geometry.Transforms
                     return dt.TriangleIndicies;
                 }
 
-                return Array.Empty<int>();
+                return [];
             }
         }
 
@@ -70,7 +49,7 @@ namespace Geometry.Transforms
                     return dt.Edges;
                 }
 
-                return Array.Empty<List<int>>();
+                return [];
             }
         }
 
@@ -85,7 +64,7 @@ namespace Geometry.Transforms
 
         protected DiscreteTransformWithContinuousFallback(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             DiscreteTransform = info.GetValue("DiscreetTransform", typeof(IDiscreteTransform)) as IDiscreteTransform;
@@ -94,26 +73,20 @@ namespace Geometry.Transforms
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("DiscreetTransform", DiscreteTransform);
             info.AddValue("ContinuousTransform", ContinuousTransform);
         }
 
-        public bool CanTransform(in GridVector2 p)
-        {
-            return true;
-        }
+        public bool CanTransform(in Vector2 p) => true;
 
-        public bool CanInverseTransform(in GridVector2 p)
-        {
-            return true;
-        }
+        public bool CanInverseTransform(in Vector2 p) => true;
 
-        public GridVector2 Transform(in GridVector2 Point)
+        public Vector2 Transform(in Vector2 Point)
         {
-            if (!DiscreteTransform.TryTransform(Point, out GridVector2 output))
+            if (!DiscreteTransform.TryTransform(Point, out Vector2 output))
             {
                 output = ContinuousTransform.Transform(Point);
             }
@@ -121,26 +94,23 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2[] Transform(in GridVector2[] Points)
-        {
-            return Points.Select(p => this.Transform(p)).ToArray();
-        }
+        public Vector2[] Transform(in Vector2[] Points) => [.. Points.Select(p => this.Transform(p))];
 
-        public bool TryTransform(in GridVector2 Point, out GridVector2 v)
+        public bool TryTransform(in Vector2 Point, out Vector2 v)
         {
             v = Transform(Point);
             return true;
         }
 
-        public bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v)
+        public bool[] TryTransform(in Vector2[] Points, out Vector2[] v)
         {
             v = Transform(Points);
-            return v.Select(p => true).ToArray();
+            return [.. v.Select(p => true)];
         }
 
-        public GridVector2 InverseTransform(in GridVector2 Point)
+        public Vector2 InverseTransform(in Vector2 Point)
         {
-            if (!DiscreteTransform.TryInverseTransform(Point, out GridVector2 output))
+            if (!DiscreteTransform.TryInverseTransform(Point, out Vector2 output))
             {
                 output = ContinuousTransform.InverseTransform(Point);
             }
@@ -148,27 +118,21 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2[] InverseTransform(in GridVector2[] Points)
-        {
-            return Points.Select(p => this.InverseTransform(p)).ToArray();
-        }
+        public Vector2[] InverseTransform(in Vector2[] Points) => [.. Points.Select(p => this.InverseTransform(p))];
 
-        public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
+        public bool TryInverseTransform(in Vector2 Point, out Vector2 v)
         {
             v = InverseTransform(Point);
             return true;
         }
 
-        public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v)
+        public bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] v)
         {
             v = InverseTransform(Points);
-            return v.Select(p => true).ToArray();
+            return [.. v.Select(p => true)];
         }
 
-        public void Translate(in GridVector2 vector)
-        {
-            throw new NotImplementedException();
-        }
+        public void Translate(in Vector2 vector) => throw new NotImplementedException();
 
         public void MinimizeMemory()
         {
@@ -176,14 +140,8 @@ namespace Geometry.Transforms
             (ContinuousTransform as IMemoryMinimization)?.MinimizeMemory();
         }
 
-        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect)
-        {
-            return ((ITransformControlPoints)DiscreteTransform).IntersectingControlRectangle(gridRect);
-        }
+        public List<MappingVector2> IntersectingControlRectangle(in Rectangle gridRect) => ((ITransformControlPoints)DiscreteTransform).IntersectingControlRectangle(gridRect);
 
-        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect)
-        {
-            return ((ITransformControlPoints)DiscreteTransform).IntersectingMappedRectangle(gridRect);
-        }
+        public List<MappingVector2> IntersectingMappedRectangle(in Rectangle gridRect) => ((ITransformControlPoints)DiscreteTransform).IntersectingMappedRectangle(gridRect);
     }
 }

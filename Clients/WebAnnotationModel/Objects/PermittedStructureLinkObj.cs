@@ -7,6 +7,9 @@ using Viking.AnnotationServiceTypes;
 namespace WebAnnotationModel.Objects
 {
 
+    /// <summary>
+    /// Allowed link between two structure types. Same Bidirectional vs server Directional inversion as StructureLinkObj.
+    /// </summary>
     public class PermittedStructureLinkObj : AnnotationModelObjBaseWithKey<PermittedStructureLinkKey,
         IPermittedStructureLink>,
         IPermittedStructureLinkKey, IComparable<IPermittedStructureLinkKey>,

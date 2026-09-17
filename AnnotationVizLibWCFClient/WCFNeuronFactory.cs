@@ -10,45 +10,38 @@ namespace AnnotationVizLib.WCFClient
 {
     public class WCFNeuronFactory
     {
-        SortedDictionary<ulong, IStructureReadOnly> IDToStructure = new SortedDictionary<ulong, IStructureReadOnly>();
+        readonly SortedDictionary<ulong, IStructureReadOnly> IDToStructure = [];
 
         static SortedDictionary<long, StructureType> IDToStructureType = null;
 
-        List<ulong> NextHopNodes = new List<ulong>();
+        List<ulong> NextHopNodes = [];
 
-        NeuronGraph graph;
+        readonly NeuronGraph graph;
 
         protected WCFNeuronFactory()
         {
-            if (IDToStructureType == null)
-                IDToStructureType = Queries.GetStructureTypes();
+            IDToStructureType ??= Queries.GetStructureTypes();
 
             graph = new NeuronGraph();
         }
 
-        public System.Collections.ObjectModel.ReadOnlyCollection<ulong> IncompleteNodes
-        {
-            get
-            {
-                return NextHopNodes.AsReadOnly();
-            }
-        }
+        public System.Collections.ObjectModel.ReadOnlyCollection<ulong> IncompleteNodes => NextHopNodes.AsReadOnly();
 
         public static NeuronGraph BuildGraph(ICollection<long> StructureIDs, uint numHops, string Endpoint, System.Net.NetworkCredential userCredentials)
         {
             ConnectionFactory.SetConnection(Endpoint, userCredentials);
 
-            WCFNeuronFactory graphFactory = new WCFNeuronFactory();
+            WCFNeuronFactory graphFactory = new();
 
-            List<ulong> MissingParents = StructureIDs.Select(s => (ulong)s).ToList();
+            List<ulong> MissingParents = [.. StructureIDs.Select(s => (ulong)s)];
 
             using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
             {
-                long[] struct_IDs = StructureIDs.ToArray();
+                long[] struct_IDs = [.. StructureIDs];
                 Task<Structure[]> task_nodes = Task<Structure[]>.Run(() => Queries.GetNetworkedStructures(struct_IDs, (int)numHops));
                 Task<StructureLink[]> task_struct_links = Task<StructureLink[]>.Run(() => Queries.GetStructureLinksInNetwork(struct_IDs, (int)numHops));
                 Structure[] childStructures = Queries.GetChildStructuresInNetwork(struct_IDs, (int)numHops);
-                Task.WaitAll(new Task[] { task_nodes, /*task_childStructures,*/ task_struct_links });
+                Task.WaitAll([task_nodes, /*task_childStructures,*/ task_struct_links]);
 
                 Structure[] network_node_IDs = task_nodes.Result;
                 StructureLink[] struct_links = task_struct_links.Result;
@@ -70,7 +63,7 @@ namespace AnnotationVizLib.WCFClient
                 if (!IDToStructure.ContainsKey(s.ID))
                     IDToStructure.Add(s.ID, s);
                 else
-                    Trace.WriteLine($"Duplicate add of structure {s.ID}");
+                    Trace.WriteLine(string.Format("Duplicate add of structure {0}", s.ID));
             }
 
             AddEdgesForChildStructures(struct_links);
@@ -81,10 +74,10 @@ namespace AnnotationVizLib.WCFClient
         /// </summary>
         public void RemoveIncompleteNodes()
         {
-            foreach (long id in this.NextHopNodes)
+            foreach (long id in NextHopNodes.Select(v => (long)v))
             {
                 if (graph.Nodes.ContainsKey(id))
-                    graph.Nodes.Remove(id);
+                    graph.RemoveNode(id);
             }
         }
 
@@ -106,7 +99,7 @@ namespace AnnotationVizLib.WCFClient
                             SourceTypeName = IDToStructureType[(long)LinkSource.TypeID].Name;
                         }
 
-                        NeuronEdge E = new NeuronEdge((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, new WCFStructureLinkAdapter(link), SourceTypeName);
+                        NeuronEdge E = new((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, new WCFStructureLinkAdapter(link), SourceTypeName);
 
                         if (graph.Edges.ContainsKey(E))
                         {
@@ -134,12 +127,12 @@ namespace AnnotationVizLib.WCFClient
         private List<long> GetHop(AnnotateStructuresClient proxy, IList<long> CellIDs)
         {
             if (CellIDs.Count == 0)
-                return new List<long>();
+                return [];
 
             //Remove nodes we have already mapped
-            CellIDs = CellIDs.Where(id => !graph.Nodes.ContainsKey(id)).ToList();
+            CellIDs = [.. CellIDs.Where(id => !graph.Nodes.ContainsKey(id))];
 
-            Structure[] MissingStructures = proxy.GetStructuresByIDs(CellIDs.ToArray(), true);
+            Structure[] MissingStructures = proxy.GetStructuresByIDs([.. CellIDs], true);
 
             Structure[] ChildStructures = FindMissingChildStructures(proxy, MissingStructures);
 
@@ -152,7 +145,7 @@ namespace AnnotationVizLib.WCFClient
 
             AddEdgesForChildStructures(ChildStructures);
 
-            List<long> ListAbsentParents = new List<long>(LinkedStructurePartners.Length);
+            List<long> ListAbsentParents = new(LinkedStructurePartners.Length);
 
             //Find a list of the parentIDs we are missing, and add them to the graph, and return them
             //so we can easily make another hop later
@@ -176,7 +169,7 @@ namespace AnnotationVizLib.WCFClient
         {
             foreach (IStructureReadOnly s in structs.Select(s => new WCFStructureAdapter(s)))
             {
-                NeuronNode node = new NeuronNode((long)s.ID, s);
+                NeuronNode node = new((long)s.ID, s);
                 graph.AddNode(node);
 
                 IDToStructure[s.ID] = s;
@@ -185,17 +178,17 @@ namespace AnnotationVizLib.WCFClient
 
         private Structure[] FindMissingChildStructures(AnnotateStructuresClient proxy, Structure[] MissingStructures)
         {
-            List<long> ListMissingChildrenIDs = new List<long>(MissingStructures.Length);
+            List<long> ListMissingChildrenIDs = new(MissingStructures.Length);
 
             foreach (Structure s in MissingStructures)
             {
                 IStructureReadOnly adapter = new WCFStructureAdapter(s);
-                NeuronNode node = new NeuronNode(s.ID, adapter);
+                NeuronNode node = new(s.ID, adapter);
                 graph.AddNode(node);
 
                 IDToStructure[(ulong)s.ID] = adapter;
 
-                if (s.ChildIDs == null)
+                if (s.ChildIDs is null)
                     continue;
 
                 //Find all of the details on child synapses, which we probably do not have
@@ -207,14 +200,14 @@ namespace AnnotationVizLib.WCFClient
 
             //Find all synapses and gap junctions
 
-            Structure[] ChildStructures = Queries.GetStructuresByIDs(proxy, ListMissingChildrenIDs.ToArray());
+            Structure[] ChildStructures = Queries.GetStructuresByIDs(proxy, [.. ListMissingChildrenIDs]);
             return ChildStructures;
         }
 
 
         private Structure[] FindMissingLinkedStructures(AnnotateStructuresClient proxy, Structure[] ChildStructures)
         {
-            SortedSet<ulong> ListAbsentLinkPartners = new SortedSet<ulong>();
+            SortedSet<ulong> ListAbsentLinkPartners = [];
 
             //Find missing structures and populate the list
             foreach (IStructureReadOnly child in ChildStructures.Select(s => new WCFStructureAdapter(s)))
@@ -224,10 +217,10 @@ namespace AnnotationVizLib.WCFClient
                     IDToStructure.Add((ulong)child.ID, child);
                 }
 
-                if (child.Links == null)
+                if (child.Links is null)
                     continue;
 
-                foreach (IStructureLinkReadOnly link in child.Links)
+                foreach (IStructureLink link in child.Links)
                 {
                     if (!IDToStructure.ContainsKey(link.SourceID))
                     {
@@ -241,7 +234,7 @@ namespace AnnotationVizLib.WCFClient
                 }
             }
 
-            Structure[] LinkedStructurePartners = proxy.GetStructuresByIDs(ListAbsentLinkPartners.Distinct().Cast<long>().ToArray(), false);
+            Structure[] LinkedStructurePartners = proxy.GetStructuresByIDs([.. ListAbsentLinkPartners.Distinct().Cast<long>()], false);
             return LinkedStructurePartners;
         }
     }

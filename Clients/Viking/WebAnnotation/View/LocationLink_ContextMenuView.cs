@@ -1,73 +1,85 @@
-﻿using System;
+using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes;
 using Viking.Common;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
-    class LocationLink_CanvasContextMenuView : IContextMenu
+    public class LocationLink_CanvasContextMenuView : IProvideContextMenus
     {
-        public LocationLinkKey linkKey;
-
-        public LocationLink_CanvasContextMenuView(LocationLinkKey link)
+        public LocationLink_CanvasContextMenuView()
         {
-            this.linkKey = link;
         }
 
-        public static ContextMenu ContextMenuGenerator(IViewLocationLink link)
+        private static WebAnnotation.UI.SplitStructuresForm? SplitForm = null;
+        protected void ContextMenu_OnSplit(object sender, EventArgs e)
         {
-            LocationLink_CanvasContextMenuView contextMenuView = new LocationLink_CanvasContextMenuView(link.Key);
-            return contextMenuView.ContextMenu;
-        }
-
-        public System.Windows.Forms.ContextMenu ContextMenu
-        {
-            get
+            if (SplitForm is null)
             {
-                ContextMenu menu = new ContextMenu();
+                if (sender is ToolStripMenuItem menuItem)
+                {
+                    if (menuItem.Tag is LocationLinkKey linkKey)
+                    {
 
-                MenuItem menuSeperator = new MenuItem();
-                MenuItem menuDelete = new MenuItem("Delete Link", ContextMenu_OnDelete);
+                        SplitForm = new WebAnnotation.UI.SplitStructuresForm
+                        {
+                            SplitID = linkKey.A,
+                            KeepID = linkKey.B
+                        };
+                        SplitForm.FormClosed += OnSplitFormClosed;
+                        SplitForm.Show();
+                    }
+                }
+            }
 
-                menu.MenuItems.Add(menuSeperator);
-                menu.MenuItems.Add(menuDelete);
+        }
 
-                menu.MenuItems.Add(menuSeperator);
+        private static void OnSplitFormClosed(object sender, FormClosedEventArgs e) => SplitForm = null;
 
-                MenuItem menuSplit = new MenuItem("Split structure", ContextMenu_OnSplit);
-                menu.MenuItems.Add(menuSplit);
+        protected async void ContextMenu_OnDelete(object sender, EventArgs e)
+        {
+            if (sender is ToolStripMenuItem menuItem)
+            {
+                if (menuItem.Tag is LocationLinkKey linkKey)
+                {
+                    await Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
+                }
+            }
+        }
+        public ContextMenuStrip BuildMenuFor(object Obj, ContextMenuStrip menu)
+        {
+            if (menu is null)
+                return null;
+
+            if (Obj is LocationLinkView link)
+            {
+                menu.Items.Add(new ToolStripSeparator());
+                ToolStripMenuItem menuDelete = new("Delete Link")
+                {
+                    Tag = link.Key
+                };
+                menuDelete.Click += ContextMenu_OnDelete;
+
+                menu.Items.Add(menuDelete);
+
+                menu.Items.Add(new ToolStripSeparator());
+
+                ToolStripMenuItem menuSplit = new("Split structure")
+                {
+                    Tag = link.Key
+                };
+                menuSplit.Click += ContextMenu_OnSplit;
+                menu.Items.Add(menuSplit);
 
                 return menu;
             }
+
+            return menu;
         }
 
-        static WebAnnotation.UI.SplitStructuresForm SplitForm = null;
-        protected void ContextMenu_OnSplit(object sender, EventArgs e)
-        {
-            if (SplitForm == null)
-            {
-                SplitForm = new WebAnnotation.UI.SplitStructuresForm();
-                SplitForm.SplitID = this.linkKey.A;
-                SplitForm.KeepID = this.linkKey.B;
-                SplitForm.FormClosed += OnSplitFormClosed;
-                SplitForm.Show();
-            }
-        }
-
-        static private void OnSplitFormClosed(object sender, FormClosedEventArgs e)
-        {
-            SplitForm = null;
-        }
-
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
-
-        public void Delete()
-        {
-            Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
-        }
+        public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu) => Menu;
     }
 }

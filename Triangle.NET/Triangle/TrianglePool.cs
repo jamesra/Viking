@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TrianglePool.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -25,7 +25,7 @@ namespace TriangleNet
         Triangle[][] pool;
 
         // A stack of free triangles.
-        Stack<Triangle> stack;
+        readonly Stack<Triangle> stack;
 
         public TrianglePool()
         {
@@ -66,13 +66,15 @@ namespace TriangleNet
             }
             else
             {
-                triangle = new Triangle();
-                triangle.hash = size;
+                triangle = new Triangle
+                {
+                    hash = size
+                };
                 triangle.id = triangle.hash;
 
                 int block = size / BLOCKSIZE;
 
-                if (pool[block] == null)
+                if (pool[block] is null)
                 {
                     pool[block] = new Triangle[BLOCKSIZE];
 
@@ -167,10 +169,7 @@ namespace TriangleNet
             }
         }
 
-        public void Add(Triangle item)
-        {
-            throw new NotImplementedException();
-        }
+        public void Add(Triangle item) => throw new NotImplementedException();
 
         public void Clear()
         {
@@ -217,65 +216,35 @@ namespace TriangleNet
             }
         }
 
-        public int Count
-        {
-            get { return count - stack.Count; }
-        }
+        public int Count => count - stack.Count;
 
-        public bool IsReadOnly
-        {
-            get { return true; }
-        }
+        public bool IsReadOnly => true;
 
-        public bool Remove(Triangle item)
-        {
-            throw new NotImplementedException();
-        }
+        public bool Remove(Triangle item) => throw new NotImplementedException();
 
-        public IEnumerator<Triangle> GetEnumerator()
-        {
-            return new Enumerator(this);
-        }
+        public IEnumerator<Triangle> GetEnumerator() => new Enumerator(this);
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
-        class Enumerator : IEnumerator<Triangle>
+        class Enumerator(TrianglePool pool) : IEnumerator<Triangle>
         {
             // TODO: enumerator should be able to tell if collection changed.
 
-            int count;
+            readonly int count = pool.Count;
 
-            Triangle[][] pool;
+            readonly Triangle[][] pool = pool.pool;
 
             Triangle current;
 
-            int index, offset;
+            int index = 0, offset = 0;
 
-            public Enumerator(TrianglePool pool)
-            {
-                this.count = pool.Count;
-                this.pool = pool.pool;
-
-                index = 0;
-                offset = 0;
-            }
-
-            public Triangle Current
-            {
-                get { return current; }
-            }
+            public Triangle Current => current;
 
             public void Dispose()
             {
             }
 
-            object System.Collections.IEnumerator.Current
-            {
-                get { return current; }
-            }
+            object System.Collections.IEnumerator.Current => current;
 
             public bool MoveNext()
             {
@@ -295,10 +264,7 @@ namespace TriangleNet
                 return false;
             }
 
-            public void Reset()
-            {
-                index = offset = 0;
-            }
+            public void Reset() => index = offset = 0;
         }
     }
 }

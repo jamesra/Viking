@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Forms;
@@ -19,28 +19,21 @@ namespace Viking.UI.Commands
             _ObservableHelpStrings = new ObservableCollection<string>(this.HelpStrings);
         }
 
-        public virtual string[] HelpStrings
-        {
-            get
-            {
-                return BuildHelpStrings();
-            }
-        }
+        public virtual string[] HelpStrings => BuildHelpStrings();
 
-        private ObservableCollection<string> _ObservableHelpStrings;
+        private readonly ObservableCollection<string> _ObservableHelpStrings;
 
-        public virtual ObservableCollection<string> ObservableHelpStrings { get { return _ObservableHelpStrings; } }
+        public virtual ObservableCollection<string> ObservableHelpStrings => _ObservableHelpStrings;
 
-        private object LastNearestObject = null;
+        private object? LastNearestObject = null;
 
         private string[] BuildHelpStrings()
         {
-            List<string> s = new List<string>();
+            List<string> s = [];
 
-            if (LastNearestObject == null)
+            if (LastNearestObject is null)
             {
-                IHelpStrings parentHelp = Parent as IHelpStrings;
-                if (parentHelp != null)
+                if (Parent is IHelpStrings parentHelp)
                 {
                     s.AddRange(parentHelp.HelpStrings);
                 }
@@ -64,26 +57,24 @@ namespace Viking.UI.Commands
 
             s.Sort();
 
-            return s.ToArray();
+            return [.. s];
         }
 
         private string[] GetHelpStringsFromObject(object obj)
         {
-            IHelpStrings helpStrings = obj as IHelpStrings;
-            if (helpStrings == null)
-                return new string[] { };
+            if (obj is not IHelpStrings helpStrings)
+                return [];
 
             return helpStrings.HelpStrings;
         }
 
-        protected object NearestObjectAtPositionAcrossAllExtensions(GridVector2 WorldPosition)
+        protected object NearestObjectAtPositionAcrossAllExtensions(Vector2 WorldPosition)
         {
             object nearest_obj = null;
             double distance = double.MaxValue;
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
             {
-                double newDistance;
-                object nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
+                object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                 if (nearObj != null)
                 {
                     if (newDistance < distance)
@@ -99,7 +90,7 @@ namespace Viking.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             object NewLastNearestObject = NearestObjectAtPositionAcrossAllExtensions(WorldPosition);
 
             if (!object.Equals(NewLastNearestObject, LastNearestObject))
@@ -115,27 +106,26 @@ namespace Viking.UI.Commands
 
             base.OnMouseMove(sender, e);
         }
-  
+
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
             //Middle mouse button is for Wacom Pen Support
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 double distance = double.MaxValue;
-                IContextMenu context_obj = null;
+                object context_obj = null;
 
                 if (Parent.ShowOverlays)
                 {
                     foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
                     {
-                        double newDistance;
-                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
+                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                         if (nearObj != null)
                         {
                             if (newDistance < distance)
                             {
-                                context_obj = nearObj as IContextMenu;
+                                context_obj = nearObj;
                                 distance = newDistance;
                             }
                         }
@@ -144,11 +134,17 @@ namespace Viking.UI.Commands
 
                 //Create a context menu and show it where the mouse clicked
                 //Right mouse button calls up context menu
-                ContextMenu menu = null;
+                ContextMenuStrip menu = null;
                 if (context_obj != null)
-                    menu = context_obj.ContextMenu;
+                    if (context_obj is IContextMenu menu_obj)
+                    {
+                        menu = menu_obj.ContextMenu;
+                        menu ??= new ContextMenuStrip();
+                    }
+                    else
+                        menu = new ContextMenuStrip();
                 else
-                    menu = new ContextMenu();
+                    menu = new ContextMenuStrip();
 
                 //Talk to everyone who modifies context menus to see if they have a contribution
                 IProvideContextMenus[] ContextMenuProviders = ExtensionManager.CreateContextMenuProviders();
@@ -157,10 +153,7 @@ namespace Viking.UI.Commands
                     menu = provider.BuildMenuFor(context_obj, menu);
                 }
 
-                if (menu != null)
-                {
-                    menu.Show(Parent, new System.Drawing.Point(e.X, e.Y));
-                }
+                menu?.Show(Parent, new System.Drawing.Point(e.X, e.Y));
             }
             else
             {

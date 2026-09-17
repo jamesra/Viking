@@ -1,36 +1,30 @@
-﻿using Geometry;
+using Geometry;
 using System;
 
 namespace MorphologyMesh
 {
     public interface ISliceChord : IEquatable<ISliceChord>
     {
-        GridLineSegment Line { get; }
-
+        /// <summary>
+        /// Geometric line segment of the chord
+        /// </summary>
+        LineSegment Line { get; }
     }
 
     /// <summary>
     /// Describes a slice chord via verticies on the mesh.  Can include medial axis verticies unlike the original SliceChord class
     /// </summary>
-    public class MeshChord : IEquatable<MeshChord>, ISliceChord
-    { 
-        public readonly GridLineSegment Line;
+    public class MeshChord(MorphRenderMesh mesh, int iO, int iT) : IEquatable<MeshChord>, ISliceChord
+    {
+        public readonly LineSegment Line = new(mesh[iO].Position.XY(), mesh[iT].Position.XY());
 
-        public readonly int iOrigin; //The index of the vertex in the mesh at the origin of the chord
-        public readonly int iTarget; //The index of the vertex in the mesh at the target of the chord
+        public readonly int iOrigin = iO; //The index of the vertex in the mesh at the origin of the chord
+        public readonly int iTarget = iT; //The index of the vertex in the mesh at the target of the chord
 
-        private readonly MorphRenderMesh mesh;
+        private readonly MorphRenderMesh mesh = mesh;
 
-        GridLineSegment ISliceChord.Line { get { return this.Line; } }
+        LineSegment ISliceChord.Line => this.Line;
 
-        public MeshChord(MorphRenderMesh mesh, int iO, int iT)
-        {
-            this.mesh = mesh;
-            this.iOrigin = iO;
-            this.iTarget = iT;
-            this.Line = new GridLineSegment(mesh[iO].Position.XY(), mesh[iT].Position.XY());
-        }
-         
         public bool Equals(MeshChord other)
         {
             if (other is null)
@@ -53,20 +47,31 @@ namespace MorphologyMesh
     /// </summary>
     public class SliceChord : IEquatable<SliceChord>, ISliceChord
     {
-        public readonly GridLineSegment Line;
+        /// <summary>
+        /// Geometric line segment of the chord
+        /// </summary>
+        public readonly LineSegment Line;
 
-        public readonly PolygonIndex Origin; //The vertex originating the slice chord
-        public readonly PolygonIndex Target; //The target vertex
+        public readonly IShapeIndex Origin; //The vertex originating the slice chord
+        public readonly IShapeIndex Target; //The target vertex
+
+        public double Orientation
+        {
+            get; private set;
+        }
+
+        LineSegment ISliceChord.Line => this.Line;
+
 
         //public SliceChordTestType PassedTests; //Tests we know this chord has passed.
         //public SliceChordTestType FailedTests; //Tests we know this chord has failed.
-         
-        public SliceChord(PolygonIndex O, PolygonIndex T, GridPolygon[] polygons)
+
+        public SliceChord(IShapeIndex O, IShapeIndex T, IShape2D[] shapes)
         {
-            this.Line = new GridLineSegment(O.Point(polygons), T.Point(polygons));
+            this.Line = new LineSegment(O.Point(shapes), T.Point(shapes));
             this.Origin = O;
             this.Target = T;
-            this.Orientation = EdgeTypeExtensions.Orientation(Origin, Target, polygons);
+            this.Orientation = Origin.Orientation(Target, shapes);
         }
 
         public bool Equals(SliceChord other)
@@ -91,22 +96,10 @@ namespace MorphologyMesh
             return this.Equals(other);
         }
 
-        public override int GetHashCode()
-        {
-            return Origin.GetHashCode() + Target.GetHashCode();
-        }
+        public override int GetHashCode() => Origin.GetHashCode() + Target.GetHashCode();
 
-        public double Orientation
-        {
-            get; private set;
-        }
 
-        GridLineSegment ISliceChord.Line { get { return this.Line; } }
-
-        public override string ToString()
-        {
-            return string.Format("{0} - {1}", Origin, Target);
-        }
+        public override string ToString() => $"{Origin} - {Target}";
 
         public bool Equals(ISliceChord other)
         {
@@ -119,7 +112,9 @@ namespace MorphologyMesh
         bool IEquatable<ISliceChord>.Equals(ISliceChord other)
         {
             if (other is SliceChord cast_other)
-                return Equals(cast_other);
+            {
+                return this.Equals(cast_other);
+            }
 
             return this.Line.Equals(other.Line);
         }

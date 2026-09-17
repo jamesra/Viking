@@ -3,57 +3,23 @@ using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureTypeAdapter : IStructureTypeReadOnly
+    class WCFStructureTypeAdapter(StructureType t) : IStructureTypeReadOnly
     {
-        private StructureType type;
-        public WCFStructureTypeAdapter(StructureType t)
-        {
-            type = t;
-        }
+        private readonly StructureType type = t;
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)type.ID;
-            }
-        }
+        public ulong ID => (ulong)type.ID;
 
-        public string Name
-        {
-            get
-            {
-                return type.Name;
-            }
-        }
+        public string Name => type.Name;
 
-        public string Code
-        {
-            get
-            {
-                return type.Code;
-            }
-        }
+        public string Code => type.Code;
 
-        public ulong? ParentID
-        {
-            get
-            {
-                return (ulong?)type.ParentID;
-            }
-        }
+        public ulong? ParentID => (ulong?)type.ParentID;
 
-        public string[] Tags
-        {
-            get
-            {
-                return type.Tags;
-            }
-        }
+        public string[] Tags => type.Tags;
 
         public bool Equals(IStructureTypeReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)

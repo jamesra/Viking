@@ -1,0 +1,11 @@
+# Docker-specific requirements for segmentation_server
+# This excludes sam2 since it's already installed from GitHub in the Dockerfile.  Greatly speeds up the build process.
+grpcio
+grpcio-tools
+protobuf
+numpy
+pillow
+opencv-python
+torch
+segmentation_grpc
+pydevd-pycharm>=252.27397.106

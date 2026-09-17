@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,17 +11,17 @@ namespace Viking.Common
     /// <typeparam name="T"></typeparam>
     public class KeyTracker<T> where T : IComparable<T>
     {
-        private readonly System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
+        private readonly System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new();
 
-        private readonly SortedSet<T> TrackedKeys = new SortedSet<T>();
+        private readonly SortedSet<T> TrackedKeys = [];
 
         public IEnumerable<T> ValuesCopy()
         {
             try
-            { 
+            {
                 rwKnownLocationsLock.EnterReadLock();
                 if (TrackedKeys.Count == 0)
-                    return Array.Empty<T>();
+                    return [];
 
                 T[] copy = new T[TrackedKeys.Count];
                 TrackedKeys.CopyTo(copy);
@@ -160,17 +160,17 @@ namespace Viking.Common
                 try
                 {
                     rwKnownLocationsLock.EnterWriteLock();
-                    if (!TrackedKeys.Contains(ID))
-                        return false;
 
-                    TrackedKeys.Remove(ID);
-                    a?.Invoke();
+                    bool removed = TrackedKeys.Remove(ID);
+                    if (removed)
+                        a?.Invoke();
+
+                    return removed;
                 }
                 finally
                 {
                     rwKnownLocationsLock.ExitWriteLock();
                 }
-                return TrackedKeys.Contains(ID);
             }
             finally
             {
@@ -186,9 +186,9 @@ namespace Viking.Common
     /// <typeparam name="T"></typeparam>
     public class RefCountingKeyTracker<T> where T : IComparable<T>
     {
-        private readonly System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
+        private readonly System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new();
 
-        private readonly SortedDictionary<T, int> TrackedKeys = new SortedDictionary<T, int>();
+        private readonly SortedDictionary<T, int> TrackedKeys = [];
         public bool Contains(T ID)
         {
             try
@@ -223,14 +223,7 @@ namespace Viking.Common
             try
             {
                 rwKnownLocationsLock.EnterReadLock();
-                if (!TrackedKeys.ContainsKey(ID))
-                {
-                    return 0;
-                }
-                else
-                {
-                    return TrackedKeys[ID];
-                }
+                return TrackedKeys.TryGetValue(ID, out int RefCount) ? RefCount : 0;
             }
             finally
             {
@@ -251,9 +244,9 @@ namespace Viking.Common
                 rwKnownLocationsLock.EnterWriteLock();
 
                 int RefCount;
-                if (TrackedKeys.ContainsKey(ID))
+                if (TrackedKeys.TryGetValue(ID, out var key))
                 {
-                    RefCount = TrackedKeys[ID];
+                    RefCount = key;
                 }
                 else
                 {
@@ -297,10 +290,9 @@ namespace Viking.Common
             {
                 rwKnownLocationsLock.EnterWriteLock();
 
-                if (!TrackedKeys.ContainsKey(ID))
+                if (!TrackedKeys.TryGetValue(ID, out int RefCount))
                     return false;
 
-                int RefCount = TrackedKeys[ID];
                 RefCount -= 1;
 
                 if (RefCount == 0)

@@ -10,13 +10,13 @@ namespace WebAnnotationTests
     [TestClass]
     public class PathAnnotationInteractionTests
     {
-        public static List<GridVector2> StraightIntegerXAxisPath(int minx, int maxx)
+        public static List<Vector2> StraightIntegerXAxisPath(int minx, int maxx)
         {
-            List<GridVector2> path_points = new List<GridVector2>();
+            List<Vector2> path_points = new List<Vector2>();
 
             for (int x = minx; x < maxx; x++)
             {
-                GridVector2 p = new GridVector2(x, 0);
+                Vector2 p = new Vector2(x, 0);
                 path_points.Add(p);
             }
 
@@ -40,20 +40,20 @@ namespace WebAnnotationTests
         [TestMethod]
         public void TestPathAcrossBox()
         {
-            GridPolygon poly = new GridPolygon(Primitives.BoxVerticies(5));
+            Polygon poly = new Polygon(Primitives.BoxVerticies(5));
 
             DummyAnnotation da = new DummyAnnotation(poly);
 
             DummyCanvas dc = new DummyCanvas();
             dc.Add(da);
 
-            List<GridVector2> path_points = StraightIntegerXAxisPath(-8, 8);
+            List<Vector2> path_points = StraightIntegerXAxisPath(-8, 8);
 
             Path path = new Path();
 
             PathInteractionLogger log = new PathInteractionLogger(path, dc);
 
-            foreach (GridVector2 p in path_points)
+            foreach (Vector2 p in path_points)
             {
                 path.Push(p);
             }
@@ -76,22 +76,22 @@ namespace WebAnnotationTests
         [TestMethod]
         public void TestPathAcrossHollowBox()
         {
-            GridPolygon poly = new GridPolygon(Primitives.BoxVerticies(5));
+            Polygon poly = new Polygon(Primitives.BoxVerticies(5));
 
-            GridPolygon hole = new GridPolygon(Primitives.BoxVerticies(2));
+            Polygon hole = new Polygon(Primitives.BoxVerticies(2));
             
-            DummyContainerAnnotation da = new DummyContainerAnnotation(poly, new GridPolygon[] { hole });
+            DummyContainerAnnotation da = new DummyContainerAnnotation(poly, new Polygon[] { hole });
 
             DummyCanvas dc = new DummyCanvas();
             dc.Add(da);
              
-            List<GridVector2> path_points = StraightIntegerXAxisPath(-8, 8);
+            List<Vector2> path_points = StraightIntegerXAxisPath(-8, 8);
 
             Path path = new Path();
 
             PathInteractionLogger log = new PathInteractionLogger(path, dc);
 
-            foreach (GridVector2 p in path_points)
+            foreach (Vector2 p in path_points)
             {
                 path.Push(p);
             }
@@ -118,22 +118,22 @@ namespace WebAnnotationTests
         [TestMethod]
         public void TestPathAcrossOffsetHollowBox()
         {
-            GridPolygon poly = new GridPolygon(Primitives.BoxVerticies(5.5));
+            Polygon poly = new Polygon(Primitives.BoxVerticies(5.5));
 
-            GridPolygon hole = new GridPolygon(Primitives.BoxVerticies(2.5));
+            Polygon hole = new Polygon(Primitives.BoxVerticies(2.5));
 
-            DummyContainerAnnotation da = new DummyContainerAnnotation(poly, new GridPolygon[] { hole });
+            DummyContainerAnnotation da = new DummyContainerAnnotation(poly, new Polygon[] { hole });
 
             DummyCanvas dc = new DummyCanvas();
             dc.Add(da);
 
-            List<GridVector2> path_points = StraightIntegerXAxisPath(-8, 8);
+            List<Vector2> path_points = StraightIntegerXAxisPath(-8, 8);
 
             Path path = new Path();
 
             PathInteractionLogger log = new PathInteractionLogger(path, dc);
 
-            foreach (GridVector2 p in path_points)
+            foreach (Vector2 p in path_points)
             {
                 path.Push(p);
             }

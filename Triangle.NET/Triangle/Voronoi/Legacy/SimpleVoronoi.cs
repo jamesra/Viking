@@ -18,9 +18,9 @@ namespace TriangleNet.Voronoi.Legacy
     [Obsolete("Use TriangleNet.Voronoi.StandardVoronoi class instead.")]
     public class SimpleVoronoi : IVoronoi
     {
-        IPredicates predicates = RobustPredicates.Default;
+        readonly IPredicates predicates = RobustPredicates.Default;
 
-        Mesh mesh;
+        readonly Mesh mesh;
 
         Point[] points;
         Dictionary<int, VoronoiRegion> regions;
@@ -49,23 +49,14 @@ namespace TriangleNet.Voronoi.Legacy
         /// <summary>
         /// Gets the list of Voronoi vertices.
         /// </summary>
-        public Point[] Points
-        {
-            get { return points; }
-        }
+        public Point[] Points => points;
 
         /// <summary>
         /// Gets the list of Voronoi regions.
         /// </summary>
-        public ICollection<VoronoiRegion> Regions
-        {
-            get { return regions.Values; }
-        }
+        public ICollection<VoronoiRegion> Regions => regions.Values;
 
-        public IEnumerable<IEdge> Edges
-        {
-            get { return EnumerateEdges(); }
-        }
+        public IEnumerable<IEdge> Edges => EnumerateEdges();
 
         /// <summary>
         /// Gets the Voronoi diagram as raw output data.
@@ -87,7 +78,7 @@ namespace TriangleNet.Voronoi.Legacy
             this.points = new Point[mesh.triangles.Count + mesh.hullsize];
             this.regions = new Dictionary<int, VoronoiRegion>(mesh.vertices.Count);
 
-            rayPoints = new Dictionary<int, Point>();
+            rayPoints = [];
             rayIndex = 0;
 
             bounds = new Rectangle();
@@ -140,9 +131,9 @@ namespace TriangleNet.Voronoi.Legacy
         /// <param name="region"></param>
         private void ConstructCell(VoronoiRegion region)
         {
-            var vertex = region.Generator as Vertex;
+            Vertex vertex = region.Generator as Vertex;
 
-            var vpoints = new List<Point>();
+            List<Point> vpoints = [];
 
             Otri f = default;
             Otri f_init = default;
@@ -194,7 +185,6 @@ namespace TriangleNet.Voronoi.Legacy
             region.Bounded = false;
 
             Vertex torg, tdest, tapex;
-            Point intersection;
             int sid, n = mesh.triangles.Count;
 
             // Find the boundary segment id (we use this id to number the endpoints of infinit rays).
@@ -207,7 +197,7 @@ namespace TriangleNet.Voronoi.Legacy
             region.AddNeighbor(f.tri.id, regions[f.Apex().id]);
 
             // Check if the intersection with the bounding box has already been computed.
-            if (!rayPoints.TryGetValue(sid, out intersection))
+            if (!rayPoints.TryGetValue(sid, out var intersection))
             {
                 torg = f.Org();
                 tapex = f.Apex();
@@ -332,14 +322,7 @@ namespace TriangleNet.Voronoi.Legacy
                 x2 = y2 = 0;
             }
 
-            if (t1 < t2)
-            {
-                intersect = new Point(x1, y1);
-            }
-            else
-            {
-                intersect = new Point(x2, y2);
-            }
+            intersect = t1 < t2 ? new Point(x1, y1) : new Point(x2, y2);
 
             return true;
         }
@@ -350,7 +333,7 @@ namespace TriangleNet.Voronoi.Legacy
         {
             // Copy edges
             Point first, last;
-            var edges = new List<IEdge>(this.Regions.Count * 2);
+            List<IEdge> edges = new(this.Regions.Count * 2);
             foreach (var region in this.Regions)
             {
                 first = null;
@@ -358,7 +341,7 @@ namespace TriangleNet.Voronoi.Legacy
 
                 foreach (var pt in region.Vertices)
                 {
-                    if (first == null)
+                    if (first is null)
                     {
                         first = pt;
                         last = pt;

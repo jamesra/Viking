@@ -3,7 +3,7 @@
 namespace AnnotationService.Interfaces
 {
     [ServiceContract]
-    interface ICredentials
+    public interface ICredentials
     {
         [OperationContract]
         bool CanRead();
@@ -13,5 +13,8 @@ namespace AnnotationService.Interfaces
 
         [OperationContract]
         bool CanAdmin();
+
+        [OperationContract]
+        string Roles();
     }
 }

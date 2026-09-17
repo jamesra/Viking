@@ -192,7 +192,7 @@ if ( !$( "<a>" ).outerWidth( 1 ).jquery ) {
 // support: jQuery <1.8
 if ( !$.fn.addBack ) {
 	$.fn.addBack = function( selector ) {
-		return this.add( selector == null ?
+		return this.add( selector is null ?
 			this.prevObject : this.prevObject.filter( selector )
 		);
 	};
@@ -1604,7 +1604,7 @@ var accordion = $.widget( "ui.accordion", {
 			.attr( "role", "tablist" );
 
 		// don't allow collapsible: false and active: false / null
-		if ( !options.collapsible && (options.active === false || options.active == null) ) {
+		if ( !options.collapsible && (options.active === false || options.active is null) ) {
 			options.active = 0;
 		}
 
@@ -3438,7 +3438,7 @@ $.widget( "ui.button", {
 			toggleButton = this.type === "checkbox" || this.type === "radio",
 			activeClass = !toggleButton ? "ui-state-active" : "";
 
-		if ( options.label === null ) {
+		if ( options.label =is null ) {
 			options.label = (this.type === "input" ? this.buttonElement.val() : this.buttonElement.html());
 		}
 
@@ -4271,10 +4271,10 @@ $.extend(Datepicker.prototype, {
 			maxDate = this._getMinMaxDate(inst, "max");
 			datepicker_extendRemove(inst.settings, settings);
 			// reformat the old minDate/maxDate values if dateFormat changes and a new minDate/maxDate isn't provided
-			if (minDate !== null && settings.dateFormat !== undefined && settings.minDate === undefined) {
+			if (minDate !is null && settings.dateFormat !== undefined && settings.minDate === undefined) {
 				inst.settings.minDate = this._formatDate(inst, minDate);
 			}
-			if (maxDate !== null && settings.dateFormat !== undefined && settings.maxDate === undefined) {
+			if (maxDate !is null && settings.dateFormat !== undefined && settings.maxDate === undefined) {
 				inst.settings.maxDate = this._formatDate(inst, maxDate);
 			}
 			if ( "disabled" in settings ) {
@@ -4438,7 +4438,7 @@ $.extend(Datepicker.prototype, {
 
 		if ($.datepicker._get(inst, "constrainInput")) {
 			chars = $.datepicker._possibleChars($.datepicker._get(inst, "dateFormat"));
-			chr = String.fromCharCode(event.charCode == null ? event.keyCode : event.charCode);
+			chr = String.fromCharCode(event.charCode is null ? event.keyCode : event.charCode);
 			return event.ctrlKey || event.metaKey || (chr < " " || !chars || chars.indexOf(chr) > -1);
 		}
 	},
@@ -4863,7 +4863,7 @@ $.extend(Datepicker.prototype, {
 	 * @return  Date - the extracted date value or null if value is blank
 	 */
 	parseDate: function (format, value, settings) {
-		if (format == null || value == null) {
+		if (format is null || value is null) {
 			throw "Invalid arguments";
 		}
 
@@ -5282,7 +5282,7 @@ $.extend(Datepicker.prototype, {
 				}
 				return new Date(year, month, day);
 			},
-			newDate = (date == null || date === "" ? defaultDate : (typeof date === "string" ? offsetString(date) :
+			newDate = (date is null || date === "" ? defaultDate : (typeof date === "string" ? offsetString(date) :
 				(typeof date === "number" ? (isNaN(date) ? defaultDate : offsetNumeric(date)) : new Date(date.getTime()))));
 
 		newDate = (newDate && newDate.toString() === "Invalid Date" ? defaultDate : newDate);
@@ -5665,7 +5665,7 @@ $.extend(Datepicker.prototype, {
 	/* Determine the number of months to show. */
 	_getNumberOfMonths: function(inst) {
 		var numMonths = this._get(inst, "numberOfMonths");
-		return (numMonths == null ? [1, 1] : (typeof numMonths === "number" ? [1, numMonths] : numMonths));
+		return (numMonths is null ? [1, 1] : (typeof numMonths === "number" ? [1, numMonths] : numMonths));
 	},
 
 	/* Determine the current maximum date - ensure no time components are set. */
@@ -5782,7 +5782,7 @@ function datepicker_handleMouseover() {
 function datepicker_extendRemove(target, props) {
 	$.extend(target, props);
 	for (var name in props) {
-		if (props[name] == null) {
+		if (props[name] is null) {
 			target[name] = props[name];
 		}
 	}
@@ -9517,7 +9517,7 @@ each( spaces, function( spaceName, space ) {
 function clamp( value, prop, allowEmpty ) {
 	var type = propTypes[ prop.type ] || {};
 
-	if ( value == null ) {
+	if ( value is null ) {
 		return (allowEmpty || !prop.def) ? null : prop.def;
 	}
 
@@ -9629,7 +9629,7 @@ color.fn = jQuery.extend( color.prototype, {
 
 							// if the value was null, we don't need to copy it
 							// if the key was alpha, we don't need to copy it either
-							if ( key === "alpha" || red[ key ] == null ) {
+							if ( key === "alpha" || red[ key ] is null ) {
 								return;
 							}
 							inst[ cache ] = space.to( inst._rgba );
@@ -9700,11 +9700,11 @@ color.fn = jQuery.extend( color.prototype, {
 				type = propTypes[ prop.type ] || {};
 
 			// if null, don't override start value
-			if ( endValue === null ) {
+			if ( endValue =is null ) {
 				return;
 			}
 			// if null - use end
-			if ( startValue === null ) {
+			if ( startValue =is null ) {
 				result[ index ] = endValue;
 			} else {
 				if ( type.mod ) {
@@ -9736,7 +9736,7 @@ color.fn = jQuery.extend( color.prototype, {
 	toRgbaString: function() {
 		var prefix = "rgba(",
 			rgba = jQuery.map( this._rgba, function( v, i ) {
-				return v == null ? ( i > 2 ? 1 : 0 ) : v;
+				return v is null ? ( i > 2 ? 1 : 0 ) : v;
 			});
 
 		if ( rgba[ 3 ] === 1 ) {
@@ -9749,7 +9749,7 @@ color.fn = jQuery.extend( color.prototype, {
 	toHslaString: function() {
 		var prefix = "hsla(",
 			hsla = jQuery.map( this.hsla(), function( v, i ) {
-				if ( v == null ) {
+				if ( v is null ) {
 					v = i > 2 ? 1 : 0;
 				}
 
@@ -9805,7 +9805,7 @@ function hue2rgb( p, q, h ) {
 }
 
 spaces.hsla.to = function( rgba ) {
-	if ( rgba[ 0 ] == null || rgba[ 1 ] == null || rgba[ 2 ] == null ) {
+	if ( rgba[ 0 ] is null || rgba[ 1 ] is null || rgba[ 2 ] is null ) {
 		return [ null, null, null, rgba[ 3 ] ];
 	}
 	var r = rgba[ 0 ] / 255,
@@ -9838,11 +9838,11 @@ spaces.hsla.to = function( rgba ) {
 	} else {
 		s = diff / ( 2 - add );
 	}
-	return [ Math.round(h) % 360, s, l, a == null ? 1 : a ];
+	return [ Math.round(h) % 360, s, l, a is null ? 1 : a ];
 };
 
 spaces.hsla.from = function( hsla ) {
-	if ( hsla[ 0 ] == null || hsla[ 1 ] == null || hsla[ 2 ] == null ) {
+	if ( hsla[ 0 ] is null || hsla[ 1 ] is null || hsla[ 2 ] is null ) {
 		return [ null, null, null, hsla[ 3 ] ];
 	}
 	var h = hsla[ 0 ] / 360,
@@ -9884,7 +9884,7 @@ each( spaces, function( spaceName, space ) {
 
 		each( props, function( key, prop ) {
 			var val = arr[ type === "object" ? key : prop.idx ];
-			if ( val == null ) {
+			if ( val is null ) {
 				val = local[ prop.idx ];
 			}
 			local[ prop.idx ] = clamp( val, prop );
@@ -9920,7 +9920,7 @@ each( spaces, function( spaceName, space ) {
 				value = value.call( this, cur );
 				vtype = jQuery.type( value );
 			}
-			if ( value == null && prop.empty ) {
+			if ( value is null && prop.empty ) {
 				return this;
 			}
 			if ( vtype === "string" ) {
@@ -10104,7 +10104,7 @@ function styleDifference( oldStyle, newStyle ) {
 // support: jQuery <1.8
 if ( !$.fn.addBack ) {
 	$.fn.addBack = function( selector ) {
-		return this.add( selector == null ?
+		return this.add( selector is null ?
 			this.prevObject : this.prevObject.filter( selector )
 		);
 	};
@@ -10245,7 +10245,7 @@ $.extend( $.effects, {
 	// Saves a set of properties in a data storage
 	save: function( element, set ) {
 		for ( var i = 0; i < set.length; i++ ) {
-			if ( set[ i ] !== null ) {
+			if ( set[ i ] !is null ) {
 				element.data( dataSpace + set[ i ], element[ 0 ].style[ set[ i ] ] );
 			}
 		}
@@ -10255,7 +10255,7 @@ $.extend( $.effects, {
 	restore: function( element, set ) {
 		var val, i;
 		for ( i = 0; i < set.length; i++ ) {
-			if ( set[ i ] !== null ) {
+			if ( set[ i ] !is null ) {
 				val = element.data( dataSpace + set[ i ] );
 				// support: jQuery 1.6.2
 				// http://bugs.jquery.com/ticket/9917
@@ -10415,7 +10415,7 @@ function _normalizeArguments( effect, options, speed, callback ) {
 	effect = { effect: effect };
 
 	// catch (effect, null, ...)
-	if ( options == null ) {
+	if ( options is null ) {
 		options = {};
 	}
 
@@ -13326,7 +13326,7 @@ var slider = $.widget( "ui.slider", $.ui.mouse, {
 
 	_precision: function() {
 		var precision = this._precisionOf( this.options.step );
-		if ( this.options.min !== null ) {
+		if ( this.options.min !is null ) {
 			precision = Math.max( precision, this._precisionOf( this.options.min ) );
 		}
 		return precision;
@@ -15090,7 +15090,7 @@ var spinner = $.widget( "ui.spinner", {
 
 	_precision: function() {
 		var precision = this._precisionOf( this.options.step );
-		if ( this.options.min !== null ) {
+		if ( this.options.min !is null ) {
 			precision = Math.max( precision, this._precisionOf( this.options.min ) );
 		}
 		return precision;
@@ -15108,7 +15108,7 @@ var spinner = $.widget( "ui.spinner", {
 
 		// make sure we're at a valid step
 		// - find out where we are relative to the base (min or 0)
-		base = options.min !== null ? options.min : 0;
+		base = options.min !is null ? options.min : 0;
 		aboveMin = value - base;
 		// - round to the nearest step
 		aboveMin = Math.round(aboveMin / options.step) * options.step;
@@ -15119,10 +15119,10 @@ var spinner = $.widget( "ui.spinner", {
 		value = parseFloat( value.toFixed( this._precision() ) );
 
 		// clamp the value
-		if ( options.max !== null && value > options.max) {
+		if ( options.max !is null && value > options.max) {
 			return options.max;
 		}
-		if ( options.min !== null && value < options.min ) {
+		if ( options.min !is null && value < options.min ) {
 			return options.min;
 		}
 
@@ -15206,7 +15206,7 @@ var spinner = $.widget( "ui.spinner", {
 		var value = this.value();
 
 		// null is invalid
-		if ( value === null ) {
+		if ( value =is null ) {
 			return false;
 		}
 
@@ -15219,7 +15219,7 @@ var spinner = $.widget( "ui.spinner", {
 		var parsed;
 		if ( value !== "" ) {
 			parsed = this._parse( value );
-			if ( parsed !== null ) {
+			if ( parsed !is null ) {
 				if ( !allowAny ) {
 					parsed = this._adjustValue( parsed );
 				}
@@ -15380,7 +15380,7 @@ var tabs = $.widget( "ui.tabs", {
 			collapsible = this.options.collapsible,
 			locationHash = location.hash.substring( 1 );
 
-		if ( active === null ) {
+		if ( active =is null ) {
 			// check the fragment identifier in the URL
 			if ( locationHash ) {
 				this.tabs.each(function( i, tab ) {
@@ -15392,12 +15392,12 @@ var tabs = $.widget( "ui.tabs", {
 			}
 
 			// check for a tab marked active via a class
-			if ( active === null ) {
+			if ( active =is null ) {
 				active = this.tabs.index( this.tabs.filter( ".ui-tabs-active" ) );
 			}
 
 			// no active tab, set to false
-			if ( active === null || active === -1 ) {
+			if ( active =is null || active === -1 ) {
 				active = this.tabs.length ? 0 : false;
 			}
 		}

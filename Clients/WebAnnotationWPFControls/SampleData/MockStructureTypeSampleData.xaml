@@ -16,7 +16,7 @@
 			<System:String>Morbi maecenas vestibulum</System:String>
 		</Markup:Array>
 	</MockData:MockStructureType.Tags>
-	<MockData:MockStructureType.color>
+	<MockData:MockStructureType.Color>
 		<System:UInt32/>
-	</MockData:MockStructureType.color>
+	</MockData:MockStructureType.Color>
 </MockData:MockStructureType>

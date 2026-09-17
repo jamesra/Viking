@@ -1,42 +1,47 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
+using System.Threading.Tasks;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Actions
 {
     /// <summary>
     /// Removes an interior polygon from the annotation
     /// </summary>
-    class RemoveHoleAction : IAction, IActionView, IEquatable<RemoveHoleAction>
+    internal class RemoveHoleAction : IAction, IActionView, IEquatable<RemoveHoleAction>
     {
         public readonly LocationObj Location;
-
-        IVolumeToSectionTransform Transform;
-
-        /// <summary>
-        /// The volume space polygon we want to add to the location
-        /// </summary>
-        public readonly GridPolygon UpdatedMosaicPolygon;
+        private readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon VolumePolygonToRemove;
+        public readonly Polygon UpdatedMosaicPolygon;
+
+        /// <summary>
+        /// The volume space polygon we want to add to the location
+        /// </summary>
+        public readonly Polygon VolumePolygonToRemove;
 
         public LocationAction Type => LocationAction.CUTHOLE;
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(RemoveHoleAction a) => a.Execute;
+        public static implicit operator Action(RemoveHoleAction a)
+        {
+            return a.Execute;
+        }
 
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
 
@@ -46,31 +51,29 @@ namespace WebAnnotation.UI.Actions
         /// <param name="location"></param>
         /// <param name="transform"></param>
         /// <param name="innerPoint">A point inside the interior hole in volume space</param>
-        public RemoveHoleAction(LocationObj location, int innerPoly, IVolumeToSectionTransform transform = null)
+        public RemoveHoleAction(LocationObj location, int innerPoly, IVolumeToSectionTransform? transform = null)
         {
-            this.Location = location;
-            this.Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Location = location;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
-            GridPolygon volumePoly = location.VolumeShape as GridPolygon;
+            Polygon volumePoly = location.VolumeShape.ToPolygon();
             VolumePolygonToRemove = volumePoly.InteriorPolygons[innerPoly];
 
-            UpdatedMosaicPolygon = location.MosaicShape as GridPolygon; ;
+            UpdatedMosaicPolygon = location.MosaicShape.ToPolygon();
             UpdatedMosaicPolygon.TryRemoveInteriorRing(innerPoly);
 
             CreateDefaultVisuals();
         }
 
-        void OnExecute()
+        private async void OnExecute()
         {
-            var original_mosaic_shape = Location.MosaicShape;
+            Microsoft.SqlServer.Types.SqlGeometry original_mosaic_shape = Location.MosaicShape.ToSqlGeometry();
 
             Location.SetShapeFromGeometryInSection(Transform, UpdatedMosaicPolygon.ToSqlGeometry());
 
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -81,7 +84,7 @@ namespace WebAnnotation.UI.Actions
 
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(VolumePolygonToRemove.Smooth(Global.NumClosedCurveInterpolationPoints),
+            SolidPolygonView view = new(VolumePolygonToRemove.Smooth(Global.NumClosedCurveInterpolationPoints),
                                                          Color.Magenta.SetAlpha(0.5f));
             Passive = view;
         }
@@ -89,24 +92,31 @@ namespace WebAnnotation.UI.Actions
         public bool Equals(IAction other)
         {
             if (ReferenceEquals(this, other))
+            {
                 return true;
+            }
 
-            if (this.Type != other.Type)
+            if (Type != other.Type)
+            {
                 return false;
+            }
 
-            RemoveHoleAction other_action = other as RemoveHoleAction;
-            if (other_action == null)
+            if (other is not RemoveHoleAction other_action)
+            {
                 return false;
+            }
 
-            return this.Equals(other_action);
+            return Equals(other_action);
         }
 
         public bool Equals(RemoveHoleAction other)
         {
-            if (other.Location.ID != this.Location.ID)
+            if (other.Location.ID != Location.ID)
+            {
                 return false;
+            }
 
-            return this.VolumePolygonToRemove.Equals(other.VolumePolygonToRemove);
+            return VolumePolygonToRemove.Equals(other.VolumePolygonToRemove);
         }
     }
 }

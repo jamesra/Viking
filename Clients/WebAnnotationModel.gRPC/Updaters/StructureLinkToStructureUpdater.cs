@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -37,24 +37,32 @@ namespace WebAnnotationModel.gRPC
             StructureLinkStore.CollectionChanged += OnStructureLinkCollectionChanged;
         }
 
-        private void OnStructureLinkCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnStructureLinkCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) =>
+            _ = ApplyCollectionChangeAsync(e);
+
+        /// <summary>
+        /// Applies link add/remove off the CollectionChanged thread. Add has null OldItems; Remove has null NewItems.
+        /// </summary>
+        private async Task ApplyCollectionChangeAsync(NotifyCollectionChangedEventArgs e)
         {
-            var Tasks = new List<Task>();
-            foreach (var sl in e.OldItems.Cast<StructureLinkObj>())
+            try
             {
-                Tasks.Add(RemoveLinkToStructures(sl.ID, CancellationToken.None));
+                if (e.OldItems != null)
+                {
+                    await Task.WhenAll(e.OldItems.Cast<StructureLinkObj>()
+                        .Select(sl => RemoveLinkToStructures(sl.ID, CancellationToken.None))).ConfigureAwait(false);
+                }
+
+                if (e.NewItems != null)
+                {
+                    await Task.WhenAll(e.NewItems.Cast<StructureLinkObj>()
+                        .Select(sl => AddLinkToStructures(sl, CancellationToken.None))).ConfigureAwait(false);
+                }
             }
-
-            Task.WaitAll(Tasks.ToArray());
-            Tasks.Clear();
-
-            foreach (var sl in e.NewItems.Cast<StructureLinkObj>())
+            catch (Exception ex)
             {
-                Tasks.Add(AddLinkToStructures(sl, CancellationToken.None));
+                Trace.WriteLine(ex);
             }
-
-            Task.WaitAll(Tasks.ToArray());
-            Tasks.Clear();
         }
 
         private async Task<bool> AddLinkToStructures(StructureLinkObj link, CancellationToken token)

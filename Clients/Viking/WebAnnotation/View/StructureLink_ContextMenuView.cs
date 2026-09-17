@@ -1,91 +1,81 @@
-﻿using System;
-using System.Windows.Forms;
+using System;
+using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes;
+using System.Windows.Forms;
 using Viking.Common;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
-
-    class StructureLink_CanvasContextMenuView : IContextMenu
+    internal class StructureLink_CanvasContextMenuView : IContextMenu
     {
         public StructureLinkKey linkKey;
         public StructureLinkObj modelObj;
 
 
-        public long SourceID
-        {
-            get
-            {
-                return modelObj.SourceID;
-            }
-        }
+        public long SourceID => modelObj.SourceID;
 
-        public long TargetID
-        {
-            get
-            {
-                return modelObj.TargetID;
-            }
-        }
+        public long TargetID => modelObj.TargetID;
 
-        public bool Bidirectional
-        {
-            get { return modelObj.Bidirectional; }
-        }
+        public bool Bidirectional => modelObj.Bidirectional;
 
         public StructureLink_CanvasContextMenuView(StructureLinkObj obj)
         {
-            this.modelObj = obj;
-            this.linkKey = obj.ID;
+            modelObj = obj;
+            linkKey = obj.ID;
         }
 
         public StructureLink_CanvasContextMenuView(StructureLinkKey link)
         {
-            this.linkKey = link;
-            this.modelObj = Store.StructureLinks[link];
+            linkKey = link;
+            modelObj = Store.StructureLinks[link];
         }
 
-        public static ContextMenu ContextMenuGenerator(IViewStructureLink link)
+        public static ContextMenuStrip ContextMenuGenerator(IViewStructureLink link)
         {
-            StructureLink_CanvasContextMenuView contextMenuView = new StructureLink_CanvasContextMenuView(link.Key);
+            StructureLink_CanvasContextMenuView contextMenuView = new(link.Key);
             return contextMenuView.ContextMenu;
         }
 
-        public System.Windows.Forms.ContextMenu ContextMenu
+        public System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                MenuItem menuFlip = new MenuItem("Flip Direction", ContextMenu_OnFlip);
-
-                MenuItem menuBidirectional = new MenuItem("Bidirectional", ContextMenu_OnBidirectional);
-                menuBidirectional.Checked = this.modelObj.Bidirectional;
-
-                MenuItem menuSeperator = new MenuItem();
-                MenuItem menuDelete = new MenuItem("Delete", ContextMenu_OnDelete);
+                ContextMenuStrip menu = new();
 
                 if (!modelObj.Bidirectional)
-                    menu.MenuItems.Add(menuFlip);
+                {
+                    ToolStripMenuItem menuFlip = new("Flip Direction");
+                    menuFlip.Click += ContextMenu_OnFlip;
+                    menu.Items.Add(menuFlip);
+                }
 
-                menu.MenuItems.Add(menuBidirectional);
-                menu.MenuItems.Add(menuSeperator);
-                menu.MenuItems.Add(menuDelete);
+                ToolStripMenuItem menuBidirectional = new("Bidirectional")
+                {
+                    Checked = modelObj.Bidirectional
+                };
+                menuBidirectional.Click += ContextMenu_OnBidirectional;
+                menu.Items.Add(menuBidirectional);
+
+                menu.Items.Add(new ToolStripSeparator());
+                ToolStripMenuItem menuDelete = new("Delete");
+                menuDelete.Click += ContextMenu_OnDelete;
+                menu.Items.Add(menuDelete);
 
                 return menu;
             }
         }
 
-        protected void ContextMenu_OnFlip(object sender, EventArgs e)
+        protected async void ContextMenu_OnFlip(object sender, EventArgs e)
         {
-            Store.StructureLinks.Remove(this.modelObj);
+            await Store.StructureLinks.Remove(modelObj);
             try
             {
-                Store.StructureLinks.Save();
+                await Store.StructureLinks.Save();
 
-                StructureLinkObj newLink = new StructureLinkObj(this.TargetID, this.SourceID, this.Bidirectional);
-                Store.StructureLinks.Create(newLink);
+                StructureLinkObj newLink = new(TargetID, SourceID, Bidirectional);
+                await Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
             }
@@ -95,15 +85,15 @@ namespace WebAnnotation.View
             }
         }
 
-        protected void ContextMenu_OnBidirectional(object sender, EventArgs e)
+        protected async void ContextMenu_OnBidirectional(object sender, EventArgs e)
         {
-            Store.StructureLinks.Remove(this.modelObj);
+            await Store.StructureLinks.Remove(modelObj);
             try
             {
-                Store.StructureLinks.Save();
+                await Store.StructureLinks.Save();
 
-                StructureLinkObj newLink = new StructureLinkObj(this.SourceID, this.TargetID, !this.Bidirectional);
-                Store.StructureLinks.Create(newLink);
+                StructureLinkObj newLink = new(SourceID, TargetID, !Bidirectional);
+                await Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
             }
@@ -113,15 +103,14 @@ namespace WebAnnotation.View
             }
         }
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 
-        public void Delete()
+        public void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            Store.StructureLinks.Remove(this.modelObj);
-            Store.StructureLinks.Save();
+            await Store.StructureLinks.Remove(modelObj);
+            await Store.StructureLinks.Save();
         }
     }
 }

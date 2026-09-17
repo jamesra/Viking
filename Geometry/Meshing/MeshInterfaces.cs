@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
@@ -6,7 +6,21 @@ namespace Geometry.Meshing
 {
     public interface IVertex : IComparable<IVertex>, IEquatable<IVertex>
     {
-        int Index { get; set; }
+        /// <summary>
+        /// Index of the vertex in a mesh.  Throws InvalidOperationException if not set.
+        /// </summary>
+        int Index { get; }
+
+        /// <summary>
+        /// Sets the vertex index.  Can only be set once.  If a different index is desired use CreateShallowCopy(int).
+        /// </summary>
+        /// <param name="index"></param>
+        void SetIndex(int index);
+
+        /// <summary>
+        /// True if an index has been set for this vertex
+        /// </summary>
+        bool HasIndex { get; }
 
         ImmutableSortedSet<IEdgeKey> Edges { get; }
 
@@ -19,16 +33,23 @@ namespace Geometry.Meshing
         /// </summary>
         /// <returns></returns>
         IVertex ShallowCopy();
+
+        /// <summary>
+        /// Returns a duplicate of the vertex with a new index value assigned
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        IVertex ShallowCopy(int index);
     }
 
     public interface IVertex2D : IVertex, IComparable<IVertex2D>, IEquatable<IVertex2D>
     {
-        GridVector2 Position { get; }
+        Vector2 Position { get; }
     }
 
     public interface INormal
     {
-        GridVector3 Normal { get; }
+        Vector3 Normal { get; }
     }
 
     public interface IVertex2D<out T> : IVertex2D
@@ -39,8 +60,8 @@ namespace Geometry.Meshing
 
     public interface IVertex3D : IVertex, INormal, IComparable<IVertex3D>, IEquatable<IVertex3D>
     {
-        GridVector3 Position { get; set; }
-        new GridVector3 Normal { get; set; }
+        Vector3 Position { get; set; }
+        new Vector3 Normal { get; set; }
     }
 
     public interface IVertex3D<out T> : IVertex3D
@@ -48,25 +69,14 @@ namespace Geometry.Meshing
         T Data { get; }
     }
 
-    public struct EdgeAngle
+    public struct EdgeAngle(long origin, long target, double angle, bool clockwise)
     {
-        public long Origin;
-        public long Target;
-        public double Angle;
-        public bool IsClockwise;
+        public long Origin = origin;
+        public long Target = target;
+        public double Angle = angle;
+        public bool IsClockwise = clockwise;
 
-        public EdgeAngle(long origin, long target, double angle, bool clockwise)
-        {
-            Origin = origin;
-            Target = target;
-            Angle = angle;
-            IsClockwise = clockwise;
-        }
-
-        public override string ToString()
-        {
-            return string.Format("{0}->{1} a: {2} cw: {3}", Origin, Target, Angle, IsClockwise);
-        }
+        public override readonly string ToString() => string.Format("{0}->{1} a: {2} cw: {3}", Origin, Target, Angle, IsClockwise);
     }
 
     /// <summary>
@@ -81,7 +91,7 @@ namespace Geometry.Meshing
         /// <param name="mesh">Mesh containing the indexed verticies</param>
         /// <param name="origin_edge">Edge connected vertex indicating the origin line.  Throws an argument exception if the edge doesn't exist.</param>
         /// <param name="clockwise">True if edges should be returned in clockwise order.  Default is counter-clockwise.</param>
-        /// <returns>Indicies of partner verticies in sorted order.</returns>
+        /// <returns>Indices of partner verticies in sorted order.</returns>
         IEnumerable<long> EdgesByAngle(IComparer<IEdgeKey> comparer, long origin_edge, bool clockwise);
     }
 

@@ -1,15 +1,20 @@
-﻿using Geometry;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.UI.Controls;
 using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -18,81 +23,66 @@ namespace WebAnnotation.UI.Commands
     /// The command may exit with no action, draw an open curve, or draw a closed curved polygon.  Once the geometry is placed the 
     /// user can complete the annotation
     /// </summary>
-    class AnnotationPenFreeDrawCommand : PlaceGeometryWithPenCommandBase
+    internal class AnnotationPenFreeDrawCommand : PlaceGeometryWithPenCommandBase
     {
         /// <summary>
         /// Prevent the user from making absurdly small annotations by accident
         /// </summary>
-        private double MinAreaForClosedShape
-        {
-            get
-            {
-                return Parent.Downsample * 10 * 10;
-            }
-        }
+        private double MinAreaForClosedShape => Parent.Downsample * 10 * 10;
 
-        private double MinLengthForOpenShape
-        {
-            get
-            {
-                return Parent.Downsample * 10;
-            }
-        }
+        private double MinLengthForOpenShape => Parent.Downsample * 10;
 
-        readonly LocationCanvasView Annotation;
+        private readonly LocationCanvasView Annotation;
 
         public AnnotationPenFreeDrawCommand(SectionViewerControl parent, LocationCanvasView annotation, Color color, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, LineWidth, success_callback)
         {
             Annotation = annotation;
         }
 
-        public AnnotationPenFreeDrawCommand(SectionViewerControl parent, LocationCanvasView annotation, Color color, GridVector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
+        public AnnotationPenFreeDrawCommand(SectionViewerControl parent, LocationCanvasView annotation, Color color, Geometry.Vector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
         {
             Annotation = annotation;
         }
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
 
-        protected override bool CanCommandComplete()
-        {
-            return true;
-        }
+        protected override bool CanCommandComplete() => true;
 
-        protected override void OnPathLoop(object sender, bool HasLoop)
+        protected override async void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
             {
-                GridPolygon newVolumePoly = new GridPolygon(this.PenInput.SimplifiedFirstLoop);
-                if (newVolumePoly.Area < this.MinAreaForClosedShape)
+                Polygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
+                if (newVolumePoly.Area < MinAreaForClosedShape)
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
 
                 //We created a loop, here are our steps:
                 //1. If our loop is entirely contained within a polygon, cut a hole.
 
-                if (TryCutHole(newVolumePoly))
+                if (await TryCutHole(newVolumePoly))
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
 
                 //OK, we drew a loop... yay?  I can't think of a command that is applicable, so exit.
-                this.Execute();
+                Execute();
             }
         }
 
 
-        private bool TryCutHole(GridPolygon newVolumePoly)
+        private async Task<bool> TryCutHole(Polygon newVolumePoly)
         {
-            if (!this.PenInput.HasSelfIntersection)
+            if (!PenInput.HasSelfIntersection)
             {
                 throw new ArgumentException("Cannot possibly cut a hole if our path is not a loop.");
             }
             /*
-            List<LocationPolygonView> intersectedPolys = IntersectedPolygonsOnSection(Parent.Section.Number, newVolumePoly).Where(ip => ip.VolumeShapeAsRendered.ToPolygon().Contains(newVolumePoly)).ToList();
+            List<LocationPolygonView> intersectedPolys = IntersectedPolygonsOnSection(Parent.Section.Number, newVolumePoly).Where(ip => ip.VolumeShapeAsRendered.ToPolygon().Covers(newVolumePoly)).ToList();
             if (!intersectedPolys.Any())
             {
                 return false;
@@ -106,72 +96,73 @@ namespace WebAnnotation.UI.Commands
                 return false;
             }
 
-            LocationObj obj = Store.Locations.GetObjectByID(Annotation.ID, false);
+            if (!Store.Locations.TryGetObjectByID(Annotation.ID, out LocationObj obj) || obj == null)
+                return false;
 
-            GridPolygon mosaic_shape = obj.MosaicShape.ToPolygon();
-            GridPolygon new_mosiac_hole = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(newVolumePoly);
+            Polygon mosaic_shape = obj.MosaicShape.ToPolygon();
+            Polygon new_mosiac_hole = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(newVolumePoly);
             mosaic_shape.AddInteriorRing(new_mosiac_hole);
 
-            GridPolygon volume_shape = obj.VolumeShape.ToPolygon();
-            GridPolygon new_volume_hole = newVolumePoly.Smooth(this.NumCurveInterpolations);
+            Polygon volume_shape = obj.VolumeShape.ToPolygon();
+            Polygon new_volume_hole = newVolumePoly.Smooth(NumCurveInterpolations);
             volume_shape.AddInteriorRing(new_volume_hole);
 
-            obj.MosaicShape = mosaic_shape.ToSqlGeometry();
-            obj.VolumeShape = volume_shape.ToSqlGeometry();
+            obj.MosaicShape = mosaic_shape.ToSqlGeometry().ToShape2D();
+            obj.VolumeShape = volume_shape.ToSqlGeometry().ToShape2D();
 
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 mosaic_shape.RemoveInteriorRing(mosaic_shape.InteriorPolygons.Count);
                 volume_shape.RemoveInteriorRing(volume_shape.InteriorPolygons.Count);
-                obj.MosaicShape = mosaic_shape.ToSqlGeometry();
-                obj.VolumeShape = volume_shape.ToSqlGeometry();
+                obj.MosaicShape = mosaic_shape.ToSqlGeometry().ToShape2D();
+                obj.VolumeShape = volume_shape.ToSqlGeometry().ToShape2D();
             }
             return true;
         }
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Geometry.Vector2[] Path)
         {
             //If we draw from one annotation to another we either create a location link (different sections) or a structure link (same sections).
             //If not we create a new open curve annotation.
 
-            GridVector2 Start = Path.Last();
-            GridVector2 Finish = Path.First();
+            Geometry.Vector2 Start = Path.Last();
+            Geometry.Vector2 Finish = Path.First();
 
             List<HitTestResult> listFinishHitTestResults = AnnotationOverlay.GetAnnotations(Parent.Section.Number, Finish);
 
-            LocationObj loc = Store.Locations.GetObjectByID(Annotation.ID, false);
-            IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc, out var _);
+            if (!Store.Locations.TryGetObjectByID(Annotation.ID, out LocationObj loc) || loc == null)
+            {
+                Deactivated = true;
+                return;
+            }
+            IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc, out Rectangle _);
             if (locationLinkCandidate != null)
             {
-                LinkAnnotationsCommand.TryCreateLink(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
-                this.Execute();
+                _ = LinkAnnotationsCommand.TryCreateLink(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
+                Execute();
                 return;
             }
             else
             {
-                this.Deactivated = true;
+                Deactivated = true;
             }
         }
 
-        protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            base.OnPenPathChanged(sender, e);
-
-            /*
+        protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e) => base.OnPenPathChanged(sender, e);/*
             //This path is used to detect when the user starts inside an annotation, but leaves and re-enters the annotation to fire a retrace and replace command.
             //In the future we should probably fire OnLeavingAnnotation events to simplify detecting this case
             if (this.PenInput.Points.Count <= 1)
                 return;
 
-            GridLineSegment move_line = this.PenInput.NewestSegent;
+            LineSegment move_line = this.PenInput.NewestSegent;
             ICanvasGeometryView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line, out double distance);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
-            System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject == null ? "NULL" : IntersectedObject.ToString()));
+            System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject is null ? "NULL" : IntersectedObject.ToString()));
 
             //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command... 
             if (IntersectedObject != null)
@@ -181,8 +172,9 @@ namespace WebAnnotation.UI.Commands
                 {
 
                     //intersectedPolyView.
-                    LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
-                    GridVector2 intersection_point;
+                    if (!Store.Locations.TryGetObjectByID(intersectedPolyView.ID, out LocationObj Loc) || Loc == null)
+                        return;
+                    Geometry.Vector2 intersection_point;
 #if DEBUG
                     bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);
                     System.Diagnostics.Debug.Assert(Intersection_found, "Expected to find an intersection with the object boundary.");
@@ -204,7 +196,7 @@ namespace WebAnnotation.UI.Commands
                             System.Windows.Forms.MessageBox.Show(Parent, r.Message, "Could not save Polygon", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                         }
 
-                        Store.Locations.Save();
+                        _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                     }
                     );
 
@@ -215,19 +207,15 @@ namespace WebAnnotation.UI.Commands
                     Parent.CurrentCommand = retraceCmd;
                 }
             }*/
-        }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
             //TODO: Check if we need to start a retrace and replace command
 
             return;
         }
 
-        protected override bool ShapeIsValid()
-        {
-            return true;
-        }
+        protected override bool ShapeIsValid() => true;
 
 
         /// <summary>
@@ -235,23 +223,23 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public static List<LocationPolygonView> IntersectedPolygonsOnSection(int CurrentSectionNumber, GridPolygon bounds)
+        public static List<LocationPolygonView> IntersectedPolygonsOnSection(int CurrentSectionNumber, Polygon bounds)
         {
             SectionAnnotationsView locView = AnnotationOverlay.GetAnnotationsForSection(CurrentSectionNumber);
-            if (locView == null)
-                return null;
-
-            ICanvasGeometryView bestObj = null;
-
-            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
-
-            var listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
-
-            return listPolygons.Where(o =>
+            if (locView is null)
             {
-                GridPolygon poly = o.VolumeShapeAsRendered.ToPolygon();
-                return poly.Intersects(bounds) || poly.Contains(bounds);
-            }).ToList();
+                return null;
+            }
+
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
+
+            IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
+
+            return [.. listPolygons.Where(o =>
+            {
+                Polygon poly = o.VolumeShapeAsRendered.ToPolygon();
+                return poly.Intersects(bounds) || poly.Covers(bounds);
+            })];
         }
     }
 }

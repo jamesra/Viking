@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Web.Script.Serialization;
+using System.Text.Json;
 
 namespace AnnotationVizLib
 {
@@ -9,23 +9,30 @@ namespace AnnotationVizLib
     class JSONStructureMorphology
     {
         public ulong StructureID;
-        public List<object> Nodes = new List<object>();
-        public List<object> Edges = new List<object>();
-        public List<JSONStructureMorphology> Children = new List<JSONStructureMorphology>();
+        public List<object> Nodes = [];
+        public List<object> Edges = [];
+        public List<JSONStructureMorphology> Children = [];
     }
 
     public class MorphologyJSONView
     {
-        List<JSONStructureMorphology> StructureMorphologies = new List<JSONStructureMorphology>();
+        readonly List<JSONStructureMorphology> StructureMorphologies = [];
+
+        static readonly JsonSerializerOptions jsonOptions = new()
+        {
+            WriteIndented = true,
+            MaxDepth = 64
+        };
+
 
         static MorphologyJSONView()
         {
 
         }
 
-        static public MorphologyJSONView ToJSON(MorphologyGraph graph)
+        public static MorphologyJSONView ToJSON(MorphologyGraph graph)
         {
-            MorphologyJSONView JSONView = new MorphologyJSONView();
+            MorphologyJSONView JSONView = new();
 
             foreach (MorphologyGraph g in graph.Subgraphs.Values)
             {
@@ -34,16 +41,18 @@ namespace AnnotationVizLib
 
             return JSONView;
         }
-        static private JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
+        private static JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
         {
-            JSONStructureMorphology JSONView = new JSONStructureMorphology();
-            JSONView.StructureID = graph.StructureID;
+            JSONStructureMorphology JSONView = new()
+            {
+                StructureID = graph.StructureID
+            };
             foreach (MorphologyNode node in graph.Nodes.Values)
             {
                 JSONView.Nodes.Add(new
                 {
                     ID = node.Key,
-                    Shape = node.Location.VolumeGeometryWKT
+                    Shape = node.Location.Geometry().STAsText().ToString()
                 });
             }
 
@@ -67,32 +76,19 @@ namespace AnnotationVizLib
             return JSONView;
         }
 
-        public override string ToString()
-        {
-            StringBuilder sb = new StringBuilder();
-
-            using (StringWriter fs = new StringWriter(sb))
-            {
-                JavaScriptSerializer oSerializer = new JavaScriptSerializer();
-                oSerializer.MaxJsonLength = 268435456;
-                fs.Write(oSerializer.Serialize(new { Morphology = this.StructureMorphologies }));
-                fs.Close();
-            }
-
-            return sb.ToString();
-        }
+        public override string ToString() =>
+            // Serialize the object to JSON
+            JsonSerializer.Serialize(new { Morphology = this.StructureMorphologies }, jsonOptions);
 
         public void SaveJSON(string JSONFileFullPath)
         {
-            using (FileStream fl = new FileStream(JSONFileFullPath, FileMode.Create, FileAccess.Write))
+            using FileStream fl = new(JSONFileFullPath, FileMode.Create, FileAccess.Write);
+            using (StreamWriter write = new(fl))
             {
-                using (StreamWriter write = new StreamWriter(fl))
-                {
-                    write.Write(this.ToString());
-                    write.Close();
-                }
-                fl.Close();
+                write.Write(this.ToString());
+                write.Close();
             }
+            fl.Close();
         }
     }
 }

@@ -26,14 +26,8 @@ namespace GeometryTests
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
+            get => testContextInstance;
+            set => testContextInstance = value;
         }
 
         #region Additional test attributes
@@ -85,12 +79,11 @@ namespace GeometryTests
                                                                                                MappedTriangulation,
                                                                                                new StosTransformInfo(37, 34,
                                                                                                DateTime.UtcNow));
-            using (System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile))
-            {
-                ((Geometry.IITKSerialization)SliceToVolumeTriangulation).WriteITKTransform(fs);
+            using System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile);
+            string itk = ((Geometry.IITKSerialization)SliceToVolumeTriangulation).GetITKTransform();
+            fs.Write(itk);
 
-                fs.Flush();
-            }
+            fs.Flush();
         }
     }
 }

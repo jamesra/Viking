@@ -1,9 +1,11 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Text;
 using System.Collections.Generic;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNA
 {
@@ -14,7 +16,7 @@ namespace VikingXNA
             VertexPositionColor[] ctrlVerticies = new VertexPositionColor[transform.MapPoints.Length];
             VertexPositionColor[] mapVerticies = new VertexPositionColor[transform.MapPoints.Length];
 
-            List<int> listIndicies = new List<int>(transform.Edges.Length / 2);
+            List<int> listIndicies = new(transform.Edges.Length / 2);
             for (int iStartPoint = 0; iStartPoint < transform.Edges.Length; iStartPoint++)
             {
                 List<int> edgeList = transform.Edges[iStartPoint];
@@ -25,21 +27,21 @@ namespace VikingXNA
                     if (iEndPoint < iStartPoint)
                         continue;
 
-                    listIndicies.AddRange(new int[] { iStartPoint, iEndPoint });
+                    listIndicies.AddRange([iStartPoint, iEndPoint]);
                 }
             }
 
-            int[] indicies = listIndicies.ToArray();
+            int[] indicies = [.. listIndicies];
 
             for (int i = 0; i < transform.MapPoints.Length; i++)
             {
-                GridVector2 CtrlP = transform.MapPoints[i].ControlPoint;
-                GridVector2 MapP = transform.MapPoints[i].MappedPoint;
-                Vector3 ctrlPosition = new Vector3((Single)CtrlP.X, (Single)CtrlP.Y, 1);
-                Vector3 mapPosition = new Vector3((Single)MapP.X, (Single)MapP.Y, 1);
+                Geometry.Vector2 CtrlP = transform.MapPoints[i].ControlPoint;
+                Geometry.Vector2 MapP = transform.MapPoints[i].MappedPoint;
+                Vector3 ctrlPosition = new((Single)CtrlP.X, (Single)CtrlP.Y, 1);
+                Vector3 mapPosition = new((Single)MapP.X, (Single)MapP.Y, 1);
 
                 ctrlVerticies[i] = new VertexPositionColor(ctrlPosition, Microsoft.Xna.Framework.Color.Gold);
-                mapVerticies[i] = new VertexPositionColor(mapPosition, Microsoft.Xna.Framework.Color.Red);  
+                mapVerticies[i] = new VertexPositionColor(mapPosition, Microsoft.Xna.Framework.Color.Red);
             }
 
             //PORT XNA 4 
@@ -48,7 +50,7 @@ namespace VikingXNA
 
             VertexDeclaration oldVertexDeclaration = graphicsDevice.VertexDeclaration;
 
-            if (DrawExtensions.VertexPositionColorDeclaration == null)
+            if (DrawExtensions.VertexPositionColorDeclaration is null)
             {
                 DrawExtensions.VertexPositionColorDeclaration = new VertexDeclaration(
                     graphicsDevice,
@@ -58,7 +60,7 @@ namespace VikingXNA
 
             graphicsDevice.VertexDeclaration = DrawExtensions.VertexPositionColorDeclaration;
             */
-            basicEffect.Texture = null; 
+            basicEffect.Texture = null;
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = true;
 
@@ -72,10 +74,10 @@ namespace VikingXNA
             {
                 //PORT XNA 4
                 //pass.Begin();
-                pass.Apply(); 
+                pass.Apply();
 
-        //        graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, mapVerticies, 0, mapVerticies.Length, indicies, 0, indicies.Length / 2); 
-                if(ctrlVerticies != null && ctrlVerticies.Length > 0)
+                //        graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, mapVerticies, 0, mapVerticies.Length, indicies, 0, indicies.Length / 2); 
+                if (ctrlVerticies != null && ctrlVerticies.Length > 0)
                     graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, ctrlVerticies, 0, ctrlVerticies.Length, indicies, 0, indicies.Length / 2);
 
                 //PORT XNA 4
@@ -85,7 +87,7 @@ namespace VikingXNA
             //PORT XNA 4
             //basicEffect.End();
 
-//            graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
+            //            graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
         }
     }
 }

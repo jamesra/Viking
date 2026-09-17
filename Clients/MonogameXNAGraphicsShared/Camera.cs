@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace VikingXNA
 {
     public class Camera : INotifyPropertyChanged
     {
-        private Vector3 _LookAt = new Vector3(0, 0, 0);
+        private Vector3 _LookAt = new(0, 0, 0);
 
         private float _Pan = MathHelper.ToRadians(0f);
         private float _Tilt = MathHelper.ToRadians(0f);
@@ -23,7 +23,7 @@ namespace VikingXNA
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
         private Matrix _View;
-        public Matrix View { get { return _View; } }
+        public Matrix View => _View;
 
         public Camera()
         {
@@ -35,25 +35,25 @@ namespace VikingXNA
             Vector3 CameraPos = Vector3.Backward;
             Vector3 transformedPos = CameraPos;
 
-            transformedPos = transformedPos + _LookAt;
+            transformedPos += _LookAt;
 
             _View = Matrix.CreateLookAt(transformedPos, _LookAt, Vector3.UnitY);
         }
 
-        
+
         public float Pan
         {
-            get { return MathHelper.ToDegrees(_Pan); }
+            get => MathHelper.ToDegrees(_Pan);
             set
             {
                 _Pan = MathHelper.ToRadians(value);
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Pan"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Pan)));
             }
         }
 
         public float Tilt
         {
-            get { return MathHelper.ToDegrees(_Tilt); }
+            get => MathHelper.ToDegrees(_Tilt);
             set
             {
                 if (value >= 90)
@@ -63,31 +63,25 @@ namespace VikingXNA
 
                 _Tilt = MathHelper.ToRadians(value);
 
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Tilt"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Tilt)));
 
             }
         }
 
         public Vector2 LookAt
         {
-            get
-            {
-                return new Vector2(_LookAt.X, _LookAt.Y);
-            }
+            get => new(_LookAt.X, _LookAt.Y);
             set
             {
-                _LookAt = new Vector3(value, Vector3.Backward.Z); 
+                _LookAt = new Vector3(value, Vector3.Backward.Z);
                 UpdateViewMatrix();
-                CallOnPropertyChanged(new PropertyChangedEventArgs("LookAt"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(LookAt)));
             }
         }
 
         public float Rotation
         {
-            get
-            {
-                return MathHelper.ToDegrees(_Rotation);
-            }
+            get => MathHelper.ToDegrees(_Rotation);
             set
             {
                 if (float.IsNaN(value))
@@ -99,11 +93,11 @@ namespace VikingXNA
                     val = 0.0f;
 
                 _Rotation = val;
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Rotation"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Rotation)));
             }
         }
 
-       
+
         public virtual double Downsample
         {
             set
@@ -117,23 +111,14 @@ namespace VikingXNA
                 if (_Downsample != value)
                 {
                     _Downsample = value;
-                    CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
+                    CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Downsample)));
                 }
             }
-            get
-            {
-                return _Downsample;
-            }
+            get => _Downsample;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public void CallOnPropertyChanged(PropertyChangedEventArgs e)
-        {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, e);
-            }
-        }
+        public void CallOnPropertyChanged(PropertyChangedEventArgs e) => PropertyChanged?.Invoke(this, e);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Annotation.ViewModels;
 using System;
 using System.Diagnostics;
@@ -15,18 +15,18 @@ namespace WebAnnotation.WPF.Forms
     /// Interaction logic for StructureTypeManagementForm.xaml
     /// </summary>
     public partial class StructureTypeManagementForm : Window
-    {  
+    {
         public StructureTypeManagementForm()
         {
             InitializeComponent();
             /*
-            ListPermittedBidirectional.Items.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            ListPermittedInputs.Items.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            ListPermittedOutputs.Items.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
+            ListPermittedBidirectional.Items.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            ListPermittedInputs.Items.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            ListPermittedOutputs.Items.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
             */
-            this.Loaded += this.OnLoaded; 
+            this.Loaded += this.OnLoaded;
 
-            System.Diagnostics.Debug.Assert(ListPermittedBidirectional.Items.CanFilter, "Collection view does not support required filtering"); 
+            System.Diagnostics.Debug.Assert(ListPermittedBidirectional.Items.CanFilter, "Collection view does not support required filtering");
         }
 
         public void OnLoaded(object sender, EventArgs e)
@@ -36,45 +36,39 @@ namespace WebAnnotation.WPF.Forms
             CollectionView PermittedTargetTypesCollection = CollectionViewSource.GetDefaultView(ListPermittedOutputs.ItemsSource) as CollectionView;
             CollectionView PermittedBidirectionalTypesCollection = CollectionViewSource.GetDefaultView(ListPermittedBidirectional.ItemsSource) as CollectionView;
 
-            PermittedSourceTypesCollection.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            PermittedTargetTypesCollection.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            PermittedBidirectionalTypesCollection.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
+            PermittedSourceTypesCollection.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            PermittedTargetTypesCollection.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            PermittedBidirectionalTypesCollection.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
             */
         }
-          
 
-        private void StructureTypesTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            Trace.WriteLine(string.Format("Selected TreeViewItem {1} -> {0}", e.NewValue, e.OldValue));
-        }
-        
+
+        private void StructureTypesTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => Trace.WriteLine(string.Format("Selected TreeViewItem {1} -> {0}", e.NewValue, e.OldValue));
+
         private void StructureTypeTreeItem_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 FrameworkElement element = sender as FrameworkElement;
-                DataObject data = new DataObject(element.DataContext);
+                DataObject data = new(element.DataContext);
                 data.SetData(typeof(IStructureTypeReadOnly), element.DataContext);
                 DragDrop.DoDragDrop(element, data, DragDropEffects.Link);
                 e.Handled = true;
             }
         }
-        
-        private void StructureTypeTreeItem_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            e.Handled = e.ChangedButton == MouseButton.Left;
-        }
+
+        private void StructureTypeTreeItem_MouseDown(object sender, MouseButtonEventArgs e) => e.Handled = e.ChangedButton == MouseButton.Left;
 
         private void StructureTypeTreeItem_MouseUp(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left && e.OriginalSource is Visual source)
             {
-                var control = (ContentControl)sender;
+                ContentControl control = (ContentControl)sender;
                 DependencyObject parent = control;
-                while(!(parent is TreeViewItem))
+                while (parent is not TreeViewItem)
                 {
                     parent = VisualTreeHelper.GetParent(parent);
-                    if (parent == null)
+                    if (parent is null)
                         return;
                 }
 
@@ -83,7 +77,7 @@ namespace WebAnnotation.WPF.Forms
                     TreeViewItem item = parent as TreeViewItem;
                     item.IsSelected = true;
                 }
-                catch(Exception exp)
+                catch (Exception exp)
                 {
                     Trace.WriteLine($"{exp}");
                 }
@@ -91,18 +85,17 @@ namespace WebAnnotation.WPF.Forms
         }
 
         private void OnChooseColor(object sender, RoutedEventArgs e)
-        { 
-            
-        } 
+        {
+
+        }
 
         private void On_Drop_ParentStructure(object sender, DragEventArgs e)
         {
             if (e.Data.GetData(typeof(StructureTypeObj)) is StructureTypeObj newParent)
             {
-                if(this.StructureTypeDetailsTabControl.DataContext is StructureTypeObjViewModel model)
+                if (this.StructureTypeDetailsTabControl.DataContext is StructureTypeObjViewModel model)
                 {
-                    if (model.AssignParentCommand != null)
-                        model.AssignParentCommand.Execute(newParent);
+                    model.AssignParentCommand?.Execute(newParent);
                 }
             }
         }

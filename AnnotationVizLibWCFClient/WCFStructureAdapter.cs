@@ -5,39 +5,22 @@ using System.Linq;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureAdapter : IStructureReadOnly
+    class WCFStructureAdapter(Structure s) : IStructureReadOnly
     {
-        private Structure structure;
+        private readonly Structure structure = s;
 
-        public WCFStructureAdapter(Structure s)
-        {
-            this.structure = s;
-        }
+        public ulong ID => (ulong)structure.ID;
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)structure.ID;
-            }
-        }
+        public string Label => structure.Label;
 
-        public string Label
+        public ICollection<IStructureLink> Links
         {
             get
             {
-                return structure.Label;
-            }
-        }
+                if (structure.Links is null)
+                    return [];
 
-        public ICollection<IStructureLinkReadOnly> Links
-        {
-            get
-            {
-                if (structure.Links == null)
-                    return new IStructureLinkReadOnly[0];
-
-                return structure.Links.Select(l => new WCFStructureLinkAdapter(l)).ToArray();
+                return [.. structure.Links.Select(l => new WCFStructureLinkAdapter(l))];
             }
         }
 
@@ -52,33 +35,15 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public string TagsXML
-        {
-            get
-            {
-                return structure.AttributesXml;
-            }
-        }
+        public string TagsXML => structure.AttributesXml;
 
-        public IStructureTypeReadOnly Type
-        {
-            get
-            {
-                return new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
-            }
-        }
+        public IStructureTypeReadOnly Type => new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
 
-        public ulong TypeID
-        {
-            get
-            {
-                return (ulong)structure.TypeID;
-            }
-        }
+        public ulong TypeID => (ulong)structure.TypeID;
 
         public bool Equals(IStructureReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)

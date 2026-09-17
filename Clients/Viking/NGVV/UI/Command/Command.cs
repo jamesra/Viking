@@ -1,68 +1,76 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.UI.Commands
 {
+
+    public interface ICommandQueueEntry
+    {
+        /// <summary>
+        /// Depending on the type of entry this call will return an existing command object or create a new one. 
+        /// Should be called only once
+        /// </summary>
+        /// <returns></returns> 
+        Command GetOrCreateCommand();
+    }
+
     /// <summary>
     /// An entry either contains an existing command object or the type and constructor parameters to create a new command
     /// </summary>
-    public struct CommandQueueEntry 
+    public readonly struct CommandQueueEntry(Command command) : ICommandQueueEntry
     {
-        public readonly System.Type CommandType;
-        public readonly Object[] Args;
-        public readonly Command commandObj;
+        public readonly Command commandObj = command;
 
-        public CommandQueueEntry(System.Type type, Object[] args)
-        {
-            this.CommandType = type; 
-            this.Args = args;
-            this.commandObj = null; 
-        }
-
-        public CommandQueueEntry(Command command)
-        {
-            this.CommandType = null; 
-            this.Args = null;
-            this.commandObj = command;
-            
-        }
+        public Command GetOrCreateCommand() => commandObj;
     }
 
-    public class CommandInjectedEventHandler : System.EventArgs
+    /// <summary>
+    /// An entry either contains an existing command object or the type and constructor parameters to create a new command
+    /// </summary>
+    public readonly struct CommandConstructorQueueEntry(System.Type type, object[]? args) : ICommandQueueEntry
     {
-        public Command injectedCommand;
-        public bool SaveCurrentCommand;
+        public readonly System.Type CommandType = type;
+        public readonly Object[] Args = args ?? [];
 
-        public CommandInjectedEventHandler(Command injectedCommand, bool SaveCurrentCommand)
-        {
-            this.injectedCommand = injectedCommand;
-            this.SaveCurrentCommand = SaveCurrentCommand;
-        }
+        public Command GetOrCreateCommand() => Activator.CreateInstance(CommandType, Args) as Command ?? throw new NullReferenceException($"Failed to create command of type {CommandType}");
+
+    }
+
+    public class CommandInjectedEventHandler(Command injectedCommand, bool SaveCurrentCommand) : System.EventArgs
+    {
+        public Command injectedCommand = injectedCommand;
+        public bool SaveCurrentCommand = SaveCurrentCommand;
     }
 
 
     public class CommandQueue
     {
-        private Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
+        private readonly Queue<ICommandQueueEntry> _CommandQueue = new();
 
         public System.Collections.Specialized.NotifyCollectionChangedEventHandler OnQueueChanged;
         public delegate void CommandInjectedHandler(object sender, CommandInjectedEventHandler e);
 
-        public event CommandInjectedHandler OnCommandInjected;
-                
+        public event CommandInjectedHandler? OnCommandInjected;
+
         public void EnqueueCommand(System.Type CommandType)
         {
-            EnqueueCommand(CommandType, new Object[] { Viking.UI.State.ViewerControl });
+            var viewerControl = Viking.UI.State.ViewerControl;
+            EnqueueCommand(CommandType, [viewerControl!]);
         }
 
         /// <summary>
@@ -73,7 +81,7 @@ namespace Viking.UI.Commands
         /// <param name="Args"></param>
         public void EnqueueCommand(System.Type CommandType, params object[] Args)
         {
-            CommandQueueEntry entry = new CommandQueueEntry(CommandType, Args);
+            ICommandQueueEntry entry = new CommandConstructorQueueEntry(CommandType, Args);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
@@ -86,7 +94,7 @@ namespace Viking.UI.Commands
         /// <param name="Args"></param>
         public void EnqueueCommand<T>(params object[] Args)
         {
-            CommandQueueEntry entry = new CommandQueueEntry(typeof(T), Args);
+            ICommandQueueEntry entry = new CommandConstructorQueueEntry(typeof(T), Args);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
@@ -96,42 +104,27 @@ namespace Viking.UI.Commands
         /// </summary>
         /// <param name="replacementCommand"></param>
         /// <param name="SaveCurrentCommand"></param>
-        public void InjectCommand(Command replacementCommand, bool SaveCurrentCommand = true)
-        {
-            OnCommandInjected(this, new CommandInjectedEventHandler(replacementCommand, SaveCurrentCommand)); 
-        }
+        public void InjectCommand(Command replacementCommand, bool SaveCurrentCommand = true) => OnCommandInjected(this, new CommandInjectedEventHandler(replacementCommand, SaveCurrentCommand));
 
-        public void ClearQueue()
-        {
-            _CommandQueue.Clear();
-        }
+        public void ClearQueue() => _CommandQueue.Clear();
 
-        public int QueueDepth
-        {
-            get { return _CommandQueue.Count; }
-        }
+        public int QueueDepth => _CommandQueue.Count;
 
 
         /// <summary>
         /// Pop the next command of the queue.  If the queue is empty, return the default command
         /// </summary>
         /// <returns></returns>
-        public Command Pop()
+        public Command? Pop()
         {
-            Command newCommand = null;
-
             //Check if there is a command in the queue
             if (_CommandQueue.Count != 0)
             {
-                CommandQueueEntry nextCommand = _CommandQueue.Dequeue();
-
-                if (nextCommand.commandObj != null)
-                    newCommand = nextCommand.commandObj;
-                else
-                    newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
+                ICommandQueueEntry nextCommand = _CommandQueue.Dequeue();
+                return nextCommand.GetOrCreateCommand();
             }
 
-            return newCommand;
+            return null;
         }
 
         /// <summary>
@@ -140,10 +133,10 @@ namespace Viking.UI.Commands
         /// <returns></returns>
         public void Push(Command command)
         {
-            List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
-            existingQueue.Insert(0, new CommandQueueEntry(command)); 
+            List<ICommandQueueEntry> existingQueue = [.. _CommandQueue.ToArray()];
+            existingQueue.Insert(0, new CommandQueueEntry(command));
             _CommandQueue.Clear();
-            foreach (CommandQueueEntry e in existingQueue)
+            foreach (CommandQueueEntry e in existingQueue.Select(v => (CommandQueueEntry)v))
             {
                 _CommandQueue.Enqueue(e);
             }
@@ -175,7 +168,7 @@ namespace Viking.UI.Commands
                     newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
             }
 
-            if (Obj != null && newCommand == null)
+            if (Obj != null && newCommand is null)
             {
                 System.Type[] Commands = Viking.Common.ExtensionManager.GetCommandsForType(Obj.GetType());
 
@@ -186,7 +179,7 @@ namespace Viking.UI.Commands
                 }
             }
 
-            if (newCommand == null)
+            if (newCommand is null)
             {
                 newCommand = new DefaultCommand(Parent);
             }
@@ -202,9 +195,9 @@ namespace Viking.UI.Commands
     {
         protected Viking.UI.Controls.SectionViewerControl Parent; //Control the command is listening to
 
-        protected MouseEventArgs oldMouse = null;
+        protected MouseEventArgs? oldMouse = null;
 
-        protected PenEventArgs oldPen = null;
+        protected PenEventArgs? oldPen = null;
 
         /*
         public static readonly DependencyProperty HelpStringsProperty;
@@ -224,35 +217,35 @@ namespace Viking.UI.Commands
         }
         */
 
-        public static string[] DefaultMouseHelpStrings = new String[] {
+        public static string[] DefaultMouseHelpStrings = [
             "Hold Right click + Drag: Move view",
             "Scroll wheel: Zoom",
             "Forward/Backward button click: Change sections",
-            };
+            ];
 
-        public static string[] DefaultKeyHelpStrings = new String[] {
+        public static string[] DefaultKeyHelpStrings = [
             "Escape Key: Cancel command",
             "+/- key: Step up/down a section",
             "Shift +/- key: Step up/down ten sections",
             "Page up/down key: Change Magnification",
             "Arrow key: Move view",
             "Home key: Round magnification to whole number"
-            };
+            ];
 
         public static string[] AllDefaultHelpStrings
         {
             get
             {
-                List<string> s = new List<string>(DefaultMouseHelpStrings);
+                List<string> s = [.. DefaultMouseHelpStrings];
                 s.AddRange(DefaultKeyHelpStrings);
-                return s.ToArray();
+                return [.. s];
             }
         }
 
         /// <summary>
         /// If the base Command class' OnMouseMove is called this variable contains the mouse position at the last mouse move
         /// </summary>
-        protected GridVector2 oldWorldPosition = new GridVector2(0,0); 
+        protected Geometry.Vector2 oldWorldPosition = new(0, 0);
 
         MouseEventHandler MyMouseClick;
         MouseEventHandler MyMouseDoubleClick;
@@ -260,15 +253,15 @@ namespace Viking.UI.Commands
         MouseEventHandler MyMouseUp;
         MouseEventHandler MyMouseWheel;
         MouseEventHandler MyMouseMove;
-        EventHandler MyMouseHover; 
+        EventHandler MyMouseHover;
         EventHandler MyMouseLeave;
-        EventHandler MyMouseEnter; 
+        EventHandler MyMouseEnter;
         KeyPressEventHandler MyKeyPress;
         KeyEventHandler MyKeyDown;
         KeyEventHandler MyKeyUp;
 
         PropertyChangedEventHandler MyCameraChanged;
-        
+
         /* UI Extensions, extensions can register with these delegates to be notified whenever the default command does not process input.  This gives
         * extensions the chance to select objects only they are aware of or provide special behavior for key presses */
         public static event MouseEventHandler OnUnhandledMouseDown;
@@ -277,21 +270,20 @@ namespace Viking.UI.Commands
         /// <summary>
         /// Event fired whenever a command completes successfully
         /// </summary>
-        public event CommandCompleteEventHandler OnCommandCompleteHandler;
+        public event CommandCompleteEventHandler? OnCommandCompleteHandler;
 
         public static int _NextID = 0;
         public int ID;
 
         private void AssignID()
         {
-            this.ID = _NextID;
-            _NextID++;
+            this.ID = Interlocked.Increment(ref _NextID) - 1;
         }
 
         public Command(Viking.UI.Controls.SectionViewerControl parent)
         {
             AssignID();
-            this.Parent = parent; 
+            this.Parent = parent;
         }
 
         /// <summary>
@@ -318,7 +310,7 @@ namespace Viking.UI.Commands
             MyMouseLeave = new EventHandler(this.OnMouseLeave);
             MyMouseEnter = new EventHandler(this.OnMouseEnter);
 
-            MyKeyPress = new KeyPressEventHandler(this.OnKeyPress); 
+            MyKeyPress = new KeyPressEventHandler(this.OnKeyPress);
             MyKeyDown = new KeyEventHandler(this.OnKeyDown);
             MyKeyUp = new KeyEventHandler(this.OnKeyUp);
 
@@ -347,8 +339,8 @@ namespace Viking.UI.Commands
 
             Parent.OnGestureBegin += OnGestureBegin;
             Parent.OnGestureZoom += OnGestureZoom;
-            Parent.OnGesturePan += OnGesturePan; 
-             
+            Parent.OnGesturePan += OnGesturePan;
+
             Parent.Camera.PropertyChanged += MyCameraChanged;
         }
 
@@ -368,12 +360,12 @@ namespace Viking.UI.Commands
             Parent.MouseDoubleClick -= MyMouseDoubleClick;
             Parent.MouseDown -= MyMouseDown;
             Parent.MouseUp -= MyMouseUp;
-            Parent.MouseWheel -= MyMouseWheel; 
+            Parent.MouseWheel -= MyMouseWheel;
             Parent.MouseMove -= MyMouseMove;
 
             Parent.MouseHover -= MyMouseHover;
             Parent.MouseLeave -= MyMouseLeave;
-            Parent.MouseEnter -= MyMouseEnter; 
+            Parent.MouseEnter -= MyMouseEnter;
 
             Parent.KeyPress -= MyKeyPress;
             Parent.KeyDown -= MyKeyDown;
@@ -395,7 +387,7 @@ namespace Viking.UI.Commands
         /// <summary>
         /// Set to true if the command is in the middle of processing user input
         /// </summary>
-        private bool _CommandActive = false; 
+        private bool _CommandActive = false;
 
         /// <summary>
         /// Returns true if the command is in the middle of a user input sequence like
@@ -433,12 +425,12 @@ namespace Viking.UI.Commands
         /// 
         public bool Deactivated
         {
-            get { return _Deactivated; }
+            get => _Deactivated;
             set
             {
                 if (_Deactivated == false)
                 {
-                    Trace.WriteLine("Command Deactivated", "Command"); 
+                    Trace.WriteLine("Command Deactivated", "Command");
 
                     //Cancel any active command and remove our mouse events
                     if (value == true)
@@ -447,7 +439,7 @@ namespace Viking.UI.Commands
                         UnsubscribeToInterfaceEvents();
                         OnDeactivate();
 
-                        OnCommandCompleteHandler?.Invoke(this, null);
+                        OnCommandCompleteHandler?.Invoke(this, EventArgs.Empty);
                     }
 
                     _Deactivated = value;
@@ -455,13 +447,13 @@ namespace Viking.UI.Commands
             }
         }
 
-        virtual public void OnActivate() { }
+        public virtual void OnActivate() { }
 
-        virtual protected void OnDeactivate() { }
+        protected virtual void OnDeactivate() { }
 
-        virtual public void Undo() { }
+        public virtual void Undo() { }
 
-        virtual public void Redo() { }
+        public virtual void Redo() { }
 
         #region Mouse Events
 
@@ -471,12 +463,12 @@ namespace Viking.UI.Commands
 
         protected virtual void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            
+
         }
 
         protected virtual void OnMouseDown(object sender, MouseEventArgs e)
-        {               
-            
+        {
+
             /*if(Touch.IsPenEvent(out uint PointerID))
             {
                 Trace.WriteLine("Pen button down {0}", e.Button.ToString());
@@ -492,11 +484,11 @@ namespace Viking.UI.Commands
             }
             else if (e.Button == MouseButtons.XButton1)
             {
-                Parent.StepDownNSections(1); 
+                Parent.StepDownNSections(1);
             }
             else if (Command.OnUnhandledMouseDown != null)
             {
-                OnUnhandledMouseDown(sender, e); 
+                OnUnhandledMouseDown(sender, e);
             }
         }
 
@@ -510,48 +502,46 @@ namespace Viking.UI.Commands
 
             //This seems complicated, but we want the mouse cursor to be pointing at the same 
             //point in the volume before and after the zoom
-            
-            //This is the point the mouse is at...
-            GridVector2 BeforeZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
 
-            StepCameraDistance(multiplier); 
+            //This is the point the mouse is at...
+            Geometry.Vector2 BeforeZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
+
+            StepCameraDistance(multiplier);
 
             //This is the point the mouse is at after zooming camera...
-            GridVector2 AfterZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 AfterZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             RecenterCameraAfterZoom(BeforeZoomPosition, AfterZoomPosition);
 
             this.Parent.Invalidate();
         }
 
-        protected void RecenterCameraAfterZoom(GridVector2 BeforeZoomPosition, GridVector2 AfterZoomPosition)
+        protected void RecenterCameraAfterZoom(Geometry.Vector2 BeforeZoomPosition, Geometry.Vector2 AfterZoomPosition)
         {
-            GridVector2 Offset = BeforeZoomPosition - AfterZoomPosition;
+            Geometry.Vector2 Offset = BeforeZoomPosition - AfterZoomPosition;
 
             //Move the camera position by the offset.
-            GridVector2 CameraLookat = Parent.Camera.LookAt.ToGridVector2();
-            GridVector2 NewCameraLookat = CameraLookat + Offset;
+            Geometry.Vector2 CameraLookat = Parent.Camera.LookAt.ToVector2();
+            Geometry.Vector2 NewCameraLookat = CameraLookat + Offset;
             Parent.Camera.LookAt = new Vector2((float)NewCameraLookat.X, (float)NewCameraLookat.Y);
         }
 
         protected void StepCameraDistance(float multiplier)
         {
             if (multiplier > 0)
-                Parent.Downsample = Parent.Downsample * 0.86956521739130434782608695652174f;
+                Parent.Downsample *= 0.86956521739130434782608695652174f;
             else
-                Parent.Downsample = Parent.Downsample * 1.15f;
-
-            this.Parent.Invalidate();
+                Parent.Downsample *= 1.15f;
         }
 
         protected virtual void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
             bool TranslateButtonDown = e.Button.Right();
             bool RotateButtonDown = e.Button.Middle();
-            if (oldMouse == null)
+            if (oldMouse is null)
             {
                 oldMouse = e;
                 return;
@@ -559,7 +549,7 @@ namespace Viking.UI.Commands
 
             if (TranslateButtonDown)
             {
-                GridVector2 OldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
+                Geometry.Vector2 OldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                 Debug.Assert(double.IsNaN(NewPosition.X) == false);
 
                 OnTranslateInput(NewPosition, OldPosition);
@@ -568,10 +558,10 @@ namespace Viking.UI.Commands
             {
                 //Figure out if the mouse went clockwise or counterclockwise relative to the center of the screen
                 System.Drawing.Rectangle rect = Parent.ClientRectangle;
-                Vector2 Center = new Vector2(((rect.Width - rect.X) / 2) + rect.X, ((rect.Height - rect.Y) / 2) + rect.Y);
+                Vector2 Center = new(((rect.Width - rect.X) / 2) + rect.X, ((rect.Height - rect.Y) / 2) + rect.Y);
 
-                Vector2 old = new Vector2(oldMouse.X - Center.X, oldMouse.Y - Center.Y);
-                Vector2 newMouse = new Vector2(e.X - Center.X, e.Y - Center.Y);
+                Vector2 old = new(oldMouse.X - Center.X, oldMouse.Y - Center.Y);
+                Vector2 newMouse = new(e.X - Center.X, e.Y - Center.Y);
 
                 newMouse.Normalize();
                 old.Normalize();
@@ -595,12 +585,12 @@ namespace Viking.UI.Commands
                 Parent.Camera.Rotation += angle;
             }
 
-            SaveAsOldMousePosition(e);            
+            SaveAsOldMousePosition(e);
         }
 
         protected virtual void OnPenMove(object sender, PenEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
             //Cancel the command on a barrel click
@@ -610,10 +600,10 @@ namespace Viking.UI.Commands
                 SaveAsOldPenPosition(e);
                 return;
             }
-             
+
             if (oldPen != null && e.Erase && e.InContact)
             {
-                GridVector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
+                Geometry.Vector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
                 System.Diagnostics.Debug.Assert(double.IsNaN(NewPosition.X) == false);
 
                 OnTranslateInput(NewPosition, OldPosition);
@@ -624,13 +614,13 @@ namespace Viking.UI.Commands
             return;
         }
 
-        protected void OnTranslateInput(GridVector2 NewWorldPosition, GridVector2 OldWorldPosition)
+        protected void OnTranslateInput(Geometry.Vector2 NewWorldPosition, Geometry.Vector2 OldWorldPosition)
         {
-            
+
 
             Debug.Assert(double.IsNaN(NewWorldPosition.X) == false);
 
-            GridVector2 delta = NewWorldPosition - OldWorldPosition;
+            Geometry.Vector2 delta = NewWorldPosition - OldWorldPosition;
 
             if (double.IsNaN(delta.X))
                 return;
@@ -642,7 +632,7 @@ namespace Viking.UI.Commands
         }
 
         protected void SaveAsOldMousePosition(MouseEventArgs e)
-        { 
+        {
             this.oldMouse = e;
             this.oldWorldPosition = Parent.ScreenToWorld(e.X, e.Y);
         }
@@ -714,14 +704,14 @@ namespace Viking.UI.Commands
             else if (e.KeyChar == (char)Keys.PrintScreen ||
                      e.KeyChar == 'z')
             {
-                
-                this.CommandActive = false; 
-                
-           //     Parent.TakeScreenShot(); 
+
+                this.CommandActive = false;
+
+                //     Parent.TakeScreenShot(); 
             }
-            else if (Command.OnUnhandledKeyPress != null)
+            else
             {
-                Command.OnUnhandledKeyPress(sender, e);
+                Command.OnUnhandledKeyPress?.Invoke(sender, e);
             }
 
             Parent.Invalidate();
@@ -739,19 +729,21 @@ namespace Viking.UI.Commands
             {
                 case Keys.PageUp:
                     StepCameraDistance(1);
+                    this.Parent.Invalidate();
                     break;
                 case Keys.PageDown:
                     StepCameraDistance(-1);
-                    break;                     
+                    this.Parent.Invalidate();
+                    break;
                 case Keys.Left:
-                    GridVector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
-                    GridVector2 Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
-                    GridVector2 Diff = Right - Left;
+                    Geometry.Vector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
+                    Geometry.Vector2 Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
+                    Geometry.Vector2 Diff = Right - Left;
                     Diff *= 0.25;
 
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
-                    break; 
+                    break;
                 case Keys.Right:
                     Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
@@ -760,16 +752,16 @@ namespace Viking.UI.Commands
 
                     Parent.Camera.LookAt += new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
-                    break; 
+                    break;
                 case Keys.Up:
-                    GridVector2 Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
-                    GridVector2 Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
+                    Geometry.Vector2 Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
+                    Geometry.Vector2 Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Diff = Top - Bottom;
                     Diff *= 0.25;
 
                     Parent.Camera.LookAt += new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
-                    break; 
+                    break;
                 case Keys.Down:
                     Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
                     Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
@@ -778,7 +770,7 @@ namespace Viking.UI.Commands
 
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
-                    break; 
+                    break;
                 case Keys.Home:
                     Parent.Downsample = Math.Round(Parent.Downsample) < 1.0 ? 0.5 : Math.Round(Parent.Downsample);
                     this.Parent.Invalidate();
@@ -792,13 +784,13 @@ namespace Viking.UI.Commands
         /// Where a gesture began in world coordinates
         /// </summary>
         /// 
-        GridVector2 PanGestureWorldPositionOrigin;
+        Geometry.Vector2 PanGestureWorldPositionOrigin;
 
         /// <summary>
         /// Distance between the fingers when they first begin the zoom gesture
         /// </summary>
         double ZoomGestureInitialLineLength;
-        
+
         /// <summary>
         /// Magnification level when a zoom gesture first began
         /// </summary>
@@ -807,38 +799,38 @@ namespace Viking.UI.Commands
         protected virtual void OnGestureBegin(object sender, BeginGestureEventArgs e)
         {
             Trace.WriteLine($"{this.ID}: Begin Gesture");
-            PanGestureWorldPositionOrigin = Parent.Camera.LookAt.ToGridVector2();
+            PanGestureWorldPositionOrigin = Parent.Camera.LookAt.ToVector2();
             ZoomGestureStartingMagnification = Parent.Camera.Downsample;
         }
 
         protected virtual void OnGesturePan(object sender, PanGestureEventArgs e)
         {
-            GridVector2 screen_begin = new GridVector2(e.BeginPt.X, e.BeginPt.Y);
-            GridVector2 screen_end = new GridVector2(e.EndPt.X, e.EndPt.Y);
+            Geometry.Vector2 screen_begin = new(e.BeginPt.X, e.BeginPt.Y);
+            Geometry.Vector2 screen_end = new(e.EndPt.X, e.EndPt.Y);
 
             //Trace.WriteLine($"{e}");
             /*
-            GridVector2 screen_delta = new GridVector2(e.Delta.X, e.Delta.Y);
-            GridVector2 screen_origin = screen_end - screen_delta; 
+            Geometry.Vector2 screen_delta = new Geometry.Vector2(e.Delta.X, e.Delta.Y);
+            Geometry.Vector2 screen_origin = screen_end - screen_delta; 
 
-            GridVector2 Begin = Parent.ScreenToWorld(screen_origin.X, screen_origin.Y);
-            GridVector2 End   = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
-            GridVector2 World_Delta = End - Begin;
+            Geometry.Vector2 Begin = Parent.ScreenToWorld(screen_origin.X, screen_origin.Y);
+            Geometry.Vector2 End   = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
+            Geometry.Vector2 World_Delta = End - Begin;
             Parent.Camera.LookAt = World_Delta.ToXNAVector2();
             this.Parent.Invalidate();  
             */
-            
-            
+
+
             if (e.Gesture.State == GestureState.GF_BEGIN)
             {
                 //PanGestureWorldPositionOrigin = Parent.ScreenToWorld(e.BeginPt.X, e.BeginPt.Y);
                 return;
             }
-            
 
-            GridVector2 Begin = Parent.ScreenToWorld(screen_begin.X, screen_begin.Y);
-            GridVector2 End = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
-            GridVector2 World_Delta = End - Begin;
+
+            Geometry.Vector2 Begin = Parent.ScreenToWorld(screen_begin.X, screen_begin.Y);
+            Geometry.Vector2 End = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
+            Geometry.Vector2 World_Delta = End - Begin;
             //Trace.WriteLine($"{this.ID}: {End} - {Begin} = {World_Delta}");
             Parent.Camera.LookAt = (PanGestureWorldPositionOrigin - World_Delta).ToXNAVector2();
             this.Parent.Invalidate();
@@ -846,9 +838,9 @@ namespace Viking.UI.Commands
 
         protected virtual void OnGestureZoom(object sender, PanGestureEventArgs e)
         {
-            
-            //GridVector2 screen_begin = new GridVector2(e.BeginPt.X, e.BeginPt.Y);
-            GridVector2 screen_Center = new GridVector2(e.EndPt.X, e.EndPt.Y);
+
+            //Geometry.Vector2 screen_begin = new Geometry.Vector2(e.BeginPt.X, e.BeginPt.Y);
+            Geometry.Vector2 screen_Center = new(e.EndPt.X, e.EndPt.Y);
 
             /*if (screen_begin == screen_end)
                 return;
@@ -876,12 +868,12 @@ namespace Viking.UI.Commands
             */
 
             //This is the point the mouse is at before zoom...
-            GridVector2 BeforeZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
+            Geometry.Vector2 BeforeZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
 
             Parent.Camera.Downsample = newDownsample;
 
             //This is the point the mouse is at after zoom...
-            GridVector2 AfterZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
+            Geometry.Vector2 AfterZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
 
             RecenterCameraAfterZoom(BeforeZoomPosition, AfterZoomPosition);
 
@@ -900,7 +892,7 @@ namespace Viking.UI.Commands
 
         public virtual void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            return; 
+            return;
         }
 
         protected virtual void OnCameraChanged(object sender, PropertyChangedEventArgs e)
@@ -908,7 +900,7 @@ namespace Viking.UI.Commands
         }
 
         protected virtual void OnPenEnterRange(object sender, PenEventArgs e)
-        {  
+        {
         }
 
         protected virtual void OnPenLeaveRange(object sender, PenEventArgs e)

@@ -1,4 +1,6 @@
-﻿using Geometry;
+using Geometry;
+using Viking.Input;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -12,10 +14,12 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings
+    internal class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings
     {
         public CurveView curveView;
 
@@ -26,34 +30,26 @@ namespace WebAnnotation.View
         {
             get
             {
-                List<string> listStrings = new List<string>(base.HelpStrings);
-                listStrings.Add("Hold Left Click and drag near label: Move all control points");
-                listStrings.Add("Hold Left Click and drag near edge: Create link");
-                return listStrings.ToArray();
+                List<string> listStrings = [.. base.HelpStrings, "Hold Left Click and drag near label: Move all control points", "Hold Left Click and drag near edge: Create link"];
+                return [.. listStrings];
             }
         }
 
         public override Microsoft.Xna.Framework.Color Color
         {
-            get { return curveView.Color; }
-            set { curveView.Color = value; }
+            get => curveView.Color;
+            set => curveView.Color = value;
         }
 
         public override float Alpha
         {
-            get { return curveView.Alpha; }
-            set { curveView.Alpha = value; }
+            get => curveView.Alpha;
+            set => curveView.Alpha = value;
         }
 
-        private double _ControlPointRadius;
+        private readonly double _ControlPointRadius;
 
-        public override double ControlPointRadius
-        {
-            get
-            {
-                return _ControlPointRadius;
-            }
-        }
+        public override double ControlPointRadius => _ControlPointRadius;
 
         public double lineWidth = 32;
 
@@ -61,19 +57,21 @@ namespace WebAnnotation.View
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
-            Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            curveView = new CurveView(this.VolumeControlPoints, color, true, lineWidth: this.VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
+            bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
+            float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : obj.Parent.Type.Color.ToXNAColor(opacity);
+            curveView = new CurveView(VolumeControlPoints, color, true, lineWidth: VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
             CreateLabelObjects();
         }
 
-        private GridCircle? _InscribedCircle;
-        protected GridCircle InscribedCircle
+        private Circle? _InscribedCircle;
+        protected Circle InscribedCircle
         {
             get
             {
                 if (!_InscribedCircle.HasValue)
                 {
-                    _InscribedCircle = this.VolumeShapeAsRendered.CalculateInscribedCircle(VolumeControlPoints);
+                    _InscribedCircle = VolumeShapeAsRendered.CalculateInscribedCircle(VolumeControlPoints);
                 }
 
                 return _InscribedCircle.Value;
@@ -82,34 +80,25 @@ namespace WebAnnotation.View
 
 
 
-        public void CreateLabelObjects()
-        {
-            curveLabels = new StructureCircleLabels(this.modelObj, this.InscribedCircle);
-        }
+        public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
-        private GridVector2[] _MosaicCurveControlPoints;
-        public override GridVector2[] MosaicCurveControlPoints
+        private Geometry.Vector2[] _MosaicCurveControlPoints;
+        public override Geometry.Vector2[] MosaicCurveControlPoints
         {
             get
             {
-                if (_MosaicCurveControlPoints == null)
-                {
-                    _MosaicCurveControlPoints = this.MosaicControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
-                }
+                _MosaicCurveControlPoints ??= [.. MosaicControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, true)];
 
                 return _MosaicCurveControlPoints;
             }
         }
 
-        private GridVector2[] _VolumeCurveControlPoints;
-        public override GridVector2[] VolumeCurveControlPoints
+        private Geometry.Vector2[] _VolumeCurveControlPoints;
+        public override Geometry.Vector2[] VolumeCurveControlPoints
         {
             get
             {
-                if (_VolumeCurveControlPoints == null)
-                {
-                    _VolumeCurveControlPoints = this.VolumeControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
-                }
+                _VolumeCurveControlPoints ??= [.. VolumeControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, true)];
 
                 return _VolumeCurveControlPoints;
             }
@@ -120,10 +109,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (_RenderedVolumeShape == null)
-                {
-                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolygon();// this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);                    
-                }
+                _RenderedVolumeShape ??= VolumeCurveControlPoints.ToPolygon();// this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);                    
 
                 return _RenderedVolumeShape;
             }
@@ -132,19 +118,19 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary>
-        private GridRectangle? _BoundingBox;
-        public override GridRectangle BoundingBox
+        private Rectangle? _BoundingBox;
+        public override Rectangle BoundingBox
         {
             get
             {
                 if (!_BoundingBox.HasValue)
                 {
-                    _BoundingBox = GridRectangle.Pad(VolumeCurveControlPoints.BoundingBox(), this.lineWidth / 2.0);
+                    _BoundingBox = Rectangle.Pad(VolumeCurveControlPoints.BoundingBox(), lineWidth / 2.0);
                 }
 
                 return _BoundingBox.Value;
                 /*
-                if (_RenderedVolumeShapeEnvelope == null)
+                if (_RenderedVolumeShapeEnvelope is null)
                     _RenderedVolumeShapeEnvelope = this.VolumeShapeAsRendered.STBuffer(this.lineWidth / 2.0);
 
                 return _RenderedVolumeShapeEnvelope.Envelope();
@@ -159,105 +145,109 @@ namespace WebAnnotation.View
                           VikingXNAGraphics.OverlayShaderEffect overlayEffect,
                           LocationClosedCurveView[] listToDraw)
         {
-            OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
+            OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 
-            CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
+            CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, [.. listToDraw.Select(l => l.curveView)]);
         }
 
-        public override bool Contains(GridVector2 Position)
+        public override bool Contains(Geometry.Vector2 Position)
         {
-            if (this.VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Covers(Position)))
+            {
                 return true;
+            }
 
-            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Contains(Position))
+            if (OverlappedLinkView != null && OverlappedLinkView.Contains(Position))
+            {
                 return true;
+            }
 
             return base.Contains(Position);
         }
 
-        public override bool Intersects(GridLineSegment line)
+        public override bool Intersects(LineSegment line)
         {
-            if (this.VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Intersects(line)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Intersects(line)))
+            {
                 return true;
+            }
 
-            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(line))
+            if (OverlappedLinkView != null && OverlappedLinkView.Intersects(line))
+            {
                 return true;
+            }
 
             return base.Intersects(line);
         }
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
-            if (OverlappedLinkView != null)
-            {
-                OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
-            }
+            OverlappedLinkView?.DrawLabel(spriteBatch, font, scene);
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
             if (OverlappedLinkView != null)
             {
                 ICanvasView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
                 if (containedAnnotation != null)
+                {
                     return containedAnnotation;
+                }
             }
 
-            if (this.Contains(position))
+            if (Contains(position))
+            {
                 return this;
+            }
 
             return null;
         }
 
-        public override double LineWidth
-        {
-            get
-            {
-                return curveView.LineWidth;
-            }
-        }
+        public override double LineWidth => curveView.LineWidth;
 
         public override ICollection<long> OverlappedLinks
         {
             protected get
             {
-                if (this.OverlappedLinkView == null)
-                    return Array.Empty<long>();
+                if (OverlappedLinkView is null)
+                {
+                    return new long[0];
+                }
 
-                return this.OverlappedLinkView.OverlappedLinks;
+                return OverlappedLinkView.OverlappedLinks;
             }
 
             set
             {
-                if (value == null || value.Count == 0)
+                if (value is null || value.Count == 0)
                 {
-                    this.OverlappedLinkView = null;
+                    OverlappedLinkView = null;
                 }
 
-                this.OverlappedLinkView = new OverlappedLinkCircleView(this.InscribedCircle, this.ID, (int)this.Z, value);
-                this.OverlappedLinkView.Color = this.Color;
+                OverlappedLinkView = new OverlappedLinkCircleView(InscribedCircle, ID, (int)Z, value)
+                {
+                    Color = Color
+                };
 
-                this.CreateLabelObjects();
+                CreateLabelObjects();
             }
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
-        {
-            throw new NotImplementedException();
-        }
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
-            if (TranslateTargetCircle.Contains(WorldPosition))
+            Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+            if (TranslateTargetCircle.Covers(WorldPosition))
             {
-                LocationID = this.ID;
+                LocationID = ID;
                 return LocationAction.TRANSLATE;
             }
 
-            return base.GetMouseClickActionForPositionOnAnnotation(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+            return base.GetMouseClickActionForPositionOnAnnotation(WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
         }
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
@@ -276,12 +266,11 @@ namespace WebAnnotation.View
 
             //CreateViewObjects();
             if (IsLocationPropertyAffectingLabels(args.PropertyName))
+            {
                 CreateLabelObjects();
+            }
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
-        {
-            throw new NotImplementedException();
-        }
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();
     }
 }

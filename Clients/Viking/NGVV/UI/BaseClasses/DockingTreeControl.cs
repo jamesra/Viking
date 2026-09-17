@@ -8,7 +8,7 @@ namespace Viking.UI.BaseClasses
 {
     public partial class DockingTreeControl : Viking.UI.BaseClasses.DockableUserControl
     {
-        protected TreeNode ContextMenuNode = null;
+        protected TreeNode? ContextMenuNode = null;
 
         public DockingTreeControl()
         {
@@ -19,33 +19,26 @@ namespace Viking.UI.BaseClasses
 
         public void SetDragDropTypes()
         {
-            SupportedUITypesAttribute[] attribs = this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) as SupportedUITypesAttribute[];
-            if (attribs == null)
+            if (this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) is not SupportedUITypesAttribute[] attribs)
                 return;
 
             //Should only be one entry, but lets be safe and add them together
-            List<Type> supportedTypes = new List<Type>();
+            List<Type> supportedTypes = [];
             foreach (SupportedUITypesAttribute attrib in attribs)
             {
                 supportedTypes.AddRange(attrib.Types);
             }
 
-            Tree.ValidDragDropTypes = supportedTypes.ToArray();
+            Tree.ValidDragDropTypes = [.. supportedTypes];
         }
 
         #region Properties
 
         [Browsable(false)]
-        public IUIObject SelectedObject
+        public IUIObject? SelectedObject
         {
-            get
-            {
-                return Tree.SelectedObject;
-            }
-            set
-            {
-                Tree.SelectedObject = value;
-            }
+            get => Tree.SelectedObject;
+            set => Tree.SelectedObject = value;
         }
 
         #endregion

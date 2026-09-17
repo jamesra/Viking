@@ -10,8 +10,8 @@ namespace EntityFrameworkExtras.EF6
 {
     internal class StoredProcedureParser
     {
-        private static readonly StoredProcedureParserHelper _helper = new StoredProcedureParserHelper();
-        
+        private static readonly StoredProcedureParserHelper _helper = new();
+
         public static StoredProcedureInfo BuildStoredProcedureInfo(object storedProcedure)
         {
             Collection<StoredProcedureParameterInfo> parameterInfo = BuildStoredProcedureParameterInfo(storedProcedure);
@@ -19,30 +19,29 @@ namespace EntityFrameworkExtras.EF6
             string sql = BuildSql(storedProcedure, parameterInfo);
             SqlParameter[] sqlParameters = BuildSqlParameters(storedProcedure, parameterInfo);
 
-            var info = new StoredProcedureInfo()
-                {
-                    Sql = sql,
-                    SqlParameters = sqlParameters
-                };
+            StoredProcedureInfo info = new()
+            {
+                Sql = sql,
+                SqlParameters = sqlParameters
+            };
 
             return info;
-            
+
         }
 
         public static string GetStoreProcedureName(object storedProcedure)
         {
             var attribute = Attributes.GetAttribute<StoredProcedureAttribute>(storedProcedure.GetType());
 
-            if (attribute == null)
-                throw new InvalidOperationException(String.Format(
-                    "{0} is not decorated with StoredProcedureAttribute.", storedProcedure.GetType()));
-
-            return attribute.Name;
+            return attribute is null
+                ? throw new InvalidOperationException(String.Format(
+                    "{0} is not decorated with StoredProcedureAttribute.", storedProcedure.GetType()))
+                : attribute.Name;
         }
 
         public static Collection<StoredProcedureParameterInfo> BuildStoredProcedureParameterInfo(object storedProcedure)
         {
-            var parameters = new Collection<StoredProcedureParameterInfo>();
+            Collection<StoredProcedureParameterInfo> parameters = [];
 
             foreach (PropertyInfo propertyInfo in storedProcedure.GetType().GetProperties())
             {
@@ -56,15 +55,15 @@ namespace EntityFrameworkExtras.EF6
                     var isMandatory = _helper.ParameterIsMandatory(attribute.Options);
 
                     parameters.Add(new StoredProcedureParameterInfo
-                        {
-                            Name = parameterName,
-                            IsUserDefinedTable = isUserDefinedTableParameter,
-                            IsMandatory = isMandatory,
-                            SqlDataType = attribute.DataType,
-                            PropertyInfo = propertyInfo,
-                            Direction = attribute.Direction,
-                            Size = attribute.Size
-                        });
+                    {
+                        Name = parameterName,
+                        IsUserDefinedTable = isUserDefinedTableParameter,
+                        IsMandatory = isMandatory,
+                        SqlDataType = attribute.DataType,
+                        PropertyInfo = propertyInfo,
+                        Direction = attribute.Direction,
+                        Size = attribute.Size
+                    });
                 }
             }
 
@@ -83,7 +82,7 @@ namespace EntityFrameworkExtras.EF6
 
         private static SqlParameter[] BuildSqlParameters(object storedProcedure, IEnumerable<StoredProcedureParameterInfo> parameterInfos)
         {
-            var sqlParams = new List<SqlParameter>();
+            List<SqlParameter> sqlParams = [];
 
             foreach (var p in parameterInfos)
             {
@@ -106,13 +105,13 @@ namespace EntityFrameworkExtras.EF6
                 sqlParams.Add(sqlParameter);
             }
 
-            return sqlParams.ToArray();
+            return [.. sqlParams];
         }
 
         private static SqlParameter GenerateSqlParameter(string parameterName, object paramValue, bool mandatory, int size,
                                            bool isUserDefinedTableParameter, string udtType, SqlDbType dataType, ParameterDirection direction)
         {
-            var sqlParameter = new SqlParameter("@" + parameterName, paramValue ?? DBNull.Value)
+            SqlParameter sqlParameter = new("@" + parameterName, paramValue ?? DBNull.Value)
             {
                 Direction = direction,
                 IsNullable = !mandatory,
@@ -126,14 +125,8 @@ namespace EntityFrameworkExtras.EF6
 
             return sqlParameter;
         }
-        
-        private static int SetSize(int size, ParameterDirection direction)
-        {
-            if (direction != ParameterDirection.Input && size == 0) //output parameter
-                return -1;
 
-            return size;
-        }
+        private static int SetSize(int size, ParameterDirection direction) => direction != ParameterDirection.Input && size == 0 ? -1 : size;
 
 
 

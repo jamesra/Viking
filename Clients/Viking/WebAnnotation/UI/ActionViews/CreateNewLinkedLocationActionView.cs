@@ -1,14 +1,18 @@
-﻿using Geometry;
+using System;
+using Geometry;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.ActionViews
 {
     internal class CreateNewLinkedLocationActionView : IActionView, IIconTexture, IColorView
     {
-        CreateNewLinkedLocationAction model;
+        private readonly CreateNewLinkedLocationAction model;
 
         public IShape2D Shape { get; private set; }
 
@@ -16,10 +20,11 @@ namespace WebAnnotation.UI.ActionViews
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon { get; private set; } = BuiltinTexture.Chain;
         public Color Color { get; set; }
-        public float Alpha { get { return this.Color.GetAlpha(); } set { this.Color = this.Color.SetAlpha(value); } }
+        public float Alpha { get => Color.GetAlpha(); set => Color = Color.SetAlpha(value); }
 
         public CreateNewLinkedLocationActionView(CreateNewLinkedLocationAction action)
         {
+            if (action == null) throw new ArgumentNullException(nameof(action));
             model = action;
             CreateDefaultVisuals();
         }
@@ -28,34 +33,27 @@ namespace WebAnnotation.UI.ActionViews
         {
             Active = null;
 
-            LocationObj existing_loc = Store.Locations.GetObjectByID(model.ExistingLocID, true);
+            Store.Locations.TryGetObjectByID(model.ExistingLocID, out LocationObj existing_loc);
             if (existing_loc != null)
             {
-                StructureTypeObj structure_type = Store.StructureTypes.GetObjectByID(existing_loc.Parent.TypeID, false);
+                Store.StructureTypes.TryGetObjectByID(existing_loc.Parent.TypeID, out StructureTypeObj structure_type);
 
-                if (model != null)
-                {
-                    Color = structure_type.Color.ToXNAColor();
-                }
-                else
-                {
-                    Color = Color.White;
-                }
+                Color = model != null ? structure_type.Color.ToXNAColor() : Color.White;
             }
 
 
             if (model.NewVolumeShape.ShapeType.IsClosed())
             {
-                GridPolygon smoothedPoly = (GridPolygon)model.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+                Polygon smoothedPoly = (Polygon)model.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
-                SolidPolygonView view = new SolidPolygonView(smoothedPoly, Color);
+                SolidPolygonView view = new(smoothedPoly, Color);
                 Active = view;
             }
             else if (model.NewVolumeShape.ShapeType.IsOpen())
             {
-                GridPolyline smoothedPoly = (GridPolyline)model.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+                Polyline smoothedPoly = (Polyline)model.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
-                PolyLineView view = new PolyLineView(smoothedPoly, Color);
+                PolyLineView view = new(smoothedPoly, Color);
                 Active = view;
             }
 

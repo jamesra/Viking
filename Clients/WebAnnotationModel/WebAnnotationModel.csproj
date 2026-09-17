@@ -2,18 +2,14 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Spatial\**" />
-    <EmbeddedResource Remove="Spatial\**" />
-    <None Remove="Spatial\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
     <ProjectReference Include="..\..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj" />
     <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\..\RTree\RTree.csproj" />
     <ProjectReference Include="..\..\Viking.Annotation.Geometry\Viking.Annotation.Geometry.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>

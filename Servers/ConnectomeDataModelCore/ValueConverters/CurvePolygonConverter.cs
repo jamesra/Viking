@@ -33,24 +33,49 @@ namespace Viking.DataModel.Annotation.ValueConverters
 
         public override ConverterMappingHints MappingHints => base.MappingHints;
 
+        public override LambdaExpression ConstructorExpression => 
+            Expression.Lambda(Expression.New(typeof(CurvePolygonConverter<IN, OUT>)));
+
         protected static object DoConvertToProvider(object input)
         {
+            if (input is null)
+                return null;
+
+            if (input is Geometry geometry)
+                return geometry;
+
+            // Model properties are WKT strings; SQL provider side is Geometry (NetTopologySuite).
+            if (input is string wkt)
+            {
+                if (string.IsNullOrWhiteSpace(wkt))
+                    return null;
+                return new NetTopologySuite.IO.WKTReader().Read(wkt);
+            }
+
             return input as IN;
         }
 
 
         protected static object DoConvertFromProvider(object input)
-        { 
-            /*if (input is IUnsupportedGeometry)
+        {
+            // Note: IUnsupportedGeometry commented out - not available in current NetTopologySuite
+            /*
+            if (input is IUnsupportedGeometry)
             {
                 //App specific logic
-                return null; //This is going to be a circle, later we'll need to convert null geometry to circles
-            }*/
+                return "Circle";
+            }
+            else
+            */
+            if (input is string alreadyWkt)
+                return alreadyWkt;
+
             if(input is Geometry shape)
             {
-                return shape;
-            } 
-            throw new NotImplementedException($"Unexpected type {input?.GetType()} passed to converter");
+                return shape.ToText();
+            }
+
+            throw new ArgumentException("Unexpected type passed to converter");
         }
     }
 }

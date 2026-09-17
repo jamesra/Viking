@@ -10,9 +10,11 @@
 #region Using Statements
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.ComponentModel.Design;
 using System.Drawing;
 using System.Windows.Forms;
+using VikingXNAGraphics;
+using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
+
 #endregion
 
 namespace VikingXNAWinForms
@@ -35,7 +37,7 @@ namespace VikingXNAWinForms
 
         // However many GraphicsDeviceControl instances you have, they all share
         // the same underlying GraphicsDevice, managed by this helper service.
-        protected GraphicsDeviceService graphicsDeviceService;
+        protected GraphicsDeviceService? graphicsDeviceService;
 
         /// <summary>
         /// The winform is running in an STA thread.  If we take a lock on an STA thread other messages from
@@ -49,26 +51,18 @@ namespace VikingXNAWinForms
         /// This can be used with components such as the ContentManager,
         /// which use this service to look up the GraphicsDevice.
         /// </summary>
-        public ServiceContainer Services
-        {
-            get { return services; }
-        }
+        public ServiceContainer Services => services;
 
-        ServiceContainer services = new ServiceContainer();
+        readonly ServiceContainer services = new();
 
-        private Microsoft.Xna.Framework.Content.ContentManager _Content;
-        public Microsoft.Xna.Framework.Content.ContentManager Content
-        {
-            get
-            {
-                /*if (_Content == null)
+        private Microsoft.Xna.Framework.Content.ContentManager? _Content;
+        public Microsoft.Xna.Framework.Content.ContentManager Content =>
+            /*if (_Content is null)
                 {
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(this.Services);
                     _Content.RootDirectory = "Content";
                 }*/
-                return graphicsDeviceService.Content;
-            }
-        }
+            graphicsDeviceService?.Content ?? throw new InvalidOperationException("GraphicsDeviceService is not initialized");
 
         #endregion
 
@@ -78,11 +72,11 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets a GraphicsDevice that can be used to draw onto this control.
         /// </summary>
-        public GraphicsDevice Device
+        public GraphicsDevice? Device
         {
             get
             {
-                if (graphicsDeviceService == null)
+                if (graphicsDeviceService is null)
                     return null;
 
                 return graphicsDeviceService.GraphicsDevice;
@@ -103,7 +97,7 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void OnCreateControl()
         {
-            // Don't initialize the graphics device if we are running in the designer.
+            // Don't initialize the graphics device if we are running in the designer.  
             if (!DesignMode)
             {
                 graphicsDeviceService = GraphicsDeviceService.AddRef(Handle,
@@ -130,17 +124,10 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void Dispose(bool disposing)
         {
-            if (graphicsDeviceService != null)
-            {
-                graphicsDeviceService.Release(disposing);
-                graphicsDeviceService = null;
-            }
-
-            if (_Content != null)
-            {
-                _Content.Dispose();
-                _Content = null;
-            }
+            graphicsDeviceService?.Release(disposing);
+            graphicsDeviceService = null;
+            _Content?.Dispose();
+            _Content = null;
 
             base.Dispose(disposing);
         }
@@ -156,7 +143,7 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void OnPaint(PaintEventArgs e)
         {
-            string beginDrawError = BeginDraw();
+            string? beginDrawError = BeginDraw();
 
             if (PaintCallRefCount > 0 && string.IsNullOrEmpty(beginDrawError))
                 beginDrawError = "Viking is thinking, should be back in a few seconds.";
@@ -167,20 +154,20 @@ namespace VikingXNAWinForms
                 try
                 {
 #endif
-                PaintCallRefCount++;
-                // Draw the control using the GraphicsDevice.
-                Draw();
-                EndDraw();
+                    PaintCallRefCount++;
+                    // Draw the control using the GraphicsDevice.
+                    Draw();
+                    EndDraw();
 #if !DEBUG
                 }
                 catch (Exception except)
                 {
-                    throw except; 
+                    throw;
                 }
                 finally
                 {
 #endif
-                PaintCallRefCount--;
+                    PaintCallRefCount--;
 #if !DEBUG
                 }
 #endif
@@ -189,7 +176,7 @@ namespace VikingXNAWinForms
             else
             {
                 // If BeginDraw failed, show an error message using System.Drawing.
-                PaintUsingSystemDrawing(e.Graphics, beginDrawError);
+                PaintUsingSystemDrawing(e.Graphics, beginDrawError ?? "Unknown error");
             }
         }
 
@@ -199,16 +186,16 @@ namespace VikingXNAWinForms
         /// if this was not possible, which can happen if the graphics device is
         /// lost, or if we are running inside the Form designer.
         /// </summary>
-        string BeginDraw()
+        string? BeginDraw()
         {
             // If we have no graphics device, we must be running in the designer.
-            if (graphicsDeviceService == null)
+            if (graphicsDeviceService is null)
             {
                 return Text + "\n\n" + GetType();
             }
 
             // Make sure the graphics device is big enough, and is not lost.
-            string deviceResetError = HandleDeviceReset();
+            string? deviceResetError = HandleDeviceReset();
 
             if (!string.IsNullOrEmpty(deviceResetError))
             {
@@ -220,16 +207,20 @@ namespace VikingXNAWinForms
             // largest of these controls. But what if we are currently drawing
             // a smaller control? To avoid unwanted stretching, we set the
             // viewport to only use the top left portion of the full backbuffer.
-            Viewport viewport = new Viewport();
+            if (Device is null)
+                return "Graphics device is not available";
 
-            viewport.X = 0;
-            viewport.Y = 0;
+            Viewport viewport = new()
+            {
+                X = 0,
+                Y = 0,
 
-            viewport.Width = ClientSize.Width;
-            viewport.Height = ClientSize.Height;
+                Width = ClientSize.Width,
+                Height = ClientSize.Height,
 
-            viewport.MinDepth = 0;
-            viewport.MaxDepth = 1;
+                MinDepth = 0,
+                MaxDepth = 1
+            };
 
             Device.Viewport = viewport;
 
@@ -251,11 +242,14 @@ namespace VikingXNAWinForms
             try
             {
 #endif
-            Rectangle sourceRectangle = new Rectangle(0, 0, ClientSize.Width,
-                                                            ClientSize.Height);
+                if (Device is null)
+                    return;
 
-            if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
-                Device.Present(sourceRectangle, null, this.Handle);
+                Rectangle sourceRectangle = new(0, 0, ClientSize.Width,
+                                                                ClientSize.Height);
+
+                if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
+                    Device.Present(); //(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
             catch
@@ -274,8 +268,11 @@ namespace VikingXNAWinForms
         /// that the device is not lost. Returns an error string if the device
         /// could not be reset.
         /// </summary>
-        string HandleDeviceReset()
+        string? HandleDeviceReset()
         {
+            if (Device is null)
+                return "Graphics device is not available";
+
             bool deviceNeedsReset = false;
 
             switch (Device.GraphicsDeviceStatus)
@@ -301,6 +298,9 @@ namespace VikingXNAWinForms
             // Do we need to reset the device?
             if (deviceNeedsReset)
             {
+                if (graphicsDeviceService is null)
+                    return "Graphics device service is not available";
+
                 try
                 {
                     graphicsDeviceService.ResetDevice(ClientSize.Width,
@@ -325,16 +325,12 @@ namespace VikingXNAWinForms
         {
             graphics.Clear(Color.CornflowerBlue);
 
-            using (Brush brush = new SolidBrush(Color.Black))
-            {
-                using (StringFormat format = new StringFormat())
-                {
-                    format.Alignment = StringAlignment.Center;
-                    format.LineAlignment = StringAlignment.Center;
+            using Brush brush = new SolidBrush(Color.Black);
+            using StringFormat format = new();
+            format.Alignment = StringAlignment.Center;
+            format.LineAlignment = StringAlignment.Center;
 
-                    graphics.DrawString(text, Font, brush, ClientRectangle, format);
-                }
-            }
+            graphics.DrawString(text, Font, brush, ClientRectangle, format);
         }
 
 
@@ -357,19 +353,13 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Derived classes override this to initialize their drawing code.
         /// </summary>
-        protected virtual void Initialize()
-        {
-            throw new NotImplementedException("GraphicsDeviceControl::Initialize must be implemented");
-        }
+        protected virtual void Initialize() => throw new NotImplementedException("GraphicsDeviceControl::Initialize must be implemented");
 
 
         /// <summary>
         /// Derived classes override this to draw themselves using the GraphicsDevice.
         /// </summary>
-        protected virtual void Draw()
-        {
-            throw new NotImplementedException("GraphicsDeviceControl::Draw must be implemented");
-        }
+        protected virtual void Draw() => throw new NotImplementedException("GraphicsDeviceControl::Draw must be implemented");
 
 
         #endregion

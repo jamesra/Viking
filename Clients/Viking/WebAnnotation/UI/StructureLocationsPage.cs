@@ -1,59 +1,57 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
     [PropertyPage(typeof(Structure), 3)]
     public partial class StructureLocationsPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
-
-        bool listLoaded = false;
+        private Structure Obj;
+        private bool listLoaded = false;
 
         public StructureLocationsPage()
         {
 
             InitializeComponent();
-            this.Title = "Locations";
-            this.listLocations.Title = "Locations";
-            this.listLocations.TitleVisible = false;
+            Title = "Locations";
+            listLocations.Title = "Locations";
+            listLocations.TitleVisible = false;
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
         }
 
-        private void StructureLocationsPage_VisibleChanged(object sender, EventArgs e)
+        private async void StructureLocationsPage_VisibleChanged(object sender, EventArgs e)
         {
             if (!listLoaded)
             {
 
-                this.UseWaitCursor = true;
-                ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(Obj.ID);
-                List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Count);
+                UseWaitCursor = true;
+                ICollection<LocationObj> locations = await Store.Locations.GetStructureLocations(Obj.ID, QueryTargets.Server);
+                List<Location_PropertyPageViewModel> listLocationViews = new(locations.Count);
 
                 foreach (LocationObj loc in locations)
                 {
                     listLocationViews.Add(new Location_PropertyPageViewModel(loc.ID));
                 }
 
-                listLocations.SetLocations(listLocationViews.ToArray());
+                listLocations.SetLocations([.. listLocationViews]);
 
                 listLoaded = true;
 
 
-                this.UseWaitCursor = false;
+                UseWaitCursor = false;
             }
         }
     }

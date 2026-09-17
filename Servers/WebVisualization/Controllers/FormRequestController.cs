@@ -12,6 +12,8 @@ using System.Web.Script.Serialization;
 using System.Net.Mail;
 using System.Web.Security;
 using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using AnnotationVizLib.AnnotationService;
 
 using ConnectomeViz.Helpers;
@@ -160,8 +162,7 @@ namespace ConnectomeViz.Controllers
                 DeleteDirectory(outputPath);
           
 
-            WebClient webClient = new WebClient();
-            webClient.DownloadFile(path, sourcePath);
+            DownloadFileAsync(path, sourcePath).GetAwaiter().GetResult();
 
             while (!System.IO.File.Exists(sourcePath))
                 continue;
@@ -188,6 +189,20 @@ namespace ConnectomeViz.Controllers
    
             //return Content(userURL+"/"+ name +"/scene.json");
             return Content("http://connectomes.utah.edu/test/files/shoeb/155.100.105.9_Rabbit_476.json,http://connectomes.utah.edu/test/files/shoeb/155.100.105.9_Rabbit_514.json");
+        }
+
+        private async Task DownloadFileAsync(string url, string filePath)
+        {
+            using (var httpClient = new HttpClient())
+            {
+                var response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                
+                using (var fileStream = File.Create(filePath))
+                {
+                    await response.Content.CopyToAsync(fileStream);
+                }
+            }
         }
 
         public static bool DeleteDirectory(string target_dir)

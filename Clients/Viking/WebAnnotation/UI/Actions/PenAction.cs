@@ -40,9 +40,8 @@ namespace WebAnnotation
     /// </summary>
     public class ViewActionBinding
     {
-        VikingXNAGraphics.Controls.IClickable ClickableAction;
-
-        IActionView View;
+        private readonly VikingXNAGraphics.Controls.IClickable ClickableAction;
+        private readonly IActionView View;
     }
 
 
@@ -60,7 +59,10 @@ namespace WebAnnotation
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(AnnotationAction a) => a.Execute;
+        public static implicit operator Action(AnnotationAction a)
+        {
+            return a.Execute;
+        }
 
         /// <summary>
         /// An always active visualization
@@ -87,11 +89,11 @@ namespace WebAnnotation
         /// <param name="new_hole"></param>
         /// <param name="transform"></param>
         /// <returns></returns>
-        public static CutHoleAction TryCreateCutHole(LocationObj loc, GridPolygon new_hole, IVolumeToSectionTransform transform)
+        public static CutHoleAction TryCreateCutHole(LocationObj loc, Polygon new_hole, IVolumeToSectionTransform transform)
         {
             Action action = new Action(() =>
             {
-                GridVector2[] mosaic_points = transform.VolumeToSection(new_hole.ExteriorRing);
+                Vector2[] mosaic_points = transform.VolumeToSection(new_hole.ExteriorRing);
                 SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
                 try

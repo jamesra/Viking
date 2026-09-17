@@ -17,7 +17,7 @@ namespace EntityFrameworkExtras
         /// <param name="storedProcedure">The stored procedure to execute.</param>
         public static void ExecuteStoredProcedure(this ObjectContext context, object storedProcedure)
         {
-            if (storedProcedure == null)
+            if (storedProcedure is null)
                 throw new ArgumentNullException("storedProcedure");
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);
@@ -37,12 +37,12 @@ namespace EntityFrameworkExtras
         /// <returns></returns>
         public static IEnumerable<T> ExecuteStoredProcedure<T>(this ObjectContext context, object storedProcedure)
         {
-            if (storedProcedure == null)
+            if (storedProcedure is null)
                 throw new ArgumentNullException("storedProcedure");
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);
 
-            List<T> result = context.ExecuteStoreQuery<T>(info.Sql, info.SqlParameters).ToList();
+            List<T> result = [.. context.ExecuteStoreQuery<T>(info.Sql, info.SqlParameters)];
 
             SetOutputParameterValues(info.SqlParameters, storedProcedure);
 
@@ -53,7 +53,7 @@ namespace EntityFrameworkExtras
         {
             foreach (PropertyInfo propertyInfo in storedProcedure.GetType().GetProperties().Where(p => p.HasAttribute<StoredProcedureParameterAttribute>()))
             {
-                var helper = new StoredProcedureParserHelper();
+                StoredProcedureParserHelper helper = new();
 
                 var name = helper.GetParameterName(propertyInfo);
 
@@ -70,13 +70,10 @@ namespace EntityFrameworkExtras
             {
                 PropertyInfo propertyInfo = GetMatchingProperty(storedProcedure, sqlParameter);
 
-                if (propertyInfo != null)
-                {
-                    propertyInfo.SetValue(storedProcedure,
+                propertyInfo?.SetValue(storedProcedure,
                         (sqlParameter.Value == DBNull.Value) ?
                         GetDefault(propertyInfo.PropertyType) :
                         sqlParameter.Value, null);
-                }
             }
         }
 

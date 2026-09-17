@@ -1,45 +1,42 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using System.Linq;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    abstract class LocationCurveView : LocationLineViewBase, VikingXNAGraphics.IColorView
+    internal abstract class LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : LocationLineViewBase(obj, mapper), VikingXNAGraphics.IColorView
     {
-        public abstract GridVector2[] MosaicCurveControlPoints { get; }
-        public abstract GridVector2[] VolumeCurveControlPoints { get; }
+        public abstract Geometry.Vector2[] MosaicCurveControlPoints { get; }
+        public abstract Geometry.Vector2[] VolumeCurveControlPoints { get; }
         public abstract Color Color { get; set; }
         public abstract float Alpha { get; set; }
 
-        public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
-        {
-        }
-
-        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
         {
             if (PointIntersectsAnyControlPoint(Position))
             {
-                return VolumeControlPoints.Select(p => GridVector2.Distance(p, Position) / ControlPointRadius).Min();
+                return VolumeControlPoints.Select(p => Geometry.Vector2.Distance(p, Position) / ControlPointRadius).Min();
             }
             else
             {
                 //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
+                LineSegment[] segs = LineSegment.SegmentsFromPoints(VolumeCurveControlPoints);
                 double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-                return MinDistance / (this.LineWidth / 2.0);
+                return MinDistance / (LineWidth / 2.0);
             }
         }
 
-        protected override bool PointIntersectsAnyLineSegment(GridVector2 WorldPosition)
+        protected override bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
         {
             //TODO: This could be optimized considerably
-            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
+            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(VolumeCurveControlPoints);
             //Find the line segment the NewControlPoint intersects
-            double MinDistance;
-            int iNearest = lineSegs.NearestSegment(WorldPosition, out MinDistance);
-            return MinDistance < this.LineWidth / 2.0f;
+            int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
+            return MinDistance < LineWidth / 2.0f;
         }
     }
 }

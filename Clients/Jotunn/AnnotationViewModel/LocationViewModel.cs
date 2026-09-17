@@ -1,12 +1,11 @@
 ﻿using System.Windows;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace AnnotationViewModel
 {
     public class LocationViewModel : DependencyObject
     {
-        private readonly LocationObj obj; 
+        private readonly WebAnnotationModel.LocationObj obj; 
         
         public static readonly DependencyProperty ScreenPositionProperty;
 
@@ -39,7 +38,7 @@ namespace AnnotationViewModel
                 return;
 
             Point p = (Point)e.NewValue;
-            lvm.obj.Position = new Geometry.GridVector2(p.X, p.Y);*/
+            lvm.obj.Position = new Geometry.Vector2(p.X, p.Y);*/
         }
 
         private static void OnVolumePositionChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
@@ -49,7 +48,7 @@ namespace AnnotationViewModel
                  return;
 
              Point p = (Point)e.NewValue;
-             lvm.obj.Position = new Geometry.GridVector2(p.X, p.Y);*/
+             lvm.obj.Position = new Geometry.Vector2(p.X, p.Y);*/
         }
 
         private static void OnScreenPositionChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
@@ -59,7 +58,7 @@ namespace AnnotationViewModel
                  return;
 
              Point p = (Point)e.NewValue;
-             lvm.obj.Position = new Geometry.GridVector2(p.X, p.Y);*/
+             lvm.obj.Position = new Geometry.Vector2(p.X, p.Y);*/
         }
 
         public static readonly DependencyProperty RadiusProperty;
