@@ -25,8 +25,6 @@ namespace WebAnnotation.UI.Commands
         //Shapes the user can click to confirm
         private readonly PositionColorMeshModel? DrawnShape2D = null;  //Shape to draw for filled 2D shapes, Polygons, circles, etc...
         private readonly PolyLineView? DrawnShape1D = null;            //Shape to draw for 1D shapes or open 2D shapes, lines, closed curves, etc...
-        private readonly CircleView? circleView = null;
-        private readonly double Width;  //Line width for line types
 
         /// <summary>
         /// Button user can click to cancel

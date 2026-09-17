@@ -108,7 +108,7 @@ namespace Viking.Common
                 bmp.UnlockBits(lockedBmpData);
                 lockedBmpData = null;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 if (lockedBmpData != null)
                     bmp.UnlockBits(lockedBmpData);

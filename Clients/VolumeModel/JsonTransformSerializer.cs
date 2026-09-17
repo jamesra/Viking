@@ -146,9 +146,23 @@ namespace VolumeModel
 
         private class ComputedPropertyJsonConverterInner<T> : JsonConverter<T>
         {
-            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-                // For reading, we'll use the default behavior
-                JsonSerializer.Deserialize<T>(ref reader, options);
+            private JsonSerializerOptions _innerOptions;
+
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                // Build inner options without this factory converter to avoid infinite recursion.
+                // Cache the result since JsonSerializerOptions is expensive to construct.
+                if (_innerOptions is null)
+                {
+                    var innerOptions = new JsonSerializerOptions(options);
+                    var self = innerOptions.Converters.OfType<ComputedPropertyJsonConverter>().FirstOrDefault();
+                    if (self != null)
+                        innerOptions.Converters.Remove(self);
+                    _innerOptions = innerOptions;
+                }
+
+                return JsonSerializer.Deserialize<T>(ref reader, _innerOptions);
+            }
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
             {

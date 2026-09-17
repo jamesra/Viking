@@ -237,11 +237,22 @@ namespace Viking.Common
                     }
 
                     Trace.WriteLine($"Found extension: {Extension.Name} at {FileName}", "ExtMan");
-                    Debug.Assert(ExtensionToAssemblyTable.ContainsKey(Extension) == false, Extension.Name + ":" + FileName + " Extension loaded twice!");
+                    if (ExtensionToAssemblyTable.ContainsKey(Extension))
+                    {
+                        if (!IsPreferredExtensionPath(AssemblyDir, FileName))
+                        {
+                            Trace.WriteLine($"Skipping duplicate extension {Extension.Name} at {FileName}", "ExtMan");
+                            continue;
+                        }
+
+                        Trace.WriteLine($"Replacing {Extension.Name} with preferred path {FileName}", "ExtMan");
+                        ExtensionToAssemblyTable[Extension] = A;
+                        continue;
+                    }
 
                     ExtensionToAssemblyTable.Add(Extension, A);
                 }
-                catch (System.BadImageFormatException e)
+                    catch (System.BadImageFormatException)
                 {
                     Trace.WriteLine("Bad image format loading assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.  Otherwise it usually indicates loading a 64-bit DLL from a 32-bit process.");
                     continue;
@@ -269,6 +280,13 @@ namespace Viking.Common
             }
         }
 
+        private static bool IsPreferredExtensionPath(string modulesRoot, string fileName)
+        {
+            string assemblyName = Path.GetFileNameWithoutExtension(fileName);
+            string preferred = Path.Combine(modulesRoot, assemblyName, Path.GetFileName(fileName));
+            return string.Equals(Path.GetFullPath(fileName), Path.GetFullPath(preferred), StringComparison.OrdinalIgnoreCase);
+        }
+
         internal static List<string> RecursiveGetModules(string root)
         {
             List<string> listFiles = [.. Directory.GetFiles(root, "*.DLL")];
@@ -277,6 +295,9 @@ namespace Viking.Common
 
             foreach (string dir in dirs)
             {
+                if (string.Equals(Path.GetFileName(dir), "Viking", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 listFiles.AddRange(RecursiveGetModules(dir));
             }
 
@@ -509,7 +530,7 @@ namespace Viking.Common
             {
                 // Check if this is a FileLoadException about strongly-named assemblies
                 bool isStrongNameIssue = except.InnerExceptions.OfType<System.IO.FileLoadException>()
-                    .Any(e => e.Message.Contains("strongly-named assembly") || e.HResult == 0x80131044);
+                    .Any(e => e.Message.Contains("strongly-named assembly") || e.HResult == unchecked((int)0x80131044));
 
                 string? customMessage = isStrongNameIssue
                     ? "This extension requires a strongly-named assembly that is not available."
@@ -579,7 +600,7 @@ namespace Viking.Common
                     {
                         FullyQualifiedName = M.FullyQualifiedName;
                     }
-                    catch (ArgumentException e)
+                    catch (ArgumentException)
                     {
                         Trace.WriteLine("Could not generate FullyQualifiedName for M.ToString(), this is probably OK if it is generated code or a resource.");
                         continue;

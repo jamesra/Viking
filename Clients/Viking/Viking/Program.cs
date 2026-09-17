@@ -101,6 +101,11 @@ namespace Viking
             // Register viking:// URL protocol so the OS launches Viking when the user clicks a viking:// link
             VikingProtocolRegistration.RegisterIfNeeded();
 
+            // Same-volume deep link: forward to the running instance and exit when handled.
+            string? vikingOpenUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(vikingOpenUrl) && VikingSingleInstance.TryForwardToExistingInstance(vikingOpenUrl!))
+                return;
+
             ConfigureHighDpiMode();
             Application.EnableVisualStyles();
 
@@ -178,6 +183,7 @@ namespace Viking
 
             //Make sure the volume URL includes a file, if it does not then include Volume.VikingXML by default
             appSettings.VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(appSettings.VolumeURL);
+            UI.State.VolumeUrl = appSettings.VolumeURL;
             Trace.WriteLine($"Loading: {appSettings.VolumeURL}", "Viking");
 
             // Populate annotation URL asynchronously (fire-and-forget, errors are logged)
@@ -189,13 +195,19 @@ namespace Viking
 
             VikingApplicationContext context = new(appSettings);
             context.Initialize();
+
+            // After the main window and viewer exist, accept same-volume viking:// activations.
+            if (context.MainForm != null && !string.IsNullOrWhiteSpace(UI.State.VolumeUrl))
+                VikingSingleInstance.StartListening(UI.State.VolumeUrl!, VikingDeepLinkActivation.HandleIncomingUrl);
+
             Application.Run(context);
-             
-            // Shutdown WPF Application instance if it exists
-            System.Windows.Application.Current?.Shutdown();
+
+            VikingSingleInstance.StopListening();
+            VikingApplicationContext.ShutdownAfterMessageLoop();
 
             SynchronizedDebugWriter?.Close();
             DebugLogFile?.Close();
+            Environment.Exit(0);
         }
 
         private static ApplicationSettings TryBypassSplash(CommandLineOptions options)
@@ -228,7 +240,7 @@ namespace Viking
             if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
                 return false;
 
-            var query = ParseQueryString(uri.Query);
+            var query = VikingDeepLinkParser.ParseQueryString(uri.Query);
             ApplyStartupPlaceArguments(query);
 
             string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
@@ -272,57 +284,7 @@ namespace Viking
         /// </summary>
         private static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
         {
-            UI.State.StartupArguments = [];
-
-            if (query.TryGetValue("location", out string? locationRaw) && !string.IsNullOrWhiteSpace(locationRaw))
-            {
-                locationRaw = locationRaw.Trim();
-                if (long.TryParse(locationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locationId))
-                {
-                    UI.State.StartupArguments["Location"] = locationId.ToString(CultureInfo.InvariantCulture);
-                    return;
-                }
-
-                // Comma-separated x,y,z[,downsample] from SBFSEM-tools pick readout
-                string[] parts = locationRaw.Split(',');
-                if (parts.Length >= 3)
-                {
-                    UI.State.StartupArguments["X"] = parts[0].Trim();
-                    UI.State.StartupArguments["Y"] = parts[1].Trim();
-                    UI.State.StartupArguments["Z"] = parts[2].Trim();
-                    if (parts.Length >= 4)
-                        UI.State.StartupArguments["DS"] = parts[3].Trim();
-                    return;
-                }
-            }
-
-            CopyQueryKey(query, "x", "X");
-            CopyQueryKey(query, "y", "Y");
-            CopyQueryKey(query, "z", "Z");
-            CopyQueryKey(query, "ds", "DS");
-        }
-
-        private static void CopyQueryKey(Dictionary<string, string> query, string queryKey, string startupKey)
-        {
-            if (query.TryGetValue(queryKey, out string? value) && !string.IsNullOrWhiteSpace(value))
-                UI.State.StartupArguments[startupKey] = value.Trim();
-        }
-
-        private static Dictionary<string, string> ParseQueryString(string query)
-        {
-            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (string.IsNullOrEmpty(query) || query[0] != '?')
-                return dict;
-            foreach (var pair in query.Substring(1).Split('&'))
-            {
-                var eq = pair.IndexOf('=');
-                if (eq < 0)
-                    continue;
-                var key = Uri.UnescapeDataString(pair.Substring(0, eq).Replace('+', ' '));
-                var value = Uri.UnescapeDataString(pair.Substring(eq + 1).Replace('+', ' '));
-                dict[key] = value;
-            }
-            return dict;
+            UI.State.StartupArguments = VikingDeepLinkParser.ParsePlaceArguments(query);
         }
 
         private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
@@ -414,6 +376,8 @@ namespace Viking
             UI.State.IdentityVolumeName = string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeName)
                 ? null
                 : wpfLoginWindow.VolumeName;
+            if (!string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeURL))
+                UI.State.VolumeUrl = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(wpfLoginWindow.VolumeURL);
             UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)
                 ? "https://sbfsem-tools.com/open"
                 : settings.SbfsemToolsOpenUrl;

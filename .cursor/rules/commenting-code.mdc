@@ -1,0 +1,15 @@
+---
+name: Commenting rules
+description: Inline comments vs required type/member documentation
+alwaysApply: true
+---
+
+# Commenting Code
+
+- **No obvious inline comments:** Do not write `//` or `#` comments that only restate the next line (e.g. `// increment i by 1`). That ban is **only** for play-by-play inline comments. It does **not** mean a class or method may ship with no documentation.
+- **Type and member docs are required:** When you create or substantially edit a class, method, or non-obvious field, add the language’s standard API comment — C# `/// <summary>`, Python docstring, PowerShell comment-based help. State purpose, callers, and hidden contracts (threading, cancel, ownership). Follow the `csharp-xml-docs` / `python-comments` skills. A file with zero `///` on its types is incomplete.
+- **Explain the why, not the what:** Inline comments are for invariants, edge cases, and architectural decisions. Do not narrate self-explanatory code.
+- **Future-pass AI:** Document a contract a later edit would otherwise have to rediscover. Do not restate the code.
+- **Preserve existing comments:** If still correct, keep them. If you cannot tell, prefix with `?? AI Changed Code after comment ??`. If you know they are wrong, update or delete them.
+- **TODO formatting:** `# TODO:` or `// TODO:` plus an explanation.
+---

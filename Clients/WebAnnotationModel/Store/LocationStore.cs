@@ -584,9 +584,12 @@ namespace WebAnnotationModel
 
                 IClientChannel proxy = (IClientChannel)state.Proxy;
 
-                //This happens if we called abort
+                //This happens if we called abort — notify so RegionRequestData can clear LastQuery
                 if (IsProxyBroken(proxy))
+                {
+                    state.OnLoadCompletedCallBack?.Invoke(null);
                     return;
+                }
 
                 Debug.Assert(proxy != null);
 
@@ -601,16 +604,19 @@ namespace WebAnnotationModel
                 catch (TimeoutException)
                 {
                     Debug.Write("Timeout waiting for server results");
+                    state.OnLoadCompletedCallBack?.Invoke(null);
                     return;
                 }
                 catch (EndpointNotFoundException)
                 {
                     Debug.Write("GetLocationChangesCallback - Endpoint not found exception");
+                    state.OnLoadCompletedCallBack?.Invoke(null);
                     return;
                 }
                 catch (Exception e)
                 {
                     ShowStandardExceptionMessage(e);
+                    state.OnLoadCompletedCallBack?.Invoke(null);
                     return;
                 }
 

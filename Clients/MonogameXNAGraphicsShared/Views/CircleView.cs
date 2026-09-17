@@ -548,7 +548,7 @@ namespace VikingXNAGraphics
 
                         device.SetVertexBuffer(vb);
                         device.Indices = ib;
-                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, vertexCount, 0, indexCount / 3);
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, indexCount / 3);
                     }
                 }
             }

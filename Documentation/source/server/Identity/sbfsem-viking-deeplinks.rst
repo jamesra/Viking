@@ -98,8 +98,11 @@ Location and coordinates are **not** stored on ``VikingLaunchCode``; they
 only ride on the ``viking://`` URL. ``VolumeName`` **is** stored so
 launch-exchange can mint the correct volume scopes.
 
-First-pass limitation: each ``viking://`` click starts a new Viking process
-(no single-instance forwarding).
+Same-volume instance reuse: if Viking already has that volume open, a new
+``viking://`` click is forwarded to the running process (goto location /
+coordinates and bring the window forward) instead of starting a second
+window. A link for a **different** volume, or a click while Viking is still
+on login/splash, still starts a new process.
 
 Migration
 ---------

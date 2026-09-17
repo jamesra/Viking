@@ -1,14 +1,10 @@
-﻿using Microsoft.Xna.Framework.Graphics;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
     internal class CutHoleCommand : Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        private readonly MeshView<VertexPositionColor>? meshView = null;
-
         public static string[] DefaultCutHoleHelpStrings =
         [
             "CTRL+Click another curve: Copy control points",

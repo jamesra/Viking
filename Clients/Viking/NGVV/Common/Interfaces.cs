@@ -48,4 +48,13 @@ namespace Viking.Common
         /// <param name="BackgroundColors">Texture matching size of client window with RGB values for each pixel.  May be null of no color data available</param>
         void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue);
     }
+
+    /// <summary>
+    /// Overlay objects that consume a mouse double-click so DefaultCommand can skip the context menu.
+    /// Return true if the event was handled.
+    /// </summary>
+    public interface IHandleMouseDoubleClick
+    {
+        bool HandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, GridVector2 worldPosition);
+    }
 }

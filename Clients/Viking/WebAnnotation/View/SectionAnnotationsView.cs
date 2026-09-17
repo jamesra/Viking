@@ -56,7 +56,9 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, null, AddLocationsInLocalCache, token); // this.AddLocations, null);
+            // Server callback must not be null: objects already in the store do not raise CollectionChanged,
+            // so this is how they enter the canvas view after a region refresh.
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, AddLocationsInLocalCache, AddLocationsInLocalCache, token);
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -766,7 +768,7 @@ namespace WebAnnotation.ViewModel
                */
 
             foreach (LocationObj loc in listLocations)
-            {
+            { 
                 if (AddLocation(loc, Subscribe, UpdateVolumeLocations))
                 {
                     VolumePositionUpdatedCount++;
@@ -1263,7 +1265,9 @@ namespace WebAnnotation.ViewModel
             //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, null, AddLocationsInLocalCache, token);// this.AddLocationsInRegionCallback);
+            // Server callback must not be null: objects already in the store do not raise CollectionChanged,
+            // so this is how they enter the canvas view after a region refresh.
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, AddLocationsInLocalCache, AddLocationsInLocalCache, token);
 
 
             SectionAbove?.LoadAnnotationsInRegion(scene, token);

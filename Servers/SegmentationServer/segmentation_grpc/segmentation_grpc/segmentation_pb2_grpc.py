@@ -5,7 +5,7 @@ import warnings
 
 from segmentation_grpc import segmentation_pb2 as segmentation__pb2
 
-GRPC_GENERATED_VERSION = '1.71.0'
+GRPC_GENERATED_VERSION = '1.84.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in segmentation_pb2_grpc.py depends on'
+        + ' but the generated code in segmentation_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class SegmentationServiceStub(object):
+class SegmentationServiceStub:
     """Service for segmenting images using SAM2
     """
 
@@ -57,7 +57,7 @@ class SegmentationServiceStub(object):
                 _registered_method=True)
 
 
-class SegmentationServiceServicer(object):
+class SegmentationServiceServicer:
     """Service for segmenting images using SAM2
     """
 
@@ -69,7 +69,7 @@ class SegmentationServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def SegmentImage(self, request, context):
-        """Segment an image based on input coordinates
+        """Segment an image based on input coordinates (uses cached image_id or inline image_data)
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -83,7 +83,7 @@ class SegmentationServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def DeleteImage(self, request, context):
-        """Delete an image from the server cache
+        """Delete a cached image from the server
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -120,7 +120,7 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class SegmentationService(object):
+class SegmentationService:
     """Service for segmenting images using SAM2
     """
 

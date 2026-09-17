@@ -25,7 +25,10 @@ namespace WebAnnotationModel.Objects
         {
             get
             {
-                if (_Parent is null && ParentID.HasValue)
+                if (!ParentID.HasValue)
+                    return null;
+
+                if (_Parent is null || !_Parent.ID.Equals(ParentID.Value))
                     _Parent = OnMissingParent();
 
                 return _Parent;
@@ -144,6 +147,14 @@ namespace WebAnnotationModel.Objects
             }
 
             base.Synch(newdata);
+        }
+
+        internal override void Update(T newdata)
+        {
+            if (this.Data != null && this.Data.ParentID != newdata.ParentID)
+                this._Parent = null;
+
+            base.Update(newdata);
         }
     }
 }

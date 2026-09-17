@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         xmlns:local="clr-namespace:WebAnnotation.WPF.Forms"
+        xmlns:controls="clr-namespace:WebAnnotation.WPF.Controls"
         Title="Annotation Preferences" 
         Height="750" 
         Width="520"
@@ -296,77 +297,21 @@
                                      Text="Smallest allowed radius for circle annotations."/>
                         </Grid>
 
-                        <!-- Smallest Rendered Size -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Smallest Rendered Size:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
-                                    Minimum="0.5"
-                                    Maximum="10"
-                                    TickFrequency="0.1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SmallestRenderedSize, StringFormat='F1'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Minimum pixel size for circle diameter before it is hidden. Circles smaller than this value will not be rendered. Range: 0.5 to 10.0 pixels."/>
-                        </Grid>
+                        <controls:CircleSizePreviewSlider
+                            Header="Smallest Rendered Size:"
+                            Description="Minimum on-screen circle diameter before an annotation is hidden. The circle below shows the cutoff; the slider max is the width of this page."
+                            Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
+                            Minimum="0.5"
+                            TickFrequency="0.1"
+                            PreviewMode="PixelDiameter"/>
 
-                        <!-- Polygon Point Radius -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Radius:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonPointRadius, Mode=TwoWay}"
-                                    Minimum="1"
-                                    Maximum="50"
-                                    TickFrequency="0.5"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonPointRadius, StringFormat='F1'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Size in pixels for control points displayed on polygon and smooth polygon annotations. Range: 1.0 to 50.0."/>
-                        </Grid>
+                        <controls:CircleSizePreviewSlider
+                            Header="Polygon Point Radius:"
+                            Description="Radius in pixels for control points on polygon and smooth polygon annotations. The circle below is the on-screen size."
+                            Value="{Binding PolygonPointRadius, Mode=TwoWay}"
+                            Minimum="1"
+                            TickFrequency="0.5"
+                            PreviewMode="PixelRadius"/>
 
                         <!-- Polygon Opacity Parentless -->
                         <Grid>
@@ -517,7 +462,14 @@
                 <!-- Segmentation Settings -->
                 <Expander Header="Segmentation" IsExpanded="False" Margin="10">
                     <StackPanel Margin="10">
-                        <!-- Segmentation Point Radius -->
+                        <controls:CircleSizePreviewSlider
+                            Header="Segmentation Point Radius:"
+                            Description="Radius in pixels for segmentation prompt points on the image. The circle below is the on-screen size."
+                            Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
+                            Minimum="1"
+                            TickFrequency="0.1"
+                            PreviewMode="PixelRadius"/>
+
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -529,17 +481,17 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Point Radius:"/>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Drop Holes Smaller Than:"/>
                             <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
-                                    Minimum="1"
-                                    Maximum="15"
-                                    TickFrequency="0.1"
+                                    Value="{Binding SegmentationHoleDropFraction, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="0.25"
+                                    TickFrequency="0.01"
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationPointRadius, StringFormat='F1'}"
+                                     Text="{Binding SegmentationHoleDropFraction, StringFormat='P0'}"
                                      IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
@@ -550,8 +502,71 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Radius in pixels for segmentation points displayed on the image. Range: 1.0 to 15.0. Larger values make points more visible but may overlap."/>
+                                     Text="Holes smaller than this percentage of the segmented area are filled. Set to 0% to preserve every detected hole."/>
                         </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Edge Cleanup Radius:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationEdgeCleanupRadius, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="10"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationEdgeCleanupRadius}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Screen-pixel radius for opening then closing the mask before tracing. Removes thin wisps and notches. Set to 0 to disable."/>
+                        </Grid>
+
+                        <controls:CircleSizePreviewSlider
+                            Header="Auto Polygonize Min Size:"
+                            Description="Circles smaller than this percentage of the current view are used only as negative prompts. 0% submits every eligible circle."
+                            Value="{Binding AutoPolygonizeMinScreenAreaPercent, Mode=TwoWay}"
+                            Minimum="0"
+                            Maximum="10"
+                            TickFrequency="0.1"
+                            PreviewMode="PercentOfScreen"/>
+
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeCircles, Mode=TwoWay}"
+                                  Content="Auto polygonize circles in view"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="When enabled, idle views automatically send each circle (inset 20% from the edges) to the segmentation service. Double-click a result polyline to accept; double-right-click to dismiss."/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeOverlayMasks, Mode=TwoWay}"
+                                  Content="Overlay returned masks (debug)"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Shows the raw SAM2 mask under each auto-polygonize outline so you can compare the service response to the traced polygon. Uses extra GPU memory; leave off during normal tracing."/>
                     </StackPanel>
                 </Expander>
             </StackPanel>

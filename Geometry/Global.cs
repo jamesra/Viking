@@ -65,8 +65,6 @@ namespace Geometry
                     return false;
                 }
             }
-
-            return false;
         }
 
         public static bool IsCacheFileValid(string CacheStosPath, DateTime time) => IsCacheFileValid(CacheStosPath, [time]);

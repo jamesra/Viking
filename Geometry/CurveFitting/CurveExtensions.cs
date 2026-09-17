@@ -15,7 +15,9 @@ namespace Geometry
         {
             if (NumInterpolations == 0)
             {
-                return [.. ControlPoints];
+                return closeCurve && ControlPoints.Count > 2
+                    ? [.. ControlPoints.EnsureClosedRing()]
+                    : [.. ControlPoints];
             }
 
             if (closeCurve)

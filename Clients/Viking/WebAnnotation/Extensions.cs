@@ -1,7 +1,9 @@
 using Geometry;
+using Geometry.Meshing;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
@@ -259,12 +261,17 @@ namespace WebAnnotation
     /// </summary>
     public static class AnnotationPointExtensions
     {
+        internal static readonly PolygonNegativePromptCache PolygonPromptCache = new();
+
         /// <summary>
         /// Returns representative points for a collection of annotations.
-        /// For polygons: centroid if inside polygon, else skipped. For lines/points: vertices. For circles/ellipses: center.
+        /// For polygons: one centroid per constrained-triangulation face (falls back to the
+        /// polygon centroid if meshing fails and that centroid is inside). For lines/points:
+        /// vertices. For circles/ellipses: center.
+        /// Polygon samples are cached by location ID and LastModified so a batch of
+        /// SegmentImage calls does not retriangulate the same neighbors.
         /// </summary>
-        /// <param name="annotations">Annotations to extract points from</param>
-        /// <returns>List of points in section/mosaic coordinates</returns>
+        /// <returns>Points in section/mosaic coordinates.</returns>
         public static IReadOnlyList<GridVector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
         {
             if (annotations is null)
@@ -284,9 +291,11 @@ namespace WebAnnotation
                     case LocationType.POLYGON:
                     case LocationType.CURVEPOLYGON:
                     case LocationType.CLOSEDCURVE:
-                        GridVector2? polygonPoint = TryGetPolygonRepresentativePoint(shape);
-                        if (polygonPoint.HasValue)
-                            result.Add(polygonPoint.Value);
+                        result.AddRange(PolygonPromptCache.GetOrAdd(
+                            loc.ID,
+                            loc.LastModified,
+                            typeCode,
+                            () => TryGetPolygonRepresentativePoints(shape)));
                         break;
                     case LocationType.POLYLINE:
                     case LocationType.OPENCURVE:
@@ -308,22 +317,112 @@ namespace WebAnnotation
             return result;
         }
 
-        private static GridVector2? TryGetPolygonRepresentativePoint(SqlGeometry shape)
+        /// <summary>
+        /// Samples a polygon with one interior point per constrained-triangulation face.
+        /// <see cref="GridPolygon.Triangulate"/> works in centroid-relative coordinates, so
+        /// each face centroid is translated back. Used by auto-circle and interactive
+        /// SegmentImage background prompts.
+        /// </summary>
+        internal static IReadOnlyList<GridVector2> GetPolygonNegativePromptPoints(GridPolygon polygon)
         {
+            if (polygon is null)
+                return [];
+
             try
             {
-                if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
-                    return null;
+                TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
+                if (mesh?.Faces.Count > 0)
+                {
+                    GridVector2 origin = polygon.Centroid;
+                    List<GridVector2> points = [];
+                    foreach (IFace face in mesh.Faces)
+                    {
+                        if (!face.IsTriangle())
+                            continue;
 
-                GridPolygon polygon = shape.ToPolygon();
-                GridVector2 centroid = polygon.Centroid;
-                return polygon.Contains(centroid) ? centroid : null;
+                        try
+                        {
+                            GridVector2 centroid = mesh.Centroid(face) + origin;
+                            if (polygon.Contains(centroid))
+                                points.Add(centroid);
+                        }
+                        catch (ArgumentException)
+                        {
+                        }
+                    }
+
+                    if (points.Count > 0)
+                        return points;
+                }
+            }
+            catch (EdgesIntersectTriangulationException)
+            {
+            }
+            catch (NonconformingTriangulationException)
+            {
             }
             catch (ArgumentException)
             {
-                return null;
+            }
+
+            GridVector2 fallback = polygon.Centroid;
+            return polygon.Contains(fallback) ? [fallback] : [];
+        }
+
+        private static IReadOnlyList<GridVector2> TryGetPolygonRepresentativePoints(SqlGeometry shape)
+        {
+            try
+            {
+                if (shape.GeometryType() != SupportedGeometryType.POLYGON &&
+                    shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                {
+                    return [];
+                }
+
+                return GetPolygonNegativePromptPoints(shape.ToPolygon());
+            }
+            catch (ArgumentException)
+            {
+                return [];
             }
         }
+    }
+
+    /// <summary>
+    /// Caches polygon negative-prompt points by location ID. Entries are reused until
+    /// LastModified or TypeCode changes, then dropped when the cache exceeds a cap so
+    /// unused IDs from earlier sections do not grow without bound.
+    /// </summary>
+    internal sealed class PolygonNegativePromptCache
+    {
+        internal const int MaxEntries = 2048;
+
+        private readonly ConcurrentDictionary<long, (DateTime LastModified, LocationType TypeCode, IReadOnlyList<GridVector2> Points)> entries = new();
+
+        public IReadOnlyList<GridVector2> GetOrAdd(
+            long locationId,
+            DateTime lastModified,
+            LocationType typeCode,
+            Func<IReadOnlyList<GridVector2>> factory)
+        {
+            if (entries.TryGetValue(locationId, out var cached) &&
+                cached.LastModified == lastModified &&
+                cached.TypeCode == typeCode)
+            {
+                return cached.Points;
+            }
+
+            IReadOnlyList<GridVector2> points = factory?.Invoke() ?? [];
+            if (entries.Count >= MaxEntries)
+                entries.Clear();
+
+            entries[locationId] = (lastModified, typeCode, points);
+            return points;
+        }
+
+        public void Remove(long locationId) => entries.TryRemove(locationId, out _);
+
+        public void Clear() => entries.Clear();
     }
 
     public static class LINQLikeExtensions

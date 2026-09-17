@@ -624,14 +624,11 @@ namespace Geometry
         readonly bool IShape2D.Contains(in IPoint2D p)
         {
             throw new ArgumentException("Points do not contain geometry");
-            return p.X == this.X && p.Y == this.Y;
         }
 
         readonly ShapeRelation IShape2D.GetRelation(in Geometry.IPoint2D p)
         {
             throw new ArgumentException("Points do not contain geometry");
-            //Not sure if this should return TOUCHING or CONTAINED, but I think TOUCHING is more correct
-            return p.X == this.X && p.Y == this.Y ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
         }
 
         readonly ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D l) => l.GetRelation(this);

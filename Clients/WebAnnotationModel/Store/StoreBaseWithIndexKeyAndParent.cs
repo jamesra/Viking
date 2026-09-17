@@ -31,6 +31,13 @@ namespace WebAnnotationModel
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        /// <summary>
+        /// Returns objects already in the local cache whose ParentID matches.
+        /// Does not query the server, so children that have never been loaded are omitted.
+        /// </summary>
+        public OBJECT[] GetLocalObjectsForParent(KEY parentID) =>
+            [.. IDToObject.Values.Where(o => o.ParentID.HasValue && o.ParentID.Value.Equals(parentID))];
+
         public KEY[] RootObjects
         {
             get

@@ -35,8 +35,10 @@
     .\PublishVelopack.ps1 -Configuration Release -Version "1.2.1.0"
 #>
 
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [string]$Configuration = "Release",
+    [ValidatePattern('(?i)^[0-9a-f]{40}$')]
     [string]$CertificateThumbprint = "41403cbc59209b576efe575775abe8f4a42da6ba",
     [string]$TimestampUrl = "http://timestamp.digicert.com",
     [string]$Version = "",
@@ -273,6 +275,9 @@ function Download-PreviousRelease {
 function Sign-FilesBatch {
     param(
         [string[]]$FilePaths,
+        [Parameter(Mandatory = $true)]
+        [string]$Thumbprint,
+        [string]$TimestampServer,
         [int]$AttemptNumber = 1,
         [int]$MaxAttempts = 10,
         [switch]$CheckUnsignedAfterFailure = $false
@@ -313,8 +318,8 @@ function Sign-FilesBatch {
         $ErrorActionPreference = "Continue"
         
         & $signtoolPath sign `
-            /sha1 $CertificateThumbprint `
-            /t $TimestampUrl `
+            /sha1 $Thumbprint `
+            /t $TimestampServer `
             /fd SHA256 `
             $FilePaths 2>&1 | ForEach-Object {
                 # Parse output line by line
@@ -523,7 +528,7 @@ if ($filesToSign.Count -eq 0) {
     while ($attempt -le $maxAttempts -and $unsignedFiles.Count -gt 0) {
         # Only check unsigned files on first failure, not on retries
         $checkUnsigned = ($attempt -eq 1)
-        $result = Sign-FilesBatch -FilePaths $unsignedFiles -AttemptNumber $attempt -MaxAttempts $maxAttempts -CheckUnsignedAfterFailure:$checkUnsigned
+        $result = Sign-FilesBatch -FilePaths $unsignedFiles -Thumbprint $CertificateThumbprint -TimestampServer $TimestampUrl -AttemptNumber $attempt -MaxAttempts $maxAttempts -CheckUnsignedAfterFailure:$checkUnsigned
         
         if ($result.Success) {
             $allSigned = $true

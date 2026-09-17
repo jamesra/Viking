@@ -165,7 +165,7 @@ namespace WebAnnotation.View
                 LabelText = Parent.Type.Code + " " + LabelText;
             }
 
-            Color LabelColor = modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
+            Color LabelColor = modelObj.IsUnverifiedTerminal ? Color.Orange : Color.Black;
             LabelColor = LabelColor.SetAlpha(0.5f);
             Color ParentLabelColor = new(1.0f, 0, 0, 0.5f);
 
@@ -197,7 +197,7 @@ namespace WebAnnotation.View
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            if (IsParentPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelViews(VolumeControlPoints, ParentID);
             }

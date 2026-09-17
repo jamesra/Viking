@@ -26,7 +26,6 @@ namespace Viking.UI.WPF.ViewModels
         private SegmentationServiceTreeNode _selectedService;
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
-        private readonly bool _isSelectionMade = false;
         private readonly TaskCompletionSource<bool> _loadCompletedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null, Dictionary<long, object> preloadedServices = null)

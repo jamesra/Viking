@@ -13,7 +13,6 @@ namespace WebAnnotation.UI
     public partial class StructureLocationsChangeLogPropertiesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         private Structure Obj;
-        private readonly BindingList<WebAnnotationModel.ObjAttribute>? ListTags = null;
         private bool listLoaded = false;
 
         public StructureLocationsChangeLogPropertiesPage()

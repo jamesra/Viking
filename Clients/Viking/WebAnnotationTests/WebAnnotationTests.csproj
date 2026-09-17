@@ -22,6 +22,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\SegmentationCommandTests.cs" />
+    <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
+    <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
+    <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
   </ItemGroup>
@@ -29,6 +32,7 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>

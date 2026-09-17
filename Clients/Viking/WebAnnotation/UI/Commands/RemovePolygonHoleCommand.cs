@@ -8,7 +8,6 @@ namespace WebAnnotation.UI.Commands
     internal class RemovePolygonHoleCommand : AnnotationCommandBase
     {
         private readonly GridPolygon OriginalMosaicPolygon;
-        private readonly GridPolygon OriginalVolumePolygon;
         private readonly GridPolygon UpdatedMosaicPolygon;
 
         /// <summary>

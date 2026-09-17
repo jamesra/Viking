@@ -141,7 +141,7 @@ namespace Viking.VolumeModel
                 using FileStream fstream = new(CachedTransformsFileName, FileMode.Open, FileAccess.Read);
                 transforms = JsonTransformSerializer.DeserializeArray(fstream);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 transforms = null;
                 Trace.WriteLine(string.Format("Unable to load {0} from cache", CachedTransformsFileName));

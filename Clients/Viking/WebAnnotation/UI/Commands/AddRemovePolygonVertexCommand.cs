@@ -12,8 +12,6 @@ namespace WebAnnotation.UI.Commands
         private readonly GridPolygon OriginalVolumePolygon;
         private GridPolygon UpdatedVolumePolygon;
 
-        private readonly int iNewControlPoint = -1;
-
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
         /// </summary>

@@ -115,7 +115,6 @@ namespace Viking.UI
 
                     return false;
             }
-            return false;
         }
 
         private bool UpdateGestureState(ref Message msg)

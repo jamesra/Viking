@@ -79,7 +79,6 @@ namespace Geometry
 
         private IEnumerator GetNextEnumerator(int iShape)
         {
-            IEnumerator output;
             IShape2D shape = _shapes[_currentShapeIndex];
             if (shape.ShapeType == ShapeType2D.POLYGON)
             {

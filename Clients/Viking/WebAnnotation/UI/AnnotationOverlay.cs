@@ -29,6 +29,7 @@ using WebAnnotation.Actions;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotation.UI.AutoPolygonize;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -71,6 +72,7 @@ namespace WebAnnotation
         internal static ICanvasGeometryView LastIntersectedObject = null;
 
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
+        private AutoCirclePolygonizeController autoPolygonizeController;
 
         /// <summary>
         /// Per-section cancellation for annotation loads. When section changes we only cancel loads for sections outside the keep set (current ± radius from Global.NumSectionsInMemory).
@@ -95,6 +97,26 @@ namespace WebAnnotation
         static AnnotationOverlay()
         {
             cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory;
+
+            // Same-volume deep-link activation in the running instance (Viking.exe has no compile-time WebAnnotation ref).
+            Viking.UI.State.GoToAnnotationLocation = locId =>
+            {
+                LocationObj loc = Store.Locations.GetObjectByID(locId, true);
+                if (loc is null)
+                {
+                    string volumeLabel = Viking.UI.State.IdentityVolumeName
+                        ?? Viking.UI.State.volume?.Name
+                        ?? "(unknown volume)";
+                    MessageBox.Show(
+                        $"Location ID {locId} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
+                        "Goto Location",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                GoToLocation(loc);
+            };
         }
 
         public AnnotationOverlay()
@@ -326,6 +348,12 @@ namespace WebAnnotation
 
                 helpstrings.AddRange(DefaultKeyHelpStrings());
 
+                if (autoPolygonizeController?.IsEnabled == true)
+                {
+                    helpstrings.Add("Double-click result polyline: Accept auto polygonalization");
+                    helpstrings.Add("Double right-click result polyline: Dismiss auto polygonalization");
+                }
+
                 return [.. helpstrings];
             }
         }
@@ -389,6 +417,15 @@ namespace WebAnnotation
         public object ObjectAtPosition(GridVector2 position, out double distance)
         {
             distance = double.MaxValue;
+
+            if (IsCommandDefault() &&
+                autoPolygonizeController != null &&
+                autoPolygonizeController.TryHit(position, out AutoPolygonizeProposal proposal, out double proposalDistance))
+            {
+                distance = proposalDistance;
+                return proposal;
+            }
+
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
             {
@@ -504,6 +541,12 @@ namespace WebAnnotation
             _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
 
+            autoPolygonizeController = new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            if (Global.AnnotationSettings.AutoPolygonizeCircles)
+                autoPolygonizeController.SetEnabled(true);
+
+            _Parent.Disposed += OnParentDisposed;
+
             _currentSectionNumber = _Parent.Section?.Number ?? 0;
             if (_annotationLoadWorkerTask is null || _annotationLoadWorkerTask.IsCompleted)
                 _annotationLoadWorkerTask = Task.Run(() => RunAnnotationLoadWorkerAsync(), _annotationLoadWorkerCts.Token);
@@ -518,9 +561,50 @@ namespace WebAnnotation
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
+            autoPolygonizeController?.OnCameraChanged();
             if (!ShouldLoadAnnotationsForCameraChange())
                 return;
             RequestCurrentSectionAnnotationsLoad();
+        }
+
+        /// <summary>
+        /// Starts or stops the auto-polygonize controller. Creates it on first enable.
+        /// </summary>
+        public void SetAutoPolygonizeEnabled(bool enabled)
+        {
+            autoPolygonizeController ??= new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            autoPolygonizeController.SetEnabled(enabled);
+        }
+
+        /// <summary>
+        /// Forwards the debug mask-overlay preference so existing proposals attach or dispose GPU textures.
+        /// </summary>
+        public void SetAutoPolygonizeOverlayMasksEnabled(bool enabled)
+        {
+            autoPolygonizeController?.OnOverlayMasksChanged(enabled);
+        }
+
+        private void OnParentDisposed(object sender, EventArgs e)
+        {
+            Shutdown();
+        }
+
+        /// <summary>
+        /// Stops auto-polygonize timers and the annotation-load worker when the viewer is disposed.
+        /// </summary>
+        public void Shutdown()
+        {
+            if (_Parent != null)
+                _Parent.Disposed -= OnParentDisposed;
+
+            autoPolygonizeController?.Stop();
+            try
+            {
+                _annotationLoadWorkerCts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         protected void UpdateMouseCursor()
@@ -602,6 +686,7 @@ namespace WebAnnotation
 
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseMoveVolumeCoords = WorldPosition;
+            autoPolygonizeController?.UpdateHover(WorldPosition);
 
             ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out double distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
@@ -645,6 +730,9 @@ namespace WebAnnotation
             {
                 if (Global.PenMode)
                 {
+                    if (autoPolygonizeController?.TryHit(WorldPosition, out _, out _) == true)
+                        return;
+
                     //Id we don't have a command to start, begin creating a path
                     StartPenPath(WorldPosition);
                     return;
@@ -1670,6 +1758,7 @@ break;
 
             int B = e.NewSection?.Number ?? 0;
             _currentSectionNumber = B;
+            autoPolygonizeController?.OnSectionChanged();
 
             if (!_Parent.ShowOverlays || B <= 0)
                 return;
@@ -2272,6 +2361,8 @@ break;
             DrawLocationLabels(listLocationsToDraw, scene);
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene);
+
+            autoPolygonizeController?.Draw(graphicsDevice, scene);
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
             {

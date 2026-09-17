@@ -12,7 +12,6 @@ import time
 from concurrent import futures
 from typing import List, Optional, Sequence, Tuple, Any
 
-import cv2
 import grpc
 import numpy as np
 from grpc.aio import ServicerContext
@@ -27,8 +26,6 @@ from segmentation_grpc import (
     UploadImageResponse,
     DeleteImageRequest,
     DeleteImageResponse,
-    Point,
-    Polygon,
     SegmentResult,
     SegmentationServiceServicer,
     add_SegmentationServiceServicer_to_server
@@ -37,6 +34,7 @@ from segmentation_grpc import (
 # Import the segmentation model and image cache
 from segmentation_server.segmentation_service import SegmentInfo, SegmentationModel
 from segmentation_server.image_cache import ImageCache
+from segmentation_server.mask_encoding import encode_binary_mask_png, encode_labeled_image_png
 
 
 class SegmentationServicer(SegmentationServiceServicer):
@@ -97,65 +95,55 @@ class SegmentationServicer(SegmentationServiceServicer):
         labeled_image: NDArray[np.uint16],
         segments: List[SegmentInfo],
         width: int,
-        height: int
+        height: int,
+        omit_labeled_image: bool = False
     ) -> SegmentationResponse:
         """
         Build a SegmentationResponse from segmentation results.
         
-        This method handles mask cleanup, polygon extraction, and encoding for all segments.
-        It's extracted to avoid code duplication across SegmentImage and MultiSegmentImage methods.
+        This method handles mask encoding for all segments and optionally the labeled image.
         
         Args:
             labeled_image: Labeled image array where each pixel value is a segment index
             segments: List of segment information dictionaries
             width: Image width
             height: Image height
+            omit_labeled_image: When True, skip the unused full-frame labeled image PNG
             
         Returns:
-            SegmentationResponse message with encoded masks and polygons
+            SegmentationResponse message with encoded masks
         """
-        # Encode labeled image as PNG
-        labeled_image_bytes = cv2.imencode('.png', labeled_image)[1].tobytes()
+        labeled_start = time.perf_counter()
+        labeled_image_bytes = encode_labeled_image_png(labeled_image, omit_labeled_image)
+        labeled_ms = (time.perf_counter() - labeled_start) * 1000.0
         
-        # Create the response
         response = SegmentationResponse(
             labeled_image=labeled_image_bytes,
             width=width,
             height=height
         )
         
-        # Process each segment
+        mask_encode_ms = 0.0
+        mask_bytes_total = 0
         for segment in segments:
-            # Process the mask from segmentation_service
             if 'mask' in segment:
-                # Get mask as boolean numpy array from segmentation_service
                 mask_bool: NDArray[np.bool_] = segment['mask']
-                
-                # Clean up the mask - keep only largest connected region and fill small holes
-                mask_bool = SegmentationModel.cleanup_mask(mask_bool)
-                
-                # Recalculate bounds for the cleaned mask
+
                 x, y, mask_width, mask_height = SegmentationModel.get_mask_bounds(mask_bool)
                 
-                # Crop the mask to the bounding box before encoding
                 if mask_width > 0 and mask_height > 0:
                     cropped_mask = mask_bool[y:y+mask_height, x:x+mask_width]
                 else:
                     cropped_mask = np.zeros((0, 0), dtype=np.bool_)
                 
-                # Encode as PNG for compression and to embed dimensions in the image format
-                # Client will decode PNG to extract width, height, and mask data
-                mask_bytes = cv2.imencode('.png', cropped_mask.astype(np.uint8) * 255)[1].tobytes()
-                
-                # Extract polygons from the cleaned mask
-                polygons = self.model.mask_to_polygons(mask_bool)
+                mask_start = time.perf_counter()
+                mask_bytes = encode_binary_mask_png(cropped_mask)
+                mask_encode_ms += (time.perf_counter() - mask_start) * 1000.0
             else:
-                # Fallback if mask is missing
                 mask_bytes = b''
-                x, y, mask_width, mask_height = segment.get('x', 0), segment.get('y', 0), segment.get('width', 0), segment.get('height', 0)
-                polygons = []
+                x, y = segment.get('x', 0), segment.get('y', 0)
             
-            # Create the segment result with PNG-encoded mask and position
+            mask_bytes_total += len(mask_bytes)
             segment_result = SegmentResult(
                 index=segment['index'],
                 score=segment['score'],
@@ -164,14 +152,14 @@ class SegmentationServicer(SegmentationServiceServicer):
                 y=y
             )
             
-            # Add polygons to the segment result
-            for polygon in polygons:
-                poly = Polygon()
-                for point in polygon:
-                    poly.points.append(Point(x=int(point[0]), y=int(point[1])))
-                segment_result.polygons.append(poly)
-            
             response.segments.append(segment_result)
+        
+        response_bytes = len(labeled_image_bytes) + mask_bytes_total
+        print(
+            f"[SegmentationProfile] encode masks={mask_encode_ms:.1f}ms "
+            f"labeled={labeled_ms:.1f}ms bytes={response_bytes} "
+            f"omit_labeled={omit_labeled_image}"
+        )
         
         return response
     
@@ -347,7 +335,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         coordinates: List[Tuple[int, int]],
         labels: List[int],
         multimask_output: bool,
-        context: ServicerContext
+        context: ServicerContext,
+        omit_labeled_image: bool = False
     ) -> Optional[SegmentationResponse]:
         """
         Handle segmentation for a cached image with pre-initialized predictor.
@@ -414,7 +403,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         # Build and return response
         elapsed_time = time.perf_counter() - start_time
         print(f" (completed in {elapsed_time:.3f}s)")
-        return self._build_segmentation_response(labeled_image, segments, width, height)
+        return self._build_segmentation_response(
+            labeled_image, segments, width, height, omit_labeled_image
+        )
     
     async def _handle_inline_image_segmentation(
         self,
@@ -424,7 +415,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         coordinates: List[Tuple[int, int]],
         labels: List[int],
         multimask_output: bool,
-        context: ServicerContext
+        context: ServicerContext,
+        omit_labeled_image: bool = False
     ) -> Optional[SegmentationResponse]:
         """
         Handle segmentation for an inline image using shared predictor.
@@ -478,7 +470,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         # Build and return response
         elapsed_time = time.perf_counter() - start_time
         print(f" (completed in {elapsed_time:.3f}s)")
-        return self._build_segmentation_response(labeled_image, segments, width, height)
+        return self._build_segmentation_response(
+            labeled_image, segments, width, height, omit_labeled_image
+        )
 
     async def UploadImage(
         self,
@@ -606,7 +600,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 coordinates,
                 labels,
                 multimask_output,
-                context
+                context,
+                request.omit_labeled_image
             )
             return response if response is not None else SegmentationResponse()
         else:
@@ -618,7 +613,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 coordinates,
                 labels,
                 multimask_output,
-                context
+                context,
+                request.omit_labeled_image
             )
             return response if response is not None else SegmentationResponse()
     
@@ -666,7 +662,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 coordinates,
                 labels,
                 multimask_output,
-                context
+                context,
+                request.omit_labeled_image
             )
             return response if response is not None else SegmentationResponse()
         else:
@@ -678,7 +675,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 coordinates,
                 labels,
                 multimask_output,
-                context
+                context,
+                request.omit_labeled_image
             )
             return response if response is not None else SegmentationResponse()
 

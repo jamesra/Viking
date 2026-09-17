@@ -547,33 +547,11 @@ namespace WebAnnotation.ViewModel
                 var parent = AnnotationOverlay.CurrentOverlay.Parent;
                 // Get the circle geometry
                 GridCircle mosaic_circle = GetCircleFromLocation();
+                IReadOnlyList<GridVector2> mosaicPoints = CircleSegmentationPrompts.CreateMosaicForegroundPoints(mosaic_circle);
+                IReadOnlyList<GridVector2> volume_points = CircleSegmentationPrompts.ToVolumePoints(
+                    mosaicPoints,
+                    parent.Section.ActiveSectionToVolumeTransform);
 
-                // Generate foreground points: center + 8 points at radius/2
-                List<GridVector2> foregroundPoints = [mosaic_circle.Center];
-
-                double innerRadius = mosaic_circle.Radius / 2.0;
-                for (int i = 0; i < 8; i++)
-                {
-                    double angle = (2.0 * Math.PI * i) / 8.0;
-                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
-                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
-                    foregroundPoints.Add(new GridVector2(x, y));
-                }
-
-                innerRadius = 3 * mosaic_circle.Radius / 4.0;
-                for (int i = 0; i < 8; i++)
-                {
-                    double angle = (2.0 * Math.PI * i) / 8.0;
-                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
-                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
-                    foregroundPoints.Add(new GridVector2(x, y));
-                }
-
-                var success = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. foregroundPoints], out var volume_points);
-                //Remove points that did not map
-                volume_points = [.. volume_points.Where((p, i) => success[i])];
-
-                // Create callback to update location shape
                 void callback(GridPolygon outputPolygon)
                 {
                     UpdateLocationShapeFromVolumePolygon(outputPolygon);
@@ -587,7 +565,8 @@ namespace WebAnnotation.ViewModel
                     Array.Empty<GridVector2>(), // no background points initially
                     callback,
                     channelManager,
-                    modelObj.Parent.TypeID);
+                    modelObj.Parent.TypeID,
+                    modelObj.ID);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -631,7 +610,8 @@ namespace WebAnnotation.ViewModel
                     Array.Empty<GridVector2>(), // no background points initially
                     callback,
                     channelManager,
-                    modelObj.Parent.TypeID);
+                    modelObj.Parent.TypeID,
+                    modelObj.ID);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -689,27 +669,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         private void UpdateLocationShapeFromVolumePolygon(GridPolygon volume_poly)
         {
-            try
-            {
-                // Convert location type to POLYGON
-                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
-
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
-                var mosaic_poly = parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(volume_poly);
-
-                modelObj.SetShapeFromGeometryInVolume(parent.Section.ActiveSectionToVolumeTransform, volume_poly.ToSqlGeometry());
-
-                // Save the location
-                Store.Locations.Save();
-
-                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error updating location shape: {ex.Message}");
-                MessageBox.Show($"Failed to update location shape: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, AnnotationOverlay.CurrentOverlay.Parent);
         }
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)

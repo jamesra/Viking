@@ -98,7 +98,7 @@ namespace WebAnnotation.View
 
         public override GridCircle VolumeCircle => _VolumeCircle;
 
-        private readonly ICollection<long> _OverlappedLinks;
+        private readonly ICollection<long> _OverlappedLinks = [];
         public override ICollection<long> OverlappedLinks
         {
             protected get => _OverlappedLinks;
@@ -311,8 +311,6 @@ namespace WebAnnotation.View
         private static readonly float RadiusToResizeCircle = 7.0f / 8.0f;
         private static readonly float RadiusToPenResizeCircle = 1.0f / 8.0f;
         private static readonly float RadiusToLinkCircle = 1.75f / 4.0f;
-        private static readonly double BeginFadeCutoff = 0.1;
-        private static readonly double InvisibleCutoff = 1f;
 
         public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
@@ -684,7 +682,7 @@ namespace WebAnnotation.View
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            if (IsParentPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelObjects();
             }

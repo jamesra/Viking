@@ -93,15 +93,11 @@ namespace Geometry.Transforms
         private static bool DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
         {
 #if DEBUG
-            //Check for duplicate points
             for (int i = 1; i < listPoints.Length; i++)
             {
                 Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, $"Duplicate control space points found in transform.  This breaks Delaunay. Point #{i-1} and #{i}");
                 Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, $"Duplicate mapped space points found in transform.  This breaks Delaunay. Point #{i - 1} and #{i}");
-                return false;
             }
-            
-            return true;
 #endif
             return true;
         }

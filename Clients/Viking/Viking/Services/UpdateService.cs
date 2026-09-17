@@ -28,6 +28,11 @@ namespace Viking.Services
             Form? checkingForm = null;
 
             var mgr = new UpdateManager(UpdateUrl);
+            if (!mgr.IsInstalled)
+            {
+                Trace.WriteLine("[Velopack] Update check skipped because Viking is not installed.");
+                return;
+            }
 
             try
             {

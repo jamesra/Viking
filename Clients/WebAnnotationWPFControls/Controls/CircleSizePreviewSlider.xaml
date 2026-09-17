@@ -1,0 +1,53 @@
+<UserControl x:Class="WebAnnotation.WPF.Controls.CircleSizePreviewSlider"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="160"
+             d:DesignWidth="460"
+             SizeChanged="OnControlSizeChanged">
+    <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="80"/>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0"
+                   Content="{Binding Header, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                   VerticalAlignment="Center"/>
+            <Slider x:Name="SizeSlider"
+                    Grid.Column="1"
+                    Minimum="{Binding Minimum, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    Maximum="{Binding Maximum, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    TickFrequency="{Binding TickFrequency, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    IsSnapToTickEnabled="True"
+                    Margin="5"
+                    ValueChanged="OnSliderValueChanged"/>
+            <TextBox Grid.Column="3"
+                     Text="{Binding ValueText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"
+                     IsReadOnly="True"
+                     Margin="5,0,0,0"
+                     VerticalAlignment="Center"
+                     MinWidth="70"
+                     HorizontalAlignment="Left"/>
+        </Grid>
+        <TextBlock Margin="10,0,10,10"
+                   FontSize="10"
+                   Foreground="Gray"
+                   TextWrapping="Wrap"
+                   Text="{Binding Description, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+        <Grid x:Name="PreviewHost"
+              HorizontalAlignment="Stretch"
+              MinHeight="8">
+            <Ellipse x:Name="PreviewCircle"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     Stroke="#FF4A4A4A"
+                     StrokeThickness="1"
+                     Fill="#554A90D9"/>
+        </Grid>
+    </StackPanel>
+</UserControl>

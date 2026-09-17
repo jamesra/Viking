@@ -491,7 +491,7 @@ namespace RoundCurve
                 {
                     pass.Apply();
 
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
                 }
 
                 SegmentsAlreadyDrawn += numSegmentsThisDraw;

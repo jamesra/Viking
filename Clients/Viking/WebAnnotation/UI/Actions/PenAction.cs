@@ -36,16 +36,6 @@ namespace WebAnnotation
 
 
     /// <summary>
-    /// Binds an action to a clickable view
-    /// </summary>
-    public class ViewActionBinding
-    {
-        private readonly VikingXNAGraphics.Controls.IClickable ClickableAction;
-        private readonly IActionView View;
-    }
-
-
-    /// <summary>
     /// Describes an action a user can confirm after drawing a shape with a pen that has zero, one, or more possible meanings
     /// </summary>
     public abstract class AnnotationAction : IAction, IActionView

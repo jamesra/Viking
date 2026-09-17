@@ -199,6 +199,14 @@ namespace WebAnnotation.View
                 PropertyName == "Attributes";
         }
 
+        protected static bool IsParentPropertyAffectingLabels(string PropertyName)
+        {
+            return string.IsNullOrEmpty(PropertyName) ||
+                PropertyName == "Label" ||
+                PropertyName == "Attributes" ||
+                PropertyName == "ParentID";
+        }
+
         public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)

@@ -14,7 +14,6 @@ namespace MeasurementExtension
     {
         GridVector2 Origin;
         private readonly LengthMeasurement PixelSize;
-        private readonly LabelView? distanceLabel;
 
         private static readonly string[] DefaultHelpStrings =
         [
@@ -192,7 +191,6 @@ namespace MeasurementExtension
         /// <returns></returns>
         private Alignment FindTextAlignment(GridVector2 _origin, GridVector2 _target)
         {
-            return Alignment.TopLeft;
             VikingXNAGraphics.HorizontalAlignment hAlign = _origin.X < _target.X ? VikingXNAGraphics.HorizontalAlignment.RIGHT : VikingXNAGraphics.HorizontalAlignment.LEFT;
             VikingXNAGraphics.VerticalAlignment vAlign = _origin.Y < _target.Y ? VikingXNAGraphics.VerticalAlignment.BOTTOM : VikingXNAGraphics.VerticalAlignment.TOP;
             return new Alignment { Horizontal = hAlign, Vertical = vAlign };

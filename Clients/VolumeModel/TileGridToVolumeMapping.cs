@@ -97,8 +97,7 @@ namespace Viking.VolumeModel
             }
 
             return base.FreeMemory();
-        }
-
+        } 
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {

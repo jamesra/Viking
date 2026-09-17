@@ -187,7 +187,7 @@ class TextureReaderV2 : IDisposable
         }
         catch (System.IO.IOException e)
         {
-            Trace.WriteLine("Failed To delete bad cache file: {CacheFilename}\n{e}", "TextureUse");
+            Trace.WriteLine($"Failed To delete bad cache file: {CacheFilename}\n{e}", "TextureUse");
         }
     }
 
@@ -611,7 +611,7 @@ class TextureReaderV2 : IDisposable
             {
                 ProcessTextureWebException(e);
             }
-            catch (InvalidOperationException e)
+            catch (InvalidOperationException)
             {
                 //TODO: There is an interaction with aborting requests where an corrupt version of the image ends up in the cache and continues to be used.  I have to 
                 //figure out how to flush that bad image out of the cache if this occurs. Currently the workaround is to never cache images
@@ -777,11 +777,11 @@ class TextureReaderV2 : IDisposable
                         SetTexture(texture);
                     return this._Result;
                 }
-                catch (OutOfMemoryException e)
+                catch (OutOfMemoryException)
                 {
                     Trace.WriteLine("Out of memory exception: " + CacheFilename);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     Trace.WriteLine("Problem loading cached tile, deleting and loading from server: " +
                                     CacheFilename);
@@ -836,7 +836,7 @@ class TextureReaderV2 : IDisposable
 
                         return _Result;
                     }
-                    catch (IOException e)
+                    catch (IOException)
                     {
                         //Print out the first error, but don't flood the output in case we simply have a section where we are
                         //missing some tiles. 
@@ -846,7 +846,7 @@ class TextureReaderV2 : IDisposable
                             TextureErrorReported = true;
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         //Print out the first error, but don't flood the output in case we simply have a section where we are
                         //missing some tiles. 
@@ -1063,7 +1063,7 @@ class TextureReaderV2 : IDisposable
                 return new TextureData(pixelBytes, Width, Height);
             }
         }
-        catch (System.OutOfMemoryException e)
+        catch (System.OutOfMemoryException)
         {
             Trace.WriteLine("Out of memory when allocating texture");
             return default;
@@ -1110,7 +1110,7 @@ class TextureReaderV2 : IDisposable
                 tex.SetData<Byte>(texdata.pixelBytes);
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             tex?.Dispose();
             tex = null;

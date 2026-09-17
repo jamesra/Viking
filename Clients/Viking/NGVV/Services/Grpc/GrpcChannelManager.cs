@@ -78,6 +78,23 @@ namespace Viking.Services.Grpc
         }
 
         /// <summary>
+        /// Stops Grpc.Core native completion-queue threads. Call only after the last channel is shut down
+        /// and the process is exiting; Reset() during startup must not call this.
+        /// </summary>
+        public static void ShutdownEnvironment()
+        {
+            try
+            {
+                GrpcEnvironment.ShutdownChannelsAsync().Wait(TimeSpan.FromSeconds(5));
+                Trace.WriteLine("gRPC environment shut down successfully");
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error shutting down gRPC environment: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Grpc service URLs must be in the form host:port[/path][?query].  This function attempts to format a raw endpoint string to be compatible with that expectation.
         /// </summary>
         /// <param name="rawEndpoint"></param>

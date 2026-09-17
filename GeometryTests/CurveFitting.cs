@@ -7,6 +7,26 @@ namespace GeometryTests
     public class CurveFitting
     {
         [TestMethod]
+        public void ZeroInterpolationClosedCurveRepeatsFirstPoint()
+        {
+            GridVector2[] points =
+            [
+                new(0, 0),
+                new(10, 0),
+                new(10, 10),
+                new(0, 10)
+            ];
+
+            GridVector2[] closed = points.CalculateCurvePoints(0, true);
+            GridVector2[] open = points.CalculateCurvePoints(0, false);
+
+            Assert.AreEqual(points[0], closed[closed.Length - 1]);
+            Assert.AreEqual(points.Length + 1, closed.Length);
+            Assert.AreEqual(points.Length, open.Length);
+            Assert.AreNotEqual(open[0], open[open.Length - 1]);
+        }
+
+        [TestMethod]
         public void FitPointsWithLagrange()
         {
             GridVector2[] points = [new(0,7),

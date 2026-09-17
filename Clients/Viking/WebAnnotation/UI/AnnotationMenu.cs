@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -9,6 +10,7 @@ using System.Windows.Forms.Integration;
 using Viking.Common;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotation.WPF.Forms;
@@ -21,6 +23,7 @@ namespace WebAnnotation
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
+        private static ToolStripMenuItem menuAutoPolygonizeCircles;
         private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
         private static System.Threading.Timer _circleOpacityUpdateTimer;
         private static readonly object _circleOpacityUpdateLock = new();
@@ -59,11 +62,14 @@ namespace WebAnnotation
                 Checked = WebAnnotation.Global.PenMode
             };
             menuPenMode.Click += OnPenMode;
-
-
-
             menuRoot.DropDownItems.Add(menuPenMode);
 
+            menuAutoPolygonizeCircles = new ToolStripMenuItem("Auto Polygonize Circles")
+            {
+                Checked = Global.AnnotationSettings.AutoPolygonizeCircles
+            };
+            menuAutoPolygonizeCircles.Click += OnAutoPolygonizeCircles;
+            menuRoot.DropDownItems.Add(menuAutoPolygonizeCircles);
 
             return menuRoot;
         }
@@ -113,13 +119,36 @@ namespace WebAnnotation
                 Global.AnnotationSettings.CircleOpacityParentless,
                 Global.AnnotationSettings.CircleOpacityWithParent,
                 Global.AnnotationSettings.SegmentationPointRadius,
+                Global.AnnotationSettings.SegmentationHoleDropFraction,
+                Global.AnnotationSettings.SegmentationEdgeCleanupRadius,
                 Global.AnnotationSettings.PolygonPointRadius,
-                Global.AnnotationSettings.SmallestRenderedSize
+                Global.AnnotationSettings.SmallestRenderedSize,
+                Global.AnnotationSettings.AutoPolygonizeCircles,
+                Global.AnnotationSettings.AutoPolygonizeMinScreenAreaPercent,
+                Global.AnnotationSettings.AutoPolygonizeOverlayMasks
             );
 
             // Initialize static accessor properties
             CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
             LocationCanvasView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
+
+            viewModel.PropertyChanged += (_, e) =>
+            {
+                if (AnnotationOverlay.CurrentOverlay?.Parent?.CurrentCommand is not SegmentationCommand command)
+                    return;
+
+                bool refreshAll = string.IsNullOrEmpty(e.PropertyName);
+                if (refreshAll ||
+                    e.PropertyName == nameof(viewModel.SegmentationHoleDropFraction) ||
+                    e.PropertyName == nameof(viewModel.SegmentationEdgeCleanupRadius))
+                {
+                    command.RefreshPolygonsFromLastMask(
+                        viewModel.SegmentationHoleDropFraction,
+                        viewModel.SegmentationEdgeCleanupRadius);
+                }
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationPointRadius))
+                    command.RefreshPromptPointViews(viewModel.SegmentationPointRadius);
+            };
 
             // Wire up real-time preview for polygon opacity changes
             viewModel.PolygonOpacityChanged += (parentlessOpacity, withParentOpacity) =>
@@ -215,6 +244,13 @@ namespace WebAnnotation
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;
             Global.AnnotationSettings.SegmentationPointRadius = viewModel.SegmentationPointRadius;
+            Global.AnnotationSettings.SegmentationHoleDropFraction = viewModel.SegmentationHoleDropFraction;
+            Global.AnnotationSettings.SegmentationEdgeCleanupRadius = viewModel.SegmentationEdgeCleanupRadius;
+            Global.AnnotationSettings.AutoPolygonizeCircles = viewModel.AutoPolygonizeCircles;
+            Global.AnnotationSettings.AutoPolygonizeMinScreenAreaPercent = viewModel.AutoPolygonizeMinScreenAreaPercent;
+            Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
+            if (menuAutoPolygonizeCircles != null)
+                menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
 
@@ -532,6 +568,13 @@ namespace WebAnnotation
         {
             Global.PenMode = !Global.PenMode;
             menuPenMode.Checked = Global.PenMode;
+        }
+
+        public static void OnAutoPolygonizeCircles(object sender, EventArgs e)
+        {
+            Global.AnnotationSettings.AutoPolygonizeCircles = !Global.AnnotationSettings.AutoPolygonizeCircles;
+            if (menuAutoPolygonizeCircles != null)
+                menuAutoPolygonizeCircles.Checked = Global.AnnotationSettings.AutoPolygonizeCircles;
         }
 
         [MenuItem("Open Structure")]

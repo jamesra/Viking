@@ -8,13 +8,6 @@ namespace VikingXNAGraphics
 {
     public class TextureOverlayView : BillboardViewBase
     {
-        #region static
-
-        static readonly double BeginFadeCutoff = 0.1;
-        static readonly double InvisibleCutoff = 1f;
-
-        #endregion
-
         public Texture2D Texture;
         //bool FlipTexture = false;
 
@@ -123,8 +116,6 @@ namespace VikingXNAGraphics
 
                         device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
                             0,
-                            0,
-                            6,
                             0,
                             2);
                     }

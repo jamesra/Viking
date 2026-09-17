@@ -18,7 +18,7 @@ namespace TriangleNet.Meshing.Iterators
     /// <remarks>
     /// The default action is to set the region id and area constraint.
     /// </remarks>
-    public class RegionIterator(Mesh mesh)
+    public class RegionIterator
     {
         readonly List<Triangle> region = [];
 

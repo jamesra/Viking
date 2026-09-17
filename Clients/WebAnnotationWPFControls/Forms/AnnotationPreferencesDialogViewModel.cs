@@ -28,6 +28,11 @@ namespace WebAnnotation.WPF.Forms
         private double _originalCircleOpacityParentless;
         private double _originalCircleOpacityWithParent;
         private double _originalSegmentationPointRadius;
+        private double _originalSegmentationHoleDropFraction;
+        private int _originalSegmentationEdgeCleanupRadius;
+        private bool _originalAutoPolygonizeCircles;
+        private double _originalAutoPolygonizeMinScreenAreaPercent;
+        private bool _originalAutoPolygonizeOverlayMasks;
         private double _originalPolygonPointRadius;
         private double _originalSmallestRenderedSize;
         #endregion
@@ -250,7 +255,81 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_segmentationPointRadius - value) > 0.01)
                 {
-                    _segmentationPointRadius = MathUtils.Clamp(value, 1.0, 15.0);
+                    _segmentationPointRadius = Math.Max(1.0, value);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _segmentationHoleDropFraction;
+        public double SegmentationHoleDropFraction
+        {
+            get => _segmentationHoleDropFraction;
+            set
+            {
+                if (Math.Abs(_segmentationHoleDropFraction - value) > 0.0001)
+                {
+                    _segmentationHoleDropFraction = MathUtils.Clamp(value, 0.0, 1.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _segmentationEdgeCleanupRadius;
+        public int SegmentationEdgeCleanupRadius
+        {
+            get => _segmentationEdgeCleanupRadius;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, 0, 10);
+                if (_segmentationEdgeCleanupRadius != clampedValue)
+                {
+                    _segmentationEdgeCleanupRadius = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _autoPolygonizeCircles;
+        public bool AutoPolygonizeCircles
+        {
+            get => _autoPolygonizeCircles;
+            set
+            {
+                if (_autoPolygonizeCircles != value)
+                {
+                    _autoPolygonizeCircles = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Debug overlay of returned SAM2 masks on auto-polygonize proposals. Not intended to stay on.
+        /// </summary>
+        private bool _autoPolygonizeOverlayMasks;
+        public bool AutoPolygonizeOverlayMasks
+        {
+            get => _autoPolygonizeOverlayMasks;
+            set
+            {
+                if (_autoPolygonizeOverlayMasks != value)
+                {
+                    _autoPolygonizeOverlayMasks = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _autoPolygonizeMinScreenAreaPercent;
+        public double AutoPolygonizeMinScreenAreaPercent
+        {
+            get => _autoPolygonizeMinScreenAreaPercent;
+            set
+            {
+                if (Math.Abs(_autoPolygonizeMinScreenAreaPercent - value) > 0.001)
+                {
+                    _autoPolygonizeMinScreenAreaPercent = MathUtils.Clamp(value, 0.0, 10.0);
                     OnPropertyChanged();
                 }
             }
@@ -264,7 +343,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_polygonPointRadius - value) > 0.01)
                 {
-                    _polygonPointRadius = MathUtils.Clamp(value, 1.0, 50.0);
+                    _polygonPointRadius = Math.Max(1.0, value);
                     OnPropertyChanged();
                 }
             }
@@ -278,7 +357,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_smallestRenderedSize - value) > 0.01)
                 {
-                    _smallestRenderedSize = MathUtils.Clamp(value, 0.5, 10.0);
+                    _smallestRenderedSize = Math.Max(0.5, value);
                     OnPropertyChanged();
                 }
             }
@@ -325,8 +404,13 @@ namespace WebAnnotation.WPF.Forms
             double circleOpacityParentless,
             double circleOpacityWithParent,
             double segmentationPointRadius,
+            double segmentationHoleDropFraction,
+            int segmentationEdgeCleanupRadius,
             double polygonPointRadius,
-            double smallestRenderedSize)
+            double smallestRenderedSize,
+            bool autoPolygonizeCircles,
+            double autoPolygonizeMinScreenAreaPercent,
+            bool autoPolygonizeOverlayMasks = false)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -340,8 +424,13 @@ namespace WebAnnotation.WPF.Forms
             _penSimplifyThreshold = penSimplifyThreshold;
             _minRadius = minRadius;
             _segmentationPointRadius = segmentationPointRadius;
+            _segmentationHoleDropFraction = segmentationHoleDropFraction;
+            _segmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             _polygonPointRadius = polygonPointRadius;
             _smallestRenderedSize = smallestRenderedSize;
+            _autoPolygonizeCircles = autoPolygonizeCircles;
+            _autoPolygonizeMinScreenAreaPercent = autoPolygonizeMinScreenAreaPercent;
+            _autoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
 
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -359,6 +448,11 @@ namespace WebAnnotation.WPF.Forms
             _originalCircleOpacityParentless = circleOpacityParentless;
             _originalCircleOpacityWithParent = circleOpacityWithParent;
             _originalSegmentationPointRadius = segmentationPointRadius;
+            _originalSegmentationHoleDropFraction = segmentationHoleDropFraction;
+            _originalSegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
+            _originalAutoPolygonizeCircles = autoPolygonizeCircles;
+            _originalAutoPolygonizeMinScreenAreaPercent = autoPolygonizeMinScreenAreaPercent;
+            _originalAutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             _originalPolygonPointRadius = polygonPointRadius;
             _originalSmallestRenderedSize = smallestRenderedSize;
 
@@ -377,6 +471,11 @@ namespace WebAnnotation.WPF.Forms
             CircleOpacityChanged = tempCircleHandler;
 
             SegmentationPointRadius = segmentationPointRadius;
+            SegmentationHoleDropFraction = segmentationHoleDropFraction;
+            SegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
+            AutoPolygonizeCircles = autoPolygonizeCircles;
+            AutoPolygonizeMinScreenAreaPercent = autoPolygonizeMinScreenAreaPercent;
+            AutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             PolygonPointRadius = polygonPointRadius;
             SmallestRenderedSize = smallestRenderedSize;
 
@@ -402,6 +501,11 @@ namespace WebAnnotation.WPF.Forms
             _originalCircleOpacityParentless = _circleOpacityParentless;
             _originalCircleOpacityWithParent = _circleOpacityWithParent;
             _originalSegmentationPointRadius = _segmentationPointRadius;
+            _originalSegmentationHoleDropFraction = _segmentationHoleDropFraction;
+            _originalSegmentationEdgeCleanupRadius = _segmentationEdgeCleanupRadius;
+            _originalAutoPolygonizeCircles = _autoPolygonizeCircles;
+            _originalAutoPolygonizeMinScreenAreaPercent = _autoPolygonizeMinScreenAreaPercent;
+            _originalAutoPolygonizeOverlayMasks = _autoPolygonizeOverlayMasks;
             _originalPolygonPointRadius = _polygonPointRadius;
             _originalSmallestRenderedSize = _smallestRenderedSize;
         }
@@ -423,6 +527,11 @@ namespace WebAnnotation.WPF.Forms
             _circleOpacityParentless = _originalCircleOpacityParentless;
             _circleOpacityWithParent = _originalCircleOpacityWithParent;
             _segmentationPointRadius = _originalSegmentationPointRadius;
+            _segmentationHoleDropFraction = _originalSegmentationHoleDropFraction;
+            _segmentationEdgeCleanupRadius = _originalSegmentationEdgeCleanupRadius;
+            _autoPolygonizeCircles = _originalAutoPolygonizeCircles;
+            _autoPolygonizeMinScreenAreaPercent = _originalAutoPolygonizeMinScreenAreaPercent;
+            _autoPolygonizeOverlayMasks = _originalAutoPolygonizeOverlayMasks;
             _polygonPointRadius = _originalPolygonPointRadius;
             _smallestRenderedSize = _originalSmallestRenderedSize;
 
@@ -446,6 +555,11 @@ namespace WebAnnotation.WPF.Forms
             _circleOpacityParentless = 0.5;
             _circleOpacityWithParent = 1.0;
             _segmentationPointRadius = 5.0;
+            _segmentationHoleDropFraction = 0.03;
+            _segmentationEdgeCleanupRadius = 2;
+            _autoPolygonizeCircles = false;
+            _autoPolygonizeMinScreenAreaPercent = 1.0;
+            _autoPolygonizeOverlayMasks = false;
             _polygonPointRadius = 6.0;
             _smallestRenderedSize = 0.5;
 

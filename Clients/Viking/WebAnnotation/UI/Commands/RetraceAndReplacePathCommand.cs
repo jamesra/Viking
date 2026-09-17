@@ -10,27 +10,12 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-
-    public enum DrawWhichPoly
-    {
-        PREVPOLY,
-        NEXTPOLY
-    }
-
     internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase
     {
-        //Variables:
-
-        //If we make a wrong intersection, this will track the index of that wrong intersection
-        private readonly int WrongIntersectionPoint;
-
         //Original Polygons
         private readonly GridPolygon OriginalMosaicPolygon;
         private readonly GridPolygon OriginalVolumePolygon;
         public GridPolygon OriginalSmoothedVolumePolygon;
-
-        //Our original polygon plus the origin of retrace and replace and the origin point index
-        private readonly GridPolygon VolumePolygonPlusOrigin;
 
         public PolygonIndex OriginIndex;
 
@@ -62,9 +47,6 @@ namespace WebAnnotation.UI.Commands
             RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING or RetraceCommandAction.SHRINK_EXTERIOR_RING or RetraceCommandAction.SHRINK_INTERNAL_RING or RetraceCommandAction.CREATE_INTERNAL_RING => true,
             _ => throw new ArgumentException("Unknown state, cannot determine if the command can complete."),
         };
-
-        //False draws the PrevWalkPolygon, true draws the NextWalkPolygon
-        private readonly DrawWhichPoly DrawPoly;
 
         private bool? _CommandExpandsArea;
         private bool CommandExpandsArea

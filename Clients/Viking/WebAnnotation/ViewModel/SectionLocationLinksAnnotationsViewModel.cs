@@ -75,34 +75,29 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            try
+            if (!LocationLinkView.TryCreate(key, Section.Number, Section.VolumeViewModel, out LocationLinkView lv))
             {
-                KnownLinks.TryAdd(key, () =>
+                return;
+            }
+
+            KnownLinks.TryAdd(key, () =>
+            {
+                bool added = LocationLinks.TryAdd(key, lv);
+                Debug.Assert(added);
+
+                if (lv.LinksOverlap())
                 {
-                    LocationLinkView lv = new(key, Section.Number, Section.VolumeViewModel);
-                    bool added = LocationLinks.TryAdd(key, lv);
-                    Debug.Assert(added);
-
-                    if (lv.LinksOverlap())
+                    OverlappedLinkKeys.TryAdd(key, () =>
                     {
-                        OverlappedLinkKeys.TryAdd(key, () =>
-                        {
-                            OverlappedAdjacentLocationIDs.AddRef(key.A);
-                            OverlappedAdjacentLocationIDs.AddRef(key.B);
-                        });
-                    }
-                    else
-                    {
-                        NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
-                    }
-                });
-            }
-            catch (System.ArgumentOutOfRangeException e)
-            {
-                //This can occur when the point cannot be mapped
-                System.Diagnostics.Trace.WriteLine($"Exception adding location link {key}\n{e}");
-            }
-
+                        OverlappedAdjacentLocationIDs.AddRef(key.A);
+                        OverlappedAdjacentLocationIDs.AddRef(key.B);
+                    });
+                }
+                else
+                {
+                    NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                }
+            });
         }
 
         protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)

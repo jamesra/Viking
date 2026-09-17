@@ -151,10 +151,6 @@ namespace Viking
 
                 return null;
             }
-
-            //     stream.Close();
-            //An entry is created if the asynch write succeeds
-            return null;
         }
 
         /// <summary>
@@ -187,10 +183,6 @@ namespace Viking
 
                 return null;
             }
-
-            //     stream.Close();
-            //An entry is created if the asynch write succeeds
-            return null;
         }
 
         /// <summary>
@@ -213,8 +205,6 @@ namespace Viking
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
                 return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer);
             }
-
-            return null;
         }
 
         private async Task<LocalTextureCacheEntry> CreateEntryAssumeDirectoryExistsAsync(string filename,

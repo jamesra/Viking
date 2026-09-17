@@ -18,6 +18,19 @@
         "isDefault": true
       },
       "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run-viking",
+      "dependsOn": "build-viking",
+      "dependsOrder": "sequence",
+      "type": "shell",
+      "command": "Start-Process -FilePath '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe' -WorkingDirectory '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "close": true
+      }
     }
   ]
 }

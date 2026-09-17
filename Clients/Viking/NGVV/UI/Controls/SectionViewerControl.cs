@@ -1927,6 +1927,116 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Waits off the UI thread until every visible tile has a usable texture or a server 404.
+        /// Already-queued loads are polled; they are not treated as complete.
+        /// </summary>
+        public async Task<bool> WaitForVisibleTexturesAsync(Scene scene, int z, CancellationToken token)
+        {
+            const int pollMs = 150;
+            const int timeoutMs = 10000;
+            if (scene is null || Volume is null)
+                return false;
+
+            Stopwatch wait = Stopwatch.StartNew();
+            while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < timeoutMs)
+            {
+                List<TileView> tiles = await CollectVisibleTilesForCaptureAsync(scene, z, token).ConfigureAwait(false);
+                if (token.IsCancellationRequested)
+                    return false;
+
+                if (tiles.Count == 0)
+                {
+                    Trace.WriteLine("[SegmentationProfile] WaitForVisibleTextures: no visible tiles");
+                    return false;
+                }
+
+                bool allReady = true;
+                CancellationToken sectionToken = GetOrCreateSectionTextureLoadToken(z);
+                foreach (TileView tile in tiles)
+                {
+                    if (tile.HasTexture || tile.ServerTextureNotFound)
+                        continue;
+
+                    allReady = false;
+                    if (!tile.TextureNeedsLoading)
+                        continue;
+
+                    TileView toLoad = tile;
+                    _ = toLoad.GetOrLoadTextureAsync(graphicsDeviceService.GraphicsDevice, sectionToken)
+                        .ContinueWith(t =>
+                        {
+                            if (t.IsFaulted && t.Exception != null)
+                                Trace.WriteLine($"WaitForVisibleTextures load failed: {t.Exception.GetBaseException().Message}");
+                        }, TaskContinuationOptions.OnlyOnFaulted);
+                }
+
+                if (allReady)
+                    return true;
+
+                try
+                {
+                    await Task.Delay(pollMs, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+
+            Trace.WriteLine("[SegmentationProfile] WaitForVisibleTextures timed out");
+            return false;
+        }
+
+        /// <summary>
+        /// Visible tiles using the same skip rules as <c>QueueTextureLoads</c> so capture wait matches what the viewer would draw.
+        /// </summary>
+        private async Task<List<TileView>> CollectVisibleTilesForCaptureAsync(Scene scene, int sectionZ, CancellationToken token)
+        {
+            List<TileView> tiles = [];
+            if (false == Volume.SectionViewModels.ContainsKey(sectionZ))
+                return tiles;
+
+            SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
+            ChannelInfo[] channels = visibleSection.ChannelInfoArray;
+            if (channels.Length == 0)
+                channels = visibleSection.VolumeViewModel.DefaultChannels;
+
+            foreach (ChannelInfo channel in channels)
+            {
+                Section section = visibleSection.GetSectionToDrawForChannel(channel);
+                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                if (Mapping is null)
+                    continue;
+
+                await Mapping.Initialize(token);
+                if (token.IsCancellationRequested)
+                    return tiles;
+
+                int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
+                var visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
+
+                for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
+                {
+                    int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
+                    SortedDictionary<TileUniqueKey, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
+                    foreach (TileViewModel t in tileList.Values)
+                    {
+                        TileView tileView = FetchOrConstructTileForSection(t, section, Mapping.Name);
+                        if (tileView is null)
+                            continue;
+
+                        if (tileView.HasTexture == false && tileView.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
+                            continue;
+
+                        tiles.Add(tileView);
+                    }
+                }
+            }
+
+            return tiles;
+        }
+
         private bool AllTileViewsHaveTexture(IList<TileView> listTiles)
         {
             listTiles = [.. listTiles.Where(t => t.TextureReadComplete == false)];

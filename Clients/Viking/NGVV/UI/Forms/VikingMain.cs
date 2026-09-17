@@ -36,6 +36,7 @@ namespace Viking
 
         private void VikingMain_FormClosed(object sender, FormClosedEventArgs e)
         {
+            CacheCleaningTimer.Enabled = false;
             Global.PrintAllocatedTextures();
             Global.PrintAllocatedTextureReaders();
         }

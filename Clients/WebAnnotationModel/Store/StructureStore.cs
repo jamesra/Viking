@@ -276,6 +276,12 @@ namespace WebAnnotationModel
             return new StructureObj[0];
         }
 
+        /// <summary>
+        /// Merges MergeID into KeepID on the server, then updates locally cached locations and
+        /// child structures so the UI shows the surviving parent. The stored procedure remaps
+        /// ParentID in bulk and does not return the affected children, so the client must
+        /// apply that change to objects already in the cache.
+        /// </summary>
         public long Merge(long KeepID, long MergeID)
         {
             IClientChannel proxy = null;
@@ -283,19 +289,46 @@ namespace WebAnnotationModel
             {
                 proxy = CreateProxy();
 
-                KeepID = ((IAnnotateStructures)proxy).Merge(KeepID, MergeID);
+                ((IAnnotateStructures)proxy).Merge(KeepID, MergeID);
 
                 LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(MergeID);
                 Store.Locations.Refresh([.. locations.Select(l => l.ID)]);
 
+                ReparentLocalChildren(MergeID, KeepID);
+
                 this.ForgetLocally(MergeID);
 
-                return 0;
+                return KeepID;
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Moves locally cached children of <paramref name="oldParentID"/> onto
+        /// <paramref name="newParentID"/> without marking them for a server update.
+        /// The server already applied the ParentID change during merge.
+        /// </summary>
+        private void ReparentLocalChildren(long oldParentID, long newParentID)
+        {
+            StructureObj[] children = GetLocalObjectsForParent(oldParentID);
+            if (children.Length == 0)
+                return;
+
+            StructureObj newParent = GetObjectByID(newParentID, true);
+            foreach (StructureObj child in children)
+            {
+                DBACTION originalAction = child.DBAction;
+                if (newParent != null)
+                    child.Parent = newParent;
+                else
+                    child.ParentID = newParentID;
+
+                if (originalAction == DBACTION.NONE)
+                    child.DBAction = DBACTION.NONE;
             }
         }
 

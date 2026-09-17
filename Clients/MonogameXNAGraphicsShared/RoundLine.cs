@@ -424,7 +424,7 @@ namespace RoundLineCode
                 pass.Apply();
 
                 int numInstancesThisDraw = 1;
-                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numPrimitivesPerInstance * numInstancesThisDraw);
             }
             //NumLinesDrawn += numInstancesThisDraw;
         }
@@ -474,7 +474,7 @@ namespace RoundLineCode
                     {
                         pass.Apply();
 
-                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numPrimitivesPerInstance * numInstancesThisDraw);
                     }
 
                     //NumLinesDrawn += numInstancesThisDraw;
@@ -490,7 +490,7 @@ namespace RoundLineCode
                 {
                     pass.Apply();
 
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numPrimitivesPerInstance * numInstancesThisDraw);
                 }
 
                 numInstancesThisDraw = 0;

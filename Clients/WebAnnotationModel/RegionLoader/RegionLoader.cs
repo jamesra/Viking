@@ -99,11 +99,13 @@ namespace WebAnnotationModel
                 active_requests.TryRemove(debug_message, out string removed_message);
 #endif
 
-                // If the section load was cancelled, skip callback invocation to avoid processing stale results
-                if (Token.IsCancellationRequested)
+                // Cancelled or failed (null): do not leave LastQuery stamped from SetQuery, or the
+                // region looks "warm" for RegionUpdateInterval with nothing in the canvas view.
+                if (objects is null || Token.IsCancellationRequested)
                 {
                     this.OnCompletionCallbacks.Clear();
                     AsyncResult = null;
+                    LastQuery = null;
                     return;
                 }
 
@@ -265,6 +267,33 @@ namespace WebAnnotationModel
 
         private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber) => this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
 
+        /// <summary>
+        /// True when every pyramid cell covering the mosaic FOV has completed a server query
+        /// (HasBeenQueried and AsyncResult is null). Missing cells or in-flight queries return false.
+        /// Does not use OutstandingQuery, which is inverted relative to its comment.
+        /// </summary>
+        public bool AreRegionQueriesComplete(GridRectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber)
+        {
+            if (!volumeBounds.HasValue)
+                return false;
+
+            if (!sectionPyramids.TryGetValue(sectionNumber, out RegionPyramid<OBJECT> regionPyramid))
+                return false;
+
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = regionPyramid.GetLevel(screenPixelSizeInVolume * 8);
+            RegionRequestData<OBJECT>[] cells = level.ArrayForRegion(volumeBounds.Value);
+            if (cells.Length == 0)
+                return false;
+
+            foreach (RegionRequestData<OBJECT> cell in cells)
+            {
+                if (cell is null || !cell.HasBeenQueried || cell.AsyncResult is not null)
+                    return false;
+            }
+
+            return true;
+        }
+
 
         private RegionRequestData<OBJECT> CreateRegionRequest(IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback, CancellationToken token = default)
         {
@@ -292,16 +321,24 @@ namespace WebAnnotationModel
             cell.debug_message = string.Format("S:{0} L:{1} {2}", SectionNumber, level.Level, iCell);
 #endif
 
-            if (OnLoadCompletedCallback != null)
-                cell.AddCallback(OnLoadCompletedCallback);
-
             Debug.Assert(!cell.OutstandingQuery, "Starting a query for a region we already have an outstanding request for");
 
             MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted, token);
-            cell.SetQuery(localObjects.ServerRequestResult);
 
-            /*if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)
-                OnLoadCompletedCallback(localObjects.KnownObjects);*/
+            // Store CollectionChanged only fires for newly added objects. Hand already-known locals
+            // to the view immediately so they appear without waiting for a camera move.
+            if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)
+                OnLoadCompletedCallback(localObjects.KnownObjects);
+
+            // Only mark the region as queried when a server request actually started. A cancelled
+            // or failed start returns KnownObjects with a null ServerRequestResult.
+            if (localObjects.ServerRequestResult != null)
+            {
+                if (OnLoadCompletedCallback != null)
+                    cell.AddCallback(OnLoadCompletedCallback);
+
+                cell.SetQuery(localObjects.ServerRequestResult);
+            }
 
 #if DEBUG
             //string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);

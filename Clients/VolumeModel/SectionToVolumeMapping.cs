@@ -190,7 +190,7 @@ namespace Viking.VolumeModel
                         {
                             System.IO.File.Delete(this.CachedTransformsFileName);
                         }
-                        catch (System.IO.IOException except)
+                        catch (System.IO.IOException)
                         {
                             Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
                         }
@@ -204,7 +204,7 @@ namespace Viking.VolumeModel
                     {
                         System.IO.File.Delete(this.CachedTransformsFileName);
                     }
-                    catch (System.IO.IOException except)
+                    catch (System.IO.IOException)
                     {
                         Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
                     }

@@ -1,5 +1,6 @@
 using Geometry;
 using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using VikingXNA;
@@ -22,7 +23,7 @@ namespace WebAnnotation.View
     {
         private readonly GridPolygon VolumePolygon = volumePolygon;
         private readonly GridPolygon SmoothedVolumePolygon = smoothVolumePolygon;
-        private readonly SqlGeometry VolumeShapeAsRendered;
+        private readonly SqlGeometry VolumeShapeAsRendered = smoothVolumePolygon.ToSqlGeometry();
 
         /// <summary>
         /// Identity of the Location with the interior hole

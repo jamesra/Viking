@@ -14,9 +14,33 @@ namespace Viking.VolumeModel
         private string VolumeCachePath => this.LocalCachePath + System.IO.Path.DirectorySeparatorChar + this.Name;
 
         /// <summary>
-        /// Server-side stos files loaded from .zip file listed in .vikingxml file
+        /// Server-side stos files loaded from .zip file listed in .vikingxml file.
+        /// Ungrouped (volume-level) zip members live directly in this folder.
         /// </summary>
         public string ServerStosCachePath => this.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "StosZip";
+
+        /// <summary>
+        /// Per-StosGroup extract directory. Groups reuse the same stos member names, so sharing
+        /// <see cref="ServerStosCachePath"/> lets a later zip (e.g. SliceToVolumeLinear1) overwrite
+        /// another group's cache.
+        /// </summary>
+        public string GetServerStosCachePath(string stosGroupName)
+        {
+            if (string.IsNullOrEmpty(stosGroupName))
+                return ServerStosCachePath;
+
+            return Path.Combine(ServerStosCachePath, SanitizeDirectoryName(stosGroupName));
+        }
+
+        private static string SanitizeDirectoryName(string name)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+
+            return name;
+        }
 
 
         string _LocalVolumeDir = null;

@@ -1,10 +1,12 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 using Viking.UI.Forms;
 using Microsoft.Xna.Framework;
 
@@ -29,8 +31,7 @@ namespace Viking
             }
 
             UI.State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
-
-            //Microsoft.Xna.Framework.Content.RootDirectory = "Content";
+            PreventWpfLastWindowFromShuttingDownDispatcher();
         }
 
         public void Initialize()
@@ -83,8 +84,152 @@ namespace Viking
 
         protected override void OnMainFormClosed(object sender, EventArgs e)
         {
+            try
+            {
+                cancellationTokenSource.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            ShutdownRuntime();
+            StartExitWatchdog();
             base.OnMainFormClosed(sender, e);
-            Global.HttpClient.CancelPendingRequests();
+        }
+
+        /// <summary>
+        /// Login and preferences are WPF. Default <see cref="System.Windows.ShutdownMode.OnLastWindowClose"/>
+        /// would shut down the shared dispatcher when those windows close, which can deadlock
+        /// WinForms <c>FormClosed</c> if we also call <c>Application.Shutdown()</c>.
+        /// </summary>
+        private static void PreventWpfLastWindowFromShuttingDownDispatcher()
+        {
+            var app = System.Windows.Application.Current;
+            if (app is null)
+                return;
+
+            app.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
+        }
+
+        /// <summary>
+        /// Stops timers, texture workers, and leftover WPF windows so Application.Run can return.
+        /// Must not call <c>Application.Current.Shutdown()</c> here: that Invoke-shuts the dispatcher
+        /// on this same thread and deadlocks when a WPF window is still open.
+        /// </summary>
+        internal static void ShutdownRuntime()
+        {
+            PreventWpfLastWindowFromShuttingDownDispatcher();
+
+            try
+            {
+                PendingTextureQueue.Stop();
+                TextureRequestQueue.StopWorkers();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error stopping texture queues: {ex.Message}");
+            }
+
+            try
+            {
+                Global.HttpClient.CancelPendingRequests();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error cancelling HTTP requests: {ex.Message}");
+            }
+
+            try
+            {
+                UI.State.ViewerForm?.Close();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error closing viewer form: {ex.Message}");
+            }
+
+            CloseRemainingWpfWindows();
+
+            var dispatcher = UI.State.MainThreadDispatcher;
+            if (dispatcher != null && !dispatcher.HasShutdownStarted)
+            {
+                try
+                {
+                    dispatcher.BeginInvokeShutdown(System.Windows.Threading.DispatcherPriority.Background);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Error shutting down dispatcher: {ex.Message}");
+                }
+            }
+        }
+
+        private static void CloseRemainingWpfWindows()
+        {
+            var app = System.Windows.Application.Current;
+            if (app is null)
+                return;
+
+            System.Windows.Window[] windows;
+            try
+            {
+                windows = [.. app.Windows.Cast<System.Windows.Window>()];
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error listing WPF windows: {ex.Message}");
+                return;
+            }
+
+            foreach (System.Windows.Window window in windows)
+            {
+                try
+                {
+                    window.Close();
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Error closing WPF window: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// If the WinForms loop never returns (dispatcher or gRPC still pumping), kill the process.
+        /// Background so a clean exit does not wait out the delay.
+        /// </summary>
+        private static void StartExitWatchdog()
+        {
+            Thread watchdog = new(() =>
+            {
+                Thread.Sleep(3000);
+                Trace.WriteLine("Viking exit watchdog: Application.Run did not return; forcing Environment.Exit");
+                Environment.Exit(0);
+            })
+            {
+                IsBackground = true,
+                Name = "VikingExitWatchdog"
+            };
+            watchdog.Start();
+        }
+
+        /// <summary>
+        /// Tears down DI and Grpc.Core native threads after the WinForms message loop has exited.
+        /// Do not call this from the UI thread during FormClosed — channel shutdown Waits.
+        /// </summary>
+        public static void ShutdownAfterMessageLoop()
+        {
+            try
+            {
+                if (ServiceLocator.IsInitialized)
+                    ServiceLocator.Reset();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error resetting ServiceLocator: {ex.Message}");
+            }
+
+            GrpcChannelManager.ShutdownEnvironment();
         }
 
         private async Task BackgroundLoading(string VolumeURL, Viking.Common.IProgressReporter progressReporter, CancellationToken token)

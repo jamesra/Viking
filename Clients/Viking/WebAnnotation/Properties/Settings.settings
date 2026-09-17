@@ -65,11 +65,26 @@
     <Setting Name="SegmentationPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">5</Value>
     </Setting>
+    <Setting Name="SegmentationHoleDropFraction" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.03</Value>
+    </Setting>
+    <Setting Name="SegmentationEdgeCleanupRadius" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeCircles" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="PolygonPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">6</Value>
     </Setting>
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMinScreenAreaPercent" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeOverlayMasks" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -168,7 +168,7 @@ namespace WebAnnotation.View
 
                 GridCircle circle = new(OuterCircle.Center + new GridVector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
 
-                OverlappedLocationLinkView overlapLocation = new(locationID, linkLoc, circle, true);
+                OverlappedLocationLinkView overlapLocation = new(locationID, linkLoc, circle, true, ZCut);
                 listCircles.Add(overlapLocation);
             }
 
@@ -188,7 +188,7 @@ namespace WebAnnotation.View
 
                 GridCircle circle = new(OuterCircle.Center + new GridVector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
 
-                OverlappedLocationLinkView overlapLocation = new(locationID, linkLoc, circle, false);
+                OverlappedLocationLinkView overlapLocation = new(locationID, linkLoc, circle, false, ZCut);
                 listCircles.Add(overlapLocation);
             }
             /* This is code to create circles for error links on the same section

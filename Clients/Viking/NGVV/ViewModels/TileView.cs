@@ -491,10 +491,6 @@ namespace Viking.ViewModels
         //static VertexDeclaration VertexPositionColorDeclaration = null;
         VertexBuffer? vbMesh = null;
         IndexBuffer? ibMesh = null;
-        //PORT XNA 4
-        readonly VertexPositionColor[]? MeshVerticies = null;
-
-        //int[] MeshEdges = null;
 
         public static VertexPositionColor[] CreateMeshVerticies(TileViewModel t, Color color)
         {

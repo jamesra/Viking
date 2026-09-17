@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows.Forms;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.View
@@ -40,7 +41,7 @@ namespace WebAnnotation.View
             set => circleView.Circle = new GridCircle(value, Circle.Radius);
         }
 
-        private readonly ICollection<long> _OverlappedLinks;
+        private readonly ICollection<long> _OverlappedLinks = [];
         public override ICollection<long> OverlappedLinks
         {
             protected get => _OverlappedLinks;
@@ -50,9 +51,15 @@ namespace WebAnnotation.View
 
         public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
         {
+            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.GetLocationLinkColor(
+                obj.Parent.Type.Color.ToXNAColor(),
+                1,
+                Up ? 1 : -1,
+                false).SetAlpha(1.0f);
+
             label = new LabelView(LocationLabel(obj), gridCircle.Center)
             {
-                _Color = Microsoft.Xna.Framework.Color.Red
+                _Color = labelColor
             };
             Microsoft.Xna.Framework.Color color = obj.Parent.Type.Color.ToXNAColor(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);

@@ -25,6 +25,7 @@ using Utils;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using VikingXNAGraphics;
+using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotation.View;
 
 namespace WebAnnotation
@@ -180,11 +181,14 @@ namespace WebAnnotation
             private const double MIN_OPACITY = 0.0;
             private const double MAX_OPACITY = 1.0;
             private const double MIN_SEGMENTATION_POINT_RADIUS = 1.0;
-            private const double MAX_SEGMENTATION_POINT_RADIUS = 15.0;
+            private const double MIN_SEGMENTATION_HOLE_DROP_FRACTION = 0.0;
+            private const double MAX_SEGMENTATION_HOLE_DROP_FRACTION = 1.0;
+            private const int MIN_SEGMENTATION_EDGE_CLEANUP_RADIUS = 0;
+            private const int MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS = 10;
             private const double MIN_POLYGON_POINT_RADIUS = 1.0;
-            private const double MAX_POLYGON_POINT_RADIUS = 50.0;
             private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
-            private const double MAX_SMALLEST_RENDERED_SIZE = 10.0;
+            private const double MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT = 0.0;
+            private const double MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT = 10.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -386,30 +390,118 @@ namespace WebAnnotation
 
             public static double SegmentationPointRadius
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationPointRadius, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                get => Math.Max(MIN_SEGMENTATION_POINT_RADIUS, Properties.Settings.Default.SegmentationPointRadius);
                 set
                 {
-                    Properties.Settings.Default.SegmentationPointRadius = MathUtils.Clamp(value, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                    Properties.Settings.Default.SegmentationPointRadius = Math.Max(MIN_SEGMENTATION_POINT_RADIUS, value);
                     Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPromptPoints();
+                }
+            }
+
+            public static double SegmentationHoleDropFraction
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.SegmentationHoleDropFraction,
+                    MIN_SEGMENTATION_HOLE_DROP_FRACTION,
+                    MAX_SEGMENTATION_HOLE_DROP_FRACTION);
+                set
+                {
+                    Properties.Settings.Default.SegmentationHoleDropFraction = MathUtils.Clamp(
+                        value,
+                        MIN_SEGMENTATION_HOLE_DROP_FRACTION,
+                        MAX_SEGMENTATION_HOLE_DROP_FRACTION);
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            public static int SegmentationEdgeCleanupRadius
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.SegmentationEdgeCleanupRadius,
+                    MIN_SEGMENTATION_EDGE_CLEANUP_RADIUS,
+                    MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS);
+                set
+                {
+                    Properties.Settings.Default.SegmentationEdgeCleanupRadius = MathUtils.Clamp(
+                        value,
+                        MIN_SEGMENTATION_EDGE_CLEANUP_RADIUS,
+                        MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS);
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            /// <summary>
+            /// Enables idle-driven SAM2 proposals on circles. Persists and starts or stops the overlay controller.
+            /// </summary>
+            public static bool AutoPolygonizeCircles
+            {
+                get => Properties.Settings.Default.AutoPolygonizeCircles;
+                set
+                {
+                    if (Properties.Settings.Default.AutoPolygonizeCircles == value)
+                        return;
+
+                    Properties.Settings.Default.AutoPolygonizeCircles = value;
+                    Properties.Settings.Default.Save();
+                    AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeEnabled(value);
+                }
+            }
+
+            /// <summary>
+            /// Circles smaller than this percent of the viewport are skipped. 0 accepts any positive radius.
+            /// </summary>
+            public static double AutoPolygonizeMinScreenAreaPercent
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent,
+                    MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT,
+                    MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT,
+                        MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Debug overlay of the raw SAM2 mask on auto-polygonize proposals. Default off; not intended for daily use.
+            /// </summary>
+            public static bool AutoPolygonizeOverlayMasks
+            {
+                get => Properties.Settings.Default.AutoPolygonizeOverlayMasks;
+                set
+                {
+                    if (Properties.Settings.Default.AutoPolygonizeOverlayMasks == value)
+                        return;
+
+                    Properties.Settings.Default.AutoPolygonizeOverlayMasks = value;
+                    Properties.Settings.Default.Save();
+                    AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayMasksEnabled(value);
                 }
             }
 
             public static double PolygonPointRadius
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.PolygonPointRadius, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                get => Math.Max(MIN_POLYGON_POINT_RADIUS, Properties.Settings.Default.PolygonPointRadius);
                 set
                 {
-                    Properties.Settings.Default.PolygonPointRadius = MathUtils.Clamp(value, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                    Properties.Settings.Default.PolygonPointRadius = Math.Max(MIN_POLYGON_POINT_RADIUS, value);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double SmallestRenderedSize
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.SmallestRenderedSize, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                get => Math.Max(MIN_SMALLEST_RENDERED_SIZE, Properties.Settings.Default.SmallestRenderedSize);
                 set
                 {
-                    Properties.Settings.Default.SmallestRenderedSize = MathUtils.Clamp(value, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                    Properties.Settings.Default.SmallestRenderedSize = Math.Max(MIN_SMALLEST_RENDERED_SIZE, value);
                     Properties.Settings.Default.Save();
                 }
             }
@@ -431,6 +523,11 @@ namespace WebAnnotation
                 Properties.Settings.Default.CircleOpacityParentless = 0.5f;
                 Properties.Settings.Default.CircleOpacityWithParent = 1.0f;
                 Properties.Settings.Default.SegmentationPointRadius = 5.0;
+                Properties.Settings.Default.SegmentationHoleDropFraction = 0.03;
+                Properties.Settings.Default.SegmentationEdgeCleanupRadius = 2;
+                Properties.Settings.Default.AutoPolygonizeCircles = false;
+                Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
+                Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.PolygonPointRadius = 6.0;
                 Properties.Settings.Default.SmallestRenderedSize = 0.5;
                 Properties.Settings.Default.Save();
@@ -439,11 +536,36 @@ namespace WebAnnotation
 
             private static void OnSettingsChanged()
             {
-                // Update cache size when memory settings change
                 if (AnnotationOverlay.CurrentOverlay != null)
                 {
                     AnnotationOverlay.UpdateCacheSize(NumSectionsInMemory);
+                    AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeEnabled(AutoPolygonizeCircles);
+                    AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayMasksEnabled(AutoPolygonizeOverlayMasks);
+                    RefreshActiveSegmentationPolygons();
+                    RefreshActiveSegmentationPromptPoints();
                 }
+            }
+
+            private static void RefreshActiveSegmentationPolygons(double? holeDropFraction = null)
+            {
+                InvokeOnActiveSegmentationCommand(command => command.RefreshPolygonsFromLastMask(holeDropFraction));
+            }
+
+            private static void RefreshActiveSegmentationPromptPoints(double? pointRadiusPixels = null)
+            {
+                InvokeOnActiveSegmentationCommand(command => command.RefreshPromptPointViews(pointRadiusPixels));
+            }
+
+            private static void InvokeOnActiveSegmentationCommand(System.Action<SegmentationCommand> action)
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent?.CurrentCommand is not SegmentationCommand command)
+                    return;
+
+                if (parent.InvokeRequired)
+                    parent.BeginInvoke(new System.Action(() => action(command)));
+                else
+                    action(command);
             }
         }
 

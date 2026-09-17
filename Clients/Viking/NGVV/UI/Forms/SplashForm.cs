@@ -14,10 +14,6 @@ namespace Viking.UI.Forms
         int Progress = 0;
         int MaxProgress = 100;
         DateTime startTime;
-        readonly DateTime endVolumeLoadTime;
-        readonly DateTime endExtensionLoadTime;
-
-        readonly string VolumePath;
 
         private Task? _Task = null;
 
@@ -103,9 +99,18 @@ namespace Viking.UI.Forms
             //Wait for the volume to initialize
             if (TrackedTask != null)
             {
-                while (TrackedTask.Wait(500) == false)
+                try
                 {
-                    Application.DoEvents();
+                    while (TrackedTask.Wait(500) == false)
+                    {
+                        Application.DoEvents();
+                    }
+                }
+                catch (AggregateException ex)
+                {
+                    // Re-throw the flattened exception so BackgroundWorker forwards it
+                    // to RunWorkerCompleted via e.Error for clean handling.
+                    throw ex.Flatten();
                 }
             }
             else
@@ -129,6 +134,16 @@ namespace Viking.UI.Forms
 
         private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
+            if (e.Error != null || (TrackedTask?.IsFaulted ?? false))
+            {
+                // Volume loading failed – close with Cancel so the caller can
+                // inspect TrackedTask.Exception and show a proper error message.
+                this.LabelInfo.Text = "Load failed.";
+                this.Result = DialogResult.Cancel;
+                this.Close();
+                return;
+            }
+
             this.LabelInfo.Text = "Task completed";
             this.Progress = 100;
             this.MaxProgress = 100;

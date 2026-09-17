@@ -179,7 +179,13 @@ namespace WebAnnotation.View
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
             _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
-            VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape)?.ToPolygon();
+            var mappedShape = mapper.TryMapShapeSectionToVolume(obj.MosaicShape);
+            if (mappedShape is null)
+            {
+                throw new ArgumentException($"Could not map location {obj.ID} to volume");
+            }
+
+            VolumePolygon = mappedShape.ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
@@ -295,10 +301,15 @@ namespace WebAnnotation.View
         /// <returns></returns>
         private ICollection<GridVector2> GetAllPolygonVertices(GridPolygon polygon)
         {
+            if (polygon is null)
+            {
+                return [];
+            }
+
             List<GridVector2> vertices = [];
 
             // Add exterior ring vertices (excluding last duplicate point)
-            if (polygon.ExteriorRing.Length > 0)
+            if (polygon.ExteriorRing is { Length: > 0 })
             {
                 int count = polygon.ExteriorRing.Length;
                 // Exclude last point if it's duplicate of first
@@ -647,7 +658,7 @@ namespace WebAnnotation.View
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            if (IsParentPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelObjects();
             }

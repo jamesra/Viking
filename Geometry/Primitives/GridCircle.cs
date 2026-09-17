@@ -452,7 +452,6 @@ namespace Geometry
         public override int GetHashCode()
         {
             throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
-            return 0;
             //return _HashCode;
             /*
             if (!_HashCode.HasValue)

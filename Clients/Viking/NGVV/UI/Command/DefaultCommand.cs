@@ -75,14 +75,11 @@ namespace Viking.UI.Commands
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
             {
                 object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
-                if (nearObj != null)
-                {
-                    if (newDistance < distance)
+                    if (nearObj != null && newDistance < distance)
                     {
-                        nearest_obj = nearObj as IContextMenu;
+                        nearest_obj = nearObj;
                         distance = newDistance;
                     }
-                }
             }
 
             return nearest_obj;
@@ -109,44 +106,42 @@ namespace Viking.UI.Commands
 
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
+            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            double distance = double.MaxValue;
+            object context_obj = null;
+
+            if (Parent.ShowOverlays)
+            {
+                foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
+                {
+                    object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
+                    if (nearObj != null && newDistance < distance)
+                    {
+                        context_obj = nearObj;
+                        distance = newDistance;
+                    }
+                }
+            }
+
+            if (context_obj is IHandleMouseDoubleClick handler &&
+                handler.HandleMouseDoubleClick(e.Button, WorldPosition))
+            {
+                return;
+            }
+
             //Middle mouse button is for Wacom Pen Support
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                double distance = double.MaxValue;
-                object context_obj = null;
-
-                if (Parent.ShowOverlays)
-                {
-                    foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
-                    {
-                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
-                        if (nearObj != null)
-                        {
-                            if (newDistance < distance)
-                            {
-                                context_obj = nearObj;
-                                distance = newDistance;
-                            }
-                        }
-                    }
-                }
-
                 //Create a context menu and show it where the mouse clicked
-                //Right mouse button calls up context menu
                 ContextMenuStrip menu = null;
-                if (context_obj != null)
-                    if (context_obj is IContextMenu menu_obj)
-                    {
-                        menu = menu_obj.ContextMenu;
-                        menu ??= new ContextMenuStrip();
-                    }
-                    else
-                        menu = new ContextMenuStrip();
+                if (context_obj is IContextMenu menu_obj)
+                {
+                    menu = menu_obj.ContextMenu;
+                    menu ??= new ContextMenuStrip();
+                }
                 else
                     menu = new ContextMenuStrip();
 
-                //Talk to everyone who modifies context menus to see if they have a contribution
                 IProvideContextMenus[] ContextMenuProviders = ExtensionManager.CreateContextMenuProviders();
                 foreach (IProvideContextMenus provider in ContextMenuProviders)
                 {

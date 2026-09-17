@@ -180,6 +180,12 @@ namespace Viking.UI
         public static string? IdentityVolumeName { get; set; }
 
         /// <summary>
+        /// Volume endpoint URL currently open (normalized at login). Used to match viking:// deep links
+        /// for same-volume single-instance activation.
+        /// </summary>
+        public static string? VolumeUrl { get; set; }
+
+        /// <summary>
         /// Base URL for opening a cell in SBFSEM-tools (default https://sbfsem-tools.com/open).
         /// Used by Identity bounce after auth; the menu opens the bounce URL, not this directly.
         /// </summary>
@@ -195,6 +201,11 @@ namespace Viking.UI
         /// Arguments passed to Viking on startup
         /// </summary>
         public static System.Collections.Specialized.NameValueCollection StartupArguments = [];
+
+        /// <summary>
+        /// Registered by WebAnnotation to navigate to a Location ID (AskServer). Used by deep-link activation.
+        /// </summary>
+        public static Action<long>? GoToAnnotationLocation { get; set; }
 
     }
 }

@@ -98,8 +98,6 @@ namespace WebAnnotation.UI.Commands
                     Execute();
                     return;
                 }
-
-                Execute();
             }
         }
 
