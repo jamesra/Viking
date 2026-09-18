@@ -231,11 +231,31 @@ namespace Geometry
 
         public bool Covers(in IPoint2D point) => GetRelation(point).IsCovers();
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
 
-        public bool Covers(in Vector2 p) => GetRelation((IPoint2D)p).IsCovers();
+        public bool Covers(in Vector2 p) => GetRelation(p).IsCovers();
 
-        public ShapeRelation GetRelation(in Vector2 p) => GetRelation((IPoint2D)p);
+        public ShapeRelation GetRelation(in Vector2 p)
+        {
+            if (false == BoundingBox.Covers(p))
+                return ShapeRelation.None;
+
+            Vector2 uv = Barycentric(p);
+            Vector3 uvw = new(uv.X, uv.Y, 1 - uv.X - uv.Y);
+
+            if (uvw.X >= 0 && uvw.Y >= 0 && uvw.Z >= 0)
+            {
+                if (uvw.X + uvw.Y + uvw.Z <= 1.0)
+                {
+                    if (uvw.Coords.Any(c => c == 0))
+                        return ShapeRelation.Touching;
+
+                    return ShapeRelation.Contained;
+                }
+            }
+
+            return ShapeRelation.None;
+        }
 
         public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
 
@@ -305,27 +325,13 @@ namespace Geometry
         /// </summary>
         public ShapeRelation GetRelation(in IPoint2D p)
         {
-            if (false == BoundingBox.Covers((IPoint2D)p))
-                return ShapeRelation.None;
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
 
-            Vector2 uv = Barycentric(p);
-            Vector3 uvw = new(uv.X, uv.Y, 1 - uv.X - uv.Y);
-
-            if (uvw.X >= 0 && uvw.Y >= 0 && uvw.Z >= 0)
-            {
-                if (uvw.X + uvw.Y + uvw.Z <= 1.0)
-                {
-                    if (uvw.Coords.Any(c => c == 0))
-                        return ShapeRelation.Touching;
-
-                    return ShapeRelation.Contained;
-                }
-            }
-
-            return ShapeRelation.None;
+            return GetRelation(p.ToVector2());
         }
 
-        public ShapeRelation GetRelation(LineSegment line)
+        public ShapeRelation GetRelation(in LineSegment line)
         {
             //This is very similar to the logic for Rectangle
             ShapeRelation relA = this.GetRelation(line.A);

@@ -62,7 +62,7 @@ namespace Geometry.Meshing
         where VERTEX : IVertex
     {
         IReadOnlyList<VERTEX> Vertices { get; }
-        Dictionary<IEdgeKey, IEdge> Edges { get; } //If you are ever tempted to try a sortedlist profiling showed dictionary to be much faster during bajaj mesh generation
+        MeshEdgeMap Edges { get; } //If you are ever tempted to try a sortedlist profiling showed dictionary to be much faster during bajaj mesh generation
         SortedSet<IFace> Faces { get; }
 
         VERTEX this[long index] { get; }
@@ -73,7 +73,12 @@ namespace Geometry.Meshing
 
         IEdge this[IEdgeKey key] { get; }
 
+        IEdge this[EdgeKey key] { get; }
+
         bool Contains(IEdgeKey key);
+
+        bool Contains(EdgeKey key);
+
         bool Contains(IFace key);
 
         bool Contains(int A, int B);
@@ -202,14 +207,14 @@ namespace Geometry.Meshing
         where VERTEX : IVertex
     {
         protected readonly List<VERTEX> _Verticies = [];
-        protected readonly Dictionary<IEdgeKey, IEdge> _Edges = [];
+        protected readonly MeshEdgeMap _Edges = new();
         protected readonly SortedSet<IFace> _Faces = [];
 
         //        public event MeshChangeEvent OnMeshChange;
         //        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
 
         public virtual IReadOnlyList<VERTEX> Vertices => _Verticies;
-        public Dictionary<IEdgeKey, IEdge> Edges => _Edges;
+        public MeshEdgeMap Edges => _Edges;
         public SortedSet<IFace> Faces => _Faces;
 
         /* Functions for mesh users to override how mesh objects are created*/
@@ -255,6 +260,8 @@ namespace Geometry.Meshing
 
         public virtual IEdge this[IEdgeKey key] => this._Edges[key];
 
+        public virtual IEdge this[EdgeKey key] => this._Edges[key];
+
         /// <summary>
         /// Returns all of the verticies that match the indicies
         /// </summary>
@@ -262,13 +269,15 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public IEnumerable<IEdge> this[IEnumerable<IEdgeKey> keys] => keys.Select(e => this._Edges[e]);
 
-        public virtual bool Contains(IEdgeKey key) => Edges.ContainsKey(key);
+        public virtual bool Contains(IEdgeKey key) => key is EdgeKey edgeKey ? _Edges.ContainsKey(edgeKey) : _Edges.ContainsKey(key);
+
+        public virtual bool Contains(EdgeKey key) => _Edges.ContainsKey(key);
 
         public virtual bool Contains(IFace face) => Faces.Contains(face);
 
-        public virtual bool Contains(int A, int B) => Edges.ContainsKey(new EdgeKey(A, B));
+        public virtual bool Contains(int A, int B) => _Edges.Contains(A, B);
 
-        public virtual bool Contains(long A, long B) => Edges.ContainsKey(new EdgeKey((int)A, (int)B));
+        public virtual bool Contains(long A, long B) => _Edges.Contains((int)A, (int)B);
 
         /// <summary>
         /// Adds the vertex.  If a vertex already has an index that does not match the next index an ArgumentException is thrown
@@ -330,8 +339,34 @@ namespace Geometry.Meshing
             AddEdge(e);
         }
 
+        public void AddEdge(EdgeKey e)
+        {
+            if (e.A == e.B)
+                throw new ArgumentException("Edges cannot have the same start and end point");
+
+            if (this.Contains(e))
+                return;
+
+            if (CreateEdge is null)
+                throw new InvalidOperationException(string.Format("Adding {0}: DuplicateEdge function not specified for DynamicRenderMesh", e));
+
+#if TRACEMESH
+            Trace.WriteLine(string.Format("Add edge {0}", e));
+#endif
+
+            IEdge newEdge = CreateEdge(e.A, e.B);
+
+            this.AddEdge(newEdge);
+        }
+
         public void AddEdge(IEdgeKey e)
         {
+            if (e is EdgeKey key)
+            {
+                AddEdge(key);
+                return;
+            }
+
             if (e.A == e.B)
                 throw new ArgumentException("Edges cannot have the same start and end point");
 
@@ -369,7 +404,8 @@ namespace Geometry.Meshing
             if (e.A == e.B)
                 throw new ArgumentException("Edges cannot have the same start and end point");
 
-            if (this.Contains(e.Key))
+            EdgeKey key = e.Key is EdgeKey ek ? ek : new EdgeKey(e.A, e.B);
+            if (this.Contains(key))
                 return;
 
             if (e.A >= _Verticies.Count || e.A < 0)
@@ -382,10 +418,10 @@ namespace Geometry.Meshing
             Trace.WriteLine(string.Format("Add edge {0}", e));
 #endif
 
-            Edges.Add(e.Key, e);
+            Edges.Add(key, e);
 
-            _Verticies[(int)e.A].AddEdge(e.Key);
-            _Verticies[(int)e.B].AddEdge(e.Key);
+            _Verticies[(int)e.A].AddEdge(key);
+            _Verticies[(int)e.B].AddEdge(key);
         }
 
         public virtual void RemoveEdge(IEdgeKey e)
@@ -441,8 +477,9 @@ namespace Geometry.Meshing
         {
             foreach (IEdgeKey e in face.Edges)
             {
-                AddEdge(e);
-                Edges[e].AddFace(face);
+                EdgeKey key = e is EdgeKey ek ? ek : new EdgeKey(e.A, e.B);
+                AddEdge(key);
+                Edges[key].AddFace(face);
             }
         }
 
@@ -469,7 +506,8 @@ namespace Geometry.Meshing
 
                 foreach (IEdgeKey e in f.Edges)
                 {
-                    IEdge existing = Edges[e];
+                    EdgeKey key = e is EdgeKey ek ? ek : new EdgeKey(e.A, e.B);
+                    IEdge existing = Edges[key];
                     existing.RemoveFace(f);
                 }
             }

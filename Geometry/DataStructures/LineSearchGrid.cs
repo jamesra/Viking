@@ -442,7 +442,7 @@ namespace Geometry
                     return;
                 }*/
 
-                IEnumerable<Coord> coords = GetCoordsForLine(line);
+                IEnumerable<Coord> coords = GetCoordsForLine(in line);
                 foreach (Coord coord in coords)
                 {
                     List<LineSegment> lines = _LineGrid[coord.iX, coord.iY];
@@ -482,7 +482,7 @@ namespace Geometry
                         return false;
 
                     //Add the line to all cells it belongs in 
-                    IEnumerable<Coord> coords = GetCoordsForLine(line);
+                    IEnumerable<Coord> coords = GetCoordsForLine(in line);
                     foreach (Coord coord in coords)
                     {
                         List<LineSegment> lines = _LineGrid[coord.iX, coord.iY];
@@ -526,7 +526,7 @@ namespace Geometry
                 rwLock.EnterWriteLock();
 
                 //Add the line to all cells it belongs in 
-                IEnumerable<Coord> coords = GetCoordsForLine(line);
+                IEnumerable<Coord> coords = GetCoordsForLine(in line);
                 foreach (Coord coord in coords)
                 {
                     List<LineSegment> lines = _LineGrid[coord.iX, coord.iY];
@@ -559,7 +559,7 @@ namespace Geometry
                     rwLock.EnterWriteLock();
 
                     //Add the line to all cells it belongs in 
-                    IEnumerable<Coord> coords = GetCoordsForLine(line);
+                    IEnumerable<Coord> coords = GetCoordsForLine(in line);
                     foreach (Coord coord in coords)
                     {
                         List<LineSegment> lines = _LineGrid[coord.iX, coord.iY];
@@ -603,7 +603,7 @@ namespace Geometry
                     rwLock.EnterWriteLock();
 
                     //Add the line to all cells it belongs in 
-                    IEnumerable<Coord> coords = GetCoordsForLine(OldLine);
+                    IEnumerable<Coord> coords = GetCoordsForLine(in OldLine);
                     foreach (Coord coord in coords)
                     {
                         List<LineSegment> lines = _LineGrid[coord.iX, coord.iY];
@@ -645,7 +645,7 @@ namespace Geometry
             return new Coord(iX, iY);
         }
 
-        private IEnumerable<Coord> GetCoordsForLine(LineSegment line)
+        private IEnumerable<Coord> GetCoordsForLine(in LineSegment line)
         {
             Coord start;
             Coord end;
@@ -876,7 +876,7 @@ namespace Geometry
         /// </summary>
         /// <param name="L"></param>
         /// <returns></returns>
-        public IEnumerable<LineSegment> GetPotentialIntersections(LineSegment line) => GetPotentialIntersections(line, true);
+        public IEnumerable<LineSegment> GetPotentialIntersections(in LineSegment line) => GetPotentialIntersections(in line, true);
 
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
@@ -884,7 +884,7 @@ namespace Geometry
         /// </summary>
         /// <param name="L"></param>
         /// <returns></returns>
-        private IEnumerable<LineSegment> GetPotentialIntersections(LineSegment line, bool TakeSpinLock)
+        private IEnumerable<LineSegment> GetPotentialIntersections(in LineSegment line, bool TakeSpinLock)
         {
             //If the line doesn't intersect our bounding box then skip the search
             if (!Bounds.Intersects(line.BoundingBox))
@@ -899,7 +899,7 @@ namespace Geometry
                 //                Coord start = GetCoord(new Vector2(line.MinX, line.MinY));
                 //                Coord end = GetCoord(new Vector2(line.MaxX, line.MaxY));
 
-                IEnumerable<Coord> coords = GetCoordsForLine(line);
+                IEnumerable<Coord> coords = GetCoordsForLine(in line);
                 return new LineSearchGridCoordListEnumerator(this, coords, TakeSpinLock);
             }
             finally
@@ -924,7 +924,7 @@ namespace Geometry
             {
                 rwLock.EnterReadLock();
 
-                IEnumerable<LineSegment> LineList = GetPotentialIntersections(line, false);
+                IEnumerable<LineSegment> LineList = GetPotentialIntersections(in line, false);
                 List<T> values = [];
                 foreach (LineSegment gridLine in LineList)
                 {
@@ -982,7 +982,7 @@ namespace Geometry
         /// <param name="intersection"></param>
         /// <param name="nearestIntersect"></param>
         /// <returns></returns>
-        public T FindNearest(LineSegment TestLine, out Vector2 intersection, out double nearestIntersect)
+        public T FindNearest(in LineSegment TestLine, out Vector2 intersection, out double nearestIntersect)
         {
             bool LockTaken = false;
             try
@@ -992,7 +992,7 @@ namespace Geometry
 
                 intersection = default;
                 nearestIntersect = double.MaxValue;
-                IEnumerable<LineSegment> potentialIntersections = GetPotentialIntersections(TestLine, false);
+                IEnumerable<LineSegment> potentialIntersections = GetPotentialIntersections(in TestLine, false);
                 LineSegment BestLine = default;
                 foreach (LineSegment l in potentialIntersections)
                 {

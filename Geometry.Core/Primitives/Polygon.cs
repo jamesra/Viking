@@ -1442,54 +1442,47 @@ namespace Geometry
 
         public bool Covers(in IPoint2D point_param) => GetRelation(point_param).IsCovers();
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
 
-        public bool Covers(in Vector2 p) => GetRelation((IPoint2D)p).IsCovers();
-
-        public ShapeRelation GetRelation(in Vector2 p) => GetRelation((IPoint2D)p);
+        public bool Covers(in Vector2 p) => GetRelation(p).IsCovers();
 
         /// <summary>
         /// Point-in-polygon via winding number. Holes are exterior of this polygon (Contained inside a hole is None).
         /// </summary>
-        public ShapeRelation GetRelation(in IPoint2D point_param)
+        public ShapeRelation GetRelation(in Vector2 p)
         {
-            if (!_BoundingRect.Covers(point_param))
+            if (!_BoundingRect.Covers(p))
                 return ShapeRelation.None;
 
-            Vector2 p = new(point_param.X, point_param.Y);
-
-            //Create a line we know must pass outside the polygon
-            //There is an edge case where the test line passes through a polygon vertex, so make sure the test line does not cross any verticies
-            //Vector2 targetPoint = new LineSegment(this.ExteriorRing[0], this.ExteriorRing[1]).Bisect();
-            //Vector2 targetPoint = new LineSegment(p.X, p.Y + this.ExteriorRing[0], this.ExteriorRing[1]).Bisect();
-
-            //Line test_ray = new Line(point_param, targetPoint - point_param);
-
-            //LineSegment test_line = test_ray.ToLine(Math.Max(BoundingBox.Width, BoundingBox.Height) * 2);
-
-
-            //Make a horizontal line
             Line test_line = new(p, Vector2.UnitX);
 
-            //Test all of the line segments for both interior and exterior polygons
-            //The winding test requires every exterior segment, so no RTree narrowing is possible here.
+            // The winding test requires every exterior segment, so no RTree narrowing is possible here.
             ShapeRelation result = IsPointInsidePolygonByWindingTest(_ExteriorSegments, test_line);
             if (result == ShapeRelation.Contained)
             {
                 foreach (Polygon inner in this.InteriorPolygons)
                 {
-                    ShapeRelation inner_result = inner.GetRelation((IPoint2D)p);
-                    //if (inner_result != ShapeRelation.None) //Including TOUCHING results probably breaks Bajaj generation, but it is correct
+                    ShapeRelation inner_result = inner.GetRelation(p);
                     if (inner_result == ShapeRelation.Contained)
-                        return ShapeRelation.None; //The point is in the inner polygon, therefore not part of this polygon
+                        return ShapeRelation.None;
 
-                    //Is a point on an inner polygon touching the polygon or contained?
                     if (inner_result == ShapeRelation.Touching)
                         return inner_result;
                 }
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Point-in-polygon via winding number. Holes are exterior of this polygon (Contained inside a hole is None).
+        /// </summary>
+        public ShapeRelation GetRelation(in IPoint2D point_param)
+        {
+            if (point_param is null)
+                throw new ArgumentNullException(nameof(point_param));
+
+            return GetRelation(new Vector2(point_param.X, point_param.Y));
         }
 
         /*

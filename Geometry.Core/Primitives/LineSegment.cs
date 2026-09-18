@@ -290,7 +290,7 @@ namespace Geometry
         }
 
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
 
         /// <summary>
         /// Closed-set test via clamped segment distance. Must not call <see cref="GetRelation(in IPoint2D)"/>:
@@ -486,9 +486,9 @@ namespace Geometry
             return intersects;
         }
 
-        public bool Intersects(LineSegment seg, out IShape2D Intersection) => GetRelation(seg, out Intersection) != ShapeRelation.None;
+        public bool Intersects(LineSegment seg, out IShape2D Intersection) => GetRelation(in seg, out Intersection) != ShapeRelation.None;
 
-        public ShapeRelation GetRelation(LineSegment seg, out IShape2D Intersection)
+        public ShapeRelation GetRelation(in LineSegment seg, out IShape2D Intersection)
         {
             //Don't do the full check if the bounding boxes don't overlap
 
@@ -547,8 +547,9 @@ namespace Geometry
                 //If there are two points on the line, those are the intersecting points
                 if (distances.Count(d => d == 0) >= 2)
                 {
-                    Vector2[] endpoints = [.. new Vector2[] { seg.A, seg.B, this.A, this.B }.Distinct()];
-                    Vector2[] endpointsOnLineCandidates = [.. endpoints.Where(e => overlapRect.Value.Covers(e) && seg.DistanceToPoint(e) < Tolerance.Epsilon)];
+                    LineSegment other = seg;
+                    Vector2[] endpoints = [.. new Vector2[] { other.A, other.B, this.A, this.B }.Distinct()];
+                    Vector2[] endpointsOnLineCandidates = [.. endpoints.Where(e => overlapRect.Value.Covers(e) && other.DistanceToPoint(e) < Tolerance.Epsilon)];
 
                     //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
                     if (endpointsOnLineCandidates.Length == 0)
@@ -790,24 +791,29 @@ namespace Geometry
         /// Endpoints are <see cref="ShapeRelation.Touching"/>; a point on the open segment is <see cref="ShapeRelation.Contained"/>.
         /// Uses <see cref="Covers(in Vector2)"/> for the closed-set test (do not invert that call).
         /// </summary>
-        public ShapeRelation GetRelation(in IPoint2D p)
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(new Vector2(p.X, p.Y));
+
+        /// <summary>
+        /// Endpoints are <see cref="ShapeRelation.Touching"/>; a point on the open segment is <see cref="ShapeRelation.Contained"/>.
+        /// Uses <see cref="Covers(in Vector2)"/> for the closed-set test (do not invert that call).
+        /// </summary>
+        public ShapeRelation GetRelation(in Vector2 p)
         {
-            Vector2 v = new(p.X, p.Y);
-            if (!Covers(v))
+            if (!Covers(p))
                 return ShapeRelation.None;
 
-            if (Vector2.DistanceSquared(v, A) <= Tolerance.EpsilonSquared ||
-                Vector2.DistanceSquared(v, B) <= Tolerance.EpsilonSquared)
+            if (Vector2.DistanceSquared(p, A) <= Tolerance.EpsilonSquared ||
+                Vector2.DistanceSquared(p, B) <= Tolerance.EpsilonSquared)
                 return ShapeRelation.Touching;
 
             return ShapeRelation.Contained;
         }
 
         /// <summary>
-        /// Must use <see cref="GetRelation(LineSegment, out IShape2D)"/>. A one-arg
+        /// Must use <see cref="GetRelation(in LineSegment, out IShape2D)"/>. A one-arg
         /// <c>GetRelation(ToLineSegment())</c> binds to <see cref="GetRelation(in ILineSegment2D)"/> and recurses.
         /// </summary>
-        public ShapeRelation GetRelation(in LineSegment other) => GetRelation(other, out _);
+        public ShapeRelation GetRelation(in LineSegment other) => GetRelation(in other, out _);
 
         public ShapeRelation GetRelation(in ILineSegment2D l) => GetRelation(l.ToLineSegment());
 

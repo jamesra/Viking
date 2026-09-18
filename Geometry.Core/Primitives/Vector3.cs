@@ -19,6 +19,27 @@ namespace Geometry
     /// </summary>
     public class Vector3ComparerZYX : IComparer<Vector3>, IComparer<IPoint3D>
     {
+        public static int CompareZYX(Vector3 A, Vector3 B)
+        {
+            double diffZ = A.Z - B.Z;
+            if (diffZ == 0)
+            {
+                double diffY = A.Y - B.Y;
+                if (diffY == 0)
+                {
+                    double diffX = A.X - B.X;
+                    if (diffX == 0)
+                        return 0;
+
+                    return diffX > 0 ? 1 : -1;
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffZ > 0 ? 1 : -1;
+        }
+
         public static int CompareZYX(in IPoint3D A, in IPoint3D B)
         {
             double diffZ = A.Z - B.Z;
@@ -50,6 +71,27 @@ namespace Geometry
     /// </summary>
     public class Vector3ComparerXYZ : IComparer<Vector3>, IComparer<IPoint3D>
     {
+        public static int CompareXYZ(Vector3 A, Vector3 B)
+        {
+            double diffX = A.X - B.X;
+            if (diffX == 0)
+            {
+                double diffY = A.Y - B.Y;
+                if (diffY == 0)
+                {
+                    double diffZ = A.Z - B.Z;
+                    if (diffZ == 0)
+                        return 0;
+
+                    return diffZ > 0 ? 1 : -1;
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffX > 0 ? 1 : -1;
+        }
+
         public static int CompareXYZ(in IPoint3D A, in IPoint3D B)
         {
             double diffX = A.X - B.X;
@@ -291,7 +333,7 @@ namespace Geometry
             _ => throw new IndexOutOfRangeException($"Axis not supported for {nameof(Vector3)}"),
         };
 
-        public static Vector3 FromBarycentric(Vector3 v1, Vector3 v2, Vector3 v3, double u, double v)
+        public static Vector3 FromBarycentric(in Vector3 v1, in Vector3 v2, in Vector3 v3, double u, double v)
         {
             double w = 1 - u - v;
             return new Vector3(
@@ -300,7 +342,7 @@ namespace Geometry
                 (v1.Z * w) + (v2.Z * u) + (v3.Z * v));
         }
 
-        public static Vector3 Scale(Vector3 A, double scalar) => A * scalar;
+        public static Vector3 Scale(in Vector3 A, double scalar) => A * scalar;
 
         public readonly Vector3 Scale(double scalar) => this * scalar;
 

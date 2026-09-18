@@ -354,7 +354,7 @@ namespace Geometry
             return false;
         }
 
-        public static List<LineSegment> Intersections(this in LineSegment line, in IReadOnlyList<LineSegment> lines, out Vector2[] IntersectionPoints) => Intersections(line, lines, true, out IntersectionPoints);
+        public static List<LineSegment> Intersections(this in LineSegment line, in IReadOnlyList<LineSegment> lines, out Vector2[] IntersectionPoints) => Intersections(in line, in lines, true, out IntersectionPoints);
 
 
         /// <summary>
@@ -365,7 +365,7 @@ namespace Geometry
         /// <param name="EndpointsOnLineDoNotIntersect"></param>
         /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
         /// <returns>The lines that intersect the line parameter</returns>
-        public static List<LineSegment> Intersections(this LineSegment line, in IReadOnlyList<LineSegment> lines, bool EndpointsOnLineDoNotIntersect, out Vector2[] IntersectionPoints)
+        public static List<LineSegment> Intersections(this in LineSegment line, in IReadOnlyList<LineSegment> lines, bool EndpointsOnLineDoNotIntersect, out Vector2[] IntersectionPoints)
         {
             //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
             List<Vector2> NewPoints = new(lines.Count);
@@ -389,7 +389,8 @@ namespace Geometry
                 }
             }
 
-            double[] dotValues = [.. NewPoints.Select(p => line.Dot(p))];
+            LineSegment self = line;
+            double[] dotValues = [.. NewPoints.Select(p => self.Dot(p))];
             int[] sortedIndices = dotValues.SortAndIndex();
 
             IntersectionPoints = [.. sortedIndices.Select(i => NewPoints[i])];

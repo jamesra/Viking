@@ -303,9 +303,25 @@ namespace Geometry
 
         public bool Covers(in IPoint2D pos) => GetRelation(pos).IsCovers();
 
-        public ShapeRelation GetRelation(in Vector2 p) => GetRelation((IPoint2D)p);
+        public ShapeRelation GetRelation(in Vector2 p)
+        {
+            const double eps = Tolerance.Epsilon;
+            if (p.X < Left - eps ||
+                p.Y < Bottom - eps ||
+                p.X > Right + eps ||
+                p.Y > Top + eps)
+                return ShapeRelation.None;
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+            if (p.X > Left + eps &&
+                p.Y > Bottom + eps &&
+                p.X < Right - eps &&
+                p.Y < Top - eps)
+                return ShapeRelation.Contained;
+
+            return ShapeRelation.Touching;
+        }
+
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
 
         public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
 

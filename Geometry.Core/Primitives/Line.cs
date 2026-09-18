@@ -229,7 +229,9 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
+
+        public ShapeRelation GetRelation(in Vector2 p) => IsLeft(p) == 0 ? ShapeRelation.Contained : ShapeRelation.None;
 
         public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
 
@@ -289,9 +291,7 @@ namespace Geometry
         /// <summary>
         /// On the line is Contained (no boundary). Off the line is None.
         /// </summary>
-        public ShapeRelation GetRelation(in IPoint2D p) => ContainsOnLine(p) ? ShapeRelation.Contained : ShapeRelation.None;
-
-        bool ContainsOnLine(in IPoint2D p) => IsLeft(new Vector2(p.X, p.Y)) == 0;
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(new Vector2(p.X, p.Y));
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {

@@ -78,9 +78,9 @@ namespace Geometry
         }
         */
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
 
-        public bool Covers(in Vector2 p) => GetRelation((IPoint2D)p).IsCovers();
+        public bool Covers(in Vector2 p) => GetRelation(p).IsCovers();
 
         public bool Contains(in Rectangle R)
         {
@@ -162,11 +162,12 @@ namespace Geometry
             return ShapeRelationHelpers.QuadAsPolygon(this).GetRelation(other);
         }
 
-        public ShapeRelation GetRelation(in IPoint2D p)
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(new Vector2(p.X, p.Y));
+
+        public ShapeRelation GetRelation(in Vector2 p)
         {
-            Vector2 v = new(p.X, p.Y);
-            ShapeRelation t0 = T0.GetRelation((IPoint2D)v);
-            ShapeRelation t1 = T1.GetRelation((IPoint2D)v);
+            ShapeRelation t0 = T0.GetRelation(p);
+            ShapeRelation t1 = T1.GetRelation(p);
             if (t0 == ShapeRelation.None && t1 == ShapeRelation.None)
                 return ShapeRelation.None;
 
@@ -179,7 +180,7 @@ namespace Geometry
             ];
             foreach (LineSegment edge in outer)
             {
-                if (edge.Covers(v))
+                if (edge.Covers(p))
                     return ShapeRelation.Touching;
             }
 
@@ -189,8 +190,8 @@ namespace Geometry
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {
             LineSegment seg = line.ToLineSegment();
-            ShapeRelation a = GetRelation((IPoint2D)seg.A);
-            ShapeRelation b = GetRelation((IPoint2D)seg.B);
+            ShapeRelation a = GetRelation(seg.A);
+            ShapeRelation b = GetRelation(seg.B);
             if (a != ShapeRelation.None && b != ShapeRelation.None)
                 return a == ShapeRelation.Touching && b == ShapeRelation.Touching ? ShapeRelation.Contained : ShapeRelation.Contained;
             if (T0.Intersects(seg) || T1.Intersects(seg))

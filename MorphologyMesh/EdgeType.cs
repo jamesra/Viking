@@ -205,7 +205,7 @@ namespace MorphologyMesh
         /// <param name="Polylines"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PolylineIndex APoly, PolylineIndex BPoly, IReadOnlyList<Polyline> Polylines, Vector2 midpoint)
+        public static EdgeType GetEdgeType(in PolylineIndex APoly, in PolylineIndex BPoly, IReadOnlyList<Polyline> Polylines, Vector2 midpoint)
         {
             Polyline A = Polylines[APoly.ShapeIndex];
             Polyline B = Polylines[BPoly.ShapeIndex];
@@ -243,9 +243,9 @@ namespace MorphologyMesh
         public static EdgeType GetEdgeType(IShapeIndex A, IShapeIndex B, IReadOnlyList<IShape2D> shapes, Vector2 midpoint)
         {
             if (A is PolygonIndex iPolyA && B is PolygonIndex iPolyB)
-                return GetEdgeType(iPolyA, iPolyB, shapes, midpoint);
+                return GetEdgeType(in iPolyA, in iPolyB, shapes, midpoint);
             if (A is PolylineIndex iLineA && B is PolylineIndex iLineB)
-                return GetEdgeType(iLineA, iLineB, shapes, midpoint);
+                return GetEdgeType(in iLineA, in iLineB, shapes, midpoint);
             if ((A is PolygonIndex && B is PolylineIndex) || (A is PolylineIndex && B is PolygonIndex))
                 return EdgeType.COUNTOUR_TO_POLYLINE;
 
@@ -260,12 +260,16 @@ namespace MorphologyMesh
         /// <param name="Polygons"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
+        public static EdgeType GetEdgeType(in PolygonIndex APoly, in PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
         {
             if (Shapes[APoly.ShapeIndex] is not Polygon A)
                 throw new ArgumentException($"Shape #{APoly.ShapeIndex} must be a polygon", nameof(APoly));
             if (Shapes[BPoly.ShapeIndex] is not Polygon B)
                 throw new ArgumentException($"Shape #{BPoly.ShapeIndex} must be a polygon", nameof(BPoly));
+
+            int aShape = APoly.ShapeIndex;
+            int bShape = BPoly.ShapeIndex;
+            Vector2 mid = midpoint;
 
             if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
@@ -284,7 +288,7 @@ namespace MorphologyMesh
                     {
                         //return EdgeType.FLYING; //Line covers empty space, could be on surface
                         LineSegment segment = new(APoly.Point(A), BPoly.Point(B));
-                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex && iP != BPoly.ShapeIndex).Any(p => p.GetRelation(segment) != ShapeRelation.None);
+                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != aShape && iP != bShape).Any(p => p.GetRelation(segment) != ShapeRelation.None);
                         if (!LineIntersectsAnyOtherPoly)
                             return EdgeType.FLYING;
                         else
@@ -350,7 +354,7 @@ namespace MorphologyMesh
 
                 if (APoly.IsInner ^ BPoly.IsInner) //Spans from inner to outer ring
                 {
-                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers((IPoint2D)midpoint));
+                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != aShape).Any(p => p.Covers((IPoint2D)mid));
                     bool midInA = A.Covers(midpoint);
                     if (LineIntersectsAnyOtherPoly)
                     {
@@ -373,7 +377,7 @@ namespace MorphologyMesh
                     }
                     else //Edge spans from one inner polygon to another
                     {
-                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers((IPoint2D)midpoint));
+                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != aShape).Any(p => p.Covers((IPoint2D)mid));
                         if (LineIntersectsAnyOtherPoly)
                         {
                             return EdgeType.INVALID;
@@ -386,7 +390,7 @@ namespace MorphologyMesh
                 }
                 else //Both points are on outer ring of one polygon
                 {
-                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers((IPoint2D)midpoint));
+                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != aShape).Any(p => p.Covers((IPoint2D)mid));
                     bool midInA = A.Covers(midpoint);
 
                     if (midInA)
@@ -419,14 +423,16 @@ namespace MorphologyMesh
         /// <param name="Polygons"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PolylineIndex ALine, PolylineIndex BLine, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
+        public static EdgeType GetEdgeType(in PolylineIndex ALine, in PolylineIndex BLine, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
         {
             if (Shapes[ALine.ShapeIndex] is not Polyline A)
                 throw new ArgumentException($"Shape #{ALine.ShapeIndex} must be a polyline", nameof(Shapes));
             if (Shapes[BLine.ShapeIndex] is not Polyline B)
                 throw new ArgumentException($"Shape #{BLine.ShapeIndex} must be a polyline", nameof(Shapes));
 
-            if (ALine.ShapeIndex != BLine.ShapeIndex)
+            int aShape = ALine.ShapeIndex;
+            int bShape = BLine.ShapeIndex;
+            if (aShape != bShape)
             {
                 Vector2 a = ALine.Point(A);
                 Vector2 b = BLine.Point(B);
@@ -439,7 +445,7 @@ namespace MorphologyMesh
                     return EdgeType.INVALID;
 
                 LineSegment segment = new(a, b);
-                bool lineIntersectsAnyOtherShape = Shapes.Where((p, iP) => iP != ALine.ShapeIndex && iP != BLine.ShapeIndex)
+                bool lineIntersectsAnyOtherShape = Shapes.Where((p, iP) => iP != aShape && iP != bShape)
                     .Any(p => p.GetRelation(segment) != ShapeRelation.None);
                 if (lineIntersectsAnyOtherShape)
                     return EdgeType.INVALID;

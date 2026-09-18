@@ -528,7 +528,7 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
-        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
 
         public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
 
@@ -566,17 +566,19 @@ namespace Geometry
             return ShapeRelationHelpers.CombineParts(parts);
         }
 
-        public ShapeRelation GetRelation(in IPoint2D p)
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(new Vector2(p.X, p.Y));
+
+        public ShapeRelation GetRelation(in Vector2 p)
         {
             if (_Points.Count == 0)
                 return ShapeRelation.None;
 
-            Vector2 v = new(p.X, p.Y);
-            if (!SegmentStorage.Any(line => line.Covers(v)))
+            Vector2 point = p;
+            if (!SegmentStorage.Any(line => line.Covers(point)))
                 return ShapeRelation.None;
 
-            bool atStart = Vector2.DistanceSquared(v, _Points[0]) <= Tolerance.EpsilonSquared;
-            bool atEnd = Vector2.DistanceSquared(v, _Points[_Points.Count - 1]) <= Tolerance.EpsilonSquared;
+            bool atStart = Vector2.DistanceSquared(point, _Points[0]) <= Tolerance.EpsilonSquared;
+            bool atEnd = Vector2.DistanceSquared(point, _Points[_Points.Count - 1]) <= Tolerance.EpsilonSquared;
             if (atStart || atEnd)
                 return ShapeRelation.Touching;
 

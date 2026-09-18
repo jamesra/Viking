@@ -28,27 +28,27 @@ namespace VikingXNAGraphics
         Textured
     }
 
-    public struct HSLColor
+    public readonly struct HSLColor(float alpha, float hue, float saturation, float luminance)
     {
         /// <summary>
         /// Alpha from 0 to 1
         /// </summary>
-        public float Alpha;
+        public readonly float Alpha = alpha;
 
         /// <summary>
         /// Hue angle in degrees
         /// </summary>
-        public float Hue;
+        public readonly float Hue = hue;
 
         /// <summary>
         /// Saturation from 0 to 1
         /// </summary>
-        public float Saturation;
+        public readonly float Saturation = saturation;
 
         /// <summary>
         /// Luminance from 0 to 1
         /// </summary>
-        public float Luminance;
+        public readonly float Luminance = luminance;
     }
 
     public static class FloatExtensions
@@ -74,6 +74,7 @@ namespace VikingXNAGraphics
                 LineStyle.AnimatedBidirectional => "AnimatedBidirectional",
                 LineStyle.AnimatedRadial => "AnimatedRadial",
                 LineStyle.Ladder => "Ladder",
+                LineStyle.Dashed => "Dashed",
                 LineStyle.Tubular => "Tubular",
                 LineStyle.HalfTube => "HalfTube",
                 LineStyle.Glow => "Glow",
@@ -622,39 +623,34 @@ namespace VikingXNAGraphics
 
             int max_min_diff = max - min;
             float f_max_min_diff = f_max - f_min;
-
-            HSLColor hsl;
-            hsl.Alpha = A;
-            hsl.Luminance = (((float)(max + min)) / 2f) / 255f;
+            float luminance = (((float)(max + min)) / 2f) / 255f;
 
             if (min == max)
             {
                 //If the min & max are equal we have a shade of grey, there is no hue or saturation, only luminance.
-                hsl.Hue = 0;
-                hsl.Saturation = 0;
-                return hsl;
+                return new HSLColor(A, 0, 0, luminance);
             }
 
-            hsl.Saturation = hsl.Luminance < 0.5 ? f_max_min_diff / (f_max + f_min) : f_max_min_diff / (2f - f_max_min_diff);
+            float saturation = luminance < 0.5 ? f_max_min_diff / (f_max + f_min) : f_max_min_diff / (2f - f_max_min_diff);
 
+            float hue;
             if (max == color.R)
             {
-                hsl.Hue = (G - B) / f_max_min_diff;
+                hue = (G - B) / f_max_min_diff;
             }
             else
             {
-                hsl.Hue = max == color.G ? 2f + (B - R) / f_max_min_diff : 4f + (R - G) / f_max_min_diff;
+                hue = max == color.G ? 2f + (B - R) / f_max_min_diff : 4f + (R - G) / f_max_min_diff;
             }
 
-            //Convert Hue to degrees
-            hsl.Hue *= 60;
+            hue *= 60;
 
-            if (hsl.Hue < 0)
+            if (hue < 0)
             {
-                hsl.Hue += 360;
+                hue += 360;
             }
 
-            return hsl;
+            return new HSLColor(A, hue, saturation, luminance);
         }
 
         [Obsolete("Use ConvertToHCL for shader compatibility. ConvertToHSL uses HSL color space which differs from shader expectations.")]

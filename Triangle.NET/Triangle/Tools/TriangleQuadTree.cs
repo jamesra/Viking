@@ -78,27 +78,20 @@ namespace TriangleNet.Tools
         /// <returns>True, if point is inside or on the edge of this triangle.</returns>
         internal static bool IsPointInTriangle(Point p, Point t0, Point t1, Point t2)
         {
-            // TODO: no need to create new Point instances here
-            Point d0 = new(t1.x - t0.x, t1.y - t0.y);
-            Point d1 = new(t2.x - t0.x, t2.y - t0.y);
-            Point d2 = new(p.x - t0.x, p.y - t0.y);
+            double d0x = t1.x - t0.x;
+            double d0y = t1.y - t0.y;
+            double d1x = t2.x - t0.x;
+            double d1y = t2.y - t0.y;
+            double d2x = p.x - t0.x;
+            double d2y = p.y - t0.y;
 
-            // crossproduct of (0, 0, 1) and d0
-            Point c0 = new(-d0.y, d0.x);
+            double c0x = -d0y;
+            double c0y = d0x;
+            double c1x = -d1y;
+            double c1y = d1x;
 
-            // crossproduct of (0, 0, 1) and d1
-            Point c1 = new(-d1.y, d1.x);
-
-            // Linear combination d2 = s * d0 + v * d1.
-            //
-            // Multiply both sides of the equation with c0 and c1
-            // and solve for s and v respectively
-            //
-            // s = d2 * c1 / d0 * c1
-            // v = d2 * c0 / d1 * c0
-
-            double s = DotProduct(d2, c1) / DotProduct(d0, c1);
-            double v = DotProduct(d2, c0) / DotProduct(d1, c0);
+            double s = ((d2x * c1x) + (d2y * c1y)) / ((d0x * c1x) + (d0y * c1y));
+            double v = ((d2x * c0x) + (d2y * c0y)) / ((d1x * c0x) + (d1y * c0y));
 
             if (s >= 0 && v >= 0 && ((s + v) <= 1))
             {

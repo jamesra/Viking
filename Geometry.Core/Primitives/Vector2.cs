@@ -18,6 +18,26 @@ namespace Geometry
     /// </summary>
     public class Vector2ComparerYX : IComparer<Vector2>, IComparer<IPoint2D>
     {
+        public static int CompareYX(Vector2 A, Vector2 B)
+        {
+            // Exact compare (no Tolerance.Epsilon): same reason as Vector2ComparerXY — Delaunay splits.
+            double diffY = A.Y - B.Y;
+
+            if (diffY == 0)
+            {
+                double diffX = A.X - B.X;
+
+                if (diffX == 0)
+                {
+                    return 0;
+                }
+
+                return diffX > 0 ? 1 : -1;
+            }
+
+            return diffY > 0 ? 1 : -1;
+        }
+
         public static int CompareYX(in IPoint2D A, in IPoint2D B)
         {
             // Exact compare (no Tolerance.Epsilon): same reason as Vector2ComparerXY — Delaunay splits.
@@ -51,7 +71,7 @@ namespace Geometry
 
         public int Compare(IPoint2D A, IPoint2D B) => Vector2ComparerYX.CompareYX(in A, in B);
 
-        public int Compare(Vector2 x, Vector2 y) => Vector2ComparerYX.CompareYX((IPoint2D)x, (IPoint2D)y);
+        public int Compare(Vector2 x, Vector2 y) => Vector2ComparerYX.CompareYX(x, y);
     }
 
     /// <summary>
@@ -59,6 +79,27 @@ namespace Geometry
     /// </summary>
     public class Vector2ComparerXY : IComparer<Vector2>, IComparer<IPoint2D>
     {
+        public static int CompareXY(Vector2 A, Vector2 B)
+        {
+            // Exact compare (no Tolerance.Epsilon): epsilon equality would collapse nearby points and
+            // break Delaunay divide-and-conquer, which splits sorted sets into equal halves.
+            double diffX = A.X - B.X;
+
+            if (diffX == 0)
+            {
+                double diffY = A.Y - B.Y;
+
+                if (diffY == 0)
+                {
+                    return 0;
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffX > 0 ? 1 : -1;
+        }
+
         public static int CompareXY(in IPoint2D A, in IPoint2D B)
         {
             // Exact compare (no Tolerance.Epsilon): epsilon equality would collapse nearby points and
@@ -94,7 +135,7 @@ namespace Geometry
 
         public int Compare(IPoint2D A, IPoint2D B) => Vector2ComparerXY.CompareXY(in A, in B);
 
-        public int Compare(Vector2 x, Vector2 y) => Vector2ComparerXY.CompareXY((IPoint2D)x, (IPoint2D)y);
+        public int Compare(Vector2 x, Vector2 y) => Vector2ComparerXY.CompareXY(x, y);
     }
 
 
@@ -225,7 +266,7 @@ namespace Geometry
             return Vector2ComparerXY.CompareXY(this, B);
         }
 
-        readonly int IComparable<Vector2>.CompareTo(Vector2 B) => Vector2ComparerXY.CompareXY((IPoint2D)this, (IPoint2D)B);
+        readonly int IComparable<Vector2>.CompareTo(Vector2 B) => Vector2ComparerXY.CompareXY(this, B);
 
         public readonly int CompareTo(IPoint2D other) => Vector2ComparerXY.CompareXY(this, other);
 

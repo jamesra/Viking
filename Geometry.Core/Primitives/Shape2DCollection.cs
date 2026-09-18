@@ -53,7 +53,37 @@ namespace Geometry
             return _shapes.Any(s => s.Covers(pnt));
         }
 
-        public bool Contains(in Vector2 p) => Contains((IPoint2D)p);
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
+
+        /// <summary>
+        /// ORs child relations so a collection can report interior, boundary, and crossing together.
+        /// Walks every child. Dispatches known concrete types so the point is not boxed.
+        /// </summary>
+        public ShapeRelation GetRelation(in Vector2 p)
+        {
+            Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
+            ShapeRelation output = ShapeRelation.None;
+            foreach (var s in _shapes)
+            {
+                output |= RelationToPoint(s, p);
+            }
+
+            return output;
+        }
+
+        static ShapeRelation RelationToPoint(IShape2D s, in Vector2 p) => s switch
+        {
+            Polygon poly => poly.GetRelation(p),
+            Polyline polyline => polyline.GetRelation(p),
+            Shape2DCollection collection => collection.GetRelation(p),
+            Rectangle rect => rect.GetRelation(p),
+            Triangle tri => tri.GetRelation(p),
+            Quad quad => quad.GetRelation(p),
+            LineSegment seg => seg.GetRelation(p),
+            Line line => line.GetRelation(p),
+            Circle circle => circle.GetRelation(p),
+            _ => s.GetRelation((IPoint2D)p),
+        };
 
         public bool Contains(in IShape2D other)
         {

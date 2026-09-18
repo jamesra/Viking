@@ -346,7 +346,7 @@ namespace Geometry
 
                         LineSegmentPair pair = new(mapline: mapLine, ctrlline: ctrlLine);
 
-                        IEnumerable<Coord> Coords = GetCoordsForLine(mapLine);
+                        IEnumerable<Coord> Coords = GetCoordsForLine(in mapLine);
                         foreach (Coord coord in Coords)
                         {
                             _LineGrid[coord.iX, coord.iY].Add(pair);
@@ -385,7 +385,7 @@ namespace Geometry
         }
 
 
-        private IEnumerable<Coord> GetCoordsForLine(LineSegment line)
+        private IEnumerable<Coord> GetCoordsForLine(in LineSegment line)
         {
             Coord start;
             Coord end;
@@ -516,7 +516,7 @@ namespace Geometry
         /// </summary>
         /// <param name="L"></param>
         /// <returns></returns>
-        public IEnumerable<LineSegmentPair> GetPotentialIntersections(LineSegment line)
+        public IEnumerable<LineSegmentPair> GetPotentialIntersections(in LineSegment line)
         {
             //     List<LineSegmentPair> LineList;
             //Coord start = GetCoord(new Vector2(line.MinX, line.MinY));
@@ -528,7 +528,7 @@ namespace Geometry
                 return Array.Empty<LineSegmentPair>();
             }
 
-            return new PairedLineSearchGridCoordListEnumerator(this, GetCoordsForLine(line));
+            return new PairedLineSearchGridCoordListEnumerator(this, GetCoordsForLine(in line));
 
         }
     }

@@ -12,7 +12,7 @@ namespace Geometry.Meshing
     /// Closely related to the CompareAngle class.  In this version the vertex index can change and is determined by the 
     /// duplicate key in the compared IEdgeKeys
     /// </summary>
-    public class MeshEdgeAngleComparer<VERTEX>(IMesh2D<VERTEX> mesh, Vector2 origin_line_vector, bool clockwise = false) : IComparer<IEdgeKey>
+    public class MeshEdgeAngleComparer<VERTEX>(IMesh2D<VERTEX> mesh, Vector2 origin_line_vector, bool clockwise = false) : IComparer<IEdgeKey>, IComparer<EdgeKey>
         where VERTEX : IVertex2D
     {
         readonly IMesh2D<VERTEX> Mesh = mesh;
@@ -27,6 +27,24 @@ namespace Geometry.Meshing
         public MeshEdgeAngleComparer(IMesh2D<VERTEX> mesh, Line origin_line_vector, bool clockwise = false) :
             this(mesh, origin_line_vector.Direction, clockwise)
         {
+        }
+
+        public int Compare(EdgeKey A, EdgeKey B)
+        {
+            int origin_vertex = A.A == B.A || A.A == B.B ? A.A : A.B;
+            int APoint = A.OppositeEnd(origin_vertex);
+            int BPoint = B.OppositeEnd(origin_vertex);
+
+            Vector2 Origin = Mesh[origin_vertex].Position;
+            Vector2 ComparisonPoint = Origin + OriginVector;
+
+            double angleA = Vector2.ArcAngle(in Origin, Mesh[APoint].Position, in ComparisonPoint);
+            double angleB = Vector2.ArcAngle(in Origin, Mesh[BPoint].Position, in ComparisonPoint);
+
+            angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
+            angleB = angleB < 0 ? angleB + (Math.PI * 2.0) : angleB;
+
+            return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
         }
 
         public int Compare(IEdgeKey A, IEdgeKey B)
@@ -52,7 +70,7 @@ namespace Geometry.Meshing
     /// <summary>
     /// Closely related to the CompareAngle class.  Assumes the Vertex index will never change in the mesh and is able to cache appropriately.
     /// </summary>
-    public class MeshEdgeAngleComparerFixedIndex<VERTEX> : IComparer<IEdgeKey>
+    public class MeshEdgeAngleComparerFixedIndex<VERTEX> : IComparer<IEdgeKey>, IComparer<EdgeKey>
         where VERTEX : IVertex2D
     {
         readonly IMesh<VERTEX> Mesh;
@@ -115,6 +133,16 @@ namespace Geometry.Meshing
             //We are measuring the angle from the line in one direction, so don't allow negative angles
             Vector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint, ClockwiseOrder);
 
+        public int Compare(EdgeKey A, EdgeKey B)
+        {
+            int APoint = A.OppositeEnd(OriginVertex);
+            int BPoint = B.OppositeEnd(OriginVertex);
+            double angleA = Vector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint);
+            double angleB = Vector2.AbsArcAngle(OriginLine.Origin, Mesh[BPoint].Position, ComparisonPoint);
+
+            return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+        }
+
         public int Compare(IEdgeKey A, IEdgeKey B)
         {
             int APoint = A.OppositeEnd(OriginVertex);
@@ -146,7 +174,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public IEnumerable<long> EdgesByAngle(IComparer<IEdgeKey> comparer, long origin_edge, bool clockwise)
         {
-            if (false == this.Edges.Contains(new EdgeKey(this.Index, origin_edge)))
+            if (false == this._Edges.Contains(new EdgeKey(this.Index, origin_edge)))
             {
                 throw new ArgumentException("Non-existent edge passed as origin to EdgesByAngle.");
             }
@@ -158,7 +186,7 @@ namespace Geometry.Meshing
 
             long iStart = Array.IndexOf<long>(sortedEdges, origin_edge);
 
-            long[] EdgesSortedAroundOrigin = new long[this.Edges.Count];
+            long[] EdgesSortedAroundOrigin = new long[this._Edges.Count];
             IIndexSet indicies = new FiniteWrappedIndexSet(0, sortedEdges.Length, iStart);
 
             if (clockwise)
