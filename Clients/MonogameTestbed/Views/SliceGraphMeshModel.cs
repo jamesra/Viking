@@ -36,8 +36,8 @@ namespace MonogameTestbed
 
         private readonly Dictionary<IShapeIndex, int> ShapeIndexToVertex = [];
 
-        readonly List<MorphMeshOutwardOrientation.ShapeAtZ> _shapesAtZ = [];
-        readonly Dictionary<int, bool> _isUpperByMorphShape = [];
+        readonly List<WindingInteriorSeed> _windingInteriorSeeds = [];
+        readonly HashSet<int> _outwardMorphShapeIndices = [];
 
         readonly List<VertexPositionNormalColor> _workingVerts = [];
         readonly List<int> _workingEdges = [];
@@ -109,6 +109,7 @@ namespace MonogameTestbed
             using var _phase = MeshPhaseTimings.Measure(MeshPhase.MergeAddSlice, mesh.Vertices.Count);
 
             AccumulateSliceTopology(mesh.Topology);
+            AccumulateWindingSeeds(mesh);
 
             int[] mesh_to_global = new int[mesh.Vertices.Count];
 
@@ -198,30 +199,31 @@ namespace MonogameTestbed
             for (int i = 0; i < topology.Shapes.Length; i++)
             {
                 int morphShape = (int)topology.ShapeIndexToMorphNodeIndex[i];
-                _isUpperByMorphShape[morphShape] = topology.IsUpper[i];
+                if (topology.Shapes[i] is Geometry.Polygon)
+                    _outwardMorphShapeIndices.Add(morphShape);
+            }
+        }
 
-                _shapesAtZ.Add(new MorphMeshOutwardOrientation.ShapeAtZ
-                {
-                    Shape = topology.Shapes[i],
-                    IsUpper = topology.IsUpper[i],
-                    Z = topology.ShapeZ[i]
-                });
+        private void AccumulateWindingSeeds(BajajGeneratorMesh mesh)
+        {
+            foreach (WindingInteriorSeed seed in mesh.WindingInteriorSeeds)
+            {
+                int morphShape = (int)mesh.Topology.ShapeIndexToMorphNodeIndex[seed.ShapeIndex];
+                _windingInteriorSeeds.Add(seed with { ShapeIndex = morphShape });
             }
         }
 
         private void MergeAccumulatedSliceTopology(SliceGraphMeshModel other)
         {
-            _shapesAtZ.AddRange(other._shapesAtZ);
-
-            foreach (var kvp in other._isUpperByMorphShape)
-                _isUpperByMorphShape[kvp.Key] = kvp.Value;
+            _windingInteriorSeeds.AddRange(other._windingInteriorSeeds);
+            _outwardMorphShapeIndices.UnionWith(other._outwardMorphShapeIndices);
         }
 
         /// <summary>
         /// Reorient the merged composite so adjacent faces agree across slice boundaries, then refresh GPU normals.
         /// Per-slice meshes are oriented locally; merging can leave thousands of inconsistent shared edges.
-        /// Greedy manifold repair is skipped when any edge still has three or more faces: on those composites
-        /// the repair oscillates and punches culling holes in the tube.
+        /// The ray-seeded walk is the only orientation pass; conflicting BFS assignments fail instead of a
+        /// later greedy repair.
         /// </summary>
         public void EnsureCompositeWinding()
         {
@@ -234,18 +236,20 @@ namespace MonogameTestbed
             {
                 RespectAnchorFaces = false,
                 AlwaysOrientOutward = false,
-                RunRepairPass = false
+                RunRepairPass = false,
+                SeedByInteriorRay = _outwardMorphShapeIndices.Count > 0,
+                InteriorSeeds = _windingInteriorSeeds,
+                OutwardShapeIndices = _outwardMorphShapeIndices,
+                SkipFailedPatches = true,
+                FailureContext = $"composite with {composite.Vertices.Count} vertices"
             };
 
             var result = MeshWindingReorientation.Reorient(composite, options);
-
-            var outwardCtx = MorphMeshOutwardOrientation.ShapeContext.FromAccumulated(_shapesAtZ, _isUpperByMorphShape);
-            int outwardFlips = MorphMeshOutwardOrientation.OrientComponentsOutward(composite, outwardCtx);
-
-            int repairAfterOutward = 0;
-            var afterOutward = MeshWindingDiagnostics.Analyze(composite);
-            if (afterOutward.NonManifoldEdges == 0)
-                repairAfterOutward = MeshWindingReorientation.RepairManifoldConsistency(composite);
+            if (result.PatchFailures is not null)
+            {
+                foreach (string failure in result.PatchFailures)
+                    Trace.WriteLine($"Composite winding skipped a patch: {failure}");
+            }
 
             composite.RecalculateNormals();
 
@@ -287,14 +291,14 @@ namespace MonogameTestbed
                 System.Diagnostics.Trace.WriteLine(
                     $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
                     $"awayFromNonManifold={awayFromNonManifold} (after Reorient {result.AfterInconsistentAwayFromNonManifold}), " +
-                    $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.  " +
+                    $"{result.TotalReversals} reversals.  " +
                     $"Composite {CompositeManifoldReport}");
             }
             else
             {
                 System.Diagnostics.Trace.WriteLine(
                     $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
-                    $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.");
+                    $"{result.TotalReversals} reversals.");
             }
         }
 

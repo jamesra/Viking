@@ -1,5 +1,13 @@
 {
   "version": "0.2.0",
+  "inputs": [
+    {
+      "id": "nornirVolumeName",
+      "description": "Nornir volume name (folder under Y:\\Volumes)",
+      "type": "promptString",
+      "default": "RPC1"
+    }
+  ],
   "configurations": [
     {
       "name": "MonogameTestbed (RC2 Vasculature)",
@@ -46,6 +54,28 @@
       "stopAtEntry": false
     },
     {
+      "name": "SectionCorrectionBuilder",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-section-correction-builder",
+      "program": "${workspaceFolder}/Servers/SectionCorrectionBuilder/bin/Debug/net10.0/SectionCorrectionBuilder.dll",
+      "args": [  
+       "--volume",
+        "Y:\\Volumes\\${input:nornirVolumeName}\\SliceToVolume.VikingXML",
+        "--output",
+        "Y:\\Volumes\\${input:nornirVolumeName}\\corrections",
+        "--stos-groups",
+        "SliceToVolume1",
+        "--cache",
+        "C:\\Temp\\SectionCorrectionBuilder\\${input:nornirVolumeName}",
+        "--volume-url",
+        "http://rogue1.codepharm.net/${input:nornirVolumeName}/SliceToVolume.VikingXML"
+      ],
+      "cwd": "${workspaceFolder}/Servers/SectionCorrectionBuilder/bin/Debug/net10.0",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
       "name": "MonogameTestbed (BAJAJTEST screenshots)",
       "type": "coreclr",
       "request": "launch",
@@ -68,7 +98,26 @@
       "stopAtEntry": false
     },
     {
-      "name": "MonogameTestbed (BAJAJTEST screenshots) Release",
+    "name": "BajajTest",
+    "type": "coreclr",
+    "request": "launch",
+    "preLaunchTask": "build-monogame-testbed",
+    "program": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows/MonogameTestbed.dll",
+    "args": [
+      "--mode",
+      "BajajTest",
+      "--repro-locations",
+      "8592,8593",
+      "-e",
+      "RC1", 
+      "-l"
+    ],
+    "cwd": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows",
+    "console": "integratedTerminal",
+    "stopAtEntry": false
+  },
+    {
+      "name": "MonogameTestbed Release",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build-monogame-testbed-release",
@@ -79,10 +128,7 @@
         "--repro-locations",
         "8592,8593",
         "-e",
-        "RC1",
-        "--screenshots",
-        "-o",
-        "C:\\Temp\\BajajTestScreenshots",
+        "RC1",  
         "-l"
       ],
       "cwd": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Release/net9.0-windows",

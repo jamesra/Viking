@@ -202,7 +202,7 @@ public class NetworkControllerTest
         // Act & Assert
         try
         {
-            IActionResult result = await controller.PostDot(null);
+            IActionResult result = await controller.PostDot();
             Assert.IsTrue(result is RedirectResult);
         }
         catch (Exception ex)
@@ -239,7 +239,7 @@ public class NetworkControllerTest
         // Act & Assert
         try
         {
-            IActionResult result = await controller.PostTLP(null);
+            IActionResult result = await controller.PostTLP();
             Assert.IsTrue(result is RedirectResult);
         }
         catch (Exception ex)
@@ -276,7 +276,7 @@ public class NetworkControllerTest
         // Act & Assert
         try
         {
-            IActionResult result = await controller.PostGML(null);
+            IActionResult result = await controller.PostGML();
             Assert.IsTrue(result is RedirectResult);
         }
         catch (Exception ex)
@@ -309,7 +309,7 @@ public class NetworkControllerTest
         // Act & Assert
         try
         {
-            IActionResult result = await controller.PostJSON(null);
+            IActionResult result = await controller.PostJSON();
             Assert.IsTrue(result is RedirectResult);
         }
         catch (Exception ex)
@@ -580,7 +580,7 @@ public class NetworkControllerTest
         // Act
         try
         {
-            IActionResult result = await controller.PostDot(null);
+            IActionResult result = await controller.PostDot();
 
             // Assert
             Assert.IsTrue(result is RedirectResult);
@@ -632,7 +632,7 @@ public class NetworkControllerTest
         // Act
         try
         {
-            IActionResult result = await controller.PostTLP(null);
+            IActionResult result = await controller.PostTLP();
 
             // Assert
             Assert.IsTrue(result is RedirectResult);
@@ -684,7 +684,7 @@ public class NetworkControllerTest
         // Act
         try
         {
-            IActionResult result = await controller.PostGML(null);
+            IActionResult result = await controller.PostGML();
 
             // Assert
             Assert.IsTrue(result is RedirectResult);
@@ -732,7 +732,7 @@ public class NetworkControllerTest
         // Act
         try
         {
-            IActionResult result = await controller.PostJSON(null);
+            IActionResult result = await controller.PostJSON();
 
             // Assert
             Assert.IsTrue(result is RedirectResult);

@@ -855,13 +855,6 @@ namespace MonogameTestbed
         private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] _MeshModels =
             Array.Empty<MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>>();
 
-        /// <summary>
-        /// Memo of <see cref="HasIncompleteDescendantLeaf"/> by node key. Cleared along the ancestor chain when a
-        /// node completes so unrelated subtrees keep their answers across visible-list rebuilds.
-        /// Concurrent because the rebuild task reads while meshing invalidates under write.
-        /// </summary>
-        private readonly ConcurrentDictionary<ulong, bool> _incompleteDescendantCache = new();
-
         /// <summary>1 while a rebuild task owns the single-flight slot.</summary>
         private int _rebuildRunning;
 
@@ -1016,47 +1009,10 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// True when any descendant leaf has not finished meshing. Results are memoized until
-        /// <see cref="InvalidateIncompleteDescendantCache"/> runs for that node or an ancestor.
+        /// True until this node has a mesh of its own. Called from the visible-list rebuild and from
+        /// <c>MonogameTestbedTests</c>; leaf vs branch overlay filtering is the Show*SliceStatus flags, not this.
         /// </summary>
-        private bool HasIncompleteDescendantLeaf(IAssemblyPlannerNode node)
-        {
-            if (_incompleteDescendantCache.TryGetValue(node.Key, out bool cached))
-                return cached;
-
-            bool result;
-            if (node.IsLeaf)
-            {
-                result = !node.MeshComplete;
-            }
-            else if (node is IAssemblyPlannerBranch branch)
-            {
-                result = (branch.Left != null && HasIncompleteDescendantLeaf(branch.Left))
-                    || (branch.Right != null && HasIncompleteDescendantLeaf(branch.Right));
-            }
-            else
-            {
-                result = false;
-            }
-
-            _incompleteDescendantCache[node.Key] = result;
-            return result;
-        }
-
-        /// <summary>
-        /// Drop memoized incomplete-descendant answers for <paramref name="node"/> and every parent up to the root.
-        /// </summary>
-        private void InvalidateIncompleteDescendantCache(IAssemblyPlannerNode node)
-        {
-            for (IAssemblyPlannerNode n = node; n != null; n = n.Parent)
-                _incompleteDescendantCache.TryRemove(n.Key, out _);
-        }
-
-        /// <summary>
-        /// A node is boxed until its own mesh exists. Branch boxes stay hidden while any inner slice box is still visible.
-        /// </summary>
-        private bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) =>
-            !node.MeshComplete && (node.IsLeaf || !HasIncompleteDescendantLeaf(node));
+        internal static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) => !node.MeshComplete;
 
         internal static AssemblyBoxFailureSeverity SeverityForFailure(MeshManifoldReport? report)
         {
@@ -1244,9 +1200,6 @@ namespace MonogameTestbed
             try
             {
                 ReadyModelLock.EnterWriteLock();
-
-                //MeshComplete is set before this callback; ancestor CanShow answers are stale along this chain.
-                InvalidateIncompleteDescendantCache(node);
 
                 if (success)
                 {

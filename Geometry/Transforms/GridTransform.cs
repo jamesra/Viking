@@ -59,7 +59,7 @@ namespace Geometry.Transforms
             return Indices;
         }
 
-        public static MappingTriangle TriangleForPoint(int GridSizeX, int GridSizeY, in Rectangle Bounds, MappingVector2[] points, int[] TriIndicies, Vector2 Point)
+        public static MappingTriangle? TriangleForPoint(int GridSizeX, int GridSizeY, in Rectangle Bounds, MappingVector2[] points, int[] TriIndicies, Vector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
@@ -101,8 +101,36 @@ namespace Geometry.Transforms
 
             MappingTriangle mapTri = new(points, TriIndicies[iTri], TriIndicies[iTri + 1], TriIndicies[iTri + 2]);
 
-            Debug.Assert(mapTri.CanTransform(Point.Round(Global.TransformSignificantDigits)), "Calculated GridTransform does not intersect requested point");
-            return mapTri;
+            Vector2 testPoint = Point.Round(Global.TransformSignificantDigits);
+            if (mapTri.CanTransform(testPoint))
+                return mapTri;
+
+            //The cell test can miss by a fraction; the point then lies in the other triangle of this cell or a neighbor.
+            int cellsX = GridSizeX - 1;
+            int cellsY = GridSizeY - 1;
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int cellX = iX + dx;
+                    int cellY = iY + dy;
+                    if ((uint)cellX >= (uint)cellsX || (uint)cellY >= (uint)cellsY)
+                        continue;
+
+                    for (int upper = 0; upper < 2; upper++)
+                    {
+                        if (dx == 0 && dy == 0 && (upper == 1) == IsUpper)
+                            continue;
+
+                        int index = (2 * (cellY * cellsX + cellX) + upper) * 3;
+                        MappingTriangle adjacent = new(points, TriIndicies[index], TriIndicies[index + 1], TriIndicies[index + 2]);
+                        if (adjacent.CanTransform(testPoint))
+                            return adjacent;
+                    }
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -256,7 +284,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingTriangle GetTransform(in Vector2 Point)
+        internal override MappingTriangle? GetTransform(in Vector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
@@ -274,7 +302,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingTriangle GetInverseTransform(in Vector2 Point)
+        internal override MappingTriangle? GetInverseTransform(in Vector2 Point)
         {
             //Fetch a list of triangles from the nearest point
             List<MappingTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
@@ -309,7 +337,7 @@ namespace Geometry.Transforms
             ALL = 0xF
         };
 
-        public override double ConvexHullIntersection(LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection)
+        public override double ConvexHullIntersection(in LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection)
         {
             double distance = double.MaxValue;
             foundCtrlLine = new LineSegment();

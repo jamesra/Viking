@@ -9,11 +9,11 @@ description = "Server for the segmentation service"
 authors = [
     {name = "James Anderson"}
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 dependencies = [
-    "grpcio",
-    "grpcio-tools",
-    "protobuf",
+    "grpcio>=1.71.0",
+    "grpcio-tools>=1.71.0",
+    "protobuf>=5.29.0",
     "numpy",
     "pillow",
     "opencv-python",
@@ -22,8 +22,15 @@ dependencies = [
     "segmentation_grpc",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio"]
+
 [project.scripts]
-segmentation-server = "segmentation_server.__main__:main"
+segmentation-server = "segmentation_server.__main__:run"
 
 [tool.setuptools]
 packages = ["segmentation_server"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

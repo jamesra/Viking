@@ -292,11 +292,41 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
 
     private async Task<MorphologyGraph> GetGraphAsync(ICollection<long> requestIDs, UnitsAndScale.Scale scale)
     {
-        return await ODataMorphologyFactory.FromODataAsync(
+        MorphologyGraph graph = await ODataMorphologyFactory.FromODataAsync(
             requestIDs,
             include_children: false,
             GetODataUrl(),
             scale);
+        ApplyPublishedResidualField(graph);
+        return graph;
+    }
+
+    private void ApplyPublishedResidualField(MorphologyGraph graph)
+    {
+        string? dir = _configuration["Corrections:RootDirectory"];
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir) || graph is null)
+            return;
+
+        using Viking.SectionCorrection.CorrectionCatalog catalog = new(dir);
+        catalog.Load();
+        Viking.SectionCorrection.PublishedCorrectionSet? set;
+        string? group = _configuration["Corrections:StosGroup"];
+        if (!string.IsNullOrWhiteSpace(group))
+        {
+            if (!catalog.TryGet(group, out set) || set is null)
+                throw new InvalidOperationException($"No published correction set '{group}' under {dir}.");
+        }
+        else
+        {
+            set = catalog.Sets.OrderBy(s => s.StosGroup, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            if (set is null)
+                return;
+        }
+
+        double pitch = set.Provenance?.PitchNm > 0 ? set.Provenance.PitchNm : NeighborResidualField.GridSizeNm;
+        double kernel = set.Provenance?.KernelRadiusNm > 0 ? set.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
+        NeighborResidualField field = NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
+        MorphologyGraph.ApplyResidualField(graph, field);
     }
 
     private bool RequestedStickFigure()

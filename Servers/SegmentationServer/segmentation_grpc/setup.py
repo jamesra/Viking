@@ -9,11 +9,11 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "grpcio",
-        "grpcio-tools",
-        "protobuf",
+        "grpcio>=1.71.0",
+        "grpcio-tools>=1.71.0",
+        "protobuf>=5.29.0",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.11",
     description="gRPC interface for the segmentation service",
     author="James Anderson",
     include_package_data=True,
@@ -24,7 +24,7 @@ setup(
     # Run generate-grpc to regenerate Python gRPC code from the shared proto
     entry_points={
         "console_scripts": [
-            "generate-grpc=segmentation_grpc.generate_grpc:generate_grpc_code",
+            "generate-grpc=segmentation_grpc.__main__:main",
         ],
     },
 )

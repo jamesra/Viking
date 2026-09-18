@@ -1,0 +1,14 @@
+---
+description: CurveFit must not lengthen LocationLinks; prefer FsCheck properties for this family of invariants
+globs: AnnotationVizLib/**/MorphologyAlgorithms.cs,AnnotationVizLibTests/**/*CurveFit*,AnnotationVizLibTests/FSCheck/**
+alwaysApply: false
+---
+
+# Curve-fit LocationLink length
+
+A valid `MorphologyGraph.CurveFitProcesses` run must not increase the sum of XY lengths of the LocationLinks involved (`MorphologyGraph.SumLocationLinkLengths`). Leave-one-out Catmull-Rom with window > 1 can pull a shaft node off the current polyline; `LimitOffsetToAvoidLengtheningLinks` refuses (or shrinks) that move.
+
+- Do not remove the per-move gate or the `Debug.Assert` on process-chain hop sum.
+- A single hop can still grow when another incident link shrinks more; the enforceable property is the unique-edge length sum, not one hop.
+- New CurveFit / process-registration behavior: add or extend an **FsCheck** property in `AnnotationVizLibTests/FSCheck` (pin `Configuration.Replay`, use `QuickThrowOnFailure`). Do not pin the invariant to a single RC1 location ID.
+- Prefer FsCheck (or another parameterized property) over one-off fixtures when the claim is an invariant over a family of graphs.

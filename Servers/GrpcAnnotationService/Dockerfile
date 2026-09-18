@@ -9,8 +9,8 @@ WORKDIR /src
 
 # Restore from project files only so a .cs edit does not re-download packages.
 # Graph: GrpcAnnotationService → ConnectomeDataModelCore, AnnotationServiceTypes.gRPC,
-# GeometryOGCMapper → Geometry → Geometry.Core, GraphLib, RTree, Utils;
-# AnnotationServiceTypes.gRPC → AnnotationInterfaces, Geometry, UnitsAndScale.
+# SectionCorrection → Geometry → Geometry.Core, GraphLib, RTree, Utils;
+# GeometryOGCMapper → Geometry; AnnotationServiceTypes.gRPC → AnnotationInterfaces, Geometry, UnitsAndScale.
 COPY Directory.Build.props ./
 COPY Servers/GrpcAnnotationService/nuget.docker.config Servers/GrpcAnnotationService/
 COPY Servers/GrpcAnnotationService/GrpcAnnotationService.csproj Servers/GrpcAnnotationService/
@@ -24,6 +24,7 @@ COPY GraphLib/GraphLib.csproj GraphLib/
 COPY RTree/RTree.csproj RTree/
 COPY UnitsAndScale/UnitsAndScale.csproj UnitsAndScale/
 COPY Utils/Utils.csproj Utils/
+COPY Servers/SectionCorrection/SectionCorrection.csproj Servers/SectionCorrection/
 
 WORKDIR /src/Servers/GrpcAnnotationService
 # The repo-root NuGet.Config points at Windows-only local package sources that don't
@@ -43,6 +44,7 @@ COPY GraphLib/ GraphLib/
 COPY RTree/ RTree/
 COPY UnitsAndScale/ UnitsAndScale/
 COPY Utils/ Utils/
+COPY Servers/SectionCorrection/ Servers/SectionCorrection/
 
 WORKDIR /src/Servers/GrpcAnnotationService
 # Restore again so a host obj/ that slipped into COPY cannot poison assets

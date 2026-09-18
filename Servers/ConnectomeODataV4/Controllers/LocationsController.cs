@@ -1,6 +1,7 @@
 using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
+using Microsoft.AspNet.OData.Routing;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Data;
@@ -201,6 +202,19 @@ namespace ConnectomeODataV4.Controllers
         {
             _db.ConfigureAsReadOnly();
             return _db.LocationLinks.Where(link => link.A == key || link.B == key);
+        }
+
+        [HttpGet]
+        [EnableQuery(PageSize = WebApiConfig.PageSize)]
+        [ODataRoute("ResidualFieldLocations(MinLocations={MinLocations})")]
+        public IQueryable<Location> ResidualFieldLocations([FromODataUri] int MinLocations)
+        {
+            _db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = new DefaultODataPathHandler().Parse(
+                System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
+                "Locations",
+                Request.GetRequestContainer());
+            return _db.SelectResidualFieldCandidateLocations(MinLocations < 1 ? 3 : MinLocations);
         }
 
         // No need for Dispose override - DI container handles disposal

@@ -1,5 +1,6 @@
 using Geometry;
 using Geometry.Meshing;
+using MorphologyMesh;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,10 +19,11 @@ namespace ColladaIO
         /// <returns></returns>
         public static geometry_type CreateGeometry(IReadOnlyMesh3D<IVertex3D> mesh, string name, string MaterialName)
         {
+            string idName = StructureModel.ToColladaXmlId(name) ?? "geometry";
             geometry_type geometry = new()
             {
-                id = name + "-geometry",
-                name = name
+                id = idName + "-geometry",
+                name = idName
             };
 
             //Do not create geometry if we have no faces

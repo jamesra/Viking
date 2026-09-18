@@ -8426,5 +8426,56 @@ BEGIN TRANSACTION main
 		      N'Optimize SelectSectionAnnotationsInMosaicBounds with Z index hint' ,getDate(),User_ID())
 	 COMMIT TRANSACTION eightyfour
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 85)))
+	begin
+     print N'Add ResidualFieldCandidateLocations TVF for section residual-correction builder'
+	 BEGIN TRANSACTION eightyfive
+
+	 EXEC('
+	 CREATE FUNCTION [dbo].[ResidualFieldCandidateLocations]
+	 (
+		@MinLocations int = 3
+	 )
+	 RETURNS TABLE
+	 AS
+	 RETURN
+	 (
+		SELECT L.*
+		FROM dbo.Location AS L
+		INNER JOIN
+		(
+			SELECT ParentID
+			FROM dbo.Location
+			GROUP BY ParentID
+			HAVING COUNT(*) >= ISNULL(NULLIF(@MinLocations, 0), 3)
+		) AS C ON C.ParentID = L.ParentID
+	 )')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 EXEC('
+	 CREATE PROCEDURE [dbo].[SelectResidualFieldCandidateLocations]
+		@MinLocations int = 3
+	 AS
+	 BEGIN
+		SET NOCOUNT ON;
+		SELECT * FROM dbo.ResidualFieldCandidateLocations(@MinLocations);
+	 END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (85, 
+		      N'Add ResidualFieldCandidateLocations TVF' ,getDate(),User_ID())
+	 COMMIT TRANSACTION eightyfive
+	end
 		   
 COMMIT TRANSACTION main

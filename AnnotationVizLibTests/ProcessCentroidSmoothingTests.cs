@@ -159,6 +159,32 @@ namespace AnnotationVizLibTests
         }
 
         [TestMethod]
+        public void LeaveOneOutPullOffPolyline_RefusedWhenItWouldLengthenLinks()
+        {
+            // Node 3 sits on the 2–4 chord. Windowed Catmull-Rom through (0,200) and (400,200)
+            // pulls it off that chord (toward Y≈-25), which would lengthen 2–3 and 3–4.
+            MorphologyGraph graph = BuildChain(
+            [
+                (1, 0, 200, 1),
+                (2, 100, 0, 2),
+                (3, 200, 0, 3),
+                (4, 300, 0, 4),
+                (5, 400, 200, 5),
+            ], LinkSequential(1, 5));
+
+            double lengthBefore = MorphologyGraph.SumLocationLinkLengths(graph);
+            Vector2 before3 = graph.Nodes[3].Center.XY();
+
+            MorphologyGraph.CurveFitProcesses(graph, new MorphologyGraph.CurveFitOptions(7, null, new HashSet<ulong> { 3 }));
+
+            double lengthAfter = MorphologyGraph.SumLocationLinkLengths(graph);
+            Assert.IsTrue(lengthAfter <= lengthBefore + 1e-3,
+                $"CurveFit lengthened LocationLinks ({lengthBefore} -> {lengthAfter})");
+            Assert.AreEqual(before3.X, graph.Nodes[3].Center.X, 1e-3);
+            Assert.AreEqual(before3.Y, graph.Nodes[3].Center.Y, 1e-3);
+        }
+
+        [TestMethod]
         public void ResidualOrder_LargestOutlierCorrectedTowardLine()
         {
             // Nodes 2–6 sit on X=0; node 4 is a large outlier so it has the worst leave-one-out residual.

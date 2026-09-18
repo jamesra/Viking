@@ -1,0 +1,11 @@
+---
+description: Pin SAM2 in SegmentationServer Docker and notify James of upstream updates
+globs: Servers/SegmentationServer/Dockerfile
+alwaysApply: false
+---
+
+# SAM2 pin
+
+`Servers/SegmentationServer/Dockerfile` pins `facebookresearch/sam2` at `SAM2_GIT_SHA`.
+
+When editing that Dockerfile or SAM2 integration, check https://github.com/facebookresearch/sam2/commits/main. If `main` is newer than the pinned SHA, tell James and do not silently unpin unless he asks.

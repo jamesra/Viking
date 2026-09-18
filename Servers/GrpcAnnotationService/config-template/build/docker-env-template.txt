@@ -44,3 +44,7 @@ IdentityServer__AllowHttpMetadata=true
 # IdentityServer__ClientId=REPLACE_WITH_INTROSPECTION_CLIENT_ID
 # IdentityServer__ClientSecret=REPLACE_WITH_INTROSPECTION_CLIENT_SECRET
 # IdentityServer__AllowHttpMetadata=false
+
+# Published residual-correction maps (SectionCorrectionBuilder output).
+# Mounted at /corrections in docker-compose.yml.
+Corrections__RootDirectory=/corrections

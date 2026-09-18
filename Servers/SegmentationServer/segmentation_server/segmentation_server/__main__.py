@@ -1,42 +1,42 @@
-"""
-Segmentation Service Main Entry Point
+"""Command-line entry for the segmentation gRPC server."""
 
-This module provides the main entry point for the segmentation service.
-It handles command-line arguments and starts the gRPC server.
-"""
+from __future__ import annotations
 
-import asyncio
 import argparse
+import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
-# Import the generate_grpc_code function from the segmentation_grpc package
 from segmentation_grpc.generate_grpc import generate_grpc_code
-
-# Import the serve function from the server module
 from segmentation_server.server import serve
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class CLIArgs:
     port: int
     workers: int
-    inference_workers: Optional[int]
+    inference_workers: int
     generate_grpc: bool
 
 
 async def main() -> None:
-    """Main entry point for the segmentation service."""
-    # Parse command-line arguments
+    """Parse CLI flags and start the gRPC server."""
     parser = argparse.ArgumentParser(description='Start the segmentation service.')
     parser.add_argument('--port', type=int, default=50051,
                         help='The port to listen on (default: 50051)')
     parser.add_argument('--workers', type=int, default=10,
-                        help='The number of worker threads for gRPC server (default: 10)')
-    parser.add_argument('--inference-workers', type=int, default=None,
-                        help='The number of worker threads for model inference (default: same as --workers)')
+                        help='gRPC callback thread pool size (default: 10)')
+    parser.add_argument(
+        '--inference-workers',
+        type=int,
+        default=1,
+        help='SAM2 inference thread pool size (default: 1; extra workers usually contend for GPU memory)',
+    )
     parser.add_argument('--generate-grpc', action='store_true',
-                        help='Generate gRPC code before starting the server')
+                        help='Regenerate Python gRPC stubs from the proto before starting')
     args = parser.parse_args()
 
     cli_args = CLIArgs(
@@ -45,22 +45,36 @@ async def main() -> None:
         inference_workers=args.inference_workers,
         generate_grpc=args.generate_grpc,
     )
-    
-    # Generate gRPC code if requested
+
     if cli_args.generate_grpc:
-        print("Generating gRPC code...")
-        if not generate_grpc_code(cli_args.generate_grpc):
-            print("Failed to generate gRPC code. Exiting.")
+        logger.info("Generating gRPC code...")
+        if not generate_grpc_code(True):
+            logger.error("Failed to generate gRPC code. Exiting.")
             return
     else:
-        print("Skipping gRPC code generation (using pre-generated code)...")
-    
-    # Start the server
-    inference_workers_str = f"{cli_args.inference_workers if cli_args.inference_workers is not None else cli_args.workers} inference"
-    print(f"Starting segmentation service on port {cli_args.port} with {cli_args.workers} gRPC workers and {inference_workers_str} workers...")
-    await serve(port=cli_args.port, max_workers=cli_args.workers, inference_workers=cli_args.inference_workers)
+        logger.info("Using committed gRPC stubs (pass --generate-grpc to regenerate)")
+
+    logger.info(
+        "Starting segmentation service on port %s with %s gRPC workers and %s inference workers",
+        cli_args.port,
+        cli_args.workers,
+        cli_args.inference_workers,
+    )
+    await serve(
+        port=cli_args.port,
+        max_workers=cli_args.workers,
+        inference_workers=cli_args.inference_workers,
+    )
+
+
+def run() -> None:
+    """Sync wrapper for `python -m segmentation_server` and the console script."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    asyncio.run(main())
 
 
 if __name__ == '__main__':
-    # Run the main function
-    asyncio.run(main())
+    run()

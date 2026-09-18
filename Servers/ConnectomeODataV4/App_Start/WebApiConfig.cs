@@ -242,6 +242,11 @@ namespace ConnectomeODataV4
             NetworkStructuresSpatialDataFuncConfig.Parameter<int>("Hops");
             NetworkStructuresSpatialDataFuncConfig.ReturnsCollectionFromEntitySet<StructureSpatialCache>("StructureSpatialCaches");
             NetworkStructuresSpatialDataFuncConfig.Namespace = null;
+
+            var ResidualFieldLocationsFuncConfig = builder.Function("ResidualFieldLocations");
+            ResidualFieldLocationsFuncConfig.Parameter<int>("MinLocations");
+            ResidualFieldLocationsFuncConfig.ReturnsCollectionFromEntitySet<Location>("Locations");
+            ResidualFieldLocationsFuncConfig.Namespace = null;
         }
     }
 }

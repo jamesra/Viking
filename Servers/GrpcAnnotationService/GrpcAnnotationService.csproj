@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj" />
     <ProjectReference Include="..\..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj" />
     <ProjectReference Include="..\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj" />
+    <ProjectReference Include="..\SectionCorrection\SectionCorrection.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,11 +1,15 @@
 ---
-name: "Commenting rules"
-alwaysApply: True
+name: Commenting rules
+description: Inline comments vs required type/member documentation
+alwaysApply: true
 ---
+
 # Commenting Code
-- No obvious comments: Do not write inline comments for self-explanatory code (e.g., // increment i by 1).
-- Explain the "why", not the "what": Restrict comments to complex business logic, edge cases, the purpose of the object if not self-documenting, or non-obvious architectural decisions.
-- Future-pass AI: Add a comment when it would meaningfully reduce work on a later edit — a non-obvious invariant, which of several similar methods to call, a pitfall not visible from the signature, or a contract that would otherwise have to be rediscovered from callers and history. Do not add comments that only restate the code.
-- Preserve existing comments: Do not delete comments if the comments are still correct, if you are unable to determine, prefix them with ?? AI Changed Code after comment ?? -  If you know they are no longer correct, try to update them, if that is not possible, delete them.
-- TODO formatting: When leaving unfinished logic or temporary workarounds, format them strictly as # TODO: [explanation] or // TODO:
-- Follow the standard commenting conventions for the language (i.e. If in python, refer to PEP sources)
+
+- **No obvious inline comments:** Do not write `//` or `#` comments that only restate the next line (e.g. `// increment i by 1`). That ban is **only** for play-by-play inline comments. It does **not** mean a class or method may ship with no documentation.
+- **Type and member docs are required:** When you create or substantially edit a class, method, or non-obvious field, add the language’s standard API comment — C# `/// <summary>`, Python docstring, PowerShell comment-based help. State purpose, callers, and hidden contracts (threading, cancel, ownership). Follow the `csharp-xml-docs` / `python-comments` skills. A file with zero `///` on its types is incomplete.
+- **Explain the why, not the what:** Inline comments are for invariants, edge cases, and architectural decisions. Do not narrate self-explanatory code.
+- **Future-pass AI:** Document a contract a later edit would otherwise have to rediscover. Do not restate the code.
+- **Preserve existing comments:** If still correct, keep them. If you cannot tell, prefix with `?? AI Changed Code after comment ??`. If you know they are wrong, update or delete them.
+- **TODO formatting:** `# TODO:` or `// TODO:` plus an explanation.
+---

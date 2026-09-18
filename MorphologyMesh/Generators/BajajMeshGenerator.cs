@@ -107,13 +107,13 @@ namespace MorphologyMesh
     /// Represents a quad tree for points in the above or below shape set for a mesh group
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public struct SliceTopologyQuadTrees<T>
+    public readonly struct SliceTopologyQuadTrees<T>
     {
-        public QuadTreeWithUniqueValues<T> Above;
-        public QuadTreeWithUniqueValues<T> Below;
+        public readonly QuadTreeWithUniqueValues<T> Above;
+        public readonly QuadTreeWithUniqueValues<T> Below;
 
-        public ImmutableArray<int> UpperPolyIndicies;
-        public ImmutableArray<int> LowerPolyIndicies;
+        public readonly ImmutableArray<int> UpperPolyIndicies;
+        public readonly ImmutableArray<int> LowerPolyIndicies;
 
         public SliceTopologyQuadTrees(QuadTreeWithUniqueValues<T> aboveQuad, QuadTreeWithUniqueValues<T> belowQuad, IEnumerable<int> upperPolyIndicies, IEnumerable<int> lowerPolyIndicies)
         {
@@ -641,6 +641,7 @@ namespace MorphologyMesh
 
             }
 
+            mesh.RemoveIsolatedNonContourEdges();
             mesh.EnsureFacesHaveExternalNormals();
 
             mesh.RecalculateNormals();
@@ -810,6 +811,22 @@ namespace MorphologyMesh
                 List<int> A_List = TriMeshToMesh[f.iVerts[0]];
                 List<int> B_List = TriMeshToMesh[f.iVerts[1]];
                 List<int> C_List = TriMeshToMesh[f.iVerts[2]];
+
+                Vector2 triangleCenter =
+                    (mesh[A_List[0]].Position.XY()
+                    + mesh[B_List[0]].Position.XY()
+                    + mesh[C_List[0]].Position.XY()) / 3.0;
+
+                for (int iShape = 0; iShape < mesh.Shapes.Length; iShape++)
+                {
+                    if (mesh.Shapes[iShape] is not Polygon polygon
+                        || polygon.GetRelation(triangleCenter) != ShapeRelation.Contained)
+                    {
+                        continue;
+                    }
+
+                    mesh.AddWindingSeedCandidate(triangleCenter, iShape);
+                }
 
                 if (A_List.Count == 1 && B_List.Count == 1 && C_List.Count == 1)
                 {
@@ -1781,7 +1798,7 @@ return;
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
         /// <param name="LevelTree">An optional parameter containing quadtrees for verticies on the upper and lower polygon sets.  It can be calculated once and passed as this parameter or left null and the function will build it.</param>
         private static int SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, SliceChordTestType TestSuite,
-                                                    SliceTopologyQuadTrees<MorphMeshVertex> LevelTree, LastValidChordCache lastValid, NearestRankingCache nearestRanking,
+                                                    in SliceTopologyQuadTrees<MorphMeshVertex> LevelTree, LastValidChordCache lastValid, NearestRankingCache nearestRanking,
                                                     ref Dictionary<MorphMeshVertex, MorphMeshVertex> previousOtv, ref HashSet<MorphMeshVertex> dirtySeed)
         {
             Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable;
@@ -2145,7 +2162,7 @@ return;
 
             foreach (IShape2D poly in sliceShapes)
             {
-                if (!Theorem4(poly, ContourLine))
+                if (!Theorem4(poly, in ContourLine))
                     return false;
             }
 
@@ -2159,11 +2176,11 @@ return;
         /// <param name="poly"></param>
         /// <param name="line"></param>
         /// <returns></returns>
-        public static bool Theorem4(IReadOnlyList<IShape2D> shapes, LineSegment line)
+        public static bool Theorem4(IReadOnlyList<IShape2D> shapes, in LineSegment line)
         {
             foreach (IShape2D shape in shapes)
             {
-                if (!Theorem4(shape, line))
+                if (!Theorem4(shape, in line))
                     return false;
             }
 
@@ -2177,7 +2194,7 @@ return;
         /// <param name="poly"></param>
         /// <param name="line"></param>
         /// <returns></returns>
-        public static bool Theorem4(IShape2D shape, LineSegment line)
+        public static bool Theorem4(IShape2D shape, in LineSegment line)
         {
             //Chord vs shape AABB is cheap; most same-slice shapes never near the candidate chord.
             if (!shape.BoundingBox.Intersects(line.BoundingBox))
@@ -2615,7 +2632,7 @@ return;
         private static void CreateOptimalTilingVertexTableIncremental(
             BajajGeneratorMesh mesh,
             Dictionary<int, List<MorphMeshVertex>> incompleteByShape,
-            SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel,
+            in SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel,
             SliceChordTestType TestsToRun,
             SliceChordRTree chordTree,
             LastValidChordCache lastValid,
@@ -2715,7 +2732,7 @@ return;
         static void FillOtvTable(
             BajajGeneratorMesh mesh,
             Dictionary<int, List<MorphMeshVertex>> incompleteByShape,
-            SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel,
+            in SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel,
             SliceChordTestType TestsToRun,
             SliceChordRTree chordTree,
             LastValidChordCache lastValid,
@@ -2874,7 +2891,7 @@ return;
             CreateOptimalTilingVertexTable(VerticiesToMap, shapes, IsUpperShape, LevelTree, TestsToRun, out OTVTable, ref chordTree, isLinked, forkPartition);
         }
 
-        public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] polygons, bool[] IsUpperShape, SliceTopologyQuadTrees<IShapeIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] polygons, bool[] IsUpperShape, in SliceTopologyQuadTrees<IShapeIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out OTVTable Table, ref SliceChordRTree chordTree, Func<int, int, bool> isLinked = null, PolylineForkPartition forkPartition = null)
         {
             Table = new OTVTable();
@@ -2922,13 +2939,13 @@ return;
             CreateOptimalTilingVertexTable(mesh, GroupIncompleteVerticesByShape([.. VerticiesToMap]), LevelTree, TestsToRun, out OTVTable, ref chordTree);
         }
 
-        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, in SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
         {
             CreateOptimalTilingVertexTable(mesh, GroupIncompleteVerticesByShape([.. VerticiesToMap]), CandidateTreeByLevel, TestsToRun, out OTVTable, ref chordTree);
         }
 
-        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, in SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
         {
             OTVTable = new Dictionary<MorphMeshVertex, MorphMeshVertex>();

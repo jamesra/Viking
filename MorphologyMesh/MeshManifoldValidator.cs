@@ -1,3 +1,4 @@
+using Geometry;
 using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
@@ -152,6 +153,9 @@ namespace MorphologyMesh
 
                 manifold++;
 
+                if (IsCollapsedEdge(mesh, kvp.Key))
+                    continue;
+
                 IFace[] faces = [.. kvp.Value.Faces];
                 if (TraversesForward(faces[0].iVerts, kvp.Key.A, kvp.Key.B) == TraversesForward(faces[1].iVerts, kvp.Key.A, kvp.Key.B))
                     inconsistent++;
@@ -213,6 +217,9 @@ namespace MorphologyMesh
                 }
                 else
                 {
+                    if (IsCollapsedEdge(mesh, kvp.Key))
+                        continue;
+
                     IFace[] faces = [.. kvp.Value.Faces];
                     if (TraversesForward(faces[0].iVerts, kvp.Key.A, kvp.Key.B) != TraversesForward(faces[1].iVerts, kvp.Key.A, kvp.Key.B))
                         continue;
@@ -240,6 +247,18 @@ namespace MorphologyMesh
             if (v.MedialAxisIndex.HasValue)
                 return $"medial {v.MedialAxisIndex.Value}";
             return "?";
+        }
+
+        /// <summary>
+        /// Same-Z corresponding verts collapse to a point. Winding around a zero-length edge is not a
+        /// surface defect; MeshWindingReorientation already treats those edges as patch boundaries.
+        /// </summary>
+        private static bool IsCollapsedEdge<T>(IReadOnlyMesh<T> mesh, IEdgeKey key) where T : IVertex
+        {
+            if (mesh[key.A] is not IVertex3D a || mesh[key.B] is not IVertex3D b)
+                return false;
+
+            return Vector3.DistanceSquared(a.Position, b.Position) <= Global.EpsilonSquared;
         }
 
         /// <summary>

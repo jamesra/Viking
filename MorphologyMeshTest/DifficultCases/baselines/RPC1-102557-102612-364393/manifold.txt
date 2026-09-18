@@ -1,5 +1,5 @@
 locations: 102557,102612,364393
-final: faces:538 manifold:588 nonManifold:0 inconsistent:0 contourSeam:438 holes:0 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+final: faces:538 manifold:588 nonManifold:0 inconsistent:0 contourSeam:438 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
 firstInvalidStage: Remove Invalid Edges
 stages:
   Remove Invalid Edges: faces:182 manifold:170 nonManifold:0 inconsistent:0 contourSeam:182 holes:24 isolated:268 forkGap:0 ribbonEdge:0 singleTriPolyline:0
@@ -9,7 +9,6 @@ stages:
   FirstPassFaceGeneration: faces:389 manifold:384 nonManifold:0 inconsistent:41 contourSeam:387 holes:12 isolated:52 forkGap:0 ribbonEdge:0 singleTriPolyline:0
   Second MergeAndCloseRegionsPass: faces:538 manifold:588 nonManifold:0 inconsistent:50 contourSeam:438 holes:0 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0
   Second FirstPassFaceGeneration: faces:538 manifold:588 nonManifold:0 inconsistent:50 contourSeam:438 holes:0 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0
-  Final mesh: faces:538 manifold:588 nonManifold:0 inconsistent:0 contourSeam:438 holes:0 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  Final mesh: faces:538 manifold:588 nonManifold:0 inconsistent:0 contourSeam:438 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
 defects:
-  isolated SURFACE faces:0 v357[P:1 iVert:6 of 14] (-598.9,3112.1,48860.0) - v406[P:2 iVert:41 of 52] (-588.3,2997.4,48790.0) 
 notes:

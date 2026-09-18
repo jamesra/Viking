@@ -44,7 +44,7 @@ namespace Geometry
         /// <param name="foundMapLine"></param>
         /// <param name="intersection">Intersection point</param>
         /// <returns>Distance to intersection or double.MaxValue if no intersection is found</returns>
-        double ConvexHullIntersection(LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection);
+        double ConvexHullIntersection(in LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection);
 
     }
 

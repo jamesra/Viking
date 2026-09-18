@@ -8,7 +8,8 @@ using System.Linq;
 namespace MonogameTestbed
 {
     /// <summary>
-    /// Screen-space File | Test | View | Help strip drawn over the game. Works with DesktopGL/SDL without a native OS menu.
+    /// Screen-space File | Test | View | Settings | Help strip drawn over the game.
+    /// Works with DesktopGL/SDL without a native OS menu.
     /// </summary>
     sealed class TestbedMenuBar
     {
@@ -30,7 +31,9 @@ namespace MonogameTestbed
             File,
             Test,
             View,
-            ViewSliceStatus
+            ViewSliceStatus,
+            Settings,
+            SettingsChoices
         }
 
         enum FileItemId
@@ -63,11 +66,15 @@ namespace MonogameTestbed
         private Rectangle _fileItemBounds;
         private Rectangle _testItemBounds;
         private Rectangle _viewItemBounds;
+        private Rectangle _settingsItemBounds;
         private Rectangle _helpItemBounds;
         private readonly List<(Rectangle Bounds, FileItemId Id)> _fileDropdownItems = [];
         private readonly List<(Rectangle Bounds, TestMode Mode)> _testDropdownItems = [];
         private readonly List<(Rectangle Bounds, ViewItemId Id)> _viewDropdownItems = [];
         private readonly List<(Rectangle Bounds, SliceStatusItemId Id)> _sliceStatusItems = [];
+        private readonly List<(Rectangle Bounds, TestSettingItem Item, int Index)> _settingsDropdownItems = [];
+        private readonly List<(Rectangle Bounds, TestSettingItem Item)> _settingsChoiceItems = [];
+        private int _settingsChoiceParentIndex = -1;
 
         public TestbedMenuBar(MonoTestbed game)
         {
@@ -97,7 +104,8 @@ namespace MonogameTestbed
             tests.TryGetValue(currentMode, out IGraphicsTest current);
             IViewMenuTarget viewTarget = current as IViewMenuTarget;
             IFileMenuTarget fileTarget = current as IFileMenuTarget;
-            Layout(vpWidth, _game.GraphicsDevice.Viewport.Height, tests);
+            ITestSettings settingsTarget = current as ITestSettings;
+            Layout(vpWidth, _game.GraphicsDevice.Viewport.Height, tests, settingsTarget);
 
             Point p = new(mouse.X, mouse.Y);
             bool overBar = p.Y >= 0 && p.Y < Height && p.X >= 0 && p.X < vpWidth;
@@ -106,7 +114,12 @@ namespace MonogameTestbed
             bool overViewDrop = (_open == OpenMenu.View || _open == OpenMenu.ViewSliceStatus)
                 && _viewDropdownItems.Any(i => i.Bounds.Contains(p));
             bool overSliceDrop = _open == OpenMenu.ViewSliceStatus && _sliceStatusItems.Any(i => i.Bounds.Contains(p));
-            CapturesInput = overBar || overFileDrop || overTestDrop || overViewDrop || overSliceDrop || _open != OpenMenu.None;
+            bool overSettingsDrop = (_open == OpenMenu.Settings || _open == OpenMenu.SettingsChoices)
+                && _settingsDropdownItems.Any(i => i.Bounds.Contains(p));
+            bool overSettingsChoices = _open == OpenMenu.SettingsChoices
+                && _settingsChoiceItems.Any(i => i.Bounds.Contains(p));
+            CapturesInput = overBar || overFileDrop || overTestDrop || overViewDrop || overSliceDrop
+                || overSettingsDrop || overSettingsChoices || _open != OpenMenu.None;
 
             if (helpHotkey)
             {
@@ -130,6 +143,13 @@ namespace MonogameTestbed
                 else if (_viewItemBounds.Contains(p))
                 {
                     _open = (_open == OpenMenu.View || _open == OpenMenu.ViewSliceStatus) ? OpenMenu.None : OpenMenu.View;
+                }
+                else if (_settingsItemBounds.Contains(p))
+                {
+                    _open = (_open == OpenMenu.Settings || _open == OpenMenu.SettingsChoices)
+                        ? OpenMenu.None
+                        : OpenMenu.Settings;
+                    _settingsChoiceParentIndex = -1;
                 }
                 else if (_helpItemBounds.Contains(p))
                 {
@@ -161,6 +181,10 @@ namespace MonogameTestbed
                 {
                     HandleViewClick(p, viewTarget, overBar);
                 }
+                else if (_open == OpenMenu.Settings || _open == OpenMenu.SettingsChoices)
+                {
+                    HandleSettingsClick(p, overBar);
+                }
                 else if (!overBar)
                 {
                     _open = OpenMenu.None;
@@ -176,6 +200,18 @@ namespace MonogameTestbed
                         _open = OpenMenu.ViewSliceStatus;
                         break;
                     }
+                }
+            }
+            else if (_open == OpenMenu.Settings || _open == OpenMenu.SettingsChoices)
+            {
+                foreach (var item in _settingsDropdownItems)
+                {
+                    if (item.Item.Children.Count == 0 || !item.Bounds.Contains(p))
+                        continue;
+
+                    _settingsChoiceParentIndex = item.Index;
+                    _open = OpenMenu.SettingsChoices;
+                    break;
                 }
             }
 
@@ -241,6 +277,40 @@ namespace MonogameTestbed
                 _open = OpenMenu.None;
         }
 
+        private void HandleSettingsClick(Point p, bool overBar)
+        {
+            foreach (var choice in _settingsChoiceItems)
+            {
+                if (!choice.Bounds.Contains(p))
+                    continue;
+
+                choice.Item.Apply?.Invoke();
+                _open = OpenMenu.SettingsChoices;
+                return;
+            }
+
+            foreach (var setting in _settingsDropdownItems)
+            {
+                if (!setting.Bounds.Contains(p))
+                    continue;
+
+                if (setting.Item.Children.Count > 0)
+                {
+                    _settingsChoiceParentIndex = setting.Index;
+                    _open = OpenMenu.SettingsChoices;
+                }
+                else
+                {
+                    setting.Item.Apply?.Invoke();
+                    _open = OpenMenu.Settings;
+                }
+                return;
+            }
+
+            if (!overBar)
+                _open = OpenMenu.None;
+        }
+
         private static void ToggleSliceStatus(IViewMenuTarget target, SliceStatusItemId id)
         {
             switch (id)
@@ -287,7 +357,8 @@ namespace MonogameTestbed
             tests.TryGetValue(currentMode, out IGraphicsTest current);
             IViewMenuTarget viewTarget = current as IViewMenuTarget;
             IFileMenuTarget fileTarget = current as IFileMenuTarget;
-            Layout(vpWidth, _game.GraphicsDevice.Viewport.Height, tests);
+            ITestSettings settingsTarget = current as ITestSettings;
+            Layout(vpWidth, _game.GraphicsDevice.Viewport.Height, tests, settingsTarget);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
@@ -296,6 +367,8 @@ namespace MonogameTestbed
             DrawMenuLabel(spriteBatch, font, whitePixel, "Test", _testItemBounds, _open == OpenMenu.Test);
             DrawMenuLabel(spriteBatch, font, whitePixel, "View", _viewItemBounds,
                 _open == OpenMenu.View || _open == OpenMenu.ViewSliceStatus);
+            DrawMenuLabel(spriteBatch, font, whitePixel, "Settings", _settingsItemBounds,
+                _open == OpenMenu.Settings || _open == OpenMenu.SettingsChoices);
             DrawMenuLabel(spriteBatch, font, whitePixel, "Help", _helpItemBounds, false);
 
             if (_open == OpenMenu.File)
@@ -363,14 +436,59 @@ namespace MonogameTestbed
                 }
             }
 
+            if (_open == OpenMenu.Settings || _open == OpenMenu.SettingsChoices)
+            {
+                if (_settingsDropdownItems.Count == 0)
+                {
+                    Rectangle unavailable = new(_settingsItemBounds.X, Height, Scaled(260), Scaled(22));
+                    spriteBatch.Draw(whitePixel, unavailable, new Color(48, 48, 52));
+                    DrawDropdownText(spriteBatch, font, "  No settings for this test", unavailable);
+                }
+                else
+                {
+                    foreach (var setting in _settingsDropdownItems)
+                    {
+                        bool highlight = _open == OpenMenu.SettingsChoices
+                            && setting.Index == _settingsChoiceParentIndex;
+                        spriteBatch.Draw(whitePixel, setting.Bounds,
+                            highlight ? new Color(60, 90, 140) : new Color(48, 48, 52));
+                        string suffix = setting.Item.Children.Count > 0 ? "  >" : string.Empty;
+                        DrawDropdownText(spriteBatch, font,
+                            $"{SettingMark(setting.Item)} {setting.Item.Label}{suffix}",
+                            setting.Bounds);
+                    }
+                }
+            }
+
+            if (_open == OpenMenu.SettingsChoices)
+            {
+                foreach (var choice in _settingsChoiceItems)
+                {
+                    spriteBatch.Draw(whitePixel, choice.Bounds, new Color(48, 48, 52));
+                    DrawDropdownText(spriteBatch, font,
+                        $"{SettingMark(choice.Item)} {choice.Item.Label}",
+                        choice.Bounds);
+                }
+            }
+
             spriteBatch.End();
         }
 
         private static string CheckMark(bool on) => on ? "[x]" : "[ ]";
 
+        private static string SettingMark(TestSettingItem item)
+        {
+            bool? isChecked = item.IsChecked?.Invoke();
+            return isChecked.HasValue ? CheckMark(isChecked.Value) : "   ";
+        }
+
         private int Scaled(int basePixels) => (int)Math.Round(basePixels * _sizeFactor);
 
-        private void Layout(int vpWidth, int vpHeight, IReadOnlyDictionary<TestMode, IGraphicsTest> tests)
+        private void Layout(
+            int vpWidth,
+            int vpHeight,
+            IReadOnlyDictionary<TestMode, IGraphicsTest> tests,
+            ITestSettings settingsTarget)
         {
             _sizeFactor = MonoTestbed.HudSizeFactorFor(vpHeight);
             _textScale = BaseMenuScale * _sizeFactor;
@@ -381,12 +499,16 @@ namespace MonogameTestbed
             _fileItemBounds = new Rectangle(gap, 0, itemWidth, Height);
             _testItemBounds = new Rectangle(gap + itemWidth + gap, 0, itemWidth, Height);
             _viewItemBounds = new Rectangle(gap + 2 * (itemWidth + gap), 0, itemWidth, Height);
-            _helpItemBounds = new Rectangle(gap + 3 * (itemWidth + gap), 0, itemWidth, Height);
+            int settingsWidth = Scaled(88);
+            _settingsItemBounds = new Rectangle(gap + 3 * (itemWidth + gap), 0, settingsWidth, Height);
+            _helpItemBounds = new Rectangle(_settingsItemBounds.Right + gap, 0, itemWidth, Height);
 
             _fileDropdownItems.Clear();
             _testDropdownItems.Clear();
             _viewDropdownItems.Clear();
             _sliceStatusItems.Clear();
+            _settingsDropdownItems.Clear();
+            _settingsChoiceItems.Clear();
 
             int rowHeight = Scaled(22);
             int dropWidth = Math.Min(Scaled(480), Math.Max(Scaled(280), vpWidth / 2));
@@ -419,6 +541,36 @@ namespace MonogameTestbed
             {
                 _sliceStatusItems.Add((new Rectangle(sliceX, sliceY, sliceWidth, rowHeight), id));
                 sliceY += rowHeight;
+            }
+
+            IReadOnlyList<TestSettingItem> settings = settingsTarget?.GetSettings() ?? [];
+            int settingsWidthPixels = Scaled(300);
+            int settingsY = Height;
+            for (int i = 0; i < settings.Count; i++)
+            {
+                _settingsDropdownItems.Add((
+                    new Rectangle(_settingsItemBounds.X, settingsY, settingsWidthPixels, rowHeight),
+                    settings[i],
+                    i));
+                settingsY += rowHeight;
+            }
+
+            if (_settingsChoiceParentIndex >= settings.Count)
+                _settingsChoiceParentIndex = -1;
+
+            if (_settingsChoiceParentIndex >= 0)
+            {
+                TestSettingItem parent = settings[_settingsChoiceParentIndex];
+                int choiceX = _settingsItemBounds.X + settingsWidthPixels;
+                int choiceY = Height + (_settingsChoiceParentIndex * rowHeight);
+                int choiceWidth = Math.Min(Scaled(420), Math.Max(Scaled(280), vpWidth - choiceX));
+                foreach (TestSettingItem child in parent.Children)
+                {
+                    _settingsChoiceItems.Add((
+                        new Rectangle(choiceX, choiceY, choiceWidth, rowHeight),
+                        child));
+                    choiceY += rowHeight;
+                }
             }
         }
 

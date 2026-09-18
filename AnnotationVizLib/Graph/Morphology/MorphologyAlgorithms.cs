@@ -430,6 +430,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// Residual-ordered leave-one-out Catmull-Rom correction of process and terminal centroids.
         /// Branch points stay fixed as curve anchors. Child subgraphs co-move with their parent location.
+        /// A move is refused when it would increase the sum of XY lengths of the node's LocationLinks.
         /// Call before <c>SliceGraph.Create</c>. Mutates <see cref="MorphologyNode.Geometry"/> in place.
         /// </summary>
         public static void CurveFitProcesses(MorphologyGraph graph, CurveFitOptions options = default)
@@ -449,6 +450,26 @@ namespace AnnotationVizLib
 
             foreach (MorphologyGraph subgraph in graph.Subgraphs.Values)
                 CurveFitProcesses(subgraph, options);
+        }
+
+        /// <summary>
+        /// Sum of XY lengths of every LocationLink in <paramref name="graph"/> (each undirected edge once).
+        /// <see cref="CurveFitProcesses"/> must not increase this; the per-move gate and FSCheck rely on it.
+        /// </summary>
+        public static double SumLocationLinkLengths(MorphologyGraph graph)
+        {
+            if (graph is null)
+                return 0;
+
+            double sum = 0;
+            foreach (MorphologyEdge edge in graph.Edges.Values)
+            {
+                Vector2 a = graph.Nodes[edge.SourceNodeKey].Center.XY();
+                Vector2 b = graph.Nodes[edge.TargetNodeKey].Center.XY();
+                sum += (a - b).Magnitude;
+            }
+
+            return sum;
         }
 
         /// <summary>
@@ -495,6 +516,8 @@ namespace AnnotationVizLib
             if (process.Length < 3)
                 return;
 
+            double chainLengthBefore = ProcessChainLinkLength(graph, process);
+
             MorphologyNode[] nodes = [.. process.Select(id => graph.Nodes[id])];
             Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
             double[] z = [.. nodes.Select(n => n.Z)];
@@ -531,16 +554,97 @@ namespace AnnotationVizLib
                 if (offset.Magnitude <= Tolerance.Epsilon)
                     continue;
 
+                offset = LimitOffsetToAvoidLengtheningLinks(node, offset);
+                if (offset.Magnitude <= Tolerance.Epsilon)
+                    continue;
+
                 TranslateNodeAndAttachedSubgraphs(graph, node, offset);
                 centroids[i] = node.Center.XY();
             }
+
+            double chainLengthAfter = ProcessChainLinkLength(graph, process);
+            Debug.Assert(chainLengthAfter <= chainLengthBefore + 1e-3,
+                $"CurveFitProcesses lengthened process [{string.Join(",", process)}] from {chainLengthBefore} to {chainLengthAfter}.");
+        }
+
+        static double ProcessChainLinkLength(MorphologyGraph graph, ulong[] process)
+        {
+            double sum = 0;
+            for (int i = 0; i + 1 < process.Length; i++)
+            {
+                Vector2 a = graph.Nodes[process[i]].Center.XY();
+                Vector2 b = graph.Nodes[process[i + 1]].Center.XY();
+                sum += (a - b).Magnitude;
+            }
+
+            return sum;
+        }
+
+        static double IncidentLinkLengthSum(MorphologyNode node, Vector2 centroid)
+        {
+            double sum = 0;
+            foreach (ulong otherId in node.Edges.Keys)
+            {
+                Vector2 other = node.Graph.Nodes[otherId].Center.XY();
+                sum += (other - centroid).Magnitude;
+            }
+
+            return sum;
+        }
+
+        /// <summary>
+        /// Refuse (or shrink) a translation that would increase the sum of this node's LocationLink XY lengths.
+        /// Leave-one-out Catmull-Rom can pull a shaft node off the polyline between its neighbours; that
+        /// lengthens the involved links and is not a valid registration correction.
+        /// </summary>
+        static Vector2 LimitOffsetToAvoidLengtheningLinks(MorphologyNode node, Vector2 offset)
+        {
+            Vector2 origin = node.Center.XY();
+            double before = IncidentLinkLengthSum(node, origin);
+            Vector2 candidate = offset;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                double after = IncidentLinkLengthSum(node, origin + candidate);
+                if (after <= before + Tolerance.Epsilon)
+                    return candidate;
+
+                candidate *= 0.5;
+            }
+
+            Trace.WriteLine(
+                $"CurveFitProcesses: location {node.Key} left in place; proposed offset ({offset.Magnitude:G4}) " +
+                $"would lengthen incident LocationLinks from {before:G6} to {IncidentLinkLengthSum(node, origin + offset):G6}.");
+            return Vector2.Zero;
+        }
+
+        /// <summary>
+        /// Admission and window caps for residual-field leave-one-out sampling.
+        /// Shorter both-sided windows than <see cref="DefaultCurveFitHalfWindow"/> so horizontal travel stays in the curve.
+        /// </summary>
+        public readonly struct ResidualWindowOptions
+        {
+            public static ResidualWindowOptions Default => new(2, 3, 5, 7);
+
+            public ResidualWindowOptions(int minBoth, int maxBoth, int minOne, int maxOne)
+            {
+                MinBoth = minBoth < 1 ? 1 : minBoth;
+                MaxBoth = maxBoth < MinBoth ? MinBoth : maxBoth;
+                MinOne = minOne < 1 ? 1 : minOne;
+                MaxOne = maxOne < MinOne ? MinOne : maxOne;
+            }
+
+            public int MinBoth { get; }
+            public int MaxBoth { get; }
+            public int MinOne { get; }
+            public int MaxOne { get; }
         }
 
         /// <summary>
         /// Catmull-Rom evaluation at <paramref name="i"/> using up to <paramref name="halfWindow"/> neighbors
         /// on each side, excluding the node itself so its jitter does not enter the fit.
+        /// Used by <see cref="CurveFitProcesses"/>; always returns a prediction (may copy a lone neighbor).
         /// </summary>
-        private static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow)
+        internal static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow)
         {
             List<int> controlIdx = [];
             int lo = Math.Max(0, i - halfWindow);
@@ -552,8 +656,77 @@ namespace AnnotationVizLib
                 controlIdx.Add(j);
             }
 
-            if (controlIdx.Count == 0)
-                return centroids[i];
+            return FitLeaveOneOutAtZ(centroids, z, i, controlIdx) ?? centroids[i];
+        }
+
+        /// <summary>
+        /// Leave-one-out Catmull-Rom with asymmetric admission for residual-field samples.
+        /// Both sides require <see cref="ResidualWindowOptions.MinBoth"/> each; one-sided requires
+        /// <see cref="ResidualWindowOptions.MinOne"/>. Returns null when the sample is not admitted
+        /// (unlike <see cref="EvaluateLeaveOneOutCentroid"/>, which always returns a value).
+        /// </summary>
+        public static Vector2? TryEvaluateAsymmetricLeaveOneOut(
+            Vector2[] centroids,
+            double[] z,
+            int i,
+            ResidualWindowOptions options = default)
+        {
+            if (centroids is null || z is null || centroids.Length != z.Length)
+                return null;
+            if (i < 0 || i >= centroids.Length)
+                return null;
+
+            if (options.MinBoth < 1 && options.MaxBoth < 1 && options.MinOne < 1 && options.MaxOne < 1)
+                options = ResidualWindowOptions.Default;
+
+            int belowAvailable = i;
+            int aboveAvailable = centroids.Length - 1 - i;
+
+            List<int> controlIdx = [];
+            if (belowAvailable >= 1 && aboveAvailable >= 1)
+            {
+                if (belowAvailable < options.MinBoth || aboveAvailable < options.MinBoth)
+                    return null;
+
+                int takeBelow = Math.Min(belowAvailable, options.MaxBoth);
+                int takeAbove = Math.Min(aboveAvailable, options.MaxBoth);
+                for (int j = i - takeBelow; j < i; j++)
+                    controlIdx.Add(j);
+                for (int j = i + 1; j <= i + takeAbove; j++)
+                    controlIdx.Add(j);
+            }
+            else if (belowAvailable == 0 && aboveAvailable >= options.MinOne)
+            {
+                int takeAbove = Math.Min(aboveAvailable, options.MaxOne);
+                for (int j = i + 1; j <= i + takeAbove; j++)
+                    controlIdx.Add(j);
+            }
+            else if (aboveAvailable == 0 && belowAvailable >= options.MinOne)
+            {
+                int takeBelow = Math.Min(belowAvailable, options.MaxOne);
+                for (int j = i - takeBelow; j < i; j++)
+                    controlIdx.Add(j);
+            }
+            else
+            {
+                return null;
+            }
+
+            // Need at least two controls for a real curve (not a point copy).
+            if (controlIdx.Count < 2)
+                return null;
+
+            return FitLeaveOneOutAtZ(centroids, z, i, controlIdx);
+        }
+
+        /// <summary>
+        /// Catmull-Rom (or linear fallback) at <paramref name="i"/>'s Z using the given control indices.
+        /// Null when controls cannot produce a prediction.
+        /// </summary>
+        static Vector2? FitLeaveOneOutAtZ(Vector2[] centroids, double[] z, int i, List<int> controlIdx)
+        {
+            if (controlIdx is null || controlIdx.Count == 0)
+                return null;
             if (controlIdx.Count == 1)
                 return centroids[controlIdx[0]];
 
@@ -563,7 +736,7 @@ namespace AnnotationVizLib
                 seg++;
 
             if (seg + 1 >= controlIdx.Count)
-                return centroids[controlIdx[^1]];
+                return centroids[controlIdx[controlIdx.Count - 1]];
 
             int i1 = controlIdx[seg];
             int i2 = controlIdx[seg + 1];

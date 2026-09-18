@@ -1,8 +1,8 @@
 # Docker-specific requirements for segmentation_server
 # This excludes sam2 since it's already installed from GitHub in the Dockerfile.  Greatly speeds up the build process.
-grpcio
-grpcio-tools
-protobuf
+grpcio>=1.71.0
+grpcio-tools>=1.71.0
+protobuf>=5.29.0
 numpy
 pillow
 opencv-python

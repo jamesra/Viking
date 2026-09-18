@@ -1,13 +1,13 @@
 locations: 365031,365032
-final: faces:12 manifold:13 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:7 singleTriPolyline:0
-firstInvalidStage: Cap lower polygons
+final: faces:17 manifold:19 nonManifold:0 inconsistent:0 contourSeam:5 holes:0 isolated:0 forkGap:0 ribbonEdge:8 singleTriPolyline:0
+firstInvalidStage: Remove Invalid Edges
 stages:
-  Remove Invalid Edges: faces:9 manifold:11 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
-  CompleteCorrespondingVertexFaces: faces:9 manifold:11 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
-  FirstPassSliceChordGeneration: faces:9 manifold:11 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
-  FirstPassFaceGeneration: faces:9 manifold:11 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
-  CleanRibbonFaces: faces:6 manifold:5 nonManifold:0 inconsistent:0 contourSeam:6 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
-  Cap lower polygons: faces:12 manifold:13 nonManifold:0 inconsistent:3 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:7 singleTriPolyline:0
-  Final mesh: faces:12 manifold:13 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:7 singleTriPolyline:0
+  Remove Invalid Edges: faces:5 manifold:3 nonManifold:0 inconsistent:0 contourSeam:5 holes:2 isolated:5 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  CompleteCorrespondingVertexFaces: faces:9 manifold:8 nonManifold:0 inconsistent:1 contourSeam:9 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  FirstPassSliceChordGeneration: faces:9 manifold:8 nonManifold:0 inconsistent:1 contourSeam:9 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  FirstPassFaceGeneration: faces:9 manifold:8 nonManifold:0 inconsistent:1 contourSeam:9 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  CleanRibbonFaces: faces:9 manifold:8 nonManifold:0 inconsistent:0 contourSeam:9 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  Cap lower polygons: faces:17 manifold:19 nonManifold:0 inconsistent:0 contourSeam:5 holes:0 isolated:0 forkGap:0 ribbonEdge:8 singleTriPolyline:0
+  Final mesh: faces:17 manifold:19 nonManifold:0 inconsistent:0 contourSeam:5 holes:0 isolated:0 forkGap:0 ribbonEdge:8 singleTriPolyline:0
 defects:
 notes:

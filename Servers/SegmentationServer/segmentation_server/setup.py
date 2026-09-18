@@ -19,9 +19,9 @@ setup(
     version=_get_version(),
     packages=find_packages(),
     install_requires=[
-        "grpcio",
-        "grpcio-tools",
-        "protobuf",
+        "grpcio>=1.71.0",
+        "grpcio-tools>=1.71.0",
+        "protobuf>=5.29.0",
         "numpy",
         "pillow",
         "opencv-python",
@@ -29,12 +29,12 @@ setup(
         "sam2",
         "segmentation_grpc",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.11",
     description="Server for the segmentation service",
     author="James Anderson",
     entry_points={
         "console_scripts": [
-            "segmentation-server=segmentation_server.__main__:main",
+            "segmentation-server=segmentation_server.__main__:run",
         ],
     },
 )

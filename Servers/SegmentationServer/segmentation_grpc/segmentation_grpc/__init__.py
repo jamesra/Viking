@@ -1,36 +1,29 @@
-"""
-segmentation_grpc Package
+"""gRPC types for the segmentation service.
 
-This package provides the gRPC interface for the segmentation service.
-It includes the proto file definition and generated Python code.
+Stubs are committed next to this package. Regenerate with
+`python -m segmentation_grpc` when segmentation.proto changes.
 """
 
-# Import the generate_grpc_code function
 from .generate_grpc import generate_grpc_code
-
-generate_grpc_code(False)
-
-# Import the generated gRPC code for easy access
 from .segmentation_pb2 import (
-    SegmentationRequest,
-    SegmentationResponse,
-    MultiSegmentationRequest,
-    UploadImageRequest,
-    UploadImageResponse,
     DeleteImageRequest,
     DeleteImageResponse,
-    ServerStatusRequest,
-    ServerStatusResponse,
+    MultiSegmentationRequest,
     Point,
     Polygon,
-    SegmentResult
+    SegmentationRequest,
+    SegmentationResponse,
+    SegmentResult,
+    ServerStatusRequest,
+    ServerStatusResponse,
+    UploadImageRequest,
+    UploadImageResponse,
 )
 from .segmentation_pb2_grpc import (
-    SegmentationServiceStub,
     SegmentationServiceServicer,
-    add_SegmentationServiceServicer_to_server
+    SegmentationServiceStub,
+    add_SegmentationServiceServicer_to_server,
 )
-
 
 __all__: list[str] = [
     'SegmentationRequest',
@@ -48,5 +41,5 @@ __all__: list[str] = [
     'SegmentationServiceStub',
     'SegmentationServiceServicer',
     'add_SegmentationServiceServicer_to_server',
-    'generate_grpc_code'
+    'generate_grpc_code',
 ]

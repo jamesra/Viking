@@ -397,7 +397,7 @@ namespace MonogameTestbed
 
         private void AddMesh(Slice slice, BajajGeneratorMesh mesh, bool Success) =>
             meshAssemblyPlan?.OnMeshCompleted(slice, mesh, Success);
-
+          
 
         /// <summary>
         /// Called before GenerateMesh to reset the class views.
@@ -461,10 +461,10 @@ namespace MonogameTestbed
                     holdsPrep = true;
                 }
 
-                if (MeshViews.Count > 0)
-                    ResetMesh();
+            if (MeshViews.Count > 0)
+                ResetMesh();
 
-                Trace.WriteLine("Begin Slice graph construction");
+            Trace.WriteLine("Begin Slice graph construction");
                 //Two-step creation: the plan and the in-progress overlay exist before any topology does, and the
                 //topology initializer feeds contours into the overlay as each slice finishes.  A large cell used to
                 //show nothing until every topology was done and then every contour at once.
@@ -473,11 +473,11 @@ namespace MonogameTestbed
                 if (!IsCurrent())
                     return;
 
-                if (!sliceGraph.Nodes.Any())
-                {
+            if (!sliceGraph.Nodes.Any())
+            {
                     Trace.WriteLine($"No nodes in Slice graph {sliceGraph}");
-                    return;
-                }
+                return;
+            }
 
                 var plan = MeshAssemblyPlanner.Create(sliceGraph);
                 if (!IsCurrent())
@@ -500,8 +500,8 @@ namespace MonogameTestbed
                     ApplySliceStatusFiltersToIncompleteView();
                     plan.UntiledLinkedOverlay += incompleteView.ApplyUntiledLinkedOverlay;
                 }
-                meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
-                {
+            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
+            {
                     Color = ColorForGraph(Graph)
                 };
                 //Overlays and completed models are created after the first Draw may already have cached
@@ -555,27 +555,27 @@ namespace MonogameTestbed
                 iShownLineView ??= ViewIndex.LastOrNull(listLineViews.Count);
                 ViewIndex.ClampOrClear(ref iShownLineView, listLineViews.Count);
 
-                if (iShownMesh is null)
+            if (iShownMesh is null)
+            {
+                try
                 {
-                    try
-                    {
-                        await drawlock.WaitAsync();
+                    await drawlock.WaitAsync();
                         iShownMesh = ViewIndex.LastOrNull(MeshViews.Count);
-                    }
-                    finally
-                    {
-                        drawlock.Release();
-                    }
                 }
+                finally
+                {
+                    drawlock.Release();
+                }
+            }
                 else
                 {
                     ViewIndex.ClampOrClear(ref iShownMesh, MeshViews.Count);
                 }
 
-                if (meshAssemblyPlan.MeshAssembledEvent.IsSet
-                    && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
-                    && composite.Faces.Count > 0)
-                {
+            if (meshAssemblyPlan.MeshAssembledEvent.IsSet
+                && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
+                && composite.Faces.Count > 0)
+            {
                     Color meshColor = ColorForGraph(Graph);
                     meshAssemblyPlan.Root.MeshModel.Color = meshColor;
                     _assembledDisplayModel = BuildDisplayModelFromComposite(composite, meshColor);
@@ -806,25 +806,25 @@ namespace MonogameTestbed
 
         void DrawSolidCompositeMesh(MonoTestbed window, Scene3D scene, CullMode cull)
         {
-            bool drewSolidMesh = false;
-            var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
+                            bool drewSolidMesh = false;
+                            var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
             if (rootMeshModel?.model?.Vertices?.Length > 0)
-            {
+                            {
                 _solidDrawModels[0] = rootMeshModel.model;
-                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                                    MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
                     window.basicEffect, cull, FillMode.Solid, _solidDrawModels);
-                drewSolidMesh = true;
-            }
+                                    drewSolidMesh = true;
+                            }
 
-            if (!drewSolidMesh && _assembledDisplayModel != null)
-            {
+                            if (!drewSolidMesh && _assembledDisplayModel != null)
+                            {
                 _solidDrawModels[0] = _assembledDisplayModel;
-                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
                     window.basicEffect, cull, FillMode.Solid, _solidDrawModels);
-            }
-            else if (!drewSolidMesh && meshCompletedView != null)
+                            }
+                            else if (!drewSolidMesh && meshCompletedView != null)
             {
-                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
                     window.basicEffect, cull, FillMode.Solid, meshCompletedView.MeshModels);
             }
         }
@@ -1135,27 +1135,234 @@ namespace MonogameTestbed
 /// <summary>
 /// Generates a single mesh for a cell or a subset of a cell based on a Z range.  Used to debug the generation of whole cells and the merging of multiple slice meshes.
 /// </summary>
-class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IViewMenuTarget, IFileMenuTarget
+class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IViewMenuTarget, IFileMenuTarget, ITestSettings
 {
     public string Title => this.GetType().Name;
 
-    static readonly HotkeyBinding[] HotkeyBindings =
+    public IReadOnlyList<TestSettingItem> GetSettings() =>
     [
-        new("B / Right stick", "Toggle assembly bounding-box overlay"),
-        new("R", "Toggle red (critical) error bounding boxes only"),
-        new("K / Left stick", "Toggle backface culling"),
-        new("Left click", "Select mesh slice under cursor (empty click clears)"),
-        new("F", "Frame camera on rendered mesh"),
-        new("I", "Toggle invert-Z in the 3D view"),
-        new("Ctrl+S / Back", "Save assembled meshes (also File → Save Mesh)"),
-        new("PrintScreen / Back", "Save current structure mesh when assembled"),
-        new("Left shoulder", "Toggle composite vs slice mesh"),
-        new("Start", "Regenerate mesh for focused structure"),
-        new("A / X buttons", "Cycle shown mesh / lines / regions (gamepad)"),
-        new("Right shoulder", "Cycle vertex label modes"),
+        new()
+        {
+            Label = "Backface culling",
+            IsChecked = () => BackfaceCullingEnabled,
+            Apply = () => SetBackfaceCulling(!BackfaceCullingEnabled)
+        }
     ];
 
-    public IReadOnlyList<HotkeyBinding> GetHotkeyBindings() => HotkeyBindings;
+    bool BackfaceCullingEnabled =>
+        WrapViews.Any(wrapView => wrapView.IsTopLevelStructure && wrapView.CullMode != CullMode.None);
+
+    void SetBackfaceCulling(bool enabled)
+    {
+        foreach (var wrapView in WrapViews)
+        {
+            // Child sheets are intentionally double-sided; culling controls the enclosing cell shells.
+            wrapView.CullMode = enabled && wrapView.IsTopLevelStructure
+                ? CullMode.CullClockwiseFace
+                : CullMode.None;
+        }
+    }
+
+    readonly HotkeyCommandSet Hotkeys = new();
+    bool _hotkeysRegistered;
+
+    public IReadOnlyList<HotkeyBinding> GetHotkeyBindings()
+    {
+        EnsureHotkeys();
+        return Hotkeys.ToHelpBindings();
+    }
+
+    void EnsureHotkeys()
+    {
+        if (_hotkeysRegistered)
+            return;
+        _hotkeysRegistered = true;
+
+        Hotkeys.Add(
+            "B / Right stick",
+            "Toggle assembly bounding-box overlay",
+            HotkeyCommandSet.KeyOr(Keys.B, i => i.Gamepad.RightStick_Clicked),
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                    wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
+                _hudDirty = true;
+            });
+
+        Hotkeys.Add(
+            "R",
+            "Toggle red (critical) error bounding boxes only",
+            HotkeyCommandSet.Key(Keys.R),
+            () =>
+            {
+                ShowCriticalSliceStatus = !ShowCriticalSliceStatus;
+                _hudDirty = true;
+            });
+
+        Hotkeys.Add(
+            "K / Left stick",
+            "Toggle backface culling",
+            HotkeyCommandSet.KeyOr(Keys.K, i => i.Gamepad.LeftStick_Clicked),
+            () => SetBackfaceCulling(!BackfaceCullingEnabled));
+
+        Hotkeys.AddHelpOnly(
+            "Left click",
+            "Select mesh slice under cursor (empty click clears)");
+
+        Hotkeys.Add(
+            "F",
+            "Frame camera on rendered mesh",
+            HotkeyCommandSet.Key(Keys.F),
+            () =>
+            {
+                if (_window != null)
+                    FrameCameraOnRenderedMesh(_window);
+            });
+
+        Hotkeys.Add(
+            "I",
+            "Toggle invert-Z in the 3D view",
+            HotkeyCommandSet.Key(Keys.I),
+            () =>
+            {
+                if (Program.options is null)
+                    return;
+                Program.options.InvertZ = !Program.options.InvertZ;
+                if (scene3D != null)
+                    scene3D.World = ViewZAxisWorld;
+                if (_window != null)
+                    FrameCameraOnRenderedMesh(_window);
+                _hudDirty = true;
+            });
+
+        Hotkeys.Add(
+            "Ctrl+S / Back",
+            "Save assembled meshes (also File → Save Mesh)",
+            i => i.Gamepad.Back_Clicked
+                || (i.Keyboard.Pressed(Keys.S)
+                    && (i.Keyboard.Down(Keys.LeftControl) || i.Keyboard.Down(Keys.RightControl))),
+            () => TrySaveMesh());
+
+        Hotkeys.Add(
+            "PrintScreen / Back",
+            "Save current structure mesh when assembled",
+            HotkeyCommandSet.KeyOr(Keys.PrintScreen, i => i.Gamepad.Back_Clicked),
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                {
+                    if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
+                        SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph);
+                }
+            });
+
+        Hotkeys.Add(
+            "Left shoulder",
+            "Toggle composite vs slice mesh",
+            i => i.Gamepad.LeftShoulder_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                    wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
+            });
+
+        Hotkeys.Add(
+            "Start",
+            "Regenerate mesh for focused structure",
+            i => i.Gamepad.Start_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                {
+                    if (wrapView.IsGeneratingMesh)
+                        continue;
+                    if (ReferenceEquals(_selectedView, wrapView))
+                        ClearMeshSelection();
+                    _ = wrapView.GenerateMesh();
+                }
+            });
+
+        Hotkeys.Add(
+            "A / B / Y / X",
+            "Cycle shown mesh / lines / regions; X toggles completed vertices (gamepad)",
+            i => i.Gamepad.A_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                {
+                    wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
+                    if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
+                        wrapView.iShownMesh = null;
+                }
+            });
+
+        Hotkeys.Add(
+            "B",
+            "Cycle line views",
+            i => i.Gamepad.B_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                {
+                    wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
+                    if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
+                        wrapView.iShownLineView = null;
+                    Trace.WriteLine(wrapView.iShownLineView.ToString());
+                }
+            },
+            includeInHelp: false);
+
+        Hotkeys.Add(
+            "Y",
+            "Next region pass",
+            i => i.Gamepad.Y_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                {
+                    wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
+                    if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
+                        wrapView.iShownRegion = null;
+                }
+            },
+            includeInHelp: false);
+
+        Hotkeys.Add(
+            "X",
+            "Toggle completed vertices",
+            i => i.Gamepad.X_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                    wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
+            },
+            includeInHelp: false);
+
+        Hotkeys.Add(
+            "Right shoulder",
+            "Cycle vertex label modes",
+            i => i.Gamepad.RightShoulder_Clicked,
+            () =>
+            {
+                foreach (var wrapView in WrapViews)
+                {
+                    if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
+                        wrapView.VertexLabelType |= IndexLabelType.MESH;
+                    else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
+                        wrapView.VertexLabelType = IndexLabelType.NONE;
+                    else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
+                    {
+                        wrapView.VertexLabelType |= IndexLabelType.MESH;
+                        wrapView.VertexLabelType ^= IndexLabelType.POLYGON;
+                    }
+                    else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
+                    {
+                        wrapView.VertexLabelType |= IndexLabelType.POLYGON;
+                        wrapView.VertexLabelType ^= IndexLabelType.MESH;
+                    }
+                }
+            });
+    }
 
     public string ModeDescription => string.Empty;
 
@@ -2092,8 +2299,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             foreach (var wrapView in WrapViews)
             {
                 try
-                {
-                    if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
+            {
+                if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                         SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph, Program.options.OutputPath);
                 }
                 catch (Exception e)
@@ -2199,130 +2406,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
         UpdateClickPickInput(mouseState);
 
-        bool toggleBoxes = Input.Gamepad.RightStick_Clicked || Input.Keyboard.Pressed(Keys.B);
-        bool toggleCull = Input.Gamepad.LeftStick_Clicked || Input.Keyboard.Pressed(Keys.K);
-        bool saveCurrent = Input.Gamepad.Back_Clicked || Input.Keyboard.Pressed(Keys.PrintScreen);
-        bool aClicked = Input.Gamepad.A_Clicked;
-        bool bClicked = Input.Gamepad.B_Clicked;
-        bool yClicked = Input.Gamepad.Y_Clicked;
-        bool xClicked = Input.Gamepad.X_Clicked;
-        bool startClicked = Input.Gamepad.Start_Clicked;
-        bool rightShoulder = Input.Gamepad.RightShoulder_Clicked;
-        bool leftShoulder = Input.Gamepad.LeftShoulder_Clicked;
-
-        foreach (var wrapView in WrapViews)
-        {
-            if (aClicked)
-            {
-                wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
-                if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
-                {
-                    wrapView.iShownMesh = null;
-                }
-            }
-
-            if (bClicked)
-            {
-                wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
-                if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
-                {
-                    wrapView.iShownLineView = null;
-                }
-
-                Trace.WriteLine(wrapView.iShownLineView.ToString());
-            }
-
-            if (yClicked)
-            {
-                wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
-                if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
-                {
-                    wrapView.iShownRegion = null;
-                }
-            }
-
-            if (xClicked)
-            {
-                wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
-            }
-
-            if (startClicked && wrapView.IsGeneratingMesh == false)
-            {
-                if (ReferenceEquals(_selectedView, wrapView))
-                    ClearMeshSelection();
-                _ = wrapView.GenerateMesh();
-            }
-
-            if (rightShoulder)
-            {
-                if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
-                {
-                    wrapView.VertexLabelType |= IndexLabelType.MESH;
-                }
-                else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
-                {
-                    wrapView.VertexLabelType = IndexLabelType.NONE;
-                }
-                else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
-                {
-                    wrapView.VertexLabelType |= IndexLabelType.MESH;
-                    wrapView.VertexLabelType ^= IndexLabelType.POLYGON;
-                }
-                else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
-                {
-                    wrapView.VertexLabelType |= IndexLabelType.POLYGON;
-                    wrapView.VertexLabelType ^= IndexLabelType.MESH;
-                }
-            }
-
-            if (toggleBoxes)
-            {
-                wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
-                _hudDirty = true;
-            }
-
-            if (toggleCull)
-            {
-                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullClockwiseFace : CullMode.None;
-            }
-
-            if (leftShoulder)
-            {
-                wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
-            }
-
-            if (saveCurrent)
-            {
-                if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
-                    SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph);
-            }
-        }
-
-        if (Input.Keyboard.Pressed(Keys.R))
-        {
-            ShowCriticalSliceStatus = !ShowCriticalSliceStatus;
-            _hudDirty = true;
-        }
-
-        if (Input.Keyboard.Pressed(Keys.F) && _window != null)
-        {
-            FrameCameraOnRenderedMesh(_window);
-        }
-
-        if (Input.Keyboard.Pressed(Keys.I) && Program.options != null)
-        {
-            Program.options.InvertZ = !Program.options.InvertZ;
-            if (scene3D != null)
-                scene3D.World = ViewZAxisWorld;
-            if (_window != null)
-                FrameCameraOnRenderedMesh(_window);
-            _hudDirty = true;
-        }
-
-        if (Input.Gamepad.Back_Clicked || (Input.Keyboard.Pressed(Keys.S) && (Input.Keyboard.Pressed(Keys.LeftControl) || Input.Keyboard.Pressed(Keys.RightControl))))
-        {
-            TrySaveMesh();
-        }
+        EnsureHotkeys();
+        Hotkeys.Process(Input);
     }
 
     public void Draw(MonoTestbed window)
@@ -2355,9 +2440,9 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
                 if (wrapView != null && wrapView.IsTopLevelStructure)
                     wrapView.Draw3D(window, scene3D);
             }
-        }
-        else
-        {
+            }
+            else
+            {
             foreach (var wrapView in WrapViews)
                 wrapView?.Draw(window, scene);
         }
@@ -2416,15 +2501,15 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
         if (contentChanged || _hudText is null)
         {
-            float camDistance = (cam.Position - cam.LookAt).Length();
-            StringBuilder hud = new();
-            hud.AppendLine($"Cam ({cam.Position.X:F0}, {cam.Position.Y:F0}, {cam.Position.Z:F0})");
-            hud.AppendLine($"LookAt ({cam.LookAt.X:F0}, {cam.LookAt.Y:F0}, {cam.LookAt.Z:F0})");
-            hud.AppendLine($"Yaw {cam.Yaw * 180 / Math.PI:F1} deg  Pitch {cam.Pitch * 180 / Math.PI:F1} deg  Dist {camDistance:F0}");
+        float camDistance = (cam.Position - cam.LookAt).Length();
+        StringBuilder hud = new();
+        hud.AppendLine($"Cam ({cam.Position.X:F0}, {cam.Position.Y:F0}, {cam.Position.Z:F0})");
+        hud.AppendLine($"LookAt ({cam.LookAt.X:F0}, {cam.LookAt.Y:F0}, {cam.LookAt.Z:F0})");
+        hud.AppendLine($"Yaw {cam.Yaw * 180 / Math.PI:F1} deg  Pitch {cam.Pitch * 180 / Math.PI:F1} deg  Dist {camDistance:F0}");
             hud.AppendLine(invertZ ? "Z inverted (I to toggle)" : "Z volume (I / --invert-z)");
-            if (graph?.BoundingBox != null)
-            {
-                var bbox = graph.BoundingBox;
+        if (graph?.BoundingBox != null)
+        {
+            var bbox = graph.BoundingBox;
                 hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.MinVals[2]:F0}-{bbox.MaxVals[2]:F0}");
             }
 
@@ -2787,15 +2872,9 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         return RgbaColor.FromArgb(c.A, c.R, c.G, c.B);
     }
 
-    /// <summary>Outliner-friendly name: TypeName-StructureID when type is known.</summary>
-    static string StructureDisplayName(MorphologyGraph structureGraph)
-    {
-        ulong id = structureGraph.StructureID;
-        string typeName = structureGraph?.structure?.Type?.Name;
-        if (string.IsNullOrWhiteSpace(typeName))
-            return $"Struct-{id}";
-        return $"{typeName}-{id}";
-    }
+    /// <summary>Outliner name: StructureID-TypeLabel so sibling synapses stay distinguishable.</summary>
+    static string StructureDisplayName(MorphologyGraph structureGraph) =>
+        StructureModel.CreateDisplayName(structureGraph.StructureID, structureGraph?.structure?.Type?.Name);
 
     public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, Geometry.Vector3 Position, MorphologyGraph structureGraph, string outputDir = null)
     {
@@ -2852,6 +2931,6 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         };
         return mesh_model;
     }
-}
+    }
 }
 

@@ -1,185 +1,55 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-
+using System.Runtime.CompilerServices;
 
 namespace Geometry
 {
     /// <summary>
-    /// Maps points from one triangle to another using barycentric coordinates
+    /// Maps points from one triangle to another using barycentric coordinates.
+    /// Holds indices into a shared <see cref="MappingVector2"/> array so grid lookups can build one on the stack.
     /// </summary>
-    public class MappingTriangle(MappingVector2[] nodes, int n1, int n2, int n3) : ICloneable, IEquatable<MappingTriangle>, ITransform
+    public readonly struct MappingTriangle(MappingVector2[] nodes, int n1, int n2, int n3) : ICloneable, IEquatable<MappingTriangle>, ITransform
     {
         internal readonly MappingVector2[] Nodes = nodes;
 
-        internal readonly int N1 = n1; //Index of first node
-        internal readonly int N2 = n2; //Index of second node 
-        internal readonly int N3 = n3; //Index of third node
+        internal readonly int N1 = n1;
+        internal readonly int N2 = n2;
+        internal readonly int N3 = n3;
 
-        public override bool Equals(object obj)
-        {
-            if (obj is MappingTriangle TriObj)
-            {
-                if (TriObj.N1 == this.N1 &&
-                    TriObj.N2 == this.N2 &&
-                    TriObj.N3 == this.N3)
-                    return true;
-            }
+        public override bool Equals(object obj) => obj is MappingTriangle other && Equals(other);
 
-            //We should test all the other index combos too I suppose..
-            return false;
-        }
+        public override int GetHashCode() => GeometryHashCode.Combine(
+            GeometryHashCode.Combine(Nodes is null ? 0 : RuntimeHelpers.GetHashCode(Nodes), N1),
+            GeometryHashCode.Combine(N2, N3));
 
-        public override int GetHashCode() => GeometryHashCode.Combine(N1, N2, N3);
+        public double MinMapX => Math.Min(Math.Min(Nodes[N1].MappedPoint.X, Nodes[N2].MappedPoint.X), Nodes[N3].MappedPoint.X);
 
-        #region MapBounds
+        public double MaxMapX => Math.Max(Math.Max(Nodes[N1].MappedPoint.X, Nodes[N2].MappedPoint.X), Nodes[N3].MappedPoint.X);
 
-        //I use these to quickly determine if a triangle could intersect a point
-        private double _MinMapX = double.MaxValue;
-        private double _MaxMapX = double.MinValue;
+        public double MinMapY => Math.Min(Math.Min(Nodes[N1].MappedPoint.Y, Nodes[N2].MappedPoint.Y), Nodes[N3].MappedPoint.Y);
 
-        public double MinMapX
-        {
-            get
-            {
-                if (_MinMapX == double.MaxValue)
-                {
-                    _MinMapX = Math.Min(Nodes[N1].MappedPoint.X, Nodes[N2].MappedPoint.X);
-                    _MinMapX = Math.Min(_MinMapX, Nodes[N3].MappedPoint.X);
-                }
-
-                return _MinMapX;
-            }
-        }
-
-        public double MaxMapX
-        {
-            get
-            {
-                if (_MaxMapX == double.MinValue)
-                {
-                    _MaxMapX = Math.Max(Nodes[N1].MappedPoint.X, Nodes[N2].MappedPoint.X);
-                    _MaxMapX = Math.Max(_MaxMapX, Nodes[N3].MappedPoint.X);
-                }
-
-                return _MaxMapX;
-            }
-        }
-
-        //I use these to quickly determine if a triangle could intersect a point
-        private double _MinMapY = double.MaxValue;
-        private double _MaxMapY = double.MinValue;
-
-        public double MinMapY
-        {
-            get
-            {
-                if (_MinMapY == double.MaxValue)
-                {
-                    _MinMapY = Math.Min(Nodes[N1].MappedPoint.Y, Nodes[N2].MappedPoint.Y);
-                    _MinMapY = Math.Min(_MinMapY, Nodes[N3].MappedPoint.Y);
-                }
-
-                return _MinMapY;
-            }
-        }
-
-        public double MaxMapY
-        {
-            get
-            {
-                if (_MaxMapY == double.MinValue)
-                {
-                    _MaxMapY = Math.Max(Nodes[N1].MappedPoint.Y, Nodes[N2].MappedPoint.Y);
-                    _MaxMapY = Math.Max(_MaxMapY, Nodes[N3].MappedPoint.Y);
-                }
-
-                return _MaxMapY;
-            }
-        }
+        public double MaxMapY => Math.Max(Math.Max(Nodes[N1].MappedPoint.Y, Nodes[N2].MappedPoint.Y), Nodes[N3].MappedPoint.Y);
 
         public Rectangle MappedBoundingBox => new(MinMapX, MaxMapX, MinMapY, MaxMapY);
 
-        #endregion
+        public double MinCtrlX => Math.Min(Math.Min(Nodes[N1].ControlPoint.X, Nodes[N2].ControlPoint.X), Nodes[N3].ControlPoint.X);
 
-        #region CtrlBounds
+        public double MaxCtrlX => Math.Max(Math.Max(Nodes[N1].ControlPoint.X, Nodes[N2].ControlPoint.X), Nodes[N3].ControlPoint.X);
 
-        //I use these to quickly determine if a triangle could intersect a point
-        private double _MinCtrlX = double.MaxValue;
-        private double _MaxCtrlX = double.MinValue;
+        public double MinCtrlY => Math.Min(Math.Min(Nodes[N1].ControlPoint.Y, Nodes[N2].ControlPoint.Y), Nodes[N3].ControlPoint.Y);
 
-        public double MinCtrlX
-        {
-            get
-            {
-                if (_MinCtrlX == double.MaxValue)
-                {
-                    _MinCtrlX = Math.Min(Nodes[N1].ControlPoint.X, Nodes[N2].ControlPoint.X);
-                    _MinCtrlX = Math.Min(_MinCtrlX, Nodes[N3].ControlPoint.X);
-                }
-
-                return _MinCtrlX;
-            }
-        }
-
-        public double MaxCtrlX
-        {
-            get
-            {
-                if (_MaxCtrlX == double.MinValue)
-                {
-                    _MaxCtrlX = Math.Max(Nodes[N1].ControlPoint.X, Nodes[N2].ControlPoint.X);
-                    _MaxCtrlX = Math.Max(_MaxCtrlX, Nodes[N3].ControlPoint.X);
-                }
-
-                return _MaxCtrlX;
-            }
-        }
-
-        //I use these to quickly determine if a triangle could intersect a point
-        private double _MinCtrlY = double.MaxValue;
-        private double _MaxCtrlY = double.MinValue;
-
-        public double MinCtrlY
-        {
-            get
-            {
-                if (_MinCtrlY == double.MaxValue)
-                {
-                    _MinCtrlY = Math.Min(Nodes[N1].ControlPoint.Y, Nodes[N2].ControlPoint.Y);
-                    _MinCtrlY = Math.Min(_MinCtrlY, Nodes[N3].ControlPoint.Y);
-                }
-
-                return _MinCtrlY;
-            }
-        }
-
-        public double MaxCtrlY
-        {
-            get
-            {
-                if (_MaxCtrlY == double.MinValue)
-                {
-                    _MaxCtrlY = Math.Max(Nodes[N1].ControlPoint.Y, Nodes[N2].ControlPoint.Y);
-                    _MaxCtrlY = Math.Max(_MaxCtrlY, Nodes[N3].ControlPoint.Y);
-                }
-
-                return _MaxCtrlY;
-            }
-        }
-
-        #endregion
+        public double MaxCtrlY => Math.Max(Math.Max(Nodes[N1].ControlPoint.Y, Nodes[N2].ControlPoint.Y), Nodes[N3].ControlPoint.Y);
 
         public Rectangle ControlBoundingBox => new(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
-
 
         public Triangle Control => new(Nodes[N1].ControlPoint, Nodes[N2].ControlPoint, Nodes[N3].ControlPoint);
 
         public Triangle Mapped => new(Nodes[N1].MappedPoint, Nodes[N2].MappedPoint, Nodes[N3].MappedPoint);
 
-        public MappingTriangle Copy() => (MappingTriangle)((ICloneable)this).Clone();
+        public MappingTriangle Copy() => this;
 
-        object ICloneable.Clone() => this.MemberwiseClone();
+        object ICloneable.Clone() => this;
 
         public bool CanTransform(in Vector2 Point) => Mapped.Covers(Point);
 
@@ -195,13 +65,11 @@ namespace Geometry
 
             Vector2 translated = Vector2.FromBarycentric(Control.P1, Control.P2, Control.P3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
-
         }
 
         public Vector2 InverseTransform(in Vector2 Point)
         {
             Vector2 uv = Control.Barycentric(Point);
-            //Debug.Assert(BarycentricCoordIsMappable(uv));
 
             Vector2 translated = Vector2.FromBarycentric(Mapped.P1, Mapped.P2, Mapped.P3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
@@ -209,30 +77,29 @@ namespace Geometry
 
         public Vector2[] Transform(in Vector2[] Points)
         {
-            var uv_points = Points.Select(Point => Mapped.Barycentric(Point));
+            Triangle mapped = Mapped;
+            Triangle control = Control;
+            var uv_points = Points.Select(point => mapped.Barycentric(point));
             Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
 
-            return [.. uv_points.Select(uv => Vector2.FromBarycentric(Control.P1, Control.P2, Control.P3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
+            return [.. uv_points.Select(uv => Vector2.FromBarycentric(control.P1, control.P2, control.P3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
         }
 
         public Vector2[] InverseTransform(in Vector2[] Points)
         {
-            var uv_points = Points.Select(Point => Control.Barycentric(Point));
-            //  Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
+            Triangle mapped = Mapped;
+            Triangle control = Control;
+            var uv_points = Points.Select(point => control.Barycentric(point));
 
-            return [.. uv_points.Select(uv => Vector2.FromBarycentric(Mapped.P1, Mapped.P2, Mapped.P3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
+            return [.. uv_points.Select(uv => Vector2.FromBarycentric(mapped.P1, mapped.P2, mapped.P3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
         }
 
-        public bool Equals(MappingTriangle other)
-        {
-            if (object.ReferenceEquals(this, other))
-                return true;
+        public bool Equals(MappingTriangle other) =>
+            ReferenceEquals(Nodes, other.Nodes) && N1 == other.N1 && N2 == other.N2 && N3 == other.N3;
 
-            if (!object.ReferenceEquals(this.Nodes, other.Nodes))
-                return false;
+        public static bool operator ==(MappingTriangle left, MappingTriangle right) => left.Equals(right);
 
-            return this.N1 == other.N1 && this.N2 == other.N2 && this.N3 == other.N3;
-        }
+        public static bool operator !=(MappingTriangle left, MappingTriangle right) => !left.Equals(right);
 
         public bool TryTransform(in Vector2 Point, out Vector2 translated)
         {

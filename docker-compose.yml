@@ -36,12 +36,14 @@ services:
     volumes:
       - ./Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro
       - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro
+      - D:/Docker/Builds/GrpcAnnotationService/corrections:/corrections
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=
       - ASPNETCORE_HTTP_PORTS=
       - ASPNETCORE_HTTPS_PORTS=
       - Kestrel__UseDockerPorts=true
+      - Corrections__RootDirectory=/corrections
     networks:
       - viking-network
 
@@ -52,11 +54,6 @@ services:
     restart: on-failure
     ports:
       - "50051:50051"
-    volumes:
-      - C:/Temp/.X11-unix:/tmp/.X11-unix
-      - C:/src/git/SAM2-docker:/home/user/SAM2-Docker
-    environment:
-      - DISPLAY
     deploy:
       resources:
         reservations:

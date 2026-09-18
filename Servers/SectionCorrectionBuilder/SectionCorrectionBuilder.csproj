@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Viking.SectionCorrectionBuilder</RootNamespace>
+    <AssemblyName>SectionCorrectionBuilder</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" Version="10.0.10" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.9" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SectionCorrection\SectionCorrection.csproj" />
+    <ProjectReference Include="..\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj" />
+    <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\..\Clients\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+  </ItemGroup>
+</Project>

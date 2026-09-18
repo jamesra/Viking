@@ -44,7 +44,7 @@
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0" 
-                       Text="Available Services" 
+                       Text="Available Services (preferred first)" 
                        FontSize="14" 
                        FontWeight="Bold" 
                        Margin="0,0,0,10"/>
@@ -54,6 +54,17 @@
                       ItemsSource="{Binding ServiceNodes}"
                       SelectedItemChanged="treeServices_SelectedItemChanged"
                       MouseDoubleClick="treeServices_MouseDoubleClick">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="Foreground" Value="#222222"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Service.IsUnreachable}" Value="True">
+                                <Setter Property="Foreground" Value="#888888"/>
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TreeView.ItemContainerStyle>
                 <TreeView.Resources>
                     <HierarchicalDataTemplate DataType="{x:Type local:SegmentationServiceTreeNode}" 
                                               ItemsSource="{Binding Children}">
@@ -61,6 +72,11 @@
                             <TextBlock Text="{Binding Name}" 
                                        FontWeight="{Binding IsCategory, Converter={StaticResource BoolToFontWeightConverter}}"
                                        Margin="0,2"/>
+                            <TextBlock Text="{Binding Service.StatusSummary}"
+                                       Margin="10,2,0,2"
+                                       FontSize="11"
+                                       Foreground="#666666"
+                                       VerticalAlignment="Center"/>
                         </StackPanel>
                     </HierarchicalDataTemplate>
                 </TreeView.Resources>

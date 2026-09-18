@@ -11,6 +11,8 @@
 		}
 	],
 	"settings": {
+		"dotnet.preferCSharpExtension": true,
+		"dotnet.defaultSolution": "Everything.sln",
 		"files.exclude": {
 			"Clients/Jotunn": true
 		},

@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+option csharp_namespace = "Viking.AnnotationServiceTypes.gRPC.V1.Protos";
+
+package Viking.AnnotationServiceTypes.gRPC.V1;
+
+import "google/protobuf/timestamp.proto";
+
+// Morphology residual vector fields after mosaic+Stos volume mapping.
+// Catalogs files written by SectionCorrectionBuilder. Does not rebuild maps.
+// XY is volume nanometers (annotation DB units * AnnotateMetaData.Scale).
+// Unknown stos_group: NOT_FOUND. GetSectionCorrection for a Z with no map: NOT_FOUND.
+service AnnotateCorrections {
+  // Published StosGroup correction sets on this server.
+  rpc ListCorrectionSets (ListCorrectionSetsRequest) returns (ListCorrectionSetsResponse);
+
+  // Z values that have a published map for this StosGroup. Unknown group: NOT_FOUND.
+  rpc ListCorrectedSections (ListCorrectedSectionsRequest) returns (ListCorrectedSectionsResponse);
+
+  // Builder provenance and the list of Z. Unknown group: NOT_FOUND.
+  rpc GetCorrectionManifest (GetCorrectionManifestRequest) returns (CorrectionManifest);
+
+  // Sparse lattice for one section. Use to interpolate locally.
+  // Unknown group or Z with no map: NOT_FOUND ("no correction for section {z} in '{name}'").
+  rpc GetSectionCorrection (GetSectionCorrectionRequest) returns (SectionCorrection);
+
+  // Sample the field for XY grouped by section. Every point on a found section interpolates.
+  // CorrectedXY.trusted is near-measurement support, not interpolation success.
+  // Unknown group: NOT_FOUND. Empty sections, a section with no points, or duplicate z: INVALID_ARGUMENT.
+  rpc CorrectPoints (CorrectPointsRequest) returns (CorrectPointsResponse);
+}
+
+message ListCorrectionSetsRequest {}
+
+message ListCorrectionSetsResponse {
+  repeated CorrectionSetInfo sets = 1;
+}
+
+message CorrectionSetInfo {
+  // VikingXML StosGroup name (e.g. SliceToVolume, SliceToVolumeLinear).
+  string stos_group = 1;
+  CorrectionProvenance provenance = 2;
+}
+
+message ListCorrectedSectionsRequest {
+  string stos_group = 1;
+}
+
+message ListCorrectedSectionsResponse {
+  repeated int64 z = 1;
+}
+
+message GetCorrectionManifestRequest {
+  string stos_group = 1;
+}
+
+// How the builder measured votes. Two published sets are the same build iff
+// stos_group and this message are equal. Sampling CorrectPoints does not use these fields.
+message CorrectionProvenance {
+  google.protobuf.Timestamp built_utc = 1;
+  // LastModified cutoff of the annotation rows used to build this set.
+  google.protobuf.Timestamp annotation_watermark = 2;
+  // Lattice step in nm. Not AnnotateMetaData.Scale.
+  double pitch_nm = 3;
+  // Builder pooling radius (nm) when filling each lattice node. Default 8000.
+  double kernel_radius_nm = 4;
+  int32 min_annotation_votes = 5;
+  ResidualWindow residual_window = 6;
+}
+
+// ResidualWindowOptions for leave-one-out Catmull-Rom when the builder measured each vote.
+// Both-sided: need min_both neighbors below AND above, take at most max_both each (default 2, 3).
+// One-sided (terminal): need min_one on the populated side, take at most max_one (default 5, 7).
+// Starve rather than copy a lone neighbor.
+message ResidualWindow {
+  int32 min_both = 1;
+  int32 max_both = 2;
+  int32 min_one = 3;
+  int32 max_one = 4;
+}
+
+// Catalog of one published set. Identity is stos_group + provenance; z and volume_url are hosting.
+message CorrectionManifest {
+  string stos_group = 1;
+  CorrectionProvenance provenance = 2;
+  // REST URL for volume.npz when hosted; empty if gRPC-only.
+  string volume_url = 3;
+  repeated int64 z = 4;
+}
+
+message GetSectionCorrectionRequest {
+  string stos_group = 1;
+  int64 z = 2;
+}
+
+// Sparse COO lattice for one Z. World XY of a node: (origin_x_nm + gx * pitch_nm, origin_y_nm + gy * pitch_nm).
+message SectionCorrection {
+  string stos_group = 1;
+  int64 z = 2;
+  double origin_x_nm = 3;
+  double origin_y_nm = 4;
+  double pitch_nm = 5;
+  repeated LatticeVector nodes = 6;
+}
+
+message LatticeVector {
+  int32 gx = 1;
+  int32 gy = 2;
+  // Add to volume XY: corrected = (x + dx, y + dy).
+  double dx = 3;
+  double dy = 4;
+  int32 vote_count = 5;
+}
+
+message VolumeXY {
+  // Volume nanometers (after Scale).
+  double x = 1;
+  double y = 2;
+}
+
+// One section's query points. z is required by being on this message, not on each XY.
+message SectionPoints {
+  int64 z = 1;
+  repeated VolumeXY points = 2;
+}
+
+message CorrectPointsRequest {
+  string stos_group = 1;
+  // Group mixed-Z AnnotationPoints with GroupBy(p => p.Z) before calling.
+  repeated SectionPoints sections = 2;
+}
+
+message CorrectedXY {
+  double x = 1;
+  double y = 2;
+  double dx = 3;
+  double dy = 4;
+  // True if this XY was in compact support (2×2 occupied cell or IDW within kernel radius).
+  // Interpolation always runs; false still returns dx/dy (usually 0) but we do not trust a warp.
+  bool trusted = 5;
+}
+
+message CorrectedSection {
+  int64 z = 1;
+  // True if a published map exists for this Z.
+  bool found_section = 2;
+  // Same order as SectionPoints.points. If found_section is false, dx=dy=0 and trusted is false.
+  repeated CorrectedXY points = 3;
+}
+
+message CorrectPointsResponse {
+  // Same order as CorrectPointsRequest.sections.
+  repeated CorrectedSection sections = 1;
+}

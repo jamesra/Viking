@@ -98,6 +98,17 @@ namespace MonogameTestbed
         bool MenuEnabled => Program.options?.Screenshots != true;
 
         /// <summary>
+        /// BAJAJTEST owns its own multi-shot dump. Every other mode dumps one framed view from the host loop.
+        /// </summary>
+        bool HostOwnsScreenshots =>
+            Program.options?.Screenshots == true
+            && Mode is not TestMode.BAJAJTEST and not TestMode.BAJAJMULTITEST;
+
+        int _hostScreenshotWarmupFrames;
+        bool _hostScreenshotDone;
+        bool _hostScreenshotCapturing;
+
+        /// <summary>
         /// Viewport height at which screen-space HUD text and the menu bar draw at their base size. Taller
         /// back buffers (maximised on a 4K display) scale up from here so the text stays legible.
         /// </summary>
@@ -631,6 +642,8 @@ namespace MonogameTestbed
             if (MenuEnabled && _menuBar != null)
                 _menuBar.Draw(spriteBatch, fontArial, _whitePixel, listTests, Mode);
 
+            MaybeCaptureHostScreenshot();
+
             /*
             testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new Geometry.Vector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;
@@ -641,6 +654,100 @@ namespace MonogameTestbed
             //  spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        /// <summary>
+        /// Point the 2D camera at <paramref name="bounds"/> so a catalog of origin-scale geometry is on screen.
+        /// Tests that do not restore a saved camera must call this from Init; otherwise the Bajaj camera
+        /// (volume coordinates, large downsample) is still in effect and the frame looks empty.
+        /// </summary>
+        internal void FrameCameraOnWorldBounds(Rectangle bounds)
+        {
+            if (Scene is null || Scene.Viewport.Width <= 0 || Scene.Viewport.Height <= 0)
+                return;
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                return;
+
+            //Fit both axes independently. Scene.VisibleWorldBounds uses max(world)/min(viewport), which on a
+            //widescreen display zooms out until the catalog is a small island in the centre of the frame.
+            Scene.Camera.LookAt = bounds.Center.ToXNAVector2();
+            double downsample = Math.Max(bounds.Width / Scene.Viewport.Width, bounds.Height / Scene.Viewport.Height);
+            Scene.Camera.Downsample = downsample * 1.08;
+        }
+
+        /// <summary>
+        /// Single-frame dump for tests that have no Bajaj-style shot list. Waits a few draws so fullscreen
+        /// viewport and Init have taken effect, then writes <c>{out}/{Mode}/view.png</c> and a tiny manifest.
+        /// </summary>
+        void MaybeCaptureHostScreenshot()
+        {
+            if (!HostOwnsScreenshots || _hostScreenshotDone || _hostScreenshotCapturing)
+                return;
+
+            if (!listTests[Mode].Initialized)
+                return;
+
+            _hostScreenshotWarmupFrames++;
+            if (_hostScreenshotWarmupFrames < 3)
+                return;
+
+            EnsureExportFullscreen();
+            SyncSceneViewport();
+            UpdateEffectMatricies(Scene);
+
+            string root = ScreenshotCapture.OutputRoot(Mode.ToString());
+            System.IO.Directory.CreateDirectory(root);
+            string relative = "view.png";
+            string path = System.IO.Path.Combine(root, relative);
+
+            _hostScreenshotCapturing = true;
+            try
+            {
+                ScreenshotCapture.SavePng(GraphicsDevice, path, () =>
+                {
+                    UpdateEffectMatricies(Scene);
+                    GraphicsDevice.RasterizerState = _noCullRasterizer;
+                    listTests[Mode].Draw(this);
+                    DrawLegendHUD();
+                });
+            }
+            finally
+            {
+                _hostScreenshotCapturing = false;
+            }
+
+            var manifest = new CaptureManifest
+            {
+                Cases =
+                [
+                    new CaptureManifestCase
+                    {
+                        Index = 0,
+                        Description = listTests[Mode].Title,
+                        Folder = Mode.ToString(),
+                        Shots =
+                        [
+                            new CaptureManifestShot
+                            {
+                                Stage = "view",
+                                View = "2d",
+                                RelativePath = relative,
+                                LookAtX = Scene.Camera.LookAt.X,
+                                LookAtY = Scene.Camera.LookAt.Y,
+                                Downsample = Scene.Camera.Downsample
+                            }
+                        ]
+                    }
+                ]
+            };
+            ScreenshotCapture.WriteManifest(root, manifest);
+
+            Console.WriteLine($"Wrote {path} (LookAt {Scene.Camera.LookAt.X:F1},{Scene.Camera.LookAt.Y:F1} downsample {Scene.Camera.Downsample:F3})");
+            _hostScreenshotDone = true;
+
+            if (Program.options?.Quiet == true)
+                Exit();
         }
 
         /// <summary>
@@ -1141,6 +1248,7 @@ namespace MonogameTestbed
 
             double Y = MinY;
             double lineWidth = YStep / 1.5;
+            double fontSize = Math.Max(8.0, YStep * 0.55);
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
@@ -1150,8 +1258,13 @@ namespace MonogameTestbed
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-100, 0), anchor: Anchor.CenterRight));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-lineWidth, 0), Color.White, anchor: Anchor.CenterRight, fontSize: fontSize));
             }
+
+            //Labels sit to the left of MinX and can be several line-heights wide.
+            double labelGutter = (MaxX - MinX) * 0.85;
+            Rectangle bounds = new(MinX - labelGutter, MaxX + lineWidth, MinY - lineWidth, MaxY + lineWidth);
+            window.FrameCameraOnWorldBounds(bounds);
 
             return Task.CompletedTask;
         }
@@ -1203,19 +1316,27 @@ namespace MonogameTestbed
             double YStep = (MaxY - MinY) / NumLineTypes;
 
             double Y = MinY;
+            double lineWidth = YStep / 1.5;
+            double fontSize = Math.Max(8.0, YStep * 0.55);
+            double curveDip = YStep * 0.75;
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
                 Geometry.Vector2 source = new(MinX, Y);
-                Geometry.Vector2 mid = new(MinX + (MaxX - MinX / 2.0), Y - 30);
+                Geometry.Vector2 mid = new(MinX + (MaxX - MinX) / 2.0, Y - curveDip);
                 Geometry.Vector2 dest = new(MaxX, Y);
 
-                listLineViews.Add(new CurveView(new Geometry.Vector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: YStep / 1.5, lineStyle: style));
+                listLineViews.Add(new CurveView(new Geometry.Vector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: lineWidth, lineStyle: style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-25, 10)));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-lineWidth, 0), Color.White, anchor: Anchor.CenterRight, fontSize: fontSize));
             }
+
+            double labelGutter = (MaxX - MinX) * 0.85;
+            Rectangle bounds = new(MinX - labelGutter, MaxX + lineWidth, MinY - curveDip - lineWidth, MaxY + lineWidth);
+            window.FrameCameraOnWorldBounds(bounds);
+
             return Task.CompletedTask;
         }
 

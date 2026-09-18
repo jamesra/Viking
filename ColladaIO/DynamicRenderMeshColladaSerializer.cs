@@ -134,9 +134,9 @@ namespace ColladaIO
             library_geometries_type geomLib = new();
 
 #if DEBUG
-            geomLib.geometry = [.. listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.Name, model.Material.Key)).Where(Geom => Geom != null)];
+            geomLib.geometry = [.. listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.GeometryId, model.Material.Key)).Where(Geom => Geom != null)];
 #else
-            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.Name, model.Material.Key)).AsParallel().Where(Geom => Geom != null).ToArray();
+            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.GeometryId, model.Material.Key)).AsParallel().Where(Geom => Geom != null).ToArray();
 #endif
 
             return geomLib;
@@ -172,7 +172,7 @@ namespace ColladaIO
 
             instance_geometry_type instance_geometry = new()
             {
-                url = $"#{model.Name}-geometry"
+                url = $"#{model.GeometryId}-geometry"
             };
 
             if (ApplyTranslation)

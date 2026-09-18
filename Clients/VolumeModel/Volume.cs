@@ -1080,7 +1080,7 @@ namespace Viking.VolumeModel
         /// <param name="workerThread"></param>
         private async Task WaitForCreateSectionThreads(List<Task<Section>> ListSectionThreadingObj, IProgress<ProgressInfo> workerThread, CancellationToken token)
         {
-            workerThread.Report(new ProgressInfo("Waiting for Section Loading Threads", 0));
+            workerThread?.Report(new ProgressInfo("Waiting for Section Loading Threads", 0));
 
             var taskArray = ListSectionThreadingObj.ToArray();
             int countFinished = 0;
@@ -1335,7 +1335,7 @@ namespace Viking.VolumeModel
                                     try
                                     {
                                         string outString = $"Adding transforms: {trans} to {ControlTrans}";
-                                        workerThread.Report(new ProgressInfo(outString, (iSectionProgress * 100) / TList.Count, 100));
+                                        workerThread?.Report(new ProgressInfo(outString, (iSectionProgress * 100) / TList.Count, 100));
 
                                         TList[childSection] = ContinuousControlTransform.TransformTransform((trans as ITransformControlPoints), trans.GetType());
 
@@ -1371,7 +1371,7 @@ namespace Viking.VolumeModel
                                 else
                                 {
                                     string outString = $"Loading transforms from Cache: {trans} to {ControlTrans}";
-                                    workerThread.Report(new ProgressInfo(outString, (iSectionProgress * 100) / TList.Count, 100));
+                                    workerThread?.Report(new ProgressInfo(outString, (iSectionProgress * 100) / TList.Count, 100));
                                 }
                             }
 

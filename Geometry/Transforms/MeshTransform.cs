@@ -126,7 +126,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingTriangle GetTransform(in Vector2 Point)
+        internal override MappingTriangle? GetTransform(in Vector2 Point)
         {
             //TODO: Optimize the search
 
@@ -161,7 +161,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingTriangle GetInverseTransform(in Vector2 Point)
+        internal override MappingTriangle? GetInverseTransform(in Vector2 Point)
         {
             //TODO: Optimize the search
 
@@ -277,7 +277,7 @@ namespace Geometry.Transforms
         /// <param name="foundMapLine"></param>
         /// <param name="intersection"></param>
         /// <returns></returns>
-        public override double ConvexHullIntersection(LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection)
+        public override double ConvexHullIntersection(in LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection)
         {
             double nearestIntersect = double.MaxValue;
 

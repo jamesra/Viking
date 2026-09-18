@@ -7,8 +7,8 @@ stages:
   FirstPassSliceChordGeneration: faces:27 manifold:24 nonManifold:0 inconsistent:0 contourSeam:27 holes:4 isolated:24 forkGap:0 ribbonEdge:2 singleTriPolyline:0
   FirstPassFaceGeneration: faces:27 manifold:24 nonManifold:0 inconsistent:0 contourSeam:27 holes:4 isolated:24 forkGap:0 ribbonEdge:2 singleTriPolyline:0
   CleanRibbonFaces: faces:51 manifold:50 nonManifold:0 inconsistent:0 contourSeam:51 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
-  Cap upper polygons: faces:109 manifold:136 nonManifold:0 inconsistent:0 contourSeam:22 holes:0 isolated:0 forkGap:0 ribbonEdge:33 singleTriPolyline:0
-  Cap lower polygons: faces:153 manifold:201 nonManifold:0 inconsistent:0 contourSeam:0 holes:0 isolated:0 forkGap:0 ribbonEdge:57 singleTriPolyline:0
+  Cap upper polygons: faces:109 manifold:136 nonManifold:0 inconsistent:29 contourSeam:22 holes:0 isolated:0 forkGap:0 ribbonEdge:33 singleTriPolyline:0
+  Cap lower polygons: faces:153 manifold:201 nonManifold:0 inconsistent:51 contourSeam:0 holes:0 isolated:0 forkGap:0 ribbonEdge:57 singleTriPolyline:0
   Final mesh: faces:153 manifold:201 nonManifold:0 inconsistent:0 contourSeam:0 holes:0 isolated:0 forkGap:0 ribbonEdge:57 singleTriPolyline:0
 defects:
 notes:

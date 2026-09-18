@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SectionCorrectionBuilder (RC2)": {
+      "commandName": "Project",
+      "commandLineArgs": "--connection \"Server=OpR-Marc-DB2;Database=RC2;Trusted_Connection=True;integrated security=True;MultipleActiveResultSets=true\" --volume Y:\\Volumes\\RC2\\SliceToVolume.VikingXML --output Y:\\Volumes\\RC2\\corrections --stos-groups SliceToVolume1 --cache C:\\Temp\\SectionCorrectionBuilder\\RC2 --volume-url http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML",
+      "workingDirectory": "$(TargetDir)"
+    }
+  }
+}

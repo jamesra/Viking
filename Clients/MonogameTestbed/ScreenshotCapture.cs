@@ -359,13 +359,19 @@ namespace MonogameTestbed
     /// </summary>
     internal static class ScreenshotCapture
     {
-        public static string BajajOutputRoot()
+        /// <summary>
+        /// Output folder for a named capture run. BAJAJTEST uses <c>BajajTest</c>; other modes use the TestMode name
+        /// so <c>--mode LineStyles --screenshots -o dir</c> lands beside the Bajaj dumps.
+        /// </summary>
+        public static string OutputRoot(string folderName)
         {
             string basePath = string.IsNullOrWhiteSpace(Program.options?.OutputPath)
                 ? Directory.GetCurrentDirectory()
                 : Program.options.OutputPath;
-            return Path.Combine(basePath, "BajajTest");
+            return Path.Combine(basePath, folderName);
         }
+
+        public static string BajajOutputRoot() => OutputRoot("BajajTest");
 
         public static void SavePng(GraphicsDevice device, string path, Action draw)
         {

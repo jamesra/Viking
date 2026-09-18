@@ -1,3 +1,4 @@
+using Geometry;
 using Geometry.Meshing;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -43,6 +44,9 @@ namespace MorphologyMesh
                 }
 
                 manifold++;
+                if (IsCollapsedEdge(mesh, kvp.Key))
+                    continue;
+
                 IFace[] faces = [.. kvp.Value.Faces];
                 bool f0 = TraversesForward(faces[0].iVerts, kvp.Key.A, kvp.Key.B);
                 bool f1 = TraversesForward(faces[1].iVerts, kvp.Key.A, kvp.Key.B);
@@ -73,6 +77,9 @@ namespace MorphologyMesh
                 if (kvp.Value.Faces.Count != 2)
                     continue;
 
+                if (IsCollapsedEdge(mesh, kvp.Key))
+                    continue;
+
                 IFace[] faces = [.. kvp.Value.Faces];
                 if (TraversesForward(faces[0].iVerts, kvp.Key.A, kvp.Key.B) != TraversesForward(faces[1].iVerts, kvp.Key.A, kvp.Key.B))
                     continue;
@@ -99,6 +106,14 @@ namespace MorphologyMesh
             }
 
             return false;
+        }
+
+        private static bool IsCollapsedEdge<T>(IReadOnlyMesh<T> mesh, IEdgeKey key) where T : IVertex
+        {
+            if (mesh[key.A] is not IVertex3D a || mesh[key.B] is not IVertex3D b)
+                return false;
+
+            return Vector3.DistanceSquared(a.Position, b.Position) <= Global.EpsilonSquared;
         }
     }
 }

@@ -376,6 +376,9 @@ namespace MonogameTestbed
                 AddLineView(FirstPassTriangulation, "Cap lower polygons");
             }
 
+            // Match BajajMeshGenerator.FinishSliceMesh: drop rejected non-contour edges that never received a face.
+            FirstPassTriangulation.RemoveIsolatedNonContourEdges();
+
             //The normals pass marks every face anchored afterwards, so the faces it was actually forbidden to flip
             //have to be remembered here for the defect report to say whether a winding defect was repairable.
             HashSet<IFace> anchoredBeforeRepair = [.. FirstPassTriangulation.MorphFaces.Where(f => f.NormalIsKnownCorrect)];
@@ -1562,6 +1565,44 @@ namespace MonogameTestbed
             return false;
         }
 
+        /// <summary>
+        /// Axis-aligned bounds of the generated mesh in volume XY / slice Z.  Falls back to the annotation
+        /// contours when faces have not been built yet so F can still frame an empty view.
+        /// </summary>
+        internal bool TryGetRenderedMeshBounds(out Vector3 min, out Vector3 max)
+        {
+            min = new Vector3(float.MaxValue);
+            max = new Vector3(float.MinValue);
+
+            lock (ViewsLock)
+            {
+                if (FirstPassTriangulation?.Vertices is { Count: > 0 } verts)
+                {
+                    foreach (IVertex3D v in verts)
+                    {
+                        Vector3 p = v.Position.ToXNAVector3();
+                        min = Vector3.Min(min, p);
+                        max = Vector3.Max(max, p);
+                    }
+
+                    return true;
+                }
+            }
+
+            if (Shapes is not { Length: > 0 })
+                return false;
+
+            Geometry.Rectangle xy = Shapes.BoundingBox();
+            double zMin = ShapeZ.Min();
+            double zMax = ShapeZ.Max();
+            if (zMax <= zMin)
+                zMax = zMin + MeshViewZRange;
+
+            min = new Vector3((float)xy.Left, (float)xy.Bottom, (float)zMin);
+            max = new Vector3((float)xy.Right, (float)xy.Top, (float)zMax);
+            return true;
+        }
+
         private static bool TryLineBounds(IEnumerable<LineView> lines, out Rectangle bounds)
         {
             bounds = default;
@@ -1732,9 +1773,9 @@ namespace MonogameTestbed
             //structure and its neighborhood so the slice's locations and edges are present in the graph.
             //
             //BajajMultiTest applies --correction before building its slice graph. Match that here so a
-            //failed-slice repro shows the same geometry. Neighbor mode needs a wider hop load for the curve window.
+            //failed-slice repro shows the same geometry. Residual-field and curvefit both need extra Z hops.
             CorrectionMode correction = Program.options?.Correction ?? CorrectionMode.All;
-            bool needsWideLoad = correction is CorrectionMode.CurveFit or CorrectionMode.All or CorrectionMode.Neighbor;
+            bool needsWideLoad = correction != CorrectionMode.None;
             int loadHops = needsWideLoad ? Math.Max(hops, 3) : hops;
             Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDs([.. SliceLocations.Select(id => (long)id)], Endpoint, loadHops);
 
@@ -1792,22 +1833,356 @@ namespace MonogameTestbed
     /// <summary>
     /// This tests how we create faces that connect two polygons at different Z levels
     /// </summary>
-    class BajajAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
+    class BajajAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, ITestSettings
     {
         public string Title => this.GetType().Name;
 
-        public IReadOnlyList<HotkeyBinding> GetHotkeyBindings() =>
+        public IReadOnlyList<TestSettingItem> GetSettings()
+        {
+            if (wrapView is null)
+                return [ViewSetting()];
+
+            lock (wrapView.ViewsLock)
+            {
+                return
+                [
+                    ViewSetting(),
+                    ChoiceSetting("Mesh layer", MeshLayerChoices()),
+                    ChoiceSetting("Line / chord layer", LineLayerChoices()),
+                    ChoiceSetting("Region layer", RegionLayerChoices()),
+                    ToggleSetting(
+                        "OTV chords",
+                        () => wrapView.ShowOtvChords,
+                        () =>
+                        {
+                            wrapView.ShowOtvChords = !wrapView.ShowOtvChords;
+                            ClearDisplayShotSelection();
+                        }),
+                    ToggleSetting(
+                        "Completed vertices",
+                        () => wrapView.ShowCompletedVerticies,
+                        () =>
+                        {
+                            wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
+                            ClearDisplayShotSelection();
+                        }),
+                    ChoiceSetting("Labels", LabelChoices())
+                ];
+            }
+        }
+
+        TestSettingItem ViewSetting() => ChoiceSetting(
+            "View",
+            [
+                RadioSetting("2D", () => !Draw3D, () => Draw3D = false),
+                RadioSetting("3D", () => Draw3D, () => Draw3D = true)
+            ]);
+
+        IReadOnlyList<TestSettingItem> MeshLayerChoices()
+        {
+            List<TestSettingItem> choices =
+            [
+                RadioSetting(
+                    "None",
+                    () => !wrapView.iShownMesh.HasValue,
+                    () =>
+                    {
+                        wrapView.iShownMesh = null;
+                        ClearDisplayShotSelection();
+                    })
+            ];
+
+            for (int i = 0; i < wrapView.MeshViews.Count; i++)
+            {
+                int index = i;
+                string name = string.IsNullOrWhiteSpace(wrapView.MeshViews[i].Name)
+                    ? $"Mesh {i}"
+                    : wrapView.MeshViews[i].Name;
+                choices.Add(RadioSetting(
+                    name,
+                    () => wrapView.iShownMesh == index,
+                    () =>
+                    {
+                        wrapView.iShownMesh = index;
+                        ClearDisplayShotSelection();
+                    }));
+            }
+
+            return choices;
+        }
+
+        IReadOnlyList<TestSettingItem> LineLayerChoices()
+        {
+            List<TestSettingItem> choices =
+            [
+                RadioSetting(
+                    "None",
+                    () => !wrapView.iShownLineView.HasValue,
+                    () =>
+                    {
+                        wrapView.iShownLineView = null;
+                        ClearDisplayShotSelection();
+                    })
+            ];
+
+            for (int i = 0; i < wrapView.listLineViews.Count; i++)
+            {
+                int index = i;
+                string name = string.IsNullOrWhiteSpace(wrapView.listLineViews[i].Name)
+                    ? $"Lines {i}"
+                    : wrapView.listLineViews[i].Name;
+                choices.Add(RadioSetting(
+                    name,
+                    () => wrapView.iShownLineView == index,
+                    () =>
+                    {
+                        wrapView.iShownLineView = index;
+                        ClearDisplayShotSelection();
+                    }));
+            }
+
+            return choices;
+        }
+
+        IReadOnlyList<TestSettingItem> RegionLayerChoices()
+        {
+            List<TestSettingItem> choices =
+            [
+                RadioSetting(
+                    "None",
+                    () => !wrapView.iShownRegion.HasValue,
+                    () =>
+                    {
+                        wrapView.iShownRegion = null;
+                        ClearDisplayShotSelection();
+                    })
+            ];
+
+            for (int i = 0; i < wrapView.RegionViews.Count; i++)
+            {
+                int index = i;
+                choices.Add(RadioSetting(
+                    $"Region {i}",
+                    () => wrapView.iShownRegion == index,
+                    () =>
+                    {
+                        wrapView.iShownRegion = index;
+                        ClearDisplayShotSelection();
+                    }));
+            }
+
+            return choices;
+        }
+
+        IReadOnlyList<TestSettingItem> LabelChoices() =>
         [
-            new("V / Left shoulder", "Toggle 2D / 3D view"),
-            new("K / Left stick", "Toggle backface culling"),
-            new("PageDown / Mouse X2", "Next diagnostic shot (2D)"),
-            new("PageUp / Mouse X1", "Previous diagnostic shot (2D)"),
-            new("Start", "Rebuild mesh for current slice pair"),
-            new("Back", "Reset 3D camera to slice bounds"),
-            new("A / B / Y / X", "Cycle meshes, lines, regions (gamepad)"),
-            new("Right shoulder", "Cycle vertex label modes"),
-            new("Right stick", "Toggle position labels"),
+            FlagSetting("Mesh vertex indices", IndexLabelType.MESH),
+            FlagSetting("Polygon vertex indices", IndexLabelType.POLYGON),
+            FlagSetting("Vertex positions", IndexLabelType.POSITION),
+            ToggleSetting(
+                "Edge / chord type labels",
+                () => !wrapView.VertexIndicesOnly,
+                () =>
+                {
+                    wrapView.VertexIndicesOnly = !wrapView.VertexIndicesOnly;
+                    ClearDisplayShotSelection();
+                })
         ];
+
+        TestSettingItem FlagSetting(string label, IndexLabelType flag) =>
+            ToggleSetting(
+                label,
+                () => (wrapView.VertexLabelType & flag) != 0,
+                () =>
+                {
+                    wrapView.VertexLabelType ^= flag;
+                    ClearDisplayShotSelection();
+                });
+
+        static TestSettingItem ChoiceSetting(string label, IReadOnlyList<TestSettingItem> choices) => new()
+        {
+            Label = label,
+            Children = choices
+        };
+
+        static TestSettingItem RadioSetting(string label, Func<bool> isChecked, Action apply) => new()
+        {
+            Label = label,
+            IsChecked = () => isChecked(),
+            Apply = apply
+        };
+
+        static TestSettingItem ToggleSetting(string label, Func<bool> isChecked, Action apply) =>
+            RadioSetting(label, isChecked, apply);
+
+        void ClearDisplayShotSelection()
+        {
+            _displayShotIndex = null;
+            _pendingShotDelta = 0;
+        }
+
+        public IReadOnlyList<HotkeyBinding> GetHotkeyBindings()
+        {
+            EnsureHotkeys();
+            return Hotkeys.ToHelpBindings();
+        }
+
+        readonly HotkeyCommandSet Hotkeys = new();
+        bool _hotkeysRegistered;
+
+        void EnsureHotkeys()
+        {
+            if (_hotkeysRegistered)
+                return;
+            _hotkeysRegistered = true;
+
+            Hotkeys.Add(
+                "V / Left shoulder",
+                "Toggle 2D / 3D view",
+                HotkeyCommandSet.KeyOr(Keys.V, i => i.Gamepad.LeftShoulder_Clicked),
+                () => Draw3D = !Draw3D);
+
+            Hotkeys.Add(
+                "F",
+                "Frame camera on rendered mesh",
+                HotkeyCommandSet.Key(Keys.F),
+                () =>
+                {
+                    if (_host != null)
+                        FrameCameraOnRenderedMesh(_host);
+                });
+
+            Hotkeys.Add(
+                "K / Left stick",
+                "Toggle backface culling",
+                HotkeyCommandSet.KeyOr(Keys.K, i => i.Gamepad.LeftStick_Clicked),
+                () => wrapView.CullMode = wrapView.CullMode == CullMode.None
+                    ? CullMode.CullClockwiseFace
+                    : CullMode.None);
+
+            Hotkeys.Add(
+                "PageDown / Mouse X2",
+                "Next diagnostic shot (2D)",
+                _ => _x2Clicked || (!Draw3D && Input.Keyboard.Pressed(Keys.PageDown)),
+                () =>
+                {
+                    _pendingShotDelta++;
+                    TryApplyPendingShotStep();
+                });
+
+            Hotkeys.Add(
+                "PageUp / Mouse X1",
+                "Previous diagnostic shot (2D)",
+                _ => _x1Clicked || (!Draw3D && Input.Keyboard.Pressed(Keys.PageUp)),
+                () =>
+                {
+                    _pendingShotDelta--;
+                    TryApplyPendingShotStep();
+                });
+
+            Hotkeys.Add(
+                "Start",
+                "Rebuild mesh for current slice pair",
+                i => i.Gamepad.Start_Clicked,
+                () =>
+                {
+                    var Graph = CurrentTestCase.Morphology;
+                    Slice slice = CurrentTestCase.GetSlice();
+                    wrapView = new BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
+                    _displayShotIndex = null;
+                    _pendingShotDelta = 0;
+                });
+
+            Hotkeys.Add(
+                "Back",
+                "Reset 3D camera to slice bounds",
+                i => i.Gamepad.Back_Clicked,
+                () =>
+                {
+                    Geometry.Rectangle bbox = wrapView.Shapes.BoundingBox();
+                    double MinZ = wrapView.ShapeZ.Min();
+                    double MaxZ = wrapView.ShapeZ.Max();
+                    double Depth = MaxZ - MinZ;
+                    scene3D.Camera.Position = (bbox.Center.ToVector3(0) + new Geometry.Vector3(0, 0, 100f * (float)Depth)).ToXNAVector3();
+                    scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.Center.X, (float)bbox.Center.Y, 0);
+                });
+
+            Hotkeys.Add(
+                "A / B / Y / X",
+                "Cycle meshes, lines, regions (gamepad)",
+                i => i.Gamepad.A_Clicked,
+                () =>
+                {
+                    wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
+                    if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
+                        wrapView.iShownMesh = null;
+                });
+
+            Hotkeys.Add(
+                "B",
+                "Cycle line views",
+                i => i.Gamepad.B_Clicked,
+                () =>
+                {
+                    wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
+                    if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
+                        wrapView.iShownLineView = null;
+                    Trace.WriteLine(wrapView.iShownLineView.ToString());
+                },
+                includeInHelp: false);
+
+            Hotkeys.Add(
+                "Y",
+                "Next region pass",
+                i => i.Gamepad.Y_Clicked,
+                () =>
+                {
+                    wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
+                    if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
+                        wrapView.iShownRegion = null;
+                },
+                includeInHelp: false);
+
+            Hotkeys.Add(
+                "X",
+                "Previous region pass",
+                i => i.Gamepad.X_Clicked,
+                () =>
+                {
+                    wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value - 1 : wrapView.RegionViews.Count - 1;
+                    if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value < 0)
+                        wrapView.iShownRegion = null;
+                },
+                includeInHelp: false);
+
+            Hotkeys.Add(
+                "Right shoulder",
+                "Cycle vertex label modes",
+                i => i.Gamepad.RightShoulder_Clicked,
+                () =>
+                {
+                    if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
+                        wrapView.VertexLabelType |= IndexLabelType.MESH;
+                    else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
+                        wrapView.VertexLabelType = IndexLabelType.NONE;
+                    else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
+                    {
+                        wrapView.VertexLabelType |= IndexLabelType.MESH;
+                        wrapView.VertexLabelType ^= IndexLabelType.POLYGON;
+                    }
+                    else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
+                    {
+                        wrapView.VertexLabelType |= IndexLabelType.POLYGON;
+                        wrapView.VertexLabelType ^= IndexLabelType.MESH;
+                    }
+                });
+
+            Hotkeys.Add(
+                "Right stick",
+                "Toggle position labels",
+                i => i.Gamepad.RightStick_Clicked,
+                () => wrapView.VertexLabelType ^= IndexLabelType.POSITION);
+        }
 
         public string ModeDescription
         {
@@ -1824,7 +2199,7 @@ namespace MonogameTestbed
                     if (CurrentTestCase.SliceLocations is { Length: > 0 })
                         sb.AppendLine("Slice locations: " + string.Join(", ", CurrentTestCase.SliceLocations));
                 }
-                sb.Append(Draw3D ? "View: 3D mesh  (V: 2D)" : "View: 2D  (V: 3D, PgUp/PgDn: stage)");
+                sb.Append(Draw3D ? "View: 3D mesh  (V: 2D, F: frame)" : "View: 2D  (V: 3D, F: frame, PgUp/PgDn: stage)");
                 return sb.ToString();
             }
         }
@@ -2113,6 +2488,8 @@ namespace MonogameTestbed
         Scene3D scene3D;
         MouseState _lastMouse;
         bool _mouseSeen;
+        bool _x1Clicked;
+        bool _x2Clicked;
         int? _displayShotIndex;
         int _pendingShotDelta;
         readonly TestInputContext Input = new();
@@ -2204,135 +2581,15 @@ namespace MonogameTestbed
             GamePadState state = GamePad.GetState(PlayerIndex.One);
             Input.Gamepad.Update(state);
             Input.Keyboard.Update(Microsoft.Xna.Framework.Input.Keyboard.GetState());
-            UpdateDisplayShotInput();
+            PollDisplayShotMouseEdges();
 
             if (!Draw3D)
                 Input.CameraManipulator.Update(scene.Camera);
             else
                 Camera3DManipulator.Update(this.scene3D.Camera, scene3D.Viewport.Width, scene3D.Viewport.Height);
 
-            if (Input.Gamepad.A_Clicked)
-            {
-                wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
-                if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
-                {
-                    wrapView.iShownMesh = null;
-                }
-            }
-
-            if (Input.Gamepad.B_Clicked)
-            {
-                wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
-                if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
-                {
-                    wrapView.iShownLineView = null;
-                }
-
-                Trace.WriteLine(wrapView.iShownLineView.ToString());
-
-                /*wrapView.ShowPolygons = !wrapView.ShowPolygons;
-                wrapView.ShowAllEdges = !wrapView.ShowAllEdges;
-                */
-            }
-
-            if (Input.Gamepad.Y_Clicked)
-            {
-                //Cycle throught the various region passes as Y is clicked
-                wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
-                if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
-                {
-                    wrapView.iShownRegion = null;
-                }
-
-            }
-
-
-            if (Input.Gamepad.X_Clicked)
-            {
-                //wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
-                wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value - 1 : wrapView.RegionViews.Count - 1;
-                if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value < 0)
-                {
-                    wrapView.iShownRegion = null;
-                }
-            }
-
-            if (Input.Gamepad.Start_Clicked)
-            {
-                //Recalculate the mesh from scratch
-                var Graph = CurrentTestCase.Morphology;
-                Slice slice = CurrentTestCase.GetSlice();
-
-                wrapView = new MonogameTestbed.BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
-                _displayShotIndex = null;
-                _pendingShotDelta = 0;
-            }
-
-            if (Input.Gamepad.RightShoulder_Clicked)
-            {
-                if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
-                {
-                    wrapView.VertexLabelType |= IndexLabelType.MESH;
-                }
-                else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
-                {
-                    wrapView.VertexLabelType = IndexLabelType.NONE;
-                }
-                else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
-                {
-                    wrapView.VertexLabelType |= IndexLabelType.MESH;
-                    wrapView.VertexLabelType ^= IndexLabelType.POLYGON;
-                }
-                else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
-                {
-                    wrapView.VertexLabelType |= IndexLabelType.POLYGON;
-                    wrapView.VertexLabelType ^= IndexLabelType.MESH;
-                }
-            }
-
-            if (Input.Gamepad.RightStick_Clicked)
-            {
-                wrapView.VertexLabelType ^= IndexLabelType.POSITION;
-            }
-
-            if (Input.Gamepad.LeftStick_Clicked || Input.Keyboard.Pressed(Keys.K))
-            {
-                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullClockwiseFace : CullMode.None;
-            }
-
-            //Keyboard alternative to the shoulder button, which is the only way to reach the 3D view without a
-            //gamepad attached.
-            if (Input.Gamepad.LeftShoulder_Clicked || Input.Keyboard.Pressed(Keys.V))
-            {
-                this.Draw3D = !this.Draw3D;
-            }
-
-            if (Input.Gamepad.Back_Clicked)
-            {
-                Geometry.Rectangle bbox = wrapView.Shapes.BoundingBox();
-                double MinZ = wrapView.ShapeZ.Min();
-                double MaxZ = wrapView.ShapeZ.Max();
-                double Depth = MaxZ - MinZ;
-                scene3D.Camera.Position = (bbox.Center.ToVector3(0) + new Geometry.Vector3(0, 0, 100f * (float)Depth)).ToXNAVector3();
-                scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.Center.X, (float)bbox.Center.Y, 0); // bbox.CenterPoint.ToXNAVector3();
-            }
-
-
-            /*
-            if(Input.Gamepad.RightShoulder_Clicked)
-            {
-                wrapView.NumLinesToDraw++;
-            }
-
-            if (Input.Gamepad.LeftShoulder_Clicked)
-            {
-                wrapView.NumLinesToDraw--;
-            }
-
-            if (Input.Gamepad.Y_Clicked)
-            {
-                wrapView.ShowFinalLines = !wrapView.ShowFinalLines;
-            }*/
+            EnsureHotkeys();
+            Hotkeys.Process(Input);
         }
 
         public void Draw(MonoTestbed window)
@@ -2440,6 +2697,77 @@ namespace MonogameTestbed
             double depth = Math.Max(Math.Max(bbox.Depth, morphology.SectionThickness), 1);
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToVector3(0) + new Geometry.Vector3(0, 0, 10f * (float)depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0);
+        }
+
+        /// <summary>
+        /// Aim both cameras at the generated mesh: 2D LookAt/downsample on the XY bounds, 3D the same FOV fit
+        /// BAJAJMULTITEST uses for F.  Mesh views recenter Z at 0, so the 3D look-at Z is 0 rather than volume Z.
+        /// </summary>
+        void FrameCameraOnRenderedMesh(MonoTestbed window)
+        {
+            if (wrapView is null || wrapView.TryGetRenderedMeshBounds(out Vector3 min, out Vector3 max) == false)
+                return;
+
+            Geometry.Rectangle xy = new(min.X, max.X, min.Y, max.Y);
+            if (xy.Width < 1e-3)
+                xy = new(xy.Center, Math.Max(xy.Height, 1.0));
+            if (xy.Height < 1e-3)
+                xy = new(xy.Center, Math.Max(xy.Width, 1.0));
+
+            scene.Camera.LookAt = xy.Center.ToXNAVector2();
+            scene.Camera.Downsample = FitDownsample(window, xy);
+
+            Vector3 centerVol = (min + max) * 0.5f;
+            Vector3 viewMin = new(min.X, min.Y, min.Z - centerVol.Z);
+            Vector3 viewMax = new(max.X, max.Y, max.Z - centerVol.Z);
+            Frame3DCameraOnBounds(window, viewMin, viewMax);
+        }
+
+        /// <summary>
+        /// Same viewing-direction FOV fit as <c>BajajMultiTest.FrameCameraOnRenderedMesh</c>, in the Z-centered
+        /// space the mesh ModelMatrix uses.
+        /// </summary>
+        void Frame3DCameraOnBounds(MonoTestbed window, Vector3 min, Vector3 max)
+        {
+            MonoTestbed.SyncViewport(scene3D, window.GraphicsDevice);
+
+            Vector3 center = (min + max) * 0.5f;
+            Vector3 halfExtent = (max - min) * 0.5f;
+            if (halfExtent.LengthSquared() < float.Epsilon)
+                halfExtent = Vector3.One;
+
+            Vector3 direction = Vector3.Normalize(new Vector3(-1f, -0.35f, 0.2f));
+
+            Vector3 zaxis = direction;
+            Vector3 cameraUp = Vector3.UnitZ;
+            Vector3 xaxis = Vector3.Cross(cameraUp, zaxis);
+            if (xaxis.LengthSquared() < 1e-6f)
+            {
+                cameraUp = Vector3.UnitY;
+                xaxis = Vector3.Cross(cameraUp, zaxis);
+            }
+            xaxis = Vector3.Normalize(xaxis);
+            Vector3 yaxis = Vector3.Normalize(Vector3.Cross(zaxis, xaxis));
+
+            float extentHorizontal = Math.Abs(halfExtent.X * xaxis.X) + Math.Abs(halfExtent.Y * xaxis.Y) + Math.Abs(halfExtent.Z * xaxis.Z);
+            float extentVertical = Math.Abs(halfExtent.X * yaxis.X) + Math.Abs(halfExtent.Y * yaxis.Y) + Math.Abs(halfExtent.Z * yaxis.Z);
+
+            float halfFovVertical = scene3D.FieldOfView * 0.5f;
+            float aspect = scene3D.Viewport.Height > 0
+                ? scene3D.Viewport.Width / (float)scene3D.Viewport.Height
+                : 1f;
+            float halfFovHorizontal = (float)Math.Atan(Math.Tan(halfFovVertical) * aspect);
+
+            const float FrameMargin = 1.05f;
+            float distanceVertical = extentVertical / (float)Math.Tan(halfFovVertical);
+            float distanceHorizontal = extentHorizontal / (float)Math.Tan(halfFovHorizontal);
+            float distance = Math.Max(Math.Max(distanceVertical, distanceHorizontal), 1f) * FrameMargin;
+
+            float enclosingRadius = Math.Max(extentHorizontal, extentVertical);
+            scene3D.MaxDrawDistance = Math.Max(scene3D.MaxDrawDistance, (distance + enclosingRadius) * 2f);
+
+            scene3D.Camera.Position = center + (direction * distance);
+            scene3D.Camera.LookAt = center;
         }
 
 
@@ -2584,35 +2912,28 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// Steps the interactive view through <see cref="BajajOTVAssignmentView.EnumerateDefaultShots"/>,
-        /// the same list screenshot capture uses. Ignored while a screenshot dump is running.
-        /// Mouse X2 / PageDown go forward; X1 / PageUp go back. Wrap around. The first press
-        /// starts at overview (forward) or the last shot (back) rather than guessing the stacked A/B/Y overlays.
-        /// PageUp/PageDown are omitted in 3D so they can pan world Z on the camera.
+        /// Edge-detect mouse X1/X2 for diagnostic shot stepping. PageUp/PageDown and the delta
+        /// application live in <see cref="Hotkeys"/> so Help stays tied to the same handlers.
         /// </summary>
-        private void UpdateDisplayShotInput()
+        private void PollDisplayShotMouseEdges()
         {
             MouseState mouse = Mouse.GetState();
-            bool x2Clicked = false;
-            bool x1Clicked = false;
+            _x2Clicked = false;
+            _x1Clicked = false;
             if (_mouseSeen)
             {
-                x2Clicked = mouse.XButton2 == ButtonState.Pressed && _lastMouse.XButton2 != ButtonState.Pressed;
-                x1Clicked = mouse.XButton1 == ButtonState.Pressed && _lastMouse.XButton1 != ButtonState.Pressed;
+                _x2Clicked = mouse.XButton2 == ButtonState.Pressed && _lastMouse.XButton2 != ButtonState.Pressed;
+                _x1Clicked = mouse.XButton1 == ButtonState.Pressed && _lastMouse.XButton1 != ButtonState.Pressed;
             }
 
             _lastMouse = mouse;
             _mouseSeen = true;
 
             if (_screenshotPhase != ScreenshotPhase.Inactive)
-                return;
-
-            if (x2Clicked || (!Draw3D && Input.Keyboard.Pressed(Keys.PageDown)))
-                _pendingShotDelta++;
-            else if (x1Clicked || (!Draw3D && Input.Keyboard.Pressed(Keys.PageUp)))
-                _pendingShotDelta--;
-
-            TryApplyPendingShotStep();
+            {
+                _x1Clicked = false;
+                _x2Clicked = false;
+            }
         }
 
         /// <summary>
@@ -2842,7 +3163,10 @@ namespace MonogameTestbed
             MonoTestbed.SyncViewport(scene3D, window.GraphicsDevice);
 
             if (!Draw3D)
+            {
                 wrapView?.Draw(window, scene);
+                ResidualFieldQuiverOverlay.Draw(window, scene, CurrentTestCase);
+            }
             else
                 wrapView?.Draw3D(window, scene3D);
         }

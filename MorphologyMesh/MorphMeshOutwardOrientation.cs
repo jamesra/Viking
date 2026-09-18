@@ -185,6 +185,9 @@ namespace MorphologyMesh
             if (f.IsTriangle() && IsSidewall(verts, n))
                 return TrySidewallNeedsFlip(verts, ctx, out needsFlip);
 
+            if (f.IsTriangle() && verts.Any(v => v.ShapeIndex is null))
+                return TryCapDomeNeedsFlip(verts, n, out needsFlip);
+
             Vector2 faceCenter = mesh.GetCentroid(f);
             double faceZ = verts.Average(v => v.Position.Z);
             double zTol = Math.Max(Global.Epsilon * 1000, 0.5);
@@ -199,15 +202,44 @@ namespace MorphologyMesh
         /// <summary>
         /// A tiling triangle lives on two sections, or is closer to vertical than to a cap.
         /// Composite faces always span Z; testing them as caps with zTol≈1 always votes "flip".
+        /// Cap and medial vertices have no <see cref="MorphMeshVertex.ShapeIndex"/>; those faces span Z to a
+        /// pole and must not use this test (the contour then looks "lower" than the peak and the vote inverts).
         /// </summary>
         private static bool IsSidewall(MorphMeshVertex[] verts, Vector3 n)
         {
+            if (verts.Any(v => v.ShapeIndex is null))
+                return false;
+
             double zMin = verts.Min(v => v.Position.Z);
             double zMax = verts.Max(v => v.Position.Z);
             if (zMax - zMin > Global.Epsilon)
                 return true;
 
             return Math.Abs(n.Z) < 0.5;
+        }
+
+        /// <summary>
+        /// Upper dome (medial verts above the contour) is outward when n.Z is positive; lower dome the reverse.
+        /// Pole-only fans have no contour vertex on the face and are left unsampled.
+        /// </summary>
+        private static bool TryCapDomeNeedsFlip(MorphMeshVertex[] verts, Vector3 n, out bool needsFlip)
+        {
+            needsFlip = false;
+            double? contourZ = null;
+            double? medialZ = null;
+            foreach (MorphMeshVertex v in verts)
+            {
+                if (v.ShapeIndex is not null)
+                    contourZ = contourZ is null ? v.Position.Z : (contourZ.Value + v.Position.Z) * 0.5;
+                else
+                    medialZ = medialZ is null ? v.Position.Z : (medialZ.Value + v.Position.Z) * 0.5;
+            }
+
+            if (contourZ is null || medialZ is null)
+                return false;
+
+            needsFlip = medialZ.Value > contourZ.Value ? n.Z < 0 : n.Z > 0;
+            return true;
         }
 
         /// <summary>
@@ -323,6 +355,8 @@ namespace MorphologyMesh
         /// <summary>
         /// After manifold-consistent winding, flip 2-manifold patches that mostly point inward relative to contours.
         /// Uses majority vote per patch instead of a single cap face (critical for large merged composites).
+        /// Cap and medial faces are not sampled: they span Z to a pole, so the sidewall test treats the contour as
+        /// the lower vertex of an upper dome and a few dozen cap triangles can invert a whole cell.
         /// Patches are the same 2-manifold components <see cref="MeshWindingReorientation"/> orients; walking
         /// through 3-face junctions would mix independently orientable sides and invert the wrong walls.
         /// </summary>
@@ -343,6 +377,11 @@ namespace MorphologyMesh
                 {
                     if (f.IsTriangle() == false)
                         continue;
+
+                    MorphMeshVertex[] sampleVerts = [.. mesh[f.iVerts]];
+                    if (sampleVerts.Any(v => v.ShapeIndex is null))
+                        continue;
+
                     if (TryFaceNeedsFlipForOutward(mesh, f, ctx, out bool flip) == false)
                         continue;
 

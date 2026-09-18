@@ -9,6 +9,11 @@ using System.Text;
 
 namespace MorphologyMesh
 {
+    /// <summary>
+    /// A point known to lie inside one annotation contour, retained from slice construction so winding can choose
+    /// an outward seed face without guessing from the centroid of a branched mesh.
+    /// </summary>
+    public readonly record struct WindingInteriorSeed(Vector3 Position, int ShapeIndex);
 
     /// <summary>
     /// 
@@ -55,6 +60,159 @@ namespace MorphologyMesh
         /// An optional field that allows tracking of which annotations compose the mesh
         /// </summary>
         public readonly Slice Slice = slice;
+
+        private readonly List<WindingInteriorSeed> _windingInteriorSeeds = [];
+        private readonly Dictionary<int, List<Vector2>> _windingSeedCandidatesByShape = [];
+
+        /// <summary>
+        /// Interior points retained from Delaunay or a pre-cooked generator. Shape indices are local to this slice
+        /// until <c>SliceGraphMeshModel</c> remaps them to morphology-node indices during composite assembly.
+        /// After <see cref="CommitWindingSeedsForOrientablePatches"/> this is one validated seed per patch.
+        /// </summary>
+        public IReadOnlyList<WindingInteriorSeed> WindingInteriorSeeds => _windingInteriorSeeds;
+
+        /// <summary>
+        /// Retain a Delaunay-contained XY candidate. Face generation later picks one validated 3D seed per
+        /// orientable patch so composites do not rescans every triangle centroid.
+        /// </summary>
+        public void AddWindingSeedCandidate(Vector2 xy, int shapeIndex)
+        {
+            if (shapeIndex < 0 || shapeIndex >= Topology.Shapes.Length)
+                throw new ArgumentOutOfRangeException(nameof(shapeIndex));
+
+            if (_windingSeedCandidatesByShape.TryGetValue(shapeIndex, out List<Vector2> existing) == false)
+            {
+                existing = [];
+                _windingSeedCandidatesByShape[shapeIndex] = existing;
+            }
+
+            double epsilonSquared = Global.Epsilon * Global.Epsilon;
+            if (existing.Any(point => Vector2.DistanceSquared(point, xy) <= epsilonSquared))
+                return;
+
+            existing.Add(xy);
+        }
+
+        /// <summary>
+        /// Retain a pre-validated 3D interior point (circle loft, medial cap). Deduplicates coincident points
+        /// on the same shape.
+        /// </summary>
+        public void AddWindingInteriorSeed(Vector3 position, int shapeIndex)
+        {
+            if (shapeIndex < 0 || shapeIndex >= Topology.Shapes.Length)
+                throw new ArgumentOutOfRangeException(nameof(shapeIndex));
+
+            double epsilonSquared = Global.Epsilon * Global.Epsilon;
+            if (_windingInteriorSeeds.Any(seed =>
+                seed.ShapeIndex == shapeIndex
+                && Vector3.DistanceSquared(seed.Position, position) <= epsilonSquared))
+            {
+                return;
+            }
+
+            _windingInteriorSeeds.Add(new WindingInteriorSeed(position, shapeIndex));
+        }
+
+        /// <summary>
+        /// After faces exist, keep one geometrically valid seed per 2-manifold polygon patch. Circle and
+        /// medial seeds already in the list win over Delaunay XY candidates for the same patch.
+        /// </summary>
+        public void CommitWindingSeedsForOrientablePatches()
+        {
+            if (Faces.Count == 0)
+            {
+                _windingSeedCandidatesByShape.Clear();
+                return;
+            }
+
+            HashSet<int> outwardShapeIndices = [.. Enumerable.Range(0, Shapes.Length)
+                .Where(i => Shapes[i] is Polygon)];
+            List<WindingInteriorSeed> committed = [];
+            List<WindingInteriorSeed> existing = [.. _windingInteriorSeeds];
+
+            foreach (List<IFace> patch in MeshWindingReorientation.CollectTwoManifoldPatches(this))
+            {
+                HashSet<int> patchShapes = [.. patch
+                    .SelectMany(face => face.iVerts)
+                    .Select(index => this[index].ShapeIndex?.ShapeIndex)
+                    .Where(index => index.HasValue)
+                    .Select(index => index.Value)];
+                if (patchShapes.Any(shape => outwardShapeIndices.Contains(shape)) == false)
+                    continue;
+
+                Vector3 center = Vector3.Zero;
+                int count = 0;
+                foreach (int index in patch.SelectMany(face => face.iVerts).Distinct())
+                {
+                    center += this[index].Position;
+                    count++;
+                }
+
+                center /= Math.Max(1, count);
+
+                List<WindingInteriorSeed> localChoices = [.. existing
+                    .Where(seed => patchShapes.Contains(seed.ShapeIndex))];
+                if (TrySelectCandidateSeed(patchShapes, center, out WindingInteriorSeed fromCandidate))
+                    localChoices.Add(fromCandidate);
+
+                if (localChoices.Count == 0)
+                    continue;
+
+                committed.Add(localChoices.MinBy(seed => Vector3.DistanceSquared(seed.Position, center)));
+            }
+
+            _windingInteriorSeeds.Clear();
+            _windingInteriorSeeds.AddRange(committed);
+            _windingSeedCandidatesByShape.Clear();
+        }
+
+        private bool TrySelectCandidateSeed(HashSet<int> patchShapes, Vector3 patchCenter, out WindingInteriorSeed seed)
+        {
+            Vector2 bestXY = default;
+            int bestShape = -1;
+            double bestClearance = double.NegativeInfinity;
+            double bestDistance = double.PositiveInfinity;
+
+            foreach (int shapeIndex in patchShapes)
+            {
+                if (_windingSeedCandidatesByShape.TryGetValue(shapeIndex, out List<Vector2> candidates) == false)
+                    continue;
+
+                IShape2D shape = Shapes[shapeIndex];
+                foreach (Vector2 xy in candidates)
+                {
+                    if (shape.GetRelation((IPoint2D)xy) != ShapeRelation.Contained)
+                        continue;
+
+                    double distance = Vector2.DistanceSquared(xy, patchCenter.XY());
+                    double clearance = WindingSeedPlacement.BoundaryClearance(shape, xy);
+                    if (distance < bestDistance
+                        || (distance == bestDistance && clearance > bestClearance))
+                    {
+                        bestClearance = clearance;
+                        bestDistance = distance;
+                        bestXY = xy;
+                        bestShape = shapeIndex;
+                    }
+                }
+            }
+
+            if (bestShape < 0)
+            {
+                seed = default;
+                return false;
+            }
+
+            seed = new WindingInteriorSeed(
+                WindingSeedPlacement.PlaceInsideReconstructedBand(
+                    bestXY,
+                    Shapes[bestShape],
+                    ShapeZ[bestShape],
+                    SliceCenterZ,
+                    SliceThickness),
+                bestShape);
+            return true;
+        }
 
         /// <summary>
         /// How thick the slice is along the Z axis
@@ -484,33 +642,45 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Ensure every 2-manifold patch has consistent, outward-facing winding so backface culling does not
-        /// punch holes in the surface. Delegates patch BFS to <see cref="MeshWindingReorientation"/> (only
-        /// edges with exactly two faces) then majority-vote outward vs contours. Greedy repair is skipped when
-        /// any edge still has three faces; that pass oscillates on non-manifold junctions.
+        /// Ensure every 2-manifold polygon patch has consistent, outward-facing winding so backface culling does
+        /// not punch holes in the surface. A ray from a retained contour-interior point establishes one authoritative
+        /// face, then <see cref="MeshWindingReorientation"/> propagates from it once. Polyline sheets only receive
+        /// consistency propagation because both sides render. A non-orientable or unseedable patch is skipped and
+        /// recorded on <see cref="GenerationHadErrors"/>; generated faces stay so a cell-body slice is not
+        /// published as a blank band.
         /// </summary>
         public void EnsureFacesHaveExternalNormals()
         {
+            HashSet<int> outwardShapeIndices = [.. Enumerable.Range(0, Shapes.Length)
+                .Where(i => Shapes[i] is Polygon)];
+
+            CommitWindingSeedsForOrientablePatches();
+
             var options = new MeshWindingReorientation.Options
             {
-                RespectAnchorFaces = true,
+                RespectAnchorFaces = false,
                 AlwaysOrientOutward = false,
-                RunRepairPass = false
+                RunRepairPass = false,
+                SeedByInteriorRay = outwardShapeIndices.Count > 0,
+                InteriorSeeds = WindingInteriorSeeds,
+                OutwardShapeIndices = outwardShapeIndices,
+                SkipFailedPatches = true,
+                FailureContext = Slice is null
+                    ? $"slice topology {Topology.SliceKey}"
+                    : $"slice {Slice.Key} locations {string.Join(",", Slice.AllNodes)}"
             };
-            MeshWindingReorientation.Reorient(this, options);
-
-            if (HasPolygonShapes)
+            MeshWindingReorientation.Result winding = MeshWindingReorientation.Reorient(this, options);
+            if (winding.PatchFailures is not null)
             {
-                var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(Topology);
-                MorphMeshOutwardOrientation.OrientComponentsOutward(this, ctx);
+                foreach (string failure in winding.PatchFailures)
+                    RecordGenerationError(failure);
             }
 
-            var after = MeshWindingDiagnostics.Analyze(this);
-            if (after.NonManifoldEdges == 0)
-                MeshWindingReorientation.RepairManifoldConsistency(this);
-
-            foreach (MorphMeshFace f in this.MorphFaces)
-                f.NormalIsKnownCorrect = true;
+            if (winding.PatchFailures is null || winding.PatchFailures.Count == 0)
+            {
+                foreach (MorphMeshFace f in this.MorphFaces)
+                    f.NormalIsKnownCorrect = true;
+            }
         }
 
         /// <summary>
@@ -618,6 +788,29 @@ namespace MorphologyMesh
                     continue;
 
                 v.Position = new Vector3(v.Position.X + back.X, v.Position.Y + back.Y, v.Position.Z);
+            }
+
+            for (int i = 0; i < _windingInteriorSeeds.Count; i++)
+            {
+                WindingInteriorSeed seed = _windingInteriorSeeds[i];
+                Vector2 back = -offsets[seed.ShapeIndex];
+                if (back != Vector2.Zero)
+                {
+                    _windingInteriorSeeds[i] = seed with
+                    {
+                        Position = new Vector3(seed.Position.X + back.X, seed.Position.Y + back.Y, seed.Position.Z)
+                    };
+                }
+            }
+
+            foreach (KeyValuePair<int, List<Vector2>> pair in _windingSeedCandidatesByShape)
+            {
+                Vector2 back = -offsets[pair.Key];
+                if (back == Vector2.Zero)
+                    continue;
+
+                for (int i = 0; i < pair.Value.Count; i++)
+                    pair.Value[i] += back;
             }
 
             for (int i = 0; i < offsets.Length; i++)

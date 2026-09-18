@@ -114,6 +114,43 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
+        /// Production FinishSliceMesh caps both open ends then orients. Cap triangles span Z, and if they vote as
+        /// sidewalls they outnumber the loft and invert the frustum (grey interior along the cell centreline).
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_CappedCirclePair_OutwardNormalsSurviveOrientation()
+        {
+            Circle lowerCircle = new(0, 0, 10);
+            Circle upperCircle = new(0, 0, 10);
+            Polygon lower = CirclePolygon(lowerCircle, 8);
+            Polygon upper = CirclePolygon(upperCircle, 8);
+
+            SliceTopology topology = new(
+                [lower, upper],
+                [false, true],
+                [0.0, 70.0],
+                shapeLocationTypes: [LocationType.CIRCLE, LocationType.CIRCLE],
+                shapeCircles: [lowerCircle, upperCircle],
+                sliceThickness: 70.0);
+
+            BajajGeneratorMesh mesh = new(topology);
+            BajajMeshGenerator.GenerateFaces(mesh);
+            mesh.CapMeshEnd(true);
+            mesh.CapMeshEnd(false);
+            mesh.EnsureFacesHaveExternalNormals();
+            mesh.RecalculateNormals();
+
+            AssertOutwardCirclePair(mesh, lowerCircle.Center, upperCircle.Center);
+
+            var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(mesh.Topology);
+            int flips = MorphMeshOutwardOrientation.OrientComponentsOutward(mesh, ctx);
+            mesh.RecalculateNormals();
+
+            Assert.AreEqual(0, flips, "A second outward pass must not invert a capped circle frustum.");
+            AssertOutwardCirclePair(mesh, lowerCircle.Center, upperCircle.Center);
+        }
+
+        /// <summary>
         /// A two-circle structure is capped at both ends; the caps must close the surface rather than leave the
         /// inner ring as an open frustum (RPC1 368453/368452 reported holes:20).
         /// </summary>
@@ -176,6 +213,11 @@ namespace MorphologyMeshTest
 
             BajajGeneratorMesh mesh = new(topology);
             BajajMeshGenerator.GenerateFaces(mesh);
+
+            Assert.IsTrue(mesh.WindingInteriorSeeds.Any(seed =>
+                    seed.ShapeIndex == 0
+                    && Vector2.Distance(seed.Position.XY(), (lowerCircle.Center + upperCircle.Center) / 2.0) < 0.05),
+                "The pre-cooked circle loft must retain its centerline as the outward-winding seed.");
 
             double lowerX = mesh.MorphVerticies
                 .Where(v => v.ShapeIndex is PolygonIndex pi && pi.ShapeIndex == 0)
@@ -254,6 +296,39 @@ namespace MorphologyMeshTest
 
             Assert.IsTrue(minimumAngle > 0.15,
                 $"Aligned samples and zipper traversal should avoid thin twisted triangles; minimum angle was {minimumAngle * 180.0 / Math.PI:F2} degrees.");
+        }
+
+        private static void AssertOutwardCirclePair(BajajGeneratorMesh mesh, Vector2 lowerCenter, Vector2 upperCenter)
+        {
+            double minZ = mesh.Vertices.Min(v => v.Position.Z);
+            double maxZ = mesh.Vertices.Max(v => v.Position.Z);
+            MorphMeshVertex upperPole = mesh.Vertices.First(v =>
+                Math.Abs(v.Position.Z - maxZ) < 1e-6 && Vector2.Distance(v.Position.XY(), upperCenter) < 0.05);
+            MorphMeshVertex lowerPole = mesh.Vertices.First(v =>
+                Math.Abs(v.Position.Z - minZ) < 1e-6 && Vector2.Distance(v.Position.XY(), lowerCenter) < 0.05);
+
+            Assert.IsTrue(upperPole.Normal.Z > 0.3,
+                $"Upper cap pole normal {upperPole.Normal} must point +Z, away from the solid.");
+            Assert.IsTrue(lowerPole.Normal.Z < -0.3,
+                $"Lower cap pole normal {lowerPole.Normal} must point -Z, away from the solid.");
+
+            int sampled = 0;
+            foreach (MorphMeshVertex v in mesh.Vertices)
+            {
+                if (v.ShapeIndex is null)
+                    continue;
+                Vector2 fromAxis = v.Position.XY() - (v.Position.Z > 35.0 ? upperCenter : lowerCenter);
+                if (fromAxis.Magnitude < 1)
+                    continue;
+                if (Math.Abs(v.Normal.Z) > 0.5)
+                    continue;
+
+                sampled++;
+                Assert.IsTrue(Vector2.Dot(fromAxis, v.Normal.XY()) > 0,
+                    $"Sidewall vertex {v.Position} normal {v.Normal} must point away from the frustum axis.");
+            }
+
+            Assert.IsTrue(sampled > 0, "Expected loft vertices with mostly-horizontal normals.");
         }
 
         private static Polygon SampledCircle(Circle circle, int segments)

@@ -10,6 +10,7 @@
   <ItemGroup>
     <None Remove="Protos\AnnotationMetaData.proto" />
     <None Remove="Protos\AnnotationTypes.proto" />
+    <None Remove="Protos\Correction.proto" />
     <None Remove="Protos\Location.proto" />
     <None Remove="Protos\PermittedStructureLinks.proto" />
     <None Remove="Protos\Structure.proto" />
@@ -35,6 +36,7 @@
 
   <ItemGroup>
     <Protobuf Include="Protos\AnnotationMetaData.proto" GrpcServices="Both" />
+    <Protobuf Include="Protos\Correction.proto" GrpcServices="Both" />
     <Protobuf Include="Protos\PermittedStructureLinks.proto" GrpcServices="Both" />
     <Protobuf Include="Protos\AnnotationTypes.proto">
       <GrpcServices>Both</GrpcServices>

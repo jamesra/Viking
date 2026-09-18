@@ -7,12 +7,14 @@ using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Duende.IdentityModel.Client;
 using Viking.Common;
 using Viking.Tokens;
 using Viking.UI.WPF.Models;
+using Viking.UI.WPF.Services;
 
 namespace Viking.UI.WPF.ViewModels
 {
@@ -54,6 +56,7 @@ namespace Viking.UI.WPF.ViewModels
                 {
                     PreselectService(_preselectedEndpoint);
                 }
+                _ = ProbeAndRankAsync();
                 _loadCompletedTcs.TrySetResult(true);
             }
             else if (_bearerToken != null)
@@ -303,6 +306,8 @@ namespace Viking.UI.WPF.ViewModels
                 {
                     PreselectService(_preselectedEndpoint);
                 }
+
+                await ProbeAndRankAsync();
             }
             catch (System.Net.Http.HttpRequestException httpEx) when (httpEx.Message.Contains("404"))
             {
@@ -350,6 +355,141 @@ namespace Viking.UI.WPF.ViewModels
                     Trace.WriteLine($"Error parsing segmentation service {kvp.Key}: {ex.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Pings GetServerStatus on each endpoint and reorders the list: reachable, lowest load first.
+        /// Unreachable servers stay in the list (grayed) so the user can still pick them.
+        /// </summary>
+        private async Task ProbeAndRankAsync()
+        {
+            var services = ServiceNodes
+                .Select(node => node.Service)
+                .Where(service => service != null && !string.IsNullOrWhiteSpace(service.Endpoint))
+                .ToList();
+
+            if (services.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var service in services)
+            {
+                service.IsProbing = true;
+            }
+
+            StatusMessage = "Checking which segmentation servers are up…";
+
+            var probes = services.Select(async service =>
+            {
+                var result = await SegmentationServerStatusProbe.ProbeAsync(service.Endpoint, CancellationToken.None);
+                return (service, result);
+            });
+
+            (SegmentationServiceInfo service, SegmentationServerProbeResult result)[] completed;
+            try
+            {
+                completed = await Task.WhenAll(probes);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[SegmentationSelection] Probe batch failed: {ex}");
+                foreach (var service in services)
+                {
+                    service.IsProbing = false;
+                    service.HasProbeCompleted = true;
+                    service.IsReachable = false;
+                }
+                return;
+            }
+
+            RunOnUi(() =>
+            {
+                foreach (var (service, result) in completed)
+                {
+                    ApplyProbeResult(service, result);
+                }
+
+                ApplyPreferenceOrder();
+
+                int reachable = ServiceNodes.Count(node => node.Service?.IsReachable == true);
+                int unreachable = ServiceNodes.Count(node => node.Service?.IsUnreachable == true);
+                StatusMessage = $"{reachable} reachable, {unreachable} unreachable. Listed by preference (lowest load first). Unreachable servers are grayed out but can still be selected.";
+            });
+        }
+
+        private static void ApplyProbeResult(SegmentationServiceInfo service, SegmentationServerProbeResult result)
+        {
+            service.IsProbing = false;
+            service.HasProbeCompleted = true;
+            service.IsReachable = result.IsReachable;
+            if (!result.IsReachable)
+            {
+                return;
+            }
+
+            service.ProbeLatencyMs = result.ProbeLatencyMs;
+            service.InFlightRequests = result.InFlightRequests;
+            service.RecentLatencyMs = result.RecentLatencyMs;
+            service.InferenceWorkers = result.InferenceWorkers;
+            service.Version = result.Version;
+            service.ServerMessage = result.ServerMessage;
+        }
+
+        private void ApplyPreferenceOrder()
+        {
+            string selectedEndpoint = SelectedServiceEndpoint;
+            var ordered = ServiceNodes
+                .OrderBy(node => node.Service == null || !node.Service.IsReachable)
+                .ThenBy(node => node.Service?.PreferenceScore ?? double.MaxValue)
+                .ThenBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            ServiceNodes.Clear();
+            int rank = 1;
+            foreach (var node in ordered)
+            {
+                if (node.Service != null)
+                {
+                    if (node.Service.IsReachable)
+                    {
+                        node.Service.PreferenceRank = rank;
+                        node.Service.IsPreferred = rank == 1;
+                        rank++;
+                    }
+                    else
+                    {
+                        node.Service.PreferenceRank = 0;
+                        node.Service.IsPreferred = false;
+                    }
+                }
+
+                ServiceNodes.Add(node);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_preselectedEndpoint) || !string.IsNullOrWhiteSpace(selectedEndpoint))
+            {
+                PreselectService(string.IsNullOrWhiteSpace(_preselectedEndpoint) ? selectedEndpoint : _preselectedEndpoint);
+                return;
+            }
+
+            var preferred = ServiceNodes.FirstOrDefault(node => node.Service?.IsPreferred == true);
+            if (preferred != null)
+            {
+                SelectedService = preferred;
+            }
+        }
+
+        private static void RunOnUi(Action action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(action);
+                return;
+            }
+
+            action();
         }
 
         private SegmentationServiceInfo ParseServiceData(long id, object data)

@@ -88,6 +88,15 @@ namespace gRPCAnnotationService
 #endif
             });
 
+            string correctionsRoot = Configuration["Corrections:RootDirectory"];
+            services.AddSingleton(_ =>
+            {
+                var catalog = new Viking.SectionCorrection.CorrectionCatalog(correctionsRoot);
+                catalog.Load();
+                catalog.Watch();
+                return catalog;
+            });
+
             var identityServer = Configuration.GetSection("IdentityServer");
             var authority = identityServer["Endpoint"];
             if (string.IsNullOrWhiteSpace(authority))
@@ -184,6 +193,8 @@ namespace gRPCAnnotationService
                 endpoints.MapGrpcService<StructureTypeService>().RequireAuthorization(ProtectedScopePolicy);
                 endpoints.MapGrpcService<PermittedStructureLinksService>().RequireAuthorization(ProtectedScopePolicy);
                 endpoints.MapGrpcService<MetaDataService>().RequireAuthorization(ProtectedScopePolicy);
+                endpoints.MapGrpcService<CorrectionsService>().RequireAuthorization(ProtectedScopePolicy);
+                CorrectionsFileEndpoints.Map(endpoints, ProtectedScopePolicy);
 
                 endpoints.MapGet("/", async context =>
                 {

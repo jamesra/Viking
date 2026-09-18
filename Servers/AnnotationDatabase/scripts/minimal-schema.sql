@@ -645,3 +645,41 @@ BEGIN
     );
 END
 GO
+
+-- Residual-field builder prefilter: structures with enough of their own locations.
+IF OBJECT_ID(N'dbo.ResidualFieldCandidateLocations', N'IF') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE FUNCTION dbo.ResidualFieldCandidateLocations
+    (
+        @MinLocations int = 3
+    )
+    RETURNS TABLE
+    AS
+    RETURN
+    (
+        SELECT L.*
+        FROM dbo.Location AS L
+        INNER JOIN
+        (
+            SELECT ParentID
+            FROM dbo.Location
+            GROUP BY ParentID
+            HAVING COUNT(*) >= ISNULL(NULLIF(@MinLocations, 0), 3)
+        ) AS C ON C.ParentID = L.ParentID
+    )');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectResidualFieldCandidateLocations', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectResidualFieldCandidateLocations
+        @MinLocations int = 3
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        SELECT * FROM dbo.ResidualFieldCandidateLocations(@MinLocations);
+    END');
+END
+GO

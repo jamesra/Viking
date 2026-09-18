@@ -812,6 +812,10 @@ namespace MorphologyMesh
                     int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
                     System.Diagnostics.Debug.Assert(iNewVerts == predictedStartIndex, "Cap vertex indicies must match the indicies predicted before triangulation");
 
+                    int deepest = System.Array.IndexOf(clearance, maxClearance);
+                    Vector2 seedXY = NewVerts[deepest].Key + polyCenter;
+                    mesh.AddWindingInteriorSeed(seedXY.ToVector3(contourZ + (peakOffset * 0.5)), iPoly);
+
                     //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
                     //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
 
@@ -840,8 +844,8 @@ namespace MorphologyMesh
 
                         Vector3 normal = mesh.Normal(MeshFaceVerts);
                         MorphMeshFace newFace = CloseUpper
-                            ? normal.Z < 0 ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse())
-                            : normal.Z > 0 ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse());
+                            ? normal.Z > 0 ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse())
+                            : normal.Z < 0 ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse());
 
 
                         /*
@@ -914,6 +918,8 @@ namespace MorphologyMesh
             double peakOffset = closeUpper ? halfThickness : -halfThickness;
             Vector2 center = sourceCircle.Center;
             double capRadius = sourceCircle.Radius * EndCapScale;
+
+            mesh.AddWindingInteriorSeed(center.ToVector3(contourZ + (peakOffset * 0.5)), iPoly);
 
             List<PolygonIndex> contour = [];
             foreach (PolygonIndex idx in new PolygonVertexEnum(poly, iPoly))
@@ -1025,7 +1031,7 @@ namespace MorphologyMesh
 
         /// <summary>
         /// Adds triangles that already share a consistent winding, reversing all of them together when the summed
-        /// normal points the wrong way for the cap's end.
+        /// normal points into the solid instead of away from it (+Z upper, -Z lower).
         /// </summary>
         private static void AddCappedStrip(BajajGeneratorMesh mesh, List<int[]> strip, bool closeUpper)
         {
@@ -1033,7 +1039,7 @@ namespace MorphologyMesh
             foreach (int[] verts in strip)
                 sumZ += mesh.Normal(verts).Z;
 
-            bool reverse = closeUpper ? sumZ > 0 : sumZ < 0;
+            bool reverse = closeUpper ? sumZ < 0 : sumZ > 0;
             foreach (int[] verts in strip)
             {
                 MorphMeshFace face = reverse ? new MorphMeshFace(verts.Reverse()) : new MorphMeshFace(verts);
@@ -1042,12 +1048,18 @@ namespace MorphologyMesh
             }
         }
 
+        /// <summary>
+        /// Winds a cap triangle so the normal points away from the solid: +Z on an upper end, -Z on a lower end.
+        /// Called from <see cref="CapCircleEnd"/>. The previous test forced the opposite sign and left
+        /// <see cref="MorphMeshOutwardOrientation.OrientComponentsOutward"/> to undo it, which cap faces
+        /// outvoted when they were misclassified as sidewalls.
+        /// </summary>
         private static void AddCappedTriangle(BajajGeneratorMesh mesh, int[] verts, bool closeUpper)
         {
             Vector3 normal = mesh.Normal(verts);
             MorphMeshFace face = closeUpper
-                ? normal.Z < 0 ? new MorphMeshFace(verts) : new MorphMeshFace(verts.Reverse())
-                : normal.Z > 0 ? new MorphMeshFace(verts) : new MorphMeshFace(verts.Reverse());
+                ? normal.Z > 0 ? new MorphMeshFace(verts) : new MorphMeshFace(verts.Reverse())
+                : normal.Z < 0 ? new MorphMeshFace(verts) : new MorphMeshFace(verts.Reverse());
             face.NormalIsKnownCorrect = true;
             mesh.AddFace(face);
         }

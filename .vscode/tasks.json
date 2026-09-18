@@ -88,6 +88,21 @@
       "problemMatcher": "$msCompile",
       "group": { "kind": "build", "isDefault": false },
       "presentation": { "reveal": "silent" }
+    },
+    {
+      "label": "build-section-correction-builder",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/Servers/SectionCorrectionBuilder/SectionCorrectionBuilder.csproj",
+        "/p:Configuration=Debug",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary;ForceNoAlign"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "silent" }
     }
   ]
 }

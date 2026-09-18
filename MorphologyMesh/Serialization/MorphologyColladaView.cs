@@ -82,13 +82,86 @@ namespace MorphologyMesh
             ID = id;
             Mesh = mesh;
             Material = mat;
-            Name = string.IsNullOrWhiteSpace(displayName) ? $"Struct-{id}" : displayName;
+            Name = string.IsNullOrWhiteSpace(displayName) ? CreateDisplayName(id, null) : displayName;
         }
 
         public readonly ulong ID;
 
-        /// <summary>Outliner / node display name (e.g. PSD-12345). Uniqueness stays on <see cref="NodeName"/>.</summary>
-        public string Name { get; set; }
+        private string _name;
+
+        /// <summary>
+        /// Blender/Collada outliner name: <c>StructureID-TypeLabel</c> (e.g. 9025-Cell).
+        /// Leading digits are allowed here; <see cref="GeometryId"/> is the NCName used in XML ids.
+        /// nchar padding in the type label is collapsed so it does not appear in the outliner.
+        /// Uniqueness stays on <see cref="NodeName"/>.
+        /// </summary>
+        public string Name
+        {
+            get => _name;
+            set => _name = CollapseOutlinerWhitespace(value) ?? CreateDisplayName(ID, null);
+        }
+
+        /// <summary>
+        /// Collada outliner name: StructureID, then '-' and the trimmed structure-type label.
+        /// </summary>
+        public static string CreateDisplayName(ulong structureId, string typeLabel)
+        {
+            string label = typeLabel?.Trim();
+            if (string.IsNullOrWhiteSpace(label))
+                return structureId.ToString();
+            return $"{structureId}-{label}";
+        }
+
+        /// <summary>
+        /// NCName prefix for geometry/source ids. Differs from <see cref="Name"/> when the
+        /// outliner name starts with a digit — XML ids cannot.
+        /// </summary>
+        public string GeometryId => ToColladaXmlId(Name) ?? $"id-{ID}";
+
+        /// <summary>
+        /// Collapse padding and other whitespace so the result is a legal XML NCName for Collada ids.
+        /// </summary>
+        public static string ToColladaXmlId(string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(displayName))
+                return null;
+
+            System.Text.StringBuilder id = new(displayName.Length);
+            bool pendingSeparator = false;
+            foreach (char c in displayName.Trim())
+            {
+                if (char.IsWhiteSpace(c) || c == '-')
+                {
+                    pendingSeparator = id.Length > 0;
+                    continue;
+                }
+
+                if (char.IsLetterOrDigit(c) || c == '_' || c == '.')
+                {
+                    if (pendingSeparator)
+                    {
+                        id.Append('-');
+                        pendingSeparator = false;
+                    }
+
+                    id.Append(c);
+                }
+            }
+
+            if (id.Length == 0)
+                return null;
+
+            return char.IsLetter(id[0]) || id[0] == '_' ? id.ToString() : "id-" + id;
+        }
+
+        static string CollapseOutlinerWhitespace(string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(displayName))
+                return null;
+
+            string[] tokens = displayName.Trim().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            return tokens.Length == 0 ? null : string.Join(" ", tokens);
+        }
 
         public string NodeName => $"NodeID-{ID}";
 

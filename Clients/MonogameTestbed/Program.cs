@@ -16,17 +16,34 @@ using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
-#if WINDOWS || LINUX
-
     /// <summary>
-    /// Registration correction applied to morphology before meshing.
+    /// Independent registration fixes run before SliceGraph.Create. Combine with OR.
+    /// Default is <see cref="All"/> (everything): residual field, then outlier curvefit.
     /// </summary>
+    [Flags]
     public enum CorrectionMode
     {
         None = 0,
+
+        /// <summary>
+        /// Spatial mean displacement from neighboring process curve-residuals.
+        /// Corrects smoothly varying leftover registration after Stos. Does not run curvefit.
+        /// </summary>
         Neighbor = 1,
+
+        /// <summary>
+        /// Leave-one-out Catmull-Rom for large outliers the field cannot represent
+        /// (fold, tear, a contour far from local consensus). Later than <see cref="Neighbor"/>.
+        /// </summary>
         CurveFit = 2,
-        All = 3,
+
+        /// <summary>
+        /// Every fix, in order: <see cref="Neighbor"/> then <see cref="CurveFit"/>. CLI default.
+        /// </summary>
+        All = Neighbor | CurveFit,
+
+        /// <summary>Alias of <see cref="All"/>.</summary>
+        Everything = All,
     }
 
     /// <summary>
@@ -151,15 +168,15 @@ namespace MonogameTestbed
             public bool InvertZ { get; set; }
 
             /// <summary>
-            /// Registration correction before SliceGraph.Create.
-            /// Values: none, neighbor, curvefit, all (default).
+            /// Registration correction flags before SliceGraph.Create.
+            /// Values: none, neighbor, curvefit, all/everything (default). Combine as "neighbor,curvefit".
             /// </summary>
             [Option("correction", Default = "all",
-                HelpText = "Registration correction: none | neighbor (hop field, then curvefit Sample-null processes/terminals) | curvefit | all (neighbor, unmoved curvefit, then full curvefit). Default all.")]
+                HelpText = "Registration fixes (flags): none | neighbor (residual displacement field) | curvefit (outlier pass for folds/tears) | all/everything (neighbor then curvefit). Default all.")]
             public string CorrectionParam { get; set; }
 
             /// <summary>
-            /// Parsed <see cref="CorrectionParam"/>. Omitted / blank is <see cref="CorrectionMode.All"/>.
+            /// Parsed <see cref="CorrectionParam"/>. Omitted / blank is <see cref="CorrectionMode.All"/> (everything).
             /// </summary>
             public CorrectionMode Correction { get; private set; } = CorrectionMode.All;
 
@@ -184,6 +201,15 @@ namespace MonogameTestbed
             [Option("correction-curvefit-window", Default = 7,
                 HelpText = "Curvefit leave-one-out half-window size (default 7).")]
             public int CorrectionCurveFitWindow { get; set; }
+
+            [Option("corrections-dir", HelpText = "Published correction root ({StosGroup}/manifest.json). When set, --correction neighbor loads this field instead of OData neighbors.")]
+            public string CorrectionsDirectory { get; set; }
+
+            [Option("stos-group", HelpText = "StosGroup name under --corrections-dir (default: first set in the directory).")]
+            public string CorrectionStosGroup { get; set; }
+
+            [Option("show-correction-field", Default = false, HelpText = "Draw the published residual quiver on BajajTest 2D views.")]
+            public bool ShowCorrectionField { get; set; }
 
             /// <summary>
             /// 0 = use env <c>VIKING_ODATA_MAX_CONCURRENT</c> or factory default (4).
@@ -262,7 +288,7 @@ namespace MonogameTestbed
 
             internal TestMode? StartupTestMode { get; private set; }
 
-            [Option("screenshots", Required = false, HelpText = "Dump BAJAJTEST view PNGs under the output folder", Default = false)]
+            [Option("screenshots", Required = false, HelpText = "Dump view PNGs under the output folder (BAJAJTEST stage views, or a single frame for other modes)", Default = false)]
             public bool Screenshots { get; set; }
 
             [Option("repro", Required = false, HelpText = "BAJAJTEST ReproSet index, range, comma list, or 'all'")]
@@ -471,8 +497,8 @@ namespace MonogameTestbed
                     return;
                 }
 
-                string known = "none, neighbor, curvefit, all";
-                throw new ArgumentException($"Unknown --correction value '{CorrectionParam}'. Expected one of: {known}.");
+                string known = "none, neighbor, curvefit, all, everything";
+                throw new ArgumentException($"Unknown --correction value '{CorrectionParam}'. Expected one of: {known} (flags may be combined, e.g. neighbor,curvefit).");
             }
 
             private void ParseStartupMode()
@@ -870,5 +896,4 @@ namespace MonogameTestbed
 
 
     }
-#endif
 }

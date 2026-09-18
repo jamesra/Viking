@@ -86,6 +86,8 @@ namespace MorphologyMeshTest.DifficultCases
 
             Assert.IsFalse(mesh.GenerationHadErrors, $"Face generation reported errors: {report}");
             Assert.IsTrue(report.IsValidSliceSurface, $"Mesh is not a complete surface: {report}");
+            Assert.AreEqual(0, report.IsolatedEdges,
+                $"Closed case must not leave isolated edges: {report}");
         }
 
         [TestMethod]

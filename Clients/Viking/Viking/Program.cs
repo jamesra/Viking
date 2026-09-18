@@ -1,7 +1,6 @@
 // #define USEASPMEMBERSHIP
 
 using CommandLine;
-using IdentityModel.Client;
 using System;
 using System.Collections.Specialized;
 using System.Collections.Generic;

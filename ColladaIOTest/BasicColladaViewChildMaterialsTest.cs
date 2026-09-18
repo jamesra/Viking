@@ -22,15 +22,15 @@ namespace ColladaIOTest
             var typeCell = new MaterialLighting("Type1", RgbaColor.FromRgb(100, 149, 237));
 
             Mesh3D empty = new();
-            StructureModel childA = new(100, empty, typePsd, "PSD-100")
+            StructureModel childA = new(100, empty, typePsd, StructureModel.CreateDisplayName(100, "PSD"))
             {
                 Translation = new Vector3(1, 0, 0)
             };
-            StructureModel childB = new(101, empty, typePsd, "PSD-101")
+            StructureModel childB = new(101, empty, typePsd, StructureModel.CreateDisplayName(101, "PSD"))
             {
                 Translation = new Vector3(2, 0, 0)
             };
-            StructureModel parent = new(10, empty, typeCell, "Cell-10")
+            StructureModel parent = new(10, empty, typeCell, StructureModel.CreateDisplayName(10, "Cell"))
             {
                 Translation = new Vector3(0, 0, 0)
             };
@@ -70,9 +70,9 @@ namespace ColladaIOTest
                 .Select(n => (string)n.Attribute("name"))
                 .Where(n => n != null)
                 .ToList();
-            Assert.IsTrue(nodeNames.Contains("PSD-100"));
-            Assert.IsTrue(nodeNames.Contains("PSD-101"));
-            Assert.IsTrue(nodeNames.Contains("Cell-10"));
+            Assert.IsTrue(nodeNames.Contains("100-PSD"));
+            Assert.IsTrue(nodeNames.Contains("101-PSD"));
+            Assert.IsTrue(nodeNames.Contains("10-Cell"));
         }
     }
 }

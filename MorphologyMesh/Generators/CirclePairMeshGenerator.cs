@@ -37,6 +37,16 @@ namespace MorphologyMesh
 
             LoftRings(mesh, upper, lower);
 
+            Circle[] circles = mesh.Topology.ShapeCircles;
+            Vector2 lowerCenter = circles is not null && circles.Length > iLower && circles[iLower].Radius > 0
+                ? circles[iLower].Center
+                : ((Polygon)mesh.Shapes[iLower]).Centroid;
+            Vector2 upperCenter = circles is not null && circles.Length > iUpper && circles[iUpper].Radius > 0
+                ? circles[iUpper].Center
+                : ((Polygon)mesh.Shapes[iUpper]).Centroid;
+            Vector2 centerAtMidSlice = (lowerCenter + upperCenter) / 2.0;
+            mesh.AddWindingInteriorSeed(centerAtMidSlice.ToVector3(mesh.SliceCenterZ), iLower);
+
             foreach (MorphMeshEdge edge in mesh.MorphEdges.Where(e => e.Type == EdgeType.UNKNOWN))
                 edge.Type = mesh[edge.A].Position.XY() == mesh[edge.B].Position.XY() ? EdgeType.CORRESPONDING : EdgeType.SURFACE;
 
@@ -112,16 +122,18 @@ namespace MorphologyMesh
                         <= Vector3.DistanceSquared(mesh[upperCurrent].Position, mesh[lowerNext].Position);
                 }
 
+                //CCW rings viewed from +Z: (U, L, U_next) / (U, L, L_next) have +radial normals. The previous
+                //(U, U_next, L) winding was inward and relied on OrientComponentsOutward to undo it.
                 if (advanceUpper)
                 {
                     int upperNext = upper[(upperStep + 1) % upper.Length];
-                    mesh.AddFace(new MorphMeshFace(upperCurrent, upperNext, lowerCurrent));
+                    mesh.AddFace(new MorphMeshFace(upperCurrent, lowerCurrent, upperNext));
                     upperStep++;
                 }
                 else
                 {
                     int lowerNext = lower[(lowerStart + lowerStep + 1) % lower.Length];
-                    mesh.AddFace(new MorphMeshFace(upperCurrent, lowerNext, lowerCurrent));
+                    mesh.AddFace(new MorphMeshFace(upperCurrent, lowerCurrent, lowerNext));
                     lowerStep++;
                 }
             }

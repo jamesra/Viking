@@ -1241,6 +1241,17 @@ namespace MorphologyMesh
         public void RemoveInvalidEdges() => RemoveInvalidEdges(this);
 
         /// <summary>
+        /// Drop non-contour edges that never received a face. A rejected SURFACE candidate with no remaining
+        /// purpose would otherwise count as an isolated-edge defect after both face-generation passes.
+        /// Contour edges with zero faces stay; they are untiled seams the manifold report must still show.
+        /// </summary>
+        public void RemoveIsolatedNonContourEdges()
+        {
+            foreach (MorphMeshEdge edge in MorphEdges.Where(e => e.Type != EdgeType.CONTOUR && e.Faces.Count == 0).ToArray())
+                RemoveEdge(edge);
+        }
+
+        /// <summary>
         /// An edge still typed UNKNOWN after a removal pass means classification never reached it, which is not fatal
         /// and is expected whenever the pass runs after faces have been added.  The count is surfaced so a mesh full
         /// of unclassified edges is visible in the BajajTest and BajajMultiTest logs instead of passing unnoticed.

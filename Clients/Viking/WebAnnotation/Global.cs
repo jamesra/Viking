@@ -894,9 +894,11 @@ namespace WebAnnotation
         }
 #endif
 
+#if NETFRAMEWORK
         /// <summary>
         /// After the viewer is up, jump to StartupArguments["location"] if it is a Location ID
         /// (same action as Annotation → Goto Location ID). Coordinate jumps use X/Y/Z/DS instead.
+        /// Viking.UI.State is the WinForms viewer; Jotunn's net10 WebAnnotation build has no equivalent.
         /// </summary>
         private static void ScheduleStartupLocationJump()
         {
@@ -933,6 +935,7 @@ namespace WebAnnotation
                 Trace.WriteLine("Startup Goto Location timed out waiting for viewer.", "WebAnnotation");
             });
         }
+#endif
 
         private static bool GetEndpointFromXML(XElement elem)
         {
