@@ -117,6 +117,66 @@ namespace VikingXNAGraphics
     {
         #region static
 
+        private static readonly object BasicEffectCacheLock = new();
+        private static readonly Dictionary<GraphicsDevice, BasicEffect> BasicEffectCache = [];
+        private static readonly object BufferCacheLock = new();
+        private static readonly Dictionary<GraphicsDevice, (VertexBuffer vb, IndexBuffer ib, int vertexCapacity, int indexCapacity)> BufferCache = [];
+
+        internal static BasicEffect GetOrCreateBasicEffect(GraphicsDevice device)
+        {
+            if (device == null || device.IsDisposed)
+                return null;
+            lock (BasicEffectCacheLock)
+            {
+                if (BasicEffectCache.TryGetValue(device, out var effect) && effect != null && !effect.IsDisposed)
+                    return effect;
+                BasicEffectCache.Remove(device);
+                var newEffect = new BasicEffect(device);
+                BasicEffectCache[device] = newEffect;
+                return newEffect;
+            }
+        }
+
+        /// <summary>
+        /// Drops cached BasicEffect and circle GPU buffers after a device reset.
+        /// Called from GraphicsDeviceService.ClearDeviceDependentCaches.
+        /// </summary>
+        public static void ClearDeviceDependentCaches()
+        {
+            lock (BasicEffectCacheLock)
+            {
+                BasicEffectCache.Clear();
+            }
+            lock (BufferCacheLock)
+            {
+                BufferCache.Clear();
+            }
+        }
+
+        private static void GetOrCreateCircleBuffers(GraphicsDevice device, int vertexCount, int indexCount,
+            out VertexBuffer vb, out IndexBuffer ib)
+        {
+            vb = null;
+            ib = null;
+            if (device == null || device.IsDisposed || vertexCount <= 0 || indexCount <= 0)
+                return;
+            lock (BufferCacheLock)
+            {
+                if (BufferCache.TryGetValue(device, out var cached) && cached.vb != null && !cached.vb.IsDisposed
+                    && cached.vertexCapacity >= vertexCount && cached.indexCapacity >= indexCount)
+                {
+                    vb = cached.vb;
+                    ib = cached.ib;
+                    return;
+                }
+                cached.vb?.Dispose();
+                cached.ib?.Dispose();
+                vb = new VertexBuffer(device, typeof(VertexPositionColorTexture), Math.Max(vertexCount, 256), BufferUsage.None);
+                ib = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, Math.Max(indexCount, 384), BufferUsage.None);
+                BufferCache[device] = (vb, ib, vb.VertexCount, ib.IndexCount);
+            }
+        }
+
         //static double BeginFadeCutoff = 0.1;
         static readonly double InvisibleCutoff = 1.5f;
 

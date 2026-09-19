@@ -123,6 +123,8 @@ namespace VikingXNAGraphics
             if (unit_circle_index_buffers.TryGetValue(device, out IndexBuffer ib))
             {
                 if (!ib.IsDisposed) return ib;
+
+                unit_circle_index_buffers.Remove(device);
             }
 
             ib = CreateUnitCircleIndexBuffer(device);
@@ -178,6 +180,16 @@ namespace VikingXNAGraphics
             VertexBuffer vb = new(device, typeof(VertexPositionColorTexture), SquareVerts.Length, BufferUsage.WriteOnly);
             vb.SetData<VertexPositionColorTexture>(SquareVerts);
             return vb;
+        }
+
+        /// <summary>
+        /// Drops cached unit-circle GPU buffers so they are rebuilt after a device reset.
+        /// Called from GraphicsDeviceService.ClearDeviceDependentCaches.
+        /// </summary>
+        public static void ClearDeviceDependentCaches()
+        {
+            unit_circle_index_buffers.Clear();
+            unit_circle_vertex_buffers.Clear();
         }
 
         //        static public VertexDeclaration VertexPositionColorTextureDecl = null;
