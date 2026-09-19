@@ -73,7 +73,7 @@ namespace WebAnnotation.UI.Commands
                 Execute();
             }
 
-            base.OnMouseDown(sender, e);
+            base.OnMouseUp(sender, e);
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
