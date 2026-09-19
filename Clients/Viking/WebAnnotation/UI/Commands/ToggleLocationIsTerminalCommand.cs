@@ -1,5 +1,5 @@
 using System;
-
+using System.ServiceModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
@@ -13,8 +13,18 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
+            bool previous = target.Terminal;
             target.Terminal = !target.Terminal;
-            System.Threading.Tasks.Task t = new(() => WebAnnotation.AnnotationOverlay.SaveLocationsWithMessageBoxOnError());
+            try
+            {
+                Store.Locations.Save();
+            }
+            catch (FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+                target.Terminal = previous;
+            }
+
             base.Execute();
         }
     }
