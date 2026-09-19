@@ -539,22 +539,27 @@ namespace WebAnnotation
                                     var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out GridVector2[] volume_points);
                                     var volume_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(mosaic_medial_axis_points, out GridVector2[] volume_medial_axis_points);
                                     var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand),
-                                        [Parent, volume_medial_axis_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
+                                    Parent.CommandQueue.EnqueueCommand(new SegmentationCommand(
+                                        Parent,
+                                        volume_medial_axis_points,
+                                        Array.Empty<GridVector2>(),
+                                        segmentedVolumePolygon =>
+                                        {
+                                            LocationObj newLoc = new(loc.Parent,
+                                                Parent.Section.Number,
+                                                loc.TypeCode);
+                                            try
                                             {
-                                                LocationObj newLoc = new(loc.Parent,
-                                                    Parent.Section.Number,
-                                                    loc.TypeCode);
-                                                try
-                                                {
-                                                    newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, segmentedVolumePolygon.ToSqlGeometry());
-                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
-                                                }
-                                                catch (ArgumentException e)
-                                                {
-                                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                }
-                                            }), channelManager, (long?)loc.Parent.TypeID]);
+                                                newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, segmentedVolumePolygon.ToSqlGeometry());
+                                                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
+                                            }
+                                            catch (ArgumentException e)
+                                            {
+                                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                            }
+                                        },
+                                        channelManager,
+                                        loc.Parent.TypeID));
 
                                 }
                             );

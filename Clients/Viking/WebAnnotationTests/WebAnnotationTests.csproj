@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\CommandConstructorBinderTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="Commands\SegmentationRequestCoalescerTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />

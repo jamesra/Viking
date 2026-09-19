@@ -44,7 +44,9 @@ namespace Viking.UI.Commands
         public readonly System.Type CommandType = type;
         public readonly Object[] Args = args ?? [];
 
-        public Command GetOrCreateCommand() => Activator.CreateInstance(CommandType, Args) as Command ?? throw new NullReferenceException($"Failed to create command of type {CommandType}");
+        public Command GetOrCreateCommand() =>
+            CommandConstructorBinder.Create(CommandType, Args) as Command
+            ?? throw new NullReferenceException($"Failed to create command of type {CommandType}");
 
     }
 
@@ -92,6 +94,18 @@ namespace Viking.UI.Commands
         public void EnqueueCommand<T>(params object[] Args)
         {
             ICommandQueueEntry entry = new CommandConstructorQueueEntry(typeof(T), Args);
+            _CommandQueue.Enqueue(entry);
+            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
+        }
+
+        /// <summary>
+        /// Queue an already-constructed command to run after the current command completes.
+        /// Prefer this over <see cref="EnqueueCommand(Type, object[])"/> when the caller
+        /// can bind a constructor at compile time (optional parameters, interface vs array).
+        /// </summary>
+        public void EnqueueCommand(Command command)
+        {
+            ICommandQueueEntry entry = new CommandQueueEntry(command);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
