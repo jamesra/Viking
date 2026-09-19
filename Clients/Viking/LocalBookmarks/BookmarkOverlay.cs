@@ -69,7 +69,7 @@ namespace LocalBookmarks
         object ISectionOverlayExtension.ObjectAtPosition(GridVector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
-            if (!Global.HasDocuments)
+            if (!Global.BookmarksVisible || !Global.HasDocuments)
                 return null;
 
             BookmarkUIObj nearest = null;
@@ -137,7 +137,7 @@ namespace LocalBookmarks
             basicEffect.FogEnabled = false;
             basicEffect.LightingEnabled = false;
 
-            if (!Global.HasDocuments)
+            if (!Global.BookmarksVisible || !Global.HasDocuments)
                 return;
 
             foreach (BookmarkDocument document in Global.Documents.Documents)
