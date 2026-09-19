@@ -29,6 +29,7 @@
     <Compile Include="DialogSmokeTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
+    <Compile Include="VolumePathTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="LocationActionTests.cs" />
     <Compile Include="MouseActionSupportTests.cs" />

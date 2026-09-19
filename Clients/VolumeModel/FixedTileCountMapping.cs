@@ -77,7 +77,8 @@ namespace Viking.VolumeModel
             return info.TileFileName;
         }
 
-        internal string TileFileName(string filename, int DownsampleLevel) => $"{CurrentPyramid.Path}{System.IO.Path.DirectorySeparatorChar}{DownsampleLevel:D3}{System.IO.Path.DirectorySeparatorChar}{filename}";
+        internal string TileFileName(string filename, int DownsampleLevel) =>
+            VolumePath.JoinRelative(Section.volume?.Host, CurrentPyramid.Path, DownsampleLevel.ToString("D3"), filename);
 
         /*
         private int _Initialized = 0;

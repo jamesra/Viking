@@ -235,7 +235,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public async Task<ITransform[]> LoadTransform(CancellationToken token)
         {
-            Uri mosaicURI = new(this.RootPath + '/' + MosaicPath);
+            Uri mosaicURI = new(VolumePath.Combine(this.RootPath, MosaicPath));
             DateTime serverlastModified = DateTime.MaxValue;
             serverlastModified = await TilesToSectionMapping.ServerSideLastModifed(mosaicURI, token).ConfigureAwait(false);
             if (token.IsCancellationRequested)
