@@ -18,7 +18,7 @@ namespace Viking.VolumeModel
         public override string TileFullPath(int iX, int iY, int DownsampleLevel)
         {
             string filename = this.TileTextureFileName(iX, iY);
-            return VolumePath.JoinRelative(Section.volume?.Host, TileGridPath, DownsampleLevel.ToString("D3"), filename);
+            return VolumePath.JoinRelative(Section.volume?.Host, TileGridPath, DownsampleLevel.ToString(GridCoordFormat), filename);
         }
 
 

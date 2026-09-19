@@ -307,7 +307,7 @@ namespace Viking.VolumeModel
             {
                 //This code remains, but the value is replaced if a value is found in the XML file
                 this._Host = RemoveXMLExtension(path);
-                this._IsLocal = false;
+                this._IsLocal = true;
             }
 
             this._Host = path;
