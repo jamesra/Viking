@@ -20,11 +20,26 @@ namespace LocalBookmarks
             get => _Parent;
             set
             {
+                if (this is FolderUIObj fileRoot && fileRoot.IsDocumentRoot)
+                    return;
+
+                FolderUIObj? oldParent = _Parent;
+                BookmarkDocument? oldDocument = Global.HasDocuments && oldParent != null
+                    ? Global.FindOwner(oldParent)
+                    : null;
+
                 _Parent?.RemoveChild(this);
 
                 _Parent = value is null ? Global.FolderUIObjRoot : value;
 
                 _Parent.AddChild(this);
+
+                if (Global.HasDocuments && oldDocument != null)
+                {
+                    BookmarkDocument newDocument = Global.FindOwner(_Parent);
+                    if (!ReferenceEquals(oldDocument, newDocument))
+                        Global.SaveDocument(oldDocument);
+                }
             }
         }
 
@@ -87,7 +102,8 @@ namespace LocalBookmarks
         public override void Save()
         {
             CallBeforeSave();
-            Global.Save();
+            FolderUIObj? folder = this as FolderUIObj ?? _Parent;
+            Global.SaveOwningDocument(folder);
             CallAfterSave();
         }
 
@@ -97,10 +113,15 @@ namespace LocalBookmarks
 
         public override Type[] AssignableParentTypes => [typeof(FolderUIObj)];
 
-        public override void SetParent(IUIObject parent)
+        public override void SetParent(IUIObject? parent)
         {
+            if (this is FolderUIObj fileRoot && fileRoot.IsDocumentRoot)
+                return;
+
             if (parent is FolderUIObj parentFolder)
                 Parent = parentFolder;
+            else if (parent is null)
+                Parent = Global.FolderUIObjRoot;
         }
 
     }

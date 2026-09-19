@@ -217,9 +217,8 @@ namespace LocalBookmarks
         {
             CallBeforeDelete();
             Parent.RemoveChild(this);
-            //  Parent.Data.Bookmarks.Remove(this.Data);
             CallAfterDelete();
-            Global.Save();
+            Global.SaveOwningDocument(Parent);
         }
 
         public override string ToolTip => this.Comment;

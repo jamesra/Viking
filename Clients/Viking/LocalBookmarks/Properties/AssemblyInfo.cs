@@ -10,3 +10,4 @@ using Viking.Common;
 [assembly: ComVisible(false)]
 
 [assembly: VikingExtension("Local Bookmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("LocalBookmarksTests")]
