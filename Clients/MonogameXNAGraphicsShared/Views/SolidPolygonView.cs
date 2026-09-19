@@ -287,7 +287,7 @@ namespace VikingXNAGraphics
                 case OverlayStyle.Alpha:
                     MeshView<VertexPositionColor>.Draw(device,
                         scene,
-                        effect: new BasicEffect(device),
+                        effect: CircleView.GetOrCreateBasicEffect(device),
                         cullmode: CullMode.CullClockwiseFace,
                         fillMode: FillMode.Solid,
                         meshmodels: [.. items.Select(item => item.meshModel)]);
