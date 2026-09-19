@@ -499,6 +499,14 @@ namespace RoundLineCode
 
         }
 
+        /// <summary>
+        /// Releases GPU mesh buffers. DeviceEffectsStore calls this on device reset.
+        /// </summary>
+        public void Dispose()
+        {
+            VikingXNAGraphics.EffectManagerLifetime.DisposeOwnedBuffers(ref vb, ref ib, ref vdecl);
+        }
+
     }
 
     public class LumaOverlayRoundLineManager : RoundLineManager

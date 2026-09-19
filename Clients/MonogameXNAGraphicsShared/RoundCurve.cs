@@ -611,6 +611,14 @@ namespace RoundCurve
                     throw new ArgumentException("Unknown alignment type " + alignment.ToString());
             }
         }
+
+        /// <summary>
+        /// Releases GPU mesh buffers. DeviceEffectsStore calls this on device reset.
+        /// </summary>
+        public void Dispose()
+        {
+            VikingXNAGraphics.EffectManagerLifetime.DisposeOwnedBuffers(ref vb, ref ib, ref vdecl);
+        }
     }
 
     public class CurveManagerHSV : CurveManager

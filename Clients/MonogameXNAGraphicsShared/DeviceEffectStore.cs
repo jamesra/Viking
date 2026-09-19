@@ -51,19 +51,21 @@ namespace VikingXNAGraphics
         {
             if (device == null)
             {
+                DisposeAll();
                 ManagersForDevice.Clear();
                 return;
             }
 
-            if (ManagersForDevice.ContainsKey(device))
+            if (ManagersForDevice.TryGetValue(device, out var manager))
             {
+                manager.Dispose();
                 ManagersForDevice.Remove(device);
             }
 
-            // Also clear any entries for disposed devices
             var disposedDevices = ManagersForDevice.Keys.Where(d => d.IsDisposed).ToList();
             foreach (var disposedDevice in disposedDevices)
             {
+                ManagersForDevice[disposedDevice].Dispose();
                 ManagersForDevice.Remove(disposedDevice);
             }
         }
@@ -73,7 +75,14 @@ namespace VikingXNAGraphics
         /// </summary>
         public static void ClearAll()
         {
+            DisposeAll();
             ManagersForDevice.Clear();
+        }
+
+        private static void DisposeAll()
+        {
+            foreach (var manager in ManagersForDevice.Values)
+                manager.Dispose();
         }
     }
 }

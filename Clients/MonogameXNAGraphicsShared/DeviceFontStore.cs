@@ -27,6 +27,15 @@ namespace VikingXNAGraphics
             Font = content.Load<SpriteFont>(FontName);
         }
 
+        /// <summary>
+        /// Releases the SpriteBatch owned by this font cache entry. SpriteFont stays with ContentManager.
+        /// </summary>
+        public void Dispose()
+        {
+            SpriteBatch?.Dispose();
+            SpriteBatch = null;
+        }
+
         public override bool Equals(object obj)
         {
             if (object.ReferenceEquals(obj, this))
@@ -108,19 +117,23 @@ namespace VikingXNAGraphics
         {
             if (device == null)
             {
+                DisposeAll();
                 ManagersForDevice.Clear();
                 return;
             }
 
-            if (ManagersForDevice.ContainsKey(device))
+            if (ManagersForDevice.TryGetValue(device, out var fonts))
             {
+                foreach (var font in fonts.Values)
+                    font.Dispose();
                 ManagersForDevice.Remove(device);
             }
 
-            // Also clear any entries for disposed devices
             var disposedDevices = ManagersForDevice.Keys.Where(d => d.IsDisposed).ToList();
             foreach (var disposedDevice in disposedDevices)
             {
+                foreach (var font in ManagersForDevice[disposedDevice].Values)
+                    font.Dispose();
                 ManagersForDevice.Remove(disposedDevice);
             }
         }
@@ -130,7 +143,17 @@ namespace VikingXNAGraphics
         /// </summary>
         public static void ClearAll()
         {
+            DisposeAll();
             ManagersForDevice.Clear();
+        }
+
+        private static void DisposeAll()
+        {
+            foreach (var fonts in ManagersForDevice.Values)
+            {
+                foreach (var font in fonts.Values)
+                    font.Dispose();
+            }
         }
     }
 }

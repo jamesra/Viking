@@ -224,6 +224,13 @@ namespace VikingXNAGraphics
             //this.Technique = Techniques.EffectColorLumaOverlayEffect;
         }
 
+        /// <summary>
+        /// Content-loaded Effect stays with ContentManager.
+        /// </summary>
+        public void Dispose()
+        {
+        }
+
         /*
         public static OverlayShaderEffect WrapEffect(Effect effect)
         {
