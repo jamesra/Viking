@@ -162,8 +162,11 @@ namespace WebAnnotation.View
 
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
-            upCircleView = TextureCircleView.CreateUpArrow(_VolumeCircle, modelObj.Parent.Type.Color.ToXNAColor(0.5f));
-            downCircleView = TextureCircleView.CreateDownArrow(_VolumeCircle, modelObj.Parent.Type.Color.ToXNAColor(0.5f));
+            Microsoft.Xna.Framework.Color color = modelObj.Parent is null
+                ? Microsoft.Xna.Framework.Color.Gray.SetAlpha(0.5f)
+                : modelObj.Parent.Type.Color.ToXNAColor(0.5f);
+            upCircleView = TextureCircleView.CreateUpArrow(_VolumeCircle, color);
+            downCircleView = TextureCircleView.CreateDownArrow(_VolumeCircle, color);
         }
 
         private void CreateLabelObjects() => structureLabels = new StructureCircleLabels(modelObj, VolumeCircle, false);
@@ -354,6 +357,7 @@ namespace WebAnnotation.View
                 if (value is null || value.Count == 0)
                 {
                     OverlappedLinkView = null;
+                    return;
                 }
 
                 OverlappedLinkView = new OverlappedLinkCircleView(circleView.Circle, ID, (int)Z, value)
