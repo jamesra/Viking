@@ -9,45 +9,25 @@ namespace Viking.Services
     public static class SettingsManager
     {
         /// <summary>
-        /// Upgrades settings from previous versions to preserve user preferences across updates.
-        /// This migrates settings from version-specific directories to the current version.
-        /// Uses a simple approach: if current settings are empty/default, try to upgrade from previous version.
+        /// Copies user settings from the previous application version once per install.
+        /// VolumeURLs has a Designer default, so a non-empty collection is not proof that Upgrade already ran.
         /// </summary>
         public static void UpgradeSettingsIfNeeded()
         {
             try
             {
                 var settings = Properties.Settings.Default;
-
-                // Check if we have any meaningful settings already (if VolumeURLs is empty, likely first run or after update)
-                var hasExistingSettings = settings.VolumeURLs != null && settings.VolumeURLs.Count > 0;
-
-                if (!hasExistingSettings)
+                if (!settings.UpgradeRequired)
                 {
-                    Trace.WriteLine("[Viking] No existing settings found, attempting to upgrade from previous version...");
-
-                    // Call the built-in Upgrade() method which migrates settings from previous versions
-                    // This will look for settings in older version directories and copy them to current version
-                    settings.Upgrade();
-                    settings.Reload();
-
-                    // Check if we now have settings after upgrade
-                    var hasSettingsAfterUpgrade = settings.VolumeURLs != null && settings.VolumeURLs.Count > 0;
-                    if (hasSettingsAfterUpgrade)
-                    {
-                        var count = settings.VolumeURLs?.Count ?? 0;
-                        Trace.WriteLine($"[Viking] Settings upgraded successfully. Found {count} volume URL(s).");
-                        settings.Save(); // Save the upgraded settings
-                    }
-                    else
-                    {
-                        Trace.WriteLine("[Viking] No settings found in previous version - this appears to be a fresh install.");
-                    }
+                    Trace.WriteLine("[Viking] Settings already upgraded for this version.");
+                    return;
                 }
-                else
-                {
-                    Trace.WriteLine("[Viking] Existing settings found, skipping upgrade.");
-                }
+
+                Trace.WriteLine("[Viking] UpgradeRequired is set, migrating settings from the previous version...");
+                settings.Upgrade();
+                settings.UpgradeRequired = false;
+                settings.Save();
+                Trace.WriteLine("[Viking] Settings upgrade completed.");
             }
             catch (Exception ex)
             {
