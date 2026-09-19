@@ -9,6 +9,19 @@ using System.Threading.Tasks;
 namespace WebAnnotationModel
 {
     /// <summary>
+    /// Region refresh compares elapsed wall-clock time, not TimeSpan.Seconds (0–59).
+    /// Called by RegionLoader and unit tests; a 180s interval never matches .Seconds.
+    /// </summary>
+    public static class RegionRefreshTiming
+    {
+        /// <summary>
+        /// True when more than <paramref name="intervalSeconds"/> have passed since lastQueryUtc.
+        /// </summary>
+        public static bool IsIntervalElapsed(DateTime lastQueryUtc, DateTime nowUtc, double intervalSeconds) =>
+            (nowUtc - lastQueryUtc).TotalSeconds > intervalSeconds;
+    }
+
+    /// <summary>
     /// Stores information about location queries for this region in the volume
     /// </summary>
     public class RegionRequestData<OBJECT>
@@ -185,7 +198,7 @@ namespace WebAnnotationModel
             if (!cell.LastQuery.HasValue)
                 return true;
 
-            return System.TimeSpan.FromTicks(DateTime.UtcNow.Ticks - cell.LastQuery.Value.Ticks).Seconds > RegionUpdateInterval;
+            return RegionRefreshTiming.IsIntervalElapsed(cell.LastQuery.Value, DateTime.UtcNow, RegionUpdateInterval);
         }
 
         /// <summary>

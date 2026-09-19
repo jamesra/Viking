@@ -27,6 +27,7 @@
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
+    <Compile Include="RegionRefreshTimingTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
     <Compile Include="VikingDeepLinkParserTests.cs" />
