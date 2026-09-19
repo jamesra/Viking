@@ -124,6 +124,7 @@ namespace Viking
             Trace.Listeners.Clear();
 #endif
             CreateDebugListener();
+            InitializeMathnet();
             Viking.UI.GpuExceptionHandling.Register();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
@@ -431,6 +432,8 @@ namespace Viking
         {
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? null : volumePath;
+            wpfLoginWindow.InitialUsername = username;
+            wpfLoginWindow.InitialPassword = password;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
@@ -604,8 +607,7 @@ namespace Viking
             string FileName = LogPath + "\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
 
             DebugLogFile = System.IO.File.CreateText(FileName);
-
-            TextWriter SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
+            SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
 
             TextWriterTraceListener Listener = new(SynchronizedDebugWriter, "Viking Log Listener");
             Trace.Listeners.Add(Listener);

@@ -44,6 +44,14 @@ namespace Viking.UI.WPF
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            if (_loginViewModel != null)
+            {
+                if (!string.IsNullOrWhiteSpace(InitialUsername))
+                    _loginViewModel.Username = InitialUsername;
+                if (!string.IsNullOrEmpty(InitialPassword))
+                    _loginViewModel.Password = InitialPassword;
+            }
+
             if (string.IsNullOrWhiteSpace(InitialApiToken))
                 return;
             if (_loginViewModel == null)
@@ -194,6 +202,12 @@ namespace Viking.UI.WPF
 
         /// <summary>Optional Identity volume name from launch-exchange (e.g. RC2).</summary>
         public string InitialVolumeName { get; set; }
+
+        /// <summary>Optional username from -u so the login fields are prefilled.</summary>
+        public string InitialUsername { get; set; }
+
+        /// <summary>Optional password from -p so the login fields are prefilled.</summary>
+        public string InitialPassword { get; set; }
 
         private void InitializeLoginStage()
         {
