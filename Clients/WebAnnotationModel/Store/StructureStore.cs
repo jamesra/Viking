@@ -406,7 +406,9 @@ namespace WebAnnotationModel
                                                                                                                     bounds,
                                                                                                                     MinRadius,
                                                                                                                     LastQueryUtc,
-                                                                                                                    (locs) => OnLoadedCallback([.. locs.Select(l => l.Parent)]),
+                                                                                                                    (locs) => OnLoadedCallback(locs is null
+                                                                                                                        ? []
+                                                                                                                        : [.. locs.Where(l => l?.Parent != null).Select(l => l.Parent)]),
                                                                                                                     token);
             ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
 
