@@ -130,10 +130,9 @@ namespace Viking.UI.Commands
         /// <returns></returns>
         public void Push(Command command)
         {
-            List<ICommandQueueEntry> existingQueue = [.. _CommandQueue.ToArray()];
-            existingQueue.Insert(0, new CommandQueueEntry(command));
+            List<ICommandQueueEntry> rebuilt = [new CommandQueueEntry(command), .. _CommandQueue];
             _CommandQueue.Clear();
-            foreach (CommandQueueEntry e in existingQueue.Select(v => (CommandQueueEntry)v))
+            foreach (ICommandQueueEntry e in rebuilt)
             {
                 _CommandQueue.Enqueue(e);
             }
@@ -373,6 +372,8 @@ namespace Viking.UI.Commands
             Parent.OnPenContact -= OnPenContact;
             Parent.OnPenLeaveContact -= OnPenLeaveContact;
             Parent.OnPenMove -= OnPenMove;
+            Parent.OnPenButtonDown -= OnPenButtonDown;
+            Parent.OnPenButtonUp -= OnPenButtonUp;
 
             Parent.OnGestureBegin -= OnGestureBegin;
             Parent.OnGestureZoom -= OnGestureZoom;
