@@ -71,6 +71,9 @@ namespace LocalBookmarks
         object ISectionOverlayExtension.ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
+            if (!Global.BookmarksVisible)
+                return null;
+
             return RecursiveFindBookmarks(Global.FolderUIObjRoot, WorldPosition, ref distance);
         }
 
@@ -120,6 +123,9 @@ namespace LocalBookmarks
 
             basicEffect.FogEnabled = false;
             basicEffect.LightingEnabled = false;
+
+            if (!Global.BookmarksVisible)
+                return;
 
             RecursiveDrawBookmarks(Global.FolderUIObjRoot, graphicsDevice, basicEffect, scene);
         }
