@@ -3,6 +3,7 @@ using Geometry.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Viking.Common;
@@ -36,6 +37,23 @@ namespace LocalBookmarks
             Data = folder;
             _Parent = parent;
         }
+
+        /// <summary>
+        /// File-root constructor. <paramref name="document"/> makes this node Local or a filename; it is not a nested folder.
+        /// </summary>
+        public FolderUIObj(FolderUIObj? parent, Folder folder, BookmarkDocument document)
+        {
+            Data = folder;
+            _Parent = parent;
+            Document = document ?? throw new ArgumentNullException(nameof(document));
+        }
+
+        /// <summary>
+        /// Set only on top-level Local / extra-file nodes. Nested folders leave this null.
+        /// </summary>
+        internal BookmarkDocument? Document { get; }
+
+        internal bool IsDocumentRoot => Document != null;
 
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
@@ -94,9 +112,18 @@ namespace LocalBookmarks
 
         public override string Name
         {
-            get => Data.Name;
+            get
+            {
+                if (IsDocumentRoot && Global.HasDocuments)
+                    return Global.Documents.DisplayNameOf(Document!);
+
+                return Data.Name;
+            }
             set
             {
+                if (IsDocumentRoot)
+                    return;
+
                 Data.Name = value;
                 Data.Name ??= "";
                 ValueChangedEvent("Name");
@@ -107,6 +134,9 @@ namespace LocalBookmarks
         {
             get
             {
+                if (IsDocumentRoot)
+                    return BuildDocumentRootMenu();
+
                 ContextMenuStrip menu = base.ContextMenu;
 
                 ToolStripMenuItem PlaceBookmarkMenu = new("Place Bookmark...");
@@ -128,12 +158,53 @@ namespace LocalBookmarks
                 ExportXMLMenu.Click += OnExportXML;
                 ExportMenu.DropDownItems.Add(ExportXMLMenu);
 
-                ToolStripMenuItem ImportMenu = new("Import");
+                ToolStripMenuItem ImportMenu = new("Import into folder...");
                 ImportMenu.Click += OnImportXML;
                 menu.Items.Insert(3, ImportMenu);
 
                 return menu;
             }
+        }
+
+        private ContextMenuStrip BuildDocumentRootMenu()
+        {
+            ContextMenuStrip menu = new();
+
+            ToolStripMenuItem PlaceBookmarkMenu = new("Place Bookmark...");
+            PlaceBookmarkMenu.Click += OnPlaceBookmark;
+            menu.Items.Add(PlaceBookmarkMenu);
+
+            ToolStripMenuItem NewFolderMenu = new("New Folder...");
+            NewFolderMenu.Click += OnNewFolder;
+            menu.Items.Add(NewFolderMenu);
+
+            ToolStripMenuItem ExportMenu = new("Export");
+            menu.Items.Add(ExportMenu);
+
+            ToolStripMenuItem ExportHTMLMenu = new("HTML...");
+            ExportHTMLMenu.Click += OnExportHTML;
+            ExportMenu.DropDownItems.Add(ExportHTMLMenu);
+
+            ToolStripMenuItem ExportXMLMenu = new("XML...");
+            ExportXMLMenu.Click += OnExportThisDocument;
+            ExportMenu.DropDownItems.Add(ExportXMLMenu);
+
+            ToolStripMenuItem OpenFileMenu = new("Open File...");
+            OpenFileMenu.Click += (_, _) => Global.PromptAndLoadExtraDocuments();
+            menu.Items.Add(OpenFileMenu);
+
+            if (Document is { IsLocal: false })
+            {
+                ToolStripMenuItem removeMenu = new("Remove");
+                removeMenu.Click += (_, _) => Global.TryUnloadDocument(Document);
+                menu.Items.Add(removeMenu);
+            }
+
+            ToolStripMenuItem propertiesMenu = new("Properties...");
+            propertiesMenu.Click += OnPropertiesClick;
+            menu.Items.Add(propertiesMenu);
+
+            return menu;
         }
 
         public ShapeType Shape
@@ -294,17 +365,29 @@ namespace LocalBookmarks
 
         #region IUIObjectBasic Members
 
-        public override string ToolTip => Data.Name;
+        public override string ToolTip => IsDocumentRoot ? Document!.FilePath : Data.Name;
 
 
+        /// <summary>
+        /// Nested folders are removed from their parent document. File roots unload extras from the session
+        /// (Local is a no-op). Extra files are not deleted from disk.
+        /// </summary>
         public override void Delete()
         {
+            if (IsDocumentRoot)
+            {
+                if (Document is { IsLocal: false })
+                    Global.TryUnloadDocument(Document);
+                return;
+            }
+
             CallBeforeDelete();
             Parent.RemoveChild(this);
-            //   Parent.Data.Folders.Remove(this.Data);
             CallAfterDelete();
-            Global.Save();
+            Global.SaveOwningDocument(Parent);
         }
+
+        public override Type[] AssignableParentTypes => IsDocumentRoot ? [] : [typeof(FolderUIObj)];
 
         #endregion
 
@@ -351,21 +434,53 @@ namespace LocalBookmarks
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
-                Folder newFolder = Folder.Load(fileDialog.FileName);
-                foreach (Folder f in newFolder.Folders)
-                {
-                    FolderUIObj newFolderUI = new(this, f);
-                    this.AddChild(newFolderUI);
-                }
+                MergeFromXmlFile(fileDialog.FileName);
+                Global.SaveOwningDocument(this);
+            }
+        }
 
-                foreach (Bookmark b in newFolder.Bookmarks)
-                {
-                    BookmarkUIObj newBookmarkUI = new(this, b);
-                    this.AddChild(newBookmarkUI);
-                }
+        /// <summary>
+        /// Copies folders and bookmarks from a file into this folder. Writes the owning document, never the source path.
+        /// </summary>
+        internal void MergeFromXmlFile(string xmlFile)
+        {
+            Folder? source = TryReadFolderTree(xmlFile);
+            if (source is null)
+                return;
 
-                //ExportXML(fileDialog.FileName);
-                this.Data.Save(fileDialog.FileName);
+            foreach (Folder f in source.Folders)
+            {
+                FolderUIObj newFolderUI = new(this, f);
+                this.AddChild(newFolderUI);
+            }
+
+            foreach (Bookmark b in source.Bookmarks)
+            {
+                BookmarkUIObj newBookmarkUI = new(this, b);
+                this.AddChild(newBookmarkUI);
+            }
+        }
+
+        private static Folder? TryReadFolderTree(string xmlFile)
+        {
+            try
+            {
+                XRoot root = XRoot.Load(xmlFile);
+                if (root.Folder != null)
+                    return root.Folder;
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                return Folder.Load(xmlFile);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Could not parse provided XML File: " + e.ToString());
+                return null;
             }
         }
 
@@ -405,30 +520,34 @@ namespace LocalBookmarks
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
-                //ExportXML(fileDialog.FileName);
                 this.Data.Save(fileDialog.FileName);
             }
+        }
+
+        protected void OnExportThisDocument(object sender, EventArgs e)
+        {
+            if (Document is null)
+                return;
+
+            SaveFileDialog fileDialog = new()
+            {
+                AutoUpgradeEnabled = true,
+                DefaultExt = ".xml",
+                FileName = Path.GetFileNameWithoutExtension(Document.FilePath),
+                OverwritePrompt = true,
+                Title = "Export Bookmark XML File"
+            };
+
+            if (DialogResult.OK == fileDialog.ShowDialog())
+                Document.Xml.Save(fileDialog.FileName);
         }
 
         #endregion
 
         public void ImportXML(string XMLFile)
         {
-            XRoot BookmarkXMLDoc;
-
-            try
-            {
-                BookmarkXMLDoc = XRoot.Load(XMLFile);
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show("Could not parse provided XML File: " + e.ToString());
-                return;
-            }
-
-            //Walk the new XML and insert it into our nodes
-
-
+            MergeFromXmlFile(XMLFile);
+            Global.SaveOwningDocument(this);
         }
 
     }

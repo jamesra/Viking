@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Windows.Forms;
 using Viking.Common;
-using Viking.UI.BaseClasses;
 using Viking.UI.Controls;
 
 namespace LocalBookmarks
@@ -25,7 +22,10 @@ namespace LocalBookmarks
             InitializeComponent();
 
             Global.AfterUndo += this.OnAfterUndo;
-            Global.RootBookmarkChanged += this.OnRootChanged;
+            Global.DocumentsChanged += this.OnDocumentsChanged;
+
+            this.Tree.TryHandleExternalDrag = OnTreeExternalDrag;
+            this.Tree.TryHandleExternalDrop = OnTreeExternalDrop;
         }
 
         protected void OnCreate(object sender, EventArgs e)
@@ -48,59 +48,27 @@ namespace LocalBookmarks
             this.InitializeTree();
         }
 
-        public void OnRootChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == "FolderUIObjRoot")
-            {
-                this.SetRootFolder(Global.FolderUIObjRoot);
-            }
-        }
+        public void OnDocumentsChanged(object? sender, EventArgs e) => RebuildDocumentTree();
 
-        public void SetRootFolder(FolderUIObj root)
+        /// <summary>
+        /// Shows each loaded file as a top-level node (Local first). Nested folders hang under those roots.
+        /// </summary>
+        public void RebuildDocumentTree()
         {
             Tree.ClearObjects();
 
-            if (root != null)
-            {
-                List<IUIObject> TreeObjectList = [.. root.Folders, .. root.Bookmarks];
+            if (!Global.HasDocuments)
+                return;
 
-                Tree.AddObjects([.. TreeObjectList]);
-
-                Global.FolderUIObjRoot.ChildChanged += OnRootChildChanged;
-            }
-        }
-
-        protected void OnRootChildChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            switch (e.Action)
-            {
-                case NotifyCollectionChangedAction.Reset:
-                    Tree.ClearObjects();
-                    break;
-                case NotifyCollectionChangedAction.Add:
-                    this.Tree.AddObjects(e.NewItems.Cast<IUIObject>());
-                    break;
-                case NotifyCollectionChangedAction.Remove:
-                    foreach (object obj in e.OldItems)
-                    {
-                        if (obj is not IUIObject UIObj)
-                            continue;
-
-                        GenericTreeNode[] nodes = this.Tree.GetNodesForObject(UIObj);
-                        foreach (GenericTreeNode node in nodes)
-                        {
-                            if (node.Parent is null)
-                                this.Tree.RemoveNode(node);
-                        }
-                    }
-
-                    break;
-            }
+            Tree.AddObjects(Global.Documents.Documents
+                .Select(document => document.Root)
+                .Where(root => root != null)
+                .Cast<IUIObject>());
         }
 
         protected override void InitializeTree()
         {
-            //SetRootFolder(Global.FolderUIObjRoot);
+            RebuildDocumentTree();
         }
 
         /// <summary>
@@ -131,7 +99,7 @@ namespace LocalBookmarks
                 ExportXMLMenu.Click += ContextMenuOnExportXML;
                 ExportMenu.DropDownItems.Add(ExportXMLMenu);
 
-                ToolStripMenuItem ImportMenu = new("Import");
+                ToolStripMenuItem ImportMenu = new("Open File...");
                 ImportMenu.Click += ContextMenuOnImportRootFolder;
                 CMenu.Items.Add(ImportMenu);
                 return CMenu;
@@ -212,23 +180,28 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnImportRootFolder(object sender, EventArgs e)
         {
-            OpenFileDialog fileDialog = new()
-            {
-                DefaultExt = ".xml",
-                Title = "Import Bookmark XML File",
-                CheckFileExists = true,
-                AddExtension = true,
-                AutoUpgradeEnabled = true,
-                Multiselect = false
-            };
+            Global.PromptAndLoadExtraDocuments();
+        }
 
-            if (DialogResult.OK == fileDialog.ShowDialog())
-            {
-                Global.FolderUIObjRoot.ChildChanged -= OnRootChildChanged;
-                Global.Load(fileDialog.FileName);
+        private bool OnTreeExternalDrag(DragEventArgs e)
+        {
+            if (!BookmarkFileDrop.IsXmlFileDrop(e.Data))
+                return false;
 
-                //Tree should be initialized by root change event
-            }
+            e.Effect = DragDropEffects.Copy;
+            return true;
+        }
+
+        private bool OnTreeExternalDrop(DragEventArgs e)
+        {
+            string[] paths = BookmarkFileDrop.GetDroppedXmlPaths(e.Data);
+            if (paths.Length == 0)
+                return false;
+
+            foreach (string path in paths)
+                Global.TryLoadExtraDocument(path);
+
+            return true;
         }
 
 
@@ -289,6 +262,9 @@ namespace LocalBookmarks
 
             if (node.Tag is FolderUIObj folder)
             {
+                if (folder.IsDocumentRoot)
+                    return;
+
                 folder.Name = e.Label is null || e.Label.Length == 0 ? "Unnamed" : e.Label;
 
                 folder.Save();
@@ -298,36 +274,31 @@ namespace LocalBookmarks
 
         protected override void OnDragEnter(DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                e.Effect = DragDropEffects.Copy; // Okay
+            if (BookmarkFileDrop.IsXmlFileDrop(e.Data))
+                e.Effect = DragDropEffects.Copy;
             else
                 base.OnDragEnter(e);
         }
 
         protected override void OnDragDrop(DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            string[] paths = BookmarkFileDrop.GetDroppedXmlPaths(e.Data);
+            if (paths.Length > 0)
             {
-                string[] formats = e.Data.GetFormats();
-                string filename = e.Data.GetData(typeof(string)) as string;
-
-                Global.FolderUIObjRoot.ChildChanged -= OnRootChildChanged;
-                Global.Load(filename);
-
-                InitializeTree();
+                foreach (string path in paths)
+                    Global.TryLoadExtraDocument(path);
+                return;
             }
-            else
-            {
-                base.OnDragDrop(e);
-            }
+
+            base.OnDragDrop(e);
         }
 
         protected override void OnDragOver(DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                e.Effect = DragDropEffects.Copy; // Okay
+            if (BookmarkFileDrop.IsXmlFileDrop(e.Data))
+                e.Effect = DragDropEffects.Copy;
             else
-                base.OnDragEnter(e);
+                base.OnDragOver(e);
         }
 
         private void Tree_MouseDown(object sender, MouseEventArgs e)
@@ -342,9 +313,17 @@ namespace LocalBookmarks
                     Viking.UI.State.SelectedObject = null;
                     ContextMenuStrip menu = new();
 
-                    ToolStripMenuItem menuItem = new("New");
-                    menuItem.Click += ContextMenuOnNewRootFolder;
-                    menu.Items.Add(menuItem);
+                    ToolStripMenuItem newFolderItem = new("New Folder");
+                    newFolderItem.Click += ContextMenuOnNewRootFolder;
+                    menu.Items.Add(newFolderItem);
+
+                    ToolStripMenuItem bookmarkItem = new("Place Bookmark...");
+                    bookmarkItem.Click += ContextMenuOnNewRootBookmark;
+                    menu.Items.Add(bookmarkItem);
+
+                    ToolStripMenuItem importItem = new("Open File...");
+                    importItem.Click += ContextMenuOnImportRootFolder;
+                    menu.Items.Add(importItem);
 
                     menu.Show(this, e.Location);
                 }
@@ -353,10 +332,10 @@ namespace LocalBookmarks
 
         private void FolderTreeControl_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                e.Effect = DragDropEffects.Copy; // Okay
+            if (BookmarkFileDrop.IsXmlFileDrop(e.Data))
+                e.Effect = DragDropEffects.Copy;
             else
-                base.OnDragEnter(e);
+                base.OnDragOver(e);
         }
 
 

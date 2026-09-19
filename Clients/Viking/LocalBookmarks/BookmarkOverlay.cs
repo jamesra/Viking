@@ -64,17 +64,32 @@ namespace LocalBookmarks
 
             State.volume.TransformChanged += VolumeTransformChangedEventHandler;
 
-            Global.FolderUIObjRoot = new FolderUIObj(null, Global.FolderRoot);
-            Global.SelectedFolder = Global.FolderUIObjRoot;
+            if (Global.HasDocuments)
+                Global.SelectedFolder = Global.FolderUIObjRoot;
         }
 
         object ISectionOverlayExtension.ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
-            if (!Global.BookmarksVisible)
+            if (!Global.BookmarksVisible || !Global.HasDocuments)
                 return null;
 
-            return RecursiveFindBookmarks(Global.FolderUIObjRoot, WorldPosition, ref distance);
+            BookmarkUIObj nearest = null;
+            foreach (BookmarkDocument document in Global.Documents.Documents)
+            {
+                if (document.Root is null)
+                    continue;
+
+                double documentDistance = double.MaxValue;
+                BookmarkUIObj candidate = RecursiveFindBookmarks(document.Root, WorldPosition, ref documentDistance);
+                if (documentDistance < distance)
+                {
+                    distance = documentDistance;
+                    nearest = candidate;
+                }
+            }
+
+            return nearest;
         }
 
         BookmarkUIObj RecursiveFindBookmarks(FolderUIObj parentFolder, Geometry.Vector2 position, ref double nearestDistance)
@@ -124,10 +139,14 @@ namespace LocalBookmarks
             basicEffect.FogEnabled = false;
             basicEffect.LightingEnabled = false;
 
-            if (!Global.BookmarksVisible)
+            if (!Global.BookmarksVisible || !Global.HasDocuments)
                 return;
 
-            RecursiveDrawBookmarks(Global.FolderUIObjRoot, graphicsDevice, basicEffect, scene);
+            foreach (BookmarkDocument document in Global.Documents.Documents)
+            {
+                if (document.Root != null)
+                    RecursiveDrawBookmarks(document.Root, graphicsDevice, basicEffect, scene);
+            }
         }
 
         void RecursiveDrawBookmarks(FolderUIObj ParentFolder,
@@ -156,7 +175,7 @@ namespace LocalBookmarks
 
             // Add a default menu item
             ToolStripMenuItem addBookmarkItem = new("Add Bookmark");
-            addBookmarkItem.Click += (sender, e) => State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.FolderUIObjRoot);
+            addBookmarkItem.Click += (sender, e) => State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.TargetFolderForNewBookmark());
             Menu.Items.Add(addBookmarkItem);
 
             // If the object provides its own context menu, merge it

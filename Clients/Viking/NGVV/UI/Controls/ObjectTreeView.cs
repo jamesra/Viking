@@ -149,6 +149,25 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Optional OS-file drag preview. Return true to skip in-tree IUIObject drag logic
+        /// (and set <see cref="DragEventArgs.Effect"/>). Assigned by FolderTreeControl for bookmark XML drops.
+        /// </summary>
+        public Func<DragEventArgs, bool>? TryHandleExternalDrag { get; set; }
+
+        /// <summary>
+        /// Optional OS-file drop handler. Return true when the drop was consumed so IUIObject
+        /// reparenting does not run. Explorer FileDrop never sets <see cref="UI.State.DragDropObject"/>.
+        /// </summary>
+        public Func<DragEventArgs, bool>? TryHandleExternalDrop { get; set; }
+
+        protected override void OnDragEnter(DragEventArgs e)
+        {
+            if (TryHandleExternalDrag?.Invoke(e) == true)
+                return;
+
+            base.OnDragEnter(e);
+        }
 
         protected override void OnItemDrag(ItemDragEventArgs e)
         {
@@ -167,6 +186,9 @@ namespace Viking.UI.Controls
 
         protected override void OnDragOver(System.Windows.Forms.DragEventArgs e)
         {
+            if (TryHandleExternalDrag?.Invoke(e) == true)
+                return;
+
             base.OnDragOver(e);
 
             e.Effect = DragDropEffects.None;
@@ -220,6 +242,9 @@ namespace Viking.UI.Controls
 
         protected override void OnDragDrop(System.Windows.Forms.DragEventArgs e)
         {
+            if (TryHandleExternalDrop?.Invoke(e) == true)
+                return;
+
             Point DragPoint = this.PointToClient(new Point(e.X, e.Y));
             TreeNode? DropNode = this.GetNodeAt(DragPoint);
 
@@ -232,6 +257,7 @@ namespace Viking.UI.Controls
             if (DropNode is null)
             {
                 DragObject.SetParent(null); // null is valid for SetParent to remove parent
+                DragObject.Save();
             }
             else
             {

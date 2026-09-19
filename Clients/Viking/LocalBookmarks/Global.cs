@@ -3,6 +3,8 @@ using Geometry;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Windows.Forms;
 using Viking.Common;
 
 namespace LocalBookmarks
@@ -39,21 +41,25 @@ namespace LocalBookmarks
 
         internal static readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
-        /// <summary>
-        /// The number of undo files to maintain
-        /// </summary>
-        //static readonly int UndoDepth = 16;
+        private static BookmarkDocumentStore? _store;
 
-        private static XRoot? _BookmarkXMLDoc = null;
+        /// <summary>
+        /// Session document list. Local is always index 0. Throws if <see cref="Initialize"/> has not run.
+        /// </summary>
+        internal static BookmarkDocumentStore Documents =>
+            _store ?? throw new InvalidOperationException("Bookmark documents have not been initialized.");
+
+        internal static bool HasDocuments => _store is not null;
+
+        internal static event EventHandler? DocumentsChanged;
+
+        /// <summary>
+        /// Local document XML. Setter replaces Local only; extras stay loaded.
+        /// </summary>
         internal static XRoot BookmarkXMLDoc
         {
-            get => _BookmarkXMLDoc;
-            set
-            {
-                _BookmarkXMLDoc = value;
-                RecursivelyUpdateVolumePositions(FolderRoot);
-                FolderUIObjRoot = new FolderUIObj(null!, FolderRoot);
-            }
+            get => Documents.Local.Xml;
+            set => ReplaceLocalXml(value);
         }
 
         public static event System.ComponentModel.PropertyChangedEventHandler RootBookmarkChanged;
@@ -71,19 +77,17 @@ namespace LocalBookmarks
             set => _SelectedFolder = value;
         }
 
-        private static FolderUIObj? _FolderUIObjRoot = null;
+        /// <summary>
+        /// Local file-root UI. Kept as the default parent for new bookmarks when nothing else is selected.
+        /// </summary>
         internal static FolderUIObj FolderUIObjRoot
         {
-            get => _FolderUIObjRoot;
+            get => Documents.Local.Root ?? throw new InvalidOperationException("Local bookmark UI has not been attached.");
             set
             {
-                _FolderUIObjRoot = value;
-                if (RootBookmarkChanged != null)
-                {
-                    Viking.UI.State.MainThreadDispatcher.BeginInvoke(
-                        RootBookmarkChanged,
-                        [null!, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot")]);
-                }
+                Documents.Local.Root = value;
+                RaiseRootChanged();
+                RaiseDocumentsChanged();
             }
         }
 
@@ -91,6 +95,46 @@ namespace LocalBookmarks
 
         public static event EventHandler AfterUndo;
 
+        /// <summary>
+        /// Folder that should own a newly placed bookmark: the selected folder, the parent of a selected
+        /// bookmark, or Local. Viewer "Add Bookmark" uses this so extra files can receive new marks.
+        /// </summary>
+        internal static FolderUIObj TargetFolderForNewBookmark()
+        {
+            if (Viking.UI.State.SelectedObject is FolderUIObj folder)
+                return folder;
+
+            if (Viking.UI.State.SelectedObject is BookmarkUIObj bookmark)
+                return bookmark.Parent;
+
+            return FolderUIObjRoot;
+        }
+
+        internal static BookmarkDocument FindOwner(FolderUIObj? folder) => Documents.FindOwner(folder);
+
+        /// <summary>
+        /// Writes Local (with undo) or an extra file (in place). Callers that used <see cref="Save()"/>
+        /// for every edit now go through <see cref="SaveOwningDocument"/>.
+        /// </summary>
+        internal static void SaveDocument(BookmarkDocument document)
+        {
+            if (document.IsLocal)
+                Save();
+            else
+                Documents.WriteXml(document);
+        }
+
+        internal static void SaveOwningDocument(FolderUIObj? folder)
+        {
+            if (_store is null)
+                return;
+
+            SaveDocument(FindOwner(folder));
+        }
+
+        /// <summary>
+        /// Saves the volume-cache Local file and rotates the single undo copy. Extra files are not written.
+        /// </summary>
         internal static void Save()
         {
             try
@@ -148,6 +192,81 @@ namespace LocalBookmarks
 
         internal static void Save(string SavePath) => BookmarkXMLDoc.Save(SavePath);
 
+        /// <summary>
+        /// Loads an extra bookmark XML as a top-level filename node. Does not replace Local.
+        /// Already-loaded paths are ignored. Missing or unreadable files return false.
+        /// </summary>
+        public static bool TryLoadExtraDocument(string bookmarkFileName)
+        {
+            return TryLoadExtraDocument(bookmarkFileName, persistSidecar: true, showErrors: true);
+        }
+
+        internal static bool TryLoadExtraDocument(string bookmarkFileName, bool persistSidecar, bool showErrors)
+        {
+            if (_store is null || string.IsNullOrWhiteSpace(bookmarkFileName))
+                return false;
+
+            BookmarkDocument? already = Documents.FindByPath(bookmarkFileName);
+            if (already != null)
+                return true;
+
+            XRoot? xml = TryLoadXml(bookmarkFileName, showErrors);
+            if (xml is null)
+                return false;
+
+            if (!Documents.TryAddExtra(bookmarkFileName, xml, out BookmarkDocument document))
+                return document.IsLocal || document.Root != null;
+
+            RecursivelyUpdateVolumePositions(document.Folder);
+            document.Root = new FolderUIObj(null, document.Folder, document);
+            if (persistSidecar)
+                Documents.PersistSidecar();
+
+            RaiseDocumentsChanged();
+            Viking.UI.State.ViewerControl?.Invalidate();
+            return true;
+        }
+
+        /// <summary>
+        /// Unloads an extra file from the session. Local cannot be removed. The file on disk is kept.
+        /// </summary>
+        internal static bool TryUnloadDocument(BookmarkDocument document)
+        {
+            if (_store is null || document is null || document.IsLocal)
+                return false;
+
+            if (!Documents.TryUnload(document))
+                return false;
+
+            if (ReferenceEquals(SelectedFolder, document.Root) || IsUnder(SelectedFolder, document.Root))
+                SelectedFolder = FolderUIObjRoot;
+
+            Documents.PersistSidecar();
+            RaiseDocumentsChanged();
+            Viking.UI.State.ViewerControl?.Invalidate();
+            return true;
+        }
+
+        internal static void PromptAndLoadExtraDocuments()
+        {
+            using OpenFileDialog fileDialog = new()
+            {
+                DefaultExt = ".xml",
+                Title = "Open Bookmark XML File",
+                CheckFileExists = true,
+                AddExtension = true,
+                AutoUpgradeEnabled = true,
+                Multiselect = true,
+                Filter = "Bookmark XML (*.xml)|*.xml|All files (*.*)|*.*"
+            };
+
+            if (DialogResult.OK != fileDialog.ShowDialog())
+                return;
+
+            foreach (string fileName in fileDialog.FileNames)
+                TryLoadExtraDocument(fileName);
+        }
+
         internal static void Undo()
         {
 
@@ -199,52 +318,48 @@ namespace LocalBookmarks
                     System.IO.Directory.CreateDirectory(BookmarkPath);
                 }
 
+                XRoot localXml;
                 if (false == System.IO.File.Exists(BookmarkFilePath))
                 {
-                    bool Restored = LoadBookmarksFromBackup();
-                    if (!Restored)
-                    {
-                        BookmarkXMLDoc = CreateNewBookmarkFile();
-                    }
+                    localXml = TryReadUndoXml() ?? CreateNewBookmarkFile();
                 }
                 else
                 {
-                    BookmarkXMLDoc = XRoot.Load(BookmarkFilePath);
+                    localXml = XRoot.Load(BookmarkFilePath);
                 }
+
+                InstallLocalStore(localXml);
+                LoadSidecarExtras();
             }
             catch (System.IO.FileNotFoundException)
             {
-                BookmarkXMLDoc = CreateNewBookmarkFile();
+                InstallLocalStore(CreateNewBookmarkFile());
+                LoadSidecarExtras();
             }
             catch (Xml.Schema.Linq.LinqToXsdException)
             {
                 //We found it, but could not parse it.  Check if it is an old file that needs an upgrade
                 try
                 {
-                    connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkFilePath);
-                    BookmarkXMLDoc = MigrateV1ToV2.Migrate(BookmarkFilePath);
-                    if (BookmarkXMLDoc is null)
-                    {
-                        BookmarkXMLDoc = CreateNewBookmarkFile();
-                    }
-                    else
-                    {
+                    _ = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkFilePath);
+                    XRoot? migrated = MigrateV1ToV2.Migrate(BookmarkFilePath);
+                    InstallLocalStore(migrated ?? CreateNewBookmarkFile());
+                    if (migrated != null)
                         Save();
-                    }
-
                 }
                 catch (Xml.Schema.Linq.LinqToXsdException)
                 {
-                    //OK, could not load with the old schema.
                     HandleIncorrectXSDMessage();
-                    LoadBookmarksFromBackup();
+                    InstallLocalStore(TryReadUndoXml() ?? CreateNewBookmarkFile());
                 }
+
+                LoadSidecarExtras();
             }
             catch (System.Xml.XmlException)
             {
-                //We found it, but could not parse it
                 HandleIncorrectXSDMessage();
-                LoadBookmarksFromBackup();
+                InstallLocalStore(TryReadUndoXml() ?? CreateNewBookmarkFile());
+                LoadSidecarExtras();
             }
             catch (Exception)
             {
@@ -255,8 +370,6 @@ namespace LocalBookmarks
 
             return true;
         }
-
-
 
         public static XRoot CreateNewBookmarkFile()
         {
@@ -279,68 +392,131 @@ namespace LocalBookmarks
                                             "xmlns=\"http://tempuri.org/BookmarkSchema.xsd\" and replacing the Bookmarks.xml with it.");
         }
 
-        public static bool Load(string BookmarkFileName)
+        /// <summary>
+        /// Replaces Local XML only. Extra files stay in the session. Used by undo and the old Load path.
+        /// </summary>
+        private static void ReplaceLocalXml(XRoot xml)
         {
-            try
-            {
-                if (System.IO.File.Exists(BookmarkFileName))
-                {
-                    BookmarkXMLDoc = XRoot.Load(BookmarkFileName);
-                    SelectedFolder = FolderUIObjRoot;
-                    return true;
-                }
-                else if (System.IO.File.Exists(BookmarkUndoFilePath)) //Check for an undo file
-                {
-                    BookmarkXMLDoc = XRoot.Load(BookmarkUndoFilePath);
-                    SelectedFolder = FolderUIObjRoot;
-                    return true;
-                }
-            }
-            catch (Xml.Schema.Linq.LinqToXsdException)
-            {
-                //We found it, but could not parse it.  Check if it needs to be migrated.
-                try
-                {
-                    connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkFileName);
-                    BookmarkXMLDoc = MigrateV1ToV2.Migrate(BookmarkFileName);
-                    SelectedFolder = FolderUIObjRoot;
-                }
-                catch (Xml.Schema.Linq.LinqToXsdException)
-                {
-                    //OK, could not load with the old schema.
-                    HandleIncorrectXSDMessage();
-                }
-            }
-            catch
-            {
+            if (xml is null)
+                throw new ArgumentNullException(nameof(xml));
 
-            }
+            RecursivelyUpdateVolumePositions(xml.Folder);
 
-
-            return false;
-        }
-
-        private static bool LoadBookmarksFromBackup()
-        {
-            if (System.IO.File.Exists(BookmarkUndoFilePath))
+            if (_store is null)
             {
-                BookmarkXMLDoc = XRoot.Load(Global.BookmarkUndoFilePath);
-                return true;
+                _store = BookmarkDocumentStore.FromLocal(BookmarkFilePath, xml);
+                _store.Local.Root = new FolderUIObj(null, xml.Folder, _store.Local);
             }
             else
             {
-                BookmarkXMLDoc = CreateNewBookmarkFile();
-                return false;
+                Documents.Local.Xml = xml;
+                Documents.Local.Root = new FolderUIObj(null, xml.Folder, Documents.Local);
             }
+
+            SelectedFolder = FolderUIObjRoot;
+            RaiseRootChanged();
+            RaiseDocumentsChanged();
+        }
+
+        private static void InstallLocalStore(XRoot xml)
+        {
+            RecursivelyUpdateVolumePositions(xml.Folder);
+            _store = BookmarkDocumentStore.FromLocal(BookmarkFilePath, xml);
+            _store.Local.Root = new FolderUIObj(null, xml.Folder, _store.Local);
+            SelectedFolder = FolderUIObjRoot;
+            RaiseRootChanged();
+        }
+
+        private static void LoadSidecarExtras()
+        {
+            if (_store is null)
+                return;
+
+            foreach (string extraPath in Documents.ReadSidecarPaths().ToArray())
+                TryLoadExtraDocument(extraPath, persistSidecar: false, showErrors: false);
+
+            Documents.PersistSidecar();
+            RaiseDocumentsChanged();
+        }
+
+        private static XRoot? TryReadUndoXml()
+        {
+            if (!File.Exists(BookmarkUndoFilePath))
+                return null;
+
+            return XRoot.Load(BookmarkUndoFilePath);
+        }
+
+        private static XRoot? TryLoadXml(string path, bool showErrors)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                    return null;
+
+                return XRoot.Load(path);
+            }
+            catch (Xml.Schema.Linq.LinqToXsdException)
+            {
+                try
+                {
+                    connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(path);
+                    return MigrateV1ToV2.Migrate(path);
+                }
+                catch (Exception ex)
+                {
+                    if (showErrors)
+                        MessageBox.Show("Could not parse bookmark XML: " + ex.Message);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (showErrors)
+                    MessageBox.Show("Could not parse bookmark XML: " + ex.Message);
+                return null;
+            }
+        }
+
+        private static void RaiseRootChanged()
+        {
+            if (RootBookmarkChanged is null)
+                return;
+
+            if (Viking.UI.State.MainThreadDispatcher is not null)
+            {
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(
+                    RootBookmarkChanged,
+                    [null!, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot")]);
+            }
+            else
+            {
+                RootBookmarkChanged(null!, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot"));
+            }
+        }
+
+        private static void RaiseDocumentsChanged() => DocumentsChanged?.Invoke(null, EventArgs.Empty);
+
+        private static bool IsUnder(FolderUIObj? folder, FolderUIObj? ancestor)
+        {
+            while (folder != null)
+            {
+                if (ReferenceEquals(folder, ancestor))
+                    return true;
+                folder = folder.Parent;
+            }
+
+            return false;
         }
 
         /// <summary>
         /// Recursively update all bookmark positions with the new transform
         /// </summary>
-        /// <param name="folder"></param>
-        /// <param name="transform"></param>
         public static void RecursivelyUpdateVolumePositions(Folder folder)
         {
+            if (folder is null || Viking.UI.State.volume is null)
+                return;
+
             foreach (var bookmark in folder.Bookmarks)
             {
                 Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)bookmark.Z);
@@ -354,18 +530,19 @@ namespace LocalBookmarks
             {
                 RecursivelyUpdateVolumePositions(subfolder);
             }
-
-            return;
         }
 
         /// <summary>
-        /// When this occurs we should update the positions we draw the locations at. 
+        /// When this occurs we should update the positions we draw the locations at.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public static void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e) => Global.RecursivelyUpdateVolumePositions(FolderRoot);
+        public static void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
+        {
+            if (_store is null)
+                return;
 
-
+            foreach (BookmarkDocument document in Documents.Documents)
+                RecursivelyUpdateVolumePositions(document.Folder);
+        }
 
         #endregion
     }
