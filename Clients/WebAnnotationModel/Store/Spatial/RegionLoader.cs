@@ -134,8 +134,7 @@ namespace WebAnnotationModel
         private static bool RegionIsDueForRefresh(RegionRequestData<OBJECT> cell)
         {
             return (!cell.LastQuery.HasValue ||
-                    System.TimeSpan.FromTicks(DateTime.UtcNow.Ticks - cell.LastQuery.Value.Ticks).Seconds >
-                    RegionUpdateInterval) &&
+                    RegionRefreshTiming.IsIntervalElapsed(cell.LastQuery.Value, DateTime.UtcNow, RegionUpdateInterval)) &&
                    cell.OutstandingQuery == false;
         }
 

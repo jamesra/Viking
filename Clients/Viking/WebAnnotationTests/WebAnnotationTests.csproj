@@ -25,6 +25,7 @@
   <ItemGroup>
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="DialogSmokeTests.cs" />
+    <Compile Include="RegionRefreshTimingTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="LocationActionTests.cs" />
     <Compile Include="MouseActionSupportTests.cs" />
