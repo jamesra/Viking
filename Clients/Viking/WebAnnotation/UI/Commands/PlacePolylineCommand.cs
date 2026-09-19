@@ -284,7 +284,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
                 }
             }
 
-            base.OnMouseDown(sender, e);
+            base.OnMouseUp(sender, e);
         }
 
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
