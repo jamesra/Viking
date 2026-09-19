@@ -226,6 +226,7 @@ public class Program
 
             builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.IPermissionService, Viking.Identity.Server.Extensions.Services.PermissionService>();
             builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.IAuthenticationService, Viking.Identity.Server.Extensions.Services.AuthenticationService>();
+            builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.VikingLaunchCodeService>();
             builder.Services.Configure<DebugLoggingOptions>(builder.Configuration.GetSection("DebugLogging"));
             builder.Services.AddSingleton<IDebugLoggingService, DebugLoggingService>();
 

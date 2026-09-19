@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Duende.IdentityServer.Validation;
+using IdentityModel;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.WebManagement.Extensions
 {
+    /// <summary>
+    /// Checks volume/segmentation scopes on token requests against the user's grants.
+    /// Used for ROPC and for viking_user_token (launch-exchange).
+    /// </summary>
     public class UserScopeTokenRequestValidator : ICustomTokenRequestValidator
     {
         ApplicationDbContext _context;
@@ -45,7 +51,7 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                 if (resource == null || (resource.ResourceTypeId != nameof(Volume) && resource.ResourceTypeId != nameof(SegmentationService)))
                     continue;
 
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == context.Result.ValidatedRequest.UserName);
+                var user = await FindTokenUserAsync(context.Result.ValidatedRequest);
                 if (user == null)
                 {
                     context.Result.IsError = true;
@@ -61,6 +67,27 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// Resolves the token user for volume-scope checks. ROPC sets UserName;
+        /// viking_user_token (launch-exchange) leaves UserName empty and sets Subject to the user id.
+        /// </summary>
+        private async Task<ApplicationUser> FindTokenUserAsync(ValidatedTokenRequest request)
+        {
+            if (!string.IsNullOrEmpty(request?.UserName))
+            {
+                var byName = await _context.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName);
+                if (byName != null)
+                    return byName;
+            }
+
+            var subjectId = request?.Subject?.FindFirst(JwtClaimTypes.Subject)?.Value
+                ?? request?.Subject?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(subjectId))
+                return null;
+
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == subjectId);
         }
     }
 }

@@ -78,11 +78,11 @@ namespace Viking
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
 
             // Remove the DefaultTraceListener so nothing writes to OutputDebugString.
-            // In Debug builds CreateDebugListener() re-adds a file-based listener.
+            // A rotating file listener stays in Release so deep-link failures are diagnosable.
 #if !DEBUG
             Trace.Listeners.Clear();
 #endif
-            CreateDebugListener();
+            CreateFileTraceListener();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
@@ -107,11 +107,12 @@ namespace Viking
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Check for updates before showing login dialog
-            // This runs on the UI thread with proper message pumping
-            UpdateService.CheckForUpdatesAtStartup();
-
+            // Check for updates before showing login dialog, unless this process was
+            // started from viking:// — the launch code lives five minutes and the
+            // Velopack UI has blocked exchange for minutes on a cold start.
             ApplicationSettings? appSettings = null;
+            if (!ArgsContainVikingOpen(args))
+                UpdateService.CheckForUpdatesAtStartup();
 
             // Handle viking://open?code=...&volume=...&location=... protocol (one-use launch code)
             if (TryHandleVikingOpenUrl(args, out appSettings))
@@ -209,32 +210,40 @@ namespace Viking
                 string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
                 if (string.IsNullOrEmpty(baseUrl))
                 {
-                    Trace.WriteLine("[Viking] viking://open with code ignored: LaunchExchangeBaseUrl not configured.", "Viking");
-                    return false;
+                    const string reason = "LaunchExchangeBaseUrl not configured.";
+                    Trace.WriteLine("[Viking] viking://open with code ignored: " + reason, "Viking");
+                    appSettings = ShowLoginWindow(volume, null, null, autoAdvanceFromDeepLink: true,
+                        launchStatusMessage: "The launch link could not be used (" + reason + "); please sign in.");
+                    return true;
                 }
 
                 var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
-                (string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName) = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
-                if (accessToken == null)
+                var exchange = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
+                if (exchange.AccessToken == null)
                 {
-                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
-                    appSettings = ShowLoginWindow(volume, null, null);
+                    var detail = exchange.Error ?? "no token returned";
+                    Trace.WriteLine("[Viking] Launch code exchange failed: " + detail, "Viking");
+                    appSettings = ShowLoginWindow(volume, null, null, autoAdvanceFromDeepLink: true,
+                        launchStatusMessage: "The launch link could not be used (" + detail + "); please sign in.");
                     return true;
                 }
-                string? initialVolume = !string.IsNullOrEmpty(volumeUrl) ? volumeUrl : volume;
-                appSettings = ShowLoginWindowWithLaunchResult(accessToken, identityServerUrl ?? "", initialVolume, volumeName);
+                string? initialVolume = !string.IsNullOrEmpty(exchange.VolumeUrl) ? exchange.VolumeUrl : volume;
+                appSettings = ShowLoginWindowWithLaunchResult(exchange.AccessToken, exchange.IdentityServerUrl ?? "", initialVolume, exchange.VolumeName);
                 return true;
             }
 
             if (!string.IsNullOrEmpty(volume))
             {
-                appSettings = ShowLoginWindow(volume, null, null);
+                appSettings = ShowLoginWindow(volume, null, null, autoAdvanceFromDeepLink: true);
                 return true;
             }
 
             appSettings = ShowLoginWindow(null, null, null);
             return true;
         }
+
+        private static bool ArgsContainVikingOpen(string[] args) =>
+            args?.Any(a => a != null && a.StartsWith("viking://", StringComparison.OrdinalIgnoreCase)) == true;
 
         /// <summary>
         /// Copies location / coordinate query params into StartupArguments for post-load navigation.
@@ -295,7 +304,29 @@ namespace Viking
             return dict;
         }
 
-        private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        private sealed class LaunchExchangeResult
+        {
+            public LaunchExchangeResult(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName, string? error)
+            {
+                AccessToken = accessToken;
+                IdentityServerUrl = identityServerUrl;
+                VolumeUrl = volumeUrl;
+                VolumeName = volumeName;
+                Error = error;
+            }
+
+            public string? AccessToken { get; }
+            public string? IdentityServerUrl { get; }
+            public string? VolumeUrl { get; }
+            public string? VolumeName { get; }
+            public string? Error { get; }
+        }
+
+        /// <summary>
+        /// Reads launch-exchange JSON. Prefer snake_case (the documented contract);
+        /// also accept camelCase so a mixed server build still works.
+        /// </summary>
+        private static async Task<LaunchExchangeResult> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
         {
             try
             {
@@ -306,22 +337,41 @@ namespace Viking
                 using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
-                    return (null, null, null, null);
+                    return new LaunchExchangeResult(null, null, null, null, $"exchange failed ({(int)response.StatusCode})");
                 var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var obj = JsonConvert.DeserializeObject<JObject>(responseJson);
                 if (obj == null)
-                    return (null, null, null, null);
-                return (
-                    obj["access_token"]?.ToString(),
-                    obj["identity_server_url"]?.ToString(),
-                    obj["volume_url"]?.ToString(),
-                    obj["volume_name"]?.ToString());
+                    return new LaunchExchangeResult(null, null, null, null, "invalid token response");
+                var accessToken = FirstJsonString(obj, "access_token", "accessToken");
+                if (string.IsNullOrEmpty(accessToken))
+                    return new LaunchExchangeResult(null, null, null, null, "no token returned");
+                return new LaunchExchangeResult(
+                    accessToken,
+                    FirstJsonString(obj, "identity_server_url", "identityServerUrl"),
+                    FirstJsonString(obj, "volume_url", "volumeUrl"),
+                    FirstJsonString(obj, "volume_name", "volumeName"),
+                    null);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
-                return (null, null, null, null);
+                return new LaunchExchangeResult(null, null, null, null, ex.Message);
             }
+        }
+
+        private static string? FirstJsonString(JObject obj, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                var token = obj[name];
+                if (token != null && token.Type != JTokenType.Null)
+                {
+                    var value = token.ToString();
+                    if (!string.IsNullOrEmpty(value))
+                        return value;
+                }
+            }
+            return null;
         }
 
         private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)
@@ -331,6 +381,7 @@ namespace Viking
             wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(initialVolumeUrl) ? null : initialVolumeUrl;
             wpfLoginWindow.InitialVolumeName = string.IsNullOrWhiteSpace(initialVolumeName) ? null : initialVolumeName;
+            wpfLoginWindow.AutoAdvanceFromDeepLink = true;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
@@ -354,10 +405,17 @@ namespace Viking
         }
 
 
-        private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
+        private static ApplicationSettings? ShowLoginWindow(
+            string? volumePath,
+            string? username = null,
+            string? password = null,
+            bool autoAdvanceFromDeepLink = false,
+            string? launchStatusMessage = null)
         {
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? DefaultVolumeUrl : volumePath;
+            wpfLoginWindow.AutoAdvanceFromDeepLink = autoAdvanceFromDeepLink && !string.IsNullOrWhiteSpace(volumePath);
+            wpfLoginWindow.LaunchStatusMessage = launchStatusMessage;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
@@ -516,24 +574,51 @@ namespace Viking
                 ?.Value;
         }
 
-        [Conditional("DEBUG")]
-        private static void CreateDebugListener()
+        /// <summary>
+        /// File listener under %LOCALAPPDATA%\Viking\Logs. Kept in Release so a failed
+        /// viking:// exchange is not silent. Oldest files beyond five are deleted.
+        /// </summary>
+        private static void CreateFileTraceListener()
         {
-            string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
-            if (!Directory.Exists(LogPath))
-                Directory.CreateDirectory(LogPath);
+            string logPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Viking",
+                "Logs");
+            Directory.CreateDirectory(logPath);
 
-            string FileName = LogPath + "\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
-
-            DebugLogFile = System.IO.File.CreateText(FileName);
-
-            TextWriter SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
-
-            TextWriterTraceListener Listener = new(SynchronizedDebugWriter, "Viking Log Listener");
-            Trace.Listeners.Add(Listener);
-
+            string fileName = Path.Combine(logPath, DateTime.Now.ToString("yyyy-MM-dd HH.mm.ss") + ".log");
+            DebugLogFile = File.CreateText(fileName);
+            SynchronizedDebugWriter = TextWriter.Synchronized(DebugLogFile);
+            Trace.Listeners.Add(new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener"));
             Trace.UseGlobalLock = true;
+            Trace.AutoFlush = true;
+            PruneLogFiles(logPath, keep: 5);
+#if DEBUG
             TestCultureNumberParsing();
+#endif
+        }
+
+        private static void PruneLogFiles(string directory, int keep)
+        {
+            try
+            {
+                var extras = new DirectoryInfo(directory).GetFiles("*.log")
+                    .OrderByDescending(f => f.LastWriteTimeUtc)
+                    .Skip(keep)
+                    .ToArray();
+                foreach (var file in extras)
+                {
+                    try { file.Delete(); }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine("[Viking] Could not delete old log " + file.Name + ": " + ex.Message, "Viking");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("[Viking] Log prune failed: " + ex.Message, "Viking");
+            }
         }
 
         private static void TestCultureNumberParsing()

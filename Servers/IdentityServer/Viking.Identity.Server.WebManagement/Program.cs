@@ -234,6 +234,7 @@ namespace Viking.Identity.Server.WebManagement
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
             services.AddScoped<ResourceProvisioningService>();
             services.AddScoped<CollaboratorOnboardingService>();
+            services.AddScoped<VikingLaunchCodeService>();
             services.AddHttpClient<VikingXmlMetadataService>()
                 .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
                 {
@@ -394,7 +395,9 @@ namespace Viking.Identity.Server.WebManagement
 
             if (!string.Equals(scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
             {
-                return "";
+                // null = do not forward. Empty string is treated as a scheme name and 500s
+                // ("No authentication handler is registered for the scheme") on browser GETs.
+                return null;
             }
 
             if (token.Contains("."))

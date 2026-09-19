@@ -281,11 +281,17 @@ management site. Map your renderer ids on your side.
 Opening a place in Viking from SBFSEM-tools
 ==========================================
 
-With the user already signed in to Identity (cookie on the management site), send the browser to:
+Send the browser to:
 
 .. code-block:: text
 
     https://identity.codepharm.net:4001/VikingLaunch/CreateCode?volumeName=RC2&location=769111
+
+If the browser already has the Identity management cookie, this creates a
+one-use launch code and redirects to ``viking://open?...``. If it does not,
+``CreateCode`` challenges to ``/Account/Login`` and returns to the same URL
+(``volumeName`` and ``location`` intact) after sign-in. A signed-out request
+must not 500.
 
 =============  =============================================================
 Parameter      Meaning
@@ -297,6 +303,54 @@ Parameter      Meaning
 
 ``CreateCode`` persists ``VolumeName`` on the launch code (for volume-scoped
 tokens at exchange). ``location`` remains query-only on the ``viking://`` URL.
+Desktop Viking accepts a large downsample as sent; clamp on your side if the
+whole-cell view is too far out.
+
+Minting a launch code with a bearer token
+-----------------------------------------
+
+When the browser already holds an SBFSEM-tools session (and therefore a Viking
+access token), do **not** send the person through ``CreateCode``. POST to the
+Permissions Web API. Only tokens issued to the ``sbfsem-tools`` client are
+accepted; a generic ``Viking.Annotation`` desktop token is **403**.
+
+.. code-block:: text
+
+    POST https://identity.codepharm.net:6001/api/viking/launch-code
+    Authorization: Bearer <access token>
+    Content-Type: application/json
+
+    {"volume_name": "RPC1"}
+
+================  ==========================================================
+Answer            Meaning
+================  ==========================================================
+``200``           ``code``, ``expires_in`` (300), ``viking_url``
+``400``           ``volume_name`` missing
+``401``           token missing or invalid
+``403``           client is not ``sbfsem-tools``, or the subject cannot open
+                  that volume
+``404``           no such volume
+================  ==========================================================
+
+JSON bodies use snake_case. ``volumeName`` is accepted as an alias on this
+request. Append ``&location=`` to ``viking_url`` yourselves; it is not stored.
+The browser ``CreateCode`` route stays as a fallback.
+
+Launch-exchange keys (desktop)
+------------------------------
+
+``POST /api/viking/launch-exchange`` is anonymous. The success body is
+snake_case so installed Viking **1.2.61** can read it:
+
+.. code-block:: json
+
+    {
+      "access_token": "...",
+      "identity_server_url": "https://identity.codepharm.net:5001",
+      "volume_url": "http://rogue1.codepharm.net/RPC1/SliceToVolume.VikingXML",
+      "volume_name": "RPC1"
+    }
 
 Opening SBFSEM-tools from Viking
 ================================
@@ -318,4 +372,7 @@ access and redirects to:
 Configure the final ``/open`` base with ``SbfsemToolsOptions:OpenUrl`` on
 WebManagement (default ``https://sbfsem-tools.com/open``).
 
-See also the reply note :doc:`sbfsem-tools-reply-2026-09-10` for the confirmed mapping table.
+See also :doc:`sbfsem-tools-reply-2026-09-10` for the volume-name mapping
+table, :doc:`sbfsem-tools-reply-2026-09-18-smooth-handoff` for the CreateCode
+login challenge, and :doc:`sbfsem-tools-reply-2026-09-19-open-in-viking` for
+snake_case exchange keys and ``POST /api/viking/launch-code``.

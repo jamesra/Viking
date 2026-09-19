@@ -12,12 +12,13 @@ using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server;
+using Viking.Identity.Server.Extensions.Services;
 
 namespace Viking.Identity.Server.WebApi.ApiControllers
 {
     /// <summary>
-    /// One-use launch code exchange for the viking://open protocol.
-    /// Viking calls POST /api/viking/launch-exchange with the code and receives access_token + identity_server_url + volume_url.
+    /// viking://open launch codes: anonymous exchange for the desktop client, and
+    /// bearer minting for sbfsem-tools (POST launch-code).
     /// </summary>
     [ApiController]
     [Route("api/viking")]
@@ -28,42 +29,68 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VikingIdentityServerOptions _identityOptions;
         private readonly ILogger<VikingLaunchController> _logger;
+        private readonly IAuthenticationService _authService;
+        private readonly VikingLaunchCodeService _launchCodes;
 
         public VikingLaunchController(
             ApplicationDbContext context,
             IHttpClientFactory httpClientFactory,
             IOptions<VikingIdentityServerOptions> identityOptions,
-            ILogger<VikingLaunchController> logger)
+            ILogger<VikingLaunchController> logger,
+            IAuthenticationService authService,
+            VikingLaunchCodeService launchCodes)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _identityOptions = identityOptions?.Value ?? throw new ArgumentNullException(nameof(identityOptions));
             _logger = logger;
+            _authService = authService;
+            _launchCodes = launchCodes;
         }
 
         /// <summary>
-        /// Request body for launch code exchange.
+        /// Mints a one-use launch code for the token subject. Restricted to the sbfsem-tools
+        /// client so a generic Viking.Annotation token cannot open a desktop session.
+        /// Callers append <c>&amp;location=</c> to <c>viking_url</c> themselves.
         /// </summary>
-        public class LaunchExchangeRequest
+        [HttpPost("launch-code")]
+        public async Task<IActionResult> CreateLaunchCode([FromBody] LaunchCodeRequest request)
         {
-            public string Code { get; set; }
-        }
+            if (!OAuthTokenClient.IsSbfsemTools(User))
+            {
+                _logger.LogWarning("launch-code refused: client {ClientId} is not sbfsem-tools",
+                    OAuthTokenClient.GetClientId(User) ?? "(none)");
+                return Forbid();
+            }
 
-        /// <summary>
-        /// Response body for successful launch code exchange.
-        /// </summary>
-        public class LaunchExchangeResponse
-        {
-            public string AccessToken { get; set; }
-            public string IdentityServerUrl { get; set; }
-            public string VolumeUrl { get; set; }
-            /// <summary>Identity volume name for desktop deep-links / volume-scoped tokens.</summary>
-            public string VolumeName { get; set; }
+            var caller = await _authService.GetApplicationUserAsync(User, HttpContext);
+            if (caller == null)
+                return Unauthorized();
+
+            var volumeName = request?.ResolvedVolumeName;
+            if (string.IsNullOrWhiteSpace(volumeName))
+                return BadRequest(new { error = "volume_name is required" });
+
+            var volume = await _launchCodes.ResolveVolumeAsync(volumeName);
+            if (volume == null)
+                return NotFound();
+
+            if (!await _launchCodes.UserCanAccessVolumeAsync(volume, User, caller.Id))
+                return Forbid();
+
+            var launchCode = await _launchCodes.CreateAsync(caller.Id, volume);
+            return Ok(new LaunchCodeResponse
+            {
+                Code = launchCode.Code,
+                ExpiresIn = (int)VikingLaunchCodeService.CodeLifetime.TotalSeconds,
+                VikingUrl = VikingLaunchCodeService.BuildOpenUrl(launchCode)
+            });
         }
 
         /// <summary>
         /// Exchanges a one-use launch code for an API token and optional volume URL.
         /// No bearer auth required. Code is invalidated after first successful use.
+        /// Response keys are snake_case (<c>access_token</c>, …) to match installed Viking 1.2.61.
         /// </summary>
         [AllowAnonymous]
         [HttpPost("launch-exchange")]

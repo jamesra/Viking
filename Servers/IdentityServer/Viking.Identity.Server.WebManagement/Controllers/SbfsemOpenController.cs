@@ -16,9 +16,9 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 {
     /// <summary>
     /// Identity-first bounce for Viking → SBFSEM-tools deep links.
-    /// Ensures a management-site cookie exists, then 302s to sbfsem-tools /open with the same query.
+    /// Browser cookie only, then 302 to sbfsem-tools /open with the same query.
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = Config.ApplicationCookieScheme)]
     public class SbfsemOpenController : Controller
     {
         private readonly ApplicationDbContext _context;

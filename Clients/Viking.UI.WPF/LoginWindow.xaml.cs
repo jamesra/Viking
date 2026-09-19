@@ -45,27 +45,35 @@ namespace Viking.UI.WPF
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(InitialApiToken))
-                return;
             if (_loginViewModel == null)
                 return;
             if (!string.IsNullOrWhiteSpace(InitialIdentityServerUrl))
                 _loginViewModel.IdentityServerUrl = InitialIdentityServerUrl;
-            var apiToken = CreateTokenResponseFromAccessToken(InitialApiToken);
-            if (apiToken == null)
-                return;
-            ApiToken = apiToken;
-            BearerToken = apiToken;
-            Credentials ??= new NetworkCredential("anonymous", "connectome");
-            ShowVolumeStage(apiToken);
-            if (!string.IsNullOrWhiteSpace(InitialVolumeUrl) && _volumeSelectionViewModel != null)
+            if (!string.IsNullOrWhiteSpace(LaunchStatusMessage))
+                _loginViewModel.StatusMessage = LaunchStatusMessage;
+
+            if (!string.IsNullOrWhiteSpace(InitialApiToken))
             {
-                _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
-                // Auto-advance: select the linked volume without waiting for a click.
+                var apiToken = CreateTokenResponseFromAccessToken(InitialApiToken);
+                if (apiToken == null)
+                    return;
+                ApiToken = apiToken;
+                BearerToken = apiToken;
+                Credentials ??= new NetworkCredential("anonymous", "connectome");
+                ShowVolumeStage(apiToken);
+                TryAutoSelectLinkedVolume();
+                return;
+            }
+
+            // Deep link named a volume but the code was unusable: submit remembered
+            // credentials, then auto-select volume and skip segmentation.
+            if (AutoAdvanceFromDeepLink
+                && _loginViewModel.LoginCommand?.CanExecute(null) == true)
+            {
                 Dispatcher.BeginInvoke(new System.Action(() =>
                 {
-                    if (_volumeSelectionViewModel?.SelectCommand?.CanExecute(null) == true)
-                        _volumeSelectionViewModel.SelectCommand.Execute(null);
+                    if (_loginViewModel?.LoginCommand?.CanExecute(null) == true)
+                        _loginViewModel.LoginCommand.Execute(null);
                 }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             }
         }
@@ -158,6 +166,16 @@ namespace Viking.UI.WPF
         /// <summary>Optional Identity volume name from launch-exchange (e.g. RC2).</summary>
         public string InitialVolumeName { get; set; }
 
+        /// <summary>
+        /// True when started from viking:// that names a volume. After any successful
+        /// sign-in, auto-select that volume and complete segmentation without requiring
+        /// <see cref="InitialApiToken"/>.
+        /// </summary>
+        public bool AutoAdvanceFromDeepLink { get; set; }
+
+        /// <summary>Shown on the login status line when a launch code could not be used.</summary>
+        public string LaunchStatusMessage { get; set; }
+
         private void InitializeLoginStage()
         {
             _loginViewModel = new LoginViewModel();
@@ -175,6 +193,22 @@ namespace Viking.UI.WPF
 
             // Show volume selection stage with bearer token (from login for both normal and anonymous)
             ShowVolumeStage(BearerToken);
+            if (AutoAdvanceFromDeepLink)
+                TryAutoSelectLinkedVolume();
+        }
+
+        /// <summary>Selects <see cref="InitialVolumeUrl"/> without waiting for a click.</summary>
+        private void TryAutoSelectLinkedVolume()
+        {
+            if (string.IsNullOrWhiteSpace(InitialVolumeUrl) || _volumeSelectionViewModel == null)
+                return;
+
+            _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
+            Dispatcher.BeginInvoke(new System.Action(() =>
+            {
+                if (_volumeSelectionViewModel?.SelectCommand?.CanExecute(null) == true)
+                    _volumeSelectionViewModel.SelectCommand.Execute(null);
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void InitializeVolumeSelectionViewModel(TokenResponse bearerToken)
@@ -378,8 +412,7 @@ namespace Viking.UI.WPF
                 _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
                 _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
 
-                // Launch-code path: auto-complete without showing the segmentation picker.
-                if (!string.IsNullOrWhiteSpace(InitialApiToken))
+                if (!string.IsNullOrWhiteSpace(InitialApiToken) || AutoAdvanceFromDeepLink)
                 {
                     await AutoCompleteSegmentationForLaunchAsync(preselectedEndpoint, servicesDict);
                     return;

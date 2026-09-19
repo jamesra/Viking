@@ -19,7 +19,7 @@ namespace Viking.Identity
     public class IdentityServerVikingClientStore : IClientStore
     {
         /// <summary>Client id issued to the third-party sbfsem-tools web application.</summary>
-        public const string SbfsemToolsClientId = "sbfsem-tools";
+        public const string SbfsemToolsClientId = VikingOAuthClients.SbfsemTools;
 
         ApplicationDbContext _context;
         IResourceStore _resourceStore;

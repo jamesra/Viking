@@ -11,6 +11,13 @@ namespace Viking.Identity.Server.WebManagement
         //internal const string Secret = "CorrectHorseBatteryStaple"; 
 
         public const string AuthenticationSchemes = "Bearer, Introspection, Identity.Application";
+
+        /// <summary>
+        /// ASP.NET Identity application cookie. Must stay equal to
+        /// <c>IdentityConstants.ApplicationScheme</c> ("Identity.Application").
+        /// Used on browser pages that must challenge to login, not JWT Bearer.
+        /// </summary>
+        public const string ApplicationCookieScheme = "Identity.Application";
          
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()
