@@ -399,6 +399,9 @@ namespace WebAnnotationModel
 
         private ChangeInventory<LocationObj> ProcessAnnotationSet(AnnotationSet serverAnnotations, long[] deleted_objects, DateTime? StartTime, long SectionNumber)
         {
+            if (serverAnnotations is null)
+                return new ChangeInventory<LocationObj>();
+
             DateTime TraceQueryEnd = DateTime.UtcNow;
 
             ChangeInventory<StructureObj> structure_inventory = Store.Structures.ParseQuery(serverAnnotations.Structures, new long[] { }, null);
