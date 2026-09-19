@@ -240,6 +240,13 @@ namespace Viking.UI
                 {
                     FireOnPenMove(args);
                 }
+
+                bool wasBarrel = (previousPenState.Value.flags & PenFlags.Barrel) != 0;
+                bool isBarrel = (penState.flags & PenFlags.Barrel) != 0;
+                if (!wasBarrel && isBarrel)
+                    FireOnPenButtonDown(args);
+                else if (wasBarrel && !isBarrel)
+                    FireOnPenButtonUp(args);
             }
 
             if (pointerState.Flags.InRange == false)
