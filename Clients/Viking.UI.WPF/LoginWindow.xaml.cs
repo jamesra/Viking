@@ -45,6 +45,14 @@ namespace Viking.UI.WPF
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            if (_loginViewModel != null)
+            {
+                if (!string.IsNullOrWhiteSpace(InitialUsername))
+                    _loginViewModel.Username = InitialUsername;
+                if (!string.IsNullOrEmpty(InitialPassword))
+                    _loginViewModel.Password = InitialPassword;
+            }
+
             if (_loginViewModel == null)
                 return;
             if (!string.IsNullOrWhiteSpace(InitialIdentityServerUrl))
@@ -175,6 +183,12 @@ namespace Viking.UI.WPF
 
         /// <summary>Shown on the login status line when a launch code could not be used.</summary>
         public string LaunchStatusMessage { get; set; }
+
+        /// <summary>Optional username from -u so the login fields are prefilled.</summary>
+        public string InitialUsername { get; set; }
+
+        /// <summary>Optional password from -p so the login fields are prefilled.</summary>
+        public string InitialPassword { get; set; }
 
         private void InitializeLoginStage()
         {

@@ -27,7 +27,7 @@ namespace MeasurementExtension
         {
             get
             {
-                List<string> s = [.. MeasureCommand.DefaultHelpStrings, "CTRL - Horizontal measurement", "SHIFT - Vertical measurement"];
+                List<string> s = [.. MeasureCommand.DefaultHelpStrings, "SHIFT - Horizontal measurement", "CTRL - Vertical measurement"];
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 return [.. s];
             }

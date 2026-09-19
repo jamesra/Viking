@@ -83,6 +83,7 @@ namespace Viking
             Trace.Listeners.Clear();
 #endif
             CreateFileTraceListener();
+            InitializeMathnet();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
@@ -416,6 +417,8 @@ namespace Viking
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? DefaultVolumeUrl : volumePath;
             wpfLoginWindow.AutoAdvanceFromDeepLink = autoAdvanceFromDeepLink && !string.IsNullOrWhiteSpace(volumePath);
             wpfLoginWindow.LaunchStatusMessage = launchStatusMessage;
+            wpfLoginWindow.InitialUsername = username;
+            wpfLoginWindow.InitialPassword = password;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
