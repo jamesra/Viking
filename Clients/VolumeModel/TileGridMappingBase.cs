@@ -189,6 +189,12 @@ namespace Viking.VolumeModel
         */
         #region TextureFileNames
 
+        /// <summary>
+        /// World-space tile edge length on one axis at a pyramid level.
+        /// Mosaic Y spacing must use TileSizeY here; volume mappings already did.
+        /// </summary>
+        public static int ScaledTileExtent(int tileSizePx, int downsample) => tileSizePx * downsample;
+
         public abstract string TileFullPath(int iX, int iY, int DownsampleLevel);
 
         protected virtual string TileTextureCacheFileName(int downsample, int iX, int iY)
@@ -357,8 +363,8 @@ namespace Viking.VolumeModel
         {
             GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 
-            int ScaledTileSizeX = this.TileSizeX * roundedDownsample;
-            int ScaledTileSizeY = this.TileSizeX * roundedDownsample;
+            int ScaledTileSizeX = ScaledTileExtent(this.TileSizeX, roundedDownsample);
+            int ScaledTileSizeY = ScaledTileExtent(this.TileSizeY, roundedDownsample);
 
             //Figure out which grid locations are visible
             int iMinX = (int)Math.Floor(VisibleBounds.Left / ScaledTileSizeX);
