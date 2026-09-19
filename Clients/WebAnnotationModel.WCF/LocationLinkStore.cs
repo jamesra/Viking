@@ -173,7 +173,7 @@ namespace WebAnnotationModel
 
         protected override IAsyncResult ProxyBeginGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
-            return proxy.BeginGetLocationChanges(SectionNumber,
+            return proxy.BeginGetLocationLinksForSection(SectionNumber,
                                                  LastQuery.Ticks,
                                                  GetObjectsBySectionCallback,
                                                  asynchState);
