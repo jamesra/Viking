@@ -26,7 +26,7 @@ namespace WebAnnotation.UI.Actions
         /// </summary>
         public readonly GridPolygon VolumePolygonToRemove;
 
-        public LocationAction Type => LocationAction.CUTHOLE;
+        public LocationAction Type => LocationAction.REMOVEHOLE;
 
         public Action Execute => OnExecute;
 
