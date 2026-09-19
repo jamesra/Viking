@@ -132,7 +132,7 @@ namespace WebAnnotation.UI.Commands
                 LocationObj nearest_target = Store.Locations[nearest.ID];
                 LocationObj result = TrySetTarget(nearest_target);
                 NearestTargetBoundingBox = targetBoundingRect;
-                return nearest_target;
+                return result;
             }
 
             return null;
@@ -216,6 +216,11 @@ namespace WebAnnotation.UI.Commands
                     //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...
                     //sectionAnnotations.AddStructureLinks(OriginObj.Parent);
                     //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
+                }
+                else
+                {
+                    Deactivated = true;
+                    return;
                 }
 
                 Execute();
