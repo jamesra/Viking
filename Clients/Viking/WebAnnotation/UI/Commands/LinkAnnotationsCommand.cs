@@ -138,7 +138,7 @@ namespace WebAnnotation.UI.Commands
                 LocationObj nearest_target = Store.Locations[nearest.ID];
                 LocationObj result = TrySetTarget(nearest_target);
                 NearestTargetBoundingBox = targetBoundingRect;
-                return nearest_target;
+                return result;
             }
 
             return null;
@@ -194,6 +194,11 @@ namespace WebAnnotation.UI.Commands
                 else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     _ = CreateStructureLinkAsync();
+                }
+                else
+                {
+                    Deactivated = true;
+                    return;
                 }
 
                 Execute();
