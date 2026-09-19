@@ -747,7 +747,7 @@ namespace Geometry
             return false;
         }
 
-        public static List<GridLineSegment> Intersections(this in GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints) => Intersections(line, lines, true, out IntersectionPoints);
+        public static List<GridLineSegment> Intersections(this in GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints) => Intersections(in line, in lines, true, out IntersectionPoints);
 
 
         /// <summary>
@@ -758,18 +758,19 @@ namespace Geometry
         /// <param name="EndpointsOnLineDoNotIntersect"></param>
         /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
         /// <returns>The lines that intersect the line parameter</returns>
-        public static List<GridLineSegment> Intersections(this GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
+        public static List<GridLineSegment> Intersections(this in GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
         {
             //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
             List<GridVector2> NewPoints = new(lines.Count);
             List<GridLineSegment> IntersectingLines = new(lines.Count);
+            GridLineSegment self = line;
 
             foreach (GridLineSegment testLine in lines)
             {
-                if (line.Intersects(testLine, out GridVector2 intersection))
+                if (self.Intersects(testLine, out GridVector2 intersection))
                 {
                     //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
-                    if (EndpointsOnLineDoNotIntersect && line.IsEndpoint(intersection))
+                    if (EndpointsOnLineDoNotIntersect && self.IsEndpoint(intersection))
                     {
                         continue;
                     }
@@ -782,7 +783,7 @@ namespace Geometry
                 }
             }
 
-            double[] dotValues = [.. NewPoints.Select(p => line.Dot(p))];
+            double[] dotValues = [.. NewPoints.Select(p => self.Dot(p))];
             int[] sortedIndicies = dotValues.SortAndIndex();
 
             IntersectionPoints = [.. sortedIndicies.Select(i => NewPoints[i])];

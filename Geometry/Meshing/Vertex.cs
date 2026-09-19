@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Geometry.Meshing
 {
@@ -29,21 +30,28 @@ namespace Geometry.Meshing
 
         public IComparer<IEdgeKey> EdgeComparer
         {
-            get => _Edges.Comparer;
+            get => _ifaceEdgeComparer;
             protected set
             {
-                if (value != _Edges.Comparer)
-                {
-                    _Edges = new SortedSet<IEdgeKey>(_Edges, value);
-                    _ImmutableEdges = null;
-                }
+                if (value == _ifaceEdgeComparer)
+                    return;
+
+                _ifaceEdgeComparer = value;
+                IComparer<EdgeKey> comparer = value as IComparer<EdgeKey>
+                    ?? (value is null ? Comparer<EdgeKey>.Default : new EdgeKeyInterfaceComparer(value));
+                _Edges = new SortedSet<EdgeKey>(_Edges, comparer);
+                _ImmutableEdges = null;
             }
         }
 
-        protected SortedSet<IEdgeKey> _Edges;
+        IComparer<IEdgeKey> _ifaceEdgeComparer;
+
+        protected SortedSet<EdgeKey> _Edges;
 
         private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
-        public ImmutableSortedSet<IEdgeKey> Edges => _ImmutableEdges ??= _Edges.ToImmutableSortedSet(_Edges.Comparer);
+        public ImmutableSortedSet<IEdgeKey> Edges => _ImmutableEdges ??= ImmutableSortedSet.CreateRange(
+            _ifaceEdgeComparer ?? Comparer<IEdgeKey>.Default,
+            _Edges.Select(static e => (IEdgeKey)e));
 
         protected VertexBase()
         {
@@ -58,8 +66,10 @@ namespace Geometry.Meshing
 
         protected VertexBase(IComparer<IEdgeKey> edgeComparer = null)
         {
-            _Edges = new SortedSet<IEdgeKey>(edgeComparer);
+            _Edges = [];
             _ImmutableEdges = null;
+            if (edgeComparer is not null)
+                EdgeComparer = edgeComparer;
         }
 
         protected VertexBase(int index, IComparer<IEdgeKey> edgeComparer = null) : this(edgeComparer)
@@ -68,6 +78,12 @@ namespace Geometry.Meshing
         }
 
         public virtual bool AddEdge(IEdgeKey e)
+        {
+            EdgeKey key = e is EdgeKey ek ? ek : new EdgeKey(e.A, e.B);
+            return AddEdge(key);
+        }
+
+        public bool AddEdge(EdgeKey e)
         {
             if (!_Edges.Contains(e))
             {
@@ -119,6 +135,12 @@ namespace Geometry.Meshing
         public override int GetHashCode() => _Index ?? throw new InvalidOperationException("Index must be set before GetHashCode is called.");
 
         public virtual void RemoveEdge(IEdgeKey e)
+        {
+            EdgeKey key = e is EdgeKey ek ? ek : new EdgeKey(e.A, e.B);
+            RemoveEdge(key);
+        }
+
+        public void RemoveEdge(EdgeKey e)
         {
             Debug.Assert(_Edges.Contains(e));
             _Edges.Remove(e);
@@ -286,6 +308,11 @@ namespace Geometry.Meshing
         public override IVertex ShallowCopy() => new Vertex2D(Position);
 
         public override IVertex ShallowCopy(int index) => new Vertex2D(index, Position);
+    }
+
+    sealed class EdgeKeyInterfaceComparer(IComparer<IEdgeKey> inner) : IComparer<EdgeKey>
+    {
+        public int Compare(EdgeKey x, EdgeKey y) => inner.Compare(x, y);
     }
 
 }

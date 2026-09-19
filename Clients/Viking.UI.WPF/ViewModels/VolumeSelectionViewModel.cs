@@ -202,6 +202,59 @@ namespace Viking.UI.WPF.ViewModels
             }
         }
 
+        /// <summary>
+        /// Selects a volume from the Identity tree or recent list by resource name (e.g. RC1).
+        /// Used when a launch code carries volumeName but not a usable endpoint URL yet.
+        /// </summary>
+        public bool TrySelectVolumeByName(string volumeName)
+        {
+            if (string.IsNullOrWhiteSpace(volumeName))
+                return false;
+
+            VolumeInfo recent = RecentVolumes.FirstOrDefault(v =>
+                string.Equals(v.Name, volumeName, StringComparison.OrdinalIgnoreCase));
+            if (recent != null)
+            {
+                SelectedVolume = new VolumeTreeNode
+                {
+                    Volume = recent,
+                    Name = recent.Name,
+                    IsOrganization = false
+                };
+                return true;
+            }
+
+            VolumeTreeNode match = FindVolumeNodeByName(OrganizationNodes, volumeName);
+            if (match == null)
+                return false;
+
+            SelectedVolume = match;
+            return true;
+        }
+
+        private static VolumeTreeNode FindVolumeNodeByName(IEnumerable<VolumeTreeNode> nodes, string volumeName)
+        {
+            foreach (VolumeTreeNode node in nodes)
+            {
+                if (node == null)
+                    continue;
+                if (node.Volume != null
+                    && string.Equals(node.Volume.Name, volumeName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return node;
+                }
+
+                if (node.Children != null)
+                {
+                    VolumeTreeNode child = FindVolumeNodeByName(node.Children, volumeName);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
+        }
+
         private string ExtractVolumeName(string url)
         {
             try

@@ -57,11 +57,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         // Segmentation state
         private byte[] currentMaskData;
         private Texture2D maskTexture;
-        private bool isSegmenting = false;
         private int maskWidth;
         private int maskHeight;
         private GridPolygon selectedPolygon; // Track the polygon clicked for finalization
         private SegmentationServiceTypes.SegmentationResponse lastSegmentationResponse;
+        private readonly SegmentationRequestCoalescer requestCoalescer = new();
+        private CancellationTokenSource processResponseCts;
 
         // Pan/zoom tracking
         private GridRectangle lastViewBounds;
@@ -85,6 +86,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Location being converted must not receive an avoid (background) mark; those marks are for other annotations in view.
         /// </summary>
         private readonly long? locationIdToExcludeFromBackgroundPoints;
+
+        /// <summary>
+        /// Adjacent-section members of the same structure sit on the selected circle's center.
+        /// They must not get an avoid mark or SAM2 sees a red+green stack at the same pixel.
+        /// </summary>
+        private readonly long? structureIdToExcludeFromBackgroundPoints;
 
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
@@ -136,7 +143,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
             long? structureTypeId = null,
-            long? excludeLocationId = null) : base(parent)
+            long? excludeLocationId = null,
+            long? excludeStructureId = null) : base(parent)
         {
             this.success_callback = success_callback;
 
@@ -149,6 +157,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             structureTypeIdForBackgroundPoints = structureTypeId;
             locationIdToExcludeFromBackgroundPoints = excludeLocationId;
+            structureIdToExcludeFromBackgroundPoints = excludeStructureId;
         }
 
         /// <summary>
@@ -160,7 +169,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
             long? structureTypeId = null,
-            long? excludeLocationId = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId)
+            long? excludeLocationId = null,
+            long? excludeStructureId = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId)
         {
             // Populate initial points
             if (initialForegroundPoints != null)
@@ -184,6 +194,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 .Where(loc => loc != null && loc.Parent != null && loc.Parent.Type != null
                     && loc.Parent.Type.modelObj.ID == structureTypeId
                     && loc.ID != locationIdToExcludeFromBackgroundPoints
+                    && (!structureIdToExcludeFromBackgroundPoints.HasValue
+                        || loc.ParentID != structureIdToExcludeFromBackgroundPoints)
                     && loc.IsVisible(scene));
 
             var locationObjs = visibleSameType
@@ -196,7 +208,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             var success = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. mosaicPoints], out var volumePoints);
             var validVolumePoints = volumePoints.Where((p, i) => i < success.Length && success[i]).ToList();
-            backgroundPoints.AddRange(validVolumePoints);
+            double minDistance = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+            backgroundPoints.AddRange(
+                CircleSegmentationPrompts.ExceptNearForeground(validVolumePoints, foregroundPoints, minDistance));
         }
         #endregion
 
@@ -412,6 +426,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             if (foregroundPoints.Count == 0)
             {
+                requestCoalescer.Invalidate();
+                CancelProcessSegmentationResponse();
                 ClearSegmentationResults();
             }
             else
@@ -508,6 +524,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 lastViewBounds = currentBounds;
                 viewportSession.ViewportBounds = currentBounds;
+                requestCoalescer.Invalidate();
+                CancelProcessSegmentationResponse();
                 viewportSession.CancelPendingWork();
 
                 if (viewportSession.CurrentImageId.HasValue)
@@ -725,9 +743,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region gRPC Segmentation
+        /// <summary>
+        /// Sends one SegmentImage with the current prompt lists. Extra clicks while busy or uploading
+        /// set a follow-up so the next attempt uses every point collected so far.
+        /// </summary>
         private async Task RequestSegmentation()
         {
-            if (isSegmenting || !viewportSession.HasClient)
+            if (!viewportSession.HasClient)
                 return;
 
             if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
@@ -735,17 +757,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (viewportSession.IsUploading)
             {
+                requestCoalescer.MarkDirty();
                 Debug.WriteLine("Upload in progress, segmentation will be requested after upload completes");
                 return;
             }
 
-            isSegmenting = true;
+            if (!requestCoalescer.TryStart(out int generation))
+                return;
+
             try
             {
                 Debug.WriteLine($"Sending segmentation request with image ID {viewportSession.CurrentImageId}: {viewportSession.UploadedImageWidth}x{viewportSession.UploadedImageHeight}, {foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
                 var response = await viewportSession.SegmentAsync(foregroundPoints, backgroundPoints, CancellationToken.None).ConfigureAwait(false);
-                if (response is not null)
-                    await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => ProcessSegmentationResponse(response)));
+                if (response is not null && requestCoalescer.ShouldApply(generation))
+                    StartProcessSegmentationResponse(response, generation);
             }
             catch (Exception ex)
             {
@@ -753,11 +778,53 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             finally
             {
-                isSegmenting = false;
+                if (requestCoalescer.OnFinishedShouldRetry())
+                    ScheduleFollowUpSegmentation();
             }
         }
 
-        private void ProcessSegmentationResponse(SegmentationServiceTypes.SegmentationResponse response)
+        /// <summary>
+        /// Starts the coalesced follow-up on the UI dispatcher so prompt lists are read on that thread.
+        /// </summary>
+        private void ScheduleFollowUpSegmentation()
+        {
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null)
+                return;
+
+            dispatcher.BeginInvoke(new Action(() => _ = RequestSegmentation()));
+        }
+
+        /// <summary>
+        /// Cancels an in-flight polygonize and starts one for this response on a worker.
+        /// A newer result replaces the previous process token so stale marching squares stop applying.
+        /// </summary>
+        private void StartProcessSegmentationResponse(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int generation)
+        {
+            CancellationTokenSource previous = processResponseCts;
+            CancellationTokenSource next = new();
+            processResponseCts = next;
+            try
+            {
+                previous?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            previous?.Dispose();
+            _ = ProcessSegmentationResponseAsync(response, generation, next.Token);
+        }
+
+        /// <summary>
+        /// Polygonizes off the UI thread. Applies views only if this generation still owns the overlay.
+        /// </summary>
+        private async Task ProcessSegmentationResponseAsync(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int generation,
+            CancellationToken cancellationToken)
         {
             if (response.Segments.Count == 0)
             {
@@ -765,15 +832,52 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            lastSegmentationResponse = response;
-            ConvertSegmentsToPolygonViews(response);
+            IReadOnlyList<GridPolygon> polygons;
+            try
+            {
+                polygons = await Task.Run(
+                    () => viewportSession.CreatePolygonsFromResponse(
+                        response,
+                        preserveHolesContainingWorldPoints: backgroundPoints,
+                        cancellationToken: cancellationToken),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"Segmentation process generation={generation} cancelled");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Segmentation process generation={generation} failed: {ex}");
+                return;
+            }
 
+            if (polygons is null || polygons.Count == 0)
+            {
+                Debug.WriteLine($"Segmentation process generation={generation} produced no polygons");
+                return;
+            }
+
+            if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
+                return;
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null)
+                return;
+
+            await dispatcher.InvokeAsync(() =>
+            {
+                if (!requestCoalescer.TryApply(generation))
+                    return;
+
+                lastSegmentationResponse = response;
+                ApplyPolygonViews(polygons, response.Segments.Count);
 #if DEBUG
-            CreateDebugMaskOverlay(response);
+                CreateDebugMaskOverlay(response);
 #endif
-
-            // Invalidate to trigger redraw
-            Parent.Invalidate();
+                Parent.Invalidate();
+            }).Task.ConfigureAwait(false);
         }
 
         /// <summary>
@@ -802,18 +906,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double? holeDropFraction = null,
             int? edgeCleanupRadius = null)
         {
-            segmentPolygonViews.Clear();
-            segmentPolygonRingViews.Clear();
-            hoveredPolygonView = null;
-
-            int totalPolygons = response.Segments.Count;
-            int polygonIndex = 0;
-
             IReadOnlyList<GridPolygon> polygons = viewportSession.CreatePolygonsFromResponse(
                 response,
                 holeDropFraction,
                 backgroundPoints,
                 edgeCleanupRadius);
+            ApplyPolygonViews(polygons, response.Segments.Count);
+        }
+
+        /// <summary>
+        /// Replaces the live overlay with already-built polygons. Must run on the UI thread.
+        /// </summary>
+        private void ApplyPolygonViews(IReadOnlyList<GridPolygon> polygons, int totalPolygons)
+        {
+            segmentPolygonViews.Clear();
+            segmentPolygonRingViews.Clear();
+            hoveredPolygonView = null;
+
+            int polygonIndex = 0;
             foreach (GridPolygon gridPolygon in polygons)
             {
                 Color polygonColor = GenerateDistinctColor(polygonIndex, totalPolygons);
@@ -1138,8 +1248,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Debug.WriteLine("Segmentation results cleared (no foreground points remaining)");
         }
 
+        /// <summary>
+        /// Aborts decode/polygonize for the last SegmentImage result. Does not cancel the RPC itself.
+        /// </summary>
+        private void CancelProcessSegmentationResponse()
+        {
+            try
+            {
+                processResponseCts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            processResponseCts?.Dispose();
+            processResponseCts = null;
+        }
+
         private void CleanupCommand()
         {
+            requestCoalescer.Invalidate();
+            CancelProcessSegmentationResponse();
             foregroundPoints.Clear();
             backgroundPoints.Clear();
             // Clear point views but keep them initialized (never null)

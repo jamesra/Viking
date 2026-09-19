@@ -1444,47 +1444,50 @@ namespace Geometry
 
         public bool Contains(in IPoint2D point_param) => GetRelation(point_param) != ShapeRelation.NONE;
 
-        public ShapeRelation GetRelation(in IPoint2D point_param)
+        public bool Contains(in GridVector2 p) => GetRelation(p) != ShapeRelation.NONE;
+
+        /// <summary>
+        /// Point-in-polygon via winding number. Holes are exterior of this polygon (Contained inside a hole is None).
+        /// Concrete <see cref="GridVector2"/> overload skips an <see cref="IPoint2D"/> box on the hot path.
+        /// </summary>
+        public ShapeRelation GetRelation(in GridVector2 p)
         {
-            if (!_BoundingRect.Contains(point_param))
+            if (p.X < _BoundingRect.Left ||
+                p.Y < _BoundingRect.Bottom ||
+                p.X > _BoundingRect.Right ||
+                p.Y > _BoundingRect.Top)
                 return ShapeRelation.NONE;
-
-            GridVector2 p = new(point_param.X, point_param.Y);
-
-            //Create a line we know must pass outside the polygon
-            //There is an edge case where the test line passes through a polygon vertex, so make sure the test line does not cross any verticies
-            //GridVector2 targetPoint = new GridLineSegment(this.ExteriorRing[0], this.ExteriorRing[1]).Bisect();
-            //GridVector2 targetPoint = new GridLineSegment(p.X, p.Y + this.ExteriorRing[0], this.ExteriorRing[1]).Bisect();
-
-            //GridLine test_ray = new GridLine(point_param, targetPoint - point_param);
-
-            //GridLineSegment test_line = test_ray.ToLine(Math.Max(BoundingBox.Width, BoundingBox.Height) * 2);
-
 
             List<GridLineSegment> segmentsToTest = _ExteriorSegments.Length > 32 ? [.. _ExteriorSegments] : [.. _ExteriorSegments];
 
-            //Make a horizontal line
             GridLine test_line = new(p, GridVector2.UnitX);
 
-            //Test all of the line segments for both interior and exterior polygons
-            //return IsPointInsidePolygonByWindingTest(segmentsToTest, test_line); 
             ShapeRelation result = IsPointInsidePolygonByWindingTest(segmentsToTest, test_line);
             if (result == ShapeRelation.CONTAINED)
             {
                 foreach (GridPolygon inner in this.InteriorPolygons)
                 {
                     ShapeRelation inner_result = inner.GetRelation(p);
-                    //if (inner_result != ShapeRelation.NONE) //Including TOUCHING results probably breaks Bajaj generation, but it is correct
                     if (inner_result == ShapeRelation.CONTAINED)
-                        return ShapeRelation.NONE; //The point is in the inner polygon, therefore not part of this polygon
+                        return ShapeRelation.NONE;
 
-                    //Is a point on an inner polygon touching the polygon or contained?
                     if (inner_result == ShapeRelation.TOUCHING)
                         return inner_result;
                 }
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Point-in-polygon via winding number. Holes are exterior of this polygon (Contained inside a hole is None).
+        /// </summary>
+        public ShapeRelation GetRelation(in IPoint2D point_param)
+        {
+            if (point_param is null)
+                throw new ArgumentNullException(nameof(point_param));
+
+            return GetRelation(new GridVector2(point_param.X, point_param.Y));
         }
 
         /*

@@ -74,6 +74,9 @@
     <Setting Name="AutoPolygonizeCircles" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="AutoPolygonizeCirclesUserSet" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="PolygonPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">6</Value>
     </Setting>
@@ -82,6 +85,12 @@
     </Setting>
     <Setting Name="AutoPolygonizeMinScreenAreaPercent" Type="System.Double" Scope="User">
       <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMinRadiusPixels" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMinRadiusNanometers" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">75</Value>
     </Setting>
     <Setting Name="AutoPolygonizeOverlayMasks" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>

@@ -1,12 +1,16 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace WebAnnotation.WPF.Controls
 {
     /// <summary>
-    /// Slider plus a circle preview whose on-page size matches the selected cutoff.
-    /// Pixel modes cap the slider at the control width so the circle cannot exceed the property page.
+    /// Slider plus a preview of the selected cutoff. Pixel modes draw only the circle
+    /// (on-screen size). NanometerRadius stores Value in nanometers and sizes the
+    /// preview with <see cref="NanometersPerPixel"/>. PercentOfScreen draws a circle
+    /// whose area is Value% of the live Viking view, at that same pixel size on this page.
+    /// Pixel and nanometer modes cap the slider at the control width so the circle cannot exceed the page.
     /// </summary>
     public partial class CircleSizePreviewSlider : UserControl
     {
@@ -34,6 +38,15 @@ namespace WebAnnotation.WPF.Controls
 
         public static readonly DependencyProperty PreviewModeProperty =
             DependencyProperty.Register(nameof(PreviewMode), typeof(CircleSizePreviewMode), typeof(CircleSizePreviewSlider), new PropertyMetadata(CircleSizePreviewMode.PixelDiameter, OnPreviewModeChanged));
+
+        public static readonly DependencyProperty ViewportPixelWidthProperty =
+            DependencyProperty.Register(nameof(ViewportPixelWidth), typeof(double), typeof(CircleSizePreviewSlider), new PropertyMetadata(0.0, OnPreviewInputsChanged));
+
+        public static readonly DependencyProperty ViewportPixelHeightProperty =
+            DependencyProperty.Register(nameof(ViewportPixelHeight), typeof(double), typeof(CircleSizePreviewSlider), new PropertyMetadata(0.0, OnPreviewInputsChanged));
+
+        public static readonly DependencyProperty NanometersPerPixelProperty =
+            DependencyProperty.Register(nameof(NanometersPerPixel), typeof(double), typeof(CircleSizePreviewSlider), new PropertyMetadata(0.0, OnPreviewInputsChanged));
 
         public static readonly DependencyProperty ValueTextProperty =
             DependencyProperty.Register(nameof(ValueText), typeof(string), typeof(CircleSizePreviewSlider), new PropertyMetadata(string.Empty));
@@ -88,6 +101,30 @@ namespace WebAnnotation.WPF.Controls
             set => SetValue(PreviewModeProperty, value);
         }
 
+        /// <summary>Viking view width in device pixels. 0 means the live view size is unknown.</summary>
+        public double ViewportPixelWidth
+        {
+            get => (double)GetValue(ViewportPixelWidthProperty);
+            set => SetValue(ViewportPixelWidthProperty, value);
+        }
+
+        /// <summary>Viking view height in device pixels. 0 means the live view size is unknown.</summary>
+        public double ViewportPixelHeight
+        {
+            get => (double)GetValue(ViewportPixelHeightProperty);
+            set => SetValue(ViewportPixelHeightProperty, value);
+        }
+
+        /// <summary>
+        /// Nanometers represented by one Viking screen pixel at the current zoom.
+        /// PixelRadius mode stores Value in pixels and labels it with this scale.
+        /// </summary>
+        public double NanometersPerPixel
+        {
+            get => (double)GetValue(NanometersPerPixelProperty);
+            set => SetValue(NanometersPerPixelProperty, value);
+        }
+
         public string ValueText
         {
             get => (string)GetValue(ValueTextProperty);
@@ -139,9 +176,13 @@ namespace WebAnnotation.WPF.Controls
             updatingFromLayout = true;
             try
             {
-                Maximum = PreviewMode == CircleSizePreviewMode.PixelRadius
-                    ? ActualWidth / 2.0
-                    : ActualWidth;
+                if (PreviewMode == CircleSizePreviewMode.NanometerRadius && NanometersPerPixel > 0)
+                    Maximum = (ActualWidth / 2.0) * NanometersPerPixel;
+                else if (PreviewMode == CircleSizePreviewMode.PixelRadius ||
+                         PreviewMode == CircleSizePreviewMode.NanometerRadius)
+                    Maximum = ActualWidth / 2.0;
+                else
+                    Maximum = ActualWidth;
             }
             finally
             {
@@ -172,41 +213,103 @@ namespace WebAnnotation.WPF.Controls
             if (PreviewCircle is null || PreviewHost is null)
                 return;
 
-            double diameter = ComputePreviewDiameter();
+            if (PreviewMode == CircleSizePreviewMode.PercentOfScreen)
+            {
+                if (PreviewScreen is not null)
+                    PreviewScreen.Visibility = Visibility.Collapsed;
+
+                double pixelDiameter = ComputeCutoffDiameterPixels();
+                double dpi = GetDpiScale();
+                double dipDiameter = dpi > 0 ? pixelDiameter / dpi : pixelDiameter;
+                if (dipDiameter < 1 && Value > 0)
+                    dipDiameter = 1;
+
+                PreviewCircle.Width = dipDiameter;
+                PreviewCircle.Height = dipDiameter;
+                PreviewHost.Width = double.NaN;
+                PreviewHost.Height = Math.Max(8, dipDiameter);
+                ValueText = FormatValueText(pixelDiameter);
+                return;
+            }
+
+            if (PreviewScreen is not null)
+                PreviewScreen.Visibility = Visibility.Collapsed;
+
+            double styleDiameter = ComputePreviewDiameter();
             if (ActualWidth > 0)
-                diameter = Math.Min(diameter, ActualWidth);
+                styleDiameter = Math.Min(styleDiameter, ActualWidth);
 
-            if (diameter < 1)
-                diameter = Value > 0 ? 1 : 0;
+            if (styleDiameter < 1)
+                styleDiameter = Value > 0 ? 1 : 0;
 
-            PreviewCircle.Width = diameter;
-            PreviewCircle.Height = diameter;
-            PreviewHost.Height = Math.Max(8, diameter);
+            PreviewCircle.Width = styleDiameter;
+            PreviewCircle.Height = styleDiameter;
+            PreviewHost.Width = double.NaN;
+            PreviewHost.Height = Math.Max(8, styleDiameter);
             ValueText = FormatValueText();
+        }
+
+        /// <summary>
+        /// On-screen diameter of the min-size cutoff using the live Viking view when available.
+        /// Same formula as <c>MeetsMinScreenArea</c>: area is Value% of the view.
+        /// </summary>
+        private double ComputeCutoffDiameterPixels()
+        {
+            double width = ViewportPixelWidth > 1 ? ViewportPixelWidth : 0;
+            double height = ViewportPixelHeight > 1 ? ViewportPixelHeight : 0;
+            if (width < 1 || height < 1 || Value <= 0)
+                return 0;
+
+            return 2.0 * Math.Sqrt((Value / 100.0) * width * height / Math.PI);
+        }
+
+        private double GetDpiScale()
+        {
+            try
+            {
+                double scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+                return scale > 0 ? scale : 1.0;
+            }
+            catch (InvalidOperationException)
+            {
+                return 1.0;
+            }
         }
 
         private double ComputePreviewDiameter()
         {
-            switch (PreviewMode)
+            if (PreviewMode == CircleSizePreviewMode.NanometerRadius)
             {
-                case CircleSizePreviewMode.PercentOfScreen:
-                    if (ActualWidth < 1 || Value <= 0)
-                        return 0;
-                    double width = ActualWidth;
-                    double height = width * 9.0 / 16.0;
-                    double area = (Value / 100.0) * width * height;
-                    return 2.0 * Math.Sqrt(area / Math.PI);
-                case CircleSizePreviewMode.PixelRadius:
-                    return Math.Max(0, Value) * 2.0;
-                default:
-                    return Math.Max(0, Value);
+                if (NanometersPerPixel <= 0)
+                    return 0;
+                return Math.Max(0, Value / NanometersPerPixel) * 2.0;
             }
+
+            return PreviewMode == CircleSizePreviewMode.PixelRadius
+                ? Math.Max(0, Value) * 2.0
+                : Math.Max(0, Value);
         }
 
         private string FormatValueText()
         {
+            return FormatValueText(ComputeCutoffDiameterPixels());
+        }
+
+        private string FormatValueText(double pixelDiameter)
+        {
             if (PreviewMode == CircleSizePreviewMode.PercentOfScreen)
-                return $"{Value:F1}% of screen";
+            {
+                if (pixelDiameter > 0)
+                    return $"{Value:F1}% · {pixelDiameter:F0} px";
+                return $"{Value:F1}% of view area";
+            }
+
+            if (PreviewMode == CircleSizePreviewMode.NanometerRadius)
+                return $"{Value:F0} nm";
+
+            if (PreviewMode == CircleSizePreviewMode.PixelRadius && NanometersPerPixel > 0)
+                return $"{Value * NanometersPerPixel:F0} nm";
+
             return Value.ToString("F1");
         }
     }

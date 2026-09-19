@@ -189,6 +189,10 @@ namespace WebAnnotation
             private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
             private const double MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT = 0.0;
             private const double MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT = 10.0;
+            private const double MIN_AUTOPOLYGONIZE_RADIUS_PIXELS = 0.0;
+            private const double MAX_AUTOPOLYGONIZE_RADIUS_PIXELS = 256.0;
+            private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
+            private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -434,24 +438,35 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Enables idle-driven SAM2 proposals on circles. Persists and starts or stops the overlay controller.
+            /// Enables idle-driven SAM2 proposals on circles. Until the user toggles this,
+            /// review/admin sessions default on and annotate sessions default off. After a
+            /// toggle the chosen value persists across restarts.
             /// </summary>
             public static bool AutoPolygonizeCircles
             {
-                get => Properties.Settings.Default.AutoPolygonizeCircles;
+                get
+                {
+                    if (!Properties.Settings.Default.AutoPolygonizeCirclesUserSet)
+                        return VolumeAccessRoles.HasReviewAccess();
+
+                    return Properties.Settings.Default.AutoPolygonizeCircles;
+                }
                 set
                 {
-                    if (Properties.Settings.Default.AutoPolygonizeCircles == value)
-                        return;
-
+                    bool previous = AutoPolygonizeCircles;
+                    Properties.Settings.Default.AutoPolygonizeCirclesUserSet = true;
                     Properties.Settings.Default.AutoPolygonizeCircles = value;
                     Properties.Settings.Default.Save();
+                    if (previous == value)
+                        return;
+
                     AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeEnabled(value);
                 }
             }
 
             /// <summary>
-            /// Circles smaller than this percent of the viewport are skipped. 0 accepts any positive radius.
+            /// Circles smaller than this percent of the viewport area are skipped. 0 accepts any positive radius.
+            /// Matches the preferences PercentOfScreen preview (area fraction of the view).
             /// </summary>
             public static double AutoPolygonizeMinScreenAreaPercent
             {
@@ -465,6 +480,46 @@ namespace WebAnnotation
                         value,
                         MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT,
                         MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Minimum on-screen radius, in device pixels, for a circle to be auto-segmented.
+            /// 0 accepts any positive radius. Preferences show this as nanometers at the current zoom.
+            /// </summary>
+            public static double AutoPolygonizeMinRadiusPixels
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeMinRadiusPixels,
+                    MIN_AUTOPOLYGONIZE_RADIUS_PIXELS,
+                    MAX_AUTOPOLYGONIZE_RADIUS_PIXELS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_RADIUS_PIXELS,
+                        MAX_AUTOPOLYGONIZE_RADIUS_PIXELS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Minimum circle radius, in nanometers, for auto-polygonize. Default 75.
+            /// 0 accepts any positive radius. Preview size uses the current zoom.
+            /// </summary>
+            public static double AutoPolygonizeMinRadiusNanometers
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers,
+                    MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS,
+                    MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS,
+                        MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS);
                     Properties.Settings.Default.Save();
                 }
             }
@@ -526,7 +581,10 @@ namespace WebAnnotation
                 Properties.Settings.Default.SegmentationHoleDropFraction = 0.03;
                 Properties.Settings.Default.SegmentationEdgeCleanupRadius = 2;
                 Properties.Settings.Default.AutoPolygonizeCircles = false;
+                Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
+                Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = 8.0;
+                Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = 75.0;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.PolygonPointRadius = 6.0;
                 Properties.Settings.Default.SmallestRenderedSize = 0.5;

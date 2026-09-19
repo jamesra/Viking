@@ -22,6 +22,20 @@ namespace WebAnnotation
 
     internal class SectionAnnotationsViewModelCache : TimeQueueCache<int, SectionAnnotationsViewCacheEntry, SectionAnnotationsView, SectionAnnotationsView>
     {
+        /// <summary>
+        /// Fired when a <see cref="SectionAnnotationsView"/> leaves this cache (footprint trim, RemoveEntry, or Clear).
+        /// May run on a thread-pool cleaner.
+        /// </summary>
+        public event Action<int>? EntryEvicted;
+
+        protected override bool OnRemoveEntry(SectionAnnotationsViewCacheEntry entry)
+        {
+            if (entry is not null)
+                EntryEvicted?.Invoke(entry.Key);
+
+            return true;
+        }
+
         protected override SectionAnnotationsView Fetch(SectionAnnotationsViewCacheEntry key)
         {
             bool found = dictEntries.TryGetValue(key.SLVModel.SectionNumber, out SectionAnnotationsViewCacheEntry entry);

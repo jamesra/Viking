@@ -82,6 +82,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
+            cache.GeometryInvalidated += OnCacheGeometryInvalidated;
+            cache.LocationForgotten += OnCacheLocationForgotten;
+            cache.ImageLeaseReleased += OnImageLeaseReleased;
         }
 
         public bool IsEnabled => enabled;
@@ -154,6 +157,27 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// Drops overlays and cache entries for one Z when <see cref="SectionAnnotationsView"/> is evicted.
+        /// Safe to call from the section-cache cleaner thread.
+        /// </summary>
+        public void ClearSection(int sectionNumber)
+        {
+            Action clear = () =>
+            {
+                DropProposalsForSection(sectionNumber);
+                cache.ClearSection(sectionNumber);
+                if (enabled)
+                    parent.Invalidate();
+            };
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null || dispatcher.CheckAccess())
+                clear();
+            else
+                dispatcher.BeginInvoke(clear);
+        }
+
+        /// <summary>
         /// Restarts settle when the view actually moved. Aborts capture/encode only;
         /// an already-uploaded batch keeps segmenting.
         /// </summary>
@@ -207,6 +231,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!enabled || !ShouldShowProposals || parent.Section is null)
                 return;
 
+            RemoveProposalsThatAreNoLongerCircles();
             int sectionNumber = parent.Section.Number;
             lock (proposalLock)
             {
@@ -229,6 +254,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!enabled || !ShouldShowProposals || parent.Section is null || parent.Camera is null)
                 return false;
 
+            RemoveProposalsThatAreNoLongerCircles();
             double threshold = parent.Camera.Downsample * AutoPolygonizeSelection.HitTestPixels;
             int sectionNumber = parent.Section.Number;
 
@@ -286,7 +312,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (LocationShapeUpdate.ApplyVolumePolygon(location, proposal.Polygon, parent))
             {
                 cache.Remove(proposal.LocationId);
-                RemoveProposal(proposal.LocationId);
                 parent.Invalidate();
             }
         }
@@ -297,9 +322,22 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (proposal is null)
                 return;
 
-            cache.Dismiss(proposal.LocationId, proposal.LastModified);
+            cache.Dismiss(
+                proposal.LocationId,
+                proposal.SectionNumber,
+                proposal.LastModified,
+                Store.Locations.GetObjectByID(proposal.LocationId, false));
             RemoveProposal(proposal.LocationId);
             parent.Invalidate();
+        }
+
+        /// <summary>
+        /// Drops the overlay and cache entry. Used when TypeCode is no longer CIRCLE or
+        /// when auto-segment becomes visible again after a convert command.
+        /// </summary>
+        private void ForgetLocation(long locationId)
+        {
+            cache.Remove(locationId);
         }
 
         /// <summary>SetEnabled(false) path: Stop plus a redraw so leftover overlays disappear.</summary>
@@ -479,6 +517,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (!await localUploadSession.UploadCurrentImageAsync(uploadToken).ConfigureAwait(false))
                     return;
 
+                AutoPolygonizeUploadContext? uploadContext = TryCreateUploadContext(localUploadSession, downsample);
+                if (uploadContext.HasValue)
+                    cache.AcquireBatchHold(uploadContext.Value.ImageId);
+
                 long uploadMs = stepTimer.ElapsedMilliseconds;
                 Debug.WriteLine(
                     $"[SegmentationProfile] Auto batch={batchId} initialized " +
@@ -510,8 +552,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                         break;
                     }
 
-                    if (!cache.ShouldProcess(circle.ID, circle.LastModified, circle.TypeCode))
+                    if (!cache.ShouldProcess(circle.ID, sectionNumber, circle.LastModified, circle.TypeCode))
                         continue;
+
+                    int generation = cache.MarkPending(circle.ID, sectionNumber, circle, uploadContext);
 
                     Stopwatch proposalTimer = Stopwatch.StartNew();
                     IReadOnlyList<GridVector2> foreground = CircleSegmentationPrompts.ToVolumePoints(
@@ -521,9 +565,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (foreground.Count == 0)
                         continue;
 
-                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateBackgroundVolumePoints(
-                        CollectVisibleLocationObjs(viewBounds).Where(loc => loc.ID != circle.ID),
-                        transform);
+                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.ExceptNearForeground(
+                        CircleSegmentationPrompts.CreateBackgroundVolumePoints(
+                            CollectVisibleLocationObjs(viewBounds).Where(loc =>
+                                loc.ID != circle.ID && loc.ParentID != circle.ParentID),
+                            transform),
+                        foreground,
+                        Global.AnnotationSettings.SegmentationPointRadius * downsample);
                     long promptMs = proposalTimer.ElapsedMilliseconds;
 
                     Stopwatch segmentTimer = Stopwatch.StartNew();
@@ -548,6 +596,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                             proposalTimer,
                             batchTimer,
                             batchId,
+                            generation,
+                            requireMatchingLiveView: true,
                             processToken), processToken);
                         processBatch.ResponseTasks.Add(responseTask);
                     }
@@ -592,18 +642,30 @@ namespace WebAnnotation.UI.AutoPolygonize
             Stopwatch proposalTimer,
             Stopwatch batchTimer,
             long batchId,
+            int generation,
+            bool requireMatchingLiveView,
             CancellationToken processToken)
         {
             if (processToken.IsCancellationRequested || !enabled)
                 return;
 
-            GridRectangle liveBounds = session.GetLiveViewportBoundsAsync().GetAwaiter().GetResult();
-            if (parent.Section is null ||
-                parent.Section.Number != sectionNumber ||
-                !SegmentationViewportSession.ShouldUploadEncodedCapture(session.ViewportBounds, liveBounds))
+            if (!IsStillCircle(circle.ID) || !cache.IsGenerationCurrent(circle.ID, generation))
+                return;
+
+            if (requireMatchingLiveView)
             {
-                Debug.WriteLine(
-                    $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} dropped: view moved before publish");
+                GridRectangle liveBounds = session.GetLiveViewportBoundsAsync().GetAwaiter().GetResult();
+                if (parent.Section is null ||
+                    parent.Section.Number != sectionNumber ||
+                    !SegmentationViewportSession.ShouldUploadEncodedCapture(session.ViewportBounds, liveBounds))
+                {
+                    Debug.WriteLine(
+                        $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} dropped: view moved before publish");
+                    return;
+                }
+            }
+            else if (parent.Section is null || parent.Section.Number != sectionNumber)
+            {
                 return;
             }
 
@@ -638,7 +700,19 @@ namespace WebAnnotation.UI.AutoPolygonize
                 maskOverlay);
             long renderPreparationMs = renderPreparationTimer.ElapsedMilliseconds;
 
-            cache.RememberProposal(circle.ID, circle.LastModified, circle.TypeCode);
+            if (!IsStillCircle(circle.ID) || !cache.IsGenerationCurrent(circle.ID, generation))
+            {
+                proposal.DisposeMaskOverlay();
+                return;
+            }
+
+            cache.RememberProposal(
+                circle.ID,
+                sectionNumber,
+                circle.LastModified,
+                circle.TypeCode,
+                Store.Locations.GetObjectByID(circle.ID, false),
+                TryCreateUploadContext(session, downsample));
             PublishProposal(proposal);
             Debug.WriteLine(
                 $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} ready-to-draw " +
@@ -660,7 +734,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!enabled)
+                if (!enabled || !IsStillCircle(proposal.LocationId))
                 {
                     proposal.DisposeMaskOverlay();
                     return;
@@ -718,32 +792,37 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Circles inside the inset, large enough on screen, and not already
-        /// proposed or dismissed for the current LastModified.
+        /// Circles whose center is at least 5% from each edge, whose disk is fully
+        /// on screen, large enough, and not already proposed or dismissed for this LastModified.
+        /// Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
         /// </summary>
         private List<LocationObj> CollectEligibleCircles(GridRectangle viewBounds, GridRectangle inset)
         {
             List<LocationObj> eligible = [];
+            double nmPerWorld = Global.Scale.X;
+            double minRadiusNm = Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers;
             foreach (LocationObj loc in CollectVisibleLocationObjs(viewBounds))
             {
-                if (!cache.ShouldProcess(loc.ID, loc.LastModified, loc.TypeCode))
+                if (!cache.ShouldProcess(loc.ID, loc.Section, loc.LastModified, loc.TypeCode))
                     continue;
 
                 if (!AutoPolygonizeSelection.IsEligibleCircle(
                         loc.TypeCode,
                         loc.VolumePosition,
                         inset,
+                        viewBounds,
                         loc.Radius,
-                        parent.Scene.ScreenPixelSizeInVolume,
-                        parent.Scene.Viewport.Width,
-                        parent.Scene.Viewport.Height,
-                        Global.AnnotationSettings.AutoPolygonizeMinScreenAreaPercent))
+                        nmPerWorld,
+                        minRadiusNm))
                     continue;
 
                 eligible.Add(loc);
             }
 
-            return eligible;
+            return AutoPolygonizeSelection.OrderByDistanceFromCenter(
+                eligible,
+                loc => loc.VolumePosition,
+                viewBounds.Center);
         }
 
         /// <summary>Store objects for canvas views intersecting <paramref name="viewBounds"/>; used for candidates and background prompts.</summary>
@@ -875,11 +954,228 @@ namespace WebAnnotation.UI.AutoPolygonize
                     processBatches.Remove(batch);
                 }
 
-                await batch.Session.DeleteCurrentImageAsync().ConfigureAwait(false);
+                if (batch.Session.CurrentImageId is ulong imageId)
+                {
+                    batch.Session.ClearImageId();
+                    cache.ReleaseBatchHold(imageId);
+                }
             }
         }
 
-        /// <summary>Removes a proposal and disposes its mask texture if one exists.</summary>
+        /// <summary>True only when the store still has this ID as a circle. In-flight publishes must not outlive Convert to Polygon.</summary>
+        private static bool IsStillCircle(long locationId)
+        {
+            LocationObj live = Store.Locations.GetObjectByID(locationId, false);
+            return live is not null && live.TypeCode == LocationType.CIRCLE;
+        }
+
+        /// <summary>
+        /// Drops overlays whose location was converted to a polygon (or deleted) while
+        /// auto-segment was hidden. Called when the overlay becomes visible again.
+        /// </summary>
+        private void RemoveProposalsThatAreNoLongerCircles()
+        {
+            long[] stale;
+            lock (proposalLock)
+            {
+                stale = [.. proposals.Keys.Where(id => !IsStillCircle(id))];
+            }
+
+            foreach (long locationId in stale)
+                ForgetLocation(locationId);
+        }
+
+        /// <summary>Cache dropped LastModified skip after a geometry commit. Overlay is stale; force one SegmentImage if still in view.</summary>
+        private void OnCacheGeometryInvalidated(long locationId, int sectionNumber, int generation)
+        {
+            RemoveProposal(locationId);
+            if (!enabled)
+                return;
+
+            parent.Invalidate();
+            _ = RunForLocationAsync(locationId, sectionNumber, generation);
+        }
+
+        private void OnCacheLocationForgotten(long locationId)
+        {
+            RemoveProposal(locationId);
+            if (enabled)
+                parent.Invalidate();
+        }
+
+        private void OnImageLeaseReleased(ulong imageId)
+        {
+            _ = DeleteLeasedImageAsync(imageId);
+        }
+
+        /// <summary>Creates a short-lived session only to DeleteImage a lease the cache no longer holds.</summary>
+        private async Task DeleteLeasedImageAsync(ulong imageId)
+        {
+            var session = new SegmentationViewportSession(parent);
+            if (!session.TryInitializeClient())
+                return;
+
+            await session.DeleteImageByIdAsync(imageId).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Single-ID refresh after a translate/scale/resize. Reuses the leased SAM2 image when zoom
+        /// and uploaded bounds still apply; otherwise uploads the current view. NotFound re-upload
+        /// is owned by <see cref="SegmentationViewportSession.SegmentAsync"/>.
+        /// </summary>
+        private async Task RunForLocationAsync(long locationId, int sectionNumber, int generation)
+        {
+            if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || parent.Section is null)
+                return;
+
+            if (parent.Section.Number != sectionNumber || parent.CurrentCommand is SegmentationCommand)
+                return;
+
+            LocationObj circle = Store.Locations.GetObjectByID(locationId, false);
+            if (circle is null || circle.TypeCode != LocationType.CIRCLE)
+            {
+                cache.Remove(locationId);
+                return;
+            }
+
+            GridRectangle viewBounds = GetCurrentViewportBounds();
+            GridRectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
+            if (!AutoPolygonizeSelection.IsEligibleCircle(
+                    circle.TypeCode,
+                    circle.VolumePosition,
+                    inset,
+                    viewBounds,
+                    circle.Radius,
+                    Global.Scale.X,
+                    Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers))
+            {
+                cache.Remove(locationId);
+                return;
+            }
+
+            if (!cache.IsGenerationCurrent(locationId, generation))
+                return;
+
+            CancellationToken processToken;
+            lock (lifecycleLock)
+            {
+                processToken = processCts.Token;
+            }
+
+            SegmentationViewportSession session = new(parent);
+            if (!session.TryInitializeClient())
+                return;
+
+            double downsample = GetCurrentDownsample();
+            bool acquiredHold = false;
+            ulong? holdImageId = null;
+            try
+            {
+                bool reuse = cache.TryGetUploadContext(locationId, out AutoPolygonizeUploadContext uploadContext) &&
+                             AutoPolygonizeSelection.CanReuseUploadedImage(uploadContext, downsample, circle.VolumePosition);
+                if (reuse)
+                {
+                    session.AdoptUploadedImage(
+                        uploadContext.ImageId,
+                        uploadContext.WorldBounds,
+                        uploadContext.Width,
+                        uploadContext.Height);
+                }
+                else
+                {
+                    if (!await session.UploadCurrentImageAsync(processToken).ConfigureAwait(false))
+                        return;
+
+                    AutoPolygonizeUploadContext? uploaded = TryCreateUploadContext(session, downsample);
+                    if (uploaded.HasValue)
+                    {
+                        cache.AcquireBatchHold(uploaded.Value.ImageId);
+                        acquiredHold = true;
+                        holdImageId = uploaded.Value.ImageId;
+                    }
+                }
+
+                IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
+                IReadOnlyList<GridVector2> foreground = CircleSegmentationPrompts.ToVolumePoints(
+                    CircleSegmentationPrompts.CreateMosaicForegroundPoints(new GridCircle(circle.Position, circle.Radius)),
+                    transform);
+                if (foreground.Count == 0)
+                    return;
+
+                IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.ExceptNearForeground(
+                    CircleSegmentationPrompts.CreateBackgroundVolumePoints(
+                        CollectVisibleLocationObjs(viewBounds).Where(loc =>
+                            loc.ID != circle.ID && loc.ParentID != circle.ParentID),
+                        transform),
+                    foreground,
+                    Global.AnnotationSettings.SegmentationPointRadius * downsample);
+
+                Stopwatch proposalTimer = Stopwatch.StartNew();
+                var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
+                if (response is null)
+                    return;
+
+                downsample = GetCurrentDownsample();
+                AutoPolygonizeUploadContext? afterSegment = TryCreateUploadContext(session, downsample);
+                if (afterSegment.HasValue && holdImageId is ulong held && held != afterSegment.Value.ImageId)
+                {
+                    cache.AcquireBatchHold(afterSegment.Value.ImageId);
+                    cache.ReleaseBatchHold(held);
+                    holdImageId = afterSegment.Value.ImageId;
+                }
+
+                int liveGeneration = cache.MarkPending(circle.ID, sectionNumber, circle, afterSegment);
+                ProcessResponse(
+                    session,
+                    circle,
+                    sectionNumber,
+                    downsample,
+                    Global.PenSimplifyThreshold * parent.Downsample,
+                    foreground.Count,
+                    background,
+                    response,
+                    0,
+                    0,
+                    proposalTimer,
+                    proposalTimer,
+                    0,
+                    liveGeneration,
+                    requireMatchingLiveView: false,
+                    processToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Auto polygonize single-ID refresh failed: {ex.Message}");
+            }
+            finally
+            {
+                if (acquiredHold && holdImageId is ulong id)
+                    cache.ReleaseBatchHold(id);
+                else if (session.CurrentImageId is ulong leftover && !cache.IsImageHeld(leftover))
+                    await session.DeleteCurrentImageAsync().ConfigureAwait(false);
+                else
+                    session.ClearImageId();
+            }
+        }
+
+        private static AutoPolygonizeUploadContext? TryCreateUploadContext(SegmentationViewportSession session, double downsample)
+        {
+            if (session?.CurrentImageId is not ulong imageId || imageId == 0 || session.UploadedImageWidth <= 0)
+                return null;
+
+            GridRectangle bounds = session.UploadedImageBounds ?? session.ViewportBounds;
+            return new AutoPolygonizeUploadContext(
+                imageId,
+                downsample,
+                bounds,
+                session.UploadedImageWidth,
+                session.UploadedImageHeight);
+        }
+
+        /// <summary>Removes a proposal overlay. Cache membership and subscriptions stay with <see cref="AutoPolygonizeCache"/>.</summary>
         private void RemoveProposal(long locationId)
         {
             lock (proposalLock)
@@ -892,6 +1188,18 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 proposals.Remove(locationId);
             }
+        }
+
+        private void DropProposalsForSection(int sectionNumber)
+        {
+            long[] ids;
+            lock (proposalLock)
+            {
+                ids = [.. proposals.Where(pair => pair.Value.SectionNumber == sectionNumber).Select(pair => pair.Key)];
+            }
+
+            foreach (long locationId in ids)
+                RemoveProposal(locationId);
         }
 
         /// <summary>Drops GPU mask textures while keeping the outline proposals.</summary>
@@ -912,21 +1220,26 @@ namespace WebAnnotation.UI.AutoPolygonize
                 foreach (object item in e.OldItems)
                 {
                     if (item is LocationObj loc)
-                    {
-                        cache.Remove(loc.ID);
-                        RemoveProposal(loc.ID);
-                    }
+                        ForgetLocation(loc.ID);
                 }
             }
-            else if (e.Action == NotifyCollectionChangedAction.Replace && e.NewItems is not null)
+            else if (e.Action == NotifyCollectionChangedAction.Replace)
             {
-                foreach (object item in e.NewItems)
+                int count = Math.Max(e.OldItems?.Count ?? 0, e.NewItems?.Count ?? 0);
+                for (int i = 0; i < count; i++)
                 {
-                    if (item is LocationObj loc && loc.TypeCode != LocationType.CIRCLE)
+                    LocationObj? old = e.OldItems is not null && i < e.OldItems.Count ? e.OldItems[i] as LocationObj : null;
+                    LocationObj? loc = e.NewItems is not null && i < e.NewItems.Count ? e.NewItems[i] as LocationObj : null;
+                    if (loc is null)
+                        continue;
+
+                    if (loc.TypeCode != LocationType.CIRCLE)
                     {
-                        cache.Remove(loc.ID);
-                        RemoveProposal(loc.ID);
+                        ForgetLocation(loc.ID);
+                        continue;
                     }
+
+                    cache.ReplaceLocation(old, loc);
                 }
             }
         }

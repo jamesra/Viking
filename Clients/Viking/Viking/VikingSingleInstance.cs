@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -11,6 +12,8 @@ namespace Viking
 {
     /// <summary>
     /// Per-volume single-instance activation for viking:// deep links via named pipe + mutex.
+    /// Listens on both the volume URL and Identity volume name so SBFSEM/Identity links match
+    /// whichever identifier they send.
     /// </summary>
     public static class VikingSingleInstance
     {
@@ -22,80 +25,52 @@ namespace Viking
         private const int IoTimeoutMs = 2000;
 
         private static CancellationTokenSource? _listenCts;
-        private static Mutex? _volumeMutex;
+        private static readonly List<Mutex> _mutexes = [];
         private static Func<string, string>? _handler;
 
         /// <summary>
         /// If another Viking instance already has this volume open, forward the URL and return true when handled (OK).
+        /// Tries the volume-URL pipe first, then the Identity volume-name pipe.
         /// </summary>
         public static bool TryForwardToExistingInstance(string vikingUrl)
         {
             if (string.IsNullOrWhiteSpace(vikingUrl))
                 return false;
 
-            if (!VikingDeepLinkParser.TryGetVolumeUrl(vikingUrl, out string? volumeUrl) || string.IsNullOrWhiteSpace(volumeUrl))
+            if (!VikingDeepLinkParser.TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
                 return false;
 
-            string pipeName = PipeNameForVolume(volumeUrl!);
-            try
+            foreach (string pipeName in PipeNamesFor(link.VolumeUrl, link.VolumeName))
             {
-                using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
-                client.Connect(ConnectTimeoutMs);
-                client.ReadMode = PipeTransmissionMode.Byte;
-
-                using var writer = new StreamWriter(client, Encoding.UTF8, 1024, leaveOpen: true) { AutoFlush = true };
-                using var reader = new StreamReader(client, Encoding.UTF8, false, 1024, leaveOpen: true);
-
-                writer.WriteLine(vikingUrl.Trim());
-                client.WriteTimeout = IoTimeoutMs;
-                client.ReadTimeout = IoTimeoutMs;
-
-                string? ack = reader.ReadLine();
-                Trace.WriteLine($"[Viking] Deep-link forward ack: {ack}", "Viking");
-                return string.Equals(ack, AckOk, StringComparison.Ordinal);
+                if (TryForwardToPipe(pipeName, vikingUrl))
+                    return true;
             }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"[Viking] Deep-link forward failed (will start normally): {ex.Message}", "Viking");
-                return false;
-            }
+
+            return false;
         }
 
         /// <summary>
-        /// Start accepting viking:// activations for the open volume. No-op if another instance already owns this volume pipe.
+        /// Start accepting viking:// activations for the open volume. No-op for a key another instance already owns.
         /// </summary>
-        public static void StartListening(string volumeUrl, Func<string, string> handler)
+        public static void StartListening(string volumeUrl, string? volumeName, Func<string, string> handler)
         {
             StopListening();
 
-            if (string.IsNullOrWhiteSpace(volumeUrl) || handler is null)
+            if (handler is null)
                 return;
 
             _handler = handler;
-            string pipeName = PipeNameForVolume(volumeUrl);
-            string mutexName = @"Local\VikingLegacy.Vol." + HashKey(NormalizeVolumeUrl(volumeUrl));
-
-            try
-            {
-                _volumeMutex = new Mutex(true, mutexName, out bool createdNew);
-                if (!createdNew)
-                {
-                    Trace.WriteLine("[Viking] Another instance already listens for this volume; skipping deep-link server.", "Viking");
-                    _volumeMutex.Dispose();
-                    _volumeMutex = null;
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"[Viking] Deep-link mutex failed: {ex.Message}", "Viking");
-                return;
-            }
-
             _listenCts = new CancellationTokenSource();
             CancellationToken token = _listenCts.Token;
-            Task.Run(() => ListenLoop(pipeName, token), token);
-            Trace.WriteLine($"[Viking] Deep-link server listening on pipe {pipeName}", "Viking");
+
+            foreach (string pipeName in PipeNamesFor(volumeUrl, volumeName))
+            {
+                if (!TryOwnPipe(pipeName))
+                    continue;
+                string captured = pipeName;
+                Task.Run(() => ListenLoop(captured, token), token);
+                Trace.WriteLine($"[Viking] Deep-link server listening on pipe {pipeName}", "Viking");
+            }
         }
 
         public static void StopListening()
@@ -110,15 +85,68 @@ namespace Viking
             _listenCts = null;
             _handler = null;
 
-            if (_volumeMutex != null)
+            foreach (Mutex mutex in _mutexes)
             {
                 try
                 {
-                    _volumeMutex.ReleaseMutex();
+                    mutex.ReleaseMutex();
                 }
                 catch { /* ignore */ }
-                _volumeMutex.Dispose();
-                _volumeMutex = null;
+                mutex.Dispose();
+            }
+            _mutexes.Clear();
+        }
+
+        internal static string NormalizeVolumeUrl(string url) => VikingDeepLinkParser.NormalizeVolumeUrl(url);
+
+        internal static bool VolumeUrlsMatch(string? a, string? b) => VikingDeepLinkParser.VolumeUrlsEqual(a, b);
+
+        private static bool TryForwardToPipe(string pipeName, string vikingUrl)
+        {
+            try
+            {
+                using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
+                client.Connect(ConnectTimeoutMs);
+                client.ReadMode = PipeTransmissionMode.Byte;
+
+                using var writer = new StreamWriter(client, Encoding.UTF8, 1024, leaveOpen: true) { AutoFlush = true };
+                using var reader = new StreamReader(client, Encoding.UTF8, false, 1024, leaveOpen: true);
+
+                writer.WriteLine(vikingUrl.Trim());
+                client.WriteTimeout = IoTimeoutMs;
+                client.ReadTimeout = IoTimeoutMs;
+
+                string? ack = reader.ReadLine();
+                Trace.WriteLine($"[Viking] Deep-link forward ack ({pipeName}): {ack}", "Viking");
+                return string.Equals(ack, AckOk, StringComparison.Ordinal);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Deep-link forward to {pipeName} failed: {ex.Message}", "Viking");
+                return false;
+            }
+        }
+
+        private static bool TryOwnPipe(string pipeName)
+        {
+            string mutexName = @"Local\" + pipeName;
+            try
+            {
+                var mutex = new Mutex(true, mutexName, out bool createdNew);
+                if (!createdNew)
+                {
+                    Trace.WriteLine($"[Viking] Another instance already listens on {pipeName}.", "Viking");
+                    mutex.Dispose();
+                    return false;
+                }
+
+                _mutexes.Add(mutex);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Deep-link mutex failed for {pipeName}: {ex.Message}", "Viking");
+                return false;
             }
         }
 
@@ -182,38 +210,20 @@ namespace Viking
             }
         }
 
-        internal static string NormalizeVolumeUrl(string url)
+        private static IEnumerable<string> PipeNamesFor(string? volumeUrl, string? volumeName)
         {
-            if (string.IsNullOrWhiteSpace(url))
-                return string.Empty;
-
-            string normalized = url.Trim();
-            try
-            {
-                normalized = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(normalized) ?? normalized;
-            }
-            catch
-            {
-                // Keep trimmed URL if append fails (malformed URI).
-            }
-
-            return normalized.TrimEnd('/').ToLowerInvariant();
+            var names = new List<string>();
+            if (!string.IsNullOrWhiteSpace(volumeUrl) && VikingDeepLinkParser.LooksLikeVolumeUrl(volumeUrl))
+                names.Add("VikingLegacy.Activation." + HashKey(VikingDeepLinkParser.NormalizeVolumeUrl(volumeUrl!)));
+            if (!string.IsNullOrWhiteSpace(volumeName))
+                names.Add("VikingLegacy.Activation.Name." + HashKey(volumeName!.Trim().ToLowerInvariant()));
+            return names;
         }
 
-        internal static bool VolumeUrlsMatch(string? a, string? b)
-        {
-            if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
-                return false;
-            return string.Equals(NormalizeVolumeUrl(a), NormalizeVolumeUrl(b), StringComparison.Ordinal);
-        }
-
-        private static string PipeNameForVolume(string volumeUrl)
-            => "VikingLegacy.Activation." + HashKey(NormalizeVolumeUrl(volumeUrl));
-
-        private static string HashKey(string normalizedVolumeUrl)
+        private static string HashKey(string normalized)
         {
             using var sha = SHA256.Create();
-            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(normalizedVolumeUrl));
+            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(normalized));
             var sb = new StringBuilder(16);
             for (int i = 0; i < 8; i++)
                 sb.Append(hash[i].ToString("x2"));

@@ -124,9 +124,13 @@ namespace WebAnnotation
                 Global.AnnotationSettings.PolygonPointRadius,
                 Global.AnnotationSettings.SmallestRenderedSize,
                 Global.AnnotationSettings.AutoPolygonizeCircles,
-                Global.AnnotationSettings.AutoPolygonizeMinScreenAreaPercent,
+                Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers,
                 Global.AnnotationSettings.AutoPolygonizeOverlayMasks
             );
+
+            VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
+            if (scene != null)
+                viewModel.NanometersPerPixel = scene.ScreenPixelSizeInVolume * Global.Scale.X;
 
             // Initialize static accessor properties
             CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
@@ -247,7 +251,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.SegmentationHoleDropFraction = viewModel.SegmentationHoleDropFraction;
             Global.AnnotationSettings.SegmentationEdgeCleanupRadius = viewModel.SegmentationEdgeCleanupRadius;
             Global.AnnotationSettings.AutoPolygonizeCircles = viewModel.AutoPolygonizeCircles;
-            Global.AnnotationSettings.AutoPolygonizeMinScreenAreaPercent = viewModel.AutoPolygonizeMinScreenAreaPercent;
+            Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers = viewModel.AutoPolygonizeMinRadiusNanometers;
             Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
             if (menuAutoPolygonizeCircles != null)
                 menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;

@@ -1,42 +1,81 @@
-# PowerShell script to build, package, and sign Viking using Velopack
-# Builds the application, packages it with Velopack, and signs with ECC HSM certificate
-
 <#
 .SYNOPSIS
-    Builds, packages, and signs a Viking application using Velopack.
+    Builds, packages, and Authenticode-signs a Viking Velopack release.
 
 .DESCRIPTION
-    This script:
-    1. Checks for Velopack CLI (vpk) and installs if needed
-    2. Builds the application using dotnet build
-    3. Publishes the application
-    4. Preserves or downloads previous release packages for delta generation
-    5. Packages the application with Velopack (generates delta packages if previous release exists)
-    6. Signs Setup.exe and all .nupkg files with ECC HSM certificate
+    Run this from Clients\Viking\Viking before DeployVelopack.ps1. It:
+
+    1. Installs the Velopack CLI (vpk) if it is missing.
+    2. Builds Viking.csproj for net48 into bin\<Configuration>\net48.
+    3. Pre-signs every .exe/.dll in that output with the ECC HSM cert (YubiKey PIN once per batch).
+    4. Looks for a previous Viking-*-full.nupkg under .\releases, or downloads one from ReleaseUrl,
+       so vpk can emit a delta package.
+    5. Runs vpk pack into .\releases (Viking-win-Setup.exe, .nupkg, RELEASES).
+    6. Signs Viking-win-Setup.exe. NuGet packages are ZIP files and cannot be signed with signtool.
+
+    Prerequisites: .NET SDK, Windows SDK (signtool.exe), a connected YubiKey for the default cert.
+
+    After a successful pack, deploy with:
+        .\DeployVelopack.ps1 -ServerPath '\\server\share\Software\Viking'
+
+    Show this help:
+        .\PublishVelopack.ps1 -?
+        .\PublishVelopack.ps1 -Help
+        Get-Help .\PublishVelopack.ps1 -Full
+
+.PARAMETER Help
+    Writes this help and exits without building.
 
 .PARAMETER Configuration
-    The build configuration to use (default: Release)
+    dotnet build configuration. Default: Release.
 
 .PARAMETER CertificateThumbprint
-    The thumbprint of the certificate to use for signing (default: 41403cbc59209b576efe575775abe8f4a42da6ba)
+    SHA-1 thumbprint of the code-signing certificate in the Windows cert store
+    (40 hex digits). Default is the Viking ECC HSM cert.
 
 .PARAMETER TimestampUrl
-    The timestamp server URL (default: http://timestamp.digicert.com)
+    RFC 3161 timestamp URL passed to signtool /t. Default: http://timestamp.digicert.com
 
 .PARAMETER Version
-    The version number to use for the package (default: reads from Viking.csproj)
+    Velopack pack version as SemVer X.Y.Z. A four-part ApplicationVersion from Viking.csproj
+    (X.Y.Z.W) is trimmed to X.Y.Z. If omitted, ApplicationVersion is read from the csproj.
 
 .PARAMETER ReleaseUrl
-    The base URL where releases are hosted for downloading previous versions (default: http://websvc.codepharm.net/Software/Viking)
+    HTTP base used by vpk download when .\releases has no older full package.
+    Default: http://websvc.codepharm.net/Software/Viking
 
 .EXAMPLE
-    .\PublishVelopack.ps1 -Configuration Release
+    .\PublishVelopack.ps1 -Help
+
+    Print usage and parameter descriptions.
+
 .EXAMPLE
-    .\PublishVelopack.ps1 -Configuration Release -Version "1.2.1.0"
+    .\PublishVelopack.ps1
+
+    Release build, version from Viking.csproj, default signing cert.
+
+.EXAMPLE
+    .\PublishVelopack.ps1 -Configuration Release -Version "1.2.1"
+
+    Pack as 1.2.1 instead of the csproj ApplicationVersion.
+
+.EXAMPLE
+    .\PublishVelopack.ps1 -ReleaseUrl "http://websvc.codepharm.net/Software/Viking"
+
+    Force previous-release download from that URL when local releases are empty.
+
+.NOTES
+    Output directory: Clients\Viking\Viking\releases
+    Signing prompts for the YubiKey PIN; keep the key plugged in through Step 5 and Step 7.
+    Does not upload anything. Use DeployVelopack.ps1 next.
+
+.LINK
+    DeployVelopack.ps1
 #>
 
 [CmdletBinding(PositionalBinding = $false)]
 param(
+    [switch]$Help,
     [string]$Configuration = "Release",
     [ValidatePattern('(?i)^[0-9a-f]{40}$')]
     [string]$CertificateThumbprint = "41403cbc59209b576efe575775abe8f4a42da6ba",
@@ -44,6 +83,11 @@ param(
     [string]$Version = "",
     [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking"
 )
+
+if ($Help) {
+    Get-Help -Name $PSCommandPath -Full
+    exit 0
+}
 
 $ErrorActionPreference = "Stop"
 

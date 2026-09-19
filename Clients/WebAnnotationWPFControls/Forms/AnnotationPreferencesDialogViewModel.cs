@@ -31,7 +31,7 @@ namespace WebAnnotation.WPF.Forms
         private double _originalSegmentationHoleDropFraction;
         private int _originalSegmentationEdgeCleanupRadius;
         private bool _originalAutoPolygonizeCircles;
-        private double _originalAutoPolygonizeMinScreenAreaPercent;
+        private double _originalAutoPolygonizeMinRadiusNanometers;
         private bool _originalAutoPolygonizeOverlayMasks;
         private double _originalPolygonPointRadius;
         private double _originalSmallestRenderedSize;
@@ -321,15 +321,37 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
-        private double _autoPolygonizeMinScreenAreaPercent;
-        public double AutoPolygonizeMinScreenAreaPercent
+        /// <summary>
+        /// Auto-polygonize cutoff as circle radius in nanometers. Default 75.
+        /// The preview circle is that radius at the current <see cref="NanometersPerPixel"/>.
+        /// </summary>
+        private double _autoPolygonizeMinRadiusNanometers;
+        public double AutoPolygonizeMinRadiusNanometers
         {
-            get => _autoPolygonizeMinScreenAreaPercent;
+            get => _autoPolygonizeMinRadiusNanometers;
             set
             {
-                if (Math.Abs(_autoPolygonizeMinScreenAreaPercent - value) > 0.001)
+                if (Math.Abs(_autoPolygonizeMinRadiusNanometers - value) > 0.001)
                 {
-                    _autoPolygonizeMinScreenAreaPercent = MathUtils.Clamp(value, 0.0, 10.0);
+                    _autoPolygonizeMinRadiusNanometers = MathUtils.Clamp(value, 0.0, 10000.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Nanometers per Viking screen pixel at the current zoom. Sizes the min-size
+        /// preview for <see cref="AutoPolygonizeMinRadiusNanometers"/>.
+        /// </summary>
+        private double _nanometersPerPixel;
+        public double NanometersPerPixel
+        {
+            get => _nanometersPerPixel;
+            set
+            {
+                if (Math.Abs(_nanometersPerPixel - value) > 0.0001)
+                {
+                    _nanometersPerPixel = value;
                     OnPropertyChanged();
                 }
             }
@@ -409,7 +431,7 @@ namespace WebAnnotation.WPF.Forms
             double polygonPointRadius,
             double smallestRenderedSize,
             bool autoPolygonizeCircles,
-            double autoPolygonizeMinScreenAreaPercent,
+            double autoPolygonizeMinRadiusNanometers,
             bool autoPolygonizeOverlayMasks = false)
         {
             // Store current values
@@ -429,7 +451,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonPointRadius = polygonPointRadius;
             _smallestRenderedSize = smallestRenderedSize;
             _autoPolygonizeCircles = autoPolygonizeCircles;
-            _autoPolygonizeMinScreenAreaPercent = autoPolygonizeMinScreenAreaPercent;
+            _autoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             _autoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
 
             // Store original values for Cancel revert BEFORE setting properties
@@ -451,7 +473,7 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationHoleDropFraction = segmentationHoleDropFraction;
             _originalSegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             _originalAutoPolygonizeCircles = autoPolygonizeCircles;
-            _originalAutoPolygonizeMinScreenAreaPercent = autoPolygonizeMinScreenAreaPercent;
+            _originalAutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             _originalAutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             _originalPolygonPointRadius = polygonPointRadius;
             _originalSmallestRenderedSize = smallestRenderedSize;
@@ -474,7 +496,7 @@ namespace WebAnnotation.WPF.Forms
             SegmentationHoleDropFraction = segmentationHoleDropFraction;
             SegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             AutoPolygonizeCircles = autoPolygonizeCircles;
-            AutoPolygonizeMinScreenAreaPercent = autoPolygonizeMinScreenAreaPercent;
+            AutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             AutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             PolygonPointRadius = polygonPointRadius;
             SmallestRenderedSize = smallestRenderedSize;
@@ -504,7 +526,7 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationHoleDropFraction = _segmentationHoleDropFraction;
             _originalSegmentationEdgeCleanupRadius = _segmentationEdgeCleanupRadius;
             _originalAutoPolygonizeCircles = _autoPolygonizeCircles;
-            _originalAutoPolygonizeMinScreenAreaPercent = _autoPolygonizeMinScreenAreaPercent;
+            _originalAutoPolygonizeMinRadiusNanometers = _autoPolygonizeMinRadiusNanometers;
             _originalAutoPolygonizeOverlayMasks = _autoPolygonizeOverlayMasks;
             _originalPolygonPointRadius = _polygonPointRadius;
             _originalSmallestRenderedSize = _smallestRenderedSize;
@@ -530,7 +552,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentationHoleDropFraction = _originalSegmentationHoleDropFraction;
             _segmentationEdgeCleanupRadius = _originalSegmentationEdgeCleanupRadius;
             _autoPolygonizeCircles = _originalAutoPolygonizeCircles;
-            _autoPolygonizeMinScreenAreaPercent = _originalAutoPolygonizeMinScreenAreaPercent;
+            _autoPolygonizeMinRadiusNanometers = _originalAutoPolygonizeMinRadiusNanometers;
             _autoPolygonizeOverlayMasks = _originalAutoPolygonizeOverlayMasks;
             _polygonPointRadius = _originalPolygonPointRadius;
             _smallestRenderedSize = _originalSmallestRenderedSize;
@@ -558,7 +580,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentationHoleDropFraction = 0.03;
             _segmentationEdgeCleanupRadius = 2;
             _autoPolygonizeCircles = false;
-            _autoPolygonizeMinScreenAreaPercent = 1.0;
+            _autoPolygonizeMinRadiusNanometers = 75.0;
             _autoPolygonizeOverlayMasks = false;
             _polygonPointRadius = 6.0;
             _smallestRenderedSize = 0.5;

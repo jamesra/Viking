@@ -271,7 +271,15 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
-        public ShapeRelation GetRelation(in IPoint2D p) => ContainsExt(p.Convert());
+        public ShapeRelation GetRelation(in GridVector2 p) => ContainsExt(p);
+
+        public ShapeRelation GetRelation(in IPoint2D p)
+        {
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
+
+            return ContainsExt(new GridVector2(p.X, p.Y));
+        }
 
         public ShapeRelation ContainsExt(in GridVector2 p)
         {

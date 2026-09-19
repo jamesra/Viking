@@ -158,6 +158,45 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// Installs a previously uploaded SAM2 image so SegmentImage can reuse it.
+        /// Prompt mapping uses <paramref name="worldBounds"/>, not the live camera.
+        /// NotFound still re-uploads via <see cref="SegmentAsync"/>.
+        /// </summary>
+        public void AdoptUploadedImage(ulong imageId, GridRectangle worldBounds, int width, int height)
+        {
+            currentImageId = imageId;
+            uploadedImageBounds = worldBounds;
+            uploadedImageWidth = width;
+            uploadedImageHeight = height;
+            ViewportBounds = worldBounds;
+        }
+
+        /// <summary>
+        /// Best-effort DeleteImage for a leased id that is no longer referenced by the auto-polygonize cache.
+        /// Does not change <see cref="CurrentImageId"/> on this session.
+        /// </summary>
+        public async Task DeleteImageByIdAsync(ulong imageId)
+        {
+            if (imageId == 0 || grpcClient is null)
+                return;
+
+            try
+            {
+                DeleteImageRequest deleteRequest = new()
+                {
+                    ImageId = imageId
+                };
+
+                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(5));
+                await grpcClient.DeleteImageAsync(deleteRequest, callOptions).ResponseAsync.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error deleting leased image from cache (ID={imageId}): {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Waits for visible tiles, GPU-captures, encodes off-UI, then uploads if the live view still matches.
         /// UploadImage is not passed the cancel token so a completed RPC always yields an ID; cancel after assign deletes.
         /// </summary>
@@ -311,9 +350,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if ((foregroundPoints is null || foregroundPoints.Count == 0) &&
                 (backgroundPoints is null || backgroundPoints.Count == 0))
-            {
                 return null;
-            }
 
             if (!currentImageId.HasValue && !IsUploading)
             {
@@ -365,7 +402,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     deadline: DateTime.UtcNow.AddSeconds(30),
                     cancellationToken: cancellationToken);
 
-                return await grpcClient.SegmentImageAsync(retry, retryOptions).ResponseAsync.ConfigureAwait(false);
+                SegmentationResponse retryResponse =
+                    await grpcClient.SegmentImageAsync(retry, retryOptions).ResponseAsync.ConfigureAwait(false);
+                return retryResponse;
             }
             catch (OperationCanceledException)
             {
@@ -379,14 +418,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Decodes each segment mask and polygonizes in score order. Near-full-frame masks are skipped
-        /// before cleanup so marching squares cannot run for a minute on a 6M-pixel blob.
+        /// Decodes each segment mask and polygonizes in score order. Near-full-frame masks are skipped.
+        /// Cleanup and marching squares run on the downsampled mask.
+        /// <paramref name="cancellationToken"/> is checked between segments so a newer click can abort.
         /// </summary>
         public IReadOnlyList<GridPolygon> CreatePolygonsFromResponse(
             SegmentationResponse response,
             double? holeDropFraction = null,
             IReadOnlyList<GridVector2> preserveHolesContainingWorldPoints = null,
-            int? edgeCleanupRadius = null)
+            int? edgeCleanupRadius = null,
+            CancellationToken cancellationToken = default)
         {
             if (response is null || response.Segments.Count == 0)
                 return [];
@@ -403,6 +444,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             List<GridPolygon> polygons = [];
             foreach (var segment in response.Segments.OrderByDescending(s => s.Score))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 byte[] pngBytes = segment.Mask.ToByteArray();
                 maskBytes += pngBytes.Length;
                 Stopwatch decodeTimer = Stopwatch.StartNew();

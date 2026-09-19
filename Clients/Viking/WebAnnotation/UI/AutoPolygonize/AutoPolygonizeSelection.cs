@@ -1,18 +1,20 @@
 using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI.AutoPolygonize
 {
     /// <summary>
     /// Eligibility, hit-test, and line-width helpers for auto-polygonize proposals.
-    /// Circles must sit inside an inset of the viewport and meet the min on-screen area.
+    /// Circles must sit inside a 5% inset, lie entirely on the visible view, and meet the min radius in nanometers.
     /// </summary>
     internal static class AutoPolygonizeSelection
     {
-        public const double EdgeMarginFraction = 0.10;
+        public const double EdgeMarginFraction = 0.05;
         public const double HitTestPixels = 10.0;
 
         /// <summary>
@@ -44,7 +46,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Shrinks the viewport so circles near the edge are not auto-segmented.
+        /// Shrinks the viewport by <see cref="EdgeMarginFraction"/> on each side so a circle
+        /// whose center is closer than 5% to an edge is not auto-segmented.
         /// </summary>
         public static GridRectangle InsetBounds(GridRectangle viewBounds, double marginFraction = EdgeMarginFraction)
         {
@@ -66,44 +69,53 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Eligible when the center is inset and the on-screen area meets <paramref name="minScreenAreaPercent"/>.
+        /// True when the disk of <paramref name="radius"/> around <paramref name="volumeCenter"/>
+        /// lies entirely inside <paramref name="bounds"/>. Used so a clipped circle is not submitted.
+        /// </summary>
+        public static bool IsCircleEntirelyInside(GridVector2 volumeCenter, double radius, GridRectangle bounds)
+        {
+            if (radius < 0)
+                return false;
+
+            return bounds.Contains(new GridRectangle(volumeCenter, radius));
+        }
+
+        /// <summary>
+        /// Eligible when the center is at least 5% from each view edge, the disk is fully on
+        /// <paramref name="viewBounds"/>, and the radius is at least
+        /// <paramref name="minRadiusNanometers"/>.
         /// </summary>
         public static bool IsEligibleCircle(
             LocationType typeCode,
             GridVector2 volumeCenter,
             GridRectangle inset,
+            GridRectangle viewBounds,
             double mosaicRadius,
-            double screenPixelSizeInVolume,
-            double viewportWidth,
-            double viewportHeight,
-            double minScreenAreaPercent)
+            double nanometersPerWorldUnit,
+            double minRadiusNanometers)
         {
             return IsEligibleCircle(typeCode, volumeCenter, inset) &&
-                   MeetsMinScreenArea(mosaicRadius, screenPixelSizeInVolume, viewportWidth, viewportHeight, minScreenAreaPercent);
+                   IsCircleEntirelyInside(volumeCenter, mosaicRadius, viewBounds) &&
+                   MeetsMinRadiusNanometers(mosaicRadius, nanometersPerWorldUnit, minRadiusNanometers);
         }
 
         /// <summary>
-        /// True when the circle's on-screen area is at least <paramref name="minScreenAreaPercent"/> of the viewport.
-        /// 0% accepts any positive radius.
+        /// True when <paramref name="mosaicRadius"/> × <paramref name="nanometersPerWorldUnit"/>
+        /// is at least <paramref name="minRadiusNanometers"/>. 0 accepts any positive radius.
         /// </summary>
-        public static bool MeetsMinScreenArea(
+        public static bool MeetsMinRadiusNanometers(
             double mosaicRadius,
-            double screenPixelSizeInVolume,
-            double viewportWidth,
-            double viewportHeight,
-            double minScreenAreaPercent)
+            double nanometersPerWorldUnit,
+            double minRadiusNanometers)
         {
             if (mosaicRadius <= 0)
                 return false;
-            if (minScreenAreaPercent <= 0)
+            if (minRadiusNanometers <= 0)
                 return true;
-            if (screenPixelSizeInVolume <= 0 || viewportWidth <= 0 || viewportHeight <= 0)
+            if (nanometersPerWorldUnit <= 0)
                 return true;
 
-            double screenRadius = mosaicRadius / screenPixelSizeInVolume;
-            double screenArea = Math.PI * screenRadius * screenRadius;
-            double viewportArea = viewportWidth * viewportHeight;
-            return screenArea >= (minScreenAreaPercent / 100.0) * viewportArea;
+            return mosaicRadius * nanometersPerWorldUnit >= minRadiusNanometers;
         }
 
         /// <summary>
@@ -131,66 +143,64 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public static GridPolygon SimplifyProposal(GridPolygon polygon, double tolerance)
             => SegmentationMaskPolygonizer.SimplifyRings(polygon, tolerance);
-    }
-
-    /// <summary>
-    /// Remembers which circles already have a proposal or were dismissed at a given LastModified.
-    /// A hitch-view proposal must not be remembered, or the circle will never retry.
-    /// </summary>
-    internal sealed class AutoPolygonizeCache
-    {
-        private readonly Dictionary<long, (DateTime LastModified, LocationType TypeCode)> proposals = [];
-        private readonly Dictionary<long, DateTime> dismissed = [];
 
         /// <summary>
-        /// False when the circle is not a circle, was dismissed at this LastModified, or already has a matching proposal.
+        /// True when live downsample moved by 2× or more versus the cached upload.
+        /// Same rule as annotation reload on camera change.
         /// </summary>
-        public bool ShouldProcess(long locationId, DateTime lastModified, LocationType typeCode)
+        public static bool DownsampleChangedByFactorOfTwo(double liveDownsample, double cachedDownsample)
         {
-            if (typeCode != LocationType.CIRCLE)
-                return false;
+            if (cachedDownsample <= 0 || liveDownsample <= 0)
+                return true;
 
-            if (dismissed.TryGetValue(locationId, out DateTime dismissedAt) && dismissedAt == lastModified)
-                return false;
-
-            if (proposals.TryGetValue(locationId, out var existing) &&
-                existing.LastModified == lastModified &&
-                existing.TypeCode == typeCode)
-            {
-                return false;
-            }
-
-            return true;
+            return liveDownsample >= 2 * cachedDownsample || liveDownsample <= cachedDownsample / 2;
         }
 
         /// <summary>
-        /// Records a published proposal so the same LastModified is not segmented again.
+        /// True when the cached SAM2 image can be reused for a single-ID refresh:
+        /// id present, zoom not 2× away, and the circle center still inside the uploaded world rectangle.
         /// </summary>
-        public void RememberProposal(long locationId, DateTime lastModified, LocationType typeCode)
+        public static bool CanReuseUploadedImage(
+            in AutoPolygonizeUploadContext context,
+            double liveDownsample,
+            GridVector2 volumeCenter)
         {
-            dismissed.Remove(locationId);
-            proposals[locationId] = (lastModified, typeCode);
+            if (!context.IsUsable)
+                return false;
+            if (DownsampleChangedByFactorOfTwo(liveDownsample, context.Downsample))
+                return false;
+            return context.WorldBounds.Contains(volumeCenter);
         }
 
         /// <summary>
-        /// Suppresses the circle until LastModified changes (user edit or server update).
+        /// Squared-distance compare so batch SegmentImage can run nearest-to-farthest from the view center.
+        /// Negative when <paramref name="a"/> is closer to <paramref name="center"/>.
         /// </summary>
-        public void Dismiss(long locationId, DateTime lastModified)
+        public static int CompareDistanceFromCenter(GridVector2 a, GridVector2 b, GridVector2 center)
         {
-            proposals.Remove(locationId);
-            dismissed[locationId] = lastModified;
+            return GridVector2.DistanceSquared(a, center).CompareTo(GridVector2.DistanceSquared(b, center));
         }
 
-        public void Remove(long locationId)
+        /// <summary>
+        /// Stable nearest-first order around <paramref name="center"/>. Used by CollectEligibleCircles.
+        /// Equal distances keep input order.
+        /// </summary>
+        public static List<T> OrderByDistanceFromCenter<T>(
+            IEnumerable<T> items,
+            Func<T, GridVector2> position,
+            GridVector2 center)
         {
-            proposals.Remove(locationId);
-            dismissed.Remove(locationId);
+            return [.. items.OrderBy(item => GridVector2.DistanceSquared(position(item), center))];
         }
 
-        public void Clear()
+        /// <summary>
+        /// MosaicShape, VolumeShape, Position, Radius, or an empty name from a bulk update.
+        /// </summary>
+        public static bool IsGeometryProperty(string? propertyName)
         {
-            proposals.Clear();
-            dismissed.Clear();
+            return string.IsNullOrEmpty(propertyName) ||
+                   propertyName is nameof(LocationObj.MosaicShape) or nameof(LocationObj.VolumeShape)
+                       or nameof(LocationObj.Position) or nameof(LocationObj.Radius);
         }
     }
 }

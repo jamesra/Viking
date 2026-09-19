@@ -3,30 +3,18 @@
   "configurations": [
     {
       "name": "Viking",
-      "type": "coreclr",
+      "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "build-viking",
-      "program": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48",
-      "console": "internalConsole",
-      "stopAtEntry": false
+      "command": "Start-Process -FilePath '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe' -WorkingDirectory '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48' -Wait; exit",
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48"
     },
     {
       "name": "Viking (no build)",
-      "type": "coreclr",
+      "type": "node-terminal",
       "request": "launch",
-      "program": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48",
-      "console": "internalConsole",
-      "stopAtEntry": false
-    },
-    {
-      "name": "Attach to Viking",
-      "type": "coreclr",
-      "request": "attach",
-      "processName": "Viking"
+      "command": "Start-Process -FilePath '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe' -WorkingDirectory '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48' -Wait; exit",
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48"
     }
   ]
 }

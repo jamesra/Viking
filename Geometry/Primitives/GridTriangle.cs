@@ -232,7 +232,15 @@ namespace Geometry
         /// <returns></returns>
         public bool Contains(in IPoint2D point)
         {
-            if (false == BoundingBox.Contains(point))
+            if (point is null)
+                throw new ArgumentNullException(nameof(point));
+
+            return Contains(new GridVector2(point.X, point.Y));
+        }
+
+        public bool Contains(in GridVector2 point)
+        {
+            if (false == BoundingBox.Contains(point, 0))
             {
                 //False positives can happen in cases where the points have floating point precision issues.
                 //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
@@ -251,9 +259,12 @@ namespace Geometry
             return false;
         }
 
-        public ShapeRelation GetRelation(in IPoint2D p)
+        /// <summary>
+        /// Point-in-triangle via barycentric coordinates without boxing <see cref="GridVector2"/>.
+        /// </summary>
+        public ShapeRelation GetRelation(in GridVector2 p)
         {
-            if (false == BoundingBox.Contains(p))
+            if (false == BoundingBox.Contains(p, 0))
             {
                 //False positives can happen in cases where the points have floating point precision issues.
                 //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
@@ -261,7 +272,6 @@ namespace Geometry
                 return ShapeRelation.NONE;
             }
 
-            //Find out if the point is on any line segment of the triangle
             GridVector2 uv = Barycentric(p);
             GridVector3 uvw = new(uv.X, uv.Y, 1 - uv.X - uv.Y);
 
@@ -269,7 +279,6 @@ namespace Geometry
             {
                 if (uvw.X + uvw.Y + uvw.Z <= 1.0f)
                 {
-                    //The point is on or inside the triangle if any barycentric coordinate is 0
                     if (uvw.coords.Any(c => c == 0))
                         return ShapeRelation.TOUCHING;
 
@@ -280,7 +289,15 @@ namespace Geometry
             return ShapeRelation.NONE;
         }
 
-        public ShapeRelation GetRelation(GridLineSegment line)
+        public ShapeRelation GetRelation(in IPoint2D p)
+        {
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
+
+            return GetRelation(new GridVector2(p.X, p.Y));
+        }
+
+        public ShapeRelation GetRelation(in GridLineSegment line)
         {
             //This is very similar to the logic for GridRectangle
             ShapeRelation relA = this.GetRelation(line.A);

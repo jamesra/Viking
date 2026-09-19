@@ -26,7 +26,8 @@ namespace Geometry.Meshing
             IEdgeKey[] _edges = new IEdgeKey[iVerts.Length];
             for (int i = 0; i < iVerts.Length; i++)
             {
-                _edges[i] = i < iVerts.Length - 1 ? new EdgeKey(iVerts[i], iVerts[i + 1]) : new EdgeKey(iVerts[i], iVerts[0]);
+                EdgeKey key = i < iVerts.Length - 1 ? new EdgeKey(iVerts[i], iVerts[i + 1]) : new EdgeKey(iVerts[i], iVerts[0]);
+                _edges[i] = key;
             }
 
             return _edges;

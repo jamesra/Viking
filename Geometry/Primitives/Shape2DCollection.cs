@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,18 +44,44 @@ namespace Geometry
             return Shapes.Any(s => s.Contains(pnt));
         }
 
+        public bool Contains(in GridVector2 p) => GetRelation(p) != ShapeRelation.NONE;
+
         public ShapeRelation GetRelation(in IPoint2D p)
+        {
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
+
+            return GetRelation(new GridVector2(p.X, p.Y));
+        }
+
+        /// <summary>
+        /// ORs child relations so a collection can report interior, boundary, and crossing together.
+        /// Walks every child. Dispatches known concrete types so the point is not boxed.
+        /// </summary>
+        public ShapeRelation GetRelation(in GridVector2 p)
         {
             Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
             ShapeRelation output = ShapeRelation.NONE;
             foreach (var s in Shapes)
             {
-                var result = s.GetRelation(p);
-                output |= result;
+                output |= RelationToPoint(s, p);
             }
 
             return output;
         }
+
+        static ShapeRelation RelationToPoint(IShape2D s, in GridVector2 p) => s switch
+        {
+            GridPolygon poly => poly.GetRelation(p),
+            GridPolyline polyline => polyline.GetRelation(p),
+            Path path => path.GetRelation(p),
+            Shape2DCollection collection => collection.GetRelation(p),
+            GridRectangle rect => rect.GetRelation(p),
+            GridTriangle tri => tri.GetRelation(p),
+            GridLineSegment seg => seg.GetRelation(p),
+            GridCircle circle => circle.GetRelation(p),
+            _ => s.GetRelation((IPoint2D)p),
+        };
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {

@@ -496,9 +496,9 @@ namespace Geometry
             return intersects;
         }
 
-        public bool Intersects(GridLineSegment seg, out IShape2D Intersection) => GetRelation(seg, out Intersection) != ShapeRelation.NONE;
+        public bool Intersects(GridLineSegment seg, out IShape2D Intersection) => GetRelation(in seg, out Intersection) != ShapeRelation.NONE;
 
-        public ShapeRelation GetRelation(GridLineSegment seg, out IShape2D Intersection)
+        public ShapeRelation GetRelation(in GridLineSegment seg, out IShape2D Intersection)
         {
             //Don't do the full check if the bounding boxes don't overlap
 
@@ -557,8 +557,9 @@ namespace Geometry
                 //If there are two points on the line, those are the intersecting points
                 if (distances.Count(d => d == 0) >= 2)
                 {
-                    GridVector2[] endpoints = [.. new GridVector2[] { seg.A, seg.B, this.A, this.B }.Distinct()];
-                    GridVector2[] endpointsOnLineCandidates = [.. endpoints.Where(e => overlapRect.Value.Contains(e) && seg.DistanceToPoint(e) < Global.Epsilon)];
+                    GridLineSegment other = seg;
+                    GridVector2[] endpoints = [.. new GridVector2[] { other.A, other.B, this.A, this.B }.Distinct()];
+                    GridVector2[] endpointsOnLineCandidates = [.. endpoints.Where(e => overlapRect.Value.Contains(e) && other.DistanceToPoint(e) < Global.Epsilon)];
 
                     //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
                     if (endpointsOnLineCandidates.Length == 0)
@@ -696,7 +697,21 @@ namespace Geometry
 
         public bool Contains(in IPoint2D p) => Contains(new GridVector2(p.X, p.Y));
 
-        public ShapeRelation GetRelation(in IPoint2D p) => Contains(new GridVector2(p.X, p.Y)) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
+        public ShapeRelation GetRelation(in GridVector2 p) => Contains(p) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
+
+        public ShapeRelation GetRelation(in IPoint2D p)
+        {
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
+
+            return GetRelation(new GridVector2(p.X, p.Y));
+        }
+
+        /// <summary>
+        /// Must use <see cref="GetRelation(in GridLineSegment, out IShape2D)"/>. A one-arg
+        /// <c>GetRelation(ToLineSegment())</c> would otherwise bind to <see cref="GetRelation(in ILineSegment2D)"/> and recurse.
+        /// </summary>
+        public ShapeRelation GetRelation(in GridLineSegment other) => GetRelation(in other, out _);
 
         public ShapeRelation GetRelation(in ILineSegment2D l) => GetRelation(l.Convert());
 

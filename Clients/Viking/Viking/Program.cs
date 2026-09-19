@@ -101,10 +101,17 @@ namespace Viking
             // Register viking:// URL protocol so the OS launches Viking when the user clicks a viking:// link
             VikingProtocolRegistration.RegisterIfNeeded();
 
-            // Same-volume deep link: forward to the running instance and exit when handled.
-            string? vikingOpenUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
-            if (!string.IsNullOrEmpty(vikingOpenUrl) && VikingSingleInstance.TryForwardToExistingInstance(vikingOpenUrl!))
+            // Same-volume deep link with a full volume URL/name can be forwarded before UI setup.
+            // Launch codes are exchanged first (below) so location/volume from Identity survive a stripped query.
+            if (VikingDeepLinkParser.TryFindOpenUrl(args, out string? earlyOpenUrl)
+                && earlyOpenUrl != null
+                && VikingDeepLinkParser.TryParse(earlyOpenUrl, out VikingDeepLink? earlyLink)
+                && earlyLink != null
+                && string.IsNullOrWhiteSpace(earlyLink.Code)
+                && VikingSingleInstance.TryForwardToExistingInstance(earlyOpenUrl))
+            {
                 return;
+            }
 
             ConfigureHighDpiMode();
             Application.EnableVisualStyles();
@@ -149,9 +156,10 @@ namespace Viking
             ApplicationSettings? appSettings = null;
 
             // Handle viking://open?code=...&volume=...&location=... protocol (one-use launch code)
-            if (TryHandleVikingOpenUrl(args, out appSettings))
+            if (TryHandleVikingOpenUrl(args, out appSettings, out bool forwardedToExisting))
             {
-                // appSettings set by TryHandleVikingOpenUrl; continue to volume load below
+                if (forwardedToExisting)
+                    return;
             }
             else
             {
@@ -198,7 +206,10 @@ namespace Viking
 
             // After the main window and viewer exist, accept same-volume viking:// activations.
             if (context.MainForm != null && !string.IsNullOrWhiteSpace(UI.State.VolumeUrl))
-                VikingSingleInstance.StartListening(UI.State.VolumeUrl!, VikingDeepLinkActivation.HandleIncomingUrl);
+            {
+                string? volumeName = UI.State.IdentityVolumeName ?? UI.State.volume?.Name;
+                VikingSingleInstance.StartListening(UI.State.VolumeUrl!, volumeName, VikingDeepLinkActivation.HandleIncomingUrl);
+            }
 
             Application.Run(context);
 
@@ -228,25 +239,22 @@ namespace Viking
 
         /// <summary>
         /// Handles viking://open?code=...&volume=...&location=... protocol.
-        /// Returns true if args contained a viking:// URL and it was handled (appSettings may be null if user cancelled).
+        /// Returns true if args contained a viking:// URL. <paramref name="forwardedToExisting"/> is set
+        /// when the running instance accepted the link and this process should exit.
         /// </summary>
-        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings)
+        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings, out bool forwardedToExisting)
         {
             appSettings = null;
-            string? vikingUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
-            if (string.IsNullOrEmpty(vikingUrl))
+            forwardedToExisting = false;
+            if (!VikingDeepLinkParser.TryFindOpenUrl(args, out string? vikingUrl) || string.IsNullOrEmpty(vikingUrl))
                 return false;
 
-            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
+            if (!VikingDeepLinkParser.TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
                 return false;
 
-            var query = VikingDeepLinkParser.ParseQueryString(uri.Query);
-            ApplyStartupPlaceArguments(query);
+            ApplyStartupPlaceArguments(link);
 
-            string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
-            string? volume = query.TryGetValue("volume", out var v) ? v?.Trim() : null;
-
-            if (!string.IsNullOrEmpty(code))
+            if (!string.IsNullOrEmpty(link.Code))
             {
                 string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
                 if (string.IsNullOrEmpty(baseUrl))
@@ -256,21 +264,38 @@ namespace Viking
                 }
 
                 var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
-                (string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName) = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
-                if (accessToken == null)
+                LaunchExchangeResult exchanged = ExchangeLaunchCodeAsync(exchangeUrl, link.Code!).GetAwaiter().GetResult();
+                MergeExchangeIntoLink(link, exchanged);
+                ApplyStartupPlaceArguments(link);
+
+                string activationUrl = VikingDeepLinkParser.BuildActivationUrl(link);
+                if (VikingSingleInstance.TryForwardToExistingInstance(activationUrl))
                 {
-                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
-                    appSettings = ShowLoginWindow(volume, null, null);
+                    forwardedToExisting = true;
                     return true;
                 }
-                string? initialVolume = !string.IsNullOrEmpty(volumeUrl) ? volumeUrl : volume;
-                appSettings = ShowLoginWindowWithLaunchResult(accessToken, identityServerUrl ?? "", initialVolume, volumeName);
+
+                if (string.IsNullOrEmpty(exchanged.AccessToken))
+                {
+                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
+                    appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName, null, null);
+                    return true;
+                }
+
+                string? initialVolume = !string.IsNullOrEmpty(link.VolumeUrl) ? link.VolumeUrl : link.VolumeName;
+                appSettings = ShowLoginWindowWithLaunchResult(exchanged.AccessToken!, exchanged.IdentityServerUrl ?? "", initialVolume, link.VolumeName);
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(volume))
+            if (VikingSingleInstance.TryForwardToExistingInstance(VikingDeepLinkParser.BuildActivationUrl(link)))
             {
-                appSettings = ShowLoginWindow(volume, null, null);
+                forwardedToExisting = true;
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(link.VolumeUrl) || !string.IsNullOrEmpty(link.VolumeName))
+            {
+                appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName, null, null);
                 return true;
             }
 
@@ -282,12 +307,48 @@ namespace Viking
         /// Copies location / coordinate query params into StartupArguments for post-load navigation.
         /// Location ID wins over coordinates when both are present.
         /// </summary>
-        private static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
+        private static void ApplyStartupPlaceArguments(VikingDeepLink link)
         {
-            UI.State.StartupArguments = VikingDeepLinkParser.ParsePlaceArguments(query);
+            UI.State.StartupArguments = link.Place ?? [];
         }
 
-        private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        private static void MergeExchangeIntoLink(VikingDeepLink link, LaunchExchangeResult exchanged)
+        {
+            if (!string.IsNullOrWhiteSpace(exchanged.VolumeUrl))
+                link.VolumeUrl = exchanged.VolumeUrl.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.VolumeName))
+                link.VolumeName = exchanged.VolumeName.Trim();
+
+            var fromExchange = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(exchanged.Location))
+                fromExchange["location"] = exchanged.Location.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.X))
+                fromExchange["x"] = exchanged.X.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.Y))
+                fromExchange["y"] = exchanged.Y.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.Z))
+                fromExchange["z"] = exchanged.Z.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.Downsample))
+                fromExchange["ds"] = exchanged.Downsample.Trim();
+
+            if (fromExchange.Count > 0)
+                VikingDeepLinkParser.MergePlace(link.Place, VikingDeepLinkParser.ParsePlaceArguments(fromExchange));
+        }
+
+        private struct LaunchExchangeResult
+        {
+            public string? AccessToken;
+            public string? IdentityServerUrl;
+            public string? VolumeUrl;
+            public string? VolumeName;
+            public string? Location;
+            public string? X;
+            public string? Y;
+            public string? Z;
+            public string? Downsample;
+        }
+
+        private static async Task<LaunchExchangeResult> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
         {
             try
             {
@@ -298,22 +359,43 @@ namespace Viking
                 using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
-                    return (null, null, null, null);
+                {
+                    Trace.WriteLine($"[Viking] Launch code exchange HTTP {(int)response.StatusCode}.", "Viking");
+                    return default;
+                }
                 var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var obj = JsonConvert.DeserializeObject<JObject>(responseJson);
                 if (obj == null)
-                    return (null, null, null, null);
-                return (
-                    obj["access_token"]?.ToString(),
-                    obj["identity_server_url"]?.ToString(),
-                    obj["volume_url"]?.ToString(),
-                    obj["volume_name"]?.ToString());
+                    return default;
+                return new LaunchExchangeResult
+                {
+                    AccessToken = FirstJsonString(obj, "access_token"),
+                    IdentityServerUrl = FirstJsonString(obj, "identity_server_url"),
+                    VolumeUrl = FirstJsonString(obj, "volume_url"),
+                    VolumeName = FirstJsonString(obj, "volume_name"),
+                    Location = FirstJsonString(obj, "location", "location_id"),
+                    X = FirstJsonString(obj, "x"),
+                    Y = FirstJsonString(obj, "y"),
+                    Z = FirstJsonString(obj, "z"),
+                    Downsample = FirstJsonString(obj, "ds", "downsample")
+                };
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
-                return (null, null, null, null);
+                return default;
             }
+        }
+
+        private static string? FirstJsonString(JObject obj, params string[] names)
+        {
+            foreach (string name in names)
+            {
+                string? value = obj[name]?.ToString();
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value;
+            }
+            return null;
         }
 
         private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)

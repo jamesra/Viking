@@ -40,8 +40,15 @@
                    TextWrapping="Wrap"
                    Text="{Binding Description, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
         <Grid x:Name="PreviewHost"
-              HorizontalAlignment="Stretch"
+              HorizontalAlignment="Center"
               MinHeight="8">
+            <Border x:Name="PreviewScreen"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    BorderBrush="#FF888888"
+                    BorderThickness="1"
+                    Background="#11000000"
+                    Visibility="Collapsed"/>
             <Ellipse x:Name="PreviewCircle"
                      HorizontalAlignment="Center"
                      VerticalAlignment="Center"

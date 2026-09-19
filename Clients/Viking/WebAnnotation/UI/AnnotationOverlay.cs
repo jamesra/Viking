@@ -132,8 +132,15 @@ namespace WebAnnotation
             _CurrentOverlay = this;
         }
 
+        private System.Windows.Forms.Timer _startupLocationRetryTimer;
+        private int _startupLocationAttempts;
+        private const int MaxStartupLocationAttempts = 20;
+
         /// <summary>
         /// After the viewer is ready, navigate to a Location ID from viking://open?location=... if present.
+        /// Retries while ViewerForm or the annotation store is not ready yet; does not consume the
+        /// Location argument until the jump succeeds so a later default-camera recenter cannot win a race
+        /// against a lost ID.
         /// </summary>
         private void TryApplyStartupLocation()
         {
@@ -144,12 +151,22 @@ namespace WebAnnotation
             if (!long.TryParse(locStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locID))
                 return;
 
-            // Consume so we do not re-apply if overlays are recreated
-            Viking.UI.State.StartupArguments.Remove("Location");
+            if (Viking.UI.State.ViewerForm is null)
+            {
+                ScheduleStartupLocationRetry();
+                return;
+            }
 
             LocationObj loc = Store.Locations.GetObjectByID(locID, true);
             if (loc is null)
             {
+                if (_startupLocationAttempts < MaxStartupLocationAttempts)
+                {
+                    ScheduleStartupLocationRetry();
+                    return;
+                }
+
+                Viking.UI.State.StartupArguments.Remove("Location");
                 string volumeLabel = Viking.UI.State.IdentityVolumeName
                     ?? Viking.UI.State.volume?.Name
                     ?? "(unknown volume)";
@@ -161,7 +178,38 @@ namespace WebAnnotation
                 return;
             }
 
+            Viking.UI.State.StartupArguments.Remove("Location");
+            StopStartupLocationRetry();
             GoToLocation(loc);
+        }
+
+        private void ScheduleStartupLocationRetry()
+        {
+            _startupLocationAttempts++;
+            if (_Parent == null || _Parent.IsDisposed)
+                return;
+
+            if (_startupLocationRetryTimer == null)
+            {
+                _startupLocationRetryTimer = new System.Windows.Forms.Timer { Interval = 300 };
+                _startupLocationRetryTimer.Tick += (_, _) =>
+                {
+                    _startupLocationRetryTimer.Stop();
+                    TryApplyStartupLocation();
+                };
+            }
+
+            _startupLocationRetryTimer.Stop();
+            _startupLocationRetryTimer.Start();
+        }
+
+        private void StopStartupLocationRetry()
+        {
+            if (_startupLocationRetryTimer == null)
+                return;
+            _startupLocationRetryTimer.Stop();
+            _startupLocationRetryTimer.Dispose();
+            _startupLocationRetryTimer = null;
         }
 
         /// <summary>
@@ -542,6 +590,8 @@ namespace WebAnnotation
             //linksView = new LocationLinksViewModel(parent); 
 
             autoPolygonizeController = new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
+            cacheSectionAnnotations.EntryEvicted += OnSectionAnnotationsViewEvicted;
             if (Global.AnnotationSettings.AutoPolygonizeCircles)
                 autoPolygonizeController.SetEnabled(true);
 
@@ -597,6 +647,8 @@ namespace WebAnnotation
             if (_Parent != null)
                 _Parent.Disposed -= OnParentDisposed;
 
+            StopStartupLocationRetry();
+            cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
             autoPolygonizeController?.Stop();
             try
             {
@@ -1998,6 +2050,14 @@ break;
         public void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
         {
             ResetAnnotations();
+        }
+
+        /// <summary>
+        /// Forwards section-view eviction to auto-polygonize so that Z's proposals and SAM2 image leases are released.
+        /// </summary>
+        private void OnSectionAnnotationsViewEvicted(int sectionNumber)
+        {
+            autoPolygonizeController?.ClearSection(sectionNumber);
         }
 
         private void ResetAnnotations()

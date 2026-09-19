@@ -126,7 +126,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetTransform(in GridVector2 Point)
+        internal override MappingGridTriangle? GetTransform(in GridVector2 Point)
         {
             //TODO: Optimize the search
 
@@ -161,7 +161,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetInverseTransform(in GridVector2 Point)
+        internal override MappingGridTriangle? GetInverseTransform(in GridVector2 Point)
         {
             //TODO: Optimize the search
 
@@ -277,7 +277,7 @@ namespace Geometry.Transforms
         /// <param name="foundMapLine"></param>
         /// <param name="intersection"></param>
         /// <returns></returns>
-        public override double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection)
+        public override double ConvexHullIntersection(in GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection)
         {
             double nearestIntersect = double.MaxValue;
 

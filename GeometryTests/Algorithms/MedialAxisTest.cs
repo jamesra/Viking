@@ -160,14 +160,48 @@ namespace GeometryTests.Algorithms
             // For each node, it should be a circumcenter and thus equidistant from some set of points
             // This is a sanity check that the algorithm is producing geometrically valid results
             Assert.IsTrue(graph.Nodes.Count > 0, "Should have at least one medial axis node");
+        }
 
-            // Just verify the structure is valid (nodes and edges are consistent)
+        [TestMethod]
+        public void TranslateMapsEdgesThroughStoredNodeKeys()
+        {
+            MedialAxisGraph graph = new();
+            GridVector2 stored = new(10, 20);
+            GridVector2 nearby = new(10.0004, 20);
+            GridVector2 other = new(30, 20);
+            graph.AddNode(new MedialAxisVertex(stored));
+            graph.AddNode(new MedialAxisVertex(other));
+            graph.AddEdge(new MedialAxisEdge(nearby, other));
+
+            MedialAxisGraph translated = graph.Translate(new GridVector2(500000, 300000));
+
+            Assert.IsTrue(translated.Nodes.Count >= 1);
+            foreach (var edge in translated.Edges.Values)
+            {
+                Assert.IsTrue(translated.TryGetValue(edge.SourceNodeKey, out _));
+                Assert.IsTrue(translated.TryGetValue(edge.TargetNodeKey, out _));
+            }
+        }
+
+        [TestMethod]
+        public void ImprovedMedialAxisFarFromOriginDoesNotThrow()
+        {
+            GridPolygon rectangle = new(
+            [
+                new(400000, 250000),
+                new(400200, 250000),
+                new(400200, 250080),
+                new(400000, 250080),
+                new(400000, 250000)
+            ]);
+
+            MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxisImproved(rectangle);
+
+            Assert.IsNotNull(graph);
             foreach (var edge in graph.Edges.Values)
             {
-                Assert.IsTrue(graph.TryGetValue(edge.SourceNodeKey, out _),
-                    "Edge source should exist as a node in the graph");
-                Assert.IsTrue(graph.TryGetValue(edge.TargetNodeKey, out _),
-                    "Edge target should exist as a node in the graph");
+                Assert.IsTrue(graph.TryGetValue(edge.SourceNodeKey, out _));
+                Assert.IsTrue(graph.TryGetValue(edge.TargetNodeKey, out _));
             }
         }
     }

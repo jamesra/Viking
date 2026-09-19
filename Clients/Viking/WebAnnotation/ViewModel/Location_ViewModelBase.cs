@@ -566,7 +566,8 @@ namespace WebAnnotation.ViewModel
                     callback,
                     channelManager,
                     modelObj.Parent.TypeID,
-                    modelObj.ID);
+                    modelObj.ID,
+                    modelObj.ParentID);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -579,7 +580,7 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// Launch segmentation with one green prompt at each Delaunay-triangle centroid of this polygon.
         /// </summary>
         protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
         {
@@ -592,8 +593,8 @@ namespace WebAnnotation.ViewModel
 
                 // Get the circle geometry
                 GridPolygon poly = modelObj.VolumeShape.ToPolygon();
-                var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(poly);
-                var medial_axis_points = medial_axis.Points;
+                IReadOnlyList<GridVector2> foregroundPoints =
+                    AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(poly);
 
                 // Create callback to update location shape
                 void callback(GridPolygon volume_poly)
@@ -606,12 +607,13 @@ namespace WebAnnotation.ViewModel
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                 SegmentationCommand segmentCommand = new(
                     parent,
-                    medial_axis_points,
+                    foregroundPoints,
                     Array.Empty<GridVector2>(), // no background points initially
                     callback,
                     channelManager,
                     modelObj.Parent.TypeID,
-                    modelObj.ID);
+                    modelObj.ID,
+                    modelObj.ParentID);
 
                 parent.CurrentCommand = segmentCommand;
             }

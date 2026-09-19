@@ -51,6 +51,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return ToVolumePoints(mosaicPoints, transform);
         }
 
+        /// <summary>
+        /// Drops avoid prompts that sit on a foreground point. Adjacent-section siblings of the
+        /// same structure share XY with the selected circle; a red mark there cancels the center click.
+        /// </summary>
+        public static IReadOnlyList<GridVector2> ExceptNearForeground(
+            IReadOnlyList<GridVector2> background,
+            IReadOnlyList<GridVector2> foreground,
+            double minDistance)
+        {
+            if (background is null || background.Count == 0)
+                return [];
+
+            if (foreground is null || foreground.Count == 0 || minDistance <= 0)
+                return background;
+
+            double minDistanceSquared = minDistance * minDistance;
+            return [.. background.Where(bg => foreground.All(fg =>
+                GridVector2.DistanceSquared(bg, fg) >= minDistanceSquared))];
+        }
+
         private static void AddRing(List<GridVector2> points, GridVector2 center, double radius)
         {
             for (int i = 0; i < 8; i++)

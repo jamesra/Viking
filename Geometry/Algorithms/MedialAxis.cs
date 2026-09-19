@@ -26,26 +26,41 @@ namespace Geometry
 
         /// <summary>
         /// Returns a copy of the graph with all nodes translated by the specified vector.
+        /// Edges are rebuilt from the node keys actually stored after translation.
+        /// <see cref="GridVector2"/> equality is epsilon-based, so two circumcenters can
+        /// collapse to one key and an edge endpoint may not match a freshly added coordinate.
         /// </summary>
-        /// <param name="vector">The translation vector to apply to all nodes</param>
-        /// <returns>A new MedialAxisGraph with translated nodes and edges</returns>
         public MedialAxisGraph Translate(GridVector2 vector)
         {
             MedialAxisGraph translatedGraph = new();
+            Dictionary<GridVector2, GridVector2> oldToNew = [];
 
-            // Add all translated nodes
             foreach (var node in this.Nodes)
             {
                 GridVector2 translatedPosition = node.Key + vector;
-                translatedGraph.AddNode(new MedialAxisVertex(translatedPosition));
+                if (!translatedGraph.TryGetValue(translatedPosition, out MedialAxisVertex existing))
+                {
+                    existing = new MedialAxisVertex(translatedPosition);
+                    translatedGraph.AddNode(existing);
+                }
+
+                oldToNew[node.Key] = existing.Key;
             }
 
-            // Add all edges with translated endpoints
             foreach (var edge in this.Edges.Values)
             {
-                GridVector2 translatedSource = edge.SourceNodeKey + vector;
-                GridVector2 translatedTarget = edge.TargetNodeKey + vector;
-                translatedGraph.AddEdge(new MedialAxisEdge(translatedSource, translatedTarget));
+                if (!oldToNew.TryGetValue(edge.SourceNodeKey, out GridVector2 source) ||
+                    !oldToNew.TryGetValue(edge.TargetNodeKey, out GridVector2 target))
+                {
+                    continue;
+                }
+
+                if (source.Equals(target))
+                    continue;
+
+                MedialAxisEdge translatedEdge = new(source, target);
+                if (!translatedGraph.Edges.ContainsKey(translatedEdge))
+                    translatedGraph.AddEdge(translatedEdge);
             }
 
             return translatedGraph;

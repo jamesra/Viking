@@ -8,7 +8,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
     /// Converts a SAM2 binary mask to world-space <see cref="GridPolygon"/>s.
-    /// Huge near-full-frame masks are skipped; remaining masks are downsampled before marching squares.
+    /// Huge near-full-frame masks are skipped. Remaining masks are downsampled before
+    /// morphological cleanup and marching squares so a 4K capture does not run open/close at full res.
     /// </summary>
     internal static class SegmentationMaskPolygonizer
     {
@@ -104,23 +105,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return [];
             }
 
-            byte[] workingMask = maskData;
+            var (polygonMask, polygonWidth, polygonHeight, scale) =
+                DownsampleUntil(maskData, maskWidth, maskHeight, PolygonizeMaxMaskPixels);
+
+            byte[] workingMask = polygonMask;
             long cleanupMs = 0;
             if (edgeCleanupRadius > 0)
             {
+                int scaledRadius = scale <= 1
+                    ? edgeCleanupRadius
+                    : Math.Max(1, (int)Math.Round(edgeCleanupRadius / (double)scale));
                 Stopwatch cleanupTimer = Stopwatch.StartNew();
-                workingMask = CleanMask(maskData, maskWidth, maskHeight, edgeCleanupRadius);
+                workingMask = CleanMask(polygonMask, polygonWidth, polygonHeight, scaledRadius);
                 cleanupMs = cleanupTimer.ElapsedMilliseconds;
             }
 
             int foregroundAfter = CountForeground(workingMask);
             cleanupStats = new CleanupStats(cleanupMs, foregroundBefore, foregroundAfter);
 
-            var (polygonMask, polygonWidth, polygonHeight, scale) =
-                DownsampleUntil(workingMask, maskWidth, maskHeight, PolygonizeMaxMaskPixels);
-
             IReadOnlyList<GridPolygon> cleanedPolygons = PolygonizeMask(
-                polygonMask,
+                workingMask,
                 polygonWidth,
                 polygonHeight,
                 offsetX,
@@ -135,14 +139,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (IsUsable(cleanedPolygons))
                 return cleanedPolygons;
 
-            if (edgeCleanupRadius > 0 && !ReferenceEquals(workingMask, maskData))
+            if (edgeCleanupRadius > 0 && !ReferenceEquals(workingMask, polygonMask))
             {
-                var (originalMask, originalWidth, originalHeight, originalScale) =
-                    DownsampleUntil(maskData, maskWidth, maskHeight, PolygonizeMaxMaskPixels);
                 IReadOnlyList<GridPolygon> originalPolygons = PolygonizeMask(
-                    originalMask,
-                    originalWidth,
-                    originalHeight,
+                    polygonMask,
+                    polygonWidth,
+                    polygonHeight,
                     offsetX,
                     offsetY,
                     imageWidth,
@@ -150,7 +152,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     viewportBounds,
                     holeDropFraction,
                     preserveHolesContainingWorldPoints,
-                    originalScale);
+                    scale);
                 if (IsUsable(originalPolygons))
                     return originalPolygons;
             }

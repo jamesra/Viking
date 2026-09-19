@@ -19,14 +19,14 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal abstract MappingGridTriangle GetTransform(in GridVector2 Point);
+        internal abstract MappingGridTriangle? GetTransform(in GridVector2 Point);
 
         /// <summary>
         /// Return the mapping triangle which can map the point
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal abstract MappingGridTriangle GetInverseTransform(in GridVector2 Point);
+        internal abstract MappingGridTriangle? GetInverseTransform(in GridVector2 Point);
 
         /// <summary>
         /// This stores the output of the Delaunay triangulation.  Every group of three integers represents a triangle
@@ -110,7 +110,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool CanTransform(in GridVector2 Point) => GetTransform(Point) != null;
+        public override bool CanTransform(in GridVector2 Point) => GetTransform(Point).HasValue;
 
         /// <summary>
         /// Transform point from mapped space to control space
@@ -119,10 +119,9 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override GridVector2 Transform(in GridVector2 Point)
         {
-            MappingGridTriangle t = GetTransform(Point);
-            return t is null
-                ? throw new ArgumentOutOfRangeException(nameof(Point), string.Format("Transform: Point could not be mapped {0}", Point.ToString()))
-                : t.Transform(Point);
+            return GetTransform(Point) is MappingGridTriangle t
+                ? t.Transform(Point)
+                : throw new ArgumentOutOfRangeException(nameof(Point), string.Format("Transform: Point could not be mapped {0}", Point.ToString()));
         }
 
         /// <summary>
@@ -133,18 +132,11 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override GridVector2[] Transform(in GridVector2[] Points)
         {
-            MappingGridTriangle[] triangles = [.. Points.Select(Point => GetTransform(Point))];
             return [.. Points.Select(p =>
             {
-                MappingGridTriangle t = GetTransform(p);
-                if (t is null)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(Points), string.Format("Transform: Point could not be mapped {0}", p.ToString()));
-                }
-                else
-                {
-                    return t.Transform(p);
-                }
+                return GetTransform(p) is MappingGridTriangle t
+                    ? t.Transform(p)
+                    : throw new ArgumentOutOfRangeException(nameof(Points), string.Format("Transform: Point could not be mapped {0}", p.ToString()));
             })];
         }
 
@@ -155,9 +147,7 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
-            v = new GridVector2();
-            MappingGridTriangle t = GetTransform(Point);
-            if (t is null)
+            if (GetTransform(Point) is not MappingGridTriangle t)
             {
                 v = default;
                 return false;
@@ -176,23 +166,13 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override bool[] TryTransform(in GridVector2[] Points, out GridVector2[] output)
         {
-            MappingGridTriangle[] triangles = [.. Points.Select(Point => GetTransform(Point))];
-            bool[] IsTransformed = [.. triangles.Select(t => t != null)];
-            var inputPoints = Points;
+            MappingGridTriangle?[] triangles = [.. Points.Select(Point => GetTransform(Point))];
+            bool[] IsTransformed = [.. triangles.Select(t => t.HasValue)];
+            GridVector2[] inputPoints = Points;
 
             output = [.. triangles.Select((tri, i) =>
-            {
-                if (tri != null)
-                {
-                    return tri.Transform(inputPoints[i]);
-                }
-                else
-                    return default;
+                tri is MappingGridTriangle triangle ? triangle.Transform(inputPoints[i]) : default)];
 
-            }
-            )];
-
-            //return IsTransformed; 
             return IsTransformed;
         }
 
@@ -205,7 +185,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool CanInverseTransform(in GridVector2 Point) => GetInverseTransform(Point) != null;
+        public override bool CanInverseTransform(in GridVector2 Point) => GetInverseTransform(Point).HasValue;
 
         /// <summary>
         /// Transform point from mapped space to control space
@@ -214,10 +194,9 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override GridVector2 InverseTransform(in GridVector2 Point)
         {
-            MappingGridTriangle t = GetInverseTransform(Point);
-            return t is null
-                ? throw new ArgumentOutOfRangeException(nameof(Point), string.Format("InverseTransform: Point could not be mapped {0}", Point.ToString()))
-                : t.InverseTransform(Point);
+            return GetInverseTransform(Point) is MappingGridTriangle t
+                ? t.InverseTransform(Point)
+                : throw new ArgumentOutOfRangeException(nameof(Point), string.Format("InverseTransform: Point could not be mapped {0}", Point.ToString()));
         }
 
         /// <summary>
@@ -228,18 +207,11 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override GridVector2[] InverseTransform(in GridVector2[] Points)
         {
-            MappingGridTriangle[] triangles = [.. Points.Select(Point => GetInverseTransform(Point))];
             return [.. Points.Select(p =>
             {
-                MappingGridTriangle t = GetInverseTransform(p);
-                if (t is null)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(Points), string.Format("InverseTransform: Point could not be mapped {0}", p.ToString()));
-                }
-                else
-                {
-                    return t.InverseTransform(p);
-                }
+                return GetInverseTransform(p) is MappingGridTriangle t
+                    ? t.InverseTransform(p)
+                    : throw new ArgumentOutOfRangeException(nameof(Points), string.Format("InverseTransform: Point could not be mapped {0}", p.ToString()));
             })];
         }
 
@@ -251,9 +223,7 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
-            v = new GridVector2();
-            MappingGridTriangle t = GetInverseTransform(Point);
-            if (t is null)
+            if (GetInverseTransform(Point) is not MappingGridTriangle t)
             {
                 v = default;
                 return false;
@@ -272,23 +242,13 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] output)
         {
-            MappingGridTriangle[] triangles = [.. Points.Select(Point => GetInverseTransform(Point))];
-            bool[] IsTransformed = [.. triangles.Select(t => t != null)];
+            MappingGridTriangle?[] triangles = [.. Points.Select(Point => GetInverseTransform(Point))];
+            bool[] IsTransformed = [.. triangles.Select(t => t.HasValue)];
+            GridVector2[] inputPoints = Points;
 
-            var inputPoints = Points;
             output = [.. triangles.Select((tri, i) =>
-            {
-                if (tri != null)
-                {
-                    return tri.InverseTransform(inputPoints[i]);
-                }
-                else
-                    return default;
+                tri is MappingGridTriangle triangle ? triangle.InverseTransform(inputPoints[i]) : default)];
 
-            }
-            )];
-
-            //return IsTransformed; 
             return IsTransformed;
         }
 
@@ -309,7 +269,7 @@ namespace Geometry.Transforms
         /// <param name="foundMapLine"></param>
         /// <param name="intersection">Intersection point</param>
         /// <returns>Distance to intersection or double.MaxValue if no intersection is found</returns>
-        public abstract double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection);
+        public abstract double ConvexHullIntersection(in GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection);
 
         #endregion
 

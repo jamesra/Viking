@@ -64,7 +64,10 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// </summary>
     internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelpStrings
     {
-        private const float DefaultAlpha = 0.65f;
+        private const float RingSaturation = 0.80f;
+        private const float DefaultLightness = 0.70f;
+        private const float HighlightLightness = 0.90f;
+        private const float DefaultAlpha = 0.92f;
         private const float HighlightAlpha = 1.0f;
         private const float MaskOverlayAlpha = 0.35f;
 
@@ -115,9 +118,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
 
                 isHighlighted = value;
-                float alpha = isHighlighted ? HighlightAlpha : DefaultAlpha;
+                Color color = ColorForLocation(LocationId, isHighlighted);
                 foreach (CurveView ringView in RingViews)
-                    ringView.Alpha = alpha;
+                    ringView.Color = color;
             }
         }
 
@@ -230,7 +233,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             double downsample)
         {
             double lineWidth = AutoPolygonizeSelection.ProposalLineWidth(circleRadius, downsample);
-            Color ringColor = color.SetAlpha(DefaultAlpha);
+            Color ringColor = color;
             List<CurveView> rings =
             [
                 CreateRingView(polygon.ExteriorRing, ringColor, lineWidth)
@@ -254,11 +257,14 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Stable hue from location ID so the same circle keeps the same color across refreshes.
+        /// Highlighted (cursor over the ring) uses a lighter, fully opaque color.
         /// </summary>
-        public static Color ColorForLocation(long locationId)
+        public static Color ColorForLocation(long locationId, bool highlighted = false)
         {
             float hue = (float)((locationId * 0.6180339887) % 1.0);
-            return ColorFromHsl(hue, 0.75f, 0.55f, 1f);
+            float lightness = highlighted ? HighlightLightness : DefaultLightness;
+            float alpha = highlighted ? HighlightAlpha : DefaultAlpha;
+            return ColorFromHsl(hue, RingSaturation, lightness, alpha);
         }
 
         private static Color ColorFromHsl(float hue, float saturation, float lightness, float alpha)

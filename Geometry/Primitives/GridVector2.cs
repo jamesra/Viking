@@ -33,6 +33,28 @@ namespace Geometry
 
     public class GridVectorComparerYX : IComparer<GridVector2>, IComparer<IPoint2D>
     {
+        /// <summary>
+        /// Exact compare (no <see cref="Global.Epsilon"/>). Epsilon equality would collapse nearby points and
+        /// break Delaunay divide-and-conquer, which splits sorted sets into equal halves.
+        /// Called by sort paths that already have a <see cref="GridVector2"/> so the point is not boxed to <see cref="IPoint2D"/>.
+        /// </summary>
+        public static int CompareYX(GridVector2 A, GridVector2 B)
+        {
+            double diffY = A.Y - B.Y;
+
+            if (diffY == 0)
+            {
+                double diffX = A.X - B.X;
+
+                if (diffX == 0)
+                    return 0;
+
+                return diffX > 0 ? 1 : -1;
+            }
+
+            return diffY > 0 ? 1 : -1;
+        }
+
         public static int CompareYX(in IPoint2D A, in IPoint2D B)
         {
             //We need to use the same equality standard as our epsilon value
@@ -66,7 +88,7 @@ namespace Geometry
 
         public int Compare(IPoint2D A, IPoint2D B) => GridVectorComparerYX.CompareYX(in A, in B);
 
-        public int Compare(GridVector2 x, GridVector2 y) => GridVectorComparerYX.CompareYX((IPoint2D)x, (IPoint2D)y);
+        public int Compare(GridVector2 x, GridVector2 y) => GridVectorComparerYX.CompareYX(x, y);
     }
 
     public class GridVectorComparerXY : IComparer<GridVector2>, IComparer<IPoint2D>
@@ -79,6 +101,28 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
+        /// <summary>
+        /// Exact compare (no <see cref="Global.Epsilon"/>). Epsilon equality would collapse nearby points and
+        /// break Delaunay divide-and-conquer, which splits sorted sets into equal halves.
+        /// Called by sort paths that already have a <see cref="GridVector2"/> so the point is not boxed to <see cref="IPoint2D"/>.
+        /// </summary>
+        public static int CompareXY(GridVector2 A, GridVector2 B)
+        {
+            double diffX = A.X - B.X;
+
+            if (diffX == 0)
+            {
+                double diffY = A.Y - B.Y;
+
+                if (diffY == 0)
+                    return 0;
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffX > 0 ? 1 : -1;
+        }
+
         public static int CompareXY(in IPoint2D A, in IPoint2D B)
         {
             /// I struggled with how this code should behave.  For now it is the expected behaviour,
@@ -120,7 +164,7 @@ namespace Geometry
 
         public int Compare(IPoint2D A, IPoint2D B) => GridVectorComparerXY.CompareXY(in A, in B);
 
-        public int Compare(GridVector2 x, GridVector2 y) => GridVectorComparerXY.CompareXY((IPoint2D)x, (IPoint2D)y);
+        public int Compare(GridVector2 x, GridVector2 y) => GridVectorComparerXY.CompareXY(x, y);
     }
 
 
@@ -270,7 +314,7 @@ namespace Geometry
             return GridVectorComparerXY.CompareXY(this, B);
         }
 
-        readonly int IComparable<GridVector2>.CompareTo(GridVector2 B) => GridVectorComparerXY.CompareXY((IPoint2D)this, (IPoint2D)B);
+        readonly int IComparable<GridVector2>.CompareTo(GridVector2 B) => GridVectorComparerXY.CompareXY(this, B);
 
         public readonly int CompareTo(IPoint2D other) => GridVectorComparerXY.CompareXY(this, other);
 

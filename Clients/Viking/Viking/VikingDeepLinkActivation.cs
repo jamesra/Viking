@@ -30,16 +30,14 @@ namespace Viking
             if (State.volume is null || State.ViewerForm is null || string.IsNullOrWhiteSpace(State.VolumeUrl))
                 return VikingSingleInstance.AckNotReady;
 
-            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
+            if (!VikingDeepLinkParser.TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
                 return VikingSingleInstance.AckNotReady;
 
-            var query = VikingDeepLinkParser.ParseQueryString(uri.Query);
-            query.TryGetValue("volume", out string? linkVolumeUrl);
-
-            if (!VikingSingleInstance.VolumeUrlsMatch(linkVolumeUrl, State.VolumeUrl))
+            string? openName = State.IdentityVolumeName ?? State.volume?.Name;
+            if (!VikingDeepLinkParser.VolumeTargetsMatch(link.VolumeUrl, link.VolumeName, State.VolumeUrl, openName))
                 return VikingSingleInstance.AckVolumeMismatch;
 
-            NameValueCollection place = VikingDeepLinkParser.ParsePlaceArguments(query);
+            NameValueCollection place = link.Place;
 
             void Navigate()
             {

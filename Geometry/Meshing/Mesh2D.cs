@@ -161,8 +161,9 @@ namespace Geometry.Meshing
         {
             foreach (IEdgeKey e in face.Edges)
             {
-                AddEdge(e);
-                Edges[e].AddFace(face);
+                EdgeKey key = e is EdgeKey ek ? ek : new EdgeKey(e.A, e.B);
+                AddEdge(key);
+                Edges[key].AddFace(face);
                 /*
                 if(Edges[e].Faces.Count() > 2)
                 {

@@ -17,6 +17,30 @@ namespace Geometry
 
     public class GridVector3ComparerZYX : IComparer<GridVector3>, IComparer<IPoint>
     {
+        /// <summary>
+        /// Exact compare on Z then Y then X. Called with a concrete <see cref="GridVector3"/> so the point is not boxed to <see cref="IPoint"/>.
+        /// </summary>
+        public static int CompareZYX(GridVector3 A, GridVector3 B)
+        {
+            double diffZ = A.Z - B.Z;
+            if (diffZ == 0)
+            {
+                double diffY = A.Y - B.Y;
+                if (diffY == 0)
+                {
+                    double diffX = A.X - B.X;
+                    if (diffX == 0)
+                        return 0;
+
+                    return diffX > 0 ? 1 : -1;
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffZ > 0 ? 1 : -1;
+        }
+
         public static int CompareZYX(in IPoint A, in IPoint B)
         {
             double diffZ = A.Z - B.Z;
@@ -56,7 +80,7 @@ namespace Geometry
 
         public int Compare(IPoint A, IPoint B) => GridVector3ComparerZYX.CompareZYX(in A, in B);
 
-        public int Compare(GridVector3 x, GridVector3 y) => GridVector3ComparerZYX.CompareZYX((IPoint)x, (IPoint)y);
+        public int Compare(GridVector3 x, GridVector3 y) => GridVector3ComparerZYX.CompareZYX(x, y);
     }
 
     public class GridVector3ComparerXYZ : IComparer<GridVector3>, IComparer<IPoint>
@@ -69,6 +93,30 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
+        /// <summary>
+        /// Exact compare on X then Y then Z. Called with a concrete <see cref="GridVector3"/> so the point is not boxed to <see cref="IPoint"/>.
+        /// </summary>
+        public static int CompareXYZ(GridVector3 A, GridVector3 B)
+        {
+            double diffX = A.X - B.X;
+            if (diffX == 0)
+            {
+                double diffY = A.Y - B.Y;
+                if (diffY == 0)
+                {
+                    double diffZ = A.Z - B.Z;
+                    if (diffZ == 0)
+                        return 0;
+
+                    return diffZ > 0 ? 1 : -1;
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffX > 0 ? 1 : -1;
+        }
+
         public static int CompareXYZ(in IPoint A, in IPoint B)
         {
             /// I struggled with how this code should behave.  For now it is the expected behaviour,
@@ -115,7 +163,7 @@ namespace Geometry
 
         public int Compare(IPoint A, IPoint B) => GridVector3ComparerXYZ.CompareXYZ(in A, in B);
 
-        public int Compare(GridVector3 a, GridVector3 b) => GridVector3ComparerXYZ.CompareXYZ((IPoint)a, (IPoint)b);
+        public int Compare(GridVector3 a, GridVector3 b) => GridVector3ComparerXYZ.CompareXYZ(a, b);
     }
 
     [Serializable]
@@ -403,7 +451,7 @@ namespace Geometry
             //return new GridVector3(coords); 
         }
 
-        public static GridVector3 Scale(GridVector3 A, double scalar) => new GridVector3(A._coords.Select((val, i) => val * scalar));
+        public static GridVector3 Scale(in GridVector3 A, double scalar) => new GridVector3(A._coords.Select((val, i) => val * scalar));
 
         public readonly GridVector3 Scale(double scalar) => new GridVector3(this._coords.Select(val => val * scalar));
 

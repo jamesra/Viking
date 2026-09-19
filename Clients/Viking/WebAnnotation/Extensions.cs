@@ -318,12 +318,11 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Samples a polygon with one interior point per constrained-triangulation face.
-        /// <see cref="GridPolygon.Triangulate"/> works in centroid-relative coordinates, so
-        /// each face centroid is translated back. Used by auto-circle and interactive
-        /// SegmentImage background prompts.
+        /// One interior point per constrained Delaunay triangle. Triangulate is centroid-relative,
+        /// so each face centroid is translated back. Used as Resegment foreground prompts and as
+        /// avoid marks for neighboring polygons.
         /// </summary>
-        internal static IReadOnlyList<GridVector2> GetPolygonNegativePromptPoints(GridPolygon polygon)
+        internal static IReadOnlyList<GridVector2> GetPolygonTriangleCentroidPoints(GridPolygon polygon)
         {
             if (polygon is null)
                 return [];
@@ -379,7 +378,7 @@ namespace WebAnnotation
                     return [];
                 }
 
-                return GetPolygonNegativePromptPoints(shape.ToPolygon());
+                return GetPolygonTriangleCentroidPoints(shape.ToPolygon());
             }
             catch (ArgumentException)
             {

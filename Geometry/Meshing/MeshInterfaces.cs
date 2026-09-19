@@ -26,7 +26,17 @@ namespace Geometry.Meshing
 
         bool AddEdge(IEdgeKey e);
 
+        /// <summary>
+        /// Adds an edge without boxing <see cref="EdgeKey"/> to <see cref="IEdgeKey"/>.
+        /// </summary>
+        bool AddEdge(EdgeKey e);
+
         void RemoveEdge(IEdgeKey e);
+
+        /// <summary>
+        /// Removes an edge without boxing <see cref="EdgeKey"/> to <see cref="IEdgeKey"/>.
+        /// </summary>
+        void RemoveEdge(EdgeKey e);
 
         /// <summary>
         /// Returns a duplicate of the vertex.

@@ -69,7 +69,7 @@ namespace Geometry.Transforms
             return Indicies;
         }
 
-        public static MappingGridTriangle TriangleForPoint(int GridSizeX, int GridSizeY, in GridRectangle Bounds, MappingGridVector2[] points, int[] TriIndicies, GridVector2 Point)
+        public static MappingGridTriangle? TriangleForPoint(int GridSizeX, int GridSizeY, in GridRectangle Bounds, MappingGridVector2[] points, int[] TriIndicies, GridVector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
@@ -105,15 +105,49 @@ namespace Geometry.Transforms
                 iY--;
             }
 
-            int iTri = (iY << 1) + (((GridSizeY - 1) << 1) * iX); //(iY * 2) + ((GridSizeY - 1) * 2 * iX)
-            //int iTri = (iX * 2) + ((GridSizeX-1) * 2 * iY);
-            iTri += IsUpper ? 1 : 0;
-            iTri *= 3;//Multiply by three to get the triangle offset
-
+            int iTri = TriangleIndex(GridSizeY, iX, iY, IsUpper);
             MappingGridTriangle mapTri = new(points, TriIndicies[iTri], TriIndicies[iTri + 1], TriIndicies[iTri + 2]);
 
-            Debug.Assert(mapTri.CanTransform(Point.Round(Global.TransformSignificantDigits)), "Calculated GridTransform does not intersect requested point");
-            return mapTri;
+            GridVector2 testPoint = Point.Round(Global.TransformSignificantDigits);
+            if (mapTri.CanTransform(testPoint))
+                return mapTri;
+
+            //The cell test can miss by a fraction; the point then lies in the other triangle of this cell or a neighbor.
+            int cellsX = GridSizeX - 1;
+            int cellsY = GridSizeY - 1;
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int cellX = iX + dx;
+                    int cellY = iY + dy;
+                    if ((uint)cellX >= (uint)cellsX || (uint)cellY >= (uint)cellsY)
+                        continue;
+
+                    for (int upper = 0; upper < 2; upper++)
+                    {
+                        if (dx == 0 && dy == 0 && (upper == 1) == IsUpper)
+                            continue;
+
+                        int index = TriangleIndex(GridSizeY, cellX, cellY, upper == 1);
+                        MappingGridTriangle adjacent = new(points, TriIndicies[index], TriIndicies[index + 1], TriIndicies[index + 2]);
+                        if (adjacent.CanTransform(testPoint))
+                            return adjacent;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Offset into the flattened two-triangles-per-cell index array used by <see cref="TriangleForPoint"/>.
+        /// </summary>
+        static int TriangleIndex(int gridSizeY, int cellX, int cellY, bool isUpper)
+        {
+            int iTri = (cellY << 1) + (((gridSizeY - 1) << 1) * cellX);
+            iTri += isUpper ? 1 : 0;
+            return iTri * 3;
         }
 
         /// <summary>
@@ -269,7 +303,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetTransform(in GridVector2 Point)
+        internal override MappingGridTriangle? GetTransform(in GridVector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
@@ -287,7 +321,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetInverseTransform(in GridVector2 Point)
+        internal override MappingGridTriangle? GetInverseTransform(in GridVector2 Point)
         {
             //Fetch a list of triangles from the nearest point
             List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
@@ -322,7 +356,7 @@ namespace Geometry.Transforms
             ALL = 0xF
         };
 
-        public override double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection)
+        public override double ConvexHullIntersection(in GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection)
         {
             double distance = double.MaxValue;
             foundCtrlLine = new GridLineSegment();

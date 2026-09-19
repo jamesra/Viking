@@ -1,42 +1,80 @@
-# PowerShell script to deploy Viking Velopack releases to the web server
-
 <#
 .SYNOPSIS
-    Deploys Viking Velopack releases to the web server.
+    Copies a Viking Velopack release folder to the update server and bumps the next build version.
 
 .DESCRIPTION
-    This script:
-    1. Validates the releases directory exists and contains required files
-    2. Uploads all files from the releases directory to the web server
-    3. Verifies deployment was successful
+    Run this after PublishVelopack.ps1 has written .\releases. It:
+
+    1. Requires RELEASES and Viking-win-Setup.exe in ReleasesDir (plus any .nupkg files).
+    2. Copies that folder to ServerPath when DeploymentMethod is Copy.
+    3. Checks that Setup.exe and RELEASES exist at the destination.
+    4. On a verified Copy, increments the patch of ApplicationVersion / FileVersion /
+       AssemblyVersion in Viking.csproj (1.2.0.0 -> 1.2.1.0) so the next publish is newer.
+
+    WebDAV, FTP, and SCP are accepted as DeploymentMethod values but are not implemented.
+
+    Show this help:
+        .\DeployVelopack.ps1 -?
+        .\DeployVelopack.ps1 -Help
+        Get-Help .\DeployVelopack.ps1 -Full
+
+.PARAMETER Help
+    Writes this help and exits without deploying or changing Viking.csproj.
 
 .PARAMETER ReleasesDir
-    The directory containing the release files (default: releases - relative to script location)
+    Folder produced by PublishVelopack.ps1. Relative paths are resolved from this script's
+    directory. Default: releases
 
 .PARAMETER ReleaseUrl
-    The base URL where releases are hosted (default: https://websvc.codepharm.net/Software/Viking)
+    Public HTTP base printed in the summary (where clients download updates).
+    Default: http://websvc.codepharm.net/Software/Viking
 
 .PARAMETER DeploymentMethod
-    The method to use for deployment: WebDAV, FTP, SCP, or Copy (default: Copy)
-    Note: Copy assumes the server path is accessible as a network share or local path
+    How to place files on the server: Copy, WebDAV, FTP, or SCP. Only Copy is implemented.
+    Default: Copy
 
 .PARAMETER ServerPath
-    The server path or network share path where files should be deployed
-    Required if DeploymentMethod is Copy
+    Destination directory or UNC share for Copy (for example \\server\share\Software\Viking).
+    Required when DeploymentMethod is Copy.
 
 .EXAMPLE
-    .\DeployVelopack.ps1
+    .\DeployVelopack.ps1 -Help
+
+    Print usage and parameter descriptions.
+
 .EXAMPLE
-    .\DeployVelopack.ps1 -DeploymentMethod Copy -ServerPath "\\server\share\Software\Viking"
+    .\DeployVelopack.ps1 -ServerPath "\\server\share\Software\Viking"
+
+    Copy .\releases to that share and bump Viking.csproj if verification succeeds.
+
+.EXAMPLE
+    .\DeployVelopack.ps1 -ReleasesDir "D:\build\viking-releases" -ServerPath "\\server\share\Software\Viking"
+
+    Deploy from an explicit releases folder instead of .\releases.
+
+.NOTES
+    Does not build or sign. Run PublishVelopack.ps1 first.
+    Version increment happens only after a successful Copy verification.
+    Clients then fetch Viking-win-Setup.exe and RELEASES from ReleaseUrl.
+
+.LINK
+    PublishVelopack.ps1
 #>
 
+[CmdletBinding(PositionalBinding = $false)]
 param(
+    [switch]$Help,
     [string]$ReleasesDir = "releases",
     [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking",
     [ValidateSet("WebDAV", "FTP", "SCP", "Copy")]
     [string]$DeploymentMethod = "Copy",
     [string]$ServerPath = ""
 )
+
+if ($Help) {
+    Get-Help -Name $PSCommandPath -Full
+    exit 0
+}
 
 $ErrorActionPreference = "Stop"
 

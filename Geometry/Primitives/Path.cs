@@ -601,14 +601,26 @@ namespace Geometry
 
         bool IShape2D.Contains(in IPoint2D p)
         {
-            IPoint2D pnt = p;
-            return this.Segments.Any(line => line.Contains(pnt));
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
+
+            return Contains(new GridVector2(p.X, p.Y));
         }
+
+        public bool Contains(in GridVector2 p) => GetRelation(p) != ShapeRelation.NONE;
 
         ShapeRelation IShape2D.GetRelation(in IPoint2D p)
         {
-            IPoint2D pnt = p;
-            return this.Segments.Any(line => line.Contains(pnt)) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
+            if (p is null)
+                throw new ArgumentNullException(nameof(p));
+
+            return GetRelation(new GridVector2(p.X, p.Y));
+        }
+
+        public ShapeRelation GetRelation(in GridVector2 p)
+        {
+            GridVector2 point = p;
+            return this.Segments.Any(line => line.Contains(point)) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
         }
 
         ShapeRelation IShape2D.GetRelation(in ILineSegment2D line)

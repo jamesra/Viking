@@ -157,13 +157,17 @@ namespace Viking
             {
                 try
                 {
+                    // Location ID is applied by AnnotationOverlay after the store is ready.
+                    // Do not recenter on the default section or the later camera jump overwrites it.
+                    if (!string.IsNullOrWhiteSpace(UI.State.StartupArguments["Location"]))
+                        UseDefaultPosition = false;
+
                     string strX = UI.State.StartupArguments["X"];
                     string strY = UI.State.StartupArguments["Y"];
                     string strZ = UI.State.StartupArguments["Z"];
 
-                    if (strX is null || strY is null || strZ is null)
-                        UseDefaultPosition = true;
-                    else
+                    if (string.IsNullOrWhiteSpace(UI.State.StartupArguments["Location"])
+                        && strX != null && strY != null && strZ != null)
                     {
                         UseDefaultPosition = false;
                         float X = System.Convert.ToSingle(strX, System.Globalization.CultureInfo.InvariantCulture);

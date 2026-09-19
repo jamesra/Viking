@@ -542,12 +542,13 @@
 
                         <controls:CircleSizePreviewSlider
                             Header="Auto Polygonize Min Size:"
-                            Description="Circles smaller than this percentage of the current view are used only as negative prompts. 0% submits every eligible circle."
-                            Value="{Binding AutoPolygonizeMinScreenAreaPercent, Mode=TwoWay}"
+                            Description="Circles smaller than this radius are not auto-segmented. The value is in nanometers. The preview is that size on the current Viking view. 0 submits every eligible circle."
+                            Value="{Binding AutoPolygonizeMinRadiusNanometers, Mode=TwoWay}"
+                            NanometersPerPixel="{Binding NanometersPerPixel}"
                             Minimum="0"
-                            Maximum="10"
-                            TickFrequency="0.1"
-                            PreviewMode="PercentOfScreen"/>
+                            Maximum="2000"
+                            TickFrequency="5"
+                            PreviewMode="NanometerRadius"/>
 
                         <CheckBox Margin="0,10,0,0"
                                   IsChecked="{Binding AutoPolygonizeCircles, Mode=TwoWay}"
@@ -557,7 +558,7 @@
                                    FontSize="10"
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
-                                   Text="When enabled, idle views automatically send each circle (inset 20% from the edges) to the segmentation service. Double-click a result polyline to accept; double-right-click to dismiss."/>
+                                   Text="When enabled, idle views automatically send each circle whose center is at least 5% from the edges and whose disk is fully on screen to the segmentation service. Double-click a result polyline to accept; double-right-click to dismiss."/>
                         <CheckBox Margin="0,10,0,0"
                                   IsChecked="{Binding AutoPolygonizeOverlayMasks, Mode=TwoWay}"
                                   Content="Overlay returned masks (debug)"

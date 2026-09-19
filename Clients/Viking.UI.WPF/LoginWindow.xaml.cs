@@ -31,6 +31,7 @@ namespace Viking.UI.WPF
         private string _savedUsername;
         private string _savedPassword;
         private bool _isAnonymous;
+        private bool _launchVolumeAutoSelectStarted;
 
         public LoginWindow()
         {
@@ -56,16 +57,54 @@ namespace Viking.UI.WPF
             BearerToken = apiToken;
             Credentials ??= new NetworkCredential("anonymous", "connectome");
             ShowVolumeStage(apiToken);
-            if (!string.IsNullOrWhiteSpace(InitialVolumeUrl) && _volumeSelectionViewModel != null)
+            if (_volumeSelectionViewModel != null)
+                _volumeSelectionViewModel.PropertyChanged += OnLaunchVolumeSelectionPropertyChanged;
+            TryAutoSelectLaunchVolume();
+        }
+
+        /// <summary>
+        /// Launch-code path: select the linked volume once the tree finishes loading.
+        /// LoadVolumesAsync sets IsLoading and used to make SelectCommand a no-op at ApplicationIdle.
+        /// </summary>
+        private void OnLaunchVolumeSelectionPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(VolumeSelectionViewModel.IsLoading))
+                return;
+            TryAutoSelectLaunchVolume();
+        }
+
+        private void TryAutoSelectLaunchVolume()
+        {
+            if (_launchVolumeAutoSelectStarted || _volumeSelectionViewModel == null)
+                return;
+            if (string.IsNullOrWhiteSpace(InitialApiToken))
+                return;
+            if (_volumeSelectionViewModel.IsLoading)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(InitialVolumeUrl) && LooksLikeHttpUrl(InitialVolumeUrl))
             {
                 _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
-                // Auto-advance: select the linked volume without waiting for a click.
-                Dispatcher.BeginInvoke(new System.Action(() =>
-                {
-                    if (_volumeSelectionViewModel?.SelectCommand?.CanExecute(null) == true)
-                        _volumeSelectionViewModel.SelectCommand.Execute(null);
-                }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             }
+            else
+            {
+                string volumeName = !string.IsNullOrWhiteSpace(InitialVolumeName) ? InitialVolumeName : InitialVolumeUrl;
+                if (string.IsNullOrWhiteSpace(volumeName) || !_volumeSelectionViewModel.TrySelectVolumeByName(volumeName))
+                    return;
+            }
+
+            if (_volumeSelectionViewModel.SelectCommand?.CanExecute(null) != true)
+                return;
+
+            _launchVolumeAutoSelectStarted = true;
+            _volumeSelectionViewModel.SelectCommand.Execute(null);
+        }
+
+        private static bool LooksLikeHttpUrl(string value)
+        {
+            return Uri.TryCreate(value, UriKind.Absolute, out Uri uri)
+                && (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>Creates a minimal TokenResponse from a raw access token (e.g. from launch code exchange).</summary>

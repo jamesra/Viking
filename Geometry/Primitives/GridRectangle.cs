@@ -340,9 +340,12 @@ namespace Geometry
             return false;
         }
 
-        public ShapeRelation GetRelation(in IPoint2D pos)
+        /// <summary>
+        /// Point-in-rectangle without boxing <see cref="GridVector2"/> to <see cref="IPoint2D"/>.
+        /// Boundary points are Touching; interior is Contained. Matches <see cref="GetRelation(in IPoint2D)"/>.
+        /// </summary>
+        public ShapeRelation GetRelation(in GridVector2 pos)
         {
-            //Find out if the rectangles can't possibly intersect
             if (pos.X >= this.Left &&
                pos.Y >= this.Bottom &&
                pos.X <= this.Right &&
@@ -358,6 +361,14 @@ namespace Geometry
             }
 
             return ShapeRelation.NONE;
+        }
+
+        public ShapeRelation GetRelation(in IPoint2D pos)
+        {
+            if (pos is null)
+                throw new ArgumentNullException(nameof(pos));
+
+            return GetRelation(new GridVector2(pos.X, pos.Y));
         }
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
