@@ -858,7 +858,7 @@ namespace Viking.VolumeModel
         {
             LoadStosResult result = null;
             string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
-            Uri stosPath = new(this.Host + System.IO.Path.DirectorySeparatorChar + stosFileName);
+            Uri stosPath = new(VolumePath.Combine(this.Host, stosFileName));
 
             try
             {

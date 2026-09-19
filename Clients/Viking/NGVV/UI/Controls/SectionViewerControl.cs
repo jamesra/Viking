@@ -1781,7 +1781,7 @@ namespace Viking.UI.Controls
             {
                 return t.TextureFullPath;
             }
-            return $"{section.Path}{System.IO.Path.DirectorySeparatorChar}{t.TextureFullPath}";
+            return VolumePath.Combine(section.Path, t.TextureFullPath);
         }
 
         /// <summary>
