@@ -57,11 +57,20 @@ namespace WebAnnotation.View
 
         public OverlappedLocationView(LocationObj obj, Circle gridCircle, bool Up) : base(obj)
         {
+            Microsoft.Xna.Framework.Color typeColor = obj.Parent?.Type is null
+                ? Microsoft.Xna.Framework.Color.Gray
+                : obj.Parent.Type.Color.ToXNAColor();
+            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.GetLocationLinkColor(
+                typeColor,
+                1,
+                Up ? 1 : -1,
+                false).SetAlpha(1.0f);
+
             label = new LabelView(LocationLabel(obj), gridCircle.Center)
             {
                 _Color = Microsoft.Xna.Framework.Color.Red
             };
-            Microsoft.Xna.Framework.Color color = obj.Parent.Type.Color.ToXNAColor(0.75f);
+            Microsoft.Xna.Framework.Color color = typeColor.SetAlpha(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
         }
 
