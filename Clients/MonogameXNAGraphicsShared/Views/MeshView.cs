@@ -54,7 +54,7 @@ namespace VikingXNAGraphics
 
             if (effect is null || effect.IsDisposed)
             {
-                effect = new BasicEffect(device);
+                effect = CircleView.GetOrCreateBasicEffect(device);
             }
 
             RasterizerState originalRasterizerState = device.RasterizerState;
@@ -206,7 +206,7 @@ namespace VikingXNAGraphics
 
             if (effect is null || effect.IsDisposed)
             {
-                effect = new BasicEffect(device);
+                effect = CircleView.GetOrCreateBasicEffect(device);
             }
 
             RasterizerState originalRasterizerState = device.RasterizerState;
