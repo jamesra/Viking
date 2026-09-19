@@ -210,7 +210,7 @@ namespace Viking.VolumeModel
         protected virtual string TileTextureCacheFileName(int downsample, int iX, int iY)
         {
             char sep = System.IO.Path.DirectorySeparatorChar;
-            return $"{Name}{sep}{downsample:D3}{sep}{TileTextureFileName(iX, iY)}";
+            return $"{Name}{sep}{downsample.ToString(GridCoordFormat)}{sep}{TileTextureFileName(iX, iY)}";
         }
 
         /// <summary>
@@ -219,7 +219,8 @@ namespace Viking.VolumeModel
         /// <param name="iX"></param>
         /// <param name="iY"></param>
         /// <returns></returns>
-        protected virtual string TileTextureFileName(int iX, int iY) => $"{this.TilePrefix}X{iX:D3}_Y{iY:D3}{this.TilePostfix}";
+        protected virtual string TileTextureFileName(int iX, int iY) =>
+            $"{this.TilePrefix}X{iX.ToString(this.GridCoordFormat)}_Y{iY.ToString(this.GridCoordFormat)}{this.TilePostfix}";
 
         #endregion
 
