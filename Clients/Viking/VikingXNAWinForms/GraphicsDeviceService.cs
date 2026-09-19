@@ -218,6 +218,9 @@ namespace VikingXNAWinForms
             DeviceEffectsStore<PolygonOverlayEffect>.ClearAll();
             DeviceEffectsStore<OverlayShaderEffect>.ClearAll();
 
+            GlobalPrimitives.ClearDeviceDependentCaches();
+            CircleView.ClearDeviceDependentCaches();
+
             // Clear font store
             DeviceFontStore.ClearAll();
         }

@@ -238,6 +238,22 @@ namespace VikingXNAGraphics
             }
         }
 
+        /// <summary>
+        /// Drops cached BasicEffect and circle GPU buffers after a device reset.
+        /// Called from GraphicsDeviceService.ClearDeviceDependentCaches.
+        /// </summary>
+        public static void ClearDeviceDependentCaches()
+        {
+            lock (BasicEffectCacheLock)
+            {
+                BasicEffectCache.Clear();
+            }
+            lock (BufferCacheLock)
+            {
+                BufferCache.Clear();
+            }
+        }
+
         private static void GetOrCreateCircleBuffers(GraphicsDevice device, int vertexCount, int indexCount,
             out VertexBuffer vb, out IndexBuffer ib)
         {
