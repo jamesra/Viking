@@ -35,8 +35,9 @@ namespace WebAnnotation.View
 
         public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-            upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHCL(0.5f), GlobalPrimitives.UpArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
-            downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHCL(0.5f), GlobalPrimitives.DownArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
+            Color parentColor = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor().ConvertToHCL(0.5f);
+            upPolyLineView = new PolyLineView(VolumeControlPoints, parentColor, GlobalPrimitives.UpArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
+            downPolyLineView = new PolyLineView(VolumeControlPoints, parentColor, GlobalPrimitives.DownArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -88,8 +89,9 @@ namespace WebAnnotation.View
         public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D? texture = null) : base(obj, mapper)
         {
             bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out GridVector2[] volumePoints);
+            Color lineColor = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
             polyLineView = success.All(s => s == true)
-                ? new PolyLineView(volumePoints, obj.Parent.Type.Color.ToXNAColor(0.5f), texture)
+                ? new PolyLineView(volumePoints, lineColor, texture)
                 : throw new ArgumentException($"Could not map location {obj.ID} to volume");
         }
 
