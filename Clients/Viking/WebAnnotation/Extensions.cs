@@ -265,8 +265,12 @@ namespace WebAnnotation
 
         /// <summary>
         /// Returns representative points for a collection of annotations.
-        /// For polygons: one centroid per constrained-triangulation face (falls back to the
-        /// polygon centroid if meshing fails and that centroid is inside). For lines/points:
+        /// For polygons: one centroid per constrained-triangulation face of the
+        /// unsmoothed control-point ring (<see cref="LocationObj.MosaicShape"/>).
+        /// <see cref="LocationObj.VolumeShape"/> is <c>GetSmoothedShape</c> for
+        /// CURVEPOLYGON and must not be meshed here — interpolation multiplies
+        /// faces and floods SAM2 with avoid marks. Falls back to the polygon
+        /// centroid if meshing fails and that centroid is inside. For lines/points:
         /// vertices. For circles/ellipses: center.
         /// Polygon samples are cached by location ID and LastModified so a batch of
         /// SegmentImage calls does not retriangulate the same neighbors.
@@ -283,7 +287,6 @@ namespace WebAnnotation
                 if (loc?.MosaicShape is null)
                     continue;
 
-                SqlGeometry shape = loc.MosaicShape;
                 LocationType typeCode = loc.TypeCode;
 
                 switch (typeCode)
@@ -295,11 +298,11 @@ namespace WebAnnotation
                             loc.ID,
                             loc.LastModified,
                             typeCode,
-                            () => TryGetPolygonRepresentativePoints(shape)));
+                            () => TryGetUnsmoothedPolygonRepresentativePoints(loc)));
                         break;
                     case LocationType.POLYLINE:
                     case LocationType.OPENCURVE:
-                        GridVector2[] linePoints = shape.ToPoints();
+                        GridVector2[] linePoints = loc.MosaicShape.ToPoints();
                         if (linePoints?.Length > 0)
                             result.AddRange(linePoints);
                         break;
@@ -308,7 +311,7 @@ namespace WebAnnotation
                         break;
                     case LocationType.CIRCLE:
                     case LocationType.ELLIPSE:
-                        result.Add(shape.BoundingBox().Center);
+                        result.Add(loc.MosaicShape.BoundingBox().Center);
                         break;
                     default:
                         break;
@@ -368,17 +371,25 @@ namespace WebAnnotation
             return polygon.Contains(fallback) ? [fallback] : [];
         }
 
-        private static IReadOnlyList<GridVector2> TryGetPolygonRepresentativePoints(SqlGeometry shape)
+        /// <summary>
+        /// Delaunay-face centroids of <see cref="LocationObj.MosaicShape"/>, the
+        /// stored control-point ring. Called from the polygon cache factory.
+        /// </summary>
+        private static IReadOnlyList<GridVector2> TryGetUnsmoothedPolygonRepresentativePoints(LocationObj loc)
         {
             try
             {
-                if (shape.GeometryType() != SupportedGeometryType.POLYGON &&
-                    shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                SqlGeometry mosaic = loc?.MosaicShape;
+                if (mosaic is null)
+                    return [];
+
+                if (mosaic.GeometryType() != SupportedGeometryType.POLYGON &&
+                    mosaic.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
                 {
                     return [];
                 }
 
-                return GetPolygonTriangleCentroidPoints(shape.ToPolygon());
+                return GetPolygonTriangleCentroidPoints(mosaic.ToPolygon());
             }
             catch (ArgumentException)
             {

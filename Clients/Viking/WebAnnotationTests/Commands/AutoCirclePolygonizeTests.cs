@@ -1,8 +1,10 @@
 using Geometry;
 using Geometry.Meshing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotation;
@@ -152,6 +154,24 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void LargeCircleThatFitsOnScreenIsEligible()
+        {
+            GridRectangle view = new(0, 1000, 0, 1000);
+            GridRectangle inset = AutoPolygonizeSelection.InsetBounds(view);
+            const double radius = 400;
+
+            Assert.IsTrue(AutoPolygonizeSelection.IsCircleEntirelyInside(new GridVector2(500, 500), radius, view));
+            Assert.IsTrue(AutoPolygonizeSelection.IsEligibleCircle(
+                LocationType.CIRCLE,
+                new GridVector2(500, 500),
+                inset,
+                view,
+                radius,
+                1,
+                0));
+        }
+
+        [TestMethod]
         public void ShouldUploadEncodedCaptureWhenBoundsUnchanged()
         {
             GridRectangle bounds = new(0, 100, 0, 100);
@@ -226,16 +246,30 @@ namespace WebAnnotationTests.Commands
             GridCircle circle = new(new GridVector2(10, 20), 8);
             var points = CircleSegmentationPrompts.CreateMosaicForegroundPoints(circle);
 
-            Assert.AreEqual(17, points.Count);
+            Assert.AreEqual(1 + (2 * CircleSegmentationPrompts.ForegroundRingPointCount), points.Count);
             Assert.AreEqual(circle.Center, points[0]);
 
             GridVector2 innerEast = points[1];
             Assert.AreEqual(14, innerEast.X, 1e-6);
             Assert.AreEqual(20, innerEast.Y, 1e-6);
 
-            GridVector2 outerEast = points[9];
-            Assert.AreEqual(16, outerEast.X, 1e-6);
+            GridVector2 outerEast = points[1 + CircleSegmentationPrompts.ForegroundRingPointCount];
+            Assert.AreEqual(16.4, outerEast.X, 1e-6);
             Assert.AreEqual(20, outerEast.Y, 1e-6);
+            Assert.AreEqual(
+                circle.Radius * CircleSegmentationPrompts.OuterRingRadiusFraction,
+                GridVector2.Distance(circle.Center, outerEast),
+                1e-6);
+        }
+
+        [TestMethod]
+        public void OtherStructureFilterKeepsDifferentParentsAndTypes()
+        {
+            long[] excludeSelf = [22974];
+            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(22974, 100, excludeSelf, 100));
+            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(1, 100, excludeSelf, 100));
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(169829, 200, excludeSelf, 100));
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(32227, null, excludeSelf, 100));
         }
 
         [TestMethod]
@@ -282,6 +316,41 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(simplified.ExteriorRing.Length < polygon.ExteriorRing.Length);
             Assert.IsTrue(simplified.TotalUniqueVerticies <= 6);
             Assert.IsFalse(simplified.ExteriorSegments.SelfIntersects(LineSetOrdering.CLOSED));
+        }
+
+        [TestMethod]
+        public void SimplifyProposalFitsCurveControlPointsWithinTolerance()
+        {
+            List<GridVector2> ring = [];
+            const int samples = 80;
+            for (int i = 0; i < samples; i++)
+            {
+                double t = 2 * Math.PI * i / samples;
+                ring.Add(new GridVector2(50 * Math.Cos(t), 30 * Math.Sin(t)));
+            }
+
+            ring.Add(ring[0]);
+            GridPolygon original = new(ring);
+
+            const double tolerance = 1.0;
+            GridPolygon dpOnly = SegmentationMaskPolygonizer.SimplifyRings(original, tolerance);
+            GridPolygon fitted = AutoPolygonizeSelection.SimplifyProposal(original, tolerance);
+
+            Assert.IsTrue(fitted.TotalUniqueVerticies < dpOnly.TotalUniqueVerticies,
+                $"Fit should reduce DP vertices {dpOnly.TotalUniqueVerticies} -> {fitted.TotalUniqueVerticies}");
+            Assert.IsFalse(fitted.ExteriorSegments.SelfIntersects(LineSetOrdering.CLOSED));
+
+            GridPolygon fittedCurve = new(fitted.ExteriorRing.CalculateCurvePoints(8, true));
+            double maxDistance = 0;
+            foreach (GridVector2 p in original.ExteriorRing)
+            {
+                double distance = fittedCurve.Distance(p);
+                if (distance > maxDistance)
+                    maxDistance = distance;
+            }
+
+            Assert.IsTrue(maxDistance <= tolerance * 2,
+                $"Fitted curve drifted {maxDistance} from original (limit {tolerance * 2})");
         }
 
         [TestMethod]
@@ -371,6 +440,33 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(points.Count >= 2);
             foreach (GridVector2 point in points)
                 Assert.IsTrue(concave.Contains(point));
+        }
+
+        [TestMethod]
+        public void PolygonNegativePointsUseUnsmoothedMosaicShapeNotSmoothedVolumeShape()
+        {
+            AnnotationPointExtensions.PolygonPromptCache.Clear();
+            try
+            {
+                GridPolygon unsmoothed = CreateRegularPolygon(6, 20);
+                GridPolygon smoothed = unsmoothed.Smooth(Geometry.Global.NumClosedCurveInterpolationPoints);
+
+                LocationObj loc = new();
+                loc.TypeCode = LocationType.CURVEPOLYGON;
+                loc.MosaicShape = unsmoothed.ToSqlGeometry();
+                loc.VolumeShape = smoothed.ToSqlGeometry();
+
+                IReadOnlyList<GridVector2> points = AnnotationPointExtensions.GetAnnotationRepresentativePoints([loc]);
+                IReadOnlyList<GridVector2> expected = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(unsmoothed);
+                IReadOnlyList<GridVector2> ifSmoothed = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(smoothed);
+
+                Assert.IsTrue(ifSmoothed.Count > expected.Count);
+                Assert.AreEqual(expected.Count, points.Count);
+            }
+            finally
+            {
+                AnnotationPointExtensions.PolygonPromptCache.Clear();
+            }
         }
 
         [TestMethod]
@@ -562,6 +658,113 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void OverlappingSameCellPolygonsFormOneComponentAndExcludeDisjointSibling()
+        {
+            GridPolygon left = Square(0, 0, 10);
+            GridPolygon overlap = Square(5, 0, 10);
+            GridPolygon far = Square(100, 0, 10);
+            OverlapCandidate seed = new([1], 9, 1, left);
+            List<OverlapCandidate> pool =
+            [
+                seed,
+                new([2], 9, 1, overlap),
+                new([3], 9, 1, far)
+            ];
+
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(seed, pool);
+            long[] ids = [.. component.SelectMany(item => item.LocationIds).Distinct().OrderBy(id => id)];
+
+            CollectionAssert.AreEqual(new long[] { 1, 2 }, ids);
+        }
+
+        [TestMethod]
+        public void OverlappingDifferentCellsAreNotGrouped()
+        {
+            GridPolygon left = Square(0, 0, 10);
+            GridPolygon overlap = Square(5, 0, 10);
+            OverlapCandidate seed = new([1], 9, 1, left);
+            List<OverlapCandidate> pool =
+            [
+                seed,
+                new([2], 10, 1, overlap)
+            ];
+
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(seed, pool);
+            Assert.AreEqual(1, component.Count);
+            Assert.AreEqual(1, component[0].LocationIds[0]);
+        }
+
+        [TestMethod]
+        public void OrphanProposalIsNotGrouped()
+        {
+            GridPolygon left = Square(0, 0, 10);
+            GridPolygon overlap = Square(5, 0, 10);
+            OverlapCandidate seed = new([1], null, 1, left);
+            List<OverlapCandidate> pool =
+            [
+                seed,
+                new([2], null, 1, overlap)
+            ];
+
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(seed, pool);
+            Assert.AreEqual(1, component.Count);
+        }
+
+        [TestMethod]
+        public void OverlapChainIncludesTransitiveSiblings()
+        {
+            OverlapCandidate a = new([1], 9, 1, Square(0, 0, 10));
+            OverlapCandidate b = new([2], 9, 1, Square(8, 0, 10));
+            OverlapCandidate c = new([3], 9, 1, Square(16, 0, 10));
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(
+                a,
+                [a, b, c]);
+            long[] ids = [.. component.SelectMany(item => item.LocationIds).Distinct().OrderBy(id => id)];
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3 }, ids);
+        }
+
+        [TestMethod]
+        public void SurvivorIsMostLinksThenLowestId()
+        {
+            Assert.AreEqual(2, LocationSiblingMerge.ChooseSurvivorId([(5, 1), (2, 3), (9, 3)]));
+            Assert.AreEqual(4, LocationSiblingMerge.ChooseSurvivorId([(7, 2), (4, 2)]));
+        }
+
+        [TestMethod]
+        public void UniqueNeighborTransferSkipsSharedAndSameSectionIds()
+        {
+            IReadOnlyList<long> created = LocationSiblingMerge.UniqueNeighborIdsToTransfer(
+                survivorLinks: [20],
+                groupIds: [1, 2],
+                victimLinkSets:
+                [
+                    [20, 30, 2, 1],
+                    [30, 40]
+                ]);
+
+            CollectionAssert.AreEqual(new long[] { 30, 40 }, created.ToArray());
+        }
+
+        [TestMethod]
+        public void PolygonForegroundPointsIncludeCentroidAndSubsampledRing()
+        {
+            GridPolygon square = Square(0, 0, 10);
+            IReadOnlyList<GridVector2> points = CircleSegmentationPrompts.CreateForegroundPointsFromPolygons([square], 16);
+
+            Assert.IsTrue(points.Count >= 5);
+            Assert.AreEqual(square.Centroid, points[0]);
+            Assert.IsTrue(square.Contains(points[0]));
+            Assert.IsTrue(points.Skip(1).Any(p => p == new GridVector2(0, 0) || p == new GridVector2(10, 0)));
+        }
+
+        [TestMethod]
+        public void PolygonForegroundPointsRejectEmptyAndDegenerate()
+        {
+            Assert.AreEqual(0, CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(null).Count);
+            Assert.AreEqual(0, CircleSegmentationPrompts.CreateForegroundPointsFromPolygons([]).Count);
+        }
+
+        [TestMethod]
         public void AnnotateScopeDoesNotGrantReviewAccess()
         {
             string token = CreateUnsignedJwt("{\"scope\":\"openid Viking.Annotation RC2.annotate\"}");
@@ -591,6 +794,15 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(VolumeAccessRoles.TokenGrantsReviewAccess("", "RC2"));
         }
 
+        [TestMethod]
+        public void OnlyHotkeyStartedPlacementLeavesPenMode()
+        {
+            Assert.IsFalse(PlacementInput.UsePenStroke(penMode: true, startedByHotkey: true));
+            Assert.IsTrue(PlacementInput.UsePenStroke(penMode: true, startedByHotkey: false));
+            Assert.IsFalse(PlacementInput.UsePenStroke(penMode: false, startedByHotkey: true));
+            Assert.IsFalse(PlacementInput.UsePenStroke(penMode: false, startedByHotkey: false));
+        }
+
         private static string CreateUnsignedJwt(string payloadJson)
         {
             return $"{ToBase64Url("{}")}.{ToBase64Url(payloadJson)}.sig";
@@ -600,6 +812,32 @@ namespace WebAnnotationTests.Commands
         {
             string encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
             return encoded.TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        }
+
+        private static GridPolygon Square(double left, double bottom, double size)
+        {
+            return new(
+            [
+                new GridVector2(left, bottom),
+                new GridVector2(left + size, bottom),
+                new GridVector2(left + size, bottom + size),
+                new GridVector2(left, bottom + size),
+                new GridVector2(left, bottom)
+            ]);
+        }
+
+        /// <summary>Closed regular n-gon centered at the origin. Used to contrast Smooth() vertex growth.</summary>
+        private static GridPolygon CreateRegularPolygon(int sides, double radius)
+        {
+            GridVector2[] ring = new GridVector2[sides + 1];
+            for (int i = 0; i < sides; i++)
+            {
+                double angle = 2.0 * Math.PI * i / sides;
+                ring[i] = new GridVector2(radius * Math.Cos(angle), radius * Math.Sin(angle));
+            }
+
+            ring[sides] = ring[0];
+            return new GridPolygon(ring);
         }
     }
 }

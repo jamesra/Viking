@@ -8,23 +8,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
     /// Converts a SAM2 binary mask to world-space <see cref="GridPolygon"/>s.
-    /// Huge near-full-frame masks are skipped. Remaining masks are downsampled before
-    /// morphological cleanup and marching squares so a 4K capture does not run open/close at full res.
+    /// Masks are downsampled before morphological cleanup and marching squares so a
+    /// 4K capture does not run open/close at full res. Large-annotation eligibility
+    /// is "fits in the visible scene" on the auto-polygonize path, not a mask-area gate here.
     /// </summary>
     internal static class SegmentationMaskPolygonizer
     {
         private const double SimplificationTolerancePixels = 2.0;
-
-        /// <summary>
-        /// Skip polygonize when foreground exceeds this fraction of the capture and the image is large enough.
-        /// Prevents minute-long marching squares on a near-full-frame blob.
-        /// </summary>
-        internal const double HugeMaskForegroundFraction = 0.40;
-
-        /// <summary>
-        /// Images smaller than this skip the huge-mask check so small captures still polygonize.
-        /// </summary>
-        internal const int HugeMaskMinImagePixels = 250_000;
 
         /// <summary>
         /// Marching squares runs on a mask no larger than this; extra resolution is downsampled away.
@@ -49,7 +39,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Polygonizes a decoded mask. Returns empty when the mask is missing or huge.
+        /// Polygonizes a decoded mask. Returns empty when the mask is missing.
         /// If cleanup produces an unusable ring, retries on the original mask.
         /// </summary>
         public static IReadOnlyList<GridPolygon> CreatePolygons(
@@ -99,11 +89,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return [];
 
             int foregroundBefore = CountForeground(maskData);
-            if (ShouldSkipHugeMask(foregroundBefore, imageWidth, imageHeight))
-            {
-                cleanupStats = new CleanupStats(0, foregroundBefore, foregroundBefore);
-                return [];
-            }
 
             var (polygonMask, polygonWidth, polygonHeight, scale) =
                 DownsampleUntil(maskData, maskWidth, maskHeight, PolygonizeMaxMaskPixels);
@@ -158,22 +143,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             return cleanedPolygons;
-        }
-
-        /// <summary>
-        /// True when the mask covers more than <see cref="HugeMaskForegroundFraction"/> of a large capture.
-        /// Small images always return false.
-        /// </summary>
-        public static bool ShouldSkipHugeMask(int foregroundPixels, int imageWidth, int imageHeight)
-        {
-            if (imageWidth <= 0 || imageHeight <= 0 || foregroundPixels <= 0)
-                return false;
-
-            int imagePixels = imageWidth * imageHeight;
-            if (imagePixels < HugeMaskMinImagePixels)
-                return false;
-
-            return foregroundPixels > imagePixels * HugeMaskForegroundFraction;
         }
 
         /// <summary>

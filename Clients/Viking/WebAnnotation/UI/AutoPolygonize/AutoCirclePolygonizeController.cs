@@ -67,6 +67,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly object lifecycleLock = new();
         private GridRectangle lastViewBounds;
         private AutoPolygonizeProposal? hoveredProposal;
+        private readonly HashSet<string> overlapResubmitsInFlight = [];
 
         /// <summary>
         /// One uploaded viewport plus the per-response polygonize tasks that still
@@ -235,7 +236,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             int sectionNumber = parent.Section.Number;
             lock (proposalLock)
             {
-                foreach (AutoPolygonizeProposal proposal in proposals.Values)
+                foreach (AutoPolygonizeProposal proposal in DistinctProposalsUnlocked())
                 {
                     if (proposal.SectionNumber == sectionNumber)
                         proposal.Draw(graphicsDevice, scene);
@@ -260,7 +261,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             lock (proposalLock)
             {
-                foreach (AutoPolygonizeProposal candidate in proposals.Values)
+                foreach (AutoPolygonizeProposal candidate in DistinctProposalsUnlocked())
                 {
                     if (candidate.SectionNumber != sectionNumber)
                         continue;
@@ -296,37 +297,71 @@ namespace WebAnnotation.UI.AutoPolygonize
             parent.Invalidate();
         }
 
-        /// <summary>Writes the proposal polygon onto the circle location and removes it from the cache.</summary>
+        /// <summary>
+        /// Writes the proposal polygon onto the survivor location. For a same-cell group,
+        /// unique Z-links move to the survivor and the other locations are deleted first.
+        /// </summary>
         public void Accept(AutoPolygonizeProposal proposal)
         {
             if (proposal is null)
                 return;
 
-            LocationObj location = Store.Locations.GetObjectByID(proposal.LocationId, false);
-            if (location is null)
+            List<LocationObj> members = [];
+            foreach (long id in proposal.LocationIds)
+            {
+                LocationObj loc = Store.Locations.GetObjectByID(id, false);
+                if (loc is not null)
+                    members.Add(loc);
+            }
+
+            if (members.Count == 0)
             {
                 RemoveProposal(proposal.LocationId);
                 return;
             }
 
-            if (LocationShapeUpdate.ApplyVolumePolygon(location, proposal.Polygon, parent))
-            {
-                cache.Remove(proposal.LocationId);
-                parent.Invalidate();
-            }
+            long survivorId = LocationSiblingMerge.ChooseSurvivorId(members);
+            LocationObj survivor = members.First(member => member.ID == survivorId);
+            List<LocationObj> victims = [.. members.Where(member => member.ID != survivorId)];
+
+            if (!LocationShapeUpdate.ApplyVolumePolygon(survivor, proposal.Polygon, parent))
+                return;
+
+            IReadOnlyList<long> toLink = LocationSiblingMerge.UniqueNeighborIdsToTransfer(
+                survivor.LinksCopy,
+                proposal.LocationIds,
+                victims.Select(victim => (IReadOnlyCollection<long>)victim.LinksCopy));
+            foreach (long neighborId in toLink)
+                Store.LocationLinks.CreateLink(survivorId, neighborId);
+
+            foreach (LocationObj victim in victims)
+                Store.Locations.Remove(victim);
+
+            if (victims.Count > 0)
+                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+
+            foreach (long id in proposal.LocationIds)
+                cache.Remove(id);
+            RemoveProposal(proposal.LocationId);
+            parent.Invalidate();
         }
 
-        /// <summary>Hides the proposal until that location's LastModified changes.</summary>
+        /// <summary>Hides the proposal until each involved location's LastModified changes.</summary>
         public void Dismiss(AutoPolygonizeProposal proposal)
         {
             if (proposal is null)
                 return;
 
-            cache.Dismiss(
-                proposal.LocationId,
-                proposal.SectionNumber,
-                proposal.LastModified,
-                Store.Locations.GetObjectByID(proposal.LocationId, false));
+            foreach (long id in proposal.LocationIds)
+            {
+                LocationObj loc = Store.Locations.GetObjectByID(id, false);
+                cache.Dismiss(
+                    id,
+                    proposal.SectionNumber,
+                    loc?.LastModified ?? proposal.LastModified,
+                    loc);
+            }
+
             RemoveProposal(proposal.LocationId);
             parent.Invalidate();
         }
@@ -565,13 +600,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (foreground.Count == 0)
                         continue;
 
-                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.ExceptNearForeground(
-                        CircleSegmentationPrompts.CreateBackgroundVolumePoints(
-                            CollectVisibleLocationObjs(viewBounds).Where(loc =>
-                                loc.ID != circle.ID && loc.ParentID != circle.ParentID),
-                            transform),
+                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                        CollectVisibleLocationObjs(viewBounds),
+                        transform,
                         foreground,
-                        Global.AnnotationSettings.SegmentationPointRadius * downsample);
+                        Global.AnnotationSettings.SegmentationPointRadius * downsample,
+                        [circle.ID],
+                        circle.ParentID);
                     long promptMs = proposalTimer.ElapsedMilliseconds;
 
                     Stopwatch segmentTimer = Stopwatch.StartNew();
@@ -697,7 +732,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     AutoPolygonizeProposal.ColorForLocation(circle.ID),
                     circle.Radius,
                     downsample),
-                maskOverlay);
+                maskOverlay,
+                locationIds: [circle.ID],
+                parentId: circle.ParentID);
             long renderPreparationMs = renderPreparationTimer.ElapsedMilliseconds;
 
             if (!IsStillCircle(circle.ID) || !cache.IsGenerationCurrent(circle.ID, generation))
@@ -734,7 +771,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!enabled || !IsStillCircle(proposal.LocationId))
+                if (!enabled || !proposal.LocationIds.All(IsStillCircle))
                 {
                     proposal.DisposeMaskOverlay();
                     return;
@@ -742,16 +779,34 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 lock (proposalLock)
                 {
-                    if (proposals.TryGetValue(proposal.LocationId, out AutoPolygonizeProposal existing))
-                        existing.DisposeMaskOverlay();
+                    HashSet<AutoPolygonizeProposal> replaced = [];
+                    foreach (long id in proposal.LocationIds)
+                    {
+                        if (proposals.TryGetValue(id, out AutoPolygonizeProposal existing) &&
+                            !ReferenceEquals(existing, proposal))
+                        {
+                            replaced.Add(existing);
+                        }
+                    }
+
+                    foreach (AutoPolygonizeProposal old in replaced)
+                    {
+                        old.DisposeMaskOverlay();
+                        if (ReferenceEquals(hoveredProposal, old))
+                            hoveredProposal = null;
+                        foreach (long id in old.LocationIds)
+                            proposals.Remove(id);
+                    }
 
                     if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
                         proposal.AttachMaskOverlay(parent.Device);
 
-                    proposals[proposal.LocationId] = proposal;
+                    foreach (long id in proposal.LocationIds)
+                        proposals[id] = proposal;
                 }
 
                 parent.Invalidate();
+                TryBeginOverlapResubmit(proposal);
             }));
         }
 
@@ -1102,13 +1157,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (foreground.Count == 0)
                     return;
 
-                IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.ExceptNearForeground(
-                    CircleSegmentationPrompts.CreateBackgroundVolumePoints(
-                        CollectVisibleLocationObjs(viewBounds).Where(loc =>
-                            loc.ID != circle.ID && loc.ParentID != circle.ParentID),
-                        transform),
+                IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                    CollectVisibleLocationObjs(viewBounds),
+                    transform,
                     foreground,
-                    Global.AnnotationSettings.SegmentationPointRadius * downsample);
+                    Global.AnnotationSettings.SegmentationPointRadius * downsample,
+                    [circle.ID],
+                    circle.ParentID);
 
                 Stopwatch proposalTimer = Stopwatch.StartNew();
                 var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
@@ -1180,13 +1235,217 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             lock (proposalLock)
             {
-                if (hoveredProposal?.LocationId == locationId)
+                if (!proposals.TryGetValue(locationId, out AutoPolygonizeProposal existing))
+                    return;
+
+                if (ReferenceEquals(hoveredProposal, existing))
                     hoveredProposal = null;
 
-                if (proposals.TryGetValue(locationId, out AutoPolygonizeProposal existing))
-                    existing.DisposeMaskOverlay();
-
+                existing.DisposeMaskOverlay();
+                foreach (long id in existing.LocationIds)
+                    proposals.Remove(id);
                 proposals.Remove(locationId);
+            }
+        }
+
+        private IEnumerable<AutoPolygonizeProposal> DistinctProposalsUnlocked() =>
+            proposals.Values.Distinct();
+
+        /// <summary>
+        /// After a publish, if other same-cell overlays intersect this one, start one combined
+        /// SegmentImage. At most <see cref="AutoPolygonizeSelection.MaxOverlapResubmitRound"/> rounds.
+        /// </summary>
+        private void TryBeginOverlapResubmit(AutoPolygonizeProposal seed)
+        {
+            if (seed.ParentID is null || seed.OverlapResubmitRound >= AutoPolygonizeSelection.MaxOverlapResubmitRound)
+                return;
+
+            List<AutoPolygonizeProposal> distinct;
+            lock (proposalLock)
+            {
+                distinct = [.. DistinctProposalsUnlocked().Where(item => item.SectionNumber == seed.SectionNumber)];
+            }
+
+            List<OverlapCandidate> candidates = [.. distinct.Select(ToOverlapCandidate)];
+            OverlapCandidate seedCandidate = ToOverlapCandidate(seed);
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(
+                seedCandidate,
+                candidates);
+            long[] locationIds = [.. component.SelectMany(item => item.LocationIds).Distinct().OrderBy(id => id)];
+            if (locationIds.Length < 2)
+                return;
+
+            List<AutoPolygonizeProposal> members = [.. distinct.Where(item =>
+                item.LocationIds.Any(id => locationIds.Contains(id)))];
+            if (members.Count < 2 && members.All(item => item.LocationIds.Count == locationIds.Length))
+                return;
+            if (members.Max(item => item.OverlapResubmitRound) >= AutoPolygonizeSelection.MaxOverlapResubmitRound)
+                return;
+
+            string key = string.Join(",", locationIds);
+            lock (overlapResubmitsInFlight)
+            {
+                if (!overlapResubmitsInFlight.Add(key))
+                    return;
+            }
+
+            int nextRound = members.Max(item => item.OverlapResubmitRound) + 1;
+            _ = ResubmitOverlapGroupAsync(members, locationIds, nextRound, key);
+        }
+
+        private static OverlapCandidate ToOverlapCandidate(AutoPolygonizeProposal proposal) =>
+            new(proposal.LocationIds, proposal.ParentID, proposal.SectionNumber, proposal.Polygon);
+
+        /// <summary>
+        /// One SegmentImage using points from the overlapping polygons. Replaces the member overlays
+        /// with a single group proposal stored under every involved location ID.
+        /// </summary>
+        private async Task ResubmitOverlapGroupAsync(
+            List<AutoPolygonizeProposal> members,
+            long[] locationIds,
+            int overlapRound,
+            string inFlightKey)
+        {
+            try
+            {
+                if (!enabled || parent.Section is null || parent.Scene is null)
+                    return;
+
+                CancellationToken processToken;
+                lock (lifecycleLock)
+                {
+                    processToken = processCts.Token;
+                }
+
+                if (processToken.IsCancellationRequested)
+                    return;
+
+                SegmentationViewportSession session = new(parent);
+                if (!session.TryInitializeClient())
+                    return;
+
+                double downsample = GetCurrentDownsample();
+                bool acquiredHold = false;
+                ulong? holdImageId = null;
+                try
+                {
+                    bool reused = false;
+                    foreach (long id in locationIds)
+                    {
+                        if (cache.TryGetUploadContext(id, out AutoPolygonizeUploadContext upload) &&
+                            upload.IsUsable)
+                        {
+                            session.AdoptUploadedImage(
+                                upload.ImageId,
+                                upload.WorldBounds,
+                                upload.Width,
+                                upload.Height);
+                            reused = true;
+                            break;
+                        }
+                    }
+
+                    if (!reused)
+                    {
+                        if (!await session.UploadCurrentImageAsync(processToken).ConfigureAwait(false))
+                            return;
+
+                        AutoPolygonizeUploadContext? uploaded = TryCreateUploadContext(session, downsample);
+                        if (uploaded.HasValue)
+                        {
+                            cache.AcquireBatchHold(uploaded.Value.ImageId);
+                            acquiredHold = true;
+                            holdImageId = uploaded.Value.ImageId;
+                        }
+                    }
+
+                    IReadOnlyList<GridVector2> foreground = CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(
+                        members.Select(member => member.Polygon));
+                    if (foreground.Count == 0)
+                        return;
+
+                    GridRectangle viewBounds = GetCurrentViewportBounds();
+                    long? parentId = members[0].ParentID;
+                    HashSet<long> involved = [.. locationIds];
+                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                            CollectVisibleLocationObjs(viewBounds),
+                            parent.Section.ActiveSectionToVolumeTransform,
+                            foreground,
+                            Global.AnnotationSettings.SegmentationPointRadius * downsample,
+                            involved,
+                            parentId);
+
+                    var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
+                    if (response is null)
+                        return;
+
+                    if (!locationIds.All(IsStillCircle))
+                        return;
+
+                    IReadOnlyList<GridPolygon> polygons = session.CreatePolygonsFromResponse(
+                        response,
+                        preserveHolesContainingWorldPoints: background);
+                    GridPolygon polygon = polygons.FirstOrDefault();
+                    if (polygon is null)
+                        return;
+
+                    double simplifyTolerance = Global.PenSimplifyThreshold * parent.Downsample;
+                    polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
+
+                    AutoPolygonizeMaskOverlay? maskOverlay = null;
+                    if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+                        maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
+
+                    DateTime lastModified = members.Max(member => member.LastModified);
+                    double circleRadius = members.Max(member => member.CircleRadius);
+                    AutoPolygonizeUploadContext? uploadContext = TryCreateUploadContext(session, downsample);
+                    foreach (long id in locationIds)
+                    {
+                        LocationObj loc = Store.Locations.GetObjectByID(id, false);
+                        cache.RememberProposal(
+                            id,
+                            members[0].SectionNumber,
+                            loc?.LastModified ?? lastModified,
+                            loc?.TypeCode ?? LocationType.CIRCLE,
+                            loc,
+                            uploadContext);
+                    }
+
+                    AutoPolygonizeProposal group = new(
+                        this,
+                        locationIds[0],
+                        members[0].SectionNumber,
+                        lastModified,
+                        circleRadius,
+                        polygon,
+                        AutoPolygonizeProposal.CreateRingViews(
+                            polygon,
+                            AutoPolygonizeProposal.ColorForLocation(locationIds[0]),
+                            circleRadius,
+                            downsample),
+                        maskOverlay,
+                        locationIds,
+                        parentId,
+                        overlapRound);
+                    PublishProposal(group);
+                }
+                finally
+                {
+                    if (acquiredHold && holdImageId is ulong id)
+                        cache.ReleaseBatchHold(id);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Auto polygonize overlap resubmit failed: {ex.Message}");
+            }
+            finally
+            {
+                lock (overlapResubmitsInFlight)
+                    overlapResubmitsInFlight.Remove(inFlightKey);
             }
         }
 
@@ -1207,7 +1466,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             lock (proposalLock)
             {
-                foreach (AutoPolygonizeProposal proposal in proposals.Values)
+                foreach (AutoPolygonizeProposal proposal in DistinctProposalsUnlocked())
                     proposal.DisposeMaskOverlay();
             }
         }

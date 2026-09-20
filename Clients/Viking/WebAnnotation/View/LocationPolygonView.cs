@@ -644,7 +644,6 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-
             if (Global.PenMode)
             {
                 return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);

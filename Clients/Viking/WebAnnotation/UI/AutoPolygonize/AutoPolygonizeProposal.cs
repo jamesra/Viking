@@ -85,10 +85,18 @@ namespace WebAnnotation.UI.AutoPolygonize
             double circleRadius,
             GridPolygon polygon,
             IReadOnlyList<CurveView> ringViews,
-            AutoPolygonizeMaskOverlay? maskOverlay = null)
+            AutoPolygonizeMaskOverlay? maskOverlay = null,
+            IReadOnlyList<long>? locationIds = null,
+            long? parentId = null,
+            int overlapResubmitRound = 0)
         {
             this.controller = controller;
-            LocationId = locationId;
+            LocationIds = locationIds is { Count: > 0 }
+                ? [.. locationIds.Distinct().OrderBy(id => id)]
+                : [locationId];
+            LocationId = LocationIds[0];
+            ParentID = parentId;
+            OverlapResubmitRound = overlapResubmitRound;
             SectionNumber = sectionNumber;
             LastModified = lastModified;
             CircleRadius = circleRadius;
@@ -97,7 +105,17 @@ namespace WebAnnotation.UI.AutoPolygonize
             maskOverlayData = maskOverlay;
         }
 
+        /// <summary>Lowest ID in <see cref="LocationIds"/>; used for color and dictionary lookup.</summary>
         public long LocationId { get; }
+
+        /// <summary>Every circle this overlay stands for after a same-cell overlap resubmit.</summary>
+        public IReadOnlyList<long> LocationIds { get; }
+
+        /// <summary>Structure that owns the circles. Null orphans are never grouped.</summary>
+        public long? ParentID { get; }
+
+        /// <summary>0 = per-circle mask; 1 = first group resubmit; 2 = one expansion.</summary>
+        public int OverlapResubmitRound { get; }
 
         public int SectionNumber { get; }
 
@@ -224,7 +242,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Builds exterior and hole <see cref="CurveView"/>s using the circle-resize line width.
+        /// Builds exterior and hole <see cref="CurveView"/>s using the circle-resize line width
+        /// and Catmull-Rom display interpolations so the overlay matches a saved CURVEPOLYGON.
         /// </summary>
         public static IReadOnlyList<CurveView> CreateRingViews(
             GridPolygon polygon,
@@ -250,7 +269,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ring,
                 color,
                 TryToClose: true,
-                numInterpolations: 0,
+                numInterpolations: Global.NumClosedCurveInterpolationPointsForDisplay,
                 lineWidth: lineWidth,
                 lineStyle: LineStyle.Tubular,
                 ShowControlPoints: false);

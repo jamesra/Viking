@@ -112,14 +112,6 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void ShouldSkipHugeMaskWhenForegroundCoversMostOfALargeImage()
-        {
-            Assert.IsTrue(SegmentationMaskPolygonizer.ShouldSkipHugeMask(6_060_000, 3596, 2004));
-            Assert.IsFalse(SegmentationMaskPolygonizer.ShouldSkipHugeMask(911_000, 3596, 2004));
-            Assert.IsFalse(SegmentationMaskPolygonizer.ShouldSkipHugeMask(256, 20, 20));
-        }
-
-        [TestMethod]
         public void DownsampledMaskStillProducesAPolygon()
         {
             const int width = 800;

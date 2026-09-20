@@ -78,7 +78,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         //private readonly StructureTypeObj structureType;
 
         /// <summary>
-        /// When set, background points are computed from visible same-type annotations in OnActivate and on pan/zoom.
+        /// When set, OnActivate and pan/zoom fill avoid marks from other structures in view
+        /// (any type except this location and this structure). The numeric type id is only a
+        /// flag that auto-background is wanted; it is not used as a type filter.
         /// </summary>
         private readonly long? structureTypeIdForBackgroundPoints;
 
@@ -183,34 +185,33 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private void AddBackgroundPointsFromStructureType(long structureTypeId, VikingXNA.Scene scene)
+        /// <summary>
+        /// Avoid marks for every visible annotation that is not this location or this structure.
+        /// Called from OnActivate and after the view settles. Same filter as auto-polygonize.
+        /// </summary>
+        private void AddBackgroundPointsFromOtherStructures(VikingXNA.Scene scene)
         {
             var sectionAnnotations = AnnotationOverlay.GetOrCreateAnnotationsForSection(Parent.Section.Number);
             if (sectionAnnotations is null)
                 return;
 
-            var locationsInView = sectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            var visibleSameType = locationsInView
-                .Where(loc => loc != null && loc.Parent != null && loc.Parent.Type != null
-                    && loc.Parent.Type.modelObj.ID == structureTypeId
-                    && loc.ID != locationIdToExcludeFromBackgroundPoints
-                    && (!structureIdToExcludeFromBackgroundPoints.HasValue
-                        || loc.ParentID != structureIdToExcludeFromBackgroundPoints)
-                    && loc.IsVisible(scene));
-
-            var locationObjs = visibleSameType
+            IEnumerable<LocationObj> visible = sectionAnnotations.GetLocations(scene.VisibleWorldBounds)
+                .Where(loc => loc is not null && loc.IsVisible(scene))
                 .Select(loc => Store.Locations.GetObjectByID(loc.ID, false))
                 .OfType<LocationObj>();
 
-            var mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(locationObjs);
-            if (mosaicPoints.Count == 0)
-                return;
-
-            var success = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. mosaicPoints], out var volumePoints);
-            var validVolumePoints = volumePoints.Where((p, i) => i < success.Length && success[i]).ToList();
             double minDistance = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+            IReadOnlyCollection<long> excludeIds = locationIdToExcludeFromBackgroundPoints is long id
+                ? [id]
+                : [];
             backgroundPoints.AddRange(
-                CircleSegmentationPrompts.ExceptNearForeground(validVolumePoints, foregroundPoints, minDistance));
+                CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                    visible,
+                    Parent.Section.ActiveSectionToVolumeTransform,
+                    foregroundPoints,
+                    minDistance,
+                    excludeIds,
+                    structureIdToExcludeFromBackgroundPoints));
         }
         #endregion
 
@@ -221,7 +222,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
             {
-                AddBackgroundPointsFromStructureType(structureTypeIdForBackgroundPoints.Value, Parent.Scene);
+                AddBackgroundPointsFromOtherStructures(Parent.Scene);
             }
 
             if (!viewportSession.TryInitializeClient())
@@ -549,7 +550,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
                 {
                     backgroundPoints.Clear();
-                    AddBackgroundPointsFromStructureType(structureTypeIdForBackgroundPoints.Value, Parent.Scene);
+                    AddBackgroundPointsFromOtherStructures(Parent.Scene);
                     UpdatePointViews();
                 }));
             }

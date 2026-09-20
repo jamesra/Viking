@@ -453,14 +453,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (decodedMaskData is null)
                     continue;
 
-                if (SegmentationMaskPolygonizer.ShouldSkipHugeMask(
-                        CountForeground(decodedMaskData), response.Width, response.Height))
-                {
-                    Debug.WriteLine(
-                        $"[SegmentationProfile] skip huge mask image={currentImageId} " +
-                        $"pixels={decodedWidth}x{decodedHeight} viewport={response.Width}x{response.Height}");
-                    continue;
-                }
+                int captureWidth = uploadedImageWidth > 0 ? uploadedImageWidth : response.Width;
+                int captureHeight = uploadedImageHeight > 0 ? uploadedImageHeight : response.Height;
 
                 Stopwatch polygonizeTimer = Stopwatch.StartNew();
                 polygons.AddRange(SegmentationMaskPolygonizer.CreatePolygons(
@@ -469,8 +463,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     decodedHeight,
                     segment.X,
                     segment.Y,
-                    response.Width,
-                    response.Height,
+                    captureWidth,
+                    captureHeight,
                     ViewportBounds,
                     dropFraction,
                     preserveHolesContainingWorldPoints,
@@ -605,20 +599,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 imageWidth,
                 imageHeight);
             return new GridRectangle(topLeft, bottomRight);
-        }
-
-        private static int CountForeground(byte[] maskData)
-        {
-            int count = 0;
-            if (maskData is null)
-                return 0;
-            for (int i = 0; i < maskData.Length; i++)
-            {
-                if (maskData[i] > 0)
-                    count++;
-            }
-
-            return count;
         }
 
         /// <summary>

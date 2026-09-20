@@ -1,5 +1,6 @@
 ﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace GeometryTests
 {
@@ -134,5 +135,54 @@ namespace GeometryTests
 
         }
         */
+
+        [TestMethod]
+        public void RibbonTangentsClampSquareCornersBelowMiterLimit()
+        {
+            GridVector2[] square =
+            [
+                new(0, 0),
+                new(10, 0),
+                new(10, 10),
+                new(0, 10),
+                new(0, 0)
+            ];
+
+            double[] tangents = GridVector2.CalculateRibbonTangents(square, closed: true);
+            AssertAdjacentTangentStepsWithinLimit(tangents);
+        }
+
+        [TestMethod]
+        public void RibbonTangentsUnwrapCircleMonotonically()
+        {
+            const int samples = 32;
+            GridVector2[] circle = new GridVector2[samples + 1];
+            for (int i = 0; i < samples; i++)
+            {
+                double t = 2 * Math.PI * i / samples;
+                circle[i] = new GridVector2(Math.Cos(t), Math.Sin(t));
+            }
+
+            circle[samples] = circle[0];
+
+            double[] tangents = GridVector2.CalculateRibbonTangents(circle, closed: true);
+            AssertAdjacentTangentStepsWithinLimit(tangents);
+
+            for (int i = 1; i < tangents.Length; i++)
+            {
+                Assert.IsTrue(tangents[i] > tangents[i - 1],
+                    $"CCW circle tangent[{i}]={tangents[i]} should increase from {tangents[i - 1]} after unwrap");
+            }
+        }
+
+        private static void AssertAdjacentTangentStepsWithinLimit(double[] tangents)
+        {
+            for (int i = 1; i < tangents.Length; i++)
+            {
+                double delta = Math.Abs(tangents[i] - tangents[i - 1]);
+                Assert.IsTrue(delta <= GridVector2.DefaultMaxRibbonTangentDelta + 1e-9,
+                    $"Adjacent tangent step {delta} at {i} exceeds {GridVector2.DefaultMaxRibbonTangentDelta}");
+            }
+        }
     }
 }

@@ -10,7 +10,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 {
     /// <summary>
     /// Eligibility, hit-test, and line-width helpers for auto-polygonize proposals.
-    /// Circles must sit inside a 5% inset, lie entirely on the visible view, and meet the min radius in nanometers.
+    /// Circles must sit inside a 5% inset, lie entirely on the visible view, and meet
+    /// the min radius in nanometers. Fitting in the scene is the only large-annotation gate.
     /// </summary>
     internal static class AutoPolygonizeSelection
     {
@@ -26,6 +27,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public const double OriginalLineWidthPixels = 2.0;
         public const double MinLineWidthMultiplier = 2.0;
         public const double MaxLineWidthMultiplier = 6.0;
+
+        /// <summary>
+        /// First group resubmit plus one expansion if a later same-cell proposal overlaps the group.
+        /// </summary>
+        public const int MaxOverlapResubmitRound = 2;
 
         /// <summary>
         /// World-space polyline width: half the circle-resize grab band, clamped to
@@ -83,7 +89,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Eligible when the center is at least 5% from each view edge, the disk is fully on
         /// <paramref name="viewBounds"/>, and the radius is at least
-        /// <paramref name="minRadiusNanometers"/>.
+        /// <paramref name="minRadiusNanometers"/>. A circle that fits in the visible scene
+        /// is sent regardless of how much of the capture it covers.
+        /// <paramref name="mosaicRadius"/> and <paramref name="viewBounds"/> must share
+        /// the same world space as <see cref="IsCircleEntirelyInside"/>.
         /// </summary>
         public static bool IsEligibleCircle(
             LocationType typeCode,
@@ -138,11 +147,40 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// World-space Douglas-Peucker after polygonize. Tolerance is in world units
+        /// World-space Douglas-Peucker after polygonize, then Catmull-Rom control-point fit
+        /// so MosaicShape stores curve-friendly vertices. Tolerance is in world units
         /// (typically <c>PenSimplifyThreshold * downsample</c>, i.e. screen pixels).
+        /// Falls back to the DP ring when the fit self-intersects. Must not run the Catmull
+        /// fit on a raw marching-squares staircase.
         /// </summary>
         public static GridPolygon SimplifyProposal(GridPolygon polygon, double tolerance)
-            => SegmentationMaskPolygonizer.SimplifyRings(polygon, tolerance);
+        {
+            GridPolygon simplified = SegmentationMaskPolygonizer.SimplifyRings(polygon, tolerance);
+            return FitCurveControlPoints(simplified, tolerance);
+        }
+
+        /// <summary>
+        /// Replaces Douglas-Peucker vertices with Catmull-Rom control points. Called after
+        /// staircase collapse; fitting the raw marching-squares ring preserves dense stairs.
+        /// </summary>
+        internal static GridPolygon FitCurveControlPoints(GridPolygon polygon, double tolerance)
+        {
+            if (polygon is null || tolerance <= 0)
+                return polygon;
+
+            try
+            {
+                GridPolygon fitted = polygon.Simplify(tolerance);
+                if (fitted.ExteriorSegments.SelfIntersects(LineSetOrdering.CLOSED))
+                    return polygon;
+
+                return fitted;
+            }
+            catch (ArgumentException)
+            {
+                return polygon;
+            }
+        }
 
         /// <summary>
         /// True when live downsample moved by 2× or more versus the cached upload.
@@ -202,5 +240,72 @@ namespace WebAnnotation.UI.AutoPolygonize
                    propertyName is nameof(LocationObj.MosaicShape) or nameof(LocationObj.VolumeShape)
                        or nameof(LocationObj.Position) or nameof(LocationObj.Radius);
         }
+
+        /// <summary>
+        /// Same-cell, same-section proposals that intersect <paramref name="seed"/>, including
+        /// A–B–C chains. Orphans without <see cref="OverlapCandidate.ParentID"/> stay a singleton.
+        /// Called after a proposal is published to decide whether to resubmit as one SAM2 request.
+        /// </summary>
+        public static List<OverlapCandidate> CollectOverlappingSameCellComponent(
+            OverlapCandidate seed,
+            IReadOnlyList<OverlapCandidate> candidates)
+        {
+            if (seed.Polygon is null)
+                return [];
+            if (!seed.ParentID.HasValue)
+                return [seed];
+
+            List<OverlapCandidate> result = [seed];
+            HashSet<long> seenIds = [.. seed.LocationIds];
+            Queue<OverlapCandidate> pending = new();
+            pending.Enqueue(seed);
+
+            IReadOnlyList<OverlapCandidate> pool = candidates ?? [];
+            while (pending.Count > 0)
+            {
+                OverlapCandidate current = pending.Dequeue();
+                foreach (OverlapCandidate other in pool)
+                {
+                    if (other.Polygon is null || !other.ParentID.HasValue)
+                        continue;
+                    if (other.ParentID != seed.ParentID || other.SectionNumber != seed.SectionNumber)
+                        continue;
+                    if (other.LocationIds.All(seenIds.Contains))
+                        continue;
+                    if (!current.Polygon.Intersects(other.Polygon))
+                        continue;
+
+                    foreach (long id in other.LocationIds)
+                        seenIds.Add(id);
+                    result.Add(other);
+                    pending.Enqueue(other);
+                }
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// One published overlay (single location or already-grouped siblings) for overlap search.
+    /// </summary>
+    internal readonly struct OverlapCandidate
+    {
+        public OverlapCandidate(
+            IReadOnlyList<long> locationIds,
+            long? parentId,
+            int sectionNumber,
+            GridPolygon polygon)
+        {
+            LocationIds = locationIds ?? [];
+            ParentID = parentId;
+            SectionNumber = sectionNumber;
+            Polygon = polygon;
+        }
+
+        public IReadOnlyList<long> LocationIds { get; }
+        public long? ParentID { get; }
+        public int SectionNumber { get; }
+        public GridPolygon Polygon { get; }
     }
 }

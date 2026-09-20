@@ -36,6 +36,19 @@ using WebAnnotationModel;
 
 namespace WebAnnotation
 {
+    /// <summary>
+    /// Chooses stroke placement versus click-to-place for structure placement commands.
+    /// Pen Mode still treats the mouse as a pen except when a hotkey started placement.
+    /// </summary>
+    internal static class PlacementInput
+    {
+        /// <summary>
+        /// True when Pen Mode is on and the placement command was not started by a hotkey.
+        /// Called by the structure placement queues; canvas free-draw does not use this.
+        /// </summary>
+        internal static bool UsePenStroke(bool penMode, bool startedByHotkey) => penMode && !startedByHotkey;
+    }
+
     [Viking.Common.SectionOverlay("Annotation")]
     internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
     {
@@ -777,15 +790,14 @@ namespace WebAnnotation
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseDownCoords = WorldPosition;
 
-            //Left mouse button selects objects
+            //Left mouse button selects objects. In Pen Mode the mouse still emulates a pen.
             if (e.Button == MouseButtons.Left)
             {
+                if (autoPolygonizeController?.TryHit(WorldPosition, out _, out _) == true)
+                    return;
+
                 if (Global.PenMode)
                 {
-                    if (autoPolygonizeController?.TryHit(WorldPosition, out _, out _) == true)
-                        return;
-
-                    //Id we don't have a command to start, begin creating a path
                     StartPenPath(WorldPosition);
                     return;
                 }
@@ -1375,7 +1387,7 @@ break;
                         CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (comAction != null)
                         {
-                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType());
+                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType(), startedByHotkey: true);
 
                             return;
                         }
@@ -1467,7 +1479,15 @@ break;
 
 
 
-        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType)
+        /// <summary>
+        /// Queues a new structure and its placement command. Hotkey callers pass
+        /// <paramref name="startedByHotkey"/> so Pen Mode uses click-to-place instead of a stroke.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// True when a shortcut started this command. The mouse then uses click-to-place
+        /// even if Pen Mode is on. Canvas mouse-as-pen is unchanged.
+        /// </param>
+        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType, bool startedByHotkey = false)
         {
             StructureTypeObj typeObj = Store.StructureTypes.GetObjectByID(TypeID);
             if (typeObj != null)
@@ -1504,14 +1524,14 @@ break;
                         break;
                     case LocationType.OPENCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForOpenCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false);
+                        QueuePlacementCommandForOpenCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false, startedByHotkey);
                         break;
                     case LocationType.CLOSEDCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForClosedCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        QueuePlacementCommandForClosedCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false, startedByHotkey);
                         break;
                     case LocationType.CURVEPOLYGON:
-                        QueuePlacementCommandForPolygonStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        QueuePlacementCommandForPolygonStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false, startedByHotkey);
                         break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
@@ -1532,6 +1552,13 @@ break;
             }
         }
 
+        /// <summary>
+        /// Stroke placement when Pen Mode is on, unless a hotkey started the placement command.
+        /// Called by the structure placement queues.
+        /// </summary>
+        internal static bool UsePenStrokePlacement(bool startedByHotkey = false)
+            => PlacementInput.UsePenStroke(Global.PenMode, startedByHotkey);
+
         public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
         {
             Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
@@ -1547,10 +1574,17 @@ break;
                                     if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } })});
         }
 
-        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        /// <summary>
+        /// Queues open-curve placement. Stroke if Pen Mode is on, unless a hotkey started the command.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// When true, Pen Mode uses click-to-place instead of a stroke. Only the hotkey
+        /// structure-placement path sets this.
+        /// </param>
+        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore, bool startedByHotkey = false)
         {
             double LineWidth = 16.0;
-            if (Global.PenMode)
+            if (UsePenStrokePlacement(startedByHotkey))
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveWithPenCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
@@ -1571,10 +1605,17 @@ break;
             }
         }
 
-        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        /// <summary>
+        /// Queues closed-curve placement. Stroke if Pen Mode is on, unless a hotkey started the command.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// When true, Pen Mode uses click-to-place instead of a stroke. Only the hotkey
+        /// structure-placement path sets this.
+        /// </param>
+        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore, bool startedByHotkey = false)
         {
             double LineWidth = 16.0;
-            if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            if (UsePenStrokePlacement(startedByHotkey))
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
@@ -1595,10 +1636,17 @@ break;
 
         }
 
-        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        /// <summary>
+        /// Queues polygon placement. Stroke if Pen Mode is on, unless a hotkey started the command.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// When true, Pen Mode uses click-to-place instead of a stroke. Only the hotkey
+        /// structure-placement path sets this.
+        /// </param>
+        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore, bool startedByHotkey = false)
         {
             double LineWidth = 16.0;
-            if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            if (UsePenStrokePlacement(startedByHotkey))
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
