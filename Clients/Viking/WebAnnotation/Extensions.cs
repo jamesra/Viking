@@ -269,7 +269,8 @@ namespace WebAnnotation
         /// unsmoothed control-point ring (<see cref="LocationObj.MosaicShape"/>).
         /// <see cref="LocationObj.VolumeShape"/> is <c>GetSmoothedShape</c> for
         /// CURVEPOLYGON and must not be meshed here — interpolation multiplies
-        /// faces and floods SAM2 with avoid marks. Falls back to the polygon
+        /// faces. Polygon avoid marks are the centroid of the largest MosaicShape
+        /// Delaunay triangle (one point), not every face. Falls back to the polygon
         /// centroid if meshing fails and that centroid is inside. For lines/points:
         /// vertices. For circles/ellipses: center.
         /// Polygon samples are cached by location ID and LastModified so a batch of
@@ -322,8 +323,8 @@ namespace WebAnnotation
 
         /// <summary>
         /// One interior point per constrained Delaunay triangle. Triangulate is centroid-relative,
-        /// so each face centroid is translated back. Used as Resegment foreground prompts and as
-        /// avoid marks for neighboring polygons.
+        /// so each face centroid is translated back. Used as Resegment-to-polygon foreground
+        /// prompts. Neighbor avoid marks use <see cref="GetLargestTriangleCentroidPoint"/> instead.
         /// </summary>
         internal static IReadOnlyList<GridVector2> GetPolygonTriangleCentroidPoints(GridPolygon polygon)
         {
@@ -372,8 +373,70 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Delaunay-face centroids of <see cref="LocationObj.MosaicShape"/>, the
-        /// stored control-point ring. Called from the polygon cache factory.
+        /// Centroid of the largest constrained Delaunay face whose centroid is inside
+        /// the ring. Called from the polygon negative-prompt factory so dense neighbors
+        /// send one avoid mark, not one per triangle. Fallback is the polygon centroid
+        /// when meshing fails and that point is inside.
+        /// </summary>
+        internal static IReadOnlyList<GridVector2> GetLargestTriangleCentroidPoint(GridPolygon polygon)
+        {
+            if (polygon is null)
+                return [];
+
+            try
+            {
+                TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
+                if (mesh?.Faces.Count > 0)
+                {
+                    GridVector2 origin = polygon.Centroid;
+                    GridVector2 best = default;
+                    double bestArea = double.NegativeInfinity;
+                    bool found = false;
+                    foreach (IFace face in mesh.Faces)
+                    {
+                        if (!face.IsTriangle())
+                            continue;
+
+                        try
+                        {
+                            GridVector2 centroid = mesh.Centroid(face) + origin;
+                            if (!polygon.Contains(centroid))
+                                continue;
+
+                            double area = mesh.ToTriangle(face).Area;
+                            if (area <= bestArea)
+                                continue;
+
+                            bestArea = area;
+                            best = centroid;
+                            found = true;
+                        }
+                        catch (ArgumentException)
+                        {
+                        }
+                    }
+
+                    if (found)
+                        return [best];
+                }
+            }
+            catch (EdgesIntersectTriangulationException)
+            {
+            }
+            catch (NonconformingTriangulationException)
+            {
+            }
+            catch (ArgumentException)
+            {
+            }
+
+            GridVector2 fallback = polygon.Centroid;
+            return polygon.Contains(fallback) ? [fallback] : [];
+        }
+
+        /// <summary>
+        /// Largest MosaicShape Delaunay-face centroid of the stored control-point ring.
+        /// Called from the polygon cache factory. Do not mesh VolumeShape here.
         /// </summary>
         private static IReadOnlyList<GridVector2> TryGetUnsmoothedPolygonRepresentativePoints(LocationObj loc)
         {
@@ -389,7 +452,7 @@ namespace WebAnnotation
                     return [];
                 }
 
-                return GetPolygonTriangleCentroidPoints(mosaic.ToPolygon());
+                return GetLargestTriangleCentroidPoint(mosaic.ToPolygon());
             }
             catch (ArgumentException)
             {

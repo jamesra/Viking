@@ -60,7 +60,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
     /// <summary>
     /// Hollow-line preview of a SAM2 polygon over a circle. Double-click accepts; right/middle dismisses.
-    /// The mask overlay is drawn only when <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> is on.
+    /// When <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> is on, Draw also
+    /// shows the last SegmentImage mask and the green/red prompts that produced it.
     /// </summary>
     internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelpStrings
     {
@@ -75,6 +76,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly AutoPolygonizeMaskOverlay? maskOverlayData;
         private Texture2D maskTexture;
         private TextureOverlayView maskOverlayView;
+        private PointSetView? foregroundPointsView;
+        private PointSetView? backgroundPointsView;
         private bool isHighlighted;
 
         public AutoPolygonizeProposal(
@@ -88,7 +91,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             AutoPolygonizeMaskOverlay? maskOverlay = null,
             IReadOnlyList<long>? locationIds = null,
             long? parentId = null,
-            int overlapResubmitRound = 0)
+            int overlapResubmitRound = 0,
+            IReadOnlyList<GridVector2>? foregroundPrompts = null,
+            IReadOnlyList<GridVector2>? backgroundPrompts = null)
         {
             this.controller = controller;
             LocationIds = locationIds is { Count: > 0 }
@@ -103,6 +108,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             Polygon = polygon;
             RingViews = ringViews;
             maskOverlayData = maskOverlay;
+            ForegroundPrompts = foregroundPrompts is { Count: > 0 } ? [.. foregroundPrompts] : [];
+            BackgroundPrompts = backgroundPrompts is { Count: > 0 } ? [.. backgroundPrompts] : [];
         }
 
         /// <summary>Lowest ID in <see cref="LocationIds"/>; used for color and dictionary lookup.</summary>
@@ -126,6 +133,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         public GridPolygon Polygon { get; }
 
         public IReadOnlyList<CurveView> RingViews { get; }
+
+        /// <summary>Volume-space SAM2 label-1 clicks from the SegmentImage that produced this overlay.</summary>
+        public IReadOnlyList<GridVector2> ForegroundPrompts { get; }
+
+        /// <summary>Volume-space SAM2 label-0 clicks from the same request. Drawn red in mask-debug mode.</summary>
+        public IReadOnlyList<GridVector2> BackgroundPrompts { get; }
 
         public bool IsHighlighted
         {
@@ -172,11 +185,14 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Draws the debug mask first so the hollow rings stay readable on top.
+        /// Draws the debug mask first, then rings, then the last-sent prompts so clicks
+        /// stay readable on top of the mask. Prompt dots follow
+        /// <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> like the mask.
         /// </summary>
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
-            if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+            bool showDebugOverlay = Global.AnnotationSettings.AutoPolygonizeOverlayMasks;
+            if (showDebugOverlay)
                 maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 
             double lineWidth = AutoPolygonizeSelection.ProposalLineWidth(CircleRadius, scene.Camera.Downsample);
@@ -185,6 +201,48 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ringView.LineWidth = lineWidth;
                 ringView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
+
+            if (showDebugOverlay)
+                DrawPromptOverlays(graphicsDevice, scene);
+        }
+
+        /// <summary>
+        /// Green foreground / red background circles matching interactive Segment. Depth is
+        /// disabled so the dots sit on the mask. Radius tracks live downsample.
+        /// </summary>
+        private void DrawPromptOverlays(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
+        {
+            double radius = Global.AnnotationSettings.SegmentationPointRadius * scene.Camera.Downsample;
+            EnsurePromptView(ref backgroundPointsView, BackgroundPrompts, Color.Red, radius);
+            EnsurePromptView(ref foregroundPointsView, ForegroundPrompts, Color.Green, radius);
+
+            DepthStencilState previous = graphicsDevice.DepthStencilState;
+            graphicsDevice.DepthStencilState = DepthStencilState.None;
+            backgroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            foregroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            graphicsDevice.DepthStencilState = previous;
+        }
+
+        private static void EnsurePromptView(
+            ref PointSetView? view,
+            IReadOnlyList<GridVector2> points,
+            Color color,
+            double radius)
+        {
+            if (points is null || points.Count == 0)
+                return;
+
+            if (view is null)
+            {
+                view = new PointSetView(color, radius)
+                {
+                    Points = [.. points]
+                };
+                return;
+            }
+
+            if (Math.Abs(view.PointRadius - radius) > 1e-6)
+                view.PointRadius = radius;
         }
 
         /// <summary>

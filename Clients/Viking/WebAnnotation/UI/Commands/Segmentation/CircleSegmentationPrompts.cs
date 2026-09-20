@@ -83,8 +83,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Representative points of other annotations, mapped to volume as SAM2 background prompts.
-        /// Polygon avoid marks are the Delaunay of MosaicShape (unsmoothed control
-        /// points), not VolumeShape (Catmull-Rom smoothed for CURVEPOLYGON).
+        /// Polygon avoid marks are the centroid of the largest MosaicShape Delaunay
+        /// triangle, not VolumeShape (Catmull-Rom smoothed for CURVEPOLYGON).
         /// </summary>
         public static IReadOnlyList<GridVector2> CreateBackgroundVolumePoints(
             IEnumerable<LocationObj> otherAnnotations,

@@ -215,8 +215,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Preference toggle for the debug SAM2 mask overlay. Turning it off
-        /// disposes GPU textures; turning it on does not backfill existing proposals.
+        /// Preference toggle for the debug SAM2 mask overlay and last-sent prompt
+        /// dots. Turning it off disposes GPU textures; turning it on does not
+        /// backfill mask textures, but stored prompts still draw.
         /// </summary>
         public void OnOverlayMasksChanged(bool enabled)
         {
@@ -623,7 +624,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                             sectionNumber,
                             downsample,
                             simplifyTolerance,
-                            foreground.Count,
+                            foreground,
                             background,
                             response,
                             promptMs,
@@ -661,7 +662,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Thread-pool polygonize/simplify. Drops the result without caching if the
         /// live view no longer matches the captured bounds, so a hitch-pan can retry.
-        /// GPU mask textures are created later on the UI thread in <see cref="PublishProposal"/>.
+        /// An empty union is a LastModified skip (no overlay) so the next idle batch
+        /// does not SegmentImage the same circle again. GPU mask textures are created
+        /// later on the UI thread in <see cref="PublishProposal"/>.
         /// </summary>
         private void ProcessResponse(
             SegmentationViewportSession session,
@@ -669,7 +672,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             int sectionNumber,
             double downsample,
             double simplifyTolerance,
-            int foregroundCount,
+            IReadOnlyList<GridVector2> foreground,
             IReadOnlyList<GridVector2> background,
             Viking.gRPC.SegmentationServiceTypes.V1.SegmentationResponse response,
             long promptMs,
@@ -711,7 +714,11 @@ namespace WebAnnotation.UI.AutoPolygonize
             GridPolygon polygon = polygons.FirstOrDefault();
             long polygonMs = polygonTimer.ElapsedMilliseconds;
             if (polygon is null)
+            {
+                if (IsStillCircle(circle.ID) && cache.IsGenerationCurrent(circle.ID, generation))
+                    RememberEmptyMask(circle, sectionNumber, session, downsample);
                 return;
+            }
 
             AutoPolygonizeMaskOverlay? maskOverlay = null;
             if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
@@ -734,7 +741,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     downsample),
                 maskOverlay,
                 locationIds: [circle.ID],
-                parentId: circle.ParentID);
+                parentId: circle.ParentID,
+                foregroundPrompts: foreground,
+                backgroundPrompts: background);
             long renderPreparationMs = renderPreparationTimer.ElapsedMilliseconds;
 
             if (!IsStillCircle(circle.ID) || !cache.IsGenerationCurrent(circle.ID, generation))
@@ -756,7 +765,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 $"prompts={promptMs}ms segmentRpc={segmentMs}ms polygonize={polygonMs}ms " +
                 $"simplifyAndViews={renderPreparationMs}ms vertices={verticesBeforeSimplify}->{polygon.TotalUniqueVerticies} " +
                 $"proposal={proposalTimer.ElapsedMilliseconds}ms " +
-                $"batchElapsed={batchTimer.ElapsedMilliseconds}ms foreground={foregroundCount} background={background.Count}");
+                $"batchElapsed={batchTimer.ElapsedMilliseconds}ms foreground={foreground.Count} background={background.Count}");
         }
 
         /// <summary>
@@ -1186,7 +1195,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     sectionNumber,
                     downsample,
                     Global.PenSimplifyThreshold * parent.Downsample,
-                    foreground.Count,
+                    foreground,
                     background,
                     response,
                     0,
@@ -1213,6 +1222,50 @@ namespace WebAnnotation.UI.AutoPolygonize
                     await session.DeleteCurrentImageAsync().ConfigureAwait(false);
                 else
                     session.ClearImageId();
+            }
+        }
+
+        /// <summary>
+        /// LastModified skip without publishing an overlay. Empty SAM2 unions must not
+        /// stay pending or the next idle/confirm batch will SegmentImage the same circle.
+        /// </summary>
+        private void RememberEmptyMask(
+            LocationObj circle,
+            int sectionNumber,
+            SegmentationViewportSession session,
+            double downsample)
+        {
+            cache.RememberProposal(
+                circle.ID,
+                sectionNumber,
+                circle.LastModified,
+                circle.TypeCode,
+                Store.Locations.GetObjectByID(circle.ID, false),
+                TryCreateUploadContext(session, downsample));
+        }
+
+        /// <summary>
+        /// Overlap-resubmit empty union: skip every involved ID so the group is not
+        /// SegmentImage'd again until a member's LastModified changes.
+        /// </summary>
+        private void RememberEmptyMaskForIds(
+            IReadOnlyList<long> locationIds,
+            int sectionNumber,
+            DateTime lastModifiedFallback,
+            SegmentationViewportSession session,
+            double downsample)
+        {
+            AutoPolygonizeUploadContext? upload = TryCreateUploadContext(session, downsample);
+            foreach (long id in locationIds)
+            {
+                LocationObj loc = Store.Locations.GetObjectByID(id, false);
+                cache.RememberProposal(
+                    id,
+                    sectionNumber,
+                    loc?.LastModified ?? lastModifiedFallback,
+                    loc?.TypeCode ?? LocationType.CIRCLE,
+                    loc,
+                    upload);
             }
         }
 
@@ -1387,7 +1440,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                         preserveHolesContainingWorldPoints: background);
                     GridPolygon polygon = polygons.FirstOrDefault();
                     if (polygon is null)
+                    {
+                        RememberEmptyMaskForIds(
+                            locationIds,
+                            members[0].SectionNumber,
+                            members.Max(member => member.LastModified),
+                            session,
+                            downsample);
                         return;
+                    }
 
                     double simplifyTolerance = Global.PenSimplifyThreshold * parent.Downsample;
                     polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
@@ -1426,7 +1487,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                         maskOverlay,
                         locationIds,
                         parentId,
-                        overlapRound);
+                        overlapRound,
+                        foreground,
+                        background);
                     PublishProposal(group);
                 }
                 finally

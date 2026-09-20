@@ -284,6 +284,34 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void ProposalKeepsACopyOfLastSentPrompts()
+        {
+            GridPolygon square = Square(0, 0, 10);
+            List<GridVector2> foreground = [new GridVector2(1, 1)];
+            List<GridVector2> background = [new GridVector2(2, 2), new GridVector2(8, 8)];
+            AutoPolygonizeProposal proposal = new(
+                null!,
+                7,
+                1,
+                DateTime.UtcNow,
+                8,
+                square,
+                [],
+                foregroundPrompts: foreground,
+                backgroundPrompts: background);
+
+            Assert.AreEqual(1, proposal.ForegroundPrompts.Count);
+            Assert.AreEqual(2, proposal.BackgroundPrompts.Count);
+            Assert.AreEqual(new GridVector2(1, 1), proposal.ForegroundPrompts[0]);
+            Assert.AreEqual(new GridVector2(8, 8), proposal.BackgroundPrompts[1]);
+
+            foreground.Add(new GridVector2(9, 9));
+            background.Clear();
+            Assert.AreEqual(1, proposal.ForegroundPrompts.Count);
+            Assert.AreEqual(2, proposal.BackgroundPrompts.Count);
+        }
+
+        [TestMethod]
         public void SimplifyProposalRemovesRedundantVertices()
         {
             GridPolygon polygon = new(
@@ -422,6 +450,49 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void PolygonAvoidMarkIsLargestTriangleCentroid()
+        {
+            GridPolygon lShape = new(
+            [
+                new GridVector2(0, 0),
+                new GridVector2(10, 0),
+                new GridVector2(10, 3),
+                new GridVector2(3, 3),
+                new GridVector2(3, 10),
+                new GridVector2(0, 10),
+                new GridVector2(0, 0)
+            ]);
+
+            IReadOnlyList<GridVector2> points = AnnotationPointExtensions.GetLargestTriangleCentroidPoint(lShape);
+            Assert.AreEqual(1, points.Count);
+            Assert.IsTrue(lShape.Contains(points[0]));
+
+            var mesh = lShape.Triangulate();
+            GridVector2 origin = lShape.Centroid;
+            double maxArea = double.NegativeInfinity;
+            GridVector2 expected = default;
+            foreach (IFace face in mesh.Faces)
+            {
+                if (!face.IsTriangle())
+                    continue;
+
+                GridVector2 centroid = mesh.Centroid(face) + origin;
+                if (!lShape.Contains(centroid))
+                    continue;
+
+                double area = mesh.ToTriangle(face).Area;
+                if (area <= maxArea)
+                    continue;
+
+                maxArea = area;
+                expected = centroid;
+            }
+
+            Assert.AreEqual(expected.X, points[0].X, 1e-6);
+            Assert.AreEqual(expected.Y, points[0].Y, 1e-6);
+        }
+
+        [TestMethod]
         public void ConcavePolygonNegativePointsStayInside()
         {
             GridPolygon concave = new(
@@ -457,11 +528,14 @@ namespace WebAnnotationTests.Commands
                 loc.VolumeShape = smoothed.ToSqlGeometry();
 
                 IReadOnlyList<GridVector2> points = AnnotationPointExtensions.GetAnnotationRepresentativePoints([loc]);
-                IReadOnlyList<GridVector2> expected = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(unsmoothed);
+                IReadOnlyList<GridVector2> expected = AnnotationPointExtensions.GetLargestTriangleCentroidPoint(unsmoothed);
                 IReadOnlyList<GridVector2> ifSmoothed = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(smoothed);
 
+                Assert.AreEqual(1, points.Count);
+                Assert.AreEqual(1, expected.Count);
+                Assert.AreEqual(expected[0].X, points[0].X, 1e-6);
+                Assert.AreEqual(expected[0].Y, points[0].Y, 1e-6);
                 Assert.IsTrue(ifSmoothed.Count > expected.Count);
-                Assert.AreEqual(expected.Count, points.Count);
             }
             finally
             {
