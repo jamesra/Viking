@@ -471,6 +471,104 @@ namespace Geometry
             return Math.Atan2(delta.Y, delta.X);
         }
 
+        /// <summary>
+        /// Largest shortest-arc step between adjacent RoundCurve tangents, in radians (72°).
+        /// The ribbon stitches same-side offsets; a step of π/2 or more points those offsets
+        /// at opposing sides and the triangle strip folds.
+        /// </summary>
+        public const double DefaultMaxRibbonTangentDelta = Math.PI * 0.4;
+
+        /// <summary>
+        /// Skip-one-chord atan2 at each vertex, then <see cref="UnwrapAndLimitTangents"/> so a
+        /// RoundCurve strip cannot fold at sharp corners. Called by RoundCurve vertex setup.
+        /// </summary>
+        public static double[] CalculateRibbonTangents(Vector2[] points, bool closed, double maxDelta = DefaultMaxRibbonTangentDelta)
+        {
+            if (points is null)
+                throw new ArgumentNullException(nameof(points));
+            if (points.Length == 0)
+                return [];
+            if (points.Length == 1)
+                return [0];
+
+            double[] tangents = new double[points.Length];
+            int n = points.Length;
+
+            for (int i = 1; i < n - 1; i++)
+                tangents[i] = Angle(points[i - 1], points[i + 1]);
+
+            if (closed)
+            {
+                tangents[0] = Angle(points[n - 2], points[1]);
+                tangents[n - 1] = tangents[0];
+            }
+            else
+            {
+                tangents[0] = Angle(points[0], points[1]);
+                tangents[n - 1] = Angle(points[n - 2], points[n - 1]);
+            }
+
+            UnwrapAndLimitTangents(tangents, closed, maxDelta);
+            return tangents;
+        }
+
+        /// <summary>
+        /// Adds or subtracts 2π until <paramref name="raw"/> lies on the shortest arc from
+        /// <paramref name="previous"/>. Used before clamping RoundCurve tangent steps.
+        /// </summary>
+        public static double UnwrapAngle(double previous, double raw)
+        {
+            const double twoPi = Math.PI * 2.0;
+            double delta = raw - previous;
+            while (delta > Math.PI)
+            {
+                raw -= twoPi;
+                delta = raw - previous;
+            }
+
+            while (delta < -Math.PI)
+            {
+                raw += twoPi;
+                delta = raw - previous;
+            }
+
+            return raw;
+        }
+
+        /// <summary>
+        /// Makes consecutive polyline tangents a continuous orientation and clamps each step
+        /// so adjacent ribbon frames cannot flip. Mutates <paramref name="tangents"/> in place.
+        /// For a closed ring the last sample is re-anchored to the first so the duplicated
+        /// endpoint keeps the same world rotation as the start.
+        /// </summary>
+        public static void UnwrapAndLimitTangents(double[] tangents, bool closed, double maxDelta)
+        {
+            if (tangents is null)
+                throw new ArgumentNullException(nameof(tangents));
+            if (tangents.Length < 2)
+                return;
+            if (maxDelta <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxDelta));
+
+            int lastExclusive = closed ? tangents.Length - 1 : tangents.Length;
+            for (int i = 1; i < lastExclusive; i++)
+                tangents[i] = LimitUnwrappedDelta(tangents[i - 1], tangents[i], maxDelta);
+
+            if (closed)
+                tangents[tangents.Length - 1] = LimitUnwrappedDelta(tangents[tangents.Length - 2], tangents[0], maxDelta);
+        }
+
+        private static double LimitUnwrappedDelta(double previous, double raw, double maxDelta)
+        {
+            double unwrapped = UnwrapAngle(previous, raw);
+            double delta = unwrapped - previous;
+            if (delta > maxDelta)
+                return previous + maxDelta;
+            if (delta < -maxDelta)
+                return previous - maxDelta;
+            return unwrapped;
+        }
+
         public static Vector2 operator -(in Vector2 A) => new Vector2(-A.X, -A.Y);
 
         public static Vector2 operator -(in Vector2 A, in Vector2 B) => new Vector2(A.X - B.X, A.Y - B.Y);

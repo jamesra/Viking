@@ -79,30 +79,11 @@ namespace RoundCurve
             return point_distances;
         }
 
-        private static double[] CalcLineTangents(Geometry.Vector2[] points, bool Closed)
-        {
-            double[] tangents = new double[points.Length];
-
-            int numPoints = points.Length;
-
-            for (int i = 1; i < numPoints - 1; i++)
-            {
-                tangents[i] = Geometry.Vector2.Angle(points[i - 1], points[i + 1]);
-            }
-
-            if (Closed)
-            {
-                tangents[0] = Geometry.Vector2.Angle(points[numPoints - 2], points[1]);
-                tangents[numPoints - 1] = Geometry.Vector2.Angle(points[numPoints - 2], points[1]);
-            }
-            else
-            {
-                tangents[0] = (float)Geometry.Vector2.Angle(points[0], points[1]);
-                tangents[numPoints - 1] = Geometry.Vector2.Angle(points[numPoints - 2], points[numPoints - 1]);
-            }
-
-            return tangents;
-        }
+        /// <summary>
+        /// Skip-chord atan2 plus unwrap/clamp so adjacent ribbon frames cannot flip.
+        /// </summary>
+        private static double[] CalcLineTangents(Geometry.Vector2[] points, bool Closed) =>
+            Geometry.Vector2.CalculateRibbonTangents(points, Closed);
 
         protected void RecalcDistanceAndTheta()
         {

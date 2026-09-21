@@ -1,11 +1,78 @@
-﻿using Geometry;
+﻿using FsCheck;
+using Geometry;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GeometryTests
 {
     [TestClass]
     public class CurveFitting
     {
+        [TestMethod]
+        public void ZeroInterpolationClosedCurveRepeatsFirstPoint()
+        {
+            Vector2[] points =
+            [
+                new(0, 0),
+                new(10, 0),
+                new(10, 10),
+                new(0, 10)
+            ];
+
+            Vector2[] closed = points.CalculateCurvePoints(0, true);
+            Vector2[] open = points.CalculateCurvePoints(0, false);
+
+            Assert.AreEqual(points[0], closed[closed.Length - 1]);
+            Assert.AreEqual(points.Length + 1, closed.Length);
+            Assert.AreEqual(points.Length, open.Length);
+            Assert.AreNotEqual(open[0], open[open.Length - 1]);
+        }
+
+        [TestMethod]
+        public void ZeroInterpolationAlreadyClosedRingKeepsLength()
+        {
+            Vector2[] closed =
+            [
+                new(0, 0),
+                new(10, 0),
+                new(10, 10),
+                new(0, 10),
+                new(0, 0)
+            ];
+
+            Vector2[] result = closed.CalculateCurvePoints(0, true);
+            Assert.AreEqual(closed.Length, result.Length);
+            Assert.AreEqual(result[0], result[result.Length - 1]);
+        }
+
+        [TestMethod]
+        public void ZeroInterpolationShortSeriesIsUnchangedEvenIfClosedRequested()
+        {
+            Vector2[] empty = [];
+            Vector2[] one = [new(1, 2)];
+            Vector2[] two = [new(0, 0), new(3, 4)];
+
+            CollectionAssert.AreEqual(empty, empty.CalculateCurvePoints(0, true));
+            CollectionAssert.AreEqual(one, one.CalculateCurvePoints(0, true));
+            CollectionAssert.AreEqual(two, two.CalculateCurvePoints(0, true));
+        }
+
+        [TestMethod]
+        public void ZeroInterpolationClosedRepeatsFirstWhenMoreThanTwoPoints() =>
+            CoreCheck.Run(
+                Prop.ForAll(ArbPointList(), Arb.From(Arb.Default.Bool().Generator), (points, close) =>
+                {
+                    Vector2[] result = points.CalculateCurvePoints(0, close);
+                    if (!close || points.Length <= 2)
+                        return result.SequenceEqual(points);
+
+                    Vector2[] expected = [.. ((ICollection<Vector2>)points).EnsureClosedRing()];
+                    return result.SequenceEqual(expected) && result[0] == result[result.Length - 1];
+                }),
+                nameof(ZeroInterpolationClosedRepeatsFirstWhenMoreThanTwoPoints));
+
         [TestMethod]
         public void FitPointsWithLagrange()
         {
@@ -114,5 +181,11 @@ namespace GeometryTests
 
         }
         */
+
+        static Arbitrary<Vector2[]> ArbPointList() =>
+            Arb.From(
+                from n in Gen.Choose(0, 8)
+                from points in CoreArbitraries.FiniteVector2().ArrayOf(n)
+                select points);
     }
 }
