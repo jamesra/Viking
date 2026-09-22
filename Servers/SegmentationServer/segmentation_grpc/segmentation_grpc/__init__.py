@@ -13,6 +13,7 @@ from .segmentation_pb2 import (
     Polygon,
     SegmentationRequest,
     SegmentationResponse,
+    SegmentImageSetRequest,
     SegmentResult,
     ServerStatusRequest,
     ServerStatusResponse,
@@ -28,6 +29,7 @@ from .segmentation_pb2_grpc import (
 __all__: list[str] = [
     'SegmentationRequest',
     'SegmentationResponse',
+    'SegmentImageSetRequest',
     'MultiSegmentationRequest',
     'UploadImageRequest',
     'UploadImageResponse',

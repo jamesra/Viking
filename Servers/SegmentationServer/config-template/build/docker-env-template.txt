@@ -1,0 +1,27 @@
+# Copy to D:\Docker\Builds\SegmentationServer\.env and fill in real values.
+# Do not commit the copy.
+#
+# Start enrollment with:
+#   docker compose --env-file D:/Docker/Builds/SegmentationServer/.env --profile letsencrypt up -d
+#
+# --env-file supplies SEGMENTATION_SSL_* to the segmentation-server service.
+# The certbot service also loads this file via env_file.
+
+LETSENCRYPT_EMAIL=
+LETSENCRYPT_PRIMARY_DOMAIN=
+CERTBOT_AUTH_METHOD=dns-cloudflare
+CERTBOT_RESTART_CONTAINER=segmentation-server
+CF_DNS_PROPAGATION_SECONDS=60
+CF_DNS_API_CREDENTIALS_FILE=/run/secrets/cloudflare.ini
+# Host path to a Cloudflare DNS API token file. Never commit it.
+CF_DNS_API_CREDENTIALS_HOST_PATH=D:/Docker/Builds/cloudflare.ini
+
+# PEM paths inside the segmentation container. Keep the domain in sync with
+# LETSENCRYPT_PRIMARY_DOMAIN. Do not reuse identity.codepharm.net.
+SEGMENTATION_SSL_CERT_CONTAINER_PATH=/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem
+SEGMENTATION_SSL_KEY_CONTAINER_PATH=/etc/letsencrypt/live/segmentation.codepharm.net/privkey.pem
+
+# Fine-tuned SAM2 weights. Host folder is mounted read-only at /models.
+# best_TEM_model.pt must be Meta {"model": state_dict} (sam2-em-export-serve).
+#SEGMENTATION_MODEL_HOST=D:/Docker/Run/segmentation-server
+#SAM2_CHECKPOINT=/models/best_TEM_model.pt

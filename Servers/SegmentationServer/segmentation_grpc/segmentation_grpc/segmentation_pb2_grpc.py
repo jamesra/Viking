@@ -45,6 +45,11 @@ class SegmentationServiceStub:
                 request_serializer=segmentation__pb2.SegmentationRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
                 _registered_method=True)
+        self.SegmentImageSets = channel.stream_stream(
+                '/segmentation.SegmentationService/SegmentImageSets',
+                request_serializer=segmentation__pb2.SegmentImageSetRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
+                _registered_method=True)
         self.MultiSegmentImage = channel.unary_unary(
                 '/segmentation.SegmentationService/MultiSegmentImage',
                 request_serializer=segmentation__pb2.MultiSegmentationRequest.SerializeToString,
@@ -75,6 +80,15 @@ class SegmentationServiceServicer:
 
     def SegmentImage(self, request, context):
         """Segment an image based on input coordinates (uses cached image_id or inline image_data)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SegmentImageSets(self, request_iterator, context):
+        """Auto-segmentation: each request message is one independent point set for image_id.
+        The server writes one SegmentationResponse per set as soon as that predict() finishes.
+        The first message must carry image_id. Later messages reuse it when image_id is 0.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -112,6 +126,11 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
             'SegmentImage': grpc.unary_unary_rpc_method_handler(
                     servicer.SegmentImage,
                     request_deserializer=segmentation__pb2.SegmentationRequest.FromString,
+                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
+            ),
+            'SegmentImageSets': grpc.stream_stream_rpc_method_handler(
+                    servicer.SegmentImageSets,
+                    request_deserializer=segmentation__pb2.SegmentImageSetRequest.FromString,
                     response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
             ),
             'MultiSegmentImage': grpc.unary_unary_rpc_method_handler(
@@ -184,6 +203,33 @@ class SegmentationService:
             target,
             '/segmentation.SegmentationService/SegmentImage',
             segmentation__pb2.SegmentationRequest.SerializeToString,
+            segmentation__pb2.SegmentationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SegmentImageSets(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/segmentation.SegmentationService/SegmentImageSets',
+            segmentation__pb2.SegmentImageSetRequest.SerializeToString,
             segmentation__pb2.SegmentationResponse.FromString,
             options,
             channel_credentials,

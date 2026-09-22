@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import importlib.metadata
 import logging
+import os
 import signal
 import threading
 import time
 from concurrent import futures
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
 
 import grpc
 import numpy as np
@@ -25,6 +26,7 @@ from segmentation_grpc import (
     SegmentationRequest,
     SegmentationResponse,
     SegmentationServiceServicer,
+    SegmentImageSetRequest,
     SegmentResult,
     ServerStatusRequest,
     ServerStatusResponse,
@@ -32,7 +34,13 @@ from segmentation_grpc import (
     UploadImageResponse,
     add_SegmentationServiceServicer_to_server,
 )
-from segmentation_server.image_cache import ImageCache
+from segmentation_server.cuda_errors import UnrecoverableGpuError
+from segmentation_server.image_cache import (
+    DEFAULT_MAX_ENTRIES,
+    DEFAULT_MAX_MEMORY_BYTES,
+    DEFAULT_TTL_SECONDS,
+    ImageCache,
+)
 from segmentation_server.mask_utils import SegmentInfo, encode_png, prepare_image_for_sam2
 
 if TYPE_CHECKING:
@@ -41,6 +49,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _EMPTY_COORDINATES_MESSAGE = "No coordinates provided. At least one coordinate point is required."
+_TLS_PORT = 443
+_MISSING_IMAGE_ID_MESSAGE = "image_id is required on the first SegmentImageSets message."
+_MIXED_IMAGE_ID_MESSAGE = "SegmentImageSets messages must use one image_id for the whole stream."
 _EMPTY_FOREGROUND_POINTS_MESSAGE = "No foreground_points provided. At least one point is required."
 
 
@@ -81,36 +92,84 @@ class SegmentationServicer(SegmentationServiceServicer):
 
     def __init__(
         self,
-        cache_max_memory_bytes: int = 1073741824,
-        cache_ttl_seconds: int = 300,
+        cache_max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES,
+        cache_ttl_seconds: int = DEFAULT_TTL_SECONDS,
+        cache_max_images: int = DEFAULT_MAX_ENTRIES,
         inference_executor: Optional[Any] = None,
         server_start_time: Optional[float] = None,
         model: Optional[SegmentationModel] = None,
         image_cache: Optional[ImageCache] = None,
         inference_workers: int = 1,
+        exit_process: Callable[[int], None] = os._exit,
+        compile_image_encoder: bool = True,
     ) -> None:
         """
         Args:
             cache_max_memory_bytes: Image-byte cap for the cache (default 1 GiB).
             cache_ttl_seconds: Unused-entry lifetime (default 5 minutes).
+            cache_max_images: Max cached images / GPU embeddings (default 8).
             inference_executor: Thread pool for SAM2 work; None uses the default executor.
             server_start_time: time.monotonic() at process start, for uptime.
             model: Injected SAM2 wrapper; constructed here if omitted.
             image_cache: Injected cache; constructed here if omitted.
             inference_workers: Size of the inference thread pool, reported in GetServerStatus.
+            exit_process: Called after an unrecoverable GPU error (inject in tests).
+            compile_image_encoder: torch.compile the SAM2 Hiera encoder (CUDA only).
         """
         if model is None:
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
-            model = _SegmentationModel()
+            model = _SegmentationModel(compile_image_encoder=compile_image_encoder)
         self.model = model
         self.inference_executor = inference_executor
         self._inference_workers = max(1, inference_workers)
+        self._exit_process = exit_process
         self._server_start_time = server_start_time if server_start_time is not None else 0.0
         self._load = RequestLoadTracker()
         self.image_cache = image_cache if image_cache is not None else ImageCache(
             max_memory_bytes=cache_max_memory_bytes,
             ttl_seconds=cache_ttl_seconds,
+            max_entries=cache_max_images,
             create_predictor_func=self.model.create_initialized_predictor,
+            release_predictor_func=self.model.release_predictor,
+        )
+        try:
+            self._loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None
+        if hasattr(self.model, "set_on_compiled_ready"):
+            self.model.set_on_compiled_ready(self._flush_cache_after_compile)
+
+    def _flush_cache_after_compile(self) -> None:
+        """Drop eager embeddings once the compiled encoder is serving."""
+        if self._loop is None or self._loop.is_closed():
+            logger.warning("Compiled encoder ready but no event loop; image cache not flushed")
+            return
+        asyncio.run_coroutine_threadsafe(self.image_cache.clear(), self._loop)
+
+    def _schedule_process_exit(self, delay_seconds: float = 0.25) -> None:
+        """Exit after the current RPC can send UNAVAILABLE. Docker then restarts us."""
+        def _exit() -> None:
+            self._exit_process(1)
+
+        try:
+            asyncio.get_running_loop().call_later(delay_seconds, _exit)
+        except RuntimeError:
+            self._exit_process(1)
+
+    async def _abort_unrecoverable_gpu(
+        self,
+        exc: BaseException,
+        context: ServicerContext,
+        delay_seconds: float = 0.25,
+    ) -> None:
+        logger.critical(
+            "CUDA context lost (%s); exiting so Docker can restart the process",
+            exc,
+        )
+        self._schedule_process_exit(delay_seconds=delay_seconds)
+        await context.abort(
+            grpc.StatusCode.UNAVAILABLE,
+            "CUDA context lost after a GPU reset or host sleep; segmentation server is restarting.",
         )
 
     def _build_segmentation_response(
@@ -130,7 +189,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         for segment in segments:
             if 'mask' in segment:
                 mask_bool: NDArray[np.bool_] = segment['mask']
-                mask_bool = self.model.cleanup_mask(mask_bool)
+                mask_bool = self.model.fill_small_holes(mask_bool)
                 x, y, mask_width, mask_height = self.model.get_mask_bounds(mask_bool)
                 if mask_width > 0 and mask_height > 0:
                     cropped_mask = mask_bool[y:y + mask_height, x:x + mask_width]
@@ -152,8 +211,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 index=segment['index'],
                 score=segment['score'],
                 mask=mask_bytes,
-                X=x,
-                Y=y,
+                x=x,
+                y=y,
             )
             for polygon in polygons:
                 poly = Polygon()
@@ -291,40 +350,59 @@ class SegmentationServicer(SegmentationServiceServicer):
         if await self._abort_if_image_not_found(cached_result, image_id, context):
             return SegmentationResponse()
 
-        _image_data, width, height, predictor, predictor_lock = cached_result
-
-        if await self._abort_if_predictor_unavailable(predictor, image_id, context):
-            return SegmentationResponse()
-
-        start_time = time.perf_counter()
-        logger.info("Using cached image with predictor: ID=%s, %sx%s", image_id, width, height)
-
-        if await self._validate_coordinates(coordinates, labels, context, empty_message=empty_message):
-            logger.info("Cached segmentation validation failed in %.3fs", time.perf_counter() - start_time)
-            return SegmentationResponse()
-
         try:
-            labeled_image, segments = await asyncio.get_running_loop().run_in_executor(
-                self.inference_executor,
-                self._segment_with_locked_predictor,
-                predictor,
-                predictor_lock,
-                coordinates,
-                labels,
-                multimask_output,
-                (height, width),
-            )
-        except Exception as e:
-            logger.exception("Predictor error for image ID %s", image_id)
-            await self.image_cache.delete_image(image_id)
-            await context.abort(
-                grpc.StatusCode.INTERNAL,
-                f"Error processing segmentation request: {e}. Image has been removed from cache. Please re-upload the image.",
-            )
-            return SegmentationResponse()
+            _image_data, width, height, predictor, predictor_lock = cached_result
 
-        logger.info("Cached segmentation completed in %.3fs", time.perf_counter() - start_time)
-        return self._build_segmentation_response(labeled_image, segments, width, height)
+            if await self._abort_if_predictor_unavailable(predictor, image_id, context):
+                return SegmentationResponse()
+
+            start_time = time.perf_counter()
+            logger.debug("Using cached image with predictor: ID=%s, %sx%s", image_id, width, height)
+
+            if await self._validate_coordinates(coordinates, labels, context, empty_message=empty_message):
+                logger.info("Cached segmentation validation failed in %.3fs", time.perf_counter() - start_time)
+                return SegmentationResponse()
+
+            try:
+                labeled_image, segments = await asyncio.get_running_loop().run_in_executor(
+                    self.inference_executor,
+                    self._segment_with_locked_predictor,
+                    predictor,
+                    predictor_lock,
+                    coordinates,
+                    labels,
+                    multimask_output,
+                    (height, width),
+                )
+            except UnrecoverableGpuError as e:
+                await self._abort_unrecoverable_gpu(e, context)
+                return SegmentationResponse()
+            except Exception as e:
+                logger.exception("Predictor error for image ID %s", image_id)
+                await self.image_cache.delete_image(image_id)
+                await context.abort(
+                    grpc.StatusCode.INTERNAL,
+                    f"Error processing segmentation request: {e}. Image has been removed from cache. Please re-upload the image.",
+                )
+                return SegmentationResponse()
+
+            n_fg = sum(1 for label in labels if int(label) == 1)
+            n_bg = len(labels) - n_fg
+            elapsed = time.perf_counter() - start_time
+            log = logger.warning if not segments else logger.info
+            log(
+                "Cached segmentation id=%s %sx%s fg=%s bg=%s segments=%s in %.3fs",
+                image_id,
+                width,
+                height,
+                n_fg,
+                n_bg,
+                len(segments),
+                elapsed,
+            )
+            return self._build_segmentation_response(labeled_image, segments, width, height)
+        finally:
+            await self.image_cache.release_image(image_id)
 
     async def _handle_inline_image_segmentation(
         self,
@@ -339,7 +417,7 @@ class SegmentationServicer(SegmentationServiceServicer):
     ) -> SegmentationResponse:
         """Segment an image sent on the request. Aborts the RPC on input or model errors."""
         start_time = time.perf_counter()
-        logger.info("Using inline image data: %sx%s", width, height)
+        logger.debug("Using inline image data: %sx%s", width, height)
 
         if await self._validate_coordinates(coordinates, labels, context, empty_message=empty_message):
             return SegmentationResponse()
@@ -355,12 +433,27 @@ class SegmentationServicer(SegmentationServiceServicer):
                 labels,
                 multimask_output,
             )
+        except UnrecoverableGpuError as e:
+            await self._abort_unrecoverable_gpu(e, context)
+            return SegmentationResponse()
         except Exception as e:
             logger.exception("Error during inline segmentation")
             await context.abort(grpc.StatusCode.INTERNAL, f"Error processing request: {e}")
             return SegmentationResponse()
 
-        logger.info("Inline segmentation completed in %.3fs", time.perf_counter() - start_time)
+        n_fg = sum(1 for label in labels if int(label) == 1)
+        n_bg = len(labels) - n_fg
+        elapsed = time.perf_counter() - start_time
+        log = logger.warning if not segments else logger.info
+        log(
+            "Inline segmentation %sx%s fg=%s bg=%s segments=%s in %.3fs",
+            width,
+            height,
+            n_fg,
+            n_bg,
+            len(segments),
+            elapsed,
+        )
         return self._build_segmentation_response(labeled_image, segments, width, height)
 
     async def _dispatch_segmentation(
@@ -377,6 +470,12 @@ class SegmentationServicer(SegmentationServiceServicer):
     ) -> SegmentationResponse:
         """Choose cached vs inline path from image_id."""
         if image_id != 0:
+            if image_data:
+                logger.debug(
+                    "Ignoring inline image_data for cached image_id=%s (%s bytes)",
+                    image_id,
+                    len(image_data),
+                )
             return await self._handle_cached_image_segmentation(
                 image_id, coordinates, labels, multimask_output, context, empty_message
             )
@@ -423,6 +522,10 @@ class SegmentationServicer(SegmentationServiceServicer):
             image_id: int = await self.image_cache.upload_image(
                 image_data, width, height, executor=self.inference_executor
             )
+        except UnrecoverableGpuError as e:
+            logger.exception("Error uploading image")
+            await self._abort_unrecoverable_gpu(e, context)
+            raise
         except Exception as e:
             logger.exception("Error uploading image")
             await context.abort(grpc.StatusCode.INTERNAL, f"Error uploading image: {e}")
@@ -465,12 +568,14 @@ class SegmentationServicer(SegmentationServiceServicer):
         uptime_seconds = time.monotonic() - self._server_start_time if self._server_start_time else 0.0
         cache_stats = await self.image_cache.get_stats()
         device = getattr(self.model, "device", "unknown")
+        compile_status = getattr(self.model, "compile_status", "off")
         in_flight, recent_latency_ms = self._load.snapshot()
         return ServerStatusResponse(
             version=version,
             uptime_seconds=uptime_seconds,
             message=(
                 f"device={device}; "
+                f"compile={compile_status}; "
                 f"cache={cache_stats['total_images']} images, "
                 f"{cache_stats['total_memory_mb']:.1f} MiB"
             ),
@@ -529,10 +634,96 @@ class SegmentationServicer(SegmentationServiceServicer):
         finally:
             self._load.end(time.perf_counter() - start)
 
+    async def SegmentImageSets(self, request_iterator, context: ServicerContext):
+        """Predict each streamed point set as it arrives and yield one response per set.
 
-async def serve(port: int = 50051, max_workers: int = 10, inference_workers: int = 1) -> None:
-    """Listen on `[::]:port` until SIGTERM/SIGINT.
+        Auto-segmentation clients Delaunay-decimate one object at a time. Reading the
+        stream incrementally lets the GPU run set k while the client prepares set k+1.
+        """
+        image_id = 0
+        async for request in request_iterator:
+            if request.image_id:
+                if image_id and request.image_id != image_id:
+                    await context.abort(grpc.StatusCode.INVALID_ARGUMENT, _MIXED_IMAGE_ID_MESSAGE)
+                    return
+                image_id = request.image_id
+            if not image_id:
+                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, _MISSING_IMAGE_ID_MESSAGE)
+                return
 
+            coordinates, labels = _points_from_set(request)
+            self._load.begin()
+            start = time.perf_counter()
+            try:
+                response = await self._dispatch_segmentation(
+                    image_id,
+                    b"",
+                    0,
+                    0,
+                    coordinates,
+                    labels,
+                    request.multimask_output,
+                    context,
+                    _EMPTY_COORDINATES_MESSAGE,
+                )
+            finally:
+                self._load.end(time.perf_counter() - start)
+            yield response
+
+
+def _points_from_set(request: SegmentImageSetRequest) -> Tuple[List[Tuple[int, int]], List[int]]:
+    """Foreground points are label 1 and background points are label 0."""
+    coordinates: List[Tuple[int, int]] = [(point.x, point.y) for point in request.foreground]
+    labels: List[int] = [1] * len(coordinates)
+    coordinates.extend((point.x, point.y) for point in request.background)
+    labels.extend(0 for _ in request.background)
+    return coordinates, labels
+
+
+def load_server_credentials(
+    cert_path: Optional[str] = None,
+    key_path: Optional[str] = None,
+):
+    """Load PEM server credentials from SSL_CERT_PATH and SSL_KEY_PATH.
+
+    Returns None when the paths are unset or the files are not on disk yet so the
+    process can serve the legacy cleartext port while certbot finishes enrollment.
+    """
+    if cert_path is None:
+        cert_path = os.environ.get("SSL_CERT_PATH", "")
+    if key_path is None:
+        key_path = os.environ.get("SSL_KEY_PATH", "")
+    cert_path = (cert_path or "").strip()
+    key_path = (key_path or "").strip()
+    if not cert_path or not key_path:
+        logger.info("SSL_CERT_PATH or SSL_KEY_PATH unset; TLS listener disabled")
+        return None
+    if not os.path.isfile(cert_path) or not os.path.isfile(key_path):
+        logger.warning(
+            "TLS certificate files not found (cert=%s, key=%s); serving cleartext only until certbot enrolls",
+            cert_path,
+            key_path,
+        )
+        return None
+    with open(key_path, "rb") as key_file:
+        private_key = key_file.read()
+    with open(cert_path, "rb") as cert_file:
+        certificate_chain = cert_file.read()
+    return grpc.ssl_server_credentials(((private_key, certificate_chain),))
+
+
+async def serve(
+    port: int = 50051,
+    max_workers: int = 10,
+    inference_workers: int = 1,
+    cache_ttl_seconds: int = DEFAULT_TTL_SECONDS,
+    cache_max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES,
+    cache_max_images: int = DEFAULT_MAX_ENTRIES,
+    compile_image_encoder: bool = True,
+) -> None:
+    """Listen on cleartext `[::]:port` and, when PEMs exist, TLS `[::]:443`.
+
+    The cleartext port is legacy. It stays until every client uses TLS.
     inference_workers defaults to 1 because concurrent SAM2 predict() calls on one
     GPU typically contend for VRAM rather than increase throughput.
     """
@@ -556,14 +747,30 @@ async def serve(port: int = 50051, max_workers: int = 10, inference_workers: int
             inference_executor=inference_executor,
             server_start_time=server_start_time,
             inference_workers=inference_workers,
+            cache_ttl_seconds=cache_ttl_seconds,
+            cache_max_memory_bytes=cache_max_memory_bytes,
+            cache_max_images=cache_max_images,
+            compile_image_encoder=compile_image_encoder,
         ),
         server,
     )
 
-    server_address = f'[::]:{port}'
-    server.add_insecure_port(server_address)
+    insecure_address = f'[::]:{port}'
+    server.add_insecure_port(insecure_address)
+    logger.warning(
+        "Cleartext gRPC on %s is legacy and will be removed in a future release "
+        "after every client uses TLS on port %s.",
+        insecure_address,
+        _TLS_PORT,
+    )
+    bound = [insecure_address]
+    credentials = load_server_credentials()
+    if credentials is not None:
+        tls_address = f'[::]:{_TLS_PORT}'
+        server.add_secure_port(tls_address, credentials)
+        bound.append(tls_address)
     await server.start()
-    logger.info("Server started, listening on %s (inference_workers=%s)", server_address, inference_workers)
+    logger.info("Server started, listening on %s (inference_workers=%s)", ", ".join(bound), inference_workers)
 
     loop = asyncio.get_running_loop()
     grace_seconds = 5

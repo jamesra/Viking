@@ -9,7 +9,13 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Tuple
 
+from segmentation_server.cuda_errors import UnrecoverableGpuError
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_MAX_MEMORY_BYTES = 1073741824
+DEFAULT_TTL_SECONDS = 300
+DEFAULT_MAX_ENTRIES = 8
 
 
 class PredictorCreationError(RuntimeError):
@@ -28,44 +34,56 @@ class CachedImage:
     size_bytes: int
     predictor: Optional[Any] = field(default=None)
     predictor_lock: threading.Lock = field(default_factory=threading.Lock)
+    in_use: int = 0
 
 
 class ImageCache:
     """Thread-safe image cache with LRU eviction and TTL expiration.
 
     Cache mutations take an asyncio.Lock. Predictor inference uses a per-image
-    threading.Lock because it runs in executor threads. Only encoded image bytes
-    count toward max_memory_bytes; GPU embeddings are not included.
+    threading.Lock because it runs in executor threads. Encoded image bytes count
+    toward max_memory_bytes; GPU embeddings are capped via max_entries instead.
     """
 
     def __init__(
         self,
-        max_memory_bytes: int = 1073741824,
-        ttl_seconds: int = 300,
+        max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES,
+        ttl_seconds: int = DEFAULT_TTL_SECONDS,
+        max_entries: int = DEFAULT_MAX_ENTRIES,
         create_predictor_func: Optional[Callable[[bytes], Any]] = None,
+        release_predictor_func: Optional[Callable[[Any], None]] = None,
         time_fn: Callable[[], float] = time.time,
     ) -> None:
         """
         Args:
             max_memory_bytes: Cap on sum of cached image_data lengths.
             ttl_seconds: Evict entries unused for this many seconds.
+            max_entries: Cap on cached images (VRAM proxy for GPU embeddings).
             create_predictor_func: bytes -> initialized predictor. If None, images
                 are stored without predictors (tests / decode-only use).
+            release_predictor_func: Called with a predictor before its entry is
+                dropped (delete, LRU, TTL). ImageCache stays torch-free.
             time_fn: Clock for TTL/LRU; inject a fake in tests.
         """
         self._cache: Dict[int, CachedImage] = {}
+        # Deleted/evicted while SegmentImage still holds a pin; predictor reset waits for check-in.
+        self._retiring: Dict[int, CachedImage] = {}
         self._next_id: int = 1
         self._lock: asyncio.Lock = asyncio.Lock()
         self._max_memory_bytes: int = max_memory_bytes
         self._ttl_seconds: int = ttl_seconds
+        self._max_entries: int = max(1, max_entries)
         self._current_memory_bytes: int = 0
         self._create_predictor_func = create_predictor_func
+        self._release_predictor_func = release_predictor_func
         self._time_fn = time_fn
 
         logger.info(
-            "ImageCache initialized with max_memory=%s bytes (%.2f GB), TTL=%ss",
+            "ImageCache initialized with max_memory=%s bytes (%.2f GB), "
+            "max_entries=%s, TTL=%ss",
             max_memory_bytes,
             max_memory_bytes / (1024**3),
+            self._max_entries,
             ttl_seconds,
         )
 
@@ -78,6 +96,8 @@ class ImageCache:
             predictor = self._create_predictor_func(image_data)
             logger.info("Predictor created for image ID=%s", image_id)
             return predictor
+        except UnrecoverableGpuError:
+            raise
         except Exception:
             logger.exception("Error creating predictor for image ID=%s", image_id)
             return None
@@ -94,12 +114,14 @@ class ImageCache:
         Raises:
             PredictorCreationError: Predictor setup failed, or the entry was evicted
                 before setup finished. The image is not left in the cache on failure.
+            UnrecoverableGpuError: CUDA context is dead. Caller should exit the process.
         """
         async with self._lock:
             await self._cleanup_expired()
             size_bytes = len(image_data)
-            while self._current_memory_bytes + size_bytes > self._max_memory_bytes and self._cache:
-                await self._evict_oldest()
+            while self._needs_eviction(size_bytes):
+                if not await self._evict_oldest():
+                    break
 
             image_id = self._next_id
             self._next_id += 1
@@ -123,15 +145,22 @@ class ImageCache:
             )
 
         if self._create_predictor_func:
-            predictor = await asyncio.get_running_loop().run_in_executor(
-                executor,
-                self._create_predictor_in_executor,
-                image_data,
-                image_id,
-            )
+            try:
+                predictor = await asyncio.get_running_loop().run_in_executor(
+                    executor,
+                    self._create_predictor_in_executor,
+                    image_data,
+                    image_id,
+                )
+            except UnrecoverableGpuError:
+                async with self._lock:
+                    await self._delete_image_internal(image_id)
+                raise
             async with self._lock:
                 cached = self._cache.get(image_id)
                 if cached is None:
+                    # Predictor was never published; no concurrent predict() holders.
+                    self._release_predictor(predictor, threading.Lock())
                     raise PredictorCreationError(
                         f"Image ID={image_id} was evicted before predictor could be created"
                     )
@@ -147,7 +176,11 @@ class ImageCache:
     async def get_image(
         self, image_id: int
     ) -> Optional[Tuple[bytes, int, int, Optional[Any], threading.Lock]]:
-        """Return (bytes, width, height, predictor, lock) and refresh LRU, or None if missing."""
+        """Return (bytes, width, height, predictor, lock), pin for use, and refresh LRU.
+
+        Caller must invoke :meth:`release_image` when finished so eviction/delete can
+        reset the predictor. Returns None if missing.
+        """
         async with self._lock:
             await self._cleanup_expired()
             cached_image = self._cache.get(image_id)
@@ -156,11 +189,13 @@ class ImageCache:
                 return None
 
             cached_image.last_access_time = self._time_fn()
+            cached_image.in_use += 1
             logger.debug(
-                "Image retrieved: ID=%s, size=%s bytes, predictor=%s",
+                "Image retrieved: ID=%s, size=%s bytes, predictor=%s, in_use=%s",
                 image_id,
                 cached_image.size_bytes,
                 "ready" if cached_image.predictor is not None else "pending",
+                cached_image.in_use,
             )
             return (
                 cached_image.image_data,
@@ -170,13 +205,60 @@ class ImageCache:
                 cached_image.predictor_lock,
             )
 
-    async def _delete_image_internal(self, image_id: int) -> bool:
-        """Remove an entry. Caller must hold `_lock`."""
+    async def release_image(self, image_id: int) -> None:
+        """Drop one pin from :meth:`get_image`. Resets predictor when a deferred delete finishes."""
+        async with self._lock:
+            cached_image = self._cache.get(image_id)
+            if cached_image is None:
+                cached_image = self._retiring.get(image_id)
+            if cached_image is None:
+                return
+            if cached_image.in_use > 0:
+                cached_image.in_use -= 1
+            if cached_image.in_use == 0 and image_id in self._retiring:
+                retiring = self._retiring.pop(image_id)
+                self._release_predictor(retiring.predictor, retiring.predictor_lock)
+                logger.info("Image retired after last user: ID=%s", image_id)
+
+    def _needs_eviction(self, incoming_size_bytes: int) -> bool:
+        over_bytes = self._current_memory_bytes + incoming_size_bytes > self._max_memory_bytes
+        over_entries = len(self._cache) >= self._max_entries
+        return over_bytes or over_entries
+
+    def _release_predictor(self, predictor: Any, predictor_lock: threading.Lock) -> None:
+        if predictor is None or self._release_predictor_func is None:
+            return
+        try:
+            # Serialize with predict() so reset_predictor cannot clear mid-inference.
+            with predictor_lock:
+                self._release_predictor_func(predictor)
+        except Exception:
+            logger.exception("Error releasing predictor")
+
+    async def _retire_or_delete(self, image_id: int) -> bool:
+        """Remove from the live cache. Caller must hold `_lock`.
+
+        If the entry is pinned, move it to `_retiring` and delay predictor reset until
+        the last :meth:`release_image`. Returns False if the ID was not live.
+        """
         cached_image = self._cache.pop(image_id, None)
         if cached_image is None:
             return False
         self._current_memory_bytes -= cached_image.size_bytes
+        if cached_image.in_use > 0:
+            self._retiring[image_id] = cached_image
+            logger.info(
+                "Image remove deferred (in use): ID=%s, in_use=%s",
+                image_id,
+                cached_image.in_use,
+            )
+            return True
+        self._release_predictor(cached_image.predictor, cached_image.predictor_lock)
         return True
+
+    async def _delete_image_internal(self, image_id: int) -> bool:
+        """Remove a live entry (or finish a retirement). Caller must hold `_lock`."""
+        return await self._retire_or_delete(image_id)
 
     async def delete_image(self, image_id: int) -> bool:
         """Delete by ID. Returns False if the ID was not present."""
@@ -193,11 +275,24 @@ class ImageCache:
             )
             return True
 
-    async def _evict_oldest(self) -> None:
-        """Drop the LRU entry. Caller must hold `_lock`."""
-        if not self._cache:
-            return
-        oldest_id = min(self._cache.keys(), key=lambda k: self._cache[k].last_access_time)
+    async def clear(self) -> None:
+        """Drop every live entry. Pinned images defer predictor reset until release."""
+        async with self._lock:
+            for image_id in list(self._cache.keys()):
+                await self._delete_image_internal(image_id)
+            logger.info(
+                "Image cache cleared, total_cache=%s bytes, count=%s, retiring=%s",
+                self._current_memory_bytes,
+                len(self._cache),
+                len(self._retiring),
+            )
+
+    async def _evict_oldest(self) -> bool:
+        """Drop the LRU idle entry. Caller must hold `_lock`. False if none idle."""
+        idle_ids = [image_id for image_id, cached in self._cache.items() if cached.in_use == 0]
+        if not idle_ids:
+            return False
+        oldest_id = min(idle_ids, key=lambda k: self._cache[k].last_access_time)
         await self._delete_image_internal(oldest_id)
         logger.info(
             "Image evicted (LRU): ID=%s, total_cache=%s bytes (%.2f MB), count=%s",
@@ -206,14 +301,16 @@ class ImageCache:
             self._current_memory_bytes / (1024**2),
             len(self._cache),
         )
+        return True
 
     async def _cleanup_expired(self) -> None:
-        """Drop entries unused longer than TTL. Caller must hold `_lock`."""
+        """Drop idle entries unused longer than TTL. Caller must hold `_lock`."""
         current_time = self._time_fn()
         expired_ids = [
             image_id
             for image_id, cached_image in self._cache.items()
-            if current_time - cached_image.last_access_time > self._ttl_seconds
+            if cached_image.in_use == 0
+            and current_time - cached_image.last_access_time > self._ttl_seconds
         ]
         for image_id in expired_ids:
             cached_image = self._cache.get(image_id)
@@ -244,4 +341,5 @@ class ImageCache:
                     else 0
                 ),
                 "ttl_seconds": self._ttl_seconds,
+                "max_entries": self._max_entries,
             }

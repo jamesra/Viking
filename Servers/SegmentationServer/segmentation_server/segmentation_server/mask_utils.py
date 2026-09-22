@@ -7,7 +7,8 @@ a GPU or the model weights.
 from __future__ import annotations
 
 import io
-from typing import List, Tuple, TypedDict
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Sequence, Tuple, TypedDict
 
 import cv2
 import numpy as np
@@ -18,6 +19,10 @@ MaskArray = NDArray[np.bool_]
 LabeledImage = NDArray[np.uint16]
 PolygonArray = NDArray[np.int32]
 Point = Tuple[int, int]
+ExtraPredict = Callable[
+    [Sequence[Point], Sequence[int]],
+    Tuple[NDArray[np.bool_], NDArray[np.float32]],
+]
 
 
 class SegmentInfo(TypedDict):
@@ -28,6 +33,37 @@ class SegmentInfo(TypedDict):
     y: int
     width: int
     height: int
+
+
+@dataclass(frozen=True)
+class UnionMaskStats:
+    """Cheap counters from a union pass; all O(n_masks + n_clicks) plus one count_nonzero."""
+
+    n_initial_masks: int = 0
+    n_kept_initial: int = 0
+    n_extra_predicts: int = 0
+    n_extra_kept: int = 0
+    n_positives: int = 0
+    n_negatives: int = 0
+    n_positives_oob: int = 0
+    n_uncovered: int = 0
+    area: int = 0
+    score: float = 0.0
+
+    @property
+    def n_merged(self) -> int:
+        return self.n_kept_initial + self.n_extra_kept
+
+    def log_line(self, width: int, height: int) -> str:
+        return (
+            f"segment {width}x{height} "
+            f"fg={self.n_positives} bg={self.n_negatives} "
+            f"initial={self.n_initial_masks} kept={self.n_kept_initial} "
+            f"extra={self.n_extra_predicts} extra_kept={self.n_extra_kept} "
+            f"merged={self.n_merged} area={self.area} "
+            f"uncovered={self.n_uncovered}/{self.n_positives} "
+            f"oob={self.n_positives_oob} score={self.score:.3f}"
+        )
 
 
 def prepare_image_for_sam2(image_data: bytes) -> NDArray[np.uint8]:
@@ -108,8 +144,39 @@ def get_mask_bounds(mask: MaskArray) -> Tuple[int, int, int, int]:
     return int(min_col), int(min_row), int(max_col - min_col + 1), int(max_row - min_row + 1)
 
 
+def fill_small_holes(mask: MaskArray, hole_threshold: float = 0.03) -> MaskArray:
+    """Fill interior holes smaller than hole_threshold of the True area.
+
+    Does not drop disconnected components. Background between blobs is connected
+    to the image border, so it is not treated as a hole.
+    """
+    if not np.any(mask):
+        return mask
+
+    mask_uint8 = mask.astype(np.uint8) * 255
+    holes_contours, holes_hierarchy = cv2.findContours(
+        ~mask_uint8,
+        cv2.RETR_CCOMP,
+        cv2.CHAIN_APPROX_SIMPLE,
+    )
+    if holes_hierarchy is None:
+        return mask
+
+    filled = mask_uint8.copy()
+    total_mask_area = float(np.sum(mask))
+    for i, contour in enumerate(holes_contours):
+        if holes_hierarchy[0][i][3] >= 0:
+            hole_area = cv2.contourArea(contour)
+            if hole_area < (total_mask_area * hole_threshold):
+                cv2.fillPoly(filled, [contour], 255)
+    return (filled > 0).astype(np.bool_)
+
+
 def cleanup_mask(mask: MaskArray, hole_threshold: float = 0.03) -> MaskArray:
-    """Keep the largest connected component and fill holes smaller than hole_threshold of its area."""
+    """Keep the largest connected component, then fill small holes.
+
+    Do not use this after a positive-covering union; it would throw away extra blobs.
+    """
     mask_uint8 = mask.astype(np.uint8) * 255
     num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask_uint8, connectivity=8)
 
@@ -117,26 +184,144 @@ def cleanup_mask(mask: MaskArray, hole_threshold: float = 0.03) -> MaskArray:
         return mask
 
     largest_component_idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    cleaned_mask = (labels == largest_component_idx).astype(np.bool_)
-    cleaned_mask_uint8 = cleaned_mask.astype(np.uint8) * 255
+    largest = (labels == largest_component_idx).astype(np.bool_)
+    return fill_small_holes(largest, hole_threshold=hole_threshold)
 
-    mask_copy = cleaned_mask_uint8.copy()
-    holes_contours, holes_hierarchy = cv2.findContours(
-        ~cleaned_mask_uint8,
-        cv2.RETR_CCOMP,
-        cv2.CHAIN_APPROX_SIMPLE
+
+def as_bool_mask_batch(masks: NDArray) -> NDArray[np.bool_]:
+    """Normalize SAM2 predict() output to (N, H, W) bool."""
+    arr = np.asarray(masks)
+    if arr.ndim == 2:
+        return np.expand_dims(arr, 0).astype(np.bool_, copy=False)
+    if arr.ndim >= 3:
+        return arr.astype(np.bool_, copy=False)
+    return np.zeros((0, 0, 0), dtype=np.bool_)
+
+
+def mask_contains_xy(mask: MaskArray, x: int, y: int) -> bool:
+    """True when (x, y) is inside the mask and the pixel is set."""
+    height, width = mask.shape[-2], mask.shape[-1]
+    if x < 0 or y < 0 or x >= width or y >= height:
+        return False
+    return bool(mask[y, x])
+
+
+def _labeled_points(
+    coordinates: Sequence[Point],
+    labels: Sequence[int],
+    want_positive: bool,
+) -> List[Point]:
+    if want_positive:
+        return [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
+    return [coord for coord, label in zip(coordinates, labels) if int(label) != 1]
+
+
+def mask_covers_any_positive(mask: MaskArray, positives: Sequence[Point]) -> bool:
+    return any(mask_contains_xy(mask, x, y) for x, y in positives)
+
+
+def union_masks_covering_positives(
+    initial_masks: NDArray,
+    initial_scores: NDArray,
+    coordinates: Sequence[Point],
+    labels: Sequence[int],
+    extra_predict: Optional[ExtraPredict] = None,
+    empty_shape: Tuple[int, int] = (0, 0),
+) -> Tuple[MaskArray, UnionMaskStats]:
+    """OR full-frame masks that contain at least one positive click.
+
+    Starts from the all-points predict. For each positive still uncovered,
+    extra_predict is called with that click plus the shared negatives.
+    Extra masks are kept only when they contain a positive pixel.
+    """
+    masks = as_bool_mask_batch(initial_masks)
+    scores = np.asarray(initial_scores, dtype=np.float32).reshape(-1)
+    positives = _labeled_points(coordinates, labels, want_positive=True)
+    negatives = _labeled_points(coordinates, labels, want_positive=False)
+
+    if masks.size == 0 or masks.ndim < 3 or masks.shape[0] == 0:
+        height, width = empty_shape
+        n_oob = sum(1 for x, y in positives if x < 0 or y < 0 or x >= width or y >= height)
+        stats = UnionMaskStats(
+            n_initial_masks=0,
+            n_positives=len(positives),
+            n_negatives=len(negatives),
+            n_positives_oob=n_oob,
+            n_uncovered=max(0, len(positives) - n_oob),
+        )
+        return np.zeros(empty_shape, dtype=np.bool_), stats
+
+    shape = (int(masks.shape[1]), int(masks.shape[2]))
+    height, width = shape
+    n_oob = sum(1 for x, y in positives if x < 0 or y < 0 or x >= width or y >= height)
+
+    union = np.zeros(shape, dtype=np.bool_)
+    best_score = 0.0
+    n_kept_initial = 0
+    for mask, score in zip(masks, scores):
+        if positives and not mask_covers_any_positive(mask, positives):
+            continue
+        if not positives and not np.any(mask):
+            continue
+        union |= mask
+        best_score = max(best_score, float(score))
+        n_kept_initial += 1
+
+    n_extra_predicts = 0
+    n_extra_kept = 0
+    if extra_predict is not None and positives:
+        for click in positives:
+            if mask_contains_xy(union, click[0], click[1]):
+                continue
+            n_extra_predicts += 1
+            extra_coords: List[Point] = [click, *negatives]
+            extra_labels: List[int] = [1, *[0] * len(negatives)]
+            extra_masks, extra_scores = extra_predict(extra_coords, extra_labels)
+            extra_batch = as_bool_mask_batch(extra_masks)
+            extra_score_vec = np.asarray(extra_scores, dtype=np.float32).reshape(-1)
+            for extra_mask, extra_score in zip(extra_batch, extra_score_vec):
+                if not mask_covers_any_positive(extra_mask, positives):
+                    continue
+                union |= extra_mask
+                best_score = max(best_score, float(extra_score))
+                n_extra_kept += 1
+
+    n_uncovered = sum(
+        1 for x, y in positives
+        if 0 <= x < width and 0 <= y < height and not mask_contains_xy(union, x, y)
     )
+    stats = UnionMaskStats(
+        n_initial_masks=int(masks.shape[0]),
+        n_kept_initial=n_kept_initial,
+        n_extra_predicts=n_extra_predicts,
+        n_extra_kept=n_extra_kept,
+        n_positives=len(positives),
+        n_negatives=len(negatives),
+        n_positives_oob=n_oob,
+        n_uncovered=n_uncovered,
+        area=int(np.count_nonzero(union)),
+        score=best_score,
+    )
+    return union, stats
 
-    if holes_hierarchy is not None:
-        total_mask_area = np.sum(cleaned_mask)
-        for i, contour in enumerate(holes_contours):
-            if holes_hierarchy[0][i][3] >= 0:
-                hole_area = cv2.contourArea(contour)
-                if hole_area < (total_mask_area * hole_threshold):
-                    cv2.fillPoly(mask_copy, [contour], 255)
-        cleaned_mask = (mask_copy > 0).astype(np.bool_)
 
-    return cleaned_mask
+def combined_mask_to_segments(
+    union: MaskArray,
+    score: float,
+    empty_shape: Tuple[int, int] = (0, 0),
+) -> Tuple[LabeledImage, List[SegmentInfo]]:
+    """Wrap a single full-frame union mask as one SegmentInfo."""
+    if union.size == 0 or union.ndim != 2:
+        return process_masks(
+            np.zeros((0, *empty_shape), dtype=np.bool_),
+            np.array([], dtype=np.float32),
+            empty_shape,
+        )
+    return process_masks(
+        np.expand_dims(union, 0),
+        np.array([score], dtype=np.float32),
+        empty_shape,
+    )
 
 
 def process_masks(

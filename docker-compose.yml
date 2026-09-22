@@ -47,13 +47,97 @@ services:
     networks:
       - viking-network
 
+  section-correction-service:
+    build:
+      context: .
+      dockerfile: Servers/GrpcSectionCorrectionService/Dockerfile
+    env_file:
+      - ${SECTION_CORRECTION_BUILD_ENV_PATH:-D:/Docker/Builds/SectionCorrectionService}/.env.Docker
+    ports:
+      - "41080:80"
+      - "41443:443"
+    cap_add:
+      - NET_BIND_SERVICE
+    volumes:
+      - ./Servers/GrpcSectionCorrectionService/appsettings.json:/app/appsettings.json:ro
+      - ./Servers/GrpcSectionCorrectionService/appsettings.Development.json:/app/appsettings.Development.json:ro
+      - ${SECTION_CORRECTION_CONFIG_PATH:-D:/Docker/mounted-configs/SectionCorrectionService}/corrections:/corrections
+      - ${SECTION_CORRECTION_CONFIG_PATH:-D:/Docker/mounted-configs/SectionCorrectionService}/cache:/cache
+      - section-correction-letsencrypt:/etc/letsencrypt:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=
+      - ASPNETCORE_HTTP_PORTS=
+      - ASPNETCORE_HTTPS_PORTS=
+      - Kestrel__UseDockerPorts=true
+      - Corrections__RootDirectory=/corrections
+      - Corrections__CachePath=/cache
+      - SSL_CERT_PATH=${SECTION_CORRECTION_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/corrections.codepharm.net/fullchain.pem}
+      - SSL_KEY_PATH=${SECTION_CORRECTION_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/corrections.codepharm.net/privkey.pem}
+    depends_on:
+      - section-correction-certbot-renewer
+    networks:
+      - viking-network
+
+  # Own renewer and volume. Segmentation's cert is for segmentation.codepharm.net and
+  # that renewer only restarts segmentation-server. This one starts with the stack.
+  # Skip it with: docker compose up -d --no-deps section-correction-service
+  #               docker compose stop section-correction-certbot-renewer
+  section-correction-certbot-renewer:
+    container_name: section-correction-certbot-renewer
+    build:
+      context: ./Servers/certbot
+      dockerfile: Dockerfile
+    image: section-correction-certbot-renewer:latest
+    restart: unless-stopped
+    env_file:
+      - ${SECTION_CORRECTION_BUILD_ENV_PATH:-D:/Docker/Builds/SectionCorrectionService}/.env.Docker
+    environment:
+      - CERTBOT_AUTH_METHOD=${SECTION_CORRECTION_CERTBOT_AUTH_METHOD:-dns-cloudflare}
+      - CERTBOT_RESTART_CONTAINER=section-correction-service
+      - CF_DNS_API_CREDENTIALS_FILE=${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/cloudflare.ini}
+      - CF_DNS_PROPAGATION_SECONDS=${CF_DNS_PROPAGATION_SECONDS:-60}
+    volumes:
+      - section-correction-letsencrypt:/etc/letsencrypt
+      - section-correction-certbot-lib:/var/lib/letsencrypt
+      - section-correction-certbot-logs:/var/log/letsencrypt
+      - type: bind
+        source: ${CF_DNS_API_CREDENTIALS_HOST_PATH:-D:/Docker/Builds/cloudflare.ini}
+        target: /run/secrets/cloudflare.ini
+        read_only: true
+      - type: bind
+        source: ${DOCKER_SOCKET_PATH:-//var/run/docker.sock}
+        target: /var/run/docker.sock
+    entrypoint: ["bash", "/opt/identity-certbot/renew-loop.sh"]
+    networks:
+      - viking-network
+
   segmentation-server:
     build:
       context: .
       dockerfile: Servers/SegmentationServer/Dockerfile
-    restart: on-failure
+    restart: unless-stopped
+    command: ["--port", "80"]
     ports:
-      - "50051:50051"
+      # Cleartext gRPC. Host 443/80 belong to the reverse proxy.
+      - "40080:80"
+      # Router forwards segmentation.codepharm.net:443 to this host port.
+      - "40443:443"
+    cap_add:
+      - NET_BIND_SERVICE
+    gpus: all
+    environment:
+      TORCHINDUCTOR_CACHE_DIR: /home/user/.cache/torch_inductor
+      TORCHINDUCTOR_FX_GRAPH_CACHE: "1"
+      TRITON_CACHE_DIR: /home/user/.cache/torch_inductor/triton
+      TORCHINDUCTOR_PERSISTENT_AUTOTUNE_DIR: /home/user/.cache/torch_inductor/autotune
+      SSL_CERT_PATH: ${SEGMENTATION_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem}
+      SSL_KEY_PATH: ${SEGMENTATION_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/privkey.pem}
+      SAM2_CHECKPOINT: ${SAM2_CHECKPOINT:-/models/best_TEM_model.pt}
+    volumes:
+      - ${SEGMENTATION_MODEL_HOST:-D:/Docker/Run/segmentation-server}:/models:ro
+      - ${SEGMENTATION_INDUCTOR_CACHE:-D:/Docker/cache/segmentation-inductor}:/home/user/.cache/torch_inductor
+      - segmentation-letsencrypt:/etc/letsencrypt:ro
     deploy:
       resources:
         reservations:
@@ -64,6 +148,46 @@ services:
     networks:
       - viking-network
 
+  # Started only with: docker compose --profile letsencrypt up -d
+  # Requires D:\Docker\Builds\SegmentationServer\.env (see config-template).
+  segmentation-certbot-renewer:
+    profiles: ["letsencrypt"]
+    container_name: segmentation-certbot-renewer
+    build:
+      context: ./Servers/certbot
+      dockerfile: Dockerfile
+    image: segmentation-certbot-renewer:latest
+    restart: unless-stopped
+    env_file:
+      - ${SEGMENTATION_BUILD_ENV_PATH:-D:/Docker/Builds/SegmentationServer}/.env
+    environment:
+      - CERTBOT_AUTH_METHOD=${CERTBOT_AUTH_METHOD:-dns-cloudflare}
+      - CERTBOT_RESTART_CONTAINER=${CERTBOT_RESTART_CONTAINER:-segmentation-server}
+      - CF_DNS_API_CREDENTIALS_FILE=${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/cloudflare.ini}
+      - CF_DNS_PROPAGATION_SECONDS=${CF_DNS_PROPAGATION_SECONDS:-60}
+    volumes:
+      - segmentation-letsencrypt:/etc/letsencrypt
+      - segmentation-certbot-lib:/var/lib/letsencrypt
+      - segmentation-certbot-logs:/var/log/letsencrypt
+      - type: bind
+        source: ${CF_DNS_API_CREDENTIALS_HOST_PATH:-D:/Docker/Builds/cloudflare.ini}
+        target: /run/secrets/cloudflare.ini
+        read_only: true
+      - type: bind
+        source: ${DOCKER_SOCKET_PATH:-//var/run/docker.sock}
+        target: /var/run/docker.sock
+    entrypoint: ["bash", "/opt/identity-certbot/renew-loop.sh"]
+    networks:
+      - viking-network
+
 networks:
   viking-network:
     driver: bridge
+
+volumes:
+  segmentation-letsencrypt:
+  segmentation-certbot-lib:
+  segmentation-certbot-logs:
+  section-correction-letsencrypt:
+  section-correction-certbot-lib:
+  section-correction-certbot-logs:

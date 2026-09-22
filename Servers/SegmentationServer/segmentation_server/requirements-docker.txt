@@ -1,11 +1,15 @@
 # Docker-specific requirements for segmentation_server
-# This excludes sam2 since it's already installed from GitHub in the Dockerfile.  Greatly speeds up the build process.
+# This excludes sam2 since it's already installed from GitHub in the Dockerfile.
+# Pin torch to the cu132 wheel installed earlier; pip needs the extra index
+# (Dockerfile passes --extra-index-url https://download.pytorch.org/whl/cu132)
+# so this line does not replace it with a PyPI CUDA 12 / CPU build.
 grpcio>=1.71.0
 grpcio-tools>=1.71.0
 protobuf>=5.29.0
 numpy
 pillow
-opencv-python
-torch
+opencv-python-headless
+torch==2.14.0+cu132
 segmentation_grpc
+debugpy
 pydevd-pycharm>=252.27397.106
