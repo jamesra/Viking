@@ -20,7 +20,7 @@ namespace MeasurementExtension
         public static double ScaleBarStartXFraction = 0.01;
         public static double ScaleBarStartYFraction = 0.05;
 
-        public static GridVector2 CornerOffsetFractions = new(0.01, 0.05);
+        public static Geometry.Vector2 CornerOffsetFractions = new(0.01, 0.05);
 
         private static readonly double log5 = Math.Log(5);
 
@@ -58,7 +58,7 @@ namespace MeasurementExtension
 
             double BarHeightInPixels = (VikingXNAGraphics.Global.DefaultFont.LineSpacing * Parent.Downsample) / 3;
 
-            GridVector2 CornerOffset = new(scene.VisibleWorldBounds.Width * CornerOffsetFractions.X, scene.VisibleWorldBounds.Height * CornerOffsetFractions.Y);
+            Geometry.Vector2 CornerOffset = new(scene.VisibleWorldBounds.Width * CornerOffsetFractions.X, scene.VisibleWorldBounds.Height * CornerOffsetFractions.Y);
 
             //double BarStartX = scene.VisibleWorldBounds.Left + CornerOffset.X;
             double BarStartY = scene.VisibleWorldBounds.Bottom + (CornerOffset.Y + (2 * BarHeightInPixels));
@@ -66,7 +66,7 @@ namespace MeasurementExtension
             double BarEndX = scene.VisibleWorldBounds.Right - CornerOffset.X;
             double BarStartX = BarEndX - BarWidthInPixels;
 
-            GridRectangle scaleBarRect = new(new GridVector2(BarStartX, BarStartY), BarWidthInPixels, BarHeightInPixels);
+            Geometry.Rectangle scaleBarRect = new(new Geometry.Vector2(BarStartX, BarStartY), BarWidthInPixels, BarHeightInPixels);
 
             //Draw a black box
             RectangleView scaleBarView = new(scaleBarRect, Microsoft.Xna.Framework.Color.Black);
@@ -87,7 +87,7 @@ namespace MeasurementExtension
 
         public string Name() => "Scale Bar";
 
-        public object? ObjectAtPosition(GridVector2 WorldPosition, out double distance)
+        public object? ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
             return null;

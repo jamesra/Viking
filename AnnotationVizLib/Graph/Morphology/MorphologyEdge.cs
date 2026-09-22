@@ -44,7 +44,7 @@ namespace AnnotationVizLib
             {
                 if (!_DistanceCenterToCenter.HasValue)
                 {
-                    _DistanceCenterToCenter = GridVector3.Distance(Graph.Nodes[this.SourceNodeKey].Center,
+                    _DistanceCenterToCenter = Vector3.Distance(Graph.Nodes[this.SourceNodeKey].Center,
                                                                    Graph.Nodes[this.TargetNodeKey].Center);
                 }
 

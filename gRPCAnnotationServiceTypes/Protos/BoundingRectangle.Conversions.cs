@@ -4,7 +4,7 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
     public partial class BoundingRectangle
     {
-        public static implicit operator BoundingRectangle(global::Geometry.GridRectangle src)
+        public static implicit operator BoundingRectangle(global::Geometry.Rectangle src)
         {
             var value = new BoundingRectangle { 
                 XMin = src.Left,
@@ -16,9 +16,9 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         }
 
 
-        public static implicit operator global::Geometry.GridRectangle(BoundingRectangle src)
+        public static implicit operator global::Geometry.Rectangle(BoundingRectangle src)
         {
-            var value = new global::Geometry.GridRectangle(
+            var value = new global::Geometry.Rectangle(
                 left: src.XMin,
                 right: src.XMax,
                 bottom: src.YMin,

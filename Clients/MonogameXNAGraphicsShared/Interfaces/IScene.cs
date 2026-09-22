@@ -1,4 +1,4 @@
-﻿
+
 /* Unmerged change from project 'Monographics'
 Before:
 using System;
@@ -17,7 +17,9 @@ After:
 using System.Threading.Tasks;
 */
 Geometry;
-using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNA
 {
@@ -42,15 +44,15 @@ namespace VikingXNA
         /// <summary>
         /// The bounds in world coordinates of the viewport
         /// </summary>
-        Geometry.GridRectangle VisibleWorldBounds { get; }
+        Geometry.Rectangle VisibleWorldBounds { get; }
 
-        GridVector2 ScreenToWorld(GridVector2 pos);
+        Geometry.Vector2 ScreenToWorld(Geometry.Vector2 pos);
 
-        GridVector2 ScreenToWorld(double X, double Y);
+        Geometry.Vector2 ScreenToWorld(double X, double Y);
 
-        GridVector2 WorldToScreen(GridVector2 pos);
+        Geometry.Vector2 WorldToScreen(Geometry.Vector2 pos);
 
-        GridVector2 WorldToScreen(double X, double Y);
+        Geometry.Vector2 WorldToScreen(double X, double Y);
     }
 
     interface ICamera

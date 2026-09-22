@@ -86,7 +86,9 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Returns true if a SegmentationService is configured and available with a valid URL format
+        /// Returns true if a SegmentationService is configured and available with a valid URL format.
+        /// Null and whitespace endpoints cache as unavailable so a later Select can clear the cache
+        /// via <see cref="InvalidateSegmentationServiceAvailability"/>.
         /// </summary>
         public static bool IsSegmentationServiceAvailable
         {
@@ -104,20 +106,32 @@ namespace WebAnnotation
                     return false;
                 }
 
-                var serviceUrl = segmentationService.Endpoint();
-                if (serviceUrl is null)
-                    return false;
-
-                // If no scheme is present, prepend http:// for validation (gRPC often uses host:port format)
-                string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
-
-                // Use built-in Uri validation
-                bool isValid = Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
-                               (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
-
-                _isSegmentationServiceAvailable = isValid;
-                return isValid;
+                _isSegmentationServiceAvailable = HasValidSegmentationServiceUrl(segmentationService.Endpoint());
+                return _isSegmentationServiceAvailable.Value;
             }
+        }
+
+        /// <summary>
+        /// Drops the cached availability result so the next read re-evaluates
+        /// <see cref="IGrpcServiceConfiguration.Endpoint"/>. Called after mid-session Select/None.
+        /// </summary>
+        public static void InvalidateSegmentationServiceAvailability()
+        {
+            _isSegmentationServiceAvailable = null;
+        }
+
+        /// <summary>
+        /// True when <paramref name="serviceUrl"/> is a usable http(s) host for gRPC.
+        /// Host:port without a scheme is accepted.
+        /// </summary>
+        internal static bool HasValidSegmentationServiceUrl(string? serviceUrl)
+        {
+            if (string.IsNullOrWhiteSpace(serviceUrl))
+                return false;
+
+            string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
+            return Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
+                   (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
         }
 
         /// <summary>
@@ -640,7 +654,7 @@ namespace WebAnnotation
         /// <summary>
         /// This is hardcoded for now, but should be read from the VikingXML file
         /// </summary>
-        internal static Geometry.GridVector3 Scale;
+        internal static Geometry.Vector3 Scale;
         private static readonly string WebAnnotationPath = Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
 
         /// <summary>
@@ -898,7 +912,7 @@ namespace WebAnnotation
             }
 
             //Section Thickness is hard-coded, should be pulled from server.
-            Scale = new Geometry.GridVector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
+            Scale = new Geometry.Vector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 

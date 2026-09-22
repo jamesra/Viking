@@ -56,15 +56,15 @@ namespace AnnotationVizLib.OData
 
         public LocationType TypeCode => (LocationType)loc.TypeCode;
 
-        GridBox _BoundingBox = default;
-        public GridBox BoundingBox
+        Box _BoundingBox = default;
+        public Box BoundingBox
         {
             get
             {
                 if (_BoundingBox == default)
                 {
-                    GridRectangle bound_rect = Geometry.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
+                    Rectangle bound_rect = Geometry.BoundingBox();
+                    _BoundingBox = new Box(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 
                 return _BoundingBox;

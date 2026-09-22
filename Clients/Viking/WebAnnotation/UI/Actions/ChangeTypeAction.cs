@@ -1,11 +1,13 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using WebAnnotationModel;
+using WebAnnotationModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -20,12 +22,12 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon NewVolumePolygon;
+        public readonly Polygon NewVolumePolygon;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolygon NewSmoothVolumePolygon;
+        public readonly Polygon NewSmoothVolumePolygon;
 
         public LocationAction Type => LocationAction.CHANGETYPE;
 
@@ -42,7 +44,7 @@ namespace WebAnnotation.UI.Actions
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
 
-        public ChangeToPolygonAction(LocationObj location, GridPolygon newVolumePolygon, IVolumeToSectionTransform? transform = null)
+        public ChangeToPolygonAction(LocationObj location, Polygon newVolumePolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
@@ -55,7 +57,7 @@ namespace WebAnnotation.UI.Actions
         public void OnExecute()
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
-            GridPolygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
             Location.TypeCode = LocationType.CURVEPOLYGON;
             Location.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
 
@@ -119,12 +121,12 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolyline NewVolumePolyline;
+        public readonly Polyline NewVolumePolyline;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolyline NewSmoothVolumePolyline;
+        public readonly Polyline NewSmoothVolumePolyline;
 
         public LocationAction Type => LocationAction.CHANGETYPE;
 
@@ -141,7 +143,7 @@ namespace WebAnnotation.UI.Actions
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
 
-        public ChangeToPolylineAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform? transform = null)
+        public ChangeToPolylineAction(LocationObj location, Polyline newVolumePolyline, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
@@ -153,7 +155,7 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
-            GridPolyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.TypeCode = LocationType.POLYLINE;
             Location.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
 

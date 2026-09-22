@@ -10,6 +10,9 @@ using VikingXNAGraphics;
 using WebAnnotation.UI.Commands.Segmentation;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
+
 namespace WebAnnotation.UI.AutoPolygonize
 {
     /// <summary>
@@ -21,9 +24,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         public byte[] MaskData { get; }
         public int Width { get; }
         public int Height { get; }
-        public GridRectangle WorldBounds { get; }
+        public Geometry.Rectangle WorldBounds { get; }
 
-        public AutoPolygonizeMaskOverlay(byte[] maskData, int width, int height, GridRectangle worldBounds)
+        public AutoPolygonizeMaskOverlay(byte[] maskData, int width, int height, Geometry.Rectangle worldBounds)
         {
             MaskData = maskData;
             Width = width;
@@ -47,7 +50,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
                 return null;
 
-            GridRectangle worldBounds = session.GetSegmentWorldBounds(
+            Geometry.Rectangle worldBounds = session.GetSegmentWorldBounds(
                 bestSegment.X,
                 bestSegment.Y,
                 decodedWidth,
@@ -86,14 +89,14 @@ namespace WebAnnotation.UI.AutoPolygonize
             int sectionNumber,
             DateTime lastModified,
             double circleRadius,
-            GridPolygon polygon,
+            Polygon polygon,
             IReadOnlyList<CurveView> ringViews,
             AutoPolygonizeMaskOverlay? maskOverlay = null,
             IReadOnlyList<long>? locationIds = null,
             long? parentId = null,
             int overlapResubmitRound = 0,
-            IReadOnlyList<GridVector2>? foregroundPrompts = null,
-            IReadOnlyList<GridVector2>? backgroundPrompts = null)
+            IReadOnlyList<Geometry.Vector2>? foregroundPrompts = null,
+            IReadOnlyList<Geometry.Vector2>? backgroundPrompts = null)
         {
             this.controller = controller;
             LocationIds = locationIds is { Count: > 0 }
@@ -115,7 +118,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Lowest ID in <see cref="LocationIds"/>; used for color and dictionary lookup.</summary>
         public long LocationId { get; }
 
-        /// <summary>Every circle this overlay stands for after a same-cell overlap resubmit.</summary>
+        /// <summary>Every location this overlay stands for after a same-cell overlap resubmit, including saved sibling polygons.</summary>
         public IReadOnlyList<long> LocationIds { get; }
 
         /// <summary>Structure that owns the circles. Null orphans are never grouped.</summary>
@@ -130,15 +133,29 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         public double CircleRadius { get; }
 
-        public GridPolygon Polygon { get; }
+        public Polygon Polygon { get; private set; }
 
-        public IReadOnlyList<CurveView> RingViews { get; }
+        public IReadOnlyList<CurveView> RingViews { get; private set; }
+
+        /// <summary>
+        /// Rebuilds hollow rings after carving against a newly accepted annotation.
+        /// The SAM2 mask overlay is left alone so debug view still shows the original mask.
+        /// </summary>
+        public void ReplacePolygon(Polygon polygon, double downsample)
+        {
+            Polygon = polygon;
+            RingViews = CreateRingViews(
+                polygon,
+                ColorForLocation(LocationId, isHighlighted),
+                CircleRadius,
+                downsample);
+        }
 
         /// <summary>Volume-space SAM2 label-1 clicks from the SegmentImage that produced this overlay.</summary>
-        public IReadOnlyList<GridVector2> ForegroundPrompts { get; }
+        public IReadOnlyList<Geometry.Vector2> ForegroundPrompts { get; }
 
         /// <summary>Volume-space SAM2 label-0 clicks from the same request. Drawn red in mask-debug mode.</summary>
-        public IReadOnlyList<GridVector2> BackgroundPrompts { get; }
+        public IReadOnlyList<Geometry.Vector2> BackgroundPrompts { get; }
 
         public bool IsHighlighted
         {
@@ -161,7 +178,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             "Double right-click: Dismiss segmentation overlay"
         ];
 
-        public bool HandleMouseDoubleClick(MouseButtons button, GridVector2 worldPosition)
+        public bool HandleMouseDoubleClick(MouseButtons button, Geometry.Vector2 worldPosition)
         {
             if (button == MouseButtons.Left)
             {
@@ -178,7 +195,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             return false;
         }
 
-        public bool TryHit(GridVector2 worldPosition, double worldThreshold, out double distance)
+        public bool TryHit(Geometry.Vector2 worldPosition, double worldThreshold, out double distance)
         {
             distance = AutoPolygonizeSelection.DistanceToAnyRing(Polygon, worldPosition);
             return distance <= worldThreshold;
@@ -225,7 +242,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private static void EnsurePromptView(
             ref PointSetView? view,
-            IReadOnlyList<GridVector2> points,
+            IReadOnlyList<Geometry.Vector2> points,
             Color color,
             double radius)
         {
@@ -304,7 +321,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// and Catmull-Rom display interpolations so the overlay matches a saved CURVEPOLYGON.
         /// </summary>
         public static IReadOnlyList<CurveView> CreateRingViews(
-            GridPolygon polygon,
+            Polygon polygon,
             Color color,
             double circleRadius,
             double downsample)
@@ -316,13 +333,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                 CreateRingView(polygon.ExteriorRing, ringColor, lineWidth)
             ];
 
-            foreach (GridVector2[] hole in polygon.InteriorRings)
+            foreach (Geometry.Vector2[] hole in polygon.InteriorRings)
                 rings.Add(CreateRingView(hole, ringColor, lineWidth));
 
             return rings;
         }
 
-        private static CurveView CreateRingView(ICollection<GridVector2> ring, Color color, double lineWidth) =>
+        private static CurveView CreateRingView(ICollection<Geometry.Vector2> ring, Color color, double lineWidth) =>
             new(
                 ring,
                 color,

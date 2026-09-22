@@ -1754,6 +1754,12 @@ namespace Geometry
             if (anyContained)
                 return ShapeRelation.Intersecting;
 
+            // Axis-aligned rings can overlap in area while every vertex sits on an edge
+            // (no proper crossing). The overlap-box center is then interior to both.
+            // A zero-area shared edge stays Touching.
+            if (OverlapBoxCenterIsInteriorToBoth(overlap.Value, other))
+                return ShapeRelation.Intersecting;
+
             if (anyTouching || boundaryContact)
                 return ShapeRelation.Touching;
 
@@ -1761,6 +1767,21 @@ namespace Geometry
                 return ShapeRelation.Intersecting;
 
             return ShapeRelation.None;
+        }
+
+        /// <summary>
+        /// True when the bbox-overlap center lies in both interiors.
+        /// Used by <see cref="GetRelation(in Polygon)"/> so area overlap is Intersecting even if
+        /// every vertex sits on an edge. A shared edge (zero-area overlap) returns false.
+        /// </summary>
+        private bool OverlapBoxCenterIsInteriorToBoth(in Rectangle overlap, in Polygon other)
+        {
+            if (overlap.Width <= Tolerance.Epsilon || overlap.Height <= Tolerance.Epsilon)
+                return false;
+
+            Vector2 sample = overlap.Center;
+            return GetRelation((IPoint2D)sample) == ShapeRelation.Contained
+                && other.GetRelation((IPoint2D)sample) == ShapeRelation.Contained;
         }
 
         public bool InteriorPolygonContains(in Vector2 p) => InteriorPolygonContains(p, out Polygon intersectedPoly);

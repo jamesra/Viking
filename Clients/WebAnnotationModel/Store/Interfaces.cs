@@ -18,7 +18,7 @@ namespace WebAnnotationModel
         /// <param name="MinRadius"></param>
         /// <param name="LastQueryUtc"></param>
         /// <returns></returns>
-        ICollection<OBJECT> GetLocalObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius);
+        ICollection<OBJECT> GetLocalObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius);
 
         /// <summary>
         /// Return objects from the server
@@ -28,9 +28,9 @@ namespace WebAnnotationModel
         /// <param name="MinRadius"></param>
         /// <param name="LastQueryUtc"></param>
         /// <returns></returns>
-        ICollection<OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc);
+        ICollection<OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc);
 
-        MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<OBJECT>> OnLoadedCallback, CancellationToken token = default);
+        MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<OBJECT>> OnLoadedCallback, CancellationToken token = default);
     }
 
     public interface ISectionQuery<KEY, OBJECT>

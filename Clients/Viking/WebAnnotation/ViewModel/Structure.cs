@@ -144,18 +144,18 @@ namespace WebAnnotation.ViewModel
                     double meanY = (sumY) * Global.Scale.Y;
                     double meanZ = (sumZ) * Global.Scale.Z;
 
-                    Geometry.GridVector3 MeanPosition = new(meanX, meanY, meanZ);
+                    Geometry.Vector3 MeanPosition = new(meanX, meanY, meanZ);
 
                     //Find the location closest to the mean position
                     double minDistance = double.MaxValue;
                     int iClosest = 0;
                     for (int iLoc = 0; iLoc < locations.Length; iLoc++)
                     {
-                        Geometry.GridVector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
+                        Geometry.Vector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
                                                                                     locations[iLoc].VolumePosition.Y * Global.Scale.Y,
                                                                                     locations[iLoc].Z * Global.Scale.Z);
 
-                        double distance = Geometry.GridVector3.Distance(MeanPosition, locPosition);
+                        double distance = Geometry.Vector3.Distance(MeanPosition, locPosition);
                         if (distance < minDistance)
                         {
                             iClosest = iLoc;

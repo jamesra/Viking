@@ -12,6 +12,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 #endregion
 
 
@@ -29,13 +31,13 @@ namespace RoundCurve
     /// </summary>
     public partial class RoundCurve
     {
-        private GridVector2[] _controlPoints;
+        private Geometry.Vector2[] _controlPoints;
         private double[] _tangent_thetas; // Length of the line
         private double[] _distance_to_origin; //Distance of each control point to the origin of the line
         private double[] _distance_to_origin_normalized; //Distance of each control point to the origin of the line
         private readonly bool _Closed;
 
-        public GridVector2[] ControlPoints
+        public Geometry.Vector2[] ControlPoints
         {
             get => _controlPoints;
             set
@@ -54,14 +56,14 @@ namespace RoundCurve
         public double TotalDistance => _distance_to_origin.Last();
 
 
-        public RoundCurve(GridVector2[] ControlPoints, bool Closed)
+        public RoundCurve(Geometry.Vector2[] ControlPoints, bool Closed)
         {
             this._Closed = Closed;
             this.ControlPoints = ControlPoints;
 
         }
 
-        private static double[] CalcLineDistances(GridVector2[] points)
+        private static double[] CalcLineDistances(Geometry.Vector2[] points)
         {
             double total_distance = 0;
             double[] point_distances = new double[points.Length];
@@ -69,7 +71,7 @@ namespace RoundCurve
 
             for (int i = 1; i < points.Length; i++)
             {
-                double step_distance = GridVector2.Distance(points[i], points[i - 1]);
+                double step_distance = Geometry.Vector2.Distance(points[i], points[i - 1]);
                 total_distance += step_distance;
                 point_distances[i] = total_distance;
             }
@@ -80,8 +82,8 @@ namespace RoundCurve
         /// <summary>
         /// Skip-chord atan2 plus unwrap/clamp so adjacent ribbon frames cannot flip.
         /// </summary>
-        private static double[] CalcLineTangents(GridVector2[] points, bool Closed) =>
-            GridVector2.CalculateRibbonTangents(points, Closed);
+        private static double[] CalcLineTangents(Geometry.Vector2[] points, bool Closed) =>
+            Geometry.Vector2.CalculateRibbonTangents(points, Closed);
 
         protected void RecalcDistanceAndTheta()
         {

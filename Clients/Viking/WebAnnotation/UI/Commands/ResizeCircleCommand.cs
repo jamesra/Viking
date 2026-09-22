@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Windows.Forms;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
@@ -9,7 +9,7 @@ namespace WebAnnotation.UI.Commands
     {
         public double Radius;
 
-        public GridVector2 Origin;
+        public Geometry.Vector2 Origin;
         private readonly System.Drawing.Color CircleColor;
 
         public delegate void OnCommandSuccess(double radius);
@@ -18,7 +18,7 @@ namespace WebAnnotation.UI.Commands
 
         public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
-                                     GridVector2 origin,
+                                     Geometry.Vector2 origin,
                                      OnCommandSuccess success_callback)
             : base(parent)
         {
@@ -30,9 +30,9 @@ namespace WebAnnotation.UI.Commands
 
         private void UpdateRadius(MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            Radius = GridVector2.Distance(Origin, WorldPos);
+            Radius = Geometry.Vector2.Distance(Origin, WorldPos);
         }
 
         protected override void OnMouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -79,7 +79,7 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             //            double OldRadius = selected.Radius;
-            GridVector2 Pos = Origin;
+            Geometry.Vector2 Pos = Origin;
 
             Microsoft.Xna.Framework.Color color = CircleColor.ToXNAColor(0.5f);
 

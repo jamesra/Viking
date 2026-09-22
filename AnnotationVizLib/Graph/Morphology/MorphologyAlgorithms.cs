@@ -157,7 +157,7 @@ namespace AnnotationVizLib
             double scale_factor = 2.0;
             while (found_nodes.Count < 8 && found_nodes.Count != rtree.Count)
             {
-                GridBox bbox = shape_to_check.BoundingBox;
+                Box bbox = shape_to_check.BoundingBox;
                 bbox = bbox.Scale(scale_factor);
                 found_nodes = [.. rtree.Intersects(bbox.ToRTreeRect())];
                 scale_factor *= 2.0;
@@ -405,11 +405,11 @@ namespace AnnotationVizLib
             {
                 MorphologyNode[] process_nodes = [.. process.Select(p => graph.Nodes[p])];
 
-                GridVector2[] center_of_mass = [.. process_nodes.Select(n => n.Center.XY())];
+                Vector2[] center_of_mass = [.. process_nodes.Select(n => n.Center.XY())];
 
-                GridVector2[] smoothed_points = Geometry.Smoothing.Gaussian(center_of_mass);
+                Vector2[] smoothed_points = Geometry.Smoothing.Gaussian(center_of_mass);
 
-                GridVector2[] translation_vectors = [.. center_of_mass.Select((c, i) => smoothed_points[i] - c)];
+                Vector2[] translation_vectors = [.. center_of_mass.Select((c, i) => smoothed_points[i] - c)];
 
                 Parallel.For(0, process_nodes.Length, (i) => process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]));
 

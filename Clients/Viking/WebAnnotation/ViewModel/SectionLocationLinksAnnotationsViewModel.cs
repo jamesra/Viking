@@ -124,7 +124,7 @@ namespace WebAnnotation.ViewModel
             });
         }
 
-        public List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition)
+        public List<HitTestResult> GetAnnotationsAtPosition(Vector2 WorldPosition)
         {
             IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(Section.Number));
             IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Contains(WorldPosition));
@@ -148,13 +148,13 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationLinkView> NonOverlappedLinks => KeysToViews(NonOverlappedLinksSearch.Items);
 
-        public ICollection<LocationLinkView> NonOverlappedLinksInRegion(GridRectangle region)
+        public ICollection<LocationLinkView> NonOverlappedLinksInRegion(Rectangle region)
         {
             List<LocationLinkKey> listKeys = NonOverlappedLinksSearch.Intersects(region.ToRTreeRect(Section.Number));
             return KeysToViews(listKeys);
         }
 
-        public ICollection<LocationLinkView> GetLocationLinks(GridVector2 point)
+        public ICollection<LocationLinkView> GetLocationLinks(Vector2 point)
         {
             List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)Section.Number));
             return [.. intersectingIDs.Select(id =>
@@ -169,7 +169,7 @@ namespace WebAnnotation.ViewModel
             ).Where(l => l != null && l.Contains(point))];
         }
 
-        public ICollection<LocationLinkView> GetLocationLinks(GridLineSegment line)
+        public ICollection<LocationLinkView> GetLocationLinks(LineSegment line)
         {
             List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
             return [.. intersectingIDs.Select(id =>
@@ -184,7 +184,7 @@ namespace WebAnnotation.ViewModel
             ).Where(l => l != null && l.Intersects(line))];
         }
 
-        public ICollection<LocationLinkView> GetLocationLinks(GridRectangle rect)
+        public ICollection<LocationLinkView> GetLocationLinks(Rectangle rect)
         {
             List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)Section.Number));
             return [.. intersectingIDs.Select(id =>

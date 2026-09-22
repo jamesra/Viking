@@ -363,7 +363,7 @@ namespace Viking
         /// bounds appear before non-visible items; then by Downsample (highest first);
         /// then by Z distance to current section. Called on main thread by the sort timer.
         /// </summary>
-        public static void SortByVisibility(GridRectangle visibleBounds, int currentSectionZ)
+        public static void SortByVisibility(Geometry.Rectangle visibleBounds, int currentSectionZ)
         {
             _pendingLock.EnterWriteLock();
             try

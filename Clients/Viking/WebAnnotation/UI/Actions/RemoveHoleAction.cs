@@ -1,10 +1,12 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using WebAnnotationModel;
+using WebAnnotationModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -19,12 +21,12 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon UpdatedMosaicPolygon;
+        public readonly Polygon UpdatedMosaicPolygon;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon VolumePolygonToRemove;
+        public readonly Polygon VolumePolygonToRemove;
 
         public LocationAction Type => LocationAction.REMOVEHOLE;
 
@@ -52,7 +54,7 @@ namespace WebAnnotation.UI.Actions
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
-            GridPolygon volumePoly = location.VolumeShape.ToPolygon();
+            Polygon volumePoly = location.VolumeShape.ToPolygon();
             VolumePolygonToRemove = volumePoly.InteriorPolygons[innerPoly];
 
             UpdatedMosaicPolygon = location.MosaicShape.ToPolygon();

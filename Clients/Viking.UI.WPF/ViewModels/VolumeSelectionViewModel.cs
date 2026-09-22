@@ -11,6 +11,7 @@ using System.Windows.Input;
 using Duende.IdentityModel.Client;
 using Viking.Tokens;
 using Viking.UI.WPF.Models;
+using Viking.Common;
 
 namespace Viking.UI.WPF.ViewModels
 {
@@ -289,15 +290,11 @@ namespace Viking.UI.WPF.ViewModels
                     return;
                 }
 
-                // IdentityApiURL uses the same host but port 6001 instead of the Identity Server port
-                var identityApiUri = new UriBuilder(identityUri)
-                {
-                    Port = 6001
-                }.Uri;
+                var identityApiUri = IdentityEndpoints.FromIdentityServer(identityUri);
 
                 // Debug logging
                 Trace.WriteLine($"[VolumeSelection] Identity Server URL: {identityUri}");
-                Trace.WriteLine($"[VolumeSelection] Identity API URL (port 6001): {identityApiUri}");
+                Trace.WriteLine($"[VolumeSelection] Identity API URL: {identityApiUri}");
                 Trace.WriteLine($"[VolumeSelection] Full endpoint will be: {new Uri(identityApiUri, "Permissions/UserAccessibleVolumeTree")}");
 
                 IdentityApiHelper helper = new()

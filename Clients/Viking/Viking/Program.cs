@@ -22,7 +22,6 @@ using Viking.UI.WPF;
 using Viking.Services;
 using Velopack;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 
 namespace Viking
@@ -222,6 +221,17 @@ namespace Viking
             Environment.Exit(0);
         }
 
+        private static string? FirstNonEmpty(params string?[] values)
+        {
+            foreach (string? value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+
+            return null;
+        }
+
         private static ApplicationSettings TryBypassSplash(CommandLineOptions options)
         {
             if (!string.IsNullOrWhiteSpace(options.VolumeURL) &&
@@ -257,15 +267,19 @@ namespace Viking
 
             if (!string.IsNullOrEmpty(link.Code))
             {
+                string? volumeHint = link.VolumeUrl ?? link.VolumeName;
                 string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
                 if (string.IsNullOrEmpty(baseUrl))
                 {
-                    Trace.WriteLine("[Viking] viking://open with code ignored: LaunchExchangeBaseUrl not configured.", "Viking");
-                    return false;
+                    const string reason = "LaunchExchangeBaseUrl not configured.";
+                    Trace.WriteLine("[Viking] viking://open with code ignored: " + reason, "Viking");
+                    appSettings = ShowLoginWindow(volumeHint, null, null, autoAdvanceFromDeepLink: true,
+                        launchStatusMessage: "The launch link could not be used (" + reason + "); please sign in.");
+                    return true;
                 }
 
                 var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
-                LaunchExchangeResult exchanged = ExchangeLaunchCodeAsync(exchangeUrl, link.Code!).GetAwaiter().GetResult();
+                VikingLaunchExchangeResult exchanged = ExchangeLaunchCodeAsync(exchangeUrl, link.Code!).GetAwaiter().GetResult();
                 MergeExchangeIntoLink(link, exchanged);
                 ApplyStartupPlaceArguments(link);
 
@@ -278,8 +292,10 @@ namespace Viking
 
                 if (string.IsNullOrEmpty(exchanged.AccessToken))
                 {
-                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
-                    appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName, null, null);
+                    var detail = exchanged.Error ?? "no token returned";
+                    Trace.WriteLine("[Viking] Launch code exchange failed: " + detail, "Viking");
+                    appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName ?? volumeHint, null, null, autoAdvanceFromDeepLink: true,
+                        launchStatusMessage: "The launch link could not be used (" + detail + "); please sign in.");
                     return true;
                 }
 
@@ -296,7 +312,7 @@ namespace Viking
 
             if (!string.IsNullOrEmpty(link.VolumeUrl) || !string.IsNullOrEmpty(link.VolumeName))
             {
-                appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName, null, null);
+                appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName, null, null, autoAdvanceFromDeepLink: true);
                 return true;
             }
 
@@ -313,7 +329,7 @@ namespace Viking
             UI.State.StartupArguments = link.Place ?? [];
         }
 
-        private static void MergeExchangeIntoLink(VikingDeepLink link, LaunchExchangeResult exchanged)
+        private static void MergeExchangeIntoLink(VikingDeepLink link, VikingLaunchExchangeResult exchanged)
         {
             if (!string.IsNullOrWhiteSpace(exchanged.VolumeUrl))
                 link.VolumeUrl = exchanged.VolumeUrl.Trim();
@@ -336,20 +352,7 @@ namespace Viking
                 VikingDeepLinkParser.MergePlace(link.Place, VikingDeepLinkParser.ParsePlaceArguments(fromExchange));
         }
 
-        private struct LaunchExchangeResult
-        {
-            public string? AccessToken;
-            public string? IdentityServerUrl;
-            public string? VolumeUrl;
-            public string? VolumeName;
-            public string? Location;
-            public string? X;
-            public string? Y;
-            public string? Z;
-            public string? Downsample;
-        }
-
-        private static async Task<LaunchExchangeResult> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        private static async Task<VikingLaunchExchangeResult> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
         {
             try
             {
@@ -362,41 +365,17 @@ namespace Viking
                 if (!response.IsSuccessStatusCode)
                 {
                     Trace.WriteLine($"[Viking] Launch code exchange HTTP {(int)response.StatusCode}.", "Viking");
-                    return default;
+                    return VikingLaunchExchangeParser.Failed($"exchange failed ({(int)response.StatusCode})");
                 }
+
                 var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var obj = JsonConvert.DeserializeObject<JObject>(responseJson);
-                if (obj == null)
-                    return default;
-                return new LaunchExchangeResult
-                {
-                    AccessToken = FirstJsonString(obj, "access_token"),
-                    IdentityServerUrl = FirstJsonString(obj, "identity_server_url"),
-                    VolumeUrl = FirstJsonString(obj, "volume_url"),
-                    VolumeName = FirstJsonString(obj, "volume_name"),
-                    Location = FirstJsonString(obj, "location", "location_id"),
-                    X = FirstJsonString(obj, "x"),
-                    Y = FirstJsonString(obj, "y"),
-                    Z = FirstJsonString(obj, "z"),
-                    Downsample = FirstJsonString(obj, "ds", "downsample")
-                };
+                return VikingLaunchExchangeParser.ParseJson(responseJson);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
-                return default;
+                return VikingLaunchExchangeParser.Failed(ex.Message);
             }
-        }
-
-        private static string? FirstJsonString(JObject obj, params string[] names)
-        {
-            foreach (string name in names)
-            {
-                string? value = obj[name]?.ToString();
-                if (!string.IsNullOrWhiteSpace(value))
-                    return value;
-            }
-            return null;
         }
 
         private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)
@@ -406,6 +385,7 @@ namespace Viking
             wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(initialVolumeUrl) ? null : initialVolumeUrl;
             wpfLoginWindow.InitialVolumeName = string.IsNullOrWhiteSpace(initialVolumeName) ? null : initialVolumeName;
+            wpfLoginWindow.AutoAdvanceFromDeepLink = true;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
@@ -428,12 +408,19 @@ namespace Viking
             }
         }
 
-        private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
+        private static ApplicationSettings? ShowLoginWindow(
+            string? volumePath,
+            string? username = null,
+            string? password = null,
+            bool autoAdvanceFromDeepLink = false,
+            string? launchStatusMessage = null)
         {
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? null : volumePath;
             wpfLoginWindow.InitialUsername = username;
             wpfLoginWindow.InitialPassword = password;
+            wpfLoginWindow.AutoAdvanceFromDeepLink = autoAdvanceFromDeepLink && !string.IsNullOrWhiteSpace(volumePath);
+            wpfLoginWindow.LaunchStatusMessage = launchStatusMessage;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
@@ -473,12 +460,31 @@ namespace Viking
             if (wpfLoginWindow.BearerToken != null)
             {
                 Viking.Tokens.TokenInjector.BearerToken = wpfLoginWindow.BearerToken;
-                // Set authority so TokenInjector adds Bearer token to WCF calls (required for AnnotationService with anonymous/logged-in users).
-                var identityServerUrl = settings.IdentityServerURL ?? wpfLoginWindow.IdentityServerUrl;
+                // Prefer the URL from this login (launch-exchange) over a blank user setting.
+                // Empty IdentityServerURL in settings must not block Authority (?? only skips null).
+                var identityServerUrl = FirstNonEmpty(
+                    wpfLoginWindow.IdentityServerUrl,
+                    settings.IdentityServerURL);
                 if (!string.IsNullOrEmpty(identityServerUrl))
                 {
                     Viking.Tokens.TokenInjector.BearerTokenAuthority = identityServerUrl;
                 }
+
+                if (string.IsNullOrEmpty(wpfLoginWindow.BearerToken.AccessToken))
+                {
+                    Trace.WriteLine("[Viking] Login finished but BearerToken.AccessToken is empty; annotation service will deny access.", "Viking");
+                    System.Windows.Forms.MessageBox.Show(
+                        "Sign-in completed, but the access token could not be read. Annotation loading will fail.\n\n" +
+                        "Try signing in again with your username and password, or update Viking.",
+                        "Viking",
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Error);
+                    return null;
+                }
+            }
+            else
+            {
+                Trace.WriteLine("[Viking] Login finished with no BearerToken; annotation calls may be denied.", "Viking");
             }
 
             bool settingsChanged = false;
@@ -550,6 +556,35 @@ namespace Viking
             {
                 settings.Save();
             }
+
+            UI.State.IdentityServerUrl = FirstNonEmpty(
+                wpfLoginWindow.IdentityServerUrl,
+                settings.IdentityServerURL);
+
+            UI.State.RecentSegmentationServiceUrls = [];
+            if (settings.SegmentationServiceUrls != null)
+            {
+                foreach (string url in settings.SegmentationServiceUrls)
+                {
+                    if (!string.IsNullOrWhiteSpace(url))
+                        UI.State.RecentSegmentationServiceUrls.Add(url);
+                }
+            }
+
+            UI.State.PersistSegmentationServiceSelection = endpoint =>
+            {
+                settings.LastSegmentationServiceUrl = endpoint ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    var history = settings.SegmentationServiceUrls ?? [];
+                    if (history.Contains(endpoint))
+                        history.Remove(endpoint);
+                    history.Insert(0, endpoint);
+                    settings.SegmentationServiceUrls = history;
+                }
+
+                settings.Save();
+            };
 
             return appSettings;
         }

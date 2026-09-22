@@ -319,16 +319,15 @@ namespace Viking.UI.WPF.ViewModels
                 BearerTokenHelper tokenHelper = new()
                 {
                     IdentityServerURL = identityUri,
-                    //ClientId = "Viking",
-                    ClientId = "api",
-                    ClientSecret = "Correct Horse Battery Staple" // Default secret, should be configured
+                    ClientId = "Viking",
+                    ClientSecret = IdentityAppSettings.ClientSecret
                 };
 
                 var tokenResponse = await tokenHelper.RetrieveBearerToken(Username, Password);
 
                 if (tokenResponse.IsError)
                 {
-                    StatusMessage = $"Login failed: {tokenResponse.Error}";
+                    StatusMessage = "Login failed: " + TokenErrorHelper.ToUserMessage(tokenResponse);
                     return;
                 }
 
@@ -350,7 +349,7 @@ namespace Viking.UI.WPF.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = $"Error: {TokenErrorHelper.ToExceptionMessage(ex)}";
                 System.Diagnostics.Trace.WriteLine($"Login error: {ex}");
             }
             finally
@@ -377,15 +376,15 @@ namespace Viking.UI.WPF.ViewModels
                 BearerTokenHelper tokenHelper = new()
                 {
                     IdentityServerURL = identityUri,
-                    ClientId = "api",
-                    ClientSecret = "Correct Horse Battery Staple"
+                    ClientId = "Viking",
+                    ClientSecret = IdentityAppSettings.ClientSecret
                 };
 
                 var tokenResponse = await tokenHelper.RetrieveBearerToken("anonymous", anonymousPassword);
 
                 if (tokenResponse is null || tokenResponse.IsError)
                 {
-                    StatusMessage = tokenResponse != null ? $"Anonymous login failed: {tokenResponse.Error}" : "Anonymous login failed.";
+                    StatusMessage = tokenResponse != null ? "Anonymous login failed: " + TokenErrorHelper.ToUserMessage(tokenResponse) : "Anonymous login failed.";
                     return;
                 }
 
@@ -403,7 +402,7 @@ namespace Viking.UI.WPF.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = $"Error: {TokenErrorHelper.ToExceptionMessage(ex)}";
                 System.Diagnostics.Trace.WriteLine($"Anonymous login error: {ex}");
             }
             finally

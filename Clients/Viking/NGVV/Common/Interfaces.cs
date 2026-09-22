@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -36,7 +36,7 @@ namespace Viking.Common
         /// <param name="WorldPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        object ObjectAtPosition(GridVector2 WorldPosition, out double distance);
+        object ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance);
 
         /// <summary>
         /// Draw the specified overlay extension on the render target.  
@@ -55,6 +55,6 @@ namespace Viking.Common
     /// </summary>
     public interface IHandleMouseDoubleClick
     {
-        bool HandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, GridVector2 worldPosition);
+        bool HandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, Geometry.Vector2 worldPosition);
     }
 }

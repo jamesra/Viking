@@ -18,11 +18,11 @@ namespace WebAnnotation.View
     /// <param name="innerPoly"></param>
     /// <param name="volumePolygon">The interior polygon</param>
     /// <param name="smoothVolumePolygon">The smoothed interior polygon</param>
-    internal class LocationInteriorHoleView(long LocationID, int innerPoly, GridPolygon volumePolygon, GridPolygon smoothVolumePolygon) : ICanvasGeometryView, Viking.Common.IHelpStrings, Viking.Common.IContextMenu,
+    internal class LocationInteriorHoleView(long LocationID, int innerPoly, Polygon volumePolygon, Polygon smoothVolumePolygon) : ICanvasGeometryView, Viking.Common.IHelpStrings, Viking.Common.IContextMenu,
                                        IMouseActionSupport, IPenActionSupport
     {
-        private readonly GridPolygon VolumePolygon = volumePolygon;
-        private readonly GridPolygon SmoothedVolumePolygon = smoothVolumePolygon;
+        private readonly Polygon VolumePolygon = volumePolygon;
+        private readonly Polygon SmoothedVolumePolygon = smoothVolumePolygon;
         private readonly SqlGeometry VolumeShapeAsRendered = smoothVolumePolygon.ToSqlGeometry();
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace WebAnnotation.View
 
         public int VisualHeight => 0;
 
-        public GridRectangle BoundingBox => SmoothedVolumePolygon.BoundingBox;
+        public Rectangle BoundingBox => SmoothedVolumePolygon.BoundingBox;
 
         public string[] HelpStrings
         {
@@ -78,19 +78,19 @@ namespace WebAnnotation.View
                 return menu;
             }
         }
-        public bool Contains(GridVector2 Position) => SmoothedVolumePolygon.Contains(Position);
+        public bool Contains(Vector2 Position) => SmoothedVolumePolygon.Covers(Position);
 
         public double Distance(SqlGeometry Shape) => VolumeShapeAsRendered.STDistance(Shape).Value;
 
-        public double Distance(GridVector2 Position) => SmoothedVolumePolygon.Distance(Position);
+        public double Distance(Vector2 Position) => SmoothedVolumePolygon.Distance(Position);
 
-        public double DistanceFromCenterNormalized(GridVector2 Position) => SmoothedVolumePolygon.Distance(Position);
+        public double DistanceFromCenterNormalized(Vector2 Position) => SmoothedVolumePolygon.Distance(Position);
 
-        public bool Intersects(GridLineSegment line) => SmoothedVolumePolygon.Intersects(line);
+        public bool Intersects(LineSegment line) => SmoothedVolumePolygon.Intersects(line);
 
         public bool IsVisible(Scene scene) => true;
 
-        public LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
+        public LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -102,7 +102,7 @@ namespace WebAnnotation.View
             return LocationAction.NONE;
         }
 
-        public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
+        public LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 

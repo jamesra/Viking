@@ -6,16 +6,18 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
-using VikingXNA;
+using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
     public abstract class PointViewBase : IColorView, IRenderable
     {
-        private ICollection<GridVector2> _Points = [];
+        private ICollection<Geometry.Vector2> _Points = [];
         private Color _Color;
 
-        public ICollection<GridVector2> Points
+        public ICollection<Geometry.Vector2> Points
         {
             get => _Points;
             set

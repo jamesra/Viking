@@ -149,6 +149,18 @@ namespace GeometryTests
         }
 
         [TestMethod]
+        public void PolygonGetRelation_PartialOverlapWithVerticesOnEdgesIsIntersecting()
+        {
+            Polygon left = RectanglePolygon(new Rectangle(0, 10, 0, 10));
+            Polygon right = RectanglePolygon(new Rectangle(8, 18, 0, 10));
+
+            Assert.AreEqual(ShapeRelation.Intersecting, left.GetRelation(right));
+            Assert.AreEqual(ShapeRelation.Intersecting, right.GetRelation(left));
+            Assert.IsTrue(left.Intersects(right));
+            Assert.IsTrue(right.Intersects(left));
+        }
+
+        [TestMethod]
         public void GridVector2_GetHashCode_DistinguishesDistinctPoints()
         {
             Vector2 a = new(1, 2);

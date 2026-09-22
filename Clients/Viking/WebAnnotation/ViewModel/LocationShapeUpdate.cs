@@ -20,7 +20,7 @@ namespace WebAnnotation.ViewModel
         /// Writes <paramref name="volumePolygon"/> through the section-to-volume transform and saves.
         /// </summary>
         /// <returns>False when the location, polygon, or section is missing, or save throws.</returns>
-        public static bool ApplyVolumePolygon(LocationObj modelObj, GridPolygon volumePolygon, SectionViewerControl parent)
+        public static bool ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, SectionViewerControl parent)
         {
             if (modelObj is null || volumePolygon is null || parent?.Section is null)
                 return false;

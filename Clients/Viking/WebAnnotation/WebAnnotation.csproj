@@ -114,6 +114,7 @@
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationWPFControls\WebAnnotationWPFControls.csproj" />
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
+		<ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
 		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
 	</ItemGroup>
 	<ItemGroup>

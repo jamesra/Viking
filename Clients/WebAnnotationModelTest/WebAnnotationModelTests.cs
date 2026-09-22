@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using Duende.IdentityModel.Client;
 using Microsoft.SqlServer.Types;
@@ -327,8 +327,8 @@ namespace WebAnnotationModelTest
             Store.Locations.Save();
 
             Assert.AreEqual(obj.DBAction, AnnotationService.Types.DBACTION.NONE);
-            Geometry.GridVector2 oldPosition = obj.VolumePosition; 
-            Geometry.GridVector2 newPosition = new Geometry.GridVector2(1,1);
+            Geometry.Vector2 oldPosition = obj.VolumePosition; 
+            Geometry.Vector2 newPosition = new Geometry.Vector2(1,1);
              
             //obj.VolumeShape = newPosition;
             //LocationEventLog.PopObjectPropertyChangingEvent(obj, "VolumePosition");            

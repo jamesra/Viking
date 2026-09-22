@@ -9,7 +9,9 @@ using Viking.Common;
 using Viking.UI;
 using Viking.UI.Controls;
 using VikingXNA;
-using VikingXNAGraphics;
+using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace LocalBookmarks
 {
@@ -66,7 +68,7 @@ namespace LocalBookmarks
                 Global.SelectedFolder = Global.FolderUIObjRoot;
         }
 
-        object ISectionOverlayExtension.ObjectAtPosition(GridVector2 WorldPosition, out double distance)
+        object ISectionOverlayExtension.ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
             if (!Global.BookmarksVisible || !Global.HasDocuments)
@@ -90,14 +92,14 @@ namespace LocalBookmarks
             return nearest;
         }
 
-        BookmarkUIObj RecursiveFindBookmarks(FolderUIObj parentFolder, GridVector2 position, ref double nearestDistance)
+        BookmarkUIObj RecursiveFindBookmarks(FolderUIObj parentFolder, Geometry.Vector2 position, ref double nearestDistance)
         {
             BookmarkUIObj nearestBookmark = null;
             foreach (BookmarkUIObj bookmark in parentFolder.Bookmarks)
             {
                 if (State.ViewerControl.Section.Number == bookmark.Z)
                 {
-                    double bookmarkDistance = GridVector2.Distance(position, bookmark.GridPosition);
+                    double bookmarkDistance = Geometry.Vector2.Distance(position, bookmark.GridPosition);
                     if (bookmarkDistance < nearestDistance && bookmarkDistance < Global.DefaultBookmarkRadius)
                     {
                         nearestDistance = bookmarkDistance;

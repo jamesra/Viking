@@ -8,21 +8,21 @@ namespace Viking.UI.Commands
 {
     public class ROIRectCommand(Viking.UI.Controls.SectionViewerControl ctrl) : Command(ctrl)
     {
-        GridRectangle rectangle;
+        Geometry.Rectangle rectangle;
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             base.OnMouseMove(sender, e);
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Check if we should start a rectangle
             if (e.Button.Left() && !oldMouse.Button.Left())
             {
-                this.rectangle = new GridRectangle(WorldPosition, 0, 0);
+                this.rectangle = new Geometry.Rectangle(WorldPosition, 0, 0);
             }
             else if (e.Button.Left())
             {
-                this.rectangle = GridRectangle.Union(this.rectangle, WorldPosition);
+                this.rectangle = Geometry.Rectangle.Union(this.rectangle, WorldPosition);
             }
             //If the mouse was released we stop drawing rectangle
             else if (!e.Button.Left() && oldMouse.Button.Left())

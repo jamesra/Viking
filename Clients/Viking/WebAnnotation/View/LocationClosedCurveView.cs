@@ -10,7 +10,10 @@ using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -48,7 +51,10 @@ namespace WebAnnotation.View
 
         public double lineWidth = 32;
 
-        public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
+        /// <summary>
+        /// Interpolation count for new closed-curve views. Read when a view is constructed so loading the type does not touch volume settings.
+        /// </summary>
+        public static uint NumInterpolationPoints => Global.NumClosedCurveInterpolationPoints;
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
@@ -59,8 +65,8 @@ namespace WebAnnotation.View
             CreateLabelObjects();
         }
 
-        private GridCircle? _InscribedCircle;
-        protected GridCircle InscribedCircle
+        private Circle? _InscribedCircle;
+        protected Circle InscribedCircle
         {
             get
             {
@@ -77,8 +83,8 @@ namespace WebAnnotation.View
 
         public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
-        private GridVector2[] _MosaicCurveControlPoints;
-        public override GridVector2[] MosaicCurveControlPoints
+        private Geometry.Vector2[] _MosaicCurveControlPoints;
+        public override Geometry.Vector2[] MosaicCurveControlPoints
         {
             get
             {
@@ -88,8 +94,8 @@ namespace WebAnnotation.View
             }
         }
 
-        private GridVector2[] _VolumeCurveControlPoints;
-        public override GridVector2[] VolumeCurveControlPoints
+        private Geometry.Vector2[] _VolumeCurveControlPoints;
+        public override Geometry.Vector2[] VolumeCurveControlPoints
         {
             get
             {
@@ -113,14 +119,14 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary>
-        private GridRectangle? _BoundingBox;
-        public override GridRectangle BoundingBox
+        private Geometry.Rectangle? _BoundingBox;
+        public override Geometry.Rectangle BoundingBox
         {
             get
             {
                 if (!_BoundingBox.HasValue)
                 {
-                    _BoundingBox = GridRectangle.Pad(VolumeCurveControlPoints.BoundingBox(), lineWidth / 2.0);
+                    _BoundingBox = Geometry.Rectangle.Pad(VolumeCurveControlPoints.BoundingBox(), lineWidth / 2.0);
                 }
 
                 return _BoundingBox.Value;
@@ -146,9 +152,9 @@ namespace WebAnnotation.View
             CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, [.. listToDraw.Select(l => l.curveView)]);
         }
 
-        public override bool Contains(GridVector2 Position)
+        public override bool Contains(Geometry.Vector2 Position)
         {
-            if (VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Covers(Position)))
             {
                 return true;
             }
@@ -161,9 +167,9 @@ namespace WebAnnotation.View
             return base.Contains(Position);
         }
 
-        public override bool Intersects(GridLineSegment line)
+        public override bool Intersects(LineSegment line)
         {
-            if (VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Intersects(line)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Intersects(line)))
             {
                 return true;
             }
@@ -182,7 +188,7 @@ namespace WebAnnotation.View
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
             if (OverlappedLinkView != null)
             {
@@ -232,12 +238,30 @@ namespace WebAnnotation.View
             }
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new NotImplementedException();
-
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        /// <summary>
+        /// Unmodified contact returns <see cref="LocationAction.NONE"/> so pen free-draw starts.
+        /// Shift over the inner half of the inscribed circle still translates, matching the mouse path.
+        /// Called from <see cref="LocationActionDispatch"/> and the pen cursor.
+        /// </summary>
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            GridCircle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
-            if (TranslateTargetCircle.Contains(WorldPosition))
+            LocationID = ID;
+            if (ModifierKeys.ShiftPressed())
+            {
+                Circle translateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+                if (translateTargetCircle.Covers(WorldPosition))
+                {
+                    return LocationAction.TRANSLATE;
+                }
+            }
+
+            return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+            if (TranslateTargetCircle.Covers(WorldPosition))
             {
                 LocationID = ID;
                 return LocationAction.TRANSLATE;
@@ -267,6 +291,32 @@ namespace WebAnnotation.View
             }
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();
+        /// <summary>
+        /// Offers contour replace and links when a pen stroke ends on this curve, the same family as open curves and polygons.
+        /// A stroke with no loop and no border crossings only checks links and does not rebuild the rendered polygon.
+        /// Called by the pen free-draw command when the path completes.
+        /// </summary>
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            List<IAction> listActions = [];
+            if (path is null || interaction_log is null)
+            {
+                return listActions;
+            }
+
+            bool borderCrossings = interaction_log.Any(entry =>
+                entry.Annotation == this &&
+                (entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT));
+
+            if (path.HasSelfIntersection || borderCrossings)
+            {
+                Polygon smoothed = VolumeShapeAsRendered.ToPolygon();
+                listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(
+                    this, smoothed, path, interaction_log, VisibleSectionNumber));
+            }
+
+            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(ID));
+            return listActions;
+        }
     }
 }

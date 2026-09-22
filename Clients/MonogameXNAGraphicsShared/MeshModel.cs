@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading.Tasks;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -158,9 +160,9 @@ namespace VikingXNAGraphics
             }
         }
 
-        public GridVector3 Position
+        public Geometry.Vector3 Position
         {
-            get => _modelMatrix.Translation.ToGridVector3();
+            get => _modelMatrix.Translation.ToVector3();
 
             set => _modelMatrix.Translation = value.ToXNAVector3();
         }

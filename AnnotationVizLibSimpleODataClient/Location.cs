@@ -110,8 +110,8 @@ namespace AnnotationVizLib.SimpleOData
             internal set => _TypeCode = value;
         }
 
-        GridBox _BoundingBox = default;
-        public GridBox BoundingBox
+        Box _BoundingBox = default;
+        public Box BoundingBox
         {
             get
             {
@@ -121,8 +121,8 @@ namespace AnnotationVizLib.SimpleOData
 
                 if (_BoundingBox == default)
                 {
-                    GridRectangle bound_rect = VolumeShape.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value / 2.0));
+                    Rectangle bound_rect = VolumeShape.BoundingBox();
+                    _BoundingBox = new Box(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value / 2.0));
                 }
 
                 return _BoundingBox;

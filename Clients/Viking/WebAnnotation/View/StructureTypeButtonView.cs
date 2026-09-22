@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using VikingXNAGraphics;
 using WebAnnotationModel;
 
@@ -13,7 +13,7 @@ namespace WebAnnotation.View
         private VikingXNAGraphics.RectangleView? BackgroundBox = null;
         private VikingXNAGraphics.LabelView? Label = null;
 
-        public GridVector2 Position
+        public Vector2 Position
         {
             get => ((IViewPosition2D)Label).Position;
             set
@@ -23,7 +23,7 @@ namespace WebAnnotation.View
             }
         }
 
-        private void CreateVisuals(GridVector2 position)
+        private void CreateVisuals(Vector2 position)
         {
             Label = new LabelView(model.Name, position);
             BackgroundBox = new RectangleView(Label.BoundingRect, model.Color.ToXNAColor());

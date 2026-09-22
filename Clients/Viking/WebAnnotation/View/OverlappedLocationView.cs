@@ -23,7 +23,7 @@ namespace WebAnnotation.View
 
         public override SqlGeometry VolumeShapeAsRendered => Circle.ToSqlGeometry(Z);
 
-        public GridCircle Circle
+        public Circle Circle
         {
             get => circleView.Circle;
             set => circleView.Circle = value;
@@ -32,13 +32,13 @@ namespace WebAnnotation.View
         public double Radius
         {
             get => Circle.Radius;
-            set => circleView.Circle = new GridCircle(Circle.Center, value);
+            set => circleView.Circle = new Circle(Circle.Center, value);
         }
 
-        public GridVector2 Position
+        public Geometry.Vector2 Position
         {
             get => Circle.Center;
-            set => circleView.Circle = new GridCircle(value, Circle.Radius);
+            set => circleView.Circle = new Circle(value, Circle.Radius);
         }
 
         private readonly ICollection<long> _OverlappedLinks = [];
@@ -49,7 +49,7 @@ namespace WebAnnotation.View
             set => throw new NotImplementedException();
         }
 
-        public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
+        public OverlappedLocationView(LocationObj obj, Circle gridCircle, bool Up) : base(obj)
         {
             Microsoft.Xna.Framework.Color typeColor = obj.Parent is null
                 ? Microsoft.Xna.Framework.Color.Gray
@@ -74,20 +74,20 @@ namespace WebAnnotation.View
 
         public bool IsLabelVisible(VikingXNA.Scene scene) => label.IsVisible(scene);
 
-        public override bool Contains(GridVector2 Position) => Circle.Contains(Position);
+        public override bool Contains(Geometry.Vector2 Position) => Circle.Covers(Position);
 
-        public override bool Intersects(GridLineSegment line) => Circle.Intersects(line);
+        public override bool Intersects(LineSegment line) => Circle.Intersects(line);
 
         public override bool Intersects(SqlGeometry shape) => throw new NotImplementedException();
 
-        public override double Distance(GridVector2 Position)
+        public override double Distance(Geometry.Vector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, Circle.Center) - Radius;
+            double Distance = Geometry.Vector2.Distance(Position, Circle.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
             return Distance;
         }
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position) => GridVector2.Distance(Position, Circle.Center) / Radius;
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position) => Geometry.Vector2.Distance(Position, Circle.Center) / Radius;
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -109,7 +109,7 @@ namespace WebAnnotation.View
             label.Draw(spriteBatch, font, scene);
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -121,14 +121,17 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
             return LocationAction.NONE;
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//return LocationAction.CREATELINKEDLOCATION;
+        /// <summary>
+        /// Overlapped locations have no stroke-completion edits. Returns an empty list so path completion does not throw.
+        /// </summary>
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
 
         public override string[] HelpStrings => [
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
@@ -136,7 +139,7 @@ namespace WebAnnotation.View
 
         public new ContextMenuStrip ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
 
-        public override GridRectangle BoundingBox => Circle.BoundingBox;
+        public override Geometry.Rectangle BoundingBox => Circle.BoundingBox;
 
         public Microsoft.Xna.Framework.Color Color
         {

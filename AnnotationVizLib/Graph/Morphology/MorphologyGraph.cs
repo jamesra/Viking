@@ -140,8 +140,8 @@ namespace AnnotationVizLib
             }
         }
 
-        private GridBox _BoundingBox = default;
-        public Geometry.GridBox BoundingBox
+        private Box _BoundingBox = default;
+        public Geometry.Box BoundingBox
         {
             get
             {
@@ -151,20 +151,20 @@ namespace AnnotationVizLib
                     if (this.Nodes.Count > 0)
                     {
                         //Don't bother using parrallelism for small graphs
-                        IEnumerable<GridBox> boxes = this.Nodes.Count > ParallelThreshold
+                        IEnumerable<Box> boxes = this.Nodes.Count > ParallelThreshold
                             ? this.Nodes.Values.Select(n => n.BoundingBox).AsParallel()
                             : this.Nodes.Values.Select(n => n.BoundingBox);
-                        _BoundingBox = boxes.Aggregate((a, b) => GridBox.Union(a, b));
+                        _BoundingBox = boxes.Aggregate((a, b) => Box.Union(a, b));
                     }
 
                     if (!Subgraphs.IsEmpty)
                     {
-                        IEnumerable<GridBox> subgraphBoxes = this.Subgraphs.Count > ParallelThreshold
+                        IEnumerable<Box> subgraphBoxes = this.Subgraphs.Count > ParallelThreshold
                             ? Subgraphs.Values.Select(sg => sg.BoundingBox).AsParallel()
                             : Subgraphs.Values.Select(sg => sg.BoundingBox);
-                        GridBox subgraph_bbox = subgraphBoxes.Aggregate((a, b) => GridBox.Union(a, b));
+                        Box subgraph_bbox = subgraphBoxes.Aggregate((a, b) => Box.Union(a, b));
 
-                        _BoundingBox = _BoundingBox != default ? GridBox.Union(_BoundingBox, subgraph_bbox) : subgraph_bbox;
+                        _BoundingBox = _BoundingBox != default ? Box.Union(_BoundingBox, subgraph_bbox) : subgraph_bbox;
                     }
                 }
 

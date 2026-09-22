@@ -8,7 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Viking;
 using Viking.UI;
-using Viking.VolumeModel;
+using Viking.VolumeModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.ViewModels
 {
@@ -47,7 +49,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// World-space bounds of the tile (from the underlying TileViewModel).
         /// </summary>
-        public GridRectangle Bounds => _tileViewModel.Bounds;
+        public Geometry.Rectangle Bounds => _tileViewModel.Bounds;
 
         /// <summary>
         /// Section number (Z) of the tile (from the underlying TileViewModel.UniqueKey).
@@ -243,9 +245,9 @@ namespace Viking.ViewModels
 
             for (int i = 0; i < Verticies.Length; i++)
             {
-                GridVector3 pos = Verticies[i].Position;
-                GridVector3 norm = Verticies[i].Normal;
-                GridVector2 tex = Verticies[i].Texture;
+                Geometry.Vector3 pos = Verticies[i].Position;
+                Geometry.Vector3 norm = Verticies[i].Normal;
+                Geometry.Vector2 tex = Verticies[i].Texture;
 
                 vertArray[i] = new VertexPositionNormalTexture(new Vector3((float)pos.X, (float)pos.Y, (float)pos.Z),
                                                                 new Vector3((float)norm.X, (float)norm.Y, (float)norm.Z),
@@ -619,7 +621,7 @@ namespace Viking.ViewModels
 
             for (int i = 0; i < this.Tile.Verticies.Length; i++)
             {
-                GridVector2 ControlPositionScreen = _Parent.WorldToScreen(this.Tile.Verticies[i].Position.X, this.Tile.Verticies[i].Position.Y); 
+                Geometry.Vector2 ControlPositionScreen = _Parent.WorldToScreen(this.Tile.Verticies[i].Position.X, this.Tile.Verticies[i].Position.Y); 
 
                 Offset = _Parent.GetLabelSize(_Parent.fontArial, i.ToString());
                 Offset.X /= 2f;
@@ -640,7 +642,7 @@ namespace Viking.ViewModels
             {
                 double TileNameX = this.Tile.Bounds.Left + (this.Tile.Bounds.Width / 2);
                 double TileNameY = this.Tile.Bounds.Bottom + (this.Tile.Bounds.Height / 2);
-                GridVector2 NamePositionScreen = _Parent.WorldToScreen(TileNameX, TileNameY);
+                Geometry.Vector2 NamePositionScreen = _Parent.WorldToScreen(TileNameX, TileNameY);
                 Offset = _Parent.GetLabelSize(_Parent.fontArial, this.Tile.TextureFullPath);
                 Offset.X /= 2f;
                 Offset.Y /= 2f;

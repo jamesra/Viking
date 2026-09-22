@@ -629,7 +629,7 @@ namespace WebAnnotationModel
             return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects.Values);
         }
 
-        private RTree.Rectangle BuildRTreeRectangle(long SectionNumber, Geometry.GridRectangle bounds) => new RTree.Rectangle(bounds.Left, bounds.Bottom, bounds.Right, bounds.Top, SectionNumber, SectionNumber);
+        private RTree.Rectangle BuildRTreeRectangle(long SectionNumber, Geometry.Rectangle bounds) => new RTree.Rectangle(bounds.Left, bounds.Bottom, bounds.Right, bounds.Top, SectionNumber, SectionNumber);
 
 
 

@@ -13,7 +13,7 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// </summary>
     internal readonly struct AutoPolygonizeUploadContext
     {
-        public AutoPolygonizeUploadContext(ulong imageId, double downsample, GridRectangle worldBounds, int width, int height)
+        public AutoPolygonizeUploadContext(ulong imageId, double downsample, Rectangle worldBounds, int width, int height)
         {
             ImageId = imageId;
             Downsample = downsample;
@@ -24,7 +24,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         public ulong ImageId { get; }
         public double Downsample { get; }
-        public GridRectangle WorldBounds { get; }
+        public Rectangle WorldBounds { get; }
         public int Width { get; }
         public int Height { get; }
 

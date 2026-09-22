@@ -121,7 +121,7 @@ namespace Viking
         /// Stable-sort the queue by visibility, then Downsample (highest first), then Z distance.
         /// Same keys as PendingTextureQueue.SortByVisibility. Called from the sort timer.
         /// </summary>
-        public static void SortByPriority(GridRectangle visibleBounds, int currentSectionZ)
+        public static void SortByPriority(Geometry.Rectangle visibleBounds, int currentSectionZ)
         {
             lock (_lock)
             {

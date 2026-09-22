@@ -112,7 +112,7 @@ namespace WebAnnotation
         /// <param name="listHitTestObjects"></param>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
+        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, Vector2 WorldPos)
         {
             List<HitTestResult> nestedContainers = [.. listHitTestObjects.Select(lc =>
                  {
@@ -141,18 +141,18 @@ namespace WebAnnotation
         }
     }
 
-    public static class GridRectangleExtensions
+    public static class RectangleExtensions
     {
-        public static GridRectangle ToMosaicSpace(this in GridRectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        public static Rectangle ToMosaicSpace(this in Rectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
-            GridVector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
+            Vector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
 
             double MinX = MosaicCorners.Min(p => p.X);
             double MaxX = MosaicCorners.Max(p => p.X);
             double MinY = MosaicCorners.Min(p => p.Y);
             double MaxY = MosaicCorners.Max(p => p.Y);
 
-            return new GridRectangle(MinX, MaxX, MinY, MaxY);
+            return new Rectangle(MinX, MaxX, MinY, MaxY);
         }
     }
 
@@ -206,7 +206,7 @@ namespace WebAnnotation
 
     internal static class LocationObjExtensions
     {
-        public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, GridVector3 origin)
+        public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, Vector3 origin)
         {
             Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
             if (mapper is null)
@@ -214,13 +214,13 @@ namespace WebAnnotation
                 return double.MaxValue;
             }
 
-            if (!mapper.TrySectionToVolume(l.Position, out GridVector2 vPos))
+            if (!mapper.TrySectionToVolume(l.Position, out Vector2 vPos))
             {
                 return double.MaxValue;
             }
 
-            GridVector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
-            return GridVector3.Distance(p, origin);
+            Vector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
+            return Vector3.Distance(p, origin);
         }
 
 
@@ -257,6 +257,23 @@ namespace WebAnnotation
     }
 
     /// <summary>
+    /// Centroid of one constrained Delaunay triangle and that triangle's area.
+    /// Area is Heron's formula from <see cref="Triangle.Area"/>, so it is never negative.
+    /// </summary>
+    internal readonly struct PolygonTriangleCentroid
+    {
+        public PolygonTriangleCentroid(Vector2 point, double area)
+        {
+            Point = point;
+            Area = area;
+        }
+
+        public Vector2 Point { get; }
+
+        public double Area { get; }
+    }
+
+    /// <summary>
     /// Extensions for generating representative points from annotations for segmentation background prompts.
     /// </summary>
     public static class AnnotationPointExtensions
@@ -277,12 +294,12 @@ namespace WebAnnotation
         /// SegmentImage calls does not retriangulate the same neighbors.
         /// </summary>
         /// <returns>Points in section/mosaic coordinates.</returns>
-        public static IReadOnlyList<GridVector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
+        public static IReadOnlyList<Vector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
         {
             if (annotations is null)
                 return [];
 
-            List<GridVector2> result = [];
+            List<Vector2> result = [];
             foreach (LocationObj loc in annotations)
             {
                 if (loc?.MosaicShape is null)
@@ -303,7 +320,7 @@ namespace WebAnnotation
                         break;
                     case LocationType.POLYLINE:
                     case LocationType.OPENCURVE:
-                        GridVector2[] linePoints = loc.MosaicShape.ToPoints();
+                        Vector2[] linePoints = loc.MosaicShape.ToPoints();
                         if (linePoints?.Length > 0)
                             result.AddRange(linePoints);
                         break;
@@ -322,11 +339,20 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// One interior point per constrained Delaunay triangle. Triangulate is centroid-relative,
-        /// so each face centroid is translated back. Used as Resegment-to-polygon foreground
-        /// prompts. Neighbor avoid marks use <see cref="GetLargestTriangleCentroidPoint"/> instead.
+        /// One interior point per constrained Delaunay triangle, in mesh order. Triangulate is
+        /// centroid-relative, so each face centroid is translated back. SAM2 foreground clicks
+        /// decimate this set in <see cref="WebAnnotation.UI.Commands.Segmentation.PolygonSegmentationPrompts"/>.
+        /// Neighbor avoid marks use <see cref="GetLargestTriangleCentroidPoint"/> instead.
         /// </summary>
-        internal static IReadOnlyList<GridVector2> GetPolygonTriangleCentroidPoints(GridPolygon polygon)
+        internal static IReadOnlyList<Vector2> GetPolygonTriangleCentroidPoints(Polygon polygon)
+            => [.. GetPolygonTriangleCentroidSamples(polygon).Select(sample => sample.Point)];
+
+        /// <summary>
+        /// Same centroids as <see cref="GetPolygonTriangleCentroidPoints"/>, each with its triangle area.
+        /// Mesh order is preserved so a later stable sort can keep ties in that order. The fallback
+        /// polygon centroid, when meshing fails and the point is inside, has area 0.
+        /// </summary>
+        internal static IReadOnlyList<PolygonTriangleCentroid> GetPolygonTriangleCentroidSamples(Polygon polygon)
         {
             if (polygon is null)
                 return [];
@@ -336,8 +362,8 @@ namespace WebAnnotation
                 TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
                 if (mesh?.Faces.Count > 0)
                 {
-                    GridVector2 origin = polygon.Centroid;
-                    List<GridVector2> points = [];
+                    Vector2 origin = polygon.Centroid;
+                    List<PolygonTriangleCentroid> samples = [];
                     foreach (IFace face in mesh.Faces)
                     {
                         if (!face.IsTriangle())
@@ -345,17 +371,19 @@ namespace WebAnnotation
 
                         try
                         {
-                            GridVector2 centroid = mesh.Centroid(face) + origin;
-                            if (polygon.Contains(centroid))
-                                points.Add(centroid);
+                            Vector2 centroid = mesh.Centroid(face) + origin;
+                            if (!polygon.Contains(centroid))
+                                continue;
+
+                            samples.Add(new PolygonTriangleCentroid(centroid, mesh.ToTriangle(face).Area));
                         }
                         catch (ArgumentException)
                         {
                         }
                     }
 
-                    if (points.Count > 0)
-                        return points;
+                    if (samples.Count > 0)
+                        return samples;
                 }
             }
             catch (EdgesIntersectTriangulationException)
@@ -368,8 +396,8 @@ namespace WebAnnotation
             {
             }
 
-            GridVector2 fallback = polygon.Centroid;
-            return polygon.Contains(fallback) ? [fallback] : [];
+            Vector2 fallback = polygon.Centroid;
+            return polygon.Contains(fallback) ? [new PolygonTriangleCentroid(fallback, 0)] : [];
         }
 
         /// <summary>
@@ -378,7 +406,7 @@ namespace WebAnnotation
         /// send one avoid mark, not one per triangle. Fallback is the polygon centroid
         /// when meshing fails and that point is inside.
         /// </summary>
-        internal static IReadOnlyList<GridVector2> GetLargestTriangleCentroidPoint(GridPolygon polygon)
+        internal static IReadOnlyList<Vector2> GetLargestTriangleCentroidPoint(Polygon polygon)
         {
             if (polygon is null)
                 return [];
@@ -388,8 +416,8 @@ namespace WebAnnotation
                 TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
                 if (mesh?.Faces.Count > 0)
                 {
-                    GridVector2 origin = polygon.Centroid;
-                    GridVector2 best = default;
+                    Vector2 origin = polygon.Centroid;
+                    Vector2 best = default;
                     double bestArea = double.NegativeInfinity;
                     bool found = false;
                     foreach (IFace face in mesh.Faces)
@@ -399,7 +427,7 @@ namespace WebAnnotation
 
                         try
                         {
-                            GridVector2 centroid = mesh.Centroid(face) + origin;
+                            Vector2 centroid = mesh.Centroid(face) + origin;
                             if (!polygon.Contains(centroid))
                                 continue;
 
@@ -430,7 +458,7 @@ namespace WebAnnotation
             {
             }
 
-            GridVector2 fallback = polygon.Centroid;
+            Vector2 fallback = polygon.Centroid;
             return polygon.Contains(fallback) ? [fallback] : [];
         }
 
@@ -438,7 +466,7 @@ namespace WebAnnotation
         /// Largest MosaicShape Delaunay-face centroid of the stored control-point ring.
         /// Called from the polygon cache factory. Do not mesh VolumeShape here.
         /// </summary>
-        private static IReadOnlyList<GridVector2> TryGetUnsmoothedPolygonRepresentativePoints(LocationObj loc)
+        private static IReadOnlyList<Vector2> TryGetUnsmoothedPolygonRepresentativePoints(LocationObj loc)
         {
             try
             {
@@ -470,13 +498,13 @@ namespace WebAnnotation
     {
         internal const int MaxEntries = 2048;
 
-        private readonly ConcurrentDictionary<long, (DateTime LastModified, LocationType TypeCode, IReadOnlyList<GridVector2> Points)> entries = new();
+        private readonly ConcurrentDictionary<long, (DateTime LastModified, LocationType TypeCode, IReadOnlyList<Vector2> Points)> entries = new();
 
-        public IReadOnlyList<GridVector2> GetOrAdd(
+        public IReadOnlyList<Vector2> GetOrAdd(
             long locationId,
             DateTime lastModified,
             LocationType typeCode,
-            Func<IReadOnlyList<GridVector2>> factory)
+            Func<IReadOnlyList<Vector2>> factory)
         {
             if (entries.TryGetValue(locationId, out var cached) &&
                 cached.LastModified == lastModified &&
@@ -485,7 +513,7 @@ namespace WebAnnotation
                 return cached.Points;
             }
 
-            IReadOnlyList<GridVector2> points = factory?.Invoke() ?? [];
+            IReadOnlyList<Vector2> points = factory?.Invoke() ?? [];
             if (entries.Count >= MaxEntries)
                 entries.Clear();
 

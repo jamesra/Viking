@@ -144,9 +144,9 @@ namespace WebAnnotationModel
         }
 
 
-        private GridVector2? _MosaicPosition;
+        private Vector2? _MosaicPosition;
 
-        public GridVector2 Position
+        public Vector2 Position
         {
             get
             {
@@ -154,7 +154,7 @@ namespace WebAnnotationModel
                 if (!_MosaicPosition.HasValue)
                 {
                     _MosaicPosition = CenterOfLocationShape(this.TypeCode, this.MosaicShape);
-                    //_MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                    //_MosaicPosition = new Vector2(Data.Position.X, Data.Position.Y);
                 }
                 /*
 
@@ -171,7 +171,7 @@ namespace WebAnnotationModel
             /*
             set
             {
-                if (GridVector2.Equals(this.Position, value))
+                if (Vector2.Equals(this.Position, value))
                     return;
 
                 OnPropertyChanging("Position");
@@ -189,13 +189,13 @@ namespace WebAnnotationModel
         }
 
 
-        private GridVector2? _VolumePosition;
+        private Vector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
         /// We want the database to have this value so data processing tools don't need to implement the transforms
         /// It should not be used by the viewer since the viewer can calculate the value.*/
         /// </summary>
-        public GridVector2 VolumePosition
+        public Vector2 VolumePosition
         {
             get
             {
@@ -204,7 +204,7 @@ namespace WebAnnotationModel
                 {
                     _VolumePosition = CenterOfLocationShape(this.TypeCode, this.VolumeShape);
                     //_VolumePosition = Data.VolumeShape.Centroid();
-                    //_VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                    //_VolumePosition = new Vector2(Data.VolumePosition.X, Data.VolumePosition.Y);
                 }
                 /*
                 if (!_VolumePosition.HasValue)
@@ -216,7 +216,7 @@ namespace WebAnnotationModel
             /*
             set
             {
-                if (GridVector2.Equals(this.VolumePosition, value))
+                if (Vector2.Equals(this.VolumePosition, value))
                     return;
 
                 OnPropertyChanging("VolumePosition");
@@ -234,7 +234,7 @@ namespace WebAnnotationModel
 
         }
 
-        private static GridVector2 CenterOfLocationShape(LocationType type, Microsoft.SqlServer.Types.SqlGeometry shape)
+        private static Vector2 CenterOfLocationShape(LocationType type, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             return type switch
             {

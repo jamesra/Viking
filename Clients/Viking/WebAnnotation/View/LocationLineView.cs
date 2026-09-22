@@ -11,6 +11,8 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -52,9 +54,17 @@ namespace WebAnnotation.View
             PolyLineView.Draw(device, scene, OverlayStyle.Luma, linesToDraw);
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new NotImplementedException();
+        /// <summary>
+        /// Unmodified pen contact returns <see cref="LocationAction.NONE"/> so free-draw starts.
+        /// Mouse clicks still create a linked location. Called from pen contact dispatch.
+        /// </summary>
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = ID;
+            return LocationAction.NONE;
+        }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
             if (ModifierKeys.ShiftOrCtrlPressed())
@@ -65,10 +75,10 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();/*
-            LocationID = this.ID;
-            return LocationAction.NONE;
-            */
+        /// <summary>
+        /// Adjacent-section lines have no stroke-completion edits. Returns an empty list so the confirmation ring is not fed a throw.
+        /// </summary>
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
     }
 
     internal class LocationLineView : LocationLineViewBase
@@ -88,7 +98,7 @@ namespace WebAnnotation.View
 
         public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D? texture = null) : base(obj, mapper)
         {
-            bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out GridVector2[] volumePoints);
+            bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out Geometry.Vector2[] volumePoints);
             Color lineColor = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
             polyLineView = success.All(s => s == true)
                 ? new PolyLineView(volumePoints, lineColor, texture)
@@ -102,20 +112,23 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           LocationLineView[] listToDraw) => PolyLineView.Draw(device, scene, OverlayStyle.Luma, [.. listToDraw.Select(l => l.polyLineView)]);
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        /// <summary>
+        /// Unmodified pen contact returns <see cref="LocationAction.NONE"/> so free-draw starts.
+        /// Ctrl still creates a linked location. Shift stays idle, matching the previous pen path.
+        /// Mouse clicks are unchanged.
+        /// </summary>
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
-            if (ModifierKeys.ShiftPressed())
-            {
-                return LocationAction.NONE;
-            }
-            else
+            if (ModifierKeys.CtrlPressed() && !ModifierKeys.ShiftPressed())
             {
                 return LocationAction.CREATELINKEDLOCATION;
             }
+
+            return LocationAction.NONE;
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
             if (ModifierKeys.ShiftPressed())
@@ -125,7 +138,7 @@ namespace WebAnnotation.View
             else if (ModifierKeys.CtrlPressed())
             {
                 //Allow user to add a control point if the mouse is not over an existing control point
-                if (!polyLineView.ControlPoints.Select(p => new GridCircle(p, LineWidth / 2.0)).Any(c => c.Contains(WorldPosition)))
+                if (!polyLineView.ControlPoints.Select(p => new Circle(p, LineWidth / 2.0)).Any(c => c.Covers(WorldPosition)))
                 {
                     return LocationAction.ADDCONTROLPOINT;
                 }
@@ -144,8 +157,8 @@ namespace WebAnnotation.View
 
         public virtual bool IsLabelVisible(Scene scene) => IsVisible(scene);
 
-        private GridRectangle? _bbox;
-        public override GridRectangle BoundingBox
+        private Geometry.Rectangle? _bbox;
+        public override Geometry.Rectangle BoundingBox
         {
             get
             {
@@ -166,37 +179,37 @@ namespace WebAnnotation.View
             set => _OverlappedLinks = value;
         }
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
         {
             if (PointIntersectsAnyControlPoint(Position))
             {
-                return VolumeControlPoints.Select(p => GridVector2.Distance(p, Position) / ControlPointRadius).Min();
+                return VolumeControlPoints.Select(p => Geometry.Vector2.Distance(p, Position) / ControlPointRadius).Min();
             }
             else
             {
                 //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(VolumeControlPoints);
+                LineSegment[] segs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
                 double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
                 return (LineWidth / 2.0) - MinDistance;
             }
         }
 
-        protected bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
+        protected bool PointIntersectsAnyControlPoint(Geometry.Vector2 WorldPosition)
         {
-            GridCircle testCircle = new(WorldPosition, ControlPointRadius);
-            return VolumeControlPoints.Any(p => testCircle.Contains(p));
+            Circle testCircle = new(WorldPosition, ControlPointRadius);
+            return VolumeControlPoints.Any(p => testCircle.Covers(p));
         }
 
-        protected virtual bool PointIntersectsAnyLineSegment(GridVector2 WorldPosition)
+        protected virtual bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
         {
             //TODO: This could be optimized considerably
-            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(VolumeControlPoints);
+            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
             //Find the line segment the NewControlPoint intersects
             int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
             return MinDistance < LineWidth / 2.0f;
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -222,13 +235,13 @@ namespace WebAnnotation.View
             List<IAction> actions = [];
             if (path.HasSelfIntersection)
             {
-                GridPolygon closedpath = new(path.SimplifiedFirstLoop);
+                Polygon closedpath = new(path.SimplifiedFirstLoop);
                 ChangeToPolygonAction action = new(modelObj, closedpath);
                 actions.Add(action);
             }
             else
             {
-                GridPolyline openPath = new(path.SimplifiedPath);
+                Polyline openPath = new(path.SimplifiedPath);
                 ChangeToPolylineAction action = new(modelObj, openPath);
                 actions.Add(action);
             }
@@ -236,7 +249,7 @@ namespace WebAnnotation.View
             return actions;
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -325,12 +338,12 @@ namespace WebAnnotation.View
         /// <summary>
         /// Mosaic points composing the polyline, without added points to create a curve
         /// </summary>
-        internal readonly GridVector2[] MosaicControlPoints;
+        internal readonly Geometry.Vector2[] MosaicControlPoints;
 
         /// <summary>
         /// Mosaic points composing the polyline, without added points to create a curve
         /// </summary>
-        internal readonly GridVector2[] VolumeControlPoints;
+        internal readonly Geometry.Vector2[] VolumeControlPoints;
 
         public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {

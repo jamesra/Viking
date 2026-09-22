@@ -23,7 +23,10 @@ using WebAnnotationModel;
 using WebAnnotation.ViewModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 using Viking.Services.Grpc;
-using Viking.gRPC.SegmentationServiceTypes.V1;
+using WebAnnotation.UI.AutoPolygonize;
+
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -41,8 +44,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Fields
         // Point collections
-        private readonly List<GridVector2> foregroundPoints = [];
-        private readonly List<GridVector2> backgroundPoints = [];
+        private readonly List<Geometry.Vector2> foregroundPoints = [];
+        private readonly List<Geometry.Vector2> backgroundPoints = [];
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
@@ -59,13 +62,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private Texture2D maskTexture;
         private int maskWidth;
         private int maskHeight;
-        private GridPolygon selectedPolygon; // Track the polygon clicked for finalization
+        private Polygon selectedPolygon; // Track the polygon clicked for finalization
         private SegmentationServiceTypes.SegmentationResponse lastSegmentationResponse;
         private readonly SegmentationRequestCoalescer requestCoalescer = new();
         private CancellationTokenSource processResponseCts;
 
         // Pan/zoom tracking
-        private GridRectangle lastViewBounds;
+        private Geometry.Rectangle lastViewBounds;
         private System.Timers.Timer panZoomDebounceTimer;
 
         // Rendering
@@ -96,9 +99,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly long? structureIdToExcludeFromBackgroundPoints;
 
         /// <summary>
+        /// Volume polygon to save when Escape is pressed before a mask arrives.
+        /// Null for resegment and circle-to-polygon, which still cancel without saving.
+        /// </summary>
+        private readonly Polygon? placementFallback;
+
+        /// <summary>True after a mask click or Escape placement so a late mask cannot save again.</summary>
+        private bool placementFinished;
+
+        /// <summary>Server image this command holds. Released on deactivate; deleted only when it is the last hold.</summary>
+        private ulong? heldImageId;
+
+        /// <summary>Cancels the in-flight SegmentImage so Escape can place the fallback before a late mask arrives.</summary>
+        private CancellationTokenSource segmentRequestCts = new();
+
+        /// <summary>
         /// Set to the segmented polygon if the command completes successfully
         /// </summary>
-        public GridPolygon Output
+        public Polygon Output
         {
             get;
             private set;
@@ -122,7 +140,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             get
             {
-                List<string> s = [.. DefaultMouseHelpStrings, .. Viking.UI.Commands.Command.DefaultKeyHelpStrings];
+                List<string> s = [.. DefaultMouseHelpStrings];
+                foreach (string line in Viking.UI.Commands.Command.DefaultKeyHelpStrings)
+                {
+                    if (placementFallback is not null && line.StartsWith("Escape", StringComparison.Ordinal))
+                        s.Add("Escape: Place the dragged polygon without waiting");
+                    else
+                        s.Add(line);
+                }
+
                 s.Sort();
                 return [.. s];
             }
@@ -135,7 +161,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Return the approved polygon
         /// </summary>
         /// <param name="output"></param>
-        public delegate void OnCommandSuccess(GridPolygon output);
+        public delegate void OnCommandSuccess(Polygon output);
         private readonly OnCommandSuccess success_callback;
 
         #endregion
@@ -146,9 +172,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IGrpcChannelManager? grpcChannelManager = null,
             long? structureTypeId = null,
             long? excludeLocationId = null,
-            long? excludeStructureId = null) : base(parent)
+            long? excludeStructureId = null,
+            Polygon? placementFallback = null) : base(parent)
         {
             this.success_callback = success_callback;
+            this.placementFallback = placementFallback;
 
             // Load configuration from AppSettings
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
@@ -163,16 +191,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Constructor that accepts initial foreground and background points for automated segmentation
+        /// Constructor that accepts initial foreground and background points for automated segmentation.
+        /// <paramref name="placementFallback"/> is the dragged volume polygon Escape saves when the mask has not arrived.
         /// </summary>
         public SegmentationCommand(SectionViewerControl parent,
-            IEnumerable<GridVector2> initialForegroundPoints,
-            IEnumerable<GridVector2> initialBackgroundPoints,
+            IEnumerable<Geometry.Vector2> initialForegroundPoints,
+            IEnumerable<Geometry.Vector2> initialBackgroundPoints,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
             long? structureTypeId = null,
             long? excludeLocationId = null,
-            long? excludeStructureId = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId)
+            long? excludeStructureId = null,
+            Polygon? placementFallback = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId, placementFallback)
         {
             // Populate initial points
             if (initialForegroundPoints != null)
@@ -267,21 +297,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (hasInitialPoints)
             {
                 Debug.WriteLine($"SegmentationCommand activated with {foregroundPoints.Count} foreground and {backgroundPoints.Count} background points");
-                UploadCurrentImage().ContinueWith(task =>
-                {
-                    if (task.Status == TaskStatus.RanToCompletion && task.Result)
-                    {
-                        RequestSegmentation();
-                    }
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                UploadCurrentImage().ContinueWith(ContinueAfterUpload, TaskScheduler.FromCurrentSynchronizationContext());
             }
         }
 
         protected override void OnDeactivate()
         {
             viewportSession.CancelPendingWork();
-            if (viewportSession.CurrentImageId.HasValue)
-                _ = viewportSession.DeleteCurrentImageAsync();
+            CancelSegmentRequest();
+            ReleaseHeldImage();
 
             CleanupCommand();
 
@@ -296,7 +320,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Mouse Input Handling
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
-            GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
 
             if (e.Button.Left())
@@ -327,9 +351,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             base.OnMouseDown(sender, e);
         }
 
-        private void HandlePointDeletion(List<GridVector2> pointList, GridVector2 worldPos)
+        private void HandlePointDeletion(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos)
         {
-            GridVector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
+            Geometry.Vector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
             if (pointToRemove.HasValue)
             {
                 pointList.Remove(pointToRemove.Value);
@@ -342,15 +366,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Removes all points in the list that are within the given radius of worldPos (same screen-space logic as FindPointWithinRadius).
         /// Returns true if any points were removed.
         /// </summary>
-        private bool RemovePointsWithinRadius(List<GridVector2> pointList, GridVector2 worldPos, double radiusInScreenUnits)
+        private bool RemovePointsWithinRadius(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos, double radiusInScreenUnits)
         {
-            GridVector2 screenPos = WorldToScreen(worldPos);
+            Geometry.Vector2 screenPos = WorldToScreen(worldPos);
             double radiusSquared = radiusInScreenUnits * radiusInScreenUnits;
             bool anyRemoved = false;
             for (int i = pointList.Count - 1; i >= 0; i--)
             {
-                GridVector2 ptScreen = WorldToScreen(pointList[i]);
-                if (GridVector2.DistanceSquared(ptScreen, screenPos) <= radiusSquared)
+                Geometry.Vector2 ptScreen = WorldToScreen(pointList[i]);
+                if (Geometry.Vector2.DistanceSquared(ptScreen, screenPos) <= radiusSquared)
                 {
                     pointList.RemoveAt(i);
                     anyRemoved = true;
@@ -359,13 +383,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return anyRemoved;
         }
 
-        private void HandleForegroundPointAddition(GridVector2 worldPos)
+        private void HandleForegroundPointAddition(Geometry.Vector2 worldPos)
         {
             //Check if we are clicking inside a foreground point
             if (ForegroundPointsContain(worldPos))
             {
                 // Check if clicking inside existing polygon to execute (finalize)
-                GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
+                Polygon clickedPolygon = FindPolygonContainingPoint(worldPos);
                 if (clickedPolygon != null)
                 {
                     //Check if the user has selected a foreground point
@@ -379,12 +403,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             HandlePointAddition(foregroundPoints, worldPos);
         }
 
-        private void HandleBackgroundPointAddition(GridVector2 worldPos) => HandlePointAddition(backgroundPoints, worldPos);
+        private void HandleBackgroundPointAddition(Geometry.Vector2 worldPos) => HandlePointAddition(backgroundPoints, worldPos);
 
-        private void HandlePointAddition(List<GridVector2> pointList, GridVector2 worldPos)
+        private void HandlePointAddition(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos)
         {
             // Check for overlapping point
-            GridVector2? existingPoint = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
+            Geometry.Vector2? existingPoint = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
             if (!existingPoint.HasValue)
             {
                 // Add point only if no overlap
@@ -406,13 +430,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (isFirstPoint && !viewportSession.CurrentImageId.HasValue && !currentlyUploading)
             {
                 Debug.WriteLine("First point placed, uploading image to server cache");
-                UploadCurrentImage().ContinueWith(task =>
-                {
-                    if (task.Status == TaskStatus.RanToCompletion && task.Result)
-                    {
-                        RequestSegmentation();
-                    }
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                UploadCurrentImage().ContinueWith(ContinueAfterUpload, TaskScheduler.FromCurrentSynchronizationContext());
             }
             else
             {
@@ -445,14 +463,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 base.OnMouseMove(sender, e);
 
             // Update cursor based on mouse position over points
-            GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             
             // Check if mouse is over a foreground or background point
             // Convert world-space radius to screen-space radius for detection
             double pointRadiusInWorld = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
             double pointRadiusInScreen = pointRadiusInWorld;
-            GridVector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
-            GridVector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
+            Geometry.Vector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
+            Geometry.Vector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
             hoveredPolygonView = foregroundPoint.HasValue
                 ? FindPolygonViewContainingPoint(worldPos)
                 : null;
@@ -500,6 +518,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate();
         }
 
+        /// <summary>
+        /// Escape places <see cref="placementFallback"/> and leaves the command queue intact.
+        /// Callers that passed no fallback keep the base cancel, which clears the queue.
+        /// </summary>
+        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)Keys.Escape && placementFallback is not null)
+            {
+                AcceptPlacementFallback();
+                return;
+            }
+
+            base.OnKeyPress(sender, e);
+        }
+
 #if DEBUG
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -514,12 +547,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Pan/Zoom Handling
         /// <summary>
-        /// Deletes the cached SAM2 image when the view moves more than 1%. Auto-polygonize does not use this path;
-        /// it keeps an already-uploaded image and only cancels pre-upload work.
+        /// Drops this command's hold when the view moves more than 1%. The shared lease releases its own
+        /// hold so DeleteImage runs only when auto-polygonize is not still using the id.
         /// </summary>
         private void CheckForViewportChange()
         {
-            GridRectangle currentBounds = viewportSession.GetCurrentViewportBounds();
+            Geometry.Rectangle currentBounds = viewportSession.GetCurrentViewportBounds();
 
             if (!SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, currentBounds))
             {
@@ -527,10 +560,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 viewportSession.ViewportBounds = currentBounds;
                 requestCoalescer.Invalidate();
                 CancelProcessSegmentationResponse();
+                CancelSegmentRequest();
                 viewportSession.CancelPendingWork();
-
-                if (viewportSession.CurrentImageId.HasValue)
-                    _ = viewportSession.DeleteCurrentImageAsync();
+                AnnotationOverlay.CurrentOverlay?.SharedViewportImages?.ForgetIfViewMoved(currentBounds, Parent.Downsample);
+                ReleaseHeldImage();
 
                 // Restart debounce timer
                 panZoomDebounceTimer?.Stop();
@@ -594,17 +627,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate();
         }
 
-        private GridVector2? FindPointWithinRadius(List<GridVector2> points, GridVector2 worldPos, double radiusInScreenUnits)
+        private Geometry.Vector2? FindPointWithinRadius(List<Geometry.Vector2> points, Geometry.Vector2 worldPos, double radiusInScreenUnits)
         {
             // Convert world position to screen coordinates
-            GridVector2 screenPos = WorldToScreen(worldPos);
+            Geometry.Vector2 screenPos = WorldToScreen(worldPos);
             double radiusSquared = radiusInScreenUnits * radiusInScreenUnits;
 
             // Search for a point within the radius
             foreach (var pt in points)
             {
-                GridVector2 ptScreen = WorldToScreen(pt);
-                double distSq = GridVector2.DistanceSquared(ptScreen, screenPos);
+                Geometry.Vector2 ptScreen = WorldToScreen(pt);
+                double distSq = Geometry.Vector2.DistanceSquared(ptScreen, screenPos);
                 if (distSq <= radiusSquared)
                 {
                     return pt;
@@ -614,16 +647,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return null;
         }
 
-        private void RemoveNearestPoint(GridVector2 worldPos)
+        private void RemoveNearestPoint(Geometry.Vector2 worldPos)
         {
             const double searchRadiusSquared = 100.0; // 10 pixel radius squared
 
             // Find nearest foreground point
-            GridVector2? nearestFg = null;
+            Geometry.Vector2? nearestFg = null;
             double nearestFgDistSq = double.MaxValue;
             foreach (var pt in foregroundPoints)
             {
-                double distSq = GridVector2.DistanceSquared(pt, worldPos);
+                double distSq = Geometry.Vector2.DistanceSquared(pt, worldPos);
                 if (distSq < nearestFgDistSq && distSq < searchRadiusSquared)
                 {
                     nearestFgDistSq = distSq;
@@ -632,11 +665,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             // Find nearest background point
-            GridVector2? nearestBg = null;
+            Geometry.Vector2? nearestBg = null;
             double nearestBgDistSq = double.MaxValue;
             foreach (var pt in backgroundPoints)
             {
-                double distSq = GridVector2.DistanceSquared(pt, worldPos);
+                double distSq = Geometry.Vector2.DistanceSquared(pt, worldPos);
                 if (distSq < nearestBgDistSq && distSq < searchRadiusSquared)
                 {
                     nearestBgDistSq = distSq;
@@ -655,11 +688,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private SolidPolygonView FindPolygonViewContainingPoint(GridVector2 worldPos) =>
+        private SolidPolygonView FindPolygonViewContainingPoint(Geometry.Vector2 worldPos) =>
             segmentPolygonViews.FirstOrDefault(polygonView =>
-                polygonView?.InputPolygon != null && polygonView.InputPolygon.Contains(worldPos));
+                polygonView?.InputPolygon != null && polygonView.InputPolygon.Covers(worldPos));
 
-        private GridPolygon FindPolygonContainingPoint(GridVector2 worldPos) =>
+        private Polygon FindPolygonContainingPoint(Geometry.Vector2 worldPos) =>
             FindPolygonViewContainingPoint(worldPos)?.InputPolygon;
 
         /// <summary>
@@ -667,7 +700,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        private bool ForegroundPointsContain(GridVector2 worldPos) => foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
+        private bool ForegroundPointsContain(Geometry.Vector2 worldPos) => foregroundPointsView.Points.Any(p => new Circle(p, foregroundPointsView.PointRadius).Covers(worldPos));
         #endregion
 
         #region Color Generation
@@ -734,13 +767,150 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Server Image Upload/Delete
-        private Task<bool> UploadCurrentImage()
+        /// <summary>
+        /// Adopts a viewport-similar upload or captures once onto the shared lease.
+        /// Holds the id on the UI continuation so a pan or Escape cannot race the hold.
+        /// </summary>
+        private async Task<bool> UploadCurrentImage()
         {
-            viewportSession.ViewportBounds = viewportSession.GetCurrentViewportBounds();
-            return viewportSession.UploadCurrentImageAsync(CancellationToken.None);
+            Geometry.Rectangle bounds = viewportSession.GetCurrentViewportBounds();
+            double downsample = Parent.Downsample;
+            SharedViewportImageLease? lease = AnnotationOverlay.CurrentOverlay?.SharedViewportImages;
+            if (lease is null)
+            {
+                viewportSession.ViewportBounds = bounds;
+                return await viewportSession.UploadCurrentImageAsync(segmentRequestCts.Token).ConfigureAwait(false);
+            }
+
+            AutoPolygonizeUploadContext? context = await lease.GetOrUploadAsync(bounds, downsample, () => CaptureForLeaseAsync(bounds, downsample)).ConfigureAwait(false);
+            if (context is null && !placementFinished && !segmentRequestCts.IsCancellationRequested)
+                context = await lease.GetOrUploadAsync(bounds, downsample, () => CaptureForLeaseAsync(bounds, downsample)).ConfigureAwait(false);
+
+            if (context is not { IsUsable: true } ready)
+                return false;
+
+            if (!SharedViewportImageLease.CanReuse(ready, viewportSession.GetCurrentViewportBounds(), Parent.Downsample))
+            {
+                lease.ForgetIfViewMoved(viewportSession.GetCurrentViewportBounds(), Parent.Downsample);
+                return false;
+            }
+
+            if (viewportSession.CurrentImageId != ready.ImageId)
+                viewportSession.AdoptUploadedImage(ready.ImageId, ready.WorldBounds, ready.Width, ready.Height);
+
+            return true;
         }
 
-        private Task DeleteCurrentImage() => viewportSession.DeleteCurrentImageAsync();
+        /// <summary>
+        /// Capture used only when this command is the lease starter. A joined waiter never runs it.
+        /// </summary>
+        private async Task<AutoPolygonizeUploadContext?> CaptureForLeaseAsync(Geometry.Rectangle bounds, double downsample)
+        {
+            viewportSession.ViewportBounds = bounds;
+            if (!await viewportSession.UploadCurrentImageAsync(segmentRequestCts.Token).ConfigureAwait(false))
+                return null;
+
+            return SharedViewportImageLease.TryCreateContext(viewportSession, downsample);
+        }
+
+        /// <summary>
+        /// UI-thread follow-up for <see cref="UploadCurrentImage"/>. Takes the cache hold, then segments.
+        /// </summary>
+        private void ContinueAfterUpload(Task<bool> task)
+        {
+            if (placementFinished || Deactivated)
+                return;
+
+            if (!SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, viewportSession.GetCurrentViewportBounds()))
+                return;
+
+            if (task.Status == TaskStatus.RanToCompletion && task.Result && viewportSession.CurrentImageId is ulong imageId)
+            {
+                HoldSharedImage(imageId);
+                RequestSegmentation();
+            }
+        }
+
+        private void HoldSharedImage(ulong imageId)
+        {
+            if (placementFinished || heldImageId == imageId)
+                return;
+
+            AutoPolygonizeCache? cache = AnnotationOverlay.CurrentOverlay?.PolygonizeImageCache;
+            if (cache is null)
+                return;
+
+            ulong? previous = heldImageId;
+            heldImageId = imageId;
+            cache.AcquireBatchHold(imageId);
+            if (previous is ulong oldId)
+                cache.ReleaseBatchHold(oldId);
+        }
+
+        /// <summary>
+        /// Drops this command's hold. Deletes only when the cache has no remaining hold and this session still owns an id nobody leased.
+        /// </summary>
+        private void ReleaseHeldImage()
+        {
+            AutoPolygonizeCache? cache = AnnotationOverlay.CurrentOverlay?.PolygonizeImageCache;
+            if (heldImageId is ulong id)
+            {
+                cache?.ReleaseBatchHold(id);
+                heldImageId = null;
+                viewportSession.ClearImageId();
+                return;
+            }
+
+            if (viewportSession.CurrentImageId is not ulong currentId)
+                return;
+
+            if (cache is not null && cache.IsImageHeld(currentId))
+            {
+                viewportSession.ClearImageId();
+                return;
+            }
+
+            _ = viewportSession.DeleteCurrentImageAsync();
+        }
+
+        private void CancelSegmentRequest()
+        {
+            CancellationTokenSource previous = segmentRequestCts;
+            segmentRequestCts = new CancellationTokenSource();
+            try
+            {
+                previous.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            previous.Dispose();
+        }
+
+        /// <summary>
+        /// Cancels upload and SegmentImage, then saves the dragged polygon through the same callback as a finished mask.
+        /// Does not call <see cref="Viking.UI.Commands.Command.CancelCommand"/> because that clears the queue.
+        /// </summary>
+        private void AcceptPlacementFallback()
+        {
+            if (placementFinished || placementFallback is null)
+                return;
+
+            placementFinished = true;
+            requestCoalescer.Invalidate();
+            CancelSegmentRequest();
+            viewportSession.CancelPendingWork();
+            CancelProcessSegmentationResponse();
+            try
+            {
+                success_callback?.Invoke(placementFallback);
+            }
+            finally
+            {
+                Deactivated = true;
+            }
+        }
         #endregion
 
         #region gRPC Segmentation
@@ -750,6 +920,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private async Task RequestSegmentation()
         {
+            if (placementFinished || Deactivated)
+                return;
+
             if (!viewportSession.HasClient)
                 return;
 
@@ -769,8 +942,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             try
             {
                 Debug.WriteLine($"Sending segmentation request with image ID {viewportSession.CurrentImageId}: {viewportSession.UploadedImageWidth}x{viewportSession.UploadedImageHeight}, {foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
-                var response = await viewportSession.SegmentAsync(foregroundPoints, backgroundPoints, CancellationToken.None).ConfigureAwait(false);
-                if (response is not null && requestCoalescer.ShouldApply(generation))
+                CancellationToken segmentToken = segmentRequestCts.Token;
+                var response = await viewportSession.SegmentAsync(foregroundPoints, backgroundPoints, segmentToken).ConfigureAwait(false);
+                if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))
                     StartProcessSegmentationResponse(response, generation);
             }
             catch (Exception ex)
@@ -833,7 +1007,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            IReadOnlyList<GridPolygon> polygons;
+            IReadOnlyList<Polygon> polygons;
             try
             {
                 polygons = await Task.Run(
@@ -882,7 +1056,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Converts protobuf segments to GridPolygons and creates colored polygon views
+        /// Converts protobuf segments to Polygons and creates colored polygon views
         /// </summary>
         public void RefreshPolygonsFromLastMask(double? holeDropFraction = null, int? edgeCleanupRadius = null)
         {
@@ -907,7 +1081,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double? holeDropFraction = null,
             int? edgeCleanupRadius = null)
         {
-            IReadOnlyList<GridPolygon> polygons = viewportSession.CreatePolygonsFromResponse(
+            IReadOnlyList<Polygon> polygons = viewportSession.CreatePolygonsFromResponse(
                 response,
                 holeDropFraction,
                 backgroundPoints,
@@ -918,14 +1092,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Replaces the live overlay with already-built polygons. Must run on the UI thread.
         /// </summary>
-        private void ApplyPolygonViews(IReadOnlyList<GridPolygon> polygons, int totalPolygons)
+        private void ApplyPolygonViews(IReadOnlyList<Polygon> polygons, int totalPolygons)
         {
             segmentPolygonViews.Clear();
             segmentPolygonRingViews.Clear();
             hoveredPolygonView = null;
 
             int polygonIndex = 0;
-            foreach (GridPolygon gridPolygon in polygons)
+            foreach (Polygon gridPolygon in polygons)
             {
                 Color polygonColor = GenerateDistinctColor(polygonIndex, totalPolygons);
                 segmentPolygonViews.Add(new SolidPolygonView(gridPolygon, polygonColor));
@@ -937,7 +1111,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Debug.WriteLine($"Created {segmentPolygonViews.Count} polygon views");
         }
 
-        private CurveView CreateRingView(IEnumerable<GridVector2> ring, Color color) =>
+        private CurveView CreateRingView(IEnumerable<Geometry.Vector2> ring, Color color) =>
             new(
                 [.. ring],
                 color.SetAlpha(0.65f),
@@ -948,16 +1122,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 ShowControlPoints: false);
 
         /// <summary>
-        /// Converts a protobuf polygon to GridPolygon with Y-axis inversion
+        /// Converts a protobuf polygon to Polygon with Y-axis inversion
         /// </summary>
-        private GridPolygon ConvertProtoPolygonToGridPolygon(
+        private Polygon ConvertProtoPolygonToPolygon(
             SegmentationServiceTypes.Polygon protoPolygon,
             SegmentationServiceTypes.SegmentationResponse response)
         {
             try
             {
                 // Invert Y coordinates: Viking uses bottom-left origin, server uses top-left
-                Polygon invertedProtoPolygon = new()
+                SegmentationServiceTypes.Polygon invertedProtoPolygon = new()
                 {
                     Points = { protoPolygon.Points.Select(p => new SegmentationServiceTypes.Point
                     {
@@ -965,7 +1139,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         Y = response.Height - p.Y
                     }) }
                 };
-                return invertedProtoPolygon.ToGridPolygon(viewportSession.ViewportBounds, response.Width, response.Height);
+                return invertedProtoPolygon.ToPolygon(viewportSession.ViewportBounds, response.Width, response.Height);
             }
             catch (ArgumentException)
             {
@@ -998,14 +1172,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (maskTexture != null)
             {
                 // Transform segment bounds from viewport coordinates to world coordinates
-                GridVector2 topLeft = viewportSession.ViewportToWorld(bestSegment.X, response.Height - bestSegment.Y, viewportSession.UploadedImageWidth, viewportSession.UploadedImageHeight);
-                GridVector2 bottomRight = viewportSession.ViewportToWorld(
+                Geometry.Vector2 topLeft = viewportSession.ViewportToWorld(bestSegment.X, response.Height - bestSegment.Y, viewportSession.UploadedImageWidth, viewportSession.UploadedImageHeight);
+                Geometry.Vector2 bottomRight = viewportSession.ViewportToWorld(
                     bestSegment.X + decodedWidth,
                     (response.Height - bestSegment.Y) - decodedHeight,
                     viewportSession.UploadedImageWidth,
                     viewportSession.UploadedImageHeight
                 );
-                GridRectangle segmentBounds = new(topLeft, bottomRight);
+                Geometry.Rectangle segmentBounds = new(topLeft, bottomRight);
                 maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
             }
         }
@@ -1040,7 +1214,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private bool IsPointInsideMask(GridVector2 worldPos)
+        private bool IsPointInsideMask(Geometry.Vector2 worldPos)
         {
             if (currentMaskData is null || maskWidth == 0 || maskHeight == 0)
                 return false;
@@ -1083,7 +1257,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Converts world coordinates to screen pixel coordinates
         /// </summary>
-        private GridVector2 WorldToScreen(GridVector2 worldPos) => Parent.WorldToScreen(worldPos.X, worldPos.Y);
+        private Geometry.Vector2 WorldToScreen(Geometry.Vector2 worldPos) => Parent.WorldToScreen(worldPos.X, worldPos.Y);
         #endregion
 
         #region Rendering
@@ -1136,6 +1310,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Command Execution
         protected override void Execute()
         {
+            if (placementFinished)
+                return;
+
             if (selectedPolygon is null)
             {
                 MessageBox.Show("No polygon selected. Please click inside a segmented polygon to finalize.",
@@ -1154,6 +1331,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 this.Output = selectedPolygon;
+                placementFinished = true;
                 this?.success_callback(selectedPolygon);
                 // Create structure and location using the selected polygon
                 //CreateAnnotationFromPolygon(selectedPolygon);
@@ -1172,7 +1350,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             base.Execute();
         }
 
-        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, GridPolygon polygon)
+        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, Polygon polygon)
         {
             StructureTypeObj typeObj = GetDefaultStructureType(type);
             // Create structure

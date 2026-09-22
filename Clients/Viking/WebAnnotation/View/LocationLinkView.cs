@@ -11,7 +11,9 @@ using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.View;
-using WebAnnotationModel;
+using WebAnnotationModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
@@ -84,12 +86,12 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public GridCircle A;
+        public Circle A;
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public GridCircle B;
+        public Circle B;
 
         /// <summary>
         /// Section number we are displaying the location link on
@@ -127,9 +129,9 @@ namespace WebAnnotation.ViewModel
 
         protected int LinkDirection => MinSection == MaxSection ? 0 : MinSection < Z ? -1 : 1;
 
-        public GridRectangle BoundingBox => GridRectangle.Pad(LineSegment.BoundingBox, LineRadius);
+        public Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(LineSegment.BoundingBox, LineRadius);
 
-        public Geometry.GridLineSegment LineSegment => new(A.Center, B.Center);
+        public Geometry.LineSegment LineSegment => new(A.Center, B.Center);
 
         public LocationLinkContextMenuGeneratorDelegate? ContextMenuGenerator = null;
 
@@ -151,7 +153,7 @@ namespace WebAnnotation.ViewModel
             }
 
             if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
-                    out GridCircle circleA, out GridCircle circleB,
+                    out Circle circleA, out Circle circleB,
                     out int minSection, out int maxSection, out Color color))
             {
                 return false;
@@ -183,7 +185,7 @@ namespace WebAnnotation.ViewModel
         }
 
         private LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider,
-            GridCircle circleA, GridCircle circleB, int minSection, int maxSection, Color color)
+            Circle circleA, Circle circleB, int minSection, int maxSection, Color color)
         {
             Key = key;
             this.Z = Z;
@@ -208,7 +210,7 @@ namespace WebAnnotation.ViewModel
             }
 
             if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
-                    out GridCircle circleA, out GridCircle circleB,
+                    out Circle circleA, out Circle circleB,
                     out int minSection, out int maxSection, out Color color))
             {
                 return false;
@@ -224,7 +226,7 @@ namespace WebAnnotation.ViewModel
 
         private static bool TryMapEndpointPositions(
             LocationObj locA, LocationObj locB, int displayZ, IVolumeTransformProvider mapProvider,
-            out GridCircle circleA, out GridCircle circleB,
+            out Circle circleA, out Circle circleB,
             out int minSection, out int maxSection, out Color color)
         {
             circleA = default;
@@ -236,13 +238,13 @@ namespace WebAnnotation.ViewModel
             IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locA.Z));
             IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locB.Z));
 
-            if (!sourceMapper.TrySectionToVolume(locA.Position, out GridVector2 aVolumePosition))
+            if (!sourceMapper.TrySectionToVolume(locA.Position, out Geometry.Vector2 aVolumePosition))
                 return false;
-            if (!targetMapper.TrySectionToVolume(locB.Position, out GridVector2 bVolumePosition))
+            if (!targetMapper.TrySectionToVolume(locB.Position, out Geometry.Vector2 bVolumePosition))
                 return false;
 
-            circleA = new GridCircle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
-            circleB = new GridCircle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleA = new Circle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleB = new Circle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
 
             minSection = (int)Math.Round(locA.Z < locB.Z ? locA.Z : locB.Z);
             maxSection = (int)Math.Round(locA.Z < locB.Z ? locB.Z : locA.Z);
@@ -272,8 +274,8 @@ namespace WebAnnotation.ViewModel
         {
             //IVolumeToSectionMapper sourceMapper = mapProvider.GetMapping((int)Math.Round(A.Z));
             //IVolumeToSectionMapper targetMapper = mapProvider.GetMapping((int)Math.Round(B.Z));
-            //GridVector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
-            //GridVector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
+            //Geometry.Vector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
+            //Geometry.Vector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
 
             LineView line = new(A.Center, B.Center, LineWidth, Color, LineStyle.Standard);
             return line;
@@ -342,13 +344,13 @@ namespace WebAnnotation.ViewModel
             if (A.Section == sectionNumber)
             {
                 return A.VolumeShape.STIntersects(B.VolumeShape).IsTrue;
-                //return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + LocationCanvasView.CalcOffSectionRadius((float)B.Radius);
+                //return Geometry.Vector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + LocationCanvasView.CalcOffSectionRadius((float)B.Radius);
             }
 
             if (B.Section == sectionNumber)
             {
                 return B.VolumeShape.STIntersects(A.VolumeShape).IsTrue;
-                //return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + LocationCanvasView.CalcOffSectionRadius((float)A.Radius);
+                //return Geometry.Vector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + LocationCanvasView.CalcOffSectionRadius((float)A.Radius);
             } 
             
             return false; 
@@ -415,15 +417,15 @@ namespace WebAnnotation.ViewModel
 
         public bool IsVisible(Scene scene) => Math.Min(LineSegment.Length, LineWidth) / scene.Camera.Downsample > 2.0;
 
-        public bool Contains(GridVector2 Position)
+        public bool Contains(Geometry.Vector2 Position)
         {
             double d = LineSegment.DistanceToPoint(Position);
             return (d - LineRadius) <= 0;
         }
 
-        public bool Intersects(GridLineSegment line) => LineSegment.Intersects(line);
+        public bool Intersects(LineSegment line) => LineSegment.Intersects(line);
 
-        public double Distance(GridVector2 Position)
+        public double Distance(Geometry.Vector2 Position)
         {
             double d = LineSegment.DistanceToPoint(Position) - LineRadius;
             return d < 0 ? 0 : d;
@@ -431,7 +433,7 @@ namespace WebAnnotation.ViewModel
 
         public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => LineSegment.ToSqlGeometry().STDistance(shape).Value;
 
-        public double DistanceFromCenterNormalized(GridVector2 Position) => LineSegment.DistanceToPoint(Position) / LineRadius;
+        public double DistanceFromCenterNormalized(Geometry.Vector2 Position) => LineSegment.DistanceToPoint(Position) / LineRadius;
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,

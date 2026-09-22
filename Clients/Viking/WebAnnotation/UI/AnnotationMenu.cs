@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Viking.Common;
+using Viking.UI;
+using Viking.UI.WPF;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Commands.Segmentation;
@@ -70,6 +72,10 @@ namespace WebAnnotation
             };
             menuAutoPolygonizeCircles.Click += OnAutoPolygonizeCircles;
             menuRoot.DropDownItems.Add(menuAutoPolygonizeCircles);
+
+            ToolStripMenuItem menuSelectSegmentation = new("Select Segmentation Service…");
+            menuSelectSegmentation.Click += OnSelectSegmentationService;
+            menuRoot.DropDownItems.Add(menuSelectSegmentation);
 
             return menuRoot;
         }
@@ -579,6 +585,49 @@ namespace WebAnnotation
             Global.AnnotationSettings.AutoPolygonizeCircles = !Global.AnnotationSettings.AutoPolygonizeCircles;
             if (menuAutoPolygonizeCircles != null)
                 menuAutoPolygonizeCircles.Checked = Global.AnnotationSettings.AutoPolygonizeCircles;
+        }
+
+        /// <summary>
+        /// Opens the login-stage segmentation picker mid-session and applies Select or None.
+        /// </summary>
+        public static void OnSelectSegmentationService(object sender, EventArgs e)
+        {
+            if (State.UserBearerToken == null || string.IsNullOrEmpty(State.UserBearerToken.AccessToken))
+            {
+                MessageBox.Show(
+                    "A signed-in bearer token is required to list segmentation services.\n\nSign in again, then retry.",
+                    "Select Segmentation Service",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            string identityUrl = State.IdentityServerUrl
+                ?? Viking.Tokens.TokenInjector.BearerTokenAuthority;
+            if (string.IsNullOrWhiteSpace(identityUrl))
+            {
+                MessageBox.Show(
+                    "The Identity Server URL for this session is unknown.\n\nSign in again, then retry.",
+                    "Select Segmentation Service",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            IntPtr ownerHandle = IntPtr.Zero;
+            if (State.Appwindow != null && State.Appwindow.IsHandleCreated)
+                ownerHandle = State.Appwindow.Handle;
+
+            bool? confirmed = SegmentationServiceSelectionWindow.ShowDialog(
+                ownerHandle,
+                State.UserBearerToken,
+                identityUrl,
+                SegmentationServiceSession.CurrentEndpoint(),
+                State.RecentSegmentationServiceUrls,
+                out string? selectedEndpoint);
+
+            if (confirmed == true)
+                SegmentationServiceSession.ApplyEndpoint(selectedEndpoint);
         }
 
         [MenuItem("Open Structure")]

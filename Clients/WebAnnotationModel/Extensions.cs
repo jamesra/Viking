@@ -10,11 +10,11 @@ namespace WebAnnotationModel
 {
     public static class Extensions
     {
-        public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this GridRectangle rect) => new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
+        public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this Rectangle rect) => new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
 
-        public static GridRectangle ToGridRectangle(this AnnotationService.Types.BoundingRectangle bbox) => new GridRectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
+        public static Rectangle ToRectangle(this AnnotationService.Types.BoundingRectangle bbox) => new Rectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
 
-        public static SqlGeometry ToGeometry(GridVector2[] points, double Z, double radius, LocationType type)
+        public static SqlGeometry ToGeometry(Vector2[] points, double Z, double radius, LocationType type)
         {
             if (points is null)
             {

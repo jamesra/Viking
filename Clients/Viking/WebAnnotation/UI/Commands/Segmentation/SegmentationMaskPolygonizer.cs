@@ -7,7 +7,7 @@ using System.Linq;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// Converts a SAM2 binary mask to world-space <see cref="GridPolygon"/>s.
+    /// Converts a SAM2 binary mask to world-space <see cref="Polygon"/>s.
     /// Masks are downsampled before morphological cleanup and marching squares so a
     /// 4K capture does not run open/close at full res. Large-annotation eligibility
     /// is "fits in the visible scene" on the auto-polygonize path, not a mask-area gate here.
@@ -42,7 +42,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Polygonizes a decoded mask. Returns empty when the mask is missing.
         /// If cleanup produces an unusable ring, retries on the original mask.
         /// </summary>
-        public static IReadOnlyList<GridPolygon> CreatePolygons(
+        public static IReadOnlyList<Polygon> CreatePolygons(
             byte[] maskData,
             int maskWidth,
             int maskHeight,
@@ -50,9 +50,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int offsetY,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds,
+            Rectangle viewportBounds,
             double holeDropFraction,
-            IReadOnlyList<GridVector2> preserveHolesContainingWorldPoints = null,
+            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints = null,
             int edgeCleanupRadius = 0)
         {
             return CreatePolygons(
@@ -70,7 +70,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 out _);
         }
 
-        public static IReadOnlyList<GridPolygon> CreatePolygons(
+        public static IReadOnlyList<Polygon> CreatePolygons(
             byte[] maskData,
             int maskWidth,
             int maskHeight,
@@ -78,9 +78,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int offsetY,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds,
+            Rectangle viewportBounds,
             double holeDropFraction,
-            IReadOnlyList<GridVector2> preserveHolesContainingWorldPoints,
+            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
             int edgeCleanupRadius,
             out CleanupStats cleanupStats)
         {
@@ -108,7 +108,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int foregroundAfter = CountForeground(workingMask);
             cleanupStats = new CleanupStats(cleanupMs, foregroundBefore, foregroundAfter);
 
-            IReadOnlyList<GridPolygon> cleanedPolygons = PolygonizeMask(
+            IReadOnlyList<Polygon> cleanedPolygons = PolygonizeMask(
                 workingMask,
                 polygonWidth,
                 polygonHeight,
@@ -126,7 +126,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (edgeCleanupRadius > 0 && !ReferenceEquals(workingMask, polygonMask))
             {
-                IReadOnlyList<GridPolygon> originalPolygons = PolygonizeMask(
+                IReadOnlyList<Polygon> originalPolygons = PolygonizeMask(
                     polygonMask,
                     polygonWidth,
                     polygonHeight,
@@ -184,7 +184,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Marching-squares the (possibly downsampled) mask, keeps the largest exterior, then maps to world.
         /// </summary>
-        private static IReadOnlyList<GridPolygon> PolygonizeMask(
+        private static IReadOnlyList<Polygon> PolygonizeMask(
             byte[] maskData,
             int maskWidth,
             int maskHeight,
@@ -192,50 +192,50 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int offsetY,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds,
+            Rectangle viewportBounds,
             double holeDropFraction,
-            IReadOnlyList<GridVector2> preserveHolesContainingWorldPoints,
+            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
             int scale = 1)
         {
             bool[] mask = Array.ConvertAll(maskData, value => value > 0);
-            List<GridVector2[]> contours = [.. MarchingSquares.FindContours(mask, maskWidth, maskHeight)
+            List<Vector2[]> contours = [.. MarchingSquares.FindContours(mask, maskWidth, maskHeight)
                 .Select(ring => NormalizeRing(ring, offsetX, offsetY, scale))
                 .Where(ring => ring.Length >= 4)];
 
             if (contours.Count == 0)
                 return [];
 
-            GridVector2[] exteriorRing = contours
+            Vector2[] exteriorRing = contours
                 .OrderByDescending(ring => Math.Abs(ring.PolygonArea()))
                 .First();
 
-            GridPolygon pixelPolygon;
+            Polygon pixelPolygon;
             try
             {
-                pixelPolygon = new GridPolygon(exteriorRing);
+                pixelPolygon = new Polygon(exteriorRing);
             }
             catch (ArgumentException)
             {
                 return [];
             }
 
-            GridVector2[] keepHolePoints = ToPixelPoints(
+            Vector2[] keepHolePoints = ToPixelPoints(
                 preserveHolesContainingWorldPoints,
                 imageWidth,
                 imageHeight,
                 viewportBounds);
 
             double exteriorArea = pixelPolygon.Area;
-            foreach (GridVector2[] ring in contours.Where(ring => !ReferenceEquals(ring, exteriorRing)))
+            foreach (Vector2[] ring in contours.Where(ring => !ReferenceEquals(ring, exteriorRing)))
             {
                 double ringArea = Math.Abs(ring.PolygonArea());
                 if (ringArea <= 0)
                     continue;
 
-                GridPolygon holePolygon;
+                Polygon holePolygon;
                 try
                 {
-                    holePolygon = new GridPolygon(ring);
+                    holePolygon = new Polygon(ring);
                 }
                 catch (ArgumentException)
                 {
@@ -246,7 +246,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (belowDropThreshold && !ContainsAny(holePolygon, keepHolePoints))
                     continue;
 
-                if (!pixelPolygon.Contains(ring[0]))
+                if (!pixelPolygon.Covers(ring[0]))
                     continue;
 
                 try
@@ -259,8 +259,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            GridPolygon simplifiedPolygon = TrySimplify(pixelPolygon, scale);
-            GridPolygon worldPolygon = TransformToWorld(
+            Polygon simplifiedPolygon = TrySimplify(pixelPolygon, scale);
+            Polygon worldPolygon = TransformToWorld(
                 simplifiedPolygon,
                 imageWidth,
                 imageHeight,
@@ -269,10 +269,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return [worldPolygon];
         }
 
-        private static bool IsUsable(IReadOnlyList<GridPolygon> polygons) =>
+        private static bool IsUsable(IReadOnlyList<Polygon> polygons) =>
             polygons is not null &&
             polygons.Count > 0 &&
-            !polygons[0].ExteriorSegments.SelfIntersects(LineSetOrdering.CLOSED);
+            !polygons[0].ExteriorSegments.SelfIntersects(LineSetOrdering.Closed);
 
         private static int CountForeground(byte[] maskData)
         {
@@ -404,11 +404,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Maps downsampled contour vertices back to full-mask pixel space, then closes the ring.
         /// </summary>
-        private static GridVector2[] NormalizeRing(IEnumerable<GridVector2> ring, int offsetX, int offsetY, int scale)
+        private static Vector2[] NormalizeRing(IEnumerable<Vector2> ring, int offsetX, int offsetY, int scale)
         {
             int safeScale = scale < 1 ? 1 : scale;
-            GridVector2[] translated = [.. ring.Select(point =>
-                new GridVector2((point.X * safeScale) + offsetX, (point.Y * safeScale) + offsetY))];
+            Vector2[] translated = [.. ring.Select(point =>
+                new Vector2((point.X * safeScale) + offsetX, (point.Y * safeScale) + offsetY))];
             return [.. translated.RemoveAdjacentDuplicates().EnsureClosedRing()];
         }
 
@@ -417,7 +417,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// still collapses staircases after <see cref="NormalizeRing"/> multiplies vertices by <paramref name="scale"/>.
         /// Catmull-Rom <c>Simplify</c> is not used: it fits the interpolated staircase and leaves traces dense.
         /// </summary>
-        private static GridPolygon TrySimplify(GridPolygon polygon, int scale)
+        private static Polygon TrySimplify(Polygon polygon, int scale)
         {
             double tolerance = SimplificationTolerancePixels * Math.Max(1, scale);
             return SimplifyRings(polygon, tolerance);
@@ -428,7 +428,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Retries at half tolerance when the result is invalid so a dense original is not kept
         /// just because the first pass self-intersected.
         /// </summary>
-        internal static GridPolygon SimplifyRings(GridPolygon polygon, double tolerance)
+        internal static Polygon SimplifyRings(Polygon polygon, double tolerance)
         {
             if (polygon is null || tolerance <= 0)
                 return polygon;
@@ -437,7 +437,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double minimum = Math.Max(tolerance * 0.125, 0.25);
             while (current >= minimum)
             {
-                if (TryBuildSimplifiedPolygon(polygon, current, out GridPolygon simplified))
+                if (TryBuildSimplifiedPolygon(polygon, current, out Polygon simplified))
                     return simplified;
 
                 current *= 0.5;
@@ -446,19 +446,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return polygon;
         }
 
-        private static bool TryBuildSimplifiedPolygon(GridPolygon polygon, double tolerance, out GridPolygon simplified)
+        private static bool TryBuildSimplifiedPolygon(Polygon polygon, double tolerance, out Polygon simplified)
         {
             simplified = null;
             try
             {
-                GridVector2[] exterior = SimplifyClosedRing(polygon.ExteriorRing, tolerance);
+                Vector2[] exterior = SimplifyClosedRing(polygon.ExteriorRing, tolerance);
                 if (exterior is null)
                     return false;
 
-                GridPolygon output = new(exterior);
-                foreach (GridVector2[] hole in polygon.InteriorRings)
+                Polygon output = new(exterior);
+                foreach (Vector2[] hole in polygon.InteriorRings)
                 {
-                    GridVector2[] simplifiedHole = SimplifyClosedRing(hole, tolerance);
+                    Vector2[] simplifiedHole = SimplifyClosedRing(hole, tolerance);
                     try
                     {
                         output.AddInteriorRing(simplifiedHole ?? hole);
@@ -475,7 +475,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     }
                 }
 
-                if (output.ExteriorSegments.SelfIntersects(LineSetOrdering.CLOSED))
+                if (output.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed))
                     return false;
 
                 simplified = output;
@@ -487,14 +487,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private static GridVector2[] SimplifyClosedRing(IReadOnlyList<GridVector2> ring, double tolerance)
+        private static Vector2[] SimplifyClosedRing(IReadOnlyList<Vector2> ring, double tolerance)
         {
             if (ring is null || ring.Count < 4)
                 return null;
 
-            List<GridVector2> reduced = ring.ToList().DouglasPeuckerReduction(tolerance);
-            List<GridVector2> unique = ((ICollection<GridVector2>)reduced).RemoveAdjacentDuplicates();
-            GridVector2[] closed = [.. unique.EnsureClosedRing()];
+            List<Vector2> reduced = ring.ToList().DouglasPeuckerReduction(tolerance);
+            List<Vector2> unique = ((ICollection<Vector2>)reduced).RemoveAdjacentDuplicates();
+            Vector2[] closed = [.. unique.EnsureClosedRing()];
             return closed.IsValidClosedRing() ? closed : null;
         }
 
@@ -502,20 +502,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Converts mask-pixel rings to world space. Pixel Y is top-origin; Viking world Y increases upward.
         /// Tests must assert Contains against the flipped Y (e.g. 300,500 not 300,300 for a 600-tall capture).
         /// </summary>
-        private static GridPolygon TransformToWorld(
-            GridPolygon pixelPolygon,
+        private static Polygon TransformToWorld(
+            Polygon pixelPolygon,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds)
+            Rectangle viewportBounds)
         {
-            GridVector2[] exterior = TransformRing(
+            Vector2[] exterior = TransformRing(
                 pixelPolygon.ExteriorRing,
                 imageWidth,
                 imageHeight,
                 viewportBounds);
-            GridPolygon output = new(exterior);
+            Polygon output = new(exterior);
 
-            foreach (GridVector2[] interior in pixelPolygon.InteriorRings)
+            foreach (Vector2[] interior in pixelPolygon.InteriorRings)
             {
                 try
                 {
@@ -530,11 +530,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return output;
         }
 
-        private static GridVector2[] ToPixelPoints(
-            IReadOnlyList<GridVector2> worldPoints,
+        private static Vector2[] ToPixelPoints(
+            IReadOnlyList<Vector2> worldPoints,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds)
+            Rectangle viewportBounds)
         {
             if (worldPoints is null || worldPoints.Count == 0 || imageWidth <= 0 || imageHeight <= 0)
                 return [];
@@ -542,14 +542,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return [.. worldPoints.Select(point => WorldToPixel(point, imageWidth, imageHeight, viewportBounds))];
         }
 
-        private static bool ContainsAny(GridPolygon polygon, IReadOnlyList<GridVector2> points)
+        private static bool ContainsAny(Polygon polygon, IReadOnlyList<Vector2> points)
         {
             if (points is null || points.Count == 0)
                 return false;
 
-            foreach (GridVector2 point in points)
+            foreach (Vector2 point in points)
             {
-                if (polygon.Contains(point))
+                if (polygon.Covers(point))
                     return true;
             }
 
@@ -559,30 +559,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Inverse of <see cref="TransformRing"/>: world-up to mask top-origin pixels.
         /// </summary>
-        private static GridVector2 WorldToPixel(
-            GridVector2 world,
+        private static Vector2 WorldToPixel(
+            Vector2 world,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds)
+            Rectangle viewportBounds)
         {
             double normalizedX = (world.X - viewportBounds.Left) / viewportBounds.Width;
             double normalizedY = (world.Y - viewportBounds.Bottom) / viewportBounds.Height;
-            return new GridVector2(
+            return new Vector2(
                 normalizedX * imageWidth,
                 imageHeight - (normalizedY * imageHeight));
         }
 
-        private static GridVector2[] TransformRing(
-            IEnumerable<GridVector2> ring,
+        private static Vector2[] TransformRing(
+            IEnumerable<Vector2> ring,
             int imageWidth,
             int imageHeight,
-            GridRectangle viewportBounds)
+            Rectangle viewportBounds)
         {
             return [.. ring.Select(point =>
             {
                 double normalizedX = point.X / imageWidth;
                 double normalizedY = (imageHeight - point.Y) / imageHeight;
-                return new GridVector2(
+                return new Vector2(
                     viewportBounds.Left + (normalizedX * viewportBounds.Width),
                     viewportBounds.Bottom + (normalizedY * viewportBounds.Height));
             })];

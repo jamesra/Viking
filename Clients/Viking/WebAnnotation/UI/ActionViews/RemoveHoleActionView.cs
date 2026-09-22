@@ -1,4 +1,5 @@
 ﻿
+using Geometry;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;

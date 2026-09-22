@@ -15,6 +15,8 @@ using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
 using WebAnnotation.UI.Actions;
 using WebAnnotation.UI.ActionViews;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -65,7 +67,7 @@ namespace WebAnnotation.UI.Commands
 
         private readonly OnCommandSuccess? SuccessCallback = null;
 
-        private GridRectangle BoundingBox;
+        private Geometry.Rectangle BoundingBox;
 
         /// <summary>
         /// If the mouse or pen hover over a button we only display the active animation for the button if it exists
@@ -123,7 +125,7 @@ namespace WebAnnotation.UI.Commands
 
                 Color color = value is not IColorView colorView ? Color.Green : colorView.Color;
 
-                GridCircle circle = new(GridVector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
+                Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
                 btnView = value.Icon != BuiltinTexture.None
                     ? new TextureCircleView(value.Icon.GetTexture(), circle, color)
                     : new CircleView(circle, color);
@@ -150,43 +152,43 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        private GridRectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
+        private Geometry.Rectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
         {
-            GridRectangle output = new();
+            Geometry.Rectangle output = new();
 
             bool First = true;
             foreach (List<IHitTesting> controls in ActionInteractables.Values)
             {
                 foreach (IHitTesting control in controls)
                 {
-                    output = First ? control.BoundingBox : GridRectangle.Union(output, control.BoundingBox);
+                    output = First ? control.BoundingBox : Geometry.Rectangle.Union(output, control.BoundingBox);
                 }
             }
 
             //Check that the bounding box is not too large
-            GridRectangle renderTargetBounds = Parent.RenderTargetBounds();
+            Geometry.Rectangle renderTargetBounds = Parent.RenderTargetBounds();
             if (output.Width > renderTargetBounds.Width)
             {
-                output = new GridRectangle(renderTargetBounds.Left, renderTargetBounds.Right, output.Bottom,
+                output = new Geometry.Rectangle(renderTargetBounds.Left, renderTargetBounds.Right, output.Bottom,
                     output.Top);
             }
 
             if (output.Height > renderTargetBounds.Height)
             {
-                output = new GridRectangle(output.Left, output.Right, renderTargetBounds.Bottom,
+                output = new Geometry.Rectangle(output.Left, output.Right, renderTargetBounds.Bottom,
                     renderTargetBounds.Top);
             }
 
             //Check that the bounding box is not too small
             if (output.Width < renderTargetBounds.Width / 5)
             {
-                output = new GridRectangle(output.Left, output.Left + renderTargetBounds.Width / 5, output.Bottom,
+                output = new Geometry.Rectangle(output.Left, output.Left + renderTargetBounds.Width / 5, output.Bottom,
                     output.Top);
             }
 
             if (output.Height < renderTargetBounds.Height / 5)
             {
-                output = new GridRectangle(output.Left, output.Right, output.Bottom,
+                output = new Geometry.Rectangle(output.Left, output.Right, output.Bottom,
                     output.Bottom + renderTargetBounds.Height / 5);
             }
 
@@ -198,29 +200,29 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void LayoutButtons()
         {
-            GridRectangle bbox = BoundingBox;
+            Geometry.Rectangle bbox = BoundingBox;
             //TODO: Ensure buttons are visible on the screen
 
             double Radius = GetButtonRadius(BoundingBox, CircleAreaScalar);
 
-            GridVector2 Origin = bbox.UpperLeft;
-            Origin = bbox.UpperLeft - new GridVector2(Radius, Radius);
+            Geometry.Vector2 Origin = bbox.UpperLeft;
+            Origin = bbox.UpperLeft - new Geometry.Vector2(Radius, Radius);
 
-            GridRectangle visible_world = Parent.Scene.VisibleWorldBounds;
+            Geometry.Rectangle visible_world = Parent.Scene.VisibleWorldBounds;
 
             if (visible_world.Left > Origin.X)
             {
-                Origin.X = visible_world.Left;
+                Origin = new Geometry.Vector2(visible_world.Left, Origin.Y);
             }
 
             if (visible_world.Bottom > Origin.Y)
             {
-                Origin.Y = visible_world.Bottom;
+                Origin = new Geometry.Vector2(Origin.X, visible_world.Bottom);
             }
 
-            //Origin = Origin - new GridVector2(Radius, 0);
+            //Origin = Origin - new Geometry.Vector2(Radius, 0);
 
-            GridVector2 NextPosition = Origin;
+            Geometry.Vector2 NextPosition = Origin;
             double HorizontalSpacing = Radius * 3;
             double VerticalSpacing = Radius * 3;
             //Place everything but the cancel button, which is the last button in the list.  The cancel button
@@ -231,22 +233,22 @@ namespace WebAnnotation.UI.Commands
 
             for (int i = 0; i < Buttons.Length - 1; i++)
             {
-                NextPosition = Origin + new GridVector2((iCol) * HorizontalSpacing, 0 - (VerticalSpacing * iRow));
-                Buttons[i].Circle = new GridCircle(NextPosition, Radius);
+                NextPosition = Origin + new Geometry.Vector2((iCol) * HorizontalSpacing, 0 - (VerticalSpacing * iRow));
+                Buttons[i].Circle = new Circle(NextPosition, Radius);
                 iCol++;
 
                 if (iCol > nCols)
                 {
                     iRow -= 1;
                     iCol = 0;
-                    //    NextPosition = new GridVector2(Origin.X - Radius, NextPosition.Y);
+                    //    NextPosition = new Geometry.Vector2(Origin.X - Radius, NextPosition.Y);
                 }
                 Trace.WriteLine(NextPosition);
             }
 
             //Place the cancel button one row up and one column right of the normal button positions
-            NextPosition = Origin + new GridVector2((nCols + 1) * HorizontalSpacing, 0 - (VerticalSpacing * -1));
-            Buttons[Buttons.Length - 1].Circle = new GridCircle(NextPosition, Radius);
+            NextPosition = Origin + new Geometry.Vector2((nCols + 1) * HorizontalSpacing, 0 - (VerticalSpacing * -1));
+            Buttons[Buttons.Length - 1].Circle = new Circle(NextPosition, Radius);
         }
 
         /// <summary>
@@ -254,10 +256,10 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void AppendCancelButton()
         {
-            GridVector2 ButtonCenter = BoundingBox.UpperRight;
+            Geometry.Vector2 ButtonCenter = BoundingBox.UpperRight;
             double CancelCircleRadius = GetButtonRadius(BoundingBox, CircleAreaScalar);
-            ButtonCenter = ButtonCenter + new GridVector2(CancelCircleRadius, CancelCircleRadius);
-            GridCircle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
+            ButtonCenter = ButtonCenter + new Geometry.Vector2(CancelCircleRadius, CancelCircleRadius);
+            Circle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
 
             //CancelView = new CircularButton(ButtonCircle, Color.Magenta);
             TextureCircleView cancelBtnView = new(BuiltinTexture.X.GetTexture(), ButtonCircle, Color.Magenta);
@@ -377,7 +379,7 @@ namespace WebAnnotation.UI.Commands
         {
             base.OnMouseDown(sender, e);
 
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             if (CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
             {
                 Deactivated = true;
@@ -400,7 +402,7 @@ namespace WebAnnotation.UI.Commands
 
 
             /*
-            if (VolumeShape.Contains(WorldPosition))
+            if (VolumeShape.Covers(WorldPosition))
             {
                 this.Execute();
             }
@@ -415,7 +417,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             UpdateActiveView(WorldPosition);
         }
 
@@ -425,7 +427,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenContact(object sender, PenEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             if (CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Pen, e))
             {
@@ -448,7 +450,7 @@ namespace WebAnnotation.UI.Commands
 
 
             /*
-            if (BoundingBox.Contains(WorldPosition))
+            if (BoundingBox.Covers(WorldPosition))
             {
                 this.Execute();
             }
@@ -467,7 +469,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.InContact == false)
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 UpdateActiveView(WorldPosition);
             }
 
@@ -478,7 +480,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShouldSerializeProperty(DependencyProperty dp) => base.ShouldSerializeProperty(dp);
 
-        protected void UpdateActiveView(GridVector2 WorldPosition)
+        protected void UpdateActiveView(Geometry.Vector2 WorldPosition)
         {
             if (CancelButton.Contains(WorldPosition))
             {

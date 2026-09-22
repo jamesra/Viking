@@ -14,7 +14,7 @@ namespace WebAnnotationModel.ServerInterface
         /// <param name="ScreenPixelSizeInVolume"></param>
         /// <param name="Z"></param>
         /// <returns></returns>
-        Task<IList<OBJECT>> GetAsync(IRectangle bounds,
+        Task<IList<OBJECT>> GetAsync(IRectangle2D bounds,
                                      double ScreenPixelSizeInVolume,
                                      int Z);
     }

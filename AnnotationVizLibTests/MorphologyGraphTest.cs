@@ -102,11 +102,11 @@ namespace AnnotationVizLibTests
 
         public static void TestMorphologyGraphBoundingBox(MorphologyGraph graph)
         {
-            Geometry.GridBox bbox = graph.BoundingBox;
+            Geometry.Box bbox = graph.BoundingBox;
 
             //Ensure the bbox contains all of the centers of the morphology nodes
-            GridVector3[] centers = [.. graph.Nodes.Select(n => n.Value.Center)];
-            GridBox node_center_bbox = GridBox.GetBoundingBox(centers);
+            Vector3[] centers = [.. graph.Nodes.Select(n => n.Value.Center)];
+            Box node_center_bbox = Box.GetBoundingBox(centers);
 
             Assert.IsTrue(bbox.Contains(node_center_bbox));
         }
@@ -548,11 +548,11 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestMorphologyGraphBoundingBox()
         {
-            Geometry.GridBox bbox = SharedGraph.BoundingBox;
+            Geometry.Box bbox = SharedGraph.BoundingBox;
 
             //Ensure the bbox contains all of the centers of the morphology nodes
-            GridVector3[] centers = SharedGraph.Subgraphs.First().Value.Nodes.Select(n => n.Value.Center).ToArray();
-            GridBox node_center_bbox = GridBox.GetBoundingBox(centers);
+            Vector3[] centers = SharedGraph.Subgraphs.First().Value.Nodes.Select(n => n.Value.Center).ToArray();
+            Box node_center_bbox = Box.GetBoundingBox(centers);
 
             Assert.IsTrue(bbox.Contains(node_center_bbox));
         }

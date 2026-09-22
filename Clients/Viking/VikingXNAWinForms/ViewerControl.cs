@@ -8,6 +8,8 @@ using Microsoft.Xna.Framework.Graphics;
 using RoundCurve;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAWinForms;
 
@@ -41,9 +43,9 @@ public class ViewerControl : GraphicsDeviceControl
     public Microsoft.Xna.Framework.Graphics.SpriteBatch? spriteBatch = null;
     public Microsoft.Xna.Framework.Graphics.SpriteFont? fontArial = null;
 
-    static readonly Dictionary<string, Vector2> LabelToSize = [];
+    static readonly Dictionary<string, Microsoft.Xna.Framework.Vector2> LabelToSize = [];
 
-    public static Vector2 GetLabelSize(SpriteFont font, string label)
+    public static Microsoft.Xna.Framework.Vector2 GetLabelSize(SpriteFont font, string label)
     {
         if (font is null)
             throw new ArgumentNullException(nameof(font));
@@ -135,7 +137,7 @@ public class ViewerControl : GraphicsDeviceControl
             //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
             //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
             //   basicEffect.SpecularPower = 5.0f;
-            AmbientLightColor = new Vector3(1f, 1f, 1f)
+            AmbientLightColor = new Microsoft.Xna.Framework.Vector3(1f, 1f, 1f)
         };
 
         Matrix WorldViewProj = Scene.WorldViewProj;
@@ -289,21 +291,21 @@ public class ViewerControl : GraphicsDeviceControl
     /// Boundaries of the render target in world space
     /// </summary>
     /// <returns></returns>
-    public Geometry.GridRectangle RenderTargetBounds()
+    public Geometry.Rectangle RenderTargetBounds()
     {
         if (Device is null)
-            return new GridRectangle(0, 0, 10, 10);
+            return new Geometry.Rectangle(0, 0, 10, 10);
 
         //For debugging
         const int offset = 0;
 
-        //GridVector2 TopLeft = ScreenToWorld(offset, offset);
-        //GridVector2 BottomLeft = ScreenToWorld(offset, GraphicsDevice.Viewport.Height - offset);
-        //GridVector2 TopRight = ScreenToWorld(GraphicsDevice.Viewport.Width - offset, offset);
+        //Geometry.Vector2 TopLeft = ScreenToWorld(offset, offset);
+        //Geometry.Vector2 BottomLeft = ScreenToWorld(offset, GraphicsDevice.Viewport.Height - offset);
+        //Geometry.Vector2 TopRight = ScreenToWorld(GraphicsDevice.Viewport.Width - offset, offset);
 
-        GridVector2 BottomLeft = Scene.ScreenToWorld(offset, Device.Viewport.Height - offset);
-        GridVector2 TopRight = Scene.ScreenToWorld(Device.Viewport.Width - offset, offset);
-        GridRectangle rect = new(BottomLeft, TopRight.X - BottomLeft.X, TopRight.Y - BottomLeft.Y);
+        Geometry.Vector2 BottomLeft = Scene.ScreenToWorld(offset, Device.Viewport.Height - offset);
+        Geometry.Vector2 TopRight = Scene.ScreenToWorld(Device.Viewport.Width - offset, offset);
+        Geometry.Rectangle rect = new(BottomLeft, TopRight.X - BottomLeft.X, TopRight.Y - BottomLeft.Y);
         return rect;
     }
 
@@ -319,7 +321,7 @@ public class ViewerControl : GraphicsDeviceControl
     /// <summary>
     /// Takes a capture and sends it to the clipboard
     /// </summary>
-    protected Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] CaptureArea(Geometry.GridRectangle Rect, float Downsample)
+    protected Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] CaptureArea(Geometry.Rectangle Rect, float Downsample)
     {
         Debug.Assert((Rect.Width / Downsample) < 4096 && (Rect.Height / Downsample) < 4096);
         Debug.Assert(this.PaintCallRefCount == 0);
@@ -538,7 +540,7 @@ public class ViewerControl : GraphicsDeviceControl
             }
         }
 
-        //            GridRectangle Bounds = VisibleBounds();
+        //            Geometry.Rectangle Bounds = VisibleBounds();
 
 #if !DEBUG
         try
@@ -574,9 +576,9 @@ public class ViewerControl : GraphicsDeviceControl
     /// <param name="renderTarget"></param>
     protected virtual void Draw(Scene scene) => throw new NotImplementedException();
 
-    public Geometry.GridVector2 ScreenToWorld(double X, double Y) => Scene.ScreenToWorld(X, Y);
+    public Geometry.Vector2 ScreenToWorld(double X, double Y) => Scene.ScreenToWorld(X, Y);
 
-    public Geometry.GridVector2 WorldToScreen(double X, double Y) => Scene.WorldToScreen(X, Y);
+    public Geometry.Vector2 WorldToScreen(double X, double Y) => Scene.WorldToScreen(X, Y);
 
     protected override void OnClientSizeChanged(EventArgs e)
     {

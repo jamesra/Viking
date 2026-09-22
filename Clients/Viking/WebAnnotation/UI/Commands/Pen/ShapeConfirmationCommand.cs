@@ -12,6 +12,8 @@ using Viking.UI.Controls;
 using VikingXNA;
 using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -66,17 +68,17 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void LayoutButtons()
         {
-            GridVector2 Origin = VolumeShape.BoundingBox.UpperLeft;
+            Geometry.Vector2 Origin = VolumeShape.BoundingBox.UpperLeft;
 
             double Radius = GetButtonRadius(VolumeShape, CircleAreaScalar);
-            Origin = Origin - new GridVector2(Radius, Radius);
+            Origin = Origin - new Geometry.Vector2(Radius, Radius);
 
             //Place everything but the cancel button, which is the last button in the list.  The cancel button
             //is positioned at creation time
             for (int i = 0; i < Buttons.Count - 1; i++)
             {
-                GridVector2 position = Origin + new GridVector2(i * (Radius * 2), 0);
-                Buttons[i].Circle = new GridCircle(position, Radius);
+                Geometry.Vector2 position = Origin + new Geometry.Vector2(i * (Radius * 2), 0);
+                Buttons[i].Circle = new Circle(position, Radius);
             }
         }
 
@@ -85,10 +87,10 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void AppendCancelButton()
         {
-            GridVector2 ButtonCenter = VolumeShape.BoundingBox.UpperRight;
+            Geometry.Vector2 ButtonCenter = VolumeShape.BoundingBox.UpperRight;
             double CancelCircleRadius = GetButtonRadius(VolumeShape, CircleAreaScalar);
-            ButtonCenter = ButtonCenter - new GridVector2(CancelCircleRadius, CancelCircleRadius);
-            GridCircle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
+            ButtonCenter = ButtonCenter - new Geometry.Vector2(CancelCircleRadius, CancelCircleRadius);
+            Circle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
 
             //CancelView = new CircularButton(ButtonCircle, Color.Magenta);
             CancelButton = new CircularButton(ButtonCircle, Color.Magenta);
@@ -103,25 +105,18 @@ namespace WebAnnotation.UI.Commands
         {
             switch (VolumeShape.ShapeType)
             {
-                case ShapeType2D.CIRCLE:
-                    circleView = new CircleView((GridCircle)VolumeShape, ShapeColor);
+                case ShapeType2D.Circle:
+                    circleView = new CircleView((Circle)VolumeShape, ShapeColor);
                     break;
 
-                case ShapeType2D.CLOSEDCURVE:
-                    DrawnShape1D = new PolyLineView(ShapeColor, null, Width, LineStyle.Standard);
+                case ShapeType2D.Polygon:
+                    DrawnShape2D = TriangleNetExtensions.CreateMeshForPolygon2D((Polygon)VolumeShape, ShapeColor.ConvertToHCL());
                     break;
 
-                case ShapeType2D.CURVEPOLYGON:
-                case ShapeType2D.POLYGON:
-                    DrawnShape2D = TriangleNetExtensions.CreateMeshForPolygon2D((GridPolygon)VolumeShape, ShapeColor.ConvertToHCL());
-                    break;
-
-                case ShapeType2D.POINT:
-                case ShapeType2D.ELLIPSE:
+                case ShapeType2D.Point:
                     throw new NotImplementedException();
 
-                case ShapeType2D.POLYLINE:
-                case ShapeType2D.OPENCURVE:
+                case ShapeType2D.Polyline:
                     DrawnShape1D = new PolyLineView(ShapeColor, null, Width, LineStyle.Standard);
                     break;
             }
@@ -196,7 +191,7 @@ namespace WebAnnotation.UI.Commands
         {
             base.OnMouseDown(sender, e);
 
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             foreach (CircularButton button in Buttons)
             {
@@ -222,7 +217,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenContact(object sender, PenEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             foreach (CircularButton button in Buttons)
             {

@@ -76,8 +76,7 @@ namespace GeometryTests.Algorithms
         [TestMethod]
         public void FindContours_FourAdjacentPixels_OneRing()
         {
-            bool[] mask = new bool[4];
-            Array.Fill(mask, true);
+            bool[] mask = [true, true, true, true];
 
             IReadOnlyList<Vector2[]> contours = MarchingSquares.FindContours(mask, 2, 2);
 

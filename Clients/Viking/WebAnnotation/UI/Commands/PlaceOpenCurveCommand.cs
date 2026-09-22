@@ -24,7 +24,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Geometry.Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, false, success_callback)
@@ -33,7 +33,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Geometry.Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, false, success_callback)
@@ -47,14 +47,14 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanControlPointBePlaced(GridVector2 WorldPos) => (!OverlapsAnyVertex(WorldPos));
+        protected override bool CanControlPointBePlaced(Geometry.Vector2 WorldPos) => (!OverlapsAnyVertex(WorldPos));
 
         /// <summary>
         /// Can the command be completed by clicking this point?
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanCommandComplete(GridVector2 WorldPos) => (OverlapsLastVertex(WorldPos) || OverlapsFirstVertex(WorldPos)) && ShapeIsValid();
+        protected override bool CanCommandComplete(Geometry.Vector2 WorldPos) => (OverlapsLastVertex(WorldPos) || OverlapsFirstVertex(WorldPos)) && ShapeIsValid();
 
         protected override bool ShapeIsValid()
         {
@@ -78,9 +78,9 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
+        protected override Geometry.Vector2? ProposedControlPointSelfIntersection(Geometry.Vector2 worldPos)
         {
-            GridVector2? retval = new GridVector2?();
+            Geometry.Vector2? retval = new Geometry.Vector2?();
 
             if (NumVerticies < 3)
             {
@@ -90,15 +90,15 @@ namespace WebAnnotation.UI.Commands
             if (worldPos != vert_stack.Peek())
             {
                 CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                GridVector2[] controlPoints = Verticies;
-                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
-                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
+                Geometry.Vector2[] controlPoints = Verticies;
+                LineSegment[] proposed_back_curve_segments = LineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
+                LineSegment[] proposed_front_curve_segments = LineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
+                LineSegment[] existing_curve_segments = LineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
 
                 proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
                 existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
-                GridVector2[] intersections = [.. proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value)];
+                Geometry.Vector2[] intersections = [.. proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value)];
                 if (intersections.Length > 0)
                 {
                     retval = intersections.First();
@@ -125,7 +125,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Geometry.Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, true, success_callback)
@@ -134,7 +134,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Geometry.Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, true, success_callback)
@@ -146,14 +146,14 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanControlPointBePlaced(GridVector2 WorldPos) => !OverlapsAnyVertex(WorldPos) && !ProposedSegmentSelfIntersects(WorldPos);
+        protected override bool CanControlPointBePlaced(Geometry.Vector2 WorldPos) => !OverlapsAnyVertex(WorldPos) && !ProposedSegmentSelfIntersects(WorldPos);
 
         /// <summary>
         /// Can the command be completed by clicking this point?
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanCommandComplete(GridVector2 WorldPos) => OverlapsLastVertex(WorldPos) && NumVerticies >= 2 && !ProposedSegmentSelfIntersects(WorldPos);
+        protected override bool CanCommandComplete(Geometry.Vector2 WorldPos) => OverlapsLastVertex(WorldPos) && NumVerticies >= 2 && !ProposedSegmentSelfIntersects(WorldPos);
 
         protected override bool ShapeIsValid()
         {
@@ -170,14 +170,14 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        protected static bool ProposedSegmentSelfIntersects(CurveViewControlPoints curve_verticies, GridLineSegment newSegment)
+        protected static bool ProposedSegmentSelfIntersects(CurveViewControlPoints curve_verticies, LineSegment newSegment)
         {
             if (curve_verticies.ControlPoints.Length < 4)
             {
                 return false;
             }
 
-            GridLineSegment[] existingSegments = GridLineSegment.SegmentsFromPoints(
+            LineSegment[] existingSegments = LineSegment.SegmentsFromPoints(
                     [.. curve_verticies.CurvePoints.Where((p, i) => i < curve_verticies.CurvePoints.Length - 2)]);
 
             return newSegment.Intersects(existingSegments);
@@ -188,9 +188,9 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
+        protected override Geometry.Vector2? ProposedControlPointSelfIntersection(Geometry.Vector2 worldPos)
         {
-            GridVector2? retval = new GridVector2?();
+            Geometry.Vector2? retval = new Geometry.Vector2?();
 
             if (NumVerticies < 3)
             {
@@ -202,13 +202,13 @@ namespace WebAnnotation.UI.Commands
                 try
                 {
                     CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                    GridVector2[] controlPoints = Verticies;
-                    GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
-                    GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
+                    Geometry.Vector2[] controlPoints = Verticies;
+                    LineSegment[] proposed_curve_segments = LineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
+                    LineSegment[] existing_curve_segments = LineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
 
                     existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
-                    GridVector2[] intersections = [.. proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value)];
+                    Geometry.Vector2[] intersections = [.. proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value)];
                     if (intersections.Length > 0)
                     {
                         retval = intersections.First();
@@ -217,7 +217,7 @@ namespace WebAnnotation.UI.Commands
 
                 catch (ArgumentException)
                 {
-                    return new GridVector2?();
+                    return new Geometry.Vector2?();
                 }
             }
 
@@ -272,17 +272,17 @@ namespace WebAnnotation.UI.Commands
             "Home key: Round magnification to whole number"
             ];
 
-        protected Stack<GridVector2> vert_stack = new();
+        protected Stack<Geometry.Vector2> vert_stack = new();
 
-        protected void PushVertex(GridVector2 p)
+        protected void PushVertex(Geometry.Vector2 p)
         {
             vert_stack.Push(p);
             curve_verticies = vert_stack.Count > 2 || IsOpen ? new CurveViewControlPoints(Verticies, NumCurveInterpolations, !IsOpen) : null;
         }
 
-        protected GridVector2 PopVertex()
+        protected Geometry.Vector2 PopVertex()
         {
-            GridVector2 output = vert_stack.Pop();
+            Geometry.Vector2 output = vert_stack.Pop();
             curve_verticies = vert_stack.Count > 2 || IsOpen ? new CurveViewControlPoints(Verticies, NumCurveInterpolations, !IsOpen) : null;
             return output;
         }
@@ -297,13 +297,13 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
         /// </summary>
-        public override GridVector2[] Verticies
+        public override Geometry.Vector2[] Verticies
         {
-            get => [.. ((IEnumerable<GridVector2>)[.. vert_stack]).Reverse()];
+            get => [.. ((IEnumerable<Geometry.Vector2>)[.. vert_stack]).Reverse()];
             protected set
             {
                 vert_stack.Clear();
-                foreach (GridVector2 v in value)
+                foreach (Geometry.Vector2 v in value)
                 {
                     vert_stack.Push(v);
                 }
@@ -316,7 +316,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Geometry.Vector2 origin,
                                         double LineWidth,
                                         bool IsOpen,
                                         OnCommandSuccess success_callback)
@@ -330,7 +330,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Geometry.Vector2 origin,
                                         double LineWidth,
                                         bool IsOpen,
                                         OnCommandSuccess success_callback)
@@ -344,9 +344,9 @@ namespace WebAnnotation.UI.Commands
         }
 
 
-        protected CurveViewControlPoints AppendControlPointToCurve(GridVector2 worldPos)
+        protected CurveViewControlPoints AppendControlPointToCurve(Geometry.Vector2 worldPos)
         {
-            List<GridVector2> listControlPoints = [.. Verticies, worldPos];
+            List<Geometry.Vector2> listControlPoints = [.. Verticies, worldPos];
             return new CurveViewControlPoints(listControlPoints, NumCurveInterpolations, !IsOpen);
         }
 
@@ -355,23 +355,23 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        protected bool ProposedSegmentSelfIntersects(GridVector2 worldPos)
+        protected bool ProposedSegmentSelfIntersects(Geometry.Vector2 worldPos)
         {
-            GridVector2? intersection = ProposedControlPointSelfIntersection(worldPos);
+            Geometry.Vector2? intersection = ProposedControlPointSelfIntersection(worldPos);
             return intersection.HasValue;
         }
 
-        protected override GridVector2? IntersectsSelf(GridLineSegment lineSeg) => curve_verticies.CurvePoints.IntersectionPoint(lineSeg);
+        protected override Geometry.Vector2? IntersectsSelf(LineSegment lineSeg) => curve_verticies.CurvePoints.IntersectionPoint(lineSeg);
 
 
-        protected override bool CanControlPointBeGrabbed(GridVector2 WorldPos) => OverlapsAnyVertex(WorldPos);
+        protected override bool CanControlPointBeGrabbed(Geometry.Vector2 WorldPos) => OverlapsAnyVertex(WorldPos);
 
 
 
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
             if (e.Button == MouseButtons.None)
             {
@@ -387,7 +387,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.Button.Left())
             {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (CanCommandComplete(WorldPos))
                 {
                     Execute();
@@ -437,7 +437,7 @@ namespace WebAnnotation.UI.Commands
             }
             else if (e.Button.Left())
             {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (CanControlPointBePlaced(WorldPos))
                 {
                     PushVertex(WorldPos);
@@ -452,13 +452,13 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseDown(sender, e);
         }
 
-        protected abstract GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos);
+        protected abstract Geometry.Vector2? ProposedControlPointSelfIntersection(Geometry.Vector2 worldPos);
 
         protected abstract bool ShapeIsValid();
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(oldWorldPosition);
+            Geometry.Vector2? SelfIntersection = ProposedControlPointSelfIntersection(oldWorldPosition);
 
             if ((SelfIntersection.HasValue || CanControlPointBePlaced(oldWorldPosition)))
             {
@@ -486,7 +486,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 else
                 {
-                    LineView lineView = new(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!IsOpen), LineColor, lineStyle: Style);
+                    LineView lineView = new(new LineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!IsOpen), LineColor, lineStyle: Style);
                     lineView.Color.SetAlpha(ShapeIsValid() ? 1 : 0.25f);
                     LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [lineView]);
                 }
@@ -508,13 +508,13 @@ namespace WebAnnotation.UI.Commands
                 }
                 if (Verticies.Length == 2)
                 {
-                    LineView lineView = new(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!IsOpen), LineColor, lineStyle: Style);
+                    LineView lineView = new(new LineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!IsOpen), LineColor, lineStyle: Style);
                     lineView.Color.SetAlpha(ShapeIsValid() ? 1 : 0.25f);
                     LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [lineView]);
                 }
                 else
                 {
-                    CircleView view = new(new GridCircle(Verticies.First(), LineWidth / 2.0), LineColor);
+                    CircleView view = new(new Circle(Verticies.First(), LineWidth / 2.0), LineColor);
                     CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { view });
                 }
             }

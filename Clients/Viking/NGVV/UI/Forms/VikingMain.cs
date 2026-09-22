@@ -218,7 +218,7 @@ namespace Viking
                             if (map.Initialized == false)
                                 await map.Initialize(CancellationToken.None);
 
-                            Geometry.GridVector2 Center = map.ControlBounds.Center;
+                            Geometry.Vector2 Center = map.ControlBounds.Center;
                             await State.MainThreadDispatcher.BeginInvoke(new Action(() =>
                             {
                                 var CameraDownsample = Math.Max(map.ControlBounds.Width / SectionViewer.Width,

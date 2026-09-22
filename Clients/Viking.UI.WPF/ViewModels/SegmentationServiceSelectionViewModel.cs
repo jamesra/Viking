@@ -12,6 +12,7 @@ using System.Windows.Input;
 using Duende.IdentityModel.Client;
 using Viking.Tokens;
 using Viking.UI.WPF.Models;
+using Viking.Common;
 
 namespace Viking.UI.WPF.ViewModels
 {
@@ -274,13 +275,10 @@ namespace Viking.UI.WPF.ViewModels
                     return;
                 }
 
-                var identityApiUri = new UriBuilder(identityUri)
-                {
-                    Port = 6001
-                }.Uri;
+                var identityApiUri = IdentityEndpoints.FromIdentityServer(identityUri);
 
                 Trace.WriteLine($"[SegmentationSelection] Identity Server URL: {identityUri}");
-                Trace.WriteLine($"[SegmentationSelection] Identity API URL (port 6001): {identityApiUri}");
+                Trace.WriteLine($"[SegmentationSelection] Identity API URL: {identityApiUri}");
                 Trace.WriteLine($"[SegmentationSelection] Endpoint: {new Uri(identityApiUri, "Permissions/AccessibleSegmentationServices")}");
 
                 IdentityApiHelper helper = new()

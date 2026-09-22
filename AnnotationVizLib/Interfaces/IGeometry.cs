@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 
 namespace AnnotationVizLib
 {
@@ -8,6 +8,6 @@ namespace AnnotationVizLib
 
         double Z { get; }
 
-        GridBox BoundingBox { get; }
+        Box BoundingBox { get; }
     }
 }

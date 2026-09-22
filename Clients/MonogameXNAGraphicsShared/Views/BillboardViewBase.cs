@@ -2,7 +2,9 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
-using VikingXNA;
+using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -45,8 +47,8 @@ namespace VikingXNAGraphics
         public virtual Microsoft.Xna.Framework.Color HSLColor => _HSLColor;
 
 
-        public abstract GridVector2 Position { get; set; }
-        public abstract GridRectangle BoundingRect { get; set; }
+        public abstract Geometry.Vector2 Position { get; set; }
+        public abstract Geometry.Rectangle BoundingRect { get; set; }
 
         /// <summary>
         /// Called when the position or color of the view change
@@ -63,9 +65,9 @@ namespace VikingXNAGraphics
             VertexPositionColorTexture[] Verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
             GlobalPrimitives.SquareVerts.CopyTo(Verts, 0);
 
-            GridRectangle rect = shape.BoundingBox;
+            Geometry.Rectangle rect = shape.BoundingBox;
 
-            GridVector2 offset = rect.UpperRight - rect.Center;
+            Geometry.Vector2 offset = rect.UpperRight - rect.Center;
 
             for (int i = 0; i < Verts.Length; i++)
             {
@@ -87,7 +89,7 @@ namespace VikingXNAGraphics
         /// <param name="color"></param>
         public static VertexPositionColorTexture[] GetRenderableVerticies(VertexPositionColorTexture[] PositionedVerticies, Microsoft.Xna.Framework.Color HSLColor, out int[] indicies)
         {
-            //            GridVector2 Pos = this.VolumePosition;
+            //            Geometry.Vector2 Pos = this.VolumePosition;
 
             //Can't populate until we've referenced CircleVerts
             indicies = GlobalPrimitives.SquareIndicies;

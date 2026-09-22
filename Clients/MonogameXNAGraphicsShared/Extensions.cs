@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -166,7 +168,7 @@ namespace VikingXNAGraphics
         /// <param name="bbox"></param>
         /// <param name="color"></param>
         /// <returns></returns>
-        public static MeshModel<VertexPositionColor> ToMeshModel(this GridBox bbox, Color color)
+        public static MeshModel<VertexPositionColor> ToMeshModel(this Box bbox, Color color)
         {
             var model = VikingXNAGraphics.MeshExtensions.CreateUnitCube(color);
             model.ModelMatrix = Matrix.CreateScale((float)bbox.Width / 2, (float)bbox.Height / 2, (float)bbox.Depth / 2) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
@@ -179,7 +181,7 @@ namespace VikingXNAGraphics
         /// <param name="bbox"></param>
         /// <param name="color"></param>
         /// <returns></returns>
-        public static MeshModel<VertexPositionColor> ToMeshModelEdgesOnly(this GridBox bbox, Color color)
+        public static MeshModel<VertexPositionColor> ToMeshModelEdgesOnly(this Box bbox, Color color)
         {
             var model = VikingXNAGraphics.MeshExtensions.CreateUnitBoundingBox(color);
             model.ModelMatrix = Matrix.CreateScale((float)bbox.Width / 2, (float)bbox.Height / 2, (float)bbox.Depth / 2) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
@@ -211,7 +213,7 @@ namespace VikingXNAGraphics
         public static PositionColorMeshModel ToVertexPositionColorMeshModel(this IReadOnlyMesh2D<IVertex2D> mesh, Color color)
         {
             PositionColorMeshModel meshModel = new();
-            VertexPositionColor[] vertArray = [.. mesh.Verticies.Select(v => new VertexPositionColor(v.Position.ToXNAVector3(0), color))];
+            VertexPositionColor[] vertArray = [.. mesh.Vertices.Select(v => new VertexPositionColor(v.Position.ToXNAVector3(0), color))];
             meshModel.Verticies = vertArray;
 
             List<int> edges = new(mesh.Faces.Count * 3);
@@ -235,7 +237,7 @@ namespace VikingXNAGraphics
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
@@ -247,7 +249,7 @@ namespace VikingXNAGraphics
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
@@ -258,14 +260,14 @@ namespace VikingXNAGraphics
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
 
         public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color[] colors)
         {
-            if (mesh.Verticies.Count != colors.Length)
+            if (mesh.Vertices.Count != colors.Length)
             {
                 throw new ArgumentException("Number of colors must match number of verticies");
             }
@@ -275,14 +277,14 @@ namespace VikingXNAGraphics
             //Convert model to triangles if needed 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), colors[i]))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), colors[i]))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
 
         public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel(this MeshBase3D<IVertex3D> mesh, Color[] colors)
         {
-            if (mesh.Verticies.Count != colors.Length)
+            if (mesh.Vertices.Count != colors.Length)
             {
                 throw new ArgumentException("Number of colors must match number of verticies");
             }
@@ -292,7 +294,7 @@ namespace VikingXNAGraphics
             //Convert model to triangles if needed 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), colors[i]))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), colors[i]))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
@@ -303,7 +305,7 @@ namespace VikingXNAGraphics
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
@@ -314,14 +316,14 @@ namespace VikingXNAGraphics
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
 
         public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color[] colors)
         {
-            if (mesh.Verticies.Count != colors.Length)
+            if (mesh.Vertices.Count != colors.Length)
             {
                 throw new ArgumentException("Number of colors must match number of verticies");
             }
@@ -331,14 +333,14 @@ namespace VikingXNAGraphics
             //Convert model to triangles if needed 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), colors[i]))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), colors[i]))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
 
         public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel(this MeshBase3D<IVertex3D> mesh, Color[] colors)
         {
-            if (mesh.Verticies.Count != colors.Length)
+            if (mesh.Vertices.Count != colors.Length)
             {
                 throw new ArgumentException("Number of colors must match number of verticies");
             }
@@ -348,7 +350,7 @@ namespace VikingXNAGraphics
             //Convert model to triangles if needed 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), colors[i]))];
+            model.Verticies = [.. mesh.Vertices.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), colors[i]))];
             model.Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)];
             return model;
         }
@@ -358,19 +360,19 @@ namespace VikingXNAGraphics
 
     public static class VectorExtensions
     {
-        public static Microsoft.Xna.Framework.Vector2 ToXNAVector2(this Geometry.GridVector2 vec) => new Vector2((float)vec.X, (float)vec.Y);
+        public static Microsoft.Xna.Framework.Vector2 ToXNAVector2(this Geometry.Vector2 vec) => new Vector2((float)vec.X, (float)vec.Y);
 
-        public static Geometry.GridVector2 ToGridVector2(this Vector2 vec) => new Geometry.GridVector2(vec.X, vec.Y);
+        public static Geometry.Vector2 ToVector2(this Vector2 vec) => new Geometry.Vector2(vec.X, vec.Y);
 
-        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector3 v) => new((float)v.X, (float)v.Y, (float)v.Z);
+        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.Vector3 v) => new((float)v.X, (float)v.Y, (float)v.Z);
 
-        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector2 v, double z = 0) => new((float)v.X, (float)v.Y, (float)z);
+        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.Vector2 v, double z = 0) => new((float)v.X, (float)v.Y, (float)z);
 
-        public static Geometry.GridVector2 ToGridVector2XY(this Microsoft.Xna.Framework.Vector3 v) => new Geometry.GridVector2(v.X, v.Y);
+        public static Geometry.Vector2 ToVector2XY(this Microsoft.Xna.Framework.Vector3 v) => new Geometry.Vector2(v.X, v.Y);
 
-        public static Geometry.GridVector3 ToGridVector3(this Microsoft.Xna.Framework.Vector3 v) => new Geometry.GridVector3(v.X, v.Y, v.Z);
+        public static Geometry.Vector3 ToVector3(this Microsoft.Xna.Framework.Vector3 v) => new Geometry.Vector3(v.X, v.Y, v.Z);
 
-        public static Geometry.GridVector3 ToGridVector3(this Microsoft.Xna.Framework.Vector2 v, double z = 0) => new Geometry.GridVector3(v.X, v.Y, z);
+        public static Geometry.Vector3 ToVector3(this Microsoft.Xna.Framework.Vector2 v, double z = 0) => new Geometry.Vector3(v.X, v.Y, z);
     }
 
     public static class ColorExtensions

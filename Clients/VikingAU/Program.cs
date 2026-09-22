@@ -495,8 +495,8 @@ namespace Viking.AU
                 return false;
             }
 
-            GridVector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
-            GridVector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
+            Vector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
+            Vector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
 
             if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints) ||
                 updatedVolumeShape.GeometryType() != loc.VolumeShape.GeometryType())
@@ -508,9 +508,9 @@ namespace Viking.AU
             return TypeUpdated || Translated;
         }
 
-        static GridVector2[] MosaicPointsForLocation(LocationObj loc)
+        static Vector2[] MosaicPointsForLocation(LocationObj loc)
         {
-            GridVector2[] mosaicPoints = loc.TypeCode switch
+            Vector2[] mosaicPoints = loc.TypeCode switch
             {
                 LocationType.POINT or LocationType.CIRCLE => [loc.Position],
                 LocationType.POLYGON or LocationType.POLYLINE or LocationType.OPENCURVE or LocationType.CLOSEDCURVE or LocationType.CURVEPOLYGON => loc.MosaicShape.ToPoints(),
@@ -632,17 +632,17 @@ namespace Viking.AU
 
 
 
-        static bool AnyPointsAreDifferent(GridVector2[] Original, GridVector2[] New, double epsilonSquared = 0.25)
+        static bool AnyPointsAreDifferent(Vector2[] Original, Vector2[] New, double epsilonSquared = 0.25)
         {
             if (Original.Length != New.Length)
                 return true;
 
             //Any with index is not available in this language version, so we have to do it the wordy way
-            //return Original.Any((p, i) => GridVector2.DistanceSquared(p, New[i]) > epsilonSquared);
+            //return Original.Any((p, i) => Vector2.DistanceSquared(p, New[i]) > epsilonSquared);
 
             for (int i = 0; i < New.Length; i++)
             {
-                if (GridVector2.DistanceSquared(Original[i], New[i]) > epsilonSquared)
+                if (Vector2.DistanceSquared(Original[i], New[i]) > epsilonSquared)
                     return true;
             }
 

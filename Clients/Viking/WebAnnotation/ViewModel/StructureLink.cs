@@ -263,12 +263,12 @@ namespace WebAnnotation.ViewModel
         }
 
         public abstract bool IsVisible(Scene scene);
-        public abstract bool Contains(GridVector2 Position);
-        public abstract bool Intersects(GridLineSegment line);
-        public abstract double Distance(GridVector2 Position);
-        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
+        public abstract bool Contains(Geometry.Vector2 Position);
+        public abstract bool Intersects(LineSegment line);
+        public abstract double Distance(Geometry.Vector2 Position);
+        public abstract double DistanceFromCenterNormalized(Geometry.Vector2 Position);
 
-        public abstract Geometry.GridRectangle BoundingBox
+        public abstract Geometry.Rectangle BoundingBox
         {
             get;
         }
@@ -285,7 +285,7 @@ namespace WebAnnotation.ViewModel
     internal class StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : StructureLinkViewModelBase(key, mapper)
     {
         public LineView lineView;
-        public Geometry.GridLineSegment lineSegment;
+        public Geometry.LineSegment lineSegment;
 
         public double LineWidth => ((SourceLocation.Radius + TargetLocation.Radius));
 
@@ -312,21 +312,21 @@ namespace WebAnnotation.ViewModel
                 255,
                 128);
 
-        public override double Distance(GridVector2 Position) => lineSegment.DistanceToPoint(Position) - Radius;
+        public override double Distance(Geometry.Vector2 Position) => lineSegment.DistanceToPoint(Position) - Radius;
 
         public override double Distance(SqlGeometry shape) => lineSegment.ToSqlGeometry().STDistance(shape).Value;
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position) => lineSegment.DistanceToPoint(Position) / (LineWidth / 2.0);
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position) => lineSegment.DistanceToPoint(Position) / (LineWidth / 2.0);
 
-        public override bool Contains(GridVector2 Position) => lineSegment.DistanceToPoint(Position) < LineWidth;
+        public override bool Contains(Geometry.Vector2 Position) => lineSegment.DistanceToPoint(Position) < LineWidth;
 
-        public override bool Intersects(GridLineSegment line) => lineSegment.Intersects(line);
+        public override bool Intersects(LineSegment line) => lineSegment.Intersects(line);
 
         public override bool IsVisible(Scene scene) =>
             //Do not draw unless the line is at least four pixels wide
             LineWidth >= Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight) * 4;
 
-        public override Geometry.GridRectangle BoundingBox => GridRectangle.Pad(lineSegment.BoundingBox, LineWidth);
+        public override Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(lineSegment.BoundingBox, LineWidth);
 
         protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
@@ -334,12 +334,12 @@ namespace WebAnnotation.ViewModel
             LocationObj source = Store.Locations[key.SourceLocID];
             LocationObj target = Store.Locations[key.TargetLocID];
 
-            GridVector2 sourceVolumePosition = mapper.SectionToVolume(source.Position);
-            GridVector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
+            Geometry.Vector2 sourceVolumePosition = mapper.SectionToVolume(source.Position);
+            Geometry.Vector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
 
             lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
                                     link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
-            lineSegment = new GridLineSegment(sourceVolumePosition, targetVolumePosition);
+            lineSegment = new LineSegment(sourceVolumePosition, targetVolumePosition);
         }
 
         public static void Draw(GraphicsDevice device,
@@ -360,7 +360,7 @@ namespace WebAnnotation.ViewModel
     internal class StructureLinkCurvesView : StructureLinkViewModelBase
     {
         public LinkedPolyLineSimpleView lineView;
-        public Geometry.GridLineSegment[] lineSegments;
+        public Geometry.LineSegment[] lineSegments;
         public static float DefaultLineWidth = 16.0f;
 
         public double LineWidth => ((SourceLocation.Width.Value + TargetLocation.Width.Value) / 2.0);
@@ -393,35 +393,35 @@ namespace WebAnnotation.ViewModel
             CreateLineSegments();
         }
 
-        private void CreateLineSegments() => lineSegments = [.. lineView.Lines.Select(l => new GridLineSegment(l.Source, l.Destination))];
+        private void CreateLineSegments() => lineSegments = [.. lineView.Lines.Select(l => new LineSegment(l.Source, l.Destination))];
 
 
-        public override double Distance(GridVector2 Position) => lineSegments.Select(l => l.DistanceToPoint(Position) - Radius).Min();
+        public override double Distance(Geometry.Vector2 Position) => lineSegments.Select(l => l.DistanceToPoint(Position) - Radius).Min();
 
         public override double Distance(SqlGeometry shape) => lineSegments.Select(l => l.ToSqlGeometry().STDistance(shape).Value).Min();
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position) => lineSegments.Select(l => l.DistanceToPoint(Position) / (LineWidth / 2.0)).Min();
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position) => lineSegments.Select(l => l.DistanceToPoint(Position) / (LineWidth / 2.0)).Min();
 
-        public override bool Contains(GridVector2 Position) => lineSegments.Any(l => l.DistanceToPoint(Position) < LineWidth);
+        public override bool Contains(Geometry.Vector2 Position) => lineSegments.Any(l => l.DistanceToPoint(Position) < LineWidth);
 
-        public override bool Intersects(GridLineSegment line) => lineSegments.Any(l => l.Intersects(line));
+        public override bool Intersects(LineSegment line) => lineSegments.Any(l => l.Intersects(line));
 
         public override bool IsVisible(Scene scene) =>
             //Do not draw unless the line is at least four pixels wide
             LineWidth >= Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight) * 4;
 
-        public override Geometry.GridRectangle BoundingBox
+        public override Geometry.Rectangle BoundingBox
         {
             get
             {
-                GridRectangle bbox = lineSegments[0].BoundingBox;
-                foreach (GridLineSegment l in lineSegments)
+                Geometry.Rectangle bbox = lineSegments[0].BoundingBox;
+                foreach (LineSegment l in lineSegments)
                 {
-                    bbox = GridRectangle.Union(bbox, l.BoundingBox);
+                    bbox = Geometry.Rectangle.Union(bbox, l.BoundingBox);
                 }
 
-                bbox = GridRectangle.Union(bbox, bbox.LowerLeft - new GridVector2(Radius, Radius));
-                bbox = GridRectangle.Union(bbox, bbox.UpperRight + new GridVector2(Radius, Radius));
+                bbox = Geometry.Rectangle.Union(bbox, bbox.LowerLeft - new Geometry.Vector2(Radius, Radius));
+                bbox = Geometry.Rectangle.Union(bbox, bbox.UpperRight + new Geometry.Vector2(Radius, Radius));
 
                 return bbox;
             }

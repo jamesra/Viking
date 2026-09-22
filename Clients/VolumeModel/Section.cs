@@ -504,7 +504,7 @@ namespace Viking.VolumeModel
         public void Draw(MappingBase Mapping,
                          ChannelEffect channelEffect,
                          Effect basicEffect,
-                         GridRectangle VisibleBounds,
+                         Rectangle VisibleBounds,
                          double DownSample,
                          bool AsynchTextureLoad)
         {

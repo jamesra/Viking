@@ -14,7 +14,7 @@ namespace VikingXNAGraphics
         /// </summary>
         /// 
         readonly bool ReversedOrder = false;
-        public CurveViewControlPoints(ICollection<GridVector2> cps, uint NumInterpolations, bool TryToClose)
+        public CurveViewControlPoints(ICollection<Vector2> cps, uint NumInterpolations, bool TryToClose)
         {
             if (cps.Count < 2)
             {
@@ -37,20 +37,20 @@ namespace VikingXNAGraphics
             {
                 bool Reverse = cps.ToArray().AreClockwise();
                 ReversedOrder = Reverse;
-                this.ControlPoints = Reverse ? [.. ((IEnumerable<GridVector2>)cps).Reverse()] : [.. cps];
+                this.ControlPoints = Reverse ? [.. ((IEnumerable<Vector2>)cps).Reverse()] : [.. cps];
             }
             else
                 this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps, out ReversedOrder);
         }
 
-        private static GridVector2[] ReverseControlPointsIfTextUpsideDown(ICollection<GridVector2> cps, out bool Reversed)
+        private static Vector2[] ReverseControlPointsIfTextUpsideDown(ICollection<Vector2> cps, out bool Reversed)
         {
             Reversed = false;
 
             if (cps.First().X > cps.Last().X)
             {
                 Reversed = true;
-                return [.. ((IEnumerable<GridVector2>)cps).Reverse()];
+                return [.. ((IEnumerable<Vector2>)cps).Reverse()];
             }
 
             return [.. cps];
@@ -74,12 +74,12 @@ namespace VikingXNAGraphics
             }
         }
 
-        private GridVector2[] _ControlPoints;
+        private Vector2[] _ControlPoints;
 
         /// <summary>
         /// In a closed curve the control points are not looped, the first and last control points should be different
         /// </summary>
-        public GridVector2[] ControlPoints
+        public Vector2[] ControlPoints
         {
             get => _ControlPoints;
             set
@@ -94,8 +94,8 @@ namespace VikingXNAGraphics
             }
         }
 
-        private GridVector2[] _CurvePoints;
-        public GridVector2[] CurvePoints => _CurvePoints;
+        private Vector2[] _CurvePoints;
+        public Vector2[] CurvePoints => _CurvePoints;
 
         /// <summary>
         /// Return the interpolated points between the two control point indicies
@@ -103,7 +103,7 @@ namespace VikingXNAGraphics
         /// <param name="iStart"></param>
         /// <param name="iEnd"></param>
         /// <returns></returns>
-        public GridVector2[] CurvePointsBetweenControlPoints(int? iStart, int? iEnd)
+        public Vector2[] CurvePointsBetweenControlPoints(int? iStart, int? iEnd)
         {
             if (!iStart.HasValue)
                 iStart = 0;
@@ -117,8 +117,8 @@ namespace VikingXNAGraphics
                 iEnd -= ControlPoints.Length;
             }
 
-            GridVector2 startControlPoint = ControlPoints[iStart.Value];
-            GridVector2 endControlPoint = ControlPoints[iEnd.Value];
+            Vector2 startControlPoint = ControlPoints[iStart.Value];
+            Vector2 endControlPoint = ControlPoints[iEnd.Value];
 
             // int iCurveStart = iStart.Value * (int)_NumInterpolations;
             // int iCurveEnd = iEnd.Value * (int)_NumInterpolations;
@@ -134,7 +134,7 @@ namespace VikingXNAGraphics
             if (iCurveStart > iCurveEnd)
                 throw new ArgumentException("Start index greater than end index");
 
-            GridVector2[] destArray = new GridVector2[iCurveEnd - iCurveStart];
+            Vector2[] destArray = new Vector2[iCurveEnd - iCurveStart];
 
             Array.Copy(_CurvePoints, iCurveStart, destArray, 0, destArray.Length);
             return destArray;
@@ -146,14 +146,14 @@ namespace VikingXNAGraphics
         /// <param name="iStart"></param>
         /// <param name="iEnd"></param>
         /// <returns></returns>
-        public GridVector2[] CurvePointsBetweenControlPoints(GridVector2 startControlPoint, GridVector2 endControlPoint)
+        public Vector2[] CurvePointsBetweenControlPoints(Vector2 startControlPoint, Vector2 endControlPoint)
         {
             //If we reversed the order of the input array we need to reverse the start and end points
-            GridVector2[] Points = new GridVector2[_CurvePoints.Length];
+            Vector2[] Points = new Vector2[_CurvePoints.Length];
 
             if (ReversedOrder)
             {
-                Points = [.. ((IEnumerable<GridVector2>)_CurvePoints).Reverse()];
+                Points = [.. ((IEnumerable<Vector2>)_CurvePoints).Reverse()];
             }
             else
             {
@@ -173,7 +173,7 @@ namespace VikingXNAGraphics
             if (iCurveStart > iCurveEnd)
                 throw new ArgumentException("Start index greater than end index");
 
-            GridVector2[] destArray = new GridVector2[(iCurveEnd - iCurveStart) + 1];
+            Vector2[] destArray = new Vector2[(iCurveEnd - iCurveStart) + 1];
 
             Array.Copy(Points, iCurveStart, destArray, 0, destArray.Length);
             return destArray;
@@ -186,7 +186,7 @@ namespace VikingXNAGraphics
         /// <param name="value"></param>
         /// <param name="SearchStart"></param>
         /// <returns></returns>
-        private static int FindIndex(GridVector2[] array, GridVector2 value, int SearchStart = 0)
+        private static int FindIndex(Vector2[] array, Vector2 value, int SearchStart = 0)
         {
             for (int i = SearchStart; i < array.Length; i++)
             {
@@ -213,7 +213,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public void SetPoint(int i, GridVector2 value)
+        public void SetPoint(int i, Vector2 value)
         {
             _ControlPoints[i] = value;
             RecalculateCurvePoints();
@@ -224,9 +224,9 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="array"></param>
         /// <returns></returns>
-        private static GridVector2[] RemoveLastEntry(GridVector2[] array)
+        private static Vector2[] RemoveLastEntry(Vector2[] array)
         {
-            GridVector2[] cps = new GridVector2[array.Length - 1];
+            Vector2[] cps = new Vector2[array.Length - 1];
             Array.Copy(array, cps, array.Length - 1);
             return cps;
         }

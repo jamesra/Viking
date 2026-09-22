@@ -29,7 +29,7 @@ namespace WebAnnotation.ViewModel
         bool RemoveLocations(ICollection<LocationObj> locations);
         bool RemoveLocation(LocationObj loc);
 
-        List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition);
+        List<HitTestResult> GetAnnotationsAtPosition(Geometry.Vector2 WorldPosition);
     }
 
     internal abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener, ICanvasViewHitTesting
@@ -49,7 +49,7 @@ namespace WebAnnotation.ViewModel
             //We should fallback by mapping as many points as possible, and then using those to make an equivalent sized rectangle.
             //If we cannot map any points we shouldn't bother with the request.
 
-            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
+            Geometry.Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
             if (!VisibleMosaicBounds.HasValue)
             {
@@ -67,11 +67,11 @@ namespace WebAnnotation.ViewModel
 
         public abstract void RemoveLocations(IEnumerable<LocationObj> locations);
 
-        public abstract List<HitTestResult> GetAnnotations(GridVector2 WorldPosition);
+        public abstract List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition);
 
-        public abstract List<HitTestResult> GetAnnotations(GridLineSegment line);
+        public abstract List<HitTestResult> GetAnnotations(LineSegment line);
 
-        public abstract List<HitTestResult> GetAnnotations(GridRectangle line);
+        public abstract List<HitTestResult> GetAnnotations(Geometry.Rectangle line);
 
         private readonly KeyTracker<long> SubscribedLocations = new();
 
@@ -276,7 +276,7 @@ namespace WebAnnotation.ViewModel
             return LocationsSearch.Delete(loc.ID, out long RemovedID);
         }
 
-        public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
+        public override List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(SectionNumber));
             List<HitTestResult> listHitResults = [];
@@ -290,7 +290,7 @@ namespace WebAnnotation.ViewModel
             return listHitResults;
         }
 
-        public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
+        public override List<HitTestResult> GetAnnotations(LineSegment world_line)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_line.BoundingBox.ToRTreeRect(SectionNumber));
             List<HitTestResult> listHitResults = [];
@@ -304,7 +304,7 @@ namespace WebAnnotation.ViewModel
             return listHitResults;
         }
 
-        public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
+        public override List<HitTestResult> GetAnnotations(Geometry.Rectangle world_rect)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_rect.ToRTreeRect(SectionNumber));
             List<HitTestResult> listHitResults = [];
@@ -318,7 +318,7 @@ namespace WebAnnotation.ViewModel
             return listHitResults;
         }
 
-        public ICollection<LocationCanvasView> AnnotationsInRegion(GridRectangle worldRect)
+        public ICollection<LocationCanvasView> AnnotationsInRegion(Geometry.Rectangle worldRect)
         {
             List<long> loc_IDs = LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
@@ -333,7 +333,7 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<long> LocationIdsInRegion(GridRectangle worldRect) => LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
+        public ICollection<long> LocationIdsInRegion(Geometry.Rectangle worldRect) => LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
         public ICollection<LocationCanvasView> LocationViewsForIds(ICollection<long> loc_IDs)
         {
@@ -444,7 +444,7 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationLinkView> NonOverlappedLocationLinks => SectionLocationLinks.NonOverlappedLinks;
 
-        public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(GridRectangle bounds) => SectionLocationLinks.NonOverlappedLinksInRegion(bounds);
+        public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(Geometry.Rectangle bounds) => SectionLocationLinks.NonOverlappedLinksInRegion(bounds);
 
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
@@ -1010,7 +1010,7 @@ namespace WebAnnotation.ViewModel
             return LocationsForStructure.TryGetValue(ID, out child_locations);
         }
 
-        public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
+        public ICollection<LocationCanvasView> GetLocations(Geometry.Rectangle bounds)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(bounds.ToRTreeRect((float)Section.Number));
             List<LocationCanvasView> locations = [];
@@ -1024,7 +1024,7 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
+        public ICollection<LocationCanvasView> GetLocations(Geometry.Vector2 point)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(point.ToRTreeRect((float)Section.Number));
             List<LocationCanvasView> locations = [];
@@ -1038,7 +1038,7 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<LocationCanvasView> GetLocations(GridLineSegment line)
+        public ICollection<LocationCanvasView> GetLocations(LineSegment line)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
             List<LocationCanvasView> locations = [];
@@ -1054,11 +1054,11 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => SectionStructureLinks.GetStructureLinks();
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridRectangle bounds) => SectionStructureLinks.GetStructureLinks(bounds);
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Geometry.Rectangle bounds) => SectionStructureLinks.GetStructureLinks(bounds);
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point) => SectionStructureLinks.GetStructureLinks(point);
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Geometry.Vector2 point) => SectionStructureLinks.GetStructureLinks(point);
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line) => SectionStructureLinks.GetStructureLinks(line);
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line) => SectionStructureLinks.GetStructureLinks(line);
 
         /// <summary>
         /// Return all the line segments visible in the passed bounds
@@ -1072,7 +1072,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
+        public override List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition)
         {
             List<HitTestResult> listIntersectingObjects =
             [
@@ -1095,7 +1095,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridVector2 WorldPosition)
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(Geometry.Vector2 WorldPosition)
         {
             List<HitTestResult> listAnnotations = [];
 
@@ -1127,7 +1127,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
+        public override List<HitTestResult> GetAnnotations(LineSegment world_line)
         {
             List<HitTestResult> listIntersectingObjects =
             [
@@ -1150,7 +1150,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
+        public override List<HitTestResult> GetAnnotations(Geometry.Rectangle world_rect)
         {
             List<HitTestResult> listIntersectingObjects =
             [
@@ -1173,7 +1173,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridLineSegment world_line)
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(LineSegment world_line)
         {
             List<HitTestResult> listAnnotations = [];
 
@@ -1205,7 +1205,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridRectangle world_rect)
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(Geometry.Rectangle world_rect)
         {
             List<HitTestResult> listAnnotations = [];
 
@@ -1232,7 +1232,7 @@ namespace WebAnnotation.ViewModel
             })];
         }
 
-        public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(GridRectangle worldRect)
+        public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(Geometry.Rectangle worldRect)
         {
             SortedSet<LocationCanvasView> adjacentLocations = [];
             if (SectionAbove != null)
@@ -1263,7 +1263,7 @@ namespace WebAnnotation.ViewModel
         public override void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
-            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
+            Geometry.Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
             // Server callback must not be null: objects already in the store do not raise CollectionChanged,
             // so this is how they enter the canvas view after a region refresh.

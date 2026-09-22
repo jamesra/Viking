@@ -10,12 +10,12 @@ namespace Viking.VolumeModel
 {
     public static class RectangleMappingExtensions
     {
-        public static GridRectangle? ApproximateVisibleMosaicBounds(this GridRectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
+        public static Rectangle? ApproximateVisibleMosaicBounds(this Rectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
         {
-            GridVector2[] VolumeRectCorners = [VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight];
-            bool[] mapped = mapper.TryVolumeToSection(VolumeRectCorners, out GridVector2[] MosaicRectCorners);
+            Vector2[] VolumeRectCorners = [VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight];
+            bool[] mapped = mapper.TryVolumeToSection(VolumeRectCorners, out Vector2[] MosaicRectCorners);
 
-            GridVector2[] MappedMosaicCorners = [.. MosaicRectCorners.Where((p, i) => mapped[i])];
+            Vector2[] MappedMosaicCorners = [.. MosaicRectCorners.Where((p, i) => mapped[i])];
 
             if (MappedMosaicCorners.Length == 4)
             {
@@ -25,7 +25,7 @@ namespace Viking.VolumeModel
                 double MaxY = MappedMosaicCorners.Max(p => p.Y);
                 double MinY = MappedMosaicCorners.Min(p => p.Y);
 
-                return new GridRectangle(MinX, MaxX, MinY, MaxY);
+                return new Rectangle(MinX, MaxX, MinY, MaxY);
             }
             else if (MappedMosaicCorners.Length > 0)
             {
@@ -47,7 +47,7 @@ namespace Viking.VolumeModel
                 else
                 {
                     //We must be past the convex hull with no overlap
-                    return new GridRectangle?();
+                    return new Rectangle?();
                     //return mapper.SectionBounds;
                 }
             }
@@ -59,21 +59,21 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="mappedCorners"></param>
         /// <returns></returns>
-        private static GridRectangle? EstimateMosaicRectangle(bool[] IsMapped, GridVector2[] points, GridRectangle VisibleWorldBounds)
+        private static Rectangle? EstimateMosaicRectangle(bool[] IsMapped, Vector2[] points, Rectangle VisibleWorldBounds)
         {
             //If we map at least three corners we know we can construct a reasonable approximation of the correct rectangle in mosaic space
-            GridVector2[] ValidPoints = [.. points.Where((p, i) => IsMapped[i])];
+            Vector2[] ValidPoints = [.. points.Where((p, i) => IsMapped[i])];
             double MinX = ValidPoints.Min(p => p.X);
             double MaxX = ValidPoints.Max(p => p.X);
             double MaxY = ValidPoints.Max(p => p.Y);
             double MinY = ValidPoints.Min(p => p.Y);
 
             //We don't know the rotation of the rectangle.  We assume the worst case of a 45 degree angle so we multiply width or height by 1.44
-            //So we create a grid circle at the point with the radius of Max(Width,Height).  Then we return the bounding box of the GridCircle
+            //So we create a grid circle at the point with the radius of Max(Width,Height).  Then we return the bounding box of the Circle
 
             if (IsMapped.Count(b => b) == 3)
             {
-                return GridCircle.CircleFromThreePoints(ValidPoints).BoundingBox;
+                return Circle.CircleFromThreePoints(ValidPoints).BoundingBox;
             }
 
             if (OppositeCornersMapped(IsMapped))
@@ -95,11 +95,11 @@ namespace Viking.VolumeModel
             {
                 if (IsMapped[iPoint])
                 {
-                    return new GridCircle(points[iPoint], CircleRadius).BoundingBox;
+                    return new Circle(points[iPoint], CircleRadius).BoundingBox;
                 }
             }
 
-            return new GridRectangle?();
+            return new Rectangle?();
         }
 
         /// <summary>
@@ -108,13 +108,13 @@ namespace Viking.VolumeModel
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        private static GridCircle CircleFromTwoPoints(GridVector2 A, GridVector2 B)
+        private static Circle CircleFromTwoPoints(Vector2 A, Vector2 B)
         {
-            double Distance = GridVector2.Distance(A, B);
+            double Distance = Vector2.Distance(A, B);
             double X = (A.X + B.X) / 2.0;
             double Y = (A.Y + B.Y) / 2.0;
 
-            return new GridCircle(new GridVector2(X, Y), Distance / 2.0);
+            return new Circle(new Vector2(X, Y), Distance / 2.0);
         }
 
         /// <summary>
@@ -127,15 +127,15 @@ namespace Viking.VolumeModel
 
     public static class VolumeToSectionMappingExtensions
     {
-        public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output) => mapper.TrySectionToVolume([.. points.Select(p => new GridVector2(p.X, p.Y))], out output);
+        public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out Vector2[] output) => mapper.TrySectionToVolume([.. points.Select(p => new Vector2(p.X, p.Y))], out output);
 
-        public static GridVector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.SectionToVolume([.. points.Select(p => new GridVector2(p.X, p.Y))]);
+        public static Vector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.SectionToVolume([.. points.Select(p => new Vector2(p.X, p.Y))]);
 
-        public static bool[] TryVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output) => mapper.TryVolumeToSection([.. points.Select(p => new GridVector2(p.X, p.Y))], out output);
+        public static bool[] TryVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out Vector2[] output) => mapper.TryVolumeToSection([.. points.Select(p => new Vector2(p.X, p.Y))], out output);
 
-        public static GridVector2[] VolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.VolumeToSection([.. points.Select(p => new GridVector2(p.X, p.Y))]);
+        public static Vector2[] VolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.VolumeToSection([.. points.Select(p => new Vector2(p.X, p.Y))]);
 
-        public static GridPolygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
+        public static Polygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polygon shape)
         {
             bool[] mappedPosition = mapper.TrySectionToVolume(shape.ExteriorRing, out var VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
@@ -144,12 +144,12 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolygon transformed_polygon = new(VolumePositions);
+            Polygon transformed_polygon = new(VolumePositions);
 
             if (shape.HasInteriorRings)
             {
-                IEnumerable<GridPolygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeSectionToVolume(ip));
-                foreach (GridPolygon inner_poly in transformedPolygons)
+                IEnumerable<Polygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeSectionToVolume(ip));
+                foreach (Polygon inner_poly in transformedPolygons)
                 {
                     transformed_polygon.AddInteriorRing(inner_poly);
                 }
@@ -158,7 +158,7 @@ namespace Viking.VolumeModel
             return transformed_polygon;
         }
 
-        public static GridPolygon TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
+        public static Polygon TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polygon shape)
         {
             bool[] mappedPosition = mapper.TryVolumeToSection(shape.ExteriorRing, out var SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
@@ -167,12 +167,12 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolygon transformed_polygon = new(SectionPositions);
+            Polygon transformed_polygon = new(SectionPositions);
 
             if (shape.HasInteriorRings)
             {
-                IEnumerable<GridPolygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeVolumeToSection(ip));
-                foreach (GridPolygon inner_poly in transformedPolygons)
+                IEnumerable<Polygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeVolumeToSection(ip));
+                foreach (Polygon inner_poly in transformedPolygons)
                 {
                     transformed_polygon.AddInteriorRing(inner_poly);
                 }
@@ -181,7 +181,7 @@ namespace Viking.VolumeModel
             return transformed_polygon;
         }
 
-        public static GridPolyline TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolyline shape)
+        public static Polyline TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polyline shape)
         {
             bool[] mappedPosition = mapper.TrySectionToVolume(shape.Points, out var VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
@@ -190,12 +190,12 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolyline transformed_shape = new(VolumePositions, shape.AllowsSelfIntersection);
+            Polyline transformed_shape = new(VolumePositions, shape.AllowsSelfIntersection);
 
             return transformed_shape;
         }
 
-        public static GridPolyline TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolyline shape)
+        public static Polyline TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polyline shape)
         {
             bool[] mappedPosition = mapper.TryVolumeToSection(shape.Points, out var SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
@@ -204,7 +204,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolyline transformed_shape = new(SectionPositions, shape.AllowsSelfIntersection);
+            Polyline transformed_shape = new(SectionPositions, shape.AllowsSelfIntersection);
 
             return transformed_shape;
         }

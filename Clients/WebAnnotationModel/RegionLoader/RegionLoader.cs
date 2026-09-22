@@ -208,7 +208,7 @@ namespace WebAnnotationModel
         /// <param name="ScreenPixelSizeInVolume"></param>
         /// <param name="SectionNumber"></param>
         /// <param name="callback">A thread-safe callback function to hand the loaded objects to</param>
-        public void LoadSectionAnnotationsInRegion(GridRectangle? VolumeBounds,
+        public void LoadSectionAnnotationsInRegion(Rectangle? VolumeBounds,
                                                     double ScreenPixelSizeInVolume,
                                                     int SectionNumber,
                                                     Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
@@ -233,7 +233,7 @@ namespace WebAnnotationModel
 
             DateTime currentTime = DateTime.UtcNow;
 
-            foreach (GridIndex iCell in gridRange.Indicies)
+            foreach (GridIndex iCell in gridRange.Indices)
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -268,7 +268,7 @@ namespace WebAnnotationModel
                             //Use the callback for the known local objects
                             Task.Run(() =>
                             {
-                                GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
+                                Rectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
                                 ICollection<OBJECT> local_objects_in_region = this.objectStore.GetLocalObjectsInRegion(SectionNumber, cellBounds, level.MinRadius);
                                 FoundCachedLocalObjectsCallback.Invoke(local_objects_in_region);
                             }, token); //Stop the task for local objects if the load is cancelled.
@@ -285,7 +285,7 @@ namespace WebAnnotationModel
         /// (HasBeenQueried and AsyncResult is null). Missing cells or in-flight queries return false.
         /// Does not use OutstandingQuery, which is inverted relative to its comment.
         /// </summary>
-        public bool AreRegionQueriesComplete(GridRectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber)
+        public bool AreRegionQueriesComplete(Rectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber)
         {
             if (!volumeBounds.HasValue)
                 return false;
@@ -324,7 +324,7 @@ namespace WebAnnotationModel
             if (token.IsCancellationRequested)
                 return;
 
-            GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
+            Rectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
             DateTime? LastQueryUtc = cell.LastQuery;
 
             // Store the section cancellation token so OnLoadCompleted can skip callbacks for cancelled sections

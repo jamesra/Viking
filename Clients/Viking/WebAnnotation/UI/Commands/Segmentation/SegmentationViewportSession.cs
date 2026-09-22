@@ -15,6 +15,9 @@ using Viking.gRPC.SegmentationServiceTypes.V1;
 using Viking.UI;
 using Viking.UI.Controls;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
+using Polygon = Geometry.Polygon;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -29,7 +32,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
 
         private ulong? currentImageId;
-        private GridRectangle? uploadedImageBounds;
+        private Geometry.Rectangle? uploadedImageBounds;
         private int uploadedImageWidth;
         private int uploadedImageHeight;
         private int isUploadingImage;
@@ -46,11 +49,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             ViewportBounds = GetCurrentViewportBounds();
         }
 
-        public GridRectangle ViewportBounds { get; set; }
+        public Geometry.Rectangle ViewportBounds { get; set; }
 
         public ulong? CurrentImageId => currentImageId;
 
-        public GridRectangle? UploadedImageBounds => uploadedImageBounds;
+        public Geometry.Rectangle? UploadedImageBounds => uploadedImageBounds;
 
         public int UploadedImageWidth => uploadedImageWidth;
 
@@ -82,17 +85,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        public GridRectangle GetCurrentViewportBounds()
+        public Geometry.Rectangle GetCurrentViewportBounds()
         {
-            GridVector2 topLeft = parent.ScreenToWorld(0, 0);
-            GridVector2 bottomRight = parent.ScreenToWorld(parent.Width, parent.Height);
-            return new GridRectangle(topLeft, bottomRight);
+            Geometry.Vector2 topLeft = parent.ScreenToWorld(0, 0);
+            Geometry.Vector2 bottomRight = parent.ScreenToWorld(parent.Width, parent.Height);
+            return new Geometry.Rectangle(topLeft, bottomRight);
         }
 
         /// <summary>
         /// True when corners differ by less than 1% of the larger side. Used to treat hitch jitter as the same view.
         /// </summary>
-        public static bool AreViewportBoundsSimilar(GridRectangle a, GridRectangle b)
+        public static bool AreViewportBoundsSimilar(Geometry.Rectangle a, Geometry.Rectangle b)
         {
             double tolerance = Math.Max(a.Width, a.Height) * 0.01;
             return Math.Abs(a.LowerLeft.X - b.LowerLeft.X) < tolerance &&
@@ -105,21 +108,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// After PNG encode finishes, upload only when the live viewport still matches the captured bounds.
         /// Used by UploadCurrentImageAsync and covered by auto-polygonize tests.
         /// </summary>
-        public static bool ShouldUploadEncodedCapture(GridRectangle capturedBounds, GridRectangle currentBounds)
+        public static bool ShouldUploadEncodedCapture(Geometry.Rectangle capturedBounds, Geometry.Rectangle currentBounds)
             => AreViewportBoundsSimilar(capturedBounds, currentBounds);
 
         /// <summary>
         /// Maps world to capture-pixel space without a Y flip. SAM2 mask Y is flipped in <see cref="GetSegmentWorldBounds"/>.
         /// </summary>
-        public GridVector2 WorldToViewport(GridVector2 worldPos, int viewportWidth, int viewportHeight)
+        public Geometry.Vector2 WorldToViewport(Geometry.Vector2 worldPos, int viewportWidth, int viewportHeight)
         {
-            GridVector2 boundsMin = ViewportBounds.LowerLeft;
-            GridVector2 boundsMax = ViewportBounds.UpperRight;
+            Geometry.Vector2 boundsMin = ViewportBounds.LowerLeft;
+            Geometry.Vector2 boundsMax = ViewportBounds.UpperRight;
 
             double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
             double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
 
-            return new GridVector2(
+            return new Geometry.Vector2(
                 normalizedX * viewportWidth,
                 normalizedY * viewportHeight);
         }
@@ -127,13 +130,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Inverse of <see cref="WorldToViewport"/>; pixel Y is not flipped here.
         /// </summary>
-        public GridVector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
+        public Geometry.Vector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
         {
             double normalizedX = (double)pixelX / viewportWidth;
             double normalizedY = (double)pixelY / viewportHeight;
-            GridVector2 boundsMin = ViewportBounds.LowerLeft;
-            GridVector2 boundsMax = ViewportBounds.UpperRight;
-            return new GridVector2(
+            Geometry.Vector2 boundsMin = ViewportBounds.LowerLeft;
+            Geometry.Vector2 boundsMax = ViewportBounds.UpperRight;
+            return new Geometry.Vector2(
                 boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
                 boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y));
         }
@@ -162,7 +165,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Prompt mapping uses <paramref name="worldBounds"/>, not the live camera.
         /// NotFound still re-uploads via <see cref="SegmentAsync"/>.
         /// </summary>
-        public void AdoptUploadedImage(ulong imageId, GridRectangle worldBounds, int width, int height)
+        public void AdoptUploadedImage(ulong imageId, Geometry.Rectangle worldBounds, int width, int height)
         {
             currentImageId = imageId;
             uploadedImageBounds = worldBounds;
@@ -226,7 +229,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return false;
                 }
 
-                GridRectangle liveBounds = await GetLiveViewportBoundsAsync().ConfigureAwait(false);
+                Geometry.Rectangle liveBounds = await GetLiveViewportBoundsAsync().ConfigureAwait(false);
                 if (!ShouldUploadEncodedCapture(capturedBounds, liveBounds))
                 {
                     Debug.WriteLine("[SegmentationProfile] Skipping upload: view moved during encode");
@@ -341,8 +344,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// NotFound re-uploads once. Returns null when cancelled or the client is missing.
         /// </summary>
         public async Task<SegmentationResponse?> SegmentAsync(
-            IReadOnlyList<GridVector2> foregroundPoints,
-            IReadOnlyList<GridVector2> backgroundPoints,
+            IReadOnlyList<Geometry.Vector2> foregroundPoints,
+            IReadOnlyList<Geometry.Vector2> backgroundPoints,
             CancellationToken cancellationToken)
         {
             if (grpcClient is null)
@@ -422,10 +425,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Cleanup and marching squares run on the downsampled mask.
         /// <paramref name="cancellationToken"/> is checked between segments so a newer click can abort.
         /// </summary>
-        public IReadOnlyList<GridPolygon> CreatePolygonsFromResponse(
+        public IReadOnlyList<Polygon> CreatePolygonsFromResponse(
             SegmentationResponse response,
             double? holeDropFraction = null,
-            IReadOnlyList<GridVector2> preserveHolesContainingWorldPoints = null,
+            IReadOnlyList<Geometry.Vector2> preserveHolesContainingWorldPoints = null,
             int? edgeCleanupRadius = null,
             CancellationToken cancellationToken = default)
         {
@@ -441,7 +444,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int foregroundAfter = 0;
             double dropFraction = holeDropFraction ?? WebAnnotation.Global.AnnotationSettings.SegmentationHoleDropFraction;
             int cleanupRadius = edgeCleanupRadius ?? WebAnnotation.Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
-            List<GridPolygon> polygons = [];
+            List<Polygon> polygons = [];
             foreach (var segment in response.Segments.OrderByDescending(s => s.Score))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -516,8 +519,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         private SegmentationRequest? BuildSegmentationRequest(
-            IReadOnlyList<GridVector2> foregroundPoints,
-            IReadOnlyList<GridVector2> backgroundPoints)
+            IReadOnlyList<Geometry.Vector2> foregroundPoints,
+            IReadOnlyList<Geometry.Vector2> backgroundPoints)
         {
             if (!currentImageId.HasValue)
                 return null;
@@ -566,7 +569,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Reads the camera rectangle on the UI dispatcher so off-UI encode/publish can compare against the live view.
         /// </summary>
-        public Task<GridRectangle> GetLiveViewportBoundsAsync()
+        public Task<Geometry.Rectangle> GetLiveViewportBoundsAsync()
         {
             var dispatcher = Viking.UI.State.MainThreadDispatcher;
             if (dispatcher is null || dispatcher.CheckAccess())
@@ -578,7 +581,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// World rectangle of a SAM2 segment. Mask Y is top-origin, so Y is flipped against Viking world-up.
         /// </summary>
-        public GridRectangle GetSegmentWorldBounds(
+        public Geometry.Rectangle GetSegmentWorldBounds(
             int segmentX,
             int segmentY,
             int maskWidth,
@@ -588,24 +591,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             int imageWidth = uploadedImageWidth > 0 ? uploadedImageWidth : responseWidth;
             int imageHeight = uploadedImageHeight > 0 ? uploadedImageHeight : responseHeight;
-            GridVector2 topLeft = ViewportToWorld(
+            Geometry.Vector2 topLeft = ViewportToWorld(
                 segmentX,
                 responseHeight - segmentY,
                 imageWidth,
                 imageHeight);
-            GridVector2 bottomRight = ViewportToWorld(
+            Geometry.Vector2 bottomRight = ViewportToWorld(
                 segmentX + maskWidth,
                 (responseHeight - segmentY) - maskHeight,
                 imageWidth,
                 imageHeight);
-            return new GridRectangle(topLeft, bottomRight);
+            return new Geometry.Rectangle(topLeft, bottomRight);
         }
 
         /// <summary>
         /// Waits for visible tiles, GPU-captures on the UI thread, then encodes on a worker.
         /// Returns null data when tiles never become ready or encode is cancelled.
         /// </summary>
-        private async Task<(byte[]? data, int width, int height, GridRectangle capturedBounds)> CaptureViewportImage(CancellationToken cancellationToken)
+        private async Task<(byte[]? data, int width, int height, Geometry.Rectangle capturedBounds)> CaptureViewportImage(CancellationToken cancellationToken)
         {
             try
             {
@@ -666,7 +669,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// GPU render and GetData stay on the UI dispatcher. Encode is not done here.
         /// </summary>
-        private async Task<(Color[]? pixels, int width, int height, bool isGrayscale, GridRectangle capturedBounds, long renderMs, long readbackMs)> ReadViewportPixelsAsync(CancellationToken cancellationToken)
+        private async Task<(Color[]? pixels, int width, int height, bool isGrayscale, Geometry.Rectangle capturedBounds, long renderMs, long readbackMs)> ReadViewportPixelsAsync(CancellationToken cancellationToken)
         {
             var dispatcher = Viking.UI.State.MainThreadDispatcher;
             if (dispatcher is null)
@@ -681,7 +684,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return await ReadViewportPixelsCoreAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task<(Color[]? pixels, int width, int height, bool isGrayscale, GridRectangle capturedBounds, long renderMs, long readbackMs)> ReadViewportPixelsCoreAsync(CancellationToken cancellationToken)
+        private async Task<(Color[]? pixels, int width, int height, bool isGrayscale, Geometry.Rectangle capturedBounds, long renderMs, long readbackMs)> ReadViewportPixelsCoreAsync(CancellationToken cancellationToken)
         {
             CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
             var (graphicsDevice, scene, width, height) = ValidateRenderingContext();
@@ -700,7 +703,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Color[] pixels = new Color[width * height];
                 renderTarget.GetData(pixels);
                 long readbackMs = readbackTimer.ElapsedMilliseconds;
-                GridRectangle capturedBounds = GetCurrentViewportBounds();
+                Geometry.Rectangle capturedBounds = GetCurrentViewportBounds();
                 ViewportBounds = capturedBounds;
                 return (pixels, width, height, isGrayscale, capturedBounds, renderMs, readbackMs);
             }

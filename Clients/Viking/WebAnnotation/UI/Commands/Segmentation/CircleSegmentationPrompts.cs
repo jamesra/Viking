@@ -26,9 +26,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Center plus two octagons (half-radius and 80% radius) in mosaic space. Seventeen points total.
         /// </summary>
-        public static IReadOnlyList<GridVector2> CreateMosaicForegroundPoints(GridCircle mosaicCircle)
+        public static IReadOnlyList<Vector2> CreateMosaicForegroundPoints(Circle mosaicCircle)
         {
-            List<GridVector2> foregroundPoints = [mosaicCircle.Center];
+            List<Vector2> foregroundPoints = [mosaicCircle.Center];
             AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * InnerRingRadiusFraction);
             AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * OuterRingRadiusFraction);
             return foregroundPoints;
@@ -37,14 +37,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Drops points the section-to-volume transform fails to map.
         /// </summary>
-        public static IReadOnlyList<GridVector2> ToVolumePoints(
-            IReadOnlyList<GridVector2> mosaicPoints,
+        public static IReadOnlyList<Vector2> ToVolumePoints(
+            IReadOnlyList<Vector2> mosaicPoints,
             IVolumeToSectionTransform transform)
         {
             if (mosaicPoints is null || mosaicPoints.Count == 0 || transform is null)
                 return [];
 
-            bool[] success = transform.TrySectionToVolume([.. mosaicPoints], out GridVector2[] volumePoints);
+            bool[] success = transform.TrySectionToVolume([.. mosaicPoints], out Vector2[] volumePoints);
             return [.. volumePoints.Where((p, i) => i < success.Length && success[i])];
         }
 
@@ -86,11 +86,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Polygon avoid marks are the centroid of the largest MosaicShape Delaunay
         /// triangle, not VolumeShape (Catmull-Rom smoothed for CURVEPOLYGON).
         /// </summary>
-        public static IReadOnlyList<GridVector2> CreateBackgroundVolumePoints(
+        public static IReadOnlyList<Vector2> CreateBackgroundVolumePoints(
             IEnumerable<LocationObj> otherAnnotations,
             IVolumeToSectionTransform transform)
         {
-            IReadOnlyList<GridVector2> mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(otherAnnotations);
+            IReadOnlyList<Vector2> mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(otherAnnotations);
             return ToVolumePoints(mosaicPoints, transform);
         }
 
@@ -98,10 +98,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Avoid marks for every visible annotation that is not the target location or the
         /// same structure. Drops points that sit on a foreground click.
         /// </summary>
-        public static IReadOnlyList<GridVector2> CreateOtherStructureBackgroundVolumePoints(
+        public static IReadOnlyList<Vector2> CreateOtherStructureBackgroundVolumePoints(
             IEnumerable<LocationObj> visible,
             IVolumeToSectionTransform transform,
-            IReadOnlyList<GridVector2> foreground,
+            IReadOnlyList<Vector2> foreground,
             double minDistance,
             IReadOnlyCollection<long>? excludeLocationIds,
             long? excludeStructureId)
@@ -119,24 +119,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// inside) plus a subsampled exterior so one SegmentImage can cover the group.
         /// Degenerate or empty rings are skipped.
         /// </summary>
-        public static IReadOnlyList<GridVector2> CreateForegroundPointsFromPolygons(
-            IEnumerable<GridPolygon> polygons,
+        public static IReadOnlyList<Vector2> CreateForegroundPointsFromPolygons(
+            IEnumerable<Polygon> polygons,
             int maxRingPointsPerPolygon = 16)
         {
             if (polygons is null || maxRingPointsPerPolygon <= 0)
                 return [];
 
-            List<GridVector2> points = [];
-            foreach (GridPolygon polygon in polygons)
+            List<Vector2> points = [];
+            foreach (Polygon polygon in polygons)
             {
                 if (polygon?.ExteriorRing is null || polygon.ExteriorRing.Length < 4)
                     continue;
 
-                GridVector2 centroid = polygon.Centroid;
+                Vector2 centroid = polygon.Centroid;
                 if (polygon.Contains(centroid))
                     points.Add(centroid);
 
-                foreach (GridVector2 vertex in SubsampleClosedRing(polygon.ExteriorRing, maxRingPointsPerPolygon))
+                foreach (Vector2 vertex in SubsampleClosedRing(polygon.ExteriorRing, maxRingPointsPerPolygon))
                     points.Add(vertex);
             }
 
@@ -147,9 +147,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Drops avoid prompts that sit on a foreground point. Adjacent-section siblings of the
         /// same structure share XY with the selected circle; a red mark there cancels the center click.
         /// </summary>
-        public static IReadOnlyList<GridVector2> ExceptNearForeground(
-            IReadOnlyList<GridVector2> background,
-            IReadOnlyList<GridVector2> foreground,
+        public static IReadOnlyList<Vector2> ExceptNearForeground(
+            IReadOnlyList<Vector2> background,
+            IReadOnlyList<Vector2> foreground,
             double minDistance)
         {
             if (background is null || background.Count == 0)
@@ -160,13 +160,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             double minDistanceSquared = minDistance * minDistance;
             return [.. background.Where(bg => foreground.All(fg =>
-                GridVector2.DistanceSquared(bg, fg) >= minDistanceSquared))];
+                Vector2.DistanceSquared(bg, fg) >= minDistanceSquared))];
         }
 
         /// <summary>
         /// Evenly spaced vertices from a closed ring (first==last). Fewer than 3 unique points yield nothing.
         /// </summary>
-        private static IEnumerable<GridVector2> SubsampleClosedRing(GridVector2[] ring, int maxPoints)
+        private static IEnumerable<Vector2> SubsampleClosedRing(Vector2[] ring, int maxPoints)
         {
             int count = ring.Length;
             if (count > 1 && ring[0] == ring[count - 1])
@@ -179,12 +179,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 yield return ring[i];
         }
 
-        private static void AddRing(List<GridVector2> points, GridVector2 center, double radius)
+        private static void AddRing(List<Vector2> points, Vector2 center, double radius)
         {
             for (int i = 0; i < ForegroundRingPointCount; i++)
             {
                 double angle = (2.0 * Math.PI * i) / ForegroundRingPointCount;
-                points.Add(new GridVector2(
+                points.Add(new Vector2(
                     center.X + radius * Math.Cos(angle),
                     center.Y + radius * Math.Sin(angle)));
             }

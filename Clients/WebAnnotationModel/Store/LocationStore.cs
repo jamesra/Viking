@@ -33,7 +33,7 @@ namespace WebAnnotationModel
             return;
         }
 
-        public ICollection<LocationObj> Intersects(GridRectangle bbox, float SectionNumber)
+        public ICollection<LocationObj> Intersects(Rectangle bbox, float SectionNumber)
         {
             List<long> objIDs = SpatialSearch.Intersects(bbox.ToRTreeRect(SectionNumber));
 
@@ -358,7 +358,7 @@ namespace WebAnnotationModel
             return listLocations;
         }
 
-        public bool Contains(LocationObj o, Geometry.GridRectangle bounds) => bounds.Contains(o.Position);
+        public bool Contains(LocationObj o, Geometry.Rectangle bounds) => bounds.Contains(o.Position);
 
 
         #region Callbacks
@@ -448,7 +448,7 @@ namespace WebAnnotationModel
 
         #endregion
 
-        public virtual ICollection<LocationObj> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
+        public virtual ICollection<LocationObj> GetObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
@@ -506,7 +506,7 @@ namespace WebAnnotationModel
         }
 
         public virtual MixedLocalAndRemoteQueryResults<long, LocationObj> GetObjectsInRegionAsync(long SectionNumber,
-                                                                                           Geometry.GridRectangle bounds,
+                                                                                           Geometry.Rectangle bounds,
                                                                                            double MinRadius,
                                                                                            DateTime? LastQueryUtc,
                                                                                            Action<ICollection<LocationObj>> OnLoadCompletedCallBack,
@@ -644,6 +644,6 @@ namespace WebAnnotationModel
             }
         }
 
-        public ICollection<LocationObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius) => [.. SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius)];
+        public ICollection<LocationObj> GetLocalObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius) => [.. SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius)];
     }
 }

@@ -24,8 +24,9 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// <see cref="AnnotationOverlay"/>; not a Viking command.
     /// Capture uses a two-phase settle so a UI hitch cannot pass the 500ms idle
     /// timer. After upload, camera moves cancel only the upload phase so already
-    /// collected points still segment. Section changes and the interactive Segment
-    /// command cancel both phases.
+    /// collected points still segment. Section changes cancel both phases. An
+    /// interactive <see cref="SegmentationCommand"/> cancels proposal work but
+    /// leaves an in-flight viewport upload so that command can adopt the same image.
     /// </summary>
     internal sealed class AutoCirclePolygonizeController
     {
@@ -42,6 +43,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly SectionViewerControl parent;
         private readonly Action requestAnnotationLoad;
         private readonly AutoPolygonizeCache cache = new();
+        private readonly SharedViewportImageLease viewportImageLease;
         private readonly Dictionary<long, AutoPolygonizeProposal> proposals = [];
         private readonly object proposalLock = new();
 
@@ -50,7 +52,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private System.Timers.Timer? confirmTimer;
 
         /// <summary>Viewport captured when the idle timer fired; compared again after <see cref="ConfirmDelayMs"/>.</summary>
-        private GridRectangle armedBounds;
+        private Rectangle armedBounds;
         private double armedDownsample;
         private DateTime armedAtUtc;
 
@@ -65,7 +67,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private SegmentationViewportSession? uploadSession;
         private readonly List<ProcessBatch> processBatches = [];
         private readonly object lifecycleLock = new();
-        private GridRectangle lastViewBounds;
+        private Rectangle lastViewBounds;
         private AutoPolygonizeProposal? hoveredProposal;
         private readonly HashSet<string> overlapResubmitsInFlight = [];
 
@@ -83,10 +85,18 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
+            viewportImageLease = new SharedViewportImageLease(cache);
             cache.GeometryInvalidated += OnCacheGeometryInvalidated;
             cache.LocationForgotten += OnCacheLocationForgotten;
             cache.ImageLeaseReleased += OnImageLeaseReleased;
+            cache.ImageLeaseReleased += viewportImageLease.Forget;
         }
+
+        /// <summary>Cache that owns SAM2 image holds. Segmentation commands take and release holds here.</summary>
+        internal AutoPolygonizeCache ImageCache => cache;
+
+        /// <summary>Current-view upload shared with <see cref="SegmentationCommand"/>.</summary>
+        internal SharedViewportImageLease ViewportImages => viewportImageLease;
 
         public bool IsEnabled => enabled;
 
@@ -187,15 +197,45 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!enabled)
                 return;
 
-            GridRectangle current = GetCurrentViewportBounds();
+            Rectangle current = GetCurrentViewportBounds();
             if (SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, current))
                 return;
 
             lastViewBounds = current;
             lastCameraChangeUtc = DateTime.UtcNow;
+            viewportImageLease.ForgetIfViewMoved(current, GetCurrentDownsample());
             CancelUploadPhase();
             CancelConfirmTimer();
             RestartIdleTimer();
+        }
+
+        /// <summary>
+        /// Drops proposals and image leases from the previous segmentation server.
+        /// When <paramref name="newEndpointIsUsable"/> and auto-polygonize is on, restarts
+        /// the idle settle so the current view is uploaded to the new server.
+        /// Call before the gRPC channel resets so DeleteImage still reaches the old server.
+        /// </summary>
+        public void OnSegmentationEndpointChanged(bool newEndpointIsUsable)
+        {
+            CancelUploadPhase();
+            CancelProcessPhase();
+            viewportImageLease.AbandonPublished();
+            lock (proposalLock)
+            {
+                foreach (AutoPolygonizeProposal proposal in proposals.Values)
+                    proposal.DisposeMaskOverlay();
+
+                proposals.Clear();
+            }
+
+            hoveredProposal = null;
+            cache.Clear();
+            if (enabled && newEndpointIsUsable)
+                RestartIdleTimer();
+            else
+                StopSettleTimers();
+
+            parent.Invalidate();
         }
 
         /// <summary>
@@ -249,7 +289,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Nearest proposal ring within the downsample-scaled hit radius.
         /// </summary>
         /// <returns>False when overlays are hidden or nothing is in range.</returns>
-        public bool TryHit(GridVector2 worldPosition, out AutoPolygonizeProposal proposal, out double distance)
+        public bool TryHit(Vector2 worldPosition, out AutoPolygonizeProposal proposal, out double distance)
         {
             proposal = null;
             distance = double.MaxValue;
@@ -282,7 +322,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>Highlights the proposal under the cursor and invalidates when the hit changes.</summary>
-        public void UpdateHover(GridVector2 worldPosition)
+        public void UpdateHover(Vector2 worldPosition)
         {
             TryHit(worldPosition, out AutoPolygonizeProposal nextProposal, out _);
             if (ReferenceEquals(hoveredProposal, nextProposal))
@@ -325,7 +365,19 @@ namespace WebAnnotation.UI.AutoPolygonize
             LocationObj survivor = members.First(member => member.ID == survivorId);
             List<LocationObj> victims = [.. members.Where(member => member.ID != survivorId)];
 
-            if (!LocationShapeUpdate.ApplyVolumePolygon(survivor, proposal.Polygon, parent))
+            Polygon? toApply = CarveAgainstExistingPolygons(
+                proposal.Polygon,
+                proposal.LocationIds,
+                survivor.VolumePosition,
+                survivor.ParentID);
+            if (toApply is null)
+            {
+                RemoveProposal(proposal.LocationId);
+                parent.Invalidate();
+                return;
+            }
+
+            if (!LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent))
                 return;
 
             IReadOnlyList<long> toLink = LocationSiblingMerge.UniqueNeighborIdsToTransfer(
@@ -344,6 +396,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             foreach (long id in proposal.LocationIds)
                 cache.Remove(id);
             RemoveProposal(proposal.LocationId);
+            CarveRemainingProposals(toApply, proposal.LocationIds);
             parent.Invalidate();
         }
 
@@ -496,8 +549,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             if (parent.CurrentCommand is SegmentationCommand)
             {
-                CancelUploadPhase();
                 CancelProcessPhase();
+                if (!viewportImageLease.HasInFlight)
+                    CancelUploadPhase();
                 return;
             }
 
@@ -537,11 +591,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 localUploadSession.ViewportBounds = localUploadSession.GetCurrentViewportBounds();
-                GridRectangle viewBounds = localUploadSession.ViewportBounds;
-                GridRectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
+                Rectangle viewBounds = localUploadSession.ViewportBounds;
+                Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
                 List<LocationObj> candidates = CollectEligibleCircles(viewBounds, inset);
                 if (candidates.Count == 0)
+                {
+                    ScheduleSavedSiblingOverlapScan();
                     return;
+                }
 
                 long candidateCollectionMs = stepTimer.ElapsedMilliseconds;
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
@@ -550,12 +607,18 @@ namespace WebAnnotation.UI.AutoPolygonize
                 double simplifyTolerance = Global.PenSimplifyThreshold * parent.Downsample;
 
                 stepTimer.Restart();
-                if (!await localUploadSession.UploadCurrentImageAsync(uploadToken).ConfigureAwait(false))
+                AutoPolygonizeUploadContext? uploadContext = await CaptureSharedViewportAsync(
+                    localUploadSession,
+                    viewBounds,
+                    downsample,
+                    uploadToken).ConfigureAwait(false);
+                if (uploadContext is null)
                     return;
 
-                AutoPolygonizeUploadContext? uploadContext = TryCreateUploadContext(localUploadSession, downsample);
-                if (uploadContext.HasValue)
-                    cache.AcquireBatchHold(uploadContext.Value.ImageId);
+                if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
+                    return;
+
+                cache.AcquireBatchHold(uploadContext.Value.ImageId);
 
                 long uploadMs = stepTimer.ElapsedMilliseconds;
                 Debug.WriteLine(
@@ -594,14 +657,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                     int generation = cache.MarkPending(circle.ID, sectionNumber, circle, uploadContext);
 
                     Stopwatch proposalTimer = Stopwatch.StartNew();
-                    IReadOnlyList<GridVector2> foreground = CircleSegmentationPrompts.ToVolumePoints(
-                        CircleSegmentationPrompts.CreateMosaicForegroundPoints(new GridCircle(circle.Position, circle.Radius)),
+                    IReadOnlyList<Vector2> foreground = CircleSegmentationPrompts.ToVolumePoints(
+                        CircleSegmentationPrompts.CreateMosaicForegroundPoints(new Circle(circle.Position, circle.Radius)),
                         transform);
 
                     if (foreground.Count == 0)
                         continue;
 
-                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                    IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                         CollectVisibleLocationObjs(viewBounds),
                         transform,
                         foreground,
@@ -645,6 +708,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 if (processBatch.ResponseTasks.Count > 0)
                     await Task.WhenAll(processBatch.ResponseTasks).ConfigureAwait(false);
+
+                ScheduleSavedSiblingOverlapScan();
             }
             catch (OperationCanceledException)
             {
@@ -672,8 +737,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             int sectionNumber,
             double downsample,
             double simplifyTolerance,
-            IReadOnlyList<GridVector2> foreground,
-            IReadOnlyList<GridVector2> background,
+            IReadOnlyList<Vector2> foreground,
+            IReadOnlyList<Vector2> background,
             Viking.gRPC.SegmentationServiceTypes.V1.SegmentationResponse response,
             long promptMs,
             long segmentMs,
@@ -692,7 +757,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             if (requireMatchingLiveView)
             {
-                GridRectangle liveBounds = session.GetLiveViewportBoundsAsync().GetAwaiter().GetResult();
+                Rectangle liveBounds = session.GetLiveViewportBoundsAsync().GetAwaiter().GetResult();
                 if (parent.Section is null ||
                     parent.Section.Number != sectionNumber ||
                     !SegmentationViewportSession.ShouldUploadEncodedCapture(session.ViewportBounds, liveBounds))
@@ -708,10 +773,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             Stopwatch polygonTimer = Stopwatch.StartNew();
-            IReadOnlyList<GridPolygon> polygons = session.CreatePolygonsFromResponse(
+            IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
                 response,
                 preserveHolesContainingWorldPoints: background);
-            GridPolygon polygon = polygons.FirstOrDefault();
+            Polygon polygon = polygons.FirstOrDefault();
             long polygonMs = polygonTimer.ElapsedMilliseconds;
             if (polygon is null)
             {
@@ -725,8 +790,16 @@ namespace WebAnnotation.UI.AutoPolygonize
                 maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
 
             Stopwatch renderPreparationTimer = Stopwatch.StartNew();
-            int verticesBeforeSimplify = polygon.TotalUniqueVerticies;
+            int verticesBeforeSimplify = polygon.TotalUniqueVertices;
             polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
+            polygon = CarveAgainstExistingPolygons(polygon, [circle.ID], circle.VolumePosition, circle.ParentID);
+            if (polygon is null)
+            {
+                if (IsStillCircle(circle.ID) && cache.IsGenerationCurrent(circle.ID, generation))
+                    RememberEmptyMask(circle, sectionNumber, session, downsample);
+                return;
+            }
+
             AutoPolygonizeProposal proposal = new(
                 this,
                 circle.ID,
@@ -763,7 +836,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Debug.WriteLine(
                 $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} ready-to-draw " +
                 $"prompts={promptMs}ms segmentRpc={segmentMs}ms polygonize={polygonMs}ms " +
-                $"simplifyAndViews={renderPreparationMs}ms vertices={verticesBeforeSimplify}->{polygon.TotalUniqueVerticies} " +
+                $"simplifyAndViews={renderPreparationMs}ms vertices={verticesBeforeSimplify}->{polygon.TotalUniqueVertices} " +
                 $"proposal={proposalTimer.ElapsedMilliseconds}ms " +
                 $"batchElapsed={batchTimer.ElapsedMilliseconds}ms foreground={foreground.Count} background={background.Count}");
         }
@@ -780,7 +853,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!enabled || !proposal.LocationIds.All(IsStillCircle))
+                if (!enabled || !AreProposalMembersValid(proposal))
                 {
                     proposal.DisposeMaskOverlay();
                     return;
@@ -829,7 +902,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return false;
 
             SectionAnnotationsView sectionView = AnnotationOverlay.GetOrCreateAnnotationsForSection(parent.Section.Number);
-            GridRectangle? mosaicBounds = parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
+            Rectangle? mosaicBounds = parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
             Stopwatch wait = Stopwatch.StartNew();
 
             while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < RegionWaitTimeoutMs)
@@ -860,7 +933,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// on screen, large enough, and not already proposed or dismissed for this LastModified.
         /// Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
         /// </summary>
-        private List<LocationObj> CollectEligibleCircles(GridRectangle viewBounds, GridRectangle inset)
+        private List<LocationObj> CollectEligibleCircles(Rectangle viewBounds, Rectangle inset)
         {
             List<LocationObj> eligible = [];
             double nmPerWorld = Global.Scale.X;
@@ -890,7 +963,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>Store objects for canvas views intersecting <paramref name="viewBounds"/>; used for candidates and background prompts.</summary>
-        private IEnumerable<LocationObj> CollectVisibleLocationObjs(GridRectangle viewBounds)
+        private IEnumerable<LocationObj> CollectVisibleLocationObjs(Rectangle viewBounds)
         {
             SectionAnnotationsView sectionView = AnnotationOverlay.GetOrCreateAnnotationsForSection(parent.Section.Number);
             if (sectionView is null)
@@ -913,6 +986,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private void CancelUploadPhase()
         {
+            viewportImageLease.AbandonInFlight();
             SegmentationViewportSession? toCancel = null;
             lock (lifecycleLock)
             {
@@ -992,8 +1066,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             localUploadSession.CancelPendingWork();
-            if (localUploadSession.CurrentImageId.HasValue)
+            if (localUploadSession.CurrentImageId is ulong uploadedId && !cache.IsImageHeld(uploadedId))
                 await localUploadSession.DeleteCurrentImageAsync().ConfigureAwait(false);
+            else
+                localUploadSession.ClearImageId();
         }
 
         /// <summary>Waits for remaining polygonize tasks, then DeleteImage so the SAM2 cache does not keep an orphan.</summary>
@@ -1026,6 +1102,32 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
         }
 
+        /// <summary>
+        /// True when the store still has this ID as a circle, or (for a grouped overlay)
+        /// as a closed 2D polygon of the same cell. Single-id circle proposals still drop
+        /// once Convert to Polygon commits.
+        /// </summary>
+        private static bool IsGroupMemberValid(long locationId)
+        {
+            LocationObj live = Store.Locations.GetObjectByID(locationId, false);
+            if (live is null)
+                return false;
+
+            return live.TypeCode == LocationType.CIRCLE || live.TypeCode.AllowsInteriorHoles();
+        }
+
+        /// <summary>
+        /// Single-id overlays stay circle-only. Group overlays may mix circles being
+        /// converted with already-saved POLYGON/CURVEPOLYGON siblings.
+        /// </summary>
+        private static bool AreProposalMembersValid(AutoPolygonizeProposal proposal)
+        {
+            if (proposal.LocationIds.Count == 1)
+                return IsStillCircle(proposal.LocationIds[0]);
+
+            return proposal.LocationIds.All(IsGroupMemberValid);
+        }
+
         /// <summary>True only when the store still has this ID as a circle. In-flight publishes must not outlive Convert to Polygon.</summary>
         private static bool IsStillCircle(long locationId)
         {
@@ -1035,18 +1137,18 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Drops overlays whose location was converted to a polygon (or deleted) while
-        /// auto-segment was hidden. Called when the overlay becomes visible again.
+        /// auto-segment was hidden. Group overlays that include saved siblings stay.
         /// </summary>
         private void RemoveProposalsThatAreNoLongerCircles()
         {
-            long[] stale;
+            AutoPolygonizeProposal[] stale;
             lock (proposalLock)
             {
-                stale = [.. proposals.Keys.Where(id => !IsStillCircle(id))];
+                stale = [.. DistinctProposalsUnlocked().Where(item => !AreProposalMembersValid(item))];
             }
 
-            foreach (long locationId in stale)
-                ForgetLocation(locationId);
+            foreach (AutoPolygonizeProposal proposal in stale)
+                RemoveProposal(proposal.LocationId);
         }
 
         /// <summary>Cache dropped LastModified skip after a geometry commit. Overlay is stale; force one SegmentImage if still in view.</summary>
@@ -1102,8 +1204,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            GridRectangle viewBounds = GetCurrentViewportBounds();
-            GridRectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
+            Rectangle viewBounds = GetCurrentViewportBounds();
+            Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
             if (!AutoPolygonizeSelection.IsEligibleCircle(
                     circle.TypeCode,
                     circle.VolumePosition,
@@ -1144,29 +1246,32 @@ namespace WebAnnotation.UI.AutoPolygonize
                         uploadContext.WorldBounds,
                         uploadContext.Width,
                         uploadContext.Height);
+                    if (SharedViewportImageLease.CanReuse(uploadContext, viewBounds, downsample))
+                        viewportImageLease.Publish(uploadContext);
                 }
                 else
                 {
-                    if (!await session.UploadCurrentImageAsync(processToken).ConfigureAwait(false))
+                    AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
+                        session,
+                        viewBounds,
+                        downsample,
+                        processToken).ConfigureAwait(false);
+                    if (uploaded is null)
                         return;
 
-                    AutoPolygonizeUploadContext? uploaded = TryCreateUploadContext(session, downsample);
-                    if (uploaded.HasValue)
-                    {
-                        cache.AcquireBatchHold(uploaded.Value.ImageId);
-                        acquiredHold = true;
-                        holdImageId = uploaded.Value.ImageId;
-                    }
+                    cache.AcquireBatchHold(uploaded.Value.ImageId);
+                    acquiredHold = true;
+                    holdImageId = uploaded.Value.ImageId;
                 }
 
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
-                IReadOnlyList<GridVector2> foreground = CircleSegmentationPrompts.ToVolumePoints(
-                    CircleSegmentationPrompts.CreateMosaicForegroundPoints(new GridCircle(circle.Position, circle.Radius)),
+                IReadOnlyList<Vector2> foreground = CircleSegmentationPrompts.ToVolumePoints(
+                    CircleSegmentationPrompts.CreateMosaicForegroundPoints(new Circle(circle.Position, circle.Radius)),
                     transform);
                 if (foreground.Count == 0)
                     return;
 
-                IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                     CollectVisibleLocationObjs(viewBounds),
                     transform,
                     foreground,
@@ -1270,17 +1375,69 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         private static AutoPolygonizeUploadContext? TryCreateUploadContext(SegmentationViewportSession session, double downsample)
+            => SharedViewportImageLease.TryCreateContext(session, downsample);
+
+        /// <summary>
+        /// Reuses a viewport-similar upload or runs one capture shared with <see cref="SegmentationCommand"/>.
+        /// Installs the image on <paramref name="session"/>. The lease holds the id; callers add their own hold while segmenting.
+        /// </summary>
+        private async Task<AutoPolygonizeUploadContext?> CaptureSharedViewportAsync(
+            SegmentationViewportSession session,
+            Rectangle viewBounds,
+            double downsample,
+            CancellationToken cancellationToken)
         {
-            if (session?.CurrentImageId is not ulong imageId || imageId == 0 || session.UploadedImageWidth <= 0)
+            if (cancellationToken.IsCancellationRequested)
                 return null;
 
-            GridRectangle bounds = session.UploadedImageBounds ?? session.ViewportBounds;
-            return new AutoPolygonizeUploadContext(
-                imageId,
+            AutoPolygonizeUploadContext? context = await viewportImageLease.GetOrUploadAsync(
+                viewBounds,
                 downsample,
-                bounds,
-                session.UploadedImageWidth,
-                session.UploadedImageHeight);
+                () => UploadSessionForLeaseAsync(session, viewBounds, downsample, cancellationToken)).ConfigureAwait(false);
+
+            if (context is null && !cancellationToken.IsCancellationRequested)
+            {
+                context = await viewportImageLease.GetOrUploadAsync(
+                    viewBounds,
+                    downsample,
+                    () => UploadSessionForLeaseAsync(session, viewBounds, downsample, cancellationToken)).ConfigureAwait(false);
+            }
+
+            if (context is not { IsUsable: true } ready)
+                return null;
+
+            if (!SharedViewportImageLease.CanReuse(ready, GetCurrentViewportBounds(), GetCurrentDownsample()))
+            {
+                viewportImageLease.ForgetIfViewMoved(GetCurrentViewportBounds(), GetCurrentDownsample());
+                return null;
+            }
+
+            if (session.CurrentImageId != ready.ImageId)
+            {
+                session.AdoptUploadedImage(
+                    ready.ImageId,
+                    ready.WorldBounds,
+                    ready.Width,
+                    ready.Height);
+            }
+
+            return ready;
+        }
+
+        /// <summary>
+        /// Runs only for the lease starter. Joined callers wait on the same task and then adopt.
+        /// </summary>
+        private static async Task<AutoPolygonizeUploadContext?> UploadSessionForLeaseAsync(
+            SegmentationViewportSession session,
+            Rectangle viewBounds,
+            double downsample,
+            CancellationToken cancellationToken)
+        {
+            session.ViewportBounds = viewBounds;
+            if (!await session.UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
+                return null;
+
+            return SharedViewportImageLease.TryCreateContext(session, downsample);
         }
 
         /// <summary>Removes a proposal overlay. Cache membership and subscriptions stay with <see cref="AutoPolygonizeCache"/>.</summary>
@@ -1305,8 +1462,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             proposals.Values.Distinct();
 
         /// <summary>
-        /// After a publish, if other same-cell overlays intersect this one, start one combined
-        /// SegmentImage. At most <see cref="AutoPolygonizeSelection.MaxOverlapResubmitRound"/> rounds.
+        /// After a publish, if other same-cell overlays or already-saved sibling polygons
+        /// nested-contain or cross this one, start one combined SegmentImage.
+        /// At most <see cref="AutoPolygonizeSelection.MaxOverlapResubmitRound"/> rounds.
         /// </summary>
         private void TryBeginOverlapResubmit(AutoPolygonizeProposal seed)
         {
@@ -1319,20 +1477,45 @@ namespace WebAnnotation.UI.AutoPolygonize
                 distinct = [.. DistinctProposalsUnlocked().Where(item => item.SectionNumber == seed.SectionNumber)];
             }
 
+            HashSet<long> proposalIds = [.. distinct.SelectMany(item => item.LocationIds)];
             List<OverlapCandidate> candidates = [.. distinct.Select(ToOverlapCandidate)];
+            candidates.AddRange(AutoPolygonizeSelection.CollectSavedSameCellPolygonCandidates(
+                CollectVisibleLocationObjs(GetCurrentViewportBounds()),
+                seed.ParentID.Value,
+                seed.SectionNumber,
+                proposalIds,
+                parent.Section?.ActiveSectionToVolumeTransform));
+
             OverlapCandidate seedCandidate = ToOverlapCandidate(seed);
             List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(
                 seedCandidate,
                 candidates);
+            BeginOverlapResubmit(component, distinct);
+        }
+
+        /// <summary>
+        /// Starts one combined SegmentImage for a same-cell component of 2+ locations.
+        /// Skips when this exact ID set is already a grouped overlay.
+        /// </summary>
+        private void BeginOverlapResubmit(
+            List<OverlapCandidate> component,
+            List<AutoPolygonizeProposal> distinct)
+        {
             long[] locationIds = [.. component.SelectMany(item => item.LocationIds).Distinct().OrderBy(id => id)];
             if (locationIds.Length < 2)
                 return;
 
             List<AutoPolygonizeProposal> members = [.. distinct.Where(item =>
                 item.LocationIds.Any(id => locationIds.Contains(id)))];
-            if (members.Count < 2 && members.All(item => item.LocationIds.Count == locationIds.Length))
+            int currentRound = members.Count == 0 ? 0 : members.Max(item => item.OverlapResubmitRound);
+            if (currentRound >= AutoPolygonizeSelection.MaxOverlapResubmitRound)
                 return;
-            if (members.Max(item => item.OverlapResubmitRound) >= AutoPolygonizeSelection.MaxOverlapResubmitRound)
+
+            bool alreadyGrouped = members.Count == 1
+                && members[0].LocationIds.Count == locationIds.Length
+                && members[0].LocationIds.All(locationIds.Contains)
+                && members[0].OverlapResubmitRound >= 1;
+            if (alreadyGrouped)
                 return;
 
             string key = string.Join(",", locationIds);
@@ -1342,12 +1525,149 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
             }
 
-            int nextRound = members.Max(item => item.OverlapResubmitRound) + 1;
-            _ = ResubmitOverlapGroupAsync(members, locationIds, nextRound, key);
+            _ = ResubmitOverlapGroupAsync(members, locationIds, currentRound + 1, key);
+        }
+
+        /// <summary>
+        /// Visible saved POLYGON/CURVEPOLYGON fills of the same cell that overlap.
+        /// Used when every sibling is already converted so no circle proposal exists.
+        /// </summary>
+        private void ScheduleSavedSiblingOverlapScan()
+        {
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            dispatcher?.BeginInvoke(new Action(TryBeginSavedSiblingOverlapResubmits));
+        }
+
+        /// <summary>
+        /// One grouped SAM2 resubmit per overlapping saved-sibling component in the live view.
+        /// Called from the UI thread after an idle batch (including a batch with no circles).
+        /// </summary>
+        private void TryBeginSavedSiblingOverlapResubmits()
+        {
+            if (!enabled || parent.Section is null)
+                return;
+
+            int sectionNumber = parent.Section.Number;
+            IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
+            IReadOnlyList<LocationObj> visible = [.. CollectVisibleLocationObjs(GetCurrentViewportBounds())];
+
+            List<AutoPolygonizeProposal> distinct;
+            lock (proposalLock)
+            {
+                distinct = [.. DistinctProposalsUnlocked().Where(item => item.SectionNumber == sectionNumber)];
+            }
+
+            HashSet<long> scannedParents = [];
+            foreach (LocationObj location in visible)
+            {
+                if (location?.ParentID is not long parentId || !scannedParents.Add(parentId))
+                    continue;
+
+                List<OverlapCandidate> saved = AutoPolygonizeSelection.CollectSavedSameCellPolygonCandidates(
+                    visible,
+                    parentId,
+                    sectionNumber,
+                    excludeLocationIds: null,
+                    transform);
+                foreach (List<OverlapCandidate> component in AutoPolygonizeSelection.CollectOverlappingSameCellComponents(saved))
+                    BeginOverlapResubmit(component, distinct);
+            }
         }
 
         private static OverlapCandidate ToOverlapCandidate(AutoPolygonizeProposal proposal) =>
             new(proposal.LocationIds, proposal.ParentID, proposal.SectionNumber, proposal.Polygon);
+
+        /// <summary>
+        /// Proposal rings plus saved sibling polygons that are in the group but have no overlay yet.
+        /// </summary>
+        private List<Polygon> CollectOverlapPromptPolygons(
+            List<AutoPolygonizeProposal> members,
+            long[] locationIds)
+        {
+            List<Polygon> polygons = [];
+            HashSet<long> fromProposals = [];
+            foreach (AutoPolygonizeProposal member in members)
+            {
+                polygons.Add(member.Polygon);
+                foreach (long id in member.LocationIds)
+                    fromProposals.Add(id);
+            }
+
+            IVolumeToSectionTransform? transform = parent.Section?.ActiveSectionToVolumeTransform;
+            foreach (long id in locationIds)
+            {
+                if (fromProposals.Contains(id))
+                    continue;
+
+                LocationObj loc = Store.Locations.GetObjectByID(id, false);
+                if (AutoPolygonizeSelection.TryGetVolumePolygon(loc, transform, out Polygon? saved) && saved is not null)
+                    polygons.Add(saved);
+            }
+
+            return polygons;
+        }
+
+        /// <summary>
+        /// Removes other-structure POLYGON/CURVEPOLYGON area from <paramref name="proposed"/>.
+        /// Same-cell siblings are excluded so they can be grouped instead of split.
+        /// </summary>
+        private Polygon? CarveAgainstExistingPolygons(
+            Polygon proposed,
+            IReadOnlyCollection<long> excludeLocationIds,
+            Vector2 keepPoint,
+            long? excludeParentId = null)
+        {
+            if (proposed is null || parent.Section is null)
+                return proposed;
+
+            List<Polygon> existing = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
+                CollectVisibleLocationObjs(proposed.BoundingBox),
+                proposed,
+                excludeLocationIds,
+                parent.Section.ActiveSectionToVolumeTransform,
+                parent.Section.Number,
+                excludeParentId);
+            return AutoPolygonizeSelection.SubtractOverlappingPolygons(proposed, existing, keepPoint);
+        }
+
+        /// <summary>
+        /// After one proposal is accepted, recarve every remaining overlay against the
+        /// current store so a later accept does not write a stale overlapping ring.
+        /// </summary>
+        private void CarveRemainingProposals(Polygon accepted, IReadOnlyCollection<long> acceptedLocationIds)
+        {
+            List<AutoPolygonizeProposal> others;
+            lock (proposalLock)
+            {
+                others =
+                [
+                    .. DistinctProposalsUnlocked()
+                        .Where(item => !item.LocationIds.Any(acceptedLocationIds.Contains))
+                ];
+            }
+
+            if (others.Count == 0)
+                return;
+
+            double downsample = GetCurrentDownsample();
+            foreach (AutoPolygonizeProposal other in others)
+            {
+                if (!other.Polygon.Intersects(accepted))
+                    continue;
+
+                LocationObj seed = Store.Locations.GetObjectByID(other.LocationId, false);
+                Vector2 keep = seed is not null ? seed.VolumePosition : other.Polygon.Centroid;
+                Polygon? carved = CarveAgainstExistingPolygons(other.Polygon, other.LocationIds, keep, other.ParentID);
+                if (carved is null)
+                {
+                    RemoveProposal(other.LocationId);
+                    continue;
+                }
+
+                if (!ReferenceEquals(carved, other.Polygon))
+                    other.ReplacePolygon(carved, downsample);
+            }
+        }
 
         /// <summary>
         /// One SegmentImage using points from the overlapping polygons. Replaces the member overlays
@@ -1393,6 +1713,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                                 upload.WorldBounds,
                                 upload.Width,
                                 upload.Height);
+                            if (SharedViewportImageLease.CanReuse(upload, GetCurrentViewportBounds(), downsample))
+                                viewportImageLease.Publish(upload);
                             reused = true;
                             break;
                         }
@@ -1400,27 +1722,41 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     if (!reused)
                     {
-                        if (!await session.UploadCurrentImageAsync(processToken).ConfigureAwait(false))
+                        AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
+                            session,
+                            GetCurrentViewportBounds(),
+                            downsample,
+                            processToken).ConfigureAwait(false);
+                        if (uploaded is null)
                             return;
 
-                        AutoPolygonizeUploadContext? uploaded = TryCreateUploadContext(session, downsample);
-                        if (uploaded.HasValue)
-                        {
-                            cache.AcquireBatchHold(uploaded.Value.ImageId);
-                            acquiredHold = true;
-                            holdImageId = uploaded.Value.ImageId;
-                        }
+                        cache.AcquireBatchHold(uploaded.Value.ImageId);
+                        acquiredHold = true;
+                        holdImageId = uploaded.Value.ImageId;
                     }
 
-                    IReadOnlyList<GridVector2> foreground = CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(
-                        members.Select(member => member.Polygon));
+                    IReadOnlyList<Polygon> promptPolygons = CollectOverlapPromptPolygons(members, locationIds);
+                    IReadOnlyList<Vector2> foreground = CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(
+                        promptPolygons);
                     if (foreground.Count == 0)
                         return;
 
-                    GridRectangle viewBounds = GetCurrentViewportBounds();
-                    long? parentId = members[0].ParentID;
+                    LocationObj? firstLoc = Store.Locations.GetObjectByID(locationIds[0], false);
+                    int sectionNumber = members.Count > 0 ? members[0].SectionNumber : firstLoc?.Section ?? parent.Section.Number;
+                    long? parentId = members.Count > 0 ? members[0].ParentID : firstLoc?.ParentID;
+                    if (parentId is null)
+                        return;
+
+                    DateTime lastModified = members.Count > 0
+                        ? members.Max(member => member.LastModified)
+                        : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.LastModified ?? DateTime.MinValue).Max();
+                    double circleRadius = members.Count > 0
+                        ? members.Max(member => member.CircleRadius)
+                        : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.Radius ?? 0).DefaultIfEmpty(0).Max();
+
+                    Rectangle viewBounds = GetCurrentViewportBounds();
                     HashSet<long> involved = [.. locationIds];
-                    IReadOnlyList<GridVector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                    IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                             CollectVisibleLocationObjs(viewBounds),
                             parent.Section.ActiveSectionToVolumeTransform,
                             foreground,
@@ -1432,19 +1768,19 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (response is null)
                         return;
 
-                    if (!locationIds.All(IsStillCircle))
+                    if (!locationIds.All(IsGroupMemberValid))
                         return;
 
-                    IReadOnlyList<GridPolygon> polygons = session.CreatePolygonsFromResponse(
+                    IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
                         response,
                         preserveHolesContainingWorldPoints: background);
-                    GridPolygon polygon = polygons.FirstOrDefault();
+                    Polygon polygon = polygons.FirstOrDefault();
                     if (polygon is null)
                     {
                         RememberEmptyMaskForIds(
                             locationIds,
-                            members[0].SectionNumber,
-                            members.Max(member => member.LastModified),
+                            sectionNumber,
+                            lastModified,
                             session,
                             downsample);
                         return;
@@ -1452,20 +1788,34 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     double simplifyTolerance = Global.PenSimplifyThreshold * parent.Downsample;
                     polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
+                    LocationObj? keepLocation = Store.Locations.GetObjectByID(locationIds[0], false);
+                    polygon = CarveAgainstExistingPolygons(
+                        polygon,
+                        locationIds,
+                        keepLocation?.VolumePosition ?? polygon.Centroid,
+                        parentId);
+                    if (polygon is null)
+                    {
+                        RememberEmptyMaskForIds(
+                            locationIds,
+                            sectionNumber,
+                            lastModified,
+                            session,
+                            downsample);
+                        return;
+                    }
 
                     AutoPolygonizeMaskOverlay? maskOverlay = null;
                     if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
                         maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
 
-                    DateTime lastModified = members.Max(member => member.LastModified);
-                    double circleRadius = members.Max(member => member.CircleRadius);
                     AutoPolygonizeUploadContext? uploadContext = TryCreateUploadContext(session, downsample);
                     foreach (long id in locationIds)
                     {
                         LocationObj loc = Store.Locations.GetObjectByID(id, false);
                         cache.RememberProposal(
                             id,
-                            members[0].SectionNumber,
+                            sectionNumber,
                             loc?.LastModified ?? lastModified,
                             loc?.TypeCode ?? LocationType.CIRCLE,
                             loc,
@@ -1475,7 +1825,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     AutoPolygonizeProposal group = new(
                         this,
                         locationIds[0],
-                        members[0].SectionNumber,
+                        sectionNumber,
                         lastModified,
                         circleRadius,
                         polygon,
@@ -1557,7 +1907,15 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     if (loc.TypeCode != LocationType.CIRCLE)
                     {
-                        ForgetLocation(loc.ID);
+                        bool inGroupedOverlay;
+                        lock (proposalLock)
+                        {
+                            inGroupedOverlay = proposals.TryGetValue(loc.ID, out AutoPolygonizeProposal grouped)
+                                && grouped.LocationIds.Count > 1;
+                        }
+
+                        if (!inGroupedOverlay)
+                            ForgetLocation(loc.ID);
                         continue;
                     }
 
@@ -1567,7 +1925,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>Live world bounds, or <see cref="lastViewBounds"/> if Scene is not ready (startup/teardown).</summary>
-        private GridRectangle GetCurrentViewportBounds()
+        private Rectangle GetCurrentViewportBounds()
         {
             if (parent.Scene is not null)
                 return parent.Scene.VisibleWorldBounds;

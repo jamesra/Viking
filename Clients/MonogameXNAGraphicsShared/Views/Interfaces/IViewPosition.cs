@@ -9,7 +9,7 @@ namespace VikingXNAGraphics
     /// </summary>
     public interface IViewPosition2D
     {
-        GridVector2 Position { get; set; }
+        Vector2 Position { get; set; }
     }
 
     /// <summary>
@@ -17,7 +17,7 @@ namespace VikingXNAGraphics
     /// </summary>
     public interface IViewBoundingRect
     {
-        GridRectangle BoundingRect { get; set; }
+        Rectangle BoundingRect { get; set; }
     }
 
     /// <summary>
@@ -25,6 +25,6 @@ namespace VikingXNAGraphics
     /// </summary>
     public interface IViewPosition3D
     {
-        GridVector3 Position { get; set; }
+        Vector3 Position { get; set; }
     }
 }

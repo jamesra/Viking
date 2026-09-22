@@ -4,6 +4,7 @@
     <TargetFrameworks>net48;</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>WebAnnotationTests</RootNamespace>
     <AssemblyName>WebAnnotationTests</AssemblyName>
     <IsCodedUITest>false</IsCodedUITest>
@@ -11,6 +12,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
     <ProjectReference Include="..\..\..\GeometryTests\GeometryTests.csproj" />
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\..\RTree\RTree.csproj" />
@@ -24,11 +26,15 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commands\CommandConstructorBinderTests.cs" />
+        <Compile Include="Commands\PolygonHoleFillTests.cs" />
+        <Compile Include="Commands\PenModeContactTests.cs" />
+        <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
+        <Compile Include="Commands\CommandConstructorBinderTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="Commands\SegmentationRequestCoalescerTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
+    <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
@@ -36,6 +42,8 @@
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
     <Compile Include="VikingDeepLinkParserTests.cs" />
+    <Compile Include="VikingLaunchExchangeParserTests.cs" />
+    <Compile Include="TokenResponseFactoryTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

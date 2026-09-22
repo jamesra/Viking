@@ -11,7 +11,9 @@ using System.Windows;
 using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
-using VikingXNAWinForms;
+using VikingXNAWinForms;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.UI.Commands
 {
@@ -255,7 +257,7 @@ namespace Viking.UI.Commands
         /// <summary>
         /// If the base Command class' OnMouseMove is called this variable contains the mouse position at the last mouse move
         /// </summary>
-        protected GridVector2 oldWorldPosition = new(0, 0);
+        protected Geometry.Vector2 oldWorldPosition = new(0, 0);
 
         MouseEventHandler MyMouseClick;
         MouseEventHandler MyMouseDoubleClick;
@@ -516,25 +518,25 @@ namespace Viking.UI.Commands
             //point in the volume before and after the zoom
 
             //This is the point the mouse is at...
-            GridVector2 BeforeZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 BeforeZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             StepCameraDistance(multiplier);
 
             //This is the point the mouse is at after zooming camera...
-            GridVector2 AfterZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 AfterZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             RecenterCameraAfterZoom(BeforeZoomPosition, AfterZoomPosition);
 
             this.Parent.Invalidate();
         }
 
-        protected void RecenterCameraAfterZoom(GridVector2 BeforeZoomPosition, GridVector2 AfterZoomPosition)
+        protected void RecenterCameraAfterZoom(Geometry.Vector2 BeforeZoomPosition, Geometry.Vector2 AfterZoomPosition)
         {
-            GridVector2 Offset = BeforeZoomPosition - AfterZoomPosition;
+            Geometry.Vector2 Offset = BeforeZoomPosition - AfterZoomPosition;
 
             //Move the camera position by the offset.
-            GridVector2 CameraLookat = Parent.Camera.LookAt.ToGridVector2();
-            GridVector2 NewCameraLookat = CameraLookat + Offset;
+            Geometry.Vector2 CameraLookat = Parent.Camera.LookAt.ToVector2();
+            Geometry.Vector2 NewCameraLookat = CameraLookat + Offset;
             Parent.Camera.LookAt = new Vector2((float)NewCameraLookat.X, (float)NewCameraLookat.Y);
         }
 
@@ -548,7 +550,7 @@ namespace Viking.UI.Commands
 
         protected virtual void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
             bool TranslateButtonDown = e.Button.Right();
@@ -561,7 +563,7 @@ namespace Viking.UI.Commands
 
             if (TranslateButtonDown)
             {
-                GridVector2 OldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
+                Geometry.Vector2 OldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                 Debug.Assert(double.IsNaN(NewPosition.X) == false);
 
                 OnTranslateInput(NewPosition, OldPosition);
@@ -602,7 +604,7 @@ namespace Viking.UI.Commands
 
         protected virtual void OnPenMove(object sender, PenEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
             //Cancel the command on a barrel click
@@ -615,7 +617,7 @@ namespace Viking.UI.Commands
 
             if (oldPen != null && e.Erase && e.InContact)
             {
-                GridVector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
+                Geometry.Vector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
                 System.Diagnostics.Debug.Assert(double.IsNaN(NewPosition.X) == false);
 
                 OnTranslateInput(NewPosition, OldPosition);
@@ -626,13 +628,13 @@ namespace Viking.UI.Commands
             return;
         }
 
-        protected void OnTranslateInput(GridVector2 NewWorldPosition, GridVector2 OldWorldPosition)
+        protected void OnTranslateInput(Geometry.Vector2 NewWorldPosition, Geometry.Vector2 OldWorldPosition)
         {
 
 
             Debug.Assert(double.IsNaN(NewWorldPosition.X) == false);
 
-            GridVector2 delta = NewWorldPosition - OldWorldPosition;
+            Geometry.Vector2 delta = NewWorldPosition - OldWorldPosition;
 
             if (double.IsNaN(delta.X))
                 return;
@@ -748,9 +750,9 @@ namespace Viking.UI.Commands
                     this.Parent.Invalidate();
                     break;
                 case Keys.Left:
-                    GridVector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
-                    GridVector2 Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
-                    GridVector2 Diff = Right - Left;
+                    Geometry.Vector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
+                    Geometry.Vector2 Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
+                    Geometry.Vector2 Diff = Right - Left;
                     Diff *= 0.25;
 
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
@@ -766,8 +768,8 @@ namespace Viking.UI.Commands
                     this.Parent.Invalidate();
                     break;
                 case Keys.Up:
-                    GridVector2 Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
-                    GridVector2 Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
+                    Geometry.Vector2 Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
+                    Geometry.Vector2 Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Diff = Top - Bottom;
                     Diff *= 0.25;
 
@@ -796,7 +798,7 @@ namespace Viking.UI.Commands
         /// Where a gesture began in world coordinates
         /// </summary>
         /// 
-        GridVector2 PanGestureWorldPositionOrigin;
+        Geometry.Vector2 PanGestureWorldPositionOrigin;
 
         /// <summary>
         /// Distance between the fingers when they first begin the zoom gesture
@@ -811,23 +813,23 @@ namespace Viking.UI.Commands
         protected virtual void OnGestureBegin(object sender, BeginGestureEventArgs e)
         {
             Trace.WriteLine($"{this.ID}: Begin Gesture");
-            PanGestureWorldPositionOrigin = Parent.Camera.LookAt.ToGridVector2();
+            PanGestureWorldPositionOrigin = Parent.Camera.LookAt.ToVector2();
             ZoomGestureStartingMagnification = Parent.Camera.Downsample;
         }
 
         protected virtual void OnGesturePan(object sender, PanGestureEventArgs e)
         {
-            GridVector2 screen_begin = new(e.BeginPt.X, e.BeginPt.Y);
-            GridVector2 screen_end = new(e.EndPt.X, e.EndPt.Y);
+            Geometry.Vector2 screen_begin = new(e.BeginPt.X, e.BeginPt.Y);
+            Geometry.Vector2 screen_end = new(e.EndPt.X, e.EndPt.Y);
 
             //Trace.WriteLine($"{e}");
             /*
-            GridVector2 screen_delta = new GridVector2(e.Delta.X, e.Delta.Y);
-            GridVector2 screen_origin = screen_end - screen_delta; 
+            Geometry.Vector2 screen_delta = new Geometry.Vector2(e.Delta.X, e.Delta.Y);
+            Geometry.Vector2 screen_origin = screen_end - screen_delta; 
 
-            GridVector2 Begin = Parent.ScreenToWorld(screen_origin.X, screen_origin.Y);
-            GridVector2 End   = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
-            GridVector2 World_Delta = End - Begin;
+            Geometry.Vector2 Begin = Parent.ScreenToWorld(screen_origin.X, screen_origin.Y);
+            Geometry.Vector2 End   = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
+            Geometry.Vector2 World_Delta = End - Begin;
             Parent.Camera.LookAt = World_Delta.ToXNAVector2();
             this.Parent.Invalidate();  
             */
@@ -840,9 +842,9 @@ namespace Viking.UI.Commands
             }
 
 
-            GridVector2 Begin = Parent.ScreenToWorld(screen_begin.X, screen_begin.Y);
-            GridVector2 End = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
-            GridVector2 World_Delta = End - Begin;
+            Geometry.Vector2 Begin = Parent.ScreenToWorld(screen_begin.X, screen_begin.Y);
+            Geometry.Vector2 End = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
+            Geometry.Vector2 World_Delta = End - Begin;
             //Trace.WriteLine($"{this.ID}: {End} - {Begin} = {World_Delta}");
             Parent.Camera.LookAt = (PanGestureWorldPositionOrigin - World_Delta).ToXNAVector2();
             this.Parent.Invalidate();
@@ -851,8 +853,8 @@ namespace Viking.UI.Commands
         protected virtual void OnGestureZoom(object sender, PanGestureEventArgs e)
         {
 
-            //GridVector2 screen_begin = new GridVector2(e.BeginPt.X, e.BeginPt.Y);
-            GridVector2 screen_Center = new(e.EndPt.X, e.EndPt.Y);
+            //Geometry.Vector2 screen_begin = new Geometry.Vector2(e.BeginPt.X, e.BeginPt.Y);
+            Geometry.Vector2 screen_Center = new(e.EndPt.X, e.EndPt.Y);
 
             /*if (screen_begin == screen_end)
                 return;
@@ -880,12 +882,12 @@ namespace Viking.UI.Commands
             */
 
             //This is the point the mouse is at before zoom...
-            GridVector2 BeforeZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
+            Geometry.Vector2 BeforeZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
 
             Parent.Camera.Downsample = newDownsample;
 
             //This is the point the mouse is at after zoom...
-            GridVector2 AfterZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
+            Geometry.Vector2 AfterZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
 
             RecenterCameraAfterZoom(BeforeZoomPosition, AfterZoomPosition);
 

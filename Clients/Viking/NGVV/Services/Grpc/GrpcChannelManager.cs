@@ -18,28 +18,29 @@ namespace Viking.Services.Grpc
         /// <inheritdoc />
         public Channel? GetOrCreateChannel()
         {
-            string serviceUrl = _configuration.Endpoint();
-
-            serviceUrl = FormatServiceUrl(serviceUrl);
-
-            if (string.IsNullOrWhiteSpace(serviceUrl))
+            GrpcChannelTarget? parsed = TryFormatChannelTarget(_configuration.Endpoint());
+            if (parsed is null)
             {
                 return null;
             }
 
+            GrpcChannelTarget target = parsed.Value;
             lock (_lock)
             {
                 if (_channel is null ||
-                    _currentServiceUrl != serviceUrl ||
+                    _currentServiceUrl != target.ChannelKey ||
                     _channel.State == ChannelState.Shutdown ||
                     _channel.State == ChannelState.TransientFailure)
                 {
                     ShutdownChannelInternal();
 
-                    _channel = new Channel(serviceUrl, ChannelCredentials.Insecure);
-                    _currentServiceUrl = serviceUrl;
+                    ChannelCredentials credentials = target.UseTransportSecurity
+                        ? new SslCredentials()
+                        : ChannelCredentials.Insecure;
+                    _channel = new Channel(target.Target, credentials);
+                    _currentServiceUrl = target.ChannelKey;
 
-                    Trace.WriteLine($"Created new shared gRPC channel to {serviceUrl}");
+                    Trace.WriteLine($"Created new shared gRPC channel to {target.Target} tls={target.UseTransportSecurity}");
                 }
 
                 return _channel;
@@ -95,39 +96,34 @@ namespace Viking.Services.Grpc
         }
 
         /// <summary>
-        /// Grpc service URLs must be in the form host:port[/path][?query].  This function attempts to format a raw endpoint string to be compatible with that expectation.
+        /// C-core channel targets are host:port[/path][?query]. HTTPS keeps the port and selects TLS;
+        /// a missing scheme is treated as plaintext HTTP. Called when the shared channel is created.
         /// </summary>
-        /// <param name="rawEndpoint"></param>
-        /// <returns></returns>
-        private static string? FormatServiceUrl(string rawEndpoint)
+        internal static GrpcChannelTarget? TryFormatChannelTarget(string rawEndpoint)
         {
             if (string.IsNullOrWhiteSpace(rawEndpoint))
-            {
                 return null;
-            }
 
             string trimmedEndpoint = rawEndpoint.Trim();
-
-            // Ensure we can parse the endpoint by supplying a default scheme if one is missing.
             bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
             string endpointToParse = containsScheme ? trimmedEndpoint : $"http://{trimmedEndpoint}";
 
             if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri? parsedUri) || parsedUri is null)
-            {
                 return null;
-            }
 
-            string authority = parsedUri.Authority;
+            if (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps)
+                return null;
+
             string absolutePath = parsedUri.AbsolutePath;
-
             if (string.Equals(absolutePath, "/", StringComparison.Ordinal))
-            {
                 absolutePath = string.Empty;
-            }
 
-            string query = parsedUri.Query;
-
-            return $"{authority}{absolutePath}{query}";
+            string host = parsedUri.HostNameType == UriHostNameType.IPv6
+                ? $"[{parsedUri.Host}]"
+                : parsedUri.Host;
+            string target = $"{host}:{parsedUri.Port}{absolutePath}{parsedUri.Query}";
+            bool useTransportSecurity = parsedUri.Scheme == Uri.UriSchemeHttps;
+            return new GrpcChannelTarget(target, useTransportSecurity);
         }
 
         private void ShutdownChannelInternal()
@@ -151,6 +147,25 @@ namespace Viking.Services.Grpc
                 _channel = null;
             }
         }
+    }
+
+    /// <summary>
+    /// Host:port target for <see cref="Channel"/> plus whether the original URL was HTTPS.
+    /// <see cref="ChannelKey"/> includes the security mode so http and https to the same host do not share a channel.
+    /// </summary>
+    internal readonly struct GrpcChannelTarget
+    {
+        public GrpcChannelTarget(string target, bool useTransportSecurity)
+        {
+            Target = target;
+            UseTransportSecurity = useTransportSecurity;
+        }
+
+        public string Target { get; }
+
+        public bool UseTransportSecurity { get; }
+
+        public string ChannelKey => $"{(UseTransportSecurity ? "tls" : "plain")}|{Target}";
     }
 }
 

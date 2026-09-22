@@ -13,6 +13,8 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -30,25 +32,25 @@ namespace WebAnnotation.View
             }
         }
 
-        public abstract GridCircle MosaicCircle { get; }
+        public abstract Circle MosaicCircle { get; }
 
-        public abstract GridCircle VolumeCircle { get; }
+        public abstract Circle VolumeCircle { get; }
 
-        public override GridRectangle BoundingBox => VolumeCircle.BoundingBox;
-
-        /// <summary>
-        /// True if the point is on or inside the circle
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        public override bool Contains(GridVector2 Position) => VolumeCircle.Contains(Position);
+        public override Geometry.Rectangle BoundingBox => VolumeCircle.BoundingBox;
 
         /// <summary>
         /// True if the point is on or inside the circle
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        public override bool Intersects(GridLineSegment line) => VolumeCircle.Intersects(line);
+        public override bool Contains(Geometry.Vector2 Position) => VolumeCircle.Covers(Position);
+
+        /// <summary>
+        /// True if the point is on or inside the circle
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public override bool Intersects(LineSegment line) => VolumeCircle.Intersects(line);
 
         public override bool Intersects(SqlGeometry shape)
         {
@@ -56,11 +58,11 @@ namespace WebAnnotation.View
             switch (shape.GeometryType())
             {
                 case SupportedGeometryType.CURVEPOLYGON:
-                    GridCircle circle = shape.ToCircle();
+                    Circle circle = shape.ToCircle();
                     return VolumeCircle.Intersects(circle);
                 case SupportedGeometryType.POINT:
-                    GridVector2 point = new(shape.STX.Value, shape.STY.Value);
-                    return VolumeCircle.Contains(point);
+                    Geometry.Vector2 point = new(shape.STX.Value, shape.STY.Value);
+                    return VolumeCircle.Covers(point);
                 default:
                     return VolumeShapeAsRendered.STIntersects(shape).IsTrue;
             }
@@ -71,11 +73,11 @@ namespace WebAnnotation.View
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        public override double Distance(GridVector2 Position) => VolumeCircle.Distance(Position);
+        public override double Distance(Geometry.Vector2 Position) => VolumeCircle.Distance(Position);
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position) => GridVector2.Distance(Position, VolumeCircle.Center) / Radius;
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position) => Geometry.Vector2.Distance(Position, VolumeCircle.Center) / Radius;
 
-        public double DistanceToCenter(GridVector2 Position) => GridVector2.Distance(Position, VolumeCircle.Center);
+        public double DistanceToCenter(Geometry.Vector2 Position) => Geometry.Vector2.Distance(Position, VolumeCircle.Center);
 
 
         public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
@@ -91,12 +93,12 @@ namespace WebAnnotation.View
         public TextureCircleView downCircleView;
         public StructureCircleLabels structureLabels;
 
-        protected readonly GridCircle _VolumeCircle;
-        protected readonly GridCircle _MosaicCircle;
+        protected readonly Circle _VolumeCircle;
+        protected readonly Circle _MosaicCircle;
 
-        public override GridCircle MosaicCircle => _MosaicCircle;
+        public override Circle MosaicCircle => _MosaicCircle;
 
-        public override GridCircle VolumeCircle => _VolumeCircle;
+        public override Circle VolumeCircle => _VolumeCircle;
 
         private readonly ICollection<long> _OverlappedLinks = [];
         public override ICollection<long> OverlappedLinks
@@ -108,8 +110,8 @@ namespace WebAnnotation.View
 
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper, double Radius) : base(obj)
         {
-            _MosaicCircle = new GridCircle(obj.Position, Radius);
-            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _MosaicCircle = new Circle(obj.Position, Radius);
+            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
             CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
@@ -117,17 +119,17 @@ namespace WebAnnotation.View
 
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
         {
-            _MosaicCircle = new GridCircle(obj.Position, obj.Radius * Global.AdjacentLocationRadiusScalar);
-            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _MosaicCircle = new Circle(obj.Position, obj.Radius * Global.AdjacentLocationRadiusScalar);
+            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
             CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
         }
 
-        public AdjacentLocationCircleView(LocationObj obj, GridCircle mosaicCircle, IVolumeToSectionTransform mapper) : base(obj)
+        public AdjacentLocationCircleView(LocationObj obj, Circle mosaicCircle, IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = mosaicCircle;
-            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
             CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
@@ -160,7 +162,7 @@ namespace WebAnnotation.View
             }
         }
 
-        private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
+        private void CreateViewObjects(Circle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             Microsoft.Xna.Framework.Color color = modelObj.Parent is null
                 ? Microsoft.Xna.Framework.Color.Gray.SetAlpha(0.5f)
@@ -177,14 +179,24 @@ namespace WebAnnotation.View
 
         public override bool IsLabelVisible(VikingXNA.Scene scene) => structureLabels.IsLabelVisible(scene);
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        /// <summary>
+        /// Unmodified pen contact returns <see cref="LocationAction.NONE"/> so free-draw starts.
+        /// Shift or Ctrl still creates a linked location, which is what every pen contact used to do.
+        /// Mouse clicks are unchanged.
+        /// </summary>
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
-            return LocationAction.CREATELINKEDLOCATION;
+            if (ModifierKeys.ShiftOrCtrlPressed())
+            {
+                return LocationAction.CREATELINKEDLOCATION;
+            }
+
+            return LocationAction.NONE;
         }
 
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -218,13 +230,13 @@ namespace WebAnnotation.View
 
                 if (path.HasSelfIntersection)
                 {
-                    GridPolygon poly = new(path.SimplifiedFirstLoop);
+                    Polygon poly = new(path.SimplifiedFirstLoop);
                     volume_shape = poly;
                     mosaic_shape = Transform.TryMapShapeVolumeToSection(poly);
                 }
                 else
                 {
-                    GridPolyline line = new(path.SimplifiedPath, false);
+                    Polyline line = new(path.SimplifiedPath, false);
                     volume_shape = line;
                     mosaic_shape = Transform.TryMapShapeVolumeToSection(line);
                 }
@@ -264,7 +276,7 @@ namespace WebAnnotation.View
             double DesiredRowsOfText = 6.0;
             double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
             StructureIDLabelView.FontSize = DefaultFontSize;
-            StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+            StructureIDLabelView.Position = modelObj.VolumePosition - new Geometry.Vector2(0.0, this.Radius / 3.0f);
             StructureIDLabelView.Draw(spriteBatch, font, scene);
 
             return; 
@@ -275,12 +287,12 @@ namespace WebAnnotation.View
 
     internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView
     {
-        protected readonly GridCircle _VolumeCircle;
-        protected readonly GridCircle _MosaicCircle;
+        protected readonly Circle _VolumeCircle;
+        protected readonly Circle _MosaicCircle;
 
-        public override GridCircle MosaicCircle => _MosaicCircle;
+        public override Circle MosaicCircle => _MosaicCircle;
 
-        public override GridCircle VolumeCircle => _VolumeCircle;
+        public override Circle VolumeCircle => _VolumeCircle;
 
         public Color Color
         {
@@ -317,8 +329,8 @@ namespace WebAnnotation.View
 
         public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
-            _MosaicCircle = new GridCircle(obj.Position, obj.Radius);
-            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _MosaicCircle = new Circle(obj.Position, obj.Radius);
+            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
@@ -326,15 +338,15 @@ namespace WebAnnotation.View
             CreateLabelObjects();
         }
 
-        private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
+        private void CreateViewObjects(Circle MosaicCircle, IVolumeToSectionTransform mapper)
         {
-            GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
+            Geometry.Vector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
             bool hasParent = modelObj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(modelObj.TypeCode, hasParent);
             Color color = modelObj.Parent is null
                 ? Color.Gray.SetAlpha(opacity)
                 : modelObj.Parent.Type.Color.ToXNAColor(opacity);
-            circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), color);
+            circleView = new CircleView(new Circle(VolumePosition, modelObj.Radius), color);
         }
 
         private void CreateLabelObjects() => structureLabels = new StructureCircleLabels(modelObj, VolumeCircle);
@@ -376,7 +388,7 @@ namespace WebAnnotation.View
 
         public override bool IsLabelVisible(VikingXNA.Scene scene) => structureLabels.IsLabelVisible(scene);
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -405,11 +417,11 @@ namespace WebAnnotation.View
             {
                 if (Z == VisibleSectionNumber)
                 {
-                    GridPolygon closedpath = new(path.SimplifiedFirstLoop);
+                    Polygon closedpath = new(path.SimplifiedFirstLoop);
                     ChangeToPolygonAction action = new(modelObj, closedpath);
                     listActions.Add(action);
 
-                    if (VolumeCircle.Contains(closedpath))
+                    if (VolumeCircle.Covers(closedpath))
                     {
                         CutHoleAction cutHoleAction = new(modelObj, closedpath);
                         listActions.Add(cutHoleAction);
@@ -420,11 +432,11 @@ namespace WebAnnotation.View
             {
                 if (Z == VisibleSectionNumber)
                 {
-                    GridPolyline line = new(path.SimplifiedPath);
+                    Polyline line = new(path.SimplifiedPath);
                     ChangeToPolylineAction action = new(modelObj, line);
                     listActions.Add(action);
 
-                    /*SortedDictionary<double, PointIndex> intersectedSegments = this.VolumeShapeAsRendered.IntersectingSegments(path.ToLineSegments());
+                    /*SortedDictionary<double, PointIndex> intersectedSegments = this.VolumeShapeAsRendered.IntersectingSegmentIndices(path.ToLineSegments());
 
                     if (intersectedSegments.Count >= 2)
                     {
@@ -441,7 +453,7 @@ namespace WebAnnotation.View
         }
 
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -510,7 +522,7 @@ namespace WebAnnotation.View
         #region Linked Locations
 
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
             ICanvasView annotation = null;
 

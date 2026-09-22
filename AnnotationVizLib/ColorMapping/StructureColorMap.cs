@@ -84,7 +84,7 @@ namespace AnnotationVizLib
             return LocationColorMap.GetColor(locations);
         }
 
-        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<Geometry.GridVector3> points)
+        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<Geometry.Vector3> points)
         {
             if (LocationColorMap is null)
                 return System.Drawing.Color.Empty;
@@ -126,8 +126,8 @@ namespace AnnotationVizLib
 
             IEnumerable<MorphologyNode> nodes = graph.Nodes.Values.Where(v => LocationColorMap.SectionNumbers.Contains((int)v.Location.UnscaledZ));
 
-            List<Geometry.GridVector3> listPoints = [.. nodes.Select<MorphologyNode, Geometry.GridVector3>(n =>
-                n.Geometry.Centroid().ToGridVector3(n.UnscaledZ)
+            List<Geometry.Vector3> listPoints = [.. nodes.Select<MorphologyNode, Geometry.Vector3>(n =>
+                n.Geometry.Centroid().ToVector3(n.UnscaledZ)
              )];
 
             source = COLORSOURCE.LOCATION;

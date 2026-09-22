@@ -18,6 +18,8 @@ using Microsoft.Xna.Framework;
 using WebAnnotation.View;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Commands.Segmentation;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
@@ -447,7 +449,7 @@ namespace WebAnnotation.ViewModel
             {
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
                     this.modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
-                    LocationActions.UpdateCircleLocationNoSaveCallback(this.modelObj, new GridVector2(VolumeX, VolumeY), new GridVector2(X, Y));
+                    LocationActions.UpdateCircleLocationNoSaveCallback(this.modelObj, new Geometry.Vector2(VolumeX, VolumeY), new Geometry.Vector2(X, Y));
                     break;
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
                     break;
@@ -465,14 +467,14 @@ namespace WebAnnotation.ViewModel
             ToolStripMenuItem item = sender as ToolStripMenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
-            GridPolygon poly = modelObj.MosaicShape.ToPolygon();
+            Polygon poly = modelObj.MosaicShape.ToPolygon();
 
             try
             {
                 if (!innerPoly.HasValue)
                 {
-                    GridPolygon outer_poly = new(poly.ExteriorRing);
-                    GridPolygon simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
+                    Polygon outer_poly = new(poly.ExteriorRing);
+                    Polygon simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
                     poly.ExteriorRing = simple_poly.ExteriorRing;
                     modelObj.MosaicShape = poly.ToSqlGeometry();
                 }
@@ -484,8 +486,8 @@ namespace WebAnnotation.ViewModel
                         return;
                     }
 
-                    GridPolygon inner_poly = poly.InteriorPolygons[innerPoly.Value];
-                    GridPolygon simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
+                    Polygon inner_poly = poly.InteriorPolygons[innerPoly.Value];
+                    Polygon simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
                     poly.ReplaceInteriorRing(innerPoly.Value, simple_inner_poly);
                     modelObj.MosaicShape = poly.ToSqlGeometry();
                 }
@@ -509,7 +511,7 @@ namespace WebAnnotation.ViewModel
             ToolStripMenuItem item = sender as ToolStripMenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
-            GridPolygon poly = modelObj.MosaicShape.ToPolygon();
+            Polygon poly = modelObj.MosaicShape.ToPolygon();
 
             try
             {
@@ -546,13 +548,13 @@ namespace WebAnnotation.ViewModel
             {
                 var parent = AnnotationOverlay.CurrentOverlay.Parent;
                 // Get the circle geometry
-                GridCircle mosaic_circle = GetCircleFromLocation();
-                IReadOnlyList<GridVector2> mosaicPoints = CircleSegmentationPrompts.CreateMosaicForegroundPoints(mosaic_circle);
-                IReadOnlyList<GridVector2> volume_points = CircleSegmentationPrompts.ToVolumePoints(
+                Circle mosaic_circle = GetCircleFromLocation();
+                IReadOnlyList<Geometry.Vector2> mosaicPoints = CircleSegmentationPrompts.CreateMosaicForegroundPoints(mosaic_circle);
+                IReadOnlyList<Geometry.Vector2> volume_points = CircleSegmentationPrompts.ToVolumePoints(
                     mosaicPoints,
                     parent.Section.ActiveSectionToVolumeTransform);
 
-                void callback(GridPolygon outputPolygon)
+                void callback(Polygon outputPolygon)
                 {
                     UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 }
@@ -562,7 +564,7 @@ namespace WebAnnotation.ViewModel
                 SegmentationCommand segmentCommand = new(
                     parent,
                     volume_points,
-                    Array.Empty<GridVector2>(), // no background points initially
+                    Array.Empty<Geometry.Vector2>(), // no background points initially
                     callback,
                     channelManager,
                     modelObj.Parent.TypeID,
@@ -580,7 +582,7 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Launch segmentation with one green prompt at each Delaunay-triangle centroid of this polygon.
+        /// Resegment this polygon. Clicks are the unsmoothed mosaic triangle centroids, the same set linked placement sends.
         /// </summary>
         protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
         {
@@ -591,24 +593,23 @@ namespace WebAnnotation.ViewModel
                    this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
                     return;
 
-                // Get the circle geometry
-                GridPolygon poly = modelObj.VolumeShape.ToPolygon();
-                IReadOnlyList<GridVector2> foregroundPoints =
-                    AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(poly);
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                Polygon controlRing = modelObj.MosaicShape.ToPolygon();
+                IReadOnlyList<Geometry.Vector2> foregroundPoints =
+                    PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
+                        controlRing,
+                        parent.Section.ActiveSectionToVolumeTransform);
 
-                // Create callback to update location shape
-                void callback(GridPolygon volume_poly)
+                void callback(Polygon volume_poly)
                 {
                     UpdateLocationShapeFromVolumePolygon(volume_poly);
                 }
 
-                // Launch segmentation command
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                 SegmentationCommand segmentCommand = new(
                     parent,
                     foregroundPoints,
-                    Array.Empty<GridVector2>(), // no background points initially
+                    Array.Empty<Geometry.Vector2>(), // no background points initially
                     callback,
                     channelManager,
                     modelObj.Parent.TypeID,
@@ -626,25 +627,25 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Extract GridCircle geometry from a circle location
+        /// Extract Circle geometry from a circle location
         /// </summary>
-        private GridCircle GetCircleFromLocation()
+        private Circle GetCircleFromLocation()
         {
             if (modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
             {
                 throw new InvalidOperationException("Location is not a circle");
             }
 
-            GridVector2 center = modelObj.Position;
+            Geometry.Vector2 center = modelObj.Position;
             double radius = modelObj.Radius;
 
-            return new GridCircle(center, radius);
+            return new Circle(center, radius);
         }
 
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        private void UpdateLocationShapeFromMosaicPolygon(GridPolygon mosaic_poly)
+        private void UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
         {
             try
             {
@@ -669,7 +670,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        private void UpdateLocationShapeFromVolumePolygon(GridPolygon volume_poly)
+        private void UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
             LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, AnnotationOverlay.CurrentOverlay.Parent);
         }
