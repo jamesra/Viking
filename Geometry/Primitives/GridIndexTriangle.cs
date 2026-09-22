@@ -11,26 +11,26 @@ namespace Geometry
         /// <summary>
         /// THIS IS A REFERENCE.  DO NOT CHANGE ANY VALUES IN THIS ARRAY
         /// </summary>
-        readonly GridVector2[] points;
+        readonly Vector2[] points;
 
         public readonly int i1;
         public readonly int i2;
         public readonly int i3;
 
-        private GridCircle? _Circle;
+        private Circle? _Circle;
 
-        public GridCircle Circle
+        public Circle Circle
         {
             get
             {
                 if (_Circle.HasValue == false)
-                    _Circle = GridCircle.CircleFromThreePoints(points[i1], points[i2], points[i3]);
+                    _Circle = Circle.CircleFromThreePoints(points[i1], points[i2], points[i3]);
 
                 return _Circle.Value;
             }
         }
 
-        public GridIndexTriangle(int index1, int index2, int index3, ref GridVector2[] pointArray)
+        public GridIndexTriangle(int index1, int index2, int index3, ref Vector2[] pointArray)
         {
             i1 = index1;
             i2 = index2;
@@ -38,21 +38,21 @@ namespace Geometry
             this.points = pointArray;
         }
 
-        public int[] Indicies() => [i1, i2, i3];
+        public int[] Indices() => [i1, i2, i3];
 
-        public static implicit operator GridTriangle(GridIndexTriangle t)
+        public static implicit operator Triangle(GridIndexTriangle t)
         {
             if (t is null)
                 throw new ArgumentNullException(nameof(t));
 
 
-            return new GridTriangle(t.points[t.i1], t.points[t.i2], t.points[t.i3]);
+            return new Triangle(t.points[t.i1], t.points[t.i2], t.points[t.i3]);
         }
 
-        public GridVector2 P1 => points[i1];
+        public Vector2 P1 => points[i1];
 
-        public GridVector2 P2 => points[i2];
+        public Vector2 P2 => points[i2];
 
-        public GridVector2 P3 => points[i3];
+        public Vector2 P3 => points[i3];
     }
 }

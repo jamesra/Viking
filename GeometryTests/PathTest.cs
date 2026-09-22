@@ -46,7 +46,7 @@ namespace GeometryTests
             path.OnPathChanged -= this.OnPathChanged;
         }
 
-        private static void CompareWithExpectedLoop(GridVector2[] loop, GridVector2[] expected_loop)
+        private static void CompareWithExpectedLoop(Vector2[] loop, Vector2[] expected_loop)
         {
             Assert.AreEqual(expected_loop.Length, loop.Length);
             for (int i = 0; i < expected_loop.Length; i++)
@@ -74,7 +74,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopDetection()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -87,17 +87,17 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(-10, 0));
+            path.Push(new Vector2(-10, 0));
             CheckCollectionEventAndReset(NotifyCollectionChangedAction.Add);
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             CheckCollectionEventAndReset(NotifyCollectionChangedAction.Add);
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
             Assert.IsFalse(path.HasSelfIntersection);
             //Ensure there was no loop event fired yet
             CheckLoopEventAndReset();
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -105,7 +105,7 @@ namespace GeometryTests
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(-10, -10));
+            path.Push(new Vector2(-10, -10));
             CheckLoopEventAndReset(); //No event expected because the loop did not change
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
@@ -123,7 +123,7 @@ namespace GeometryTests
             CheckLoopEventAndReset(false); //Event should fire for loop removal
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -132,7 +132,7 @@ namespace GeometryTests
 
             //Move the endpoint to be exactly on the segment, ensure the loop event and change events fire.
             //The loop is different and the path has changed
-            path.Replace(new GridVector2(1, 0));
+            path.Replace(new Vector2(1, 0));
             CheckCollectionEventAndReset(NotifyCollectionChangedAction.Replace);
             CheckLoopEventAndReset(true);
 
@@ -162,7 +162,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopOnEndpointDetection()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -174,20 +174,20 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(-10, 0));
+            path.Push(new Vector2(-10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
@@ -201,7 +201,7 @@ namespace GeometryTests
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -229,7 +229,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopOnEndpointDetection2()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -241,21 +241,21 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(-10, 0));
+            path.Push(new Vector2(-10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
 
             //Make sure the loop was found
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(-10, -10));
+            path.Push(new Vector2(-10, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
@@ -269,7 +269,7 @@ namespace GeometryTests
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -295,7 +295,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopOnEndpointDetection3()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -307,21 +307,21 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(-10, 0));
+            path.Push(new Vector2(-10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
 
             //Make sure the loop was found
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
@@ -335,7 +335,7 @@ namespace GeometryTests
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -361,7 +361,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopOnEndpointDetectionWithBox()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -374,24 +374,24 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(-10, 0));
+            path.Push(new Vector2(-10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 10));
+            path.Push(new Vector2(10, 10));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Make sure the loop was found
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
@@ -405,7 +405,7 @@ namespace GeometryTests
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -431,7 +431,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopOnEndpointDetectionWithBox2()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -444,22 +444,22 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 10));
+            path.Push(new Vector2(10, 10));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Make sure the loop was found
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
@@ -473,7 +473,7 @@ namespace GeometryTests
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
@@ -499,7 +499,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestLoopOnEndpointDetectionWithBox3()
         {
-            GridVector2[] expected_loop =
+            Vector2[] expected_loop =
             [
                 new(0,0),
                 new(10,0),
@@ -514,26 +514,26 @@ namespace GeometryTests
 
             //Build our path until we have a loop
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 0));
+            path.Push(new Vector2(10, 0));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 5));
+            path.Push(new Vector2(10, 5));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(10, 10));
+            path.Push(new Vector2(10, 10));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 10));
+            path.Push(new Vector2(0, 10));
             Assert.IsFalse(path.HasSelfIntersection);
-            path.Push(new GridVector2(0, 5));
+            path.Push(new Vector2(0, 5));
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Make sure the loop was found
-            path.Push(new GridVector2(0, 0));
+            path.Push(new Vector2(0, 0));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
 
@@ -547,7 +547,7 @@ namespace GeometryTests
             Assert.IsFalse(path.HasSelfIntersection);
 
             //Replace the point needed for an intersection and ensure the loop comes back
-            path.Push(new GridVector2(0, -10));
+            path.Push(new Vector2(0, -10));
 
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);

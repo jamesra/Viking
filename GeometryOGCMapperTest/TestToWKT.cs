@@ -12,7 +12,7 @@ namespace GeometryOGCMapperTest
         [TestMethod]
         public void TestEncodePoint()
         {
-            GridVector2 expected = new(10, 20);
+            Vector2 expected = new(10, 20);
             string wkt = expected.ToWKT();
             var result = wkt.ParseWKT();
             Assert.IsTrue(result.Equals(expected));
@@ -21,8 +21,8 @@ namespace GeometryOGCMapperTest
         [TestMethod]
         public void TestEncodeLineSegment()
         {
-            GridLineSegment expected = new(new GridVector2(10, 20),
-                                                           new GridVector2(20, 30));
+            LineSegment expected = new(new Vector2(10, 20),
+                                                           new Vector2(20, 30));
             string wkt = expected.ToWKT();
             var result = wkt.ParseWKT();
             Assert.IsTrue(result.Equals(expected));
@@ -31,7 +31,7 @@ namespace GeometryOGCMapperTest
         [TestMethod]
         public void TestEncodePolyline()
         {
-            GridPolyline expected = new([
+            Polyline expected = new([
                     new(10, 20),
                     new(20, 30),
                     new(40, 50)
@@ -45,7 +45,7 @@ namespace GeometryOGCMapperTest
         [TestMethod]
         public void TestEncodePolygon()
         {
-            GridPolygon expected = new(
+            Polygon expected = new(
             [
                 new(35, 10),
                 new(45, 45),
@@ -54,7 +54,7 @@ namespace GeometryOGCMapperTest
                 new(35, 10)
             ]);
 
-            GridVector2[] innerPoly =
+            Vector2[] innerPoly =
             [
                 new(20, 30),
                 new(35, 35),
@@ -72,7 +72,7 @@ namespace GeometryOGCMapperTest
         [TestMethod]
         public void TestEncodeCircle()
         {
-            GridCircle expected = new(5, -2, 13);
+            Circle expected = new(5, -2, 13);
 
             string wkt = expected.ToWKT();
             var result = wkt.ParseWKT();

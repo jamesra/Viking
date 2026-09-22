@@ -4,30 +4,35 @@ using System.Diagnostics;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Incremental Bowyer–Watson Delaunay returning triangle indices.
+    /// For a mesh (polygon CDT, medial axis) use <see cref="GenericDelaunayMeshGenerator2D{VERTEX}"/>
+    /// (polygon rings: MeshExtensions.Triangulate).
+    /// </summary>
     public static class Delaunay2D
     {
-        public static int[] Triangulate(GridVector2[] points)
+        public static int[] Triangulate(Vector2[] points)
         {
-            GridVector2[] BoundingPoints = GetCorners(points);
+            Vector2[] BoundingPoints = GetCorners(points);
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
-        public static int[] Triangulate(GridVector2[] points, in GridRectangle bounds)
+        public static int[] Triangulate(Vector2[] points, in Rectangle bounds)
         {
             double WidthMargin = bounds.Width;
             double HeightMargin = bounds.Height;
-            GridVector2[] BoundingPoints = [ new(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin),
+            Vector2[] BoundingPoints = [ new(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin),
                                                                new(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin),
                                                                new(bounds.Left - WidthMargin, bounds.Top +  HeightMargin),
                                                                new(bounds.Right + WidthMargin, bounds.Top + HeightMargin)];
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
-        public static int[] TriangulateLeavingBorders(GridVector2[] points, in GridRectangle bounds)
+        public static int[] TriangulateLeavingBorders(Vector2[] points, in Rectangle bounds)
         {
             double WidthMargin = bounds.Width;
             double HeightMargin = bounds.Height;
-            GridVector2[] BoundingPoints = [ new(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin),
+            Vector2[] BoundingPoints = [ new(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin),
                                                                new(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin),
                                                                new(bounds.Left - WidthMargin, bounds.Top +  HeightMargin),
                                                                new(bounds.Right + WidthMargin, bounds.Top + HeightMargin)];
@@ -35,14 +40,18 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Generates the delaunay triangulation for a list of points. 
-        /// Requires the points to be sorted on the X-axis coordinate!
-        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
-        /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
-        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
-        /// by Paul Bourke
+        /// Incremental Bowyer–Watson Delaunay triangulation. Vertex indices in the result refer to
+        /// the input <paramref name="points"/> array (plus four bounding-box corners used internally).
         /// </summary>
-        public static int[] Triangulate(GridVector2[] points, GridVector2[] BoundingPoints)
+        /// <remarks>
+        /// Bowyer, "Computing Dirichlet tessellations," Comput. J. 24(2):162–166 (1981);
+        /// Watson, "Computing the n-dimensional Delaunay tessellation with application to Voronoi
+        /// polytopes," Comput. J. 24(2):167–172 (1981). Implementation follows Paul Bourke,
+        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling,"
+        /// https://paulbourke.net/papers/triangulate/
+        /// Points are sorted on X internally; duplicates closer than <see cref="Global.Epsilon"/> throw.
+        /// </remarks>
+        public static int[] Triangulate(Vector2[] points, Vector2[] BoundingPoints)
         {
             if (BoundingPoints is null)
             {
@@ -57,18 +66,29 @@ namespace Geometry
             if (points.Length < 3)
                 return [];
 
+            Vector2[] sortedPoints = (Vector2[])points.Clone();
+            Array.Sort(sortedPoints, new Vector2Comparer(xyOrder: true));
+
+            for (int i = 1; i < sortedPoints.Length; i++)
+            {
+                if (Vector2.Distance(in sortedPoints[i - 1], in sortedPoints[i]) < Global.Epsilon)
+                    throw new ArgumentException($"Duplicate points, this breaks delaunay: #{i - 1} and #{i}");
+            }
+
 #if DEBUG
 
             //Check to ensure the input is really sorted on the X-Axis
-            for (int iDebug = 1; iDebug < points.Length; iDebug++)
+            for (int iDebug = 1; iDebug < sortedPoints.Length; iDebug++)
             {
-                if(points[iDebug - 1].X > points[iDebug].X)
+                if(sortedPoints[iDebug - 1].X > sortedPoints[iDebug].X)
                     throw new ArgumentException($"Points not sorted on X axis: #{iDebug - 1} and #{iDebug}");
 
-                if(GridVector2.Distance(in points[iDebug - 1], in points[iDebug]) < Global.Epsilon)
+                if(Vector2.Distance(in sortedPoints[iDebug - 1], in sortedPoints[iDebug]) < Global.Epsilon)
                     throw new ArgumentException($"Duplicate points, this breaks delaunay: #{iDebug - 1} and #{iDebug}");
             }
 #endif
+
+            points = sortedPoints;
 
             List<GridIndexTriangle> triangles = new(points.Length);
 
@@ -77,7 +97,7 @@ namespace Geometry
             List<GridIndexTriangle> safeTriangles = [];
 
             int iNumPoints = points.Length;
-            GridVector2[] allpoints = new GridVector2[iNumPoints + 4];
+            Vector2[] allpoints = new Vector2[iNumPoints + 4];
 
             points.CopyTo(allpoints, 0);
             BoundingPoints.CopyTo(allpoints, iNumPoints);
@@ -89,7 +109,7 @@ namespace Geometry
             IndexEdge[] Edges = new IndexEdge[(triangles.Count * 3) * 2];
             for (int iPoint = 0; iPoint < points.Length; iPoint++)
             {
-                GridVector2 P = points[iPoint];
+                Vector2 P = points[iPoint];
 
                 //Use preallocated buffer if we can, otherwise expand it
                 int maxEdges = triangles.Count * 3;
@@ -101,8 +121,8 @@ namespace Geometry
                 while (iTri < triangles.Count)
                 {
                     GridIndexTriangle tri = triangles[iTri];
-                    GridCircle circle = tri.Circle;
-                    if (circle.Contains(in P))
+                    Circle circle = tri.Circle;
+                    if (circle.Covers(in P))
                     {
                         Edges[iEdge++] = new IndexEdge(tri.i1, tri.i2);
                         Edges[iEdge++] = new IndexEdge(tri.i2, tri.i3);
@@ -164,7 +184,7 @@ namespace Geometry
 
 #if DEBUG
                     //Check to make sure the new triangle intersects the point.  This is a slow test.
-                    Debug.Assert(((GridTriangle)newTri).Contains(P));
+                    Debug.Assert(((Triangle)newTri).Covers(P));
 #endif
                 }
             }
@@ -204,7 +224,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns>[BotLeft, BotRight, TopLeft, TopRight]</returns>
-        static GridVector2[] GetCorners(GridVector2[] points)
+        static Vector2[] GetCorners(Vector2[] points)
         {
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -230,10 +250,10 @@ namespace Geometry
             minY -= height;
             maxY += height;
 
-            GridVector2 BotLeft = new(minX, minY);
-            GridVector2 BotRight = new(maxX, minY);
-            GridVector2 TopLeft = new(minX, maxY);
-            GridVector2 TopRight = new(maxX, maxY);
+            Vector2 BotLeft = new(minX, minY);
+            Vector2 BotRight = new(maxX, minY);
+            Vector2 TopLeft = new(minX, maxY);
+            Vector2 TopRight = new(maxX, maxY);
 
             return [BotLeft, BotRight, TopLeft, TopRight];
         }

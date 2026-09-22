@@ -12,14 +12,14 @@ namespace Geometry.Meshing
     public interface IMesh3D<VERTEX> : IReadOnlyMesh3D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex3D
     {
-        //new IReadOnlyList<VERTEX> Verticies { get; }
+        //new IReadOnlyList<VERTEX> Vertices { get; }
 
     }
 
     public interface IReadOnlyMesh3D<out VERTEX> : IReadOnlyMesh<VERTEX>
     where VERTEX : IVertex3D
     {
-        GridBox BoundingBox { get; }
+        Box BoundingBox { get; }
     }
 
 
@@ -32,17 +32,17 @@ namespace Geometry.Meshing
     public interface IReadOnlyMesh2D<out VERTEX> : IReadOnlyMesh<VERTEX>
     where VERTEX : IVertex2D
     {
-        //new IReadOnlyList<VERTEX> Verticies { get; }
+        //new IReadOnlyList<VERTEX> Vertices { get; }
 
-        GridLineSegment ToGridLineSegment(IEdgeKey key);
+        LineSegment ToLineSegment(IEdgeKey key);
 
-        GridLineSegment ToGridLineSegment(long A, long B);
+        LineSegment ToLineSegment(long A, long B);
 
         /// <summary>
         /// Return a normalized vector with origin at A towards B
         /// </summary> 
         /// <returns></returns>
-        GridLine ToGridLine(IEdgeKey key);
+        Line ToLine(IEdgeKey key);
 
         /// <summary>
         /// Return a normalized vector from the Origin towards the Direction vertex
@@ -50,7 +50,7 @@ namespace Geometry.Meshing
         /// <param name="Origin"></param>
         /// <param name="Direction"></param>
         /// <returns></returns>
-        GridLine ToGridLine(long Origin, long Direction);
+        Line ToLine(long Origin, long Direction);
 
         bool IsClockwise(IFace f);
 
@@ -61,7 +61,7 @@ namespace Geometry.Meshing
     public interface IReadOnlyMesh<out VERTEX>
         where VERTEX : IVertex
     {
-        IReadOnlyList<VERTEX> Verticies { get; }
+        IReadOnlyList<VERTEX> Vertices { get; }
         MeshEdgeMap Edges { get; } //If you are ever tempted to try a sortedlist profiling showed dictionary to be much faster during bajaj mesh generation
         SortedSet<IFace> Faces { get; }
 
@@ -97,11 +97,6 @@ namespace Geometry.Meshing
         int AddVerticies(IEnumerable<VERTEX> verts);
 
         void AddEdge(int A, int B);
-
-        /// <summary>
-        /// Adds an edge keyed by a concrete <see cref="EdgeKey"/> so mesh insert does not box <see cref="IEdgeKey"/>.
-        /// </summary>
-        void AddEdge(EdgeKey e);
 
         void AddEdge(IEdgeKey e);
 
@@ -218,7 +213,7 @@ namespace Geometry.Meshing
         //        public event MeshChangeEvent OnMeshChange;
         //        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
 
-        public virtual IReadOnlyList<VERTEX> Verticies => _Verticies;
+        public virtual IReadOnlyList<VERTEX> Vertices => _Verticies;
         public MeshEdgeMap Edges => _Edges;
         public SortedSet<IFace> Faces => _Faces;
 
@@ -454,7 +449,9 @@ namespace Geometry.Meshing
         /// <param name="face"></param>
         public virtual void AddFace(IFace face)
         {
-            //Debug.Assert(Faces.Contains(face) == false, string.Format("Mesh already contains {0}", face));
+            //Re-adding an existing face is idempotent: Faces and each Edge's face set are both sorted sets, so the
+            //repeat add changes nothing.  The invariant worth enforcing is per-edge (no edge may collect a third
+            //face), which morphology meshes report through MeshManifoldValidator.
 #if TRACEMESH
             Trace.WriteLine(string.Format("Add face {0}", face));
 #endif

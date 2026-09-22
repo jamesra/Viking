@@ -16,13 +16,13 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
+        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.Objects.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
                 return true;
 
-            GridVector2 VolumePosition = new(-1, -1);
+            Vector2 VolumePosition = new(-1, -1);
 
             bool mappedPosition = mapper.TrySectionToVolume(loc.Position, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
@@ -42,7 +42,7 @@ namespace Viking.VolumeModel
 
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            List<GridVector2[]> VolumeInnerRings = null;
+            List<Vector2[]> VolumeInnerRings = null;
 
             //Circles are represented by curve polygons.  When we map the points through a transform the results are not a circle.
             //So we special case the mapping of circles
@@ -51,9 +51,9 @@ namespace Viking.VolumeModel
                 return TryMapCurvePolygonSectionToVolume(mapper, shape);
             }
 
-            GridVector2[] points = shape.ToPoints();
+            Vector2[] points = shape.ToPoints();
 
-            bool[] mappedPosition = mapper.TrySectionToVolume(points, out GridVector2[] VolumePositions);
+            bool[] mappedPosition = mapper.TrySectionToVolume(points, out Vector2[] VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
@@ -62,12 +62,12 @@ namespace Viking.VolumeModel
 
             if (shape.HasInteriorRings())
             {
-                List<GridVector2[]> innerRings = shape.InteriorRingPoints();
-                VolumeInnerRings = new List<GridVector2[]>(innerRings.Count);
+                List<Vector2[]> innerRings = shape.InteriorRingPoints();
+                VolumeInnerRings = new List<Vector2[]>(innerRings.Count);
 
-                foreach (GridVector2[] innerRing in innerRings)
+                foreach (Vector2[] innerRing in innerRings)
                 {
-                    mappedPosition = mapper.TrySectionToVolume(innerRing, out GridVector2[] VolumeRingPositions);
+                    mappedPosition = mapper.TrySectionToVolume(innerRing, out Vector2[] VolumeRingPositions);
                     if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
                     {
                         Trace.WriteLine("TryMapShapeSectionToVolume: Shape #" + shape.ToString() + " inner ring was unmappable.", "WebAnnotation");
@@ -89,10 +89,10 @@ namespace Viking.VolumeModel
                 return TryMapCurvePolygonVolumeToSection(mapper, shape);
             }
 
-            List<GridVector2[]> SectionInnerRings = null;
-            GridVector2[] points = shape.ToPoints();
+            List<Vector2[]> SectionInnerRings = null;
+            Vector2[] points = shape.ToPoints();
 
-            bool[] mappedPosition = mapper.TryVolumeToSection(points, out GridVector2[] SectionPositions);
+            bool[] mappedPosition = mapper.TryVolumeToSection(points, out Vector2[] SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
@@ -101,12 +101,12 @@ namespace Viking.VolumeModel
 
             if (shape.HasInteriorRings())
             {
-                List<GridVector2[]> innerRings = shape.InteriorRingPoints();
-                SectionInnerRings = new List<GridVector2[]>(innerRings.Count);
+                List<Vector2[]> innerRings = shape.InteriorRingPoints();
+                SectionInnerRings = new List<Vector2[]>(innerRings.Count);
 
-                foreach (GridVector2[] innerRing in innerRings)
+                foreach (Vector2[] innerRing in innerRings)
                 {
-                    mappedPosition = mapper.TryVolumeToSection(innerRing, out GridVector2[] SectionRingPositions);
+                    mappedPosition = mapper.TryVolumeToSection(innerRing, out Vector2[] SectionRingPositions);
                     if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
                     {
                         Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " inner ring was unmappable.", "WebAnnotation");
@@ -147,11 +147,11 @@ namespace Viking.VolumeModel
                 throw new ArgumentException("CURVEPOLYGON shape argument required");
             }
 
-            GridVector2 center = shape.Centroid();
-            GridRectangle bbox = shape.BoundingBox();
+            Vector2 center = shape.Centroid();
+            Rectangle bbox = shape.BoundingBox();
 
             //In some cases the transform can have significant distortions corrected.  To handle this we map points on the circle at the cardinal directions and then recalculate the radius
-            GridVector2[] points =
+            Vector2[] points =
             [
                 center,
                 new(bbox.Left, center.Y),
@@ -161,7 +161,7 @@ namespace Viking.VolumeModel
             ];
 
             bool[] mappedCorrectly = useSectionToVolumeDirection ?
-                mapper.TrySectionToVolume(points, out GridVector2[] mappedPoints) :
+                mapper.TrySectionToVolume(points, out Vector2[] mappedPoints) :
                 mapper.TryVolumeToSection(points, out mappedPoints);
 
             if (!mappedCorrectly[0])
@@ -170,9 +170,9 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridVector2 mappedCenter = mappedPoints[0];
+            Vector2 mappedCenter = mappedPoints[0];
 
-            double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => GridVector2.DistanceSquared(mappedCenter, p)).Median();
+            double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => Vector2.DistanceSquared(mappedCenter, p)).Median();
             double radius = Math.Sqrt(radiiSquared);
 
             return SqlGeometryUtils.Extensions.ToCircle(mappedCenter.X, mappedCenter.Y, 0, radius);

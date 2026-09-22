@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Geometry.JSON;
 
 namespace Geometry
 {
@@ -11,7 +10,7 @@ namespace Geometry
         /// <summary>
         /// In a closed curve we append some repeating control points to the list so the implementation can index them without special cases.
         /// </summary>
-        private static List<GridVector2> GetControlPointsForClosedCurve(IList<GridVector2> cp)
+        private static List<Vector2> GetControlPointsForClosedCurve(IList<Vector2> cp)
         {
             ///
             /// Catmull rom implementation only returns the points between the middle two points of a set of four. 
@@ -22,14 +21,14 @@ namespace Geometry
             //Remove any points that are closer than epsilon distanceu04908
             for (int i = 1; i < cp.Count - 1; i++)
             {
-                if (GridVector2.DistanceSquared(cp[i - 1], cp[i]) < Global.EpsilonSquared)
+                if (Vector2.DistanceSquared(cp[i - 1], cp[i]) < Tolerance.EpsilonSquared)
                 {
                     cp.RemoveAt(i);
                     i--;
                 }
             }
 
-            List<GridVector2> output = [.. cp];
+            List<Vector2> output = [.. cp];
             /*
             if (output.First() != output.Last())
             {
@@ -46,8 +45,8 @@ namespace Geometry
                 output.Insert(0, output.Last());
             }
 
-            GridVector2 AfterStart = output[1];
-            GridVector2 BeforeStart = output[output.Count - 2];
+            Vector2 AfterStart = output[1];
+            Vector2 BeforeStart = output[output.Count - 2];
 
             //output.AddRange(output.GetRange(1, 2));
 
@@ -61,35 +60,35 @@ namespace Geometry
         /// Extrapolate a point using a straight line from the last two points, half the distance between the two control points
         /// </summary>
         /// <param name="cp"></param>
-        private static List<GridVector2> GetControlPointsForOpenCurve(IList<GridVector2> cp)
+        private static List<Vector2> GetControlPointsForOpenCurve(IList<Vector2> cp)
         {
-            List<GridVector2> output = [.. cp];
+            List<Vector2> output = [.. cp];
 
-            GridVector2 zeroPoint = GetStartingPointForOpenCurve(output);
+            Vector2 zeroPoint = GetStartingPointForOpenCurve(output);
             output.Insert(0, zeroPoint);
-            GridVector2 lastPoint = GetEndingPointForOpenCurve(output);
+            Vector2 lastPoint = GetEndingPointForOpenCurve(output);
             output.Add(lastPoint);
 
             return output;
         }
 
 
-        internal static GridVector2 GetStartingPointForOpenCurve(IReadOnlyList<GridVector2> cp)
+        internal static Vector2 GetStartingPointForOpenCurve(IReadOnlyList<Vector2> cp)
         {
-            GridLineSegment start = new(cp[0], cp[1]);
-            GridVector2 zeroPoint = start.PointAlongLine(-0.5);
+            LineSegment start = new(cp[0], cp[1]);
+            Vector2 zeroPoint = start.PointAlongLine(-0.5);
             return zeroPoint;
         }
 
-        internal static GridVector2 GetEndingPointForOpenCurve(IReadOnlyList<GridVector2> cp)
+        internal static Vector2 GetEndingPointForOpenCurve(IReadOnlyList<Vector2> cp)
         {
-            GridLineSegment end = new(cp[cp.Count - 2], cp[cp.Count - 1]);
-            GridVector2 lastPoint = end.PointAlongLine(1.5);
+            LineSegment end = new(cp[cp.Count - 2], cp[cp.Count - 1]);
+            Vector2 lastPoint = end.PointAlongLine(1.5);
             return lastPoint;
         }
 
 
-        public static GridVector2[] FitCurve(IReadOnlyList<GridVector2> ControlPoints, uint NumInterpolations, bool closed)
+        public static Vector2[] FitCurve(IReadOnlyList<Vector2> ControlPoints, uint NumInterpolations, bool closed)
         {
             //Two points are a straight line, so don't bother interpolating
             if (ControlPoints.Count <= 2 || NumInterpolations == 0)
@@ -97,12 +96,12 @@ namespace Geometry
                 return [.. ControlPoints];
             }
 
-            List<GridVector2> cp = [.. ControlPoints];
+            List<Vector2> cp = [.. ControlPoints];
             cp = closed ? GetControlPointsForClosedCurve(cp) : GetControlPointsForOpenCurve(cp);
 
             //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
             var curved_points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations: NumInterpolations));
-            GridVector2[] points = [.. curved_points.RemoveAdjacentDuplicates(ControlPoints)];
+            Vector2[] points = [.. curved_points.RemoveAdjacentDuplicates(ControlPoints)];
 
 #if DEBUG
             for (int i = 0; i < ControlPoints.Count; i++)
@@ -124,8 +123,8 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="NumInterpolations">The number of points we would like returned between p1 and p2</param>
         /// <returns></returns>
-        public static GridVector2[] FitCurveSegment(in GridVector2 p0, in GridVector2 p1,
-            in GridVector2 p2, in GridVector2 p3,
+        public static Vector2[] FitCurveSegment(in Vector2 p0, in Vector2 p1,
+            in Vector2 p2, in Vector2 p3,
                                                     int NumInterpolations)
         {
             double alpha = 0.5;
@@ -139,7 +138,7 @@ namespace Geometry
             double[] tPointsArray = NumInterpolations == 1 ? [0.5] : [.. tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0)))];
             tvalues = [.. tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1))];
 
-            GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
+            Vector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
             return output;
         }
 
@@ -152,8 +151,8 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPointsArray">Fraction distances along curve between p1 & p2 to add points</param>
         /// <returns></returns>
-        public static GridVector2[] FitCurveSegment(in GridVector2 p0, in GridVector2 p1,
-                                                    in GridVector2 p2, in GridVector2 p3,
+        public static Vector2[] FitCurveSegment(in Vector2 p0, in Vector2 p1,
+                                                    in Vector2 p2, in Vector2 p3,
                                                     double[] tPointsArray)
         {
             double alpha = 0.5;
@@ -164,7 +163,7 @@ namespace Geometry
 
             double[] tvalues = TScalarsToTValues(tPointsArray, t1, t2);
 
-            GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
+            Vector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
             return output;
         }
 
@@ -177,7 +176,7 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPointsArray">Fraction distances along curve between p1 & p2 to add points</param>
         /// <returns></returns>
-        public static GridVector2[] FitCurveSegment(IReadOnlyList<GridVector2> Points, int iStart, double[] tpointsArray)
+        public static Vector2[] FitCurveSegment(IReadOnlyList<Vector2> Points, int iStart, double[] tpointsArray)
         {
             //Cannot add a curve to a straight line
             if (Points.Count < 2)
@@ -186,7 +185,7 @@ namespace Geometry
             if (iStart >= Points.Count - 1)
                 throw new ArgumentException($"Starting point {iStart} is the last point in the Points array and a curve cannot be calculated.");
 
-            GridVector2 p0, p1, p2, p3;
+            Vector2 p0, p1, p2, p3;
 
             p0 = iStart - 1 >= 0 ? Points[iStart - 1] : GetStartingPointForOpenCurve(Points);
             p1 = Points[iStart];
@@ -205,7 +204,7 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPointsArray">Fraction distances along curve between p1 & p2 to add points</param>
         /// <returns></returns>
-        public static GridVector2[] FitCurveSegment(IReadOnlyList<IPoint2D> Points, int iStart, double[] tpointsArray) => FitCurveSegment(Points.Select(p => p.ToGridVector2()).ToArray(), iStart, tpointsArray);
+        public static Vector2[] FitCurveSegment(IReadOnlyList<IPoint2D> Points, int iStart, double[] tpointsArray) => FitCurveSegment(Points.Select(p => p.ToVector2()).ToArray(), iStart, tpointsArray);
 
         /// <summary>
         /// Returns a curve over a range, does not return the final value which should match the control point
@@ -216,8 +215,8 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tvalues">The fractional distances between P1 and P2 that we would like returned</param>
         /// <returns></returns>
-        private static GridVector2[] FitCurveSegmentWithTValues(GridVector2 p0, GridVector2 p1,
-                                                    GridVector2 p2, GridVector2 p3,
+        private static Vector2[] FitCurveSegmentWithTValues(Vector2 p0, Vector2 p1,
+                                                    Vector2 p2, Vector2 p3,
                                                     double[] tvalues)
         {
             double alpha = 0.5;
@@ -244,7 +243,7 @@ namespace Geometry
             double[] CX = [.. tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1X[i] + ((t - t1) / (t2 - t1)) * B2X[i])];
             double[] CY = [.. tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1Y[i] + ((t - t1) / (t2 - t1)) * B2Y[i])];
 
-            return [.. CX.Select((cx, i) => new GridVector2(cx, CY[i]))];
+            return [.. CX.Select((cx, i) => new Vector2(cx, CY[i]))];
         }
 
         /// <summary>
@@ -259,8 +258,8 @@ namespace Geometry
         /// <param name="tPoints">If null then [NumInterpolations] points are evenly spaced along the curve </param>
         /// <param name="NumInterpolations"></param>
         /// <returns></returns>
-        public static GridVector2[] RecursivelyFitCurveSegment(in GridVector2 p0, in GridVector2 p1,
-            in GridVector2 p2, in GridVector2 p3,
+        public static Vector2[] RecursivelyFitCurveSegment(in Vector2 p0, in Vector2 p1,
+            in Vector2 p2, in Vector2 p3,
                                                     uint NumInterpolations = 5)
         {
             double[] tvalues = new double[NumInterpolations];
@@ -280,8 +279,8 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPoints">Points along curve between p1 and p2 that we will insert, 0 = p1 & 1 = p2. </param> 
         /// <returns></returns>
-        public static GridVector2[] RecursivelyFitCurveSegment(in GridVector2 p0, in GridVector2 p1,
-            in GridVector2 p2, in GridVector2 p3,
+        public static Vector2[] RecursivelyFitCurveSegment(in Vector2 p0, in Vector2 p1,
+            in Vector2 p2, in Vector2 p3,
                                                     SortedSet<double> tPoints)
         {
             double alpha = 0.5;
@@ -293,7 +292,7 @@ namespace Geometry
             double[] tPointsArray = [.. tPoints];
             double[] tvalues = TScalarsToTValues(tPoints, t1, t2);
 
-            GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
+            Vector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
 
             if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref tPoints))
             {
@@ -326,7 +325,7 @@ namespace Geometry
             return tvalues;
         }
 
-        private static double tj(double ti, in GridVector2 Pi, in GridVector2 Pj, double Alpha = 0.5) => Math.Pow(GridVector2.Distance(in Pi, in Pj), Alpha) + ti;
+        private static double tj(double ti, in Vector2 Pi, in Vector2 Pj, double Alpha = 0.5) => Math.Pow(Vector2.Distance(in Pi, in Pj), Alpha) + ti;
     }
 
     /// <summary>
@@ -334,7 +333,7 @@ namespace Geometry
     /// </summary>
     public static class CatmullRomControlPointSimplification
     {
-        private static GridVector2[] GetControlPointSubsetForCurve(IReadOnlyList<GridVector2> path, int iStart, bool IsClosed) => IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart);
+        private static Vector2[] GetControlPointSubsetForCurve(IReadOnlyList<Vector2> path, int iStart, bool IsClosed) => IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart);
 
         /// <summary>
         /// Returns the four control points we can feed into CatmullRom to obtain the curve from iStart to iStart + 1
@@ -342,7 +341,7 @@ namespace Geometry
         /// <param name="path"></param>
         /// <param name="iStart"></param>
         /// <returns></returns>
-        private static GridVector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<GridVector2> path, int iStart)
+        private static Vector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<Vector2> path, int iStart)
         {
             if (path.Count < 2)
             {
@@ -355,7 +354,7 @@ namespace Geometry
                                                                 iStart + 1,
                                                                 iStart + 2];
 
-            GridVector2[] ProposedCurveControlPoints = new GridVector2[4];
+            Vector2[] ProposedCurveControlPoints = new Vector2[4];
             for (int iV = 0; iV < ProposedControlPointIndicies.Length; iV++)
             {
                 if (ProposedControlPointIndicies[iV] < 0)
@@ -379,7 +378,7 @@ namespace Geometry
         /// <param name="path"></param>
         /// <param name="iStart"></param>
         /// <returns></returns>
-        private static GridVector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<GridVector2> path, int iStart)
+        private static Vector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<Vector2> path, int iStart)
         {
             if (path.Count < 3)
             {
@@ -392,7 +391,7 @@ namespace Geometry
                                                                 iStart + 1,
                                                                 iStart + 2];
 
-            GridVector2[] ProposedCurveControlPoints = new GridVector2[4];
+            Vector2[] ProposedCurveControlPoints = new Vector2[4];
             for (int iV = 0; iV < ProposedControlPointIndicies.Length; iV++)
             {
                 if (ProposedControlPointIndicies[iV] < 0)
@@ -412,7 +411,7 @@ namespace Geometry
             return ProposedCurveControlPoints;
         }
 
-        private static List<GridVector2> GenerateStartingSimplifiedLine(this IList<GridVector2> path, bool IsClosed)
+        private static List<Vector2> GenerateStartingSimplifiedLine(this IList<Vector2> path, bool IsClosed)
         {
             if (IsClosed)
             {
@@ -430,7 +429,7 @@ namespace Geometry
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        private static List<GridVector2> GenerateStartingSimplifiedOpenLine(this IList<GridVector2> path) => [path.First(), path.Last()];
+        private static List<Vector2> GenerateStartingSimplifiedOpenLine(this IList<Vector2> path) => [path.First(), path.Last()];
 
         /// <summary>
         /// CatmullRom requires four points to describe a curve. 
@@ -438,7 +437,7 @@ namespace Geometry
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        private static List<GridVector2> GenerateStartingSimplifiedClosedLine(this IList<GridVector2> path)
+        private static List<Vector2> GenerateStartingSimplifiedClosedLine(this IList<Vector2> path)
         {
             //Find the two largest changes in angles in the input path
             double[] angle_change = path.ToArray().MeasureCurvature().TakeDerivative();
@@ -459,10 +458,10 @@ namespace Geometry
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
         /// <param name="path"></param>
-        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
+        public static List<Vector2> IdentifyControlPoints(this IReadOnlyList<Vector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
-            List<GridVector2> path = [.. input.Select(p => p.Round(Global.TransformSignificantDigits)).RemoveAdjacentDuplicates()];
+            List<Vector2> path = [.. input.Select(p => p.Round(Tolerance.TransformSignificantDigits)).RemoveAdjacentDuplicates()];
             //var path = input.ToList();
 
             //We can't simplify the already simple...
@@ -477,10 +476,10 @@ namespace Geometry
                 path.Add(path.First());
             }
 
-            //GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
-            var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).RemoveAdjacentDuplicates().ToArray();
-            GridLineSegment[] curve_segments = curved_path.ToLineSegments();
-            QuadTreeWithUniqueValues<int> point_to_ideal_curve_index = new(input.BoundingBox() * 1.1);
+            //Vector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
+            var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Tolerance.TransformSignificantDigits)).RemoveAdjacentDuplicates().ToArray();
+            LineSegment[] curve_segments = curved_path.ToLineSegments();
+            UniquePointMap<int> point_to_ideal_curve_index = new();
             for (int i = 0; i < curved_path.Length; i++)
             {
                 if (IsClosed && i == curved_path.Length - 1)
@@ -500,19 +499,19 @@ namespace Geometry
             }
 #endif
 
-            //int[] inflectionIndicies = curved_path.InflectionPointIndicies();
-            //GridVector2[] inflectionPoints = inflectionIndicies.Select(i => curved_path[i]).ToArray();
-            //List<GridVector2> simplified_inflection_points = inflectionPoints.DouglasPeuckerReduction(Tolerance: MaxDistanceFromSimplifiedToIdeal * 10);
-            List<GridVector2> simplified_inflection_points = GenerateStartingSimplifiedLine(path, IsClosed);
+            //int[] inflectionIndicies = curved_path.InflectionPointIndices();
+            //Vector2[] inflectionPoints = inflectionIndicies.Select(i => curved_path[i]).ToArray();
+            //List<Vector2> simplified_inflection_points = inflectionPoints.DouglasPeuckerReduction(Tolerance: MaxDistanceFromSimplifiedToIdeal * 10);
+            List<Vector2> simplified_inflection_points = GenerateStartingSimplifiedLine(path, IsClosed);
 
             //Walk subsets of our proposed simplified curve, compare distance to ideal curve, add new control points as needed until distance is below threshold.
             int iProposedVertex = 0;
             while (iProposedVertex < simplified_inflection_points.Count - 1)
             {
-                GridVector2[] proposedCurveControlPoints = simplified_inflection_points.Count >= 2
+                Vector2[] proposedCurveControlPoints = simplified_inflection_points.Count >= 2
                     ? GetControlPointSubsetForCurve(simplified_inflection_points, iProposedVertex, IsClosed)
                     : [.. simplified_inflection_points];
-                GridVector2[] proposedCurve = CatmullRom.RecursivelyFitCurveSegment(proposedCurveControlPoints[0],
+                Vector2[] proposedCurve = CatmullRom.RecursivelyFitCurveSegment(proposedCurveControlPoints[0],
                                                                                     proposedCurveControlPoints[1],
                                                                                     proposedCurveControlPoints[2],
                                                                                     proposedCurveControlPoints[3],
@@ -559,11 +558,11 @@ namespace Geometry
 
                 //Copy the relevant part of the ideal curve into a smaller array to narrow our search
                 int num_ideal_segments = (iIdealEnd) - iIdealStart; // -1 to account for the index into a line array vs a point array
-                GridLineSegment[] ideal_segments = new GridLineSegment[num_ideal_segments];
+                LineSegment[] ideal_segments = new LineSegment[num_ideal_segments];
                 System.Array.Copy(curve_segments, iIdealStart, ideal_segments, 0, num_ideal_segments);
 
                 //If we need to add a control point repeat this loop iteration, otherwise increment and check the next portion of the curve
-                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out GridVector2 ControlPointToAdd))
+                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out Vector2 ControlPointToAdd))
                 {
                     Debug.Assert(simplified_inflection_points.Contains(ControlPointToAdd) == false);
 #if DEBUG
@@ -591,14 +590,14 @@ namespace Geometry
             return simplified_inflection_points;
         }
 
-        private static bool TryFindOutlierControlPoint(GridLineSegment[] ideal_path, GridVector2[] proposed_path, double MaxDistanceFromProposedToIdeal, out GridVector2 ControlPointToAdd)
+        private static bool TryFindOutlierControlPoint(LineSegment[] ideal_path, Vector2[] proposed_path, double MaxDistanceFromProposedToIdeal, out Vector2 ControlPointToAdd)
         {
             double MaxDistance = 0;
             int iMaxSegment = -1; //The line segment on the ideal path that is closest to iMaxProposedVertex
             int iMaxProposedVertex = -1; //THe proposed vertex that is furthest from the ideal path
-            ControlPointToAdd = GridVector2.Zero;
+            ControlPointToAdd = Vector2.Zero;
 
-            GridLineSegment[] proposed_segments = proposed_path.ToLineSegments();
+            LineSegment[] proposed_segments = proposed_path.ToLineSegments();
 
             for (int i = 0; i < ideal_path.Length - 1; i++)
             {
@@ -614,10 +613,10 @@ namespace Geometry
             if (MaxDistance > MaxDistanceFromProposedToIdeal)
             {
                 /*
-                GridLineSegment nearestIdeal = ideal_path[iMaxSegment];
-                nearestIdeal.DistanceToPoint(proposed_path[iMaxProposedVertex], out GridVector2 NearestPointOnLine);
+                LineSegment nearestIdeal = ideal_path[iMaxSegment];
+                nearestIdeal.DistanceToPoint(proposed_path[iMaxProposedVertex], out Vector2 NearestPointOnLine);
                 //Identify which end of the line is closest to the nearest point on the line
-                ControlPointToAdd = GridVector2.DistanceSquared(nearestIdeal.A, NearestPointOnLine) < GridVector2.DistanceSquared(nearestIdeal.B, NearestPointOnLine) ? nearestIdeal.A : nearestIdeal.B;
+                ControlPointToAdd = Vector2.DistanceSquared(nearestIdeal.A, NearestPointOnLine) < Vector2.DistanceSquared(nearestIdeal.B, NearestPointOnLine) ? nearestIdeal.A : nearestIdeal.B;
                 */
                 ControlPointToAdd = ideal_path[iMaxProposedVertex].B;
                 return true;
@@ -626,14 +625,14 @@ namespace Geometry
             return false;
         }
 
-        public static GridPolygon Simplify(this GridPolygon polygon, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
+        public static Polygon Simplify(this Polygon polygon, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
         {
-            List<GridVector2> simpleExterior = IdentifyControlPoints(polygon.ExteriorRing,
+            List<Vector2> simpleExterior = IdentifyControlPoints(polygon.ExteriorRing,
                 MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
-            GridPolygon output = new(simpleExterior.ToArray());
+            Polygon output = new(simpleExterior.ToArray());
             foreach (var innerPoly in polygon.InteriorPolygons)
             {
-                GridPolygon outputInnerPoly =
+                Polygon outputInnerPoly =
                     innerPoly.Simplify(MaxDistanceFromSimplifiedToIdeal, NumInterpolations);
                 try
                 {
@@ -641,7 +640,7 @@ namespace Geometry
                 }
                 catch (ArgumentException)
                 {
-                    Trace.WriteLine($"The interior polygon with {innerPoly.AllVerticies.Length} vertices (before being simplified) could not be added to the simplified outer polygon.  Trying to add unsimplified version instead.");
+                    Trace.WriteLine($"The interior polygon with {innerPoly.AllVertices.Length} vertices (before being simplified) could not be added to the simplified outer polygon.  Trying to add unsimplified version instead.");
                     output.AddInteriorRing(innerPoly);
                 }
             }
@@ -649,10 +648,10 @@ namespace Geometry
             return output;
         }
 
-        public static GridPolyline Simplify(this GridPolyline polyline, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
+        public static Polyline Simplify(this Polyline polyline, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
         {
-            List<GridVector2> simpleExterior = IdentifyControlPoints([.. polyline.Points.Select(p => new GridVector2(p))], MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
-            GridPolyline output = new(simpleExterior);
+            List<Vector2> simpleExterior = IdentifyControlPoints([.. polyline.Points.Select(p => new Vector2(p))], MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
+            Polyline output = new(simpleExterior);
             return output;
         }
 

@@ -11,7 +11,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static GridVector2[] Gaussian(GridVector2[] points)
+        public static Vector2[] Gaussian(Vector2[] points)
         {
             double[] kernel = [0.25, 0.5, 0.25];
             Debug.Assert(kernel.Sum() == 1.0, "Kernel values should sum to 1");
@@ -19,7 +19,7 @@ namespace Geometry
 
             int kernelRadius = (kernel.Length - 1) / 2;
 
-            GridVector2[] output = new GridVector2[points.Length];
+            Vector2[] output = new Vector2[points.Length];
 
             //Copy the values we aren't smoothing
             for (int i = 0; i < kernelRadius; i++)
@@ -41,15 +41,15 @@ namespace Geometry
             return output;
         }
 
-        private static GridVector2 ApplyKernelToIndex(GridVector2[] points, double[] kernel, int iCenter)
+        private static Vector2 ApplyKernelToIndex(Vector2[] points, double[] kernel, int iCenter)
         {
             int kernelRadius = (kernel.Length - 1) / 2;
-            GridVector2[] items = GetKernelInput(points, kernelRadius, iCenter);
+            Vector2[] items = GetKernelInput(points, kernelRadius, iCenter);
 
             double X = items.Select((p, i) => p.X * kernel[i]).Sum();
             double Y = items.Select((p, i) => p.Y * kernel[i]).Sum();
 
-            return new GridVector2(X, Y);
+            return new Vector2(X, Y);
         }
 
         /// <summary>
@@ -59,10 +59,10 @@ namespace Geometry
         /// <param name="kernelRadius">The number of items adjacent to the center that should be fetched. </param>
         /// <param name="iCenter">Center item the kernel is applied to</param>
         /// <returns></returns>
-        private static GridVector2[] GetKernelInput(this GridVector2[] points, int kernelRadius, int iCenter)
+        private static Vector2[] GetKernelInput(this Vector2[] points, int kernelRadius, int iCenter)
         {
             int KernelSize = (kernelRadius * 2) + 1;
-            GridVector2[] output = new GridVector2[KernelSize];
+            Vector2[] output = new Vector2[KernelSize];
 
             Array.Copy(points, iCenter - kernelRadius, output, 0, KernelSize);
             return output;

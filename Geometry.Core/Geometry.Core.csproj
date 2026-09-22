@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net9.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Geometry</RootNamespace>
+    <AssemblyName>Geometry.Core</AssemblyName>
+    <PackageId>Viking.Geometry</PackageId>
+    <Version>0.1.0</Version>
+    <Title>Viking Geometry Core</Title>
+    <Description>Double-precision 2D/3D geometry primitives for the Viking image annotation suite. Types live in the Geometry namespace.</Description>
+    <Authors>James Anderson</Authors>
+    <PackageLicenseExpression>CC-BY-NC-SA-4.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/jamesra/Viking</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jamesra/Viking</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IsPackable>true</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Geometry" />
+    <InternalsVisibleTo Include="GeometryTests" />
+  </ItemGroup>
+</Project>

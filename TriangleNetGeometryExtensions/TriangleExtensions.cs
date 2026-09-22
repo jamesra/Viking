@@ -1,4 +1,4 @@
-using Geometry;
+﻿using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,109 +8,110 @@ using TriangleNet.Geometry;
 using TriangleNet.Meshing;
 using TriVertex = TriangleNet.Geometry.Vertex;
 using VikingMeshing = Geometry.Meshing;
+using VikingPolygon = Geometry.Polygon;
 
 namespace TriangleNet
 {
     public static class TriangleExtensions
     {
-        public static GridVector2 ToGridVector2(this TriVertex v) => new GridVector2(v.X, v.Y);
+        public static Vector2 ToVector2(this TriVertex v) => new Vector2(v.X, v.Y);
 
-        public static GridVector2 ToGridVector2(this TriangleNet.Topology.DCEL.Vertex v) => new GridVector2(v.X, v.Y);
+        public static Vector2 ToVector2(this TriangleNet.Topology.DCEL.Vertex v) => new Vector2(v.X, v.Y);
 
-        public static GridVector3 ToGridVector3(this TriVertex v, double Z) => new GridVector3(v.X, v.Y, Z);
+        public static Vector3 ToVector3(this TriVertex v, double Z) => new Vector3(v.X, v.Y, Z);
 
-        public static GridVector3 ToGridVector3(this TriangleNet.Topology.DCEL.Vertex v, double Z) => new GridVector3(v.X, v.Y, Z);
+        public static Vector3 ToVector3(this TriangleNet.Topology.DCEL.Vertex v, double Z) => new Vector3(v.X, v.Y, Z);
 
-        public static List<GridLineSegment> ToLines(this TriangleNet.Topology.DCEL.DcelMesh mesh)
+        public static List<LineSegment> ToLines(this TriangleNet.Topology.DCEL.DcelMesh mesh)
         {
             if (mesh is null)
                 return null;
 
-            List<GridLineSegment> listLines = [];
+            List<LineSegment> listLines = [];
             //Create a map of TriVertex ID's to DRMesh ID's
             int[] IndexMap = [.. mesh.Vertices.Select(v => v.ID)];
 
             foreach (var e in mesh.Edges)
             {
-                listLines.Add(new GridLineSegment(mesh.Vertices[e.P0].ToGridVector2(),
-                                           mesh.Vertices[e.P1].ToGridVector2()));
+                listLines.Add(new LineSegment(mesh.Vertices[e.P0].ToVector2(),
+                                           mesh.Vertices[e.P1].ToVector2()));
             }
 
             return listLines;
         }
 
-        public static GridPolygon ToPolygon(this TriangleNet.Topology.DCEL.Face face)
+        public static VikingPolygon ToPolygon(this TriangleNet.Topology.DCEL.Face face)
         {
             if (face is null)
                 return null;
 
-            GridVector2[] verts = [.. face.EnumerateEdges().Select(edge => edge.Origin.ToGridVector2())];
+            Vector2[] verts = [.. face.EnumerateEdges().Select(edge => edge.Origin.ToVector2())];
 
-            GridPolygon polygon = new(verts.EnsureClosedRing());
+            VikingPolygon polygon = new(verts.EnsureClosedRing());
             return polygon;
         }
 
-        public static List<GridPolygon> ToPolygons(this TriangleNet.Topology.DCEL.DcelMesh mesh)
+        public static List<VikingPolygon> ToPolygons(this TriangleNet.Topology.DCEL.DcelMesh mesh)
         {
             if (mesh is null)
                 return null;
 
-            List<GridPolygon> listTriangles = [];
+            List<VikingPolygon> listTriangles = [];
             return [.. mesh.Faces.Select(face => face.ToPolygon())];
         }
 
-        public static List<GridLineSegment> ToLines(this TriangleNet.Meshing.IMesh mesh)
+        public static List<LineSegment> ToLines(this TriangleNet.Meshing.IMesh mesh)
         {
             if (mesh is null)
                 return null;
 
-            SortedSet<GridLineSegment> listLines = [];
+            SortedSet<LineSegment> listLines = [];
             //Create a map of TriVertex ID's to DRMesh ID's
             int[] IndexMap = [.. mesh.Vertices.Select(v => v.ID)];
             TriVertex[] verticies = [.. mesh.Vertices];
 
             foreach (var t in mesh.Triangles)
             {
-                listLines.Add(new GridLineSegment(t.GetVertex(0).ToGridVector2(), t.GetVertex(1).ToGridVector2()));
-                listLines.Add(new GridLineSegment(t.GetVertex(1).ToGridVector2(), t.GetVertex(2).ToGridVector2()));
-                listLines.Add(new GridLineSegment(t.GetVertex(2).ToGridVector2(), t.GetVertex(0).ToGridVector2()));
+                listLines.Add(new LineSegment(t.GetVertex(0).ToVector2(), t.GetVertex(1).ToVector2()));
+                listLines.Add(new LineSegment(t.GetVertex(1).ToVector2(), t.GetVertex(2).ToVector2()));
+                listLines.Add(new LineSegment(t.GetVertex(2).ToVector2(), t.GetVertex(0).ToVector2()));
             }
 
             return [.. listLines];
         }
 
-        public static List<GridTriangle> ToTriangles(this TriangleNet.Meshing.IMesh mesh)
+        public static List<Triangle> ToTriangles(this TriangleNet.Meshing.IMesh mesh)
         {
             if (mesh is null)
                 return null;
 
-            List<GridTriangle> listTriangles = [];
+            List<Triangle> listTriangles = [];
             //Create a map of TriVertex ID's to DRMesh ID's
             int[] IndexMap = [.. mesh.Vertices.Select(v => v.ID)];
             TriVertex[] verticies = [.. mesh.Vertices];
 
             foreach (var tri in mesh.Triangles)
             {
-                listTriangles.Add(new GridTriangle(tri.GetVertex(0).ToGridVector2(),
-                                                   tri.GetVertex(1).ToGridVector2(),
-                                                   tri.GetVertex(2).ToGridVector2()));
+                listTriangles.Add(new Triangle(tri.GetVertex(0).ToVector2(),
+                                                   tri.GetVertex(1).ToVector2(),
+                                                   tri.GetVertex(2).ToVector2()));
             }
 
             return listTriangles;
         }
 
-        public static TriangleNet.Geometry.Polygon CreatePolygon(this IEnumerable<GridVector2> Verticies, IEnumerable<GridVector2[]> InteriorPolygons = null)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this IEnumerable<Vector2> Vertices, IEnumerable<Vector2[]> InteriorPolygons = null)
         {
-            IPoint2D[] v = [.. Verticies.Select(p => p as IPoint2D)];
+            IPoint2D[] v = [.. Vertices.Select(p => p as IPoint2D)];
             IPoint2D[][] ip = null;
             if (InteriorPolygons != null)
                 ip = [.. InteriorPolygons.Select(interiorPolygon => interiorPolygon.Select(p => p as IPoint2D).ToArray())];
             return CreatePolygon(v, ip);
         }
 
-        public static TriangleNet.Geometry.Polygon CreatePolygon(this IEnumerable<IPoint2D> Verticies, IEnumerable<IPoint2D[]> InteriorPolygons = null)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this IEnumerable<IPoint2D> Vertices, IEnumerable<IPoint2D[]> InteriorPolygons = null)
         {
-            TriangleNet.Geometry.Vertex[] points = [.. Verticies.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y))];
+            TriangleNet.Geometry.Vertex[] points = [.. Vertices.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y))];
             TriangleNet.Geometry.Polygon poly = new(points.Length);
 
             TriangleNet.Geometry.Contour contour = new(points);
@@ -136,7 +137,7 @@ namespace TriangleNet
         /// </summary>
         /// <param name="polygon"></param>
         /// <param name="other"></param>
-        public static void Append(this Polygon polygon, GridPolygon other)
+        public static void Append(this TriangleNet.Geometry.Polygon polygon, VikingPolygon other)
         {
             TriangleNet.Geometry.Contour contour = new(other.ExteriorRing.Select(p => new TriVertex(p.X, p.Y)));
             polygon.Add(contour);
@@ -147,7 +148,7 @@ namespace TriangleNet
         /// </summary>
         /// <param name="polygon"></param>
         /// <param name="other"></param>
-        public static void Append(this Polygon polygon, ICollection<GridVector2> points)
+        public static void Append(this TriangleNet.Geometry.Polygon polygon, ICollection<Vector2> points)
         {
             points = points.EnsureOpenRing();
 
@@ -162,34 +163,34 @@ namespace TriangleNet
         /// </summary>
         /// <param name="polygon"></param>
         /// <param name="other"></param>
-        public static void AppendCountour(this Polygon polygon, ICollection<GridVector2> points)
+        public static void AppendCountour(this TriangleNet.Geometry.Polygon polygon, ICollection<Vector2> points)
         {
             TriangleNet.Geometry.Contour contour = new(points.Select(p => new TriVertex(p.X, p.Y)));
             polygon.Add(contour, true);
         }
 
 
-        public static TriangleNet.Geometry.Polygon CreatePolygon(this GridPolygon input) => CreatePolygon(input.ExteriorRing, input.InteriorRings);
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this VikingPolygon input) => CreatePolygon(input.ExteriorRing, input.InteriorRings);
 
         public static TriangleNet.Geometry.Polygon CreatePolygon(this IPolygon2D input) => CreatePolygon(input.ExteriorRing, input.InteriorRings);
 
-        public static TriangleNet.Geometry.Contour CreateContour(this ICollection<GridVector2> Verticies)
+        public static TriangleNet.Geometry.Contour CreateContour(this ICollection<Vector2> Vertices)
         {
-            TriangleNet.Geometry.Vertex[] points = [.. Verticies.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y))];
+            TriangleNet.Geometry.Vertex[] points = [.. Vertices.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y))];
             TriangleNet.Geometry.Contour contour = new(points);
 
             return contour;
         }
 
-        public static TriangleNet.Geometry.Contour CreateContour(this ICollection<IPoint2D> Verticies)
+        public static TriangleNet.Geometry.Contour CreateContour(this ICollection<IPoint2D> Vertices)
         {
-            TriangleNet.Geometry.Vertex[] points = [.. Verticies.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y))];
+            TriangleNet.Geometry.Vertex[] points = [.. Vertices.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y))];
             TriangleNet.Geometry.Contour contour = new(points);
 
             return contour;
         }
 
-        public static IMesh Triangulate(this ICollection<GridVector2> points, int SteinerPoints = 0) => Triangulate(points.Select(p => (IPoint2D)p).ToList(), SteinerPoints);
+        public static IMesh Triangulate(this ICollection<Vector2> points, int SteinerPoints = 0) => Triangulate(points.Select(p => (IPoint2D)p).ToList(), SteinerPoints);
 
         /// <summary>
         /// Triangulate the polygon.
@@ -225,7 +226,7 @@ namespace TriangleNet
             return mesh;
         }
 
-        public static IMesh Triangulate(this GridPolygon input, ICollection<GridVector2> internalPoints) => input.Triangulate(internalPoints: internalPoints.Select(p => p as IPoint2D).ToArray());
+        public static IMesh Triangulate(this VikingPolygon input, ICollection<Vector2> internalPoints) => input.Triangulate(internalPoints: internalPoints.Select(p => p as IPoint2D).ToArray());
 
         /// <summary>
         /// Triangulate the polygon.
@@ -233,7 +234,7 @@ namespace TriangleNet
         /// <param name="input">Polygon to generate faces for</param>
         /// <param name="internalPoints">Additional points inside the polygon which should be included in the triangulation</param>
         /// <returns></returns>
-        public static IMesh Triangulate(this GridPolygon input, ICollection<IPoint2D> internalPoints = null, bool UseSteiner = true)
+        public static IMesh Triangulate(this VikingPolygon input, ICollection<IPoint2D> internalPoints = null, bool UseSteiner = true)
         {
             TriangleNet.Geometry.IPolygon polygon = input.CreatePolygon();
 
@@ -266,22 +267,22 @@ namespace TriangleNet
         /// <returns></returns>
         public static TriangleNet.Meshing.IMesh Triangulate(this VikingMeshing.Mesh3D input_mesh)
         {
-            TriangleNet.Geometry.IPolygon fake_poly = new TriangleNet.Geometry.Polygon(input_mesh.Verticies.Count);
+            TriangleNet.Geometry.IPolygon fake_poly = new TriangleNet.Geometry.Polygon(input_mesh.Vertices.Count);
 
             GenericMesher mesher = new();
 
-            List<TriVertex> tri_verts = [.. input_mesh.Verticies.Select(v => v.ToTriangleNetVertex())];
+            List<TriVertex> tri_verts = [.. input_mesh.Vertices.Select(v => v.ToTriangleNetVertex())];
 
             foreach (TriVertex v in tri_verts)
             {
                 fake_poly.Add(v);
             }
 
-            List<Segment> tri_segments = [.. input_mesh.Edges.Values.Where(seg => input_mesh.Verticies[seg.A].Position.XY() != input_mesh.Verticies[seg.B].Position.XY()).
+            List<Segment> tri_segments = [.. input_mesh.Edges.Values.Where(seg => input_mesh.Vertices[seg.A].Position.XY() != input_mesh.Vertices[seg.B].Position.XY()).
                                                                             Select(seg =>
                                                                             {
-                                                                                TriVertex seg_v1 = input_mesh.Verticies[seg.A].ToTriangleNetVertex();
-                                                                                TriVertex seg_v2 = input_mesh.Verticies[seg.B].ToTriangleNetVertex();
+                                                                                TriVertex seg_v1 = input_mesh.Vertices[seg.A].ToTriangleNetVertex();
+                                                                                TriVertex seg_v2 = input_mesh.Vertices[seg.B].ToTriangleNetVertex();
 
                                                                                 Segment tri_seg = new(seg_v1, seg_v2);
                                                                                 return tri_seg;
@@ -316,7 +317,7 @@ namespace TriangleNet
             return out_v;
         }
 
-        public static TriVertex ToTriangleNetVertex(this GridVector2 vert, int ID)
+        public static TriVertex ToTriangleNetVertex(this Vector2 vert, int ID)
         {
             TriVertex out_v = new(vert.X, vert.Y)
             {
@@ -330,9 +331,9 @@ namespace TriangleNet
         /// </summary>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static TriangleNet.Meshing.IMesh TriangulateExterior(this GridPolygon[] Polygons)
+        public static TriangleNet.Meshing.IMesh TriangulateExterior(this VikingPolygon[] Polygons)
         {
-            GridPolygon[] ExteriorPolygons = [.. Polygons.Select(p => new GridPolygon(p.ExteriorRing))];
+            VikingPolygon[] ExteriorPolygons = [.. Polygons.Select(p => new VikingPolygon(p.ExteriorRing))];
 
             return Triangulate(ExteriorPolygons);
         }
@@ -344,18 +345,18 @@ namespace TriangleNet
         /// </summary>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static TriangleNet.Meshing.IMesh Triangulate(this GridPolygon[] Polygons)
+        public static TriangleNet.Meshing.IMesh Triangulate(this VikingPolygon[] Polygons)
         {
             //When using this function with the bajaj mesh generator we must constrain the triangulation to 
             //include all segments because countour edges have already been added to the mesh.  If we do not
             //for inclusion of the contour edges in the triangulation it can produce edges that cross contours
             //which will cause obscure bugs downstream in the mesh generator.
-            List<GridLineSegment> NonIntersectingSegments = Polygons.Segments();
+            List<LineSegment> NonIntersectingSegments = Polygons.Segments();
 
             List<ISegment> input = new List<ISegment>();
 
             //Add constraints for the non-intersecting line segments
-            foreach (GridLineSegment line in NonIntersectingSegments)
+            foreach (LineSegment line in NonIntersectingSegments)
             {
                 Segment seg = new Segment(new TriVertex(line.A.X, line.A.Y), new TriVertex(line.B.X, line.B.Y));
                 //System.Diagnostics.Trace.WriteLine(string.Format("ADD SEGMENT {0}x {1}y - {2}x {3}y - ", line.A.X, line.A.Y, line.B.X, line.B.Y));
@@ -390,17 +391,17 @@ namespace TriangleNet
         /// </summary>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static TriangleNet.Meshing.IMesh Triangulate(this GridPolygon[] Polygons)
+        public static TriangleNet.Meshing.IMesh Triangulate(this VikingPolygon[] Polygons)
         {
-            //SortedSet<GridVector2> AddedPoints;
-            //SortedSet<GridLineSegment> NonIntersectingSegments = Polygons.NonIntersectingSegments(true, out AddedPoints);
+            //SortedSet<Vector2> AddedPoints;
+            //SortedSet<LineSegment> NonIntersectingSegments = Polygons.NonIntersectingSegments(true, out AddedPoints);
 
-            var pointToPolyMap = GridPolygon.CreatePointToPolyMap(Polygons);
-            List<GridVector2> points = [.. pointToPolyMap.Keys.Distinct()];
+            var pointToPolyMap = Polygons.CreatePointToPolyMap();
+            List<Vector2> points = [.. pointToPolyMap.Keys.Distinct()];
 
             TriangleNet.Geometry.Polygon polygon = new(points.Count);
 
-            foreach (GridVector2 p in points)
+            foreach (Vector2 p in points)
             {
                 polygon.Add(new TriVertex(p.X, p.Y));
                 //System.Diagnostics.Trace.WriteLine(string.Format("ADD POINT {0}x {1}y", p.X, p.Y));
@@ -427,14 +428,14 @@ namespace TriangleNet
         /// <param name="mesh"></param>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static int[] IndiciesForPointsXY(this IMesh mesh, GridVector2[] points)
+        public static int[] IndiciesForPointsXY(this IMesh mesh, Vector2[] points)
         {
             points = points.EnsureOpenRing();
 
-            GridVector2[] mesh_points = [.. mesh.Vertices.Select(v => new GridVector2(v.X, v.Y))];
+            Vector2[] mesh_points = [.. mesh.Vertices.Select(v => new Vector2(v.X, v.Y))];
 
             ///Create a map of position to index
-            Dictionary<GridVector2, int> lookup = mesh_points.Select((p, i) => i).ToDictionary(i => mesh_points[i]);
+            Dictionary<Vector2, int> lookup = mesh_points.Select((p, i) => i).ToDictionary(i => mesh_points[i]);
 
             int[] output_map = new int[points.Length];
 
@@ -465,9 +466,9 @@ namespace TriangleNet
             return mesh;
         }
 
-        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<IPoint2D> points) => points.Select(p => new GridVector2(p.X, p.Y)).ToList().Voronoi();
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<IPoint2D> points) => points.Select(p => new Vector2(p.X, p.Y)).ToList().Voronoi();
 
-        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<GridVector2> input)
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<Vector2> input)
         {
             TriangleNet.Geometry.Vertex[] verticies = [.. input.Select(p => new TriVertex(p.X, p.Y))];
 
@@ -479,17 +480,17 @@ namespace TriangleNet
         /// </summary>
         /// <param name="Shapes"></param>
         /// <returns></returns>
-        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this IReadOnlyList<GridPolygon> Shapes)
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this IReadOnlyList<VikingPolygon> Shapes)
         {
             List<TriangleNet.Geometry.Vertex> verts = [];
 
             for (int i = 0; i < Shapes.Count; i++)
             {
-                GridPolygon shape = Shapes[i];
+                VikingPolygon shape = Shapes[i];
                 if (shape is null)
                     continue;
 
-                GridVector2[] points = shape.ExteriorRing.EnsureOpenRing();
+                Vector2[] points = shape.ExteriorRing.EnsureOpenRing();
                 verts.AddRange(points.Select(p =>
                 {
                     TriVertex v = new(p.X, p.Y, i, 1);
@@ -509,7 +510,7 @@ namespace TriangleNet
 
         public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<TriVertex> verticies)
         {
-            Polygon polygon = new();
+            TriangleNet.Geometry.Polygon polygon = new();
             foreach (TriVertex v in verticies)
             {
                 polygon.Add(v);

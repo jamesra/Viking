@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -60,6 +60,29 @@ namespace Geometry.Meshing
         public NonconformingTriangulationException(IFace face, string message, Exception innerException) : base(message, innerException)
         {
             Face = face;
+        }
+    }
+
+    /// <summary>
+    /// Thrown when a constrained triangulation finished without honouring its input ring: a ring edge is missing
+    /// from the mesh, a ring edge is not bordered by exactly one face, or no face was produced at all.  The
+    /// polygon is usually degenerate (self-touching or nearly so) in a way the input cleaning did not remove.
+    /// </summary>
+    public class ConstrainedTriangulationException : GeometryMeshExceptionBase
+    {
+        /// <summary>Ring edges that the finished mesh does not contain.</summary>
+        public IEdgeKey[] MissingConstrainedEdges;
+
+        /// <summary>Ring edges present in the mesh whose face count is not one, paired with that count.</summary>
+        public KeyValuePair<IEdgeKey, int>[] MisboundedConstrainedEdges;
+
+        public int FaceCount;
+
+        public ConstrainedTriangulationException(ICollection<IEdgeKey> missing, ICollection<KeyValuePair<IEdgeKey, int>> misbounded, int faceCount, string msg) : base(msg)
+        {
+            MissingConstrainedEdges = [.. missing];
+            MisboundedConstrainedEdges = [.. misbounded];
+            FaceCount = faceCount;
         }
     }
 

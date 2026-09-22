@@ -56,9 +56,9 @@ namespace GeometryTests
         [TestMethod]
         public void TestRegionPyramid()
         {
-            GridRectangle VolumeBounds = new(0, 1024, 0, 1024);
+            Rectangle VolumeBounds = new(0, 1024, 0, 1024);
             GridCellDimensions cellDimensions = new(VolumeBounds.Width, VolumeBounds.Height);
-            GridRectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
+            Rectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
 
             double FullVolumeVisibleRadius = VolumeBounds.Width / ScreenBounds.Width;
             double OneToOnePixelMappingRadius = 1.0;
@@ -95,9 +95,9 @@ namespace GeometryTests
         [TestMethod]
         public void TestRegionPyramidWithSmallerCellDimensions()
         {
-            GridRectangle VolumeBounds = new(0, 1024, 0, 1024);
+            Rectangle VolumeBounds = new(0, 1024, 0, 1024);
             GridCellDimensions cellDimensions = new(VolumeBounds.Width / 2.0, VolumeBounds.Height / 2.0);
-            GridRectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
+            Rectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
 
             double FullVolumeVisibleRadius = VolumeBounds.Width / ScreenBounds.Width;
             double OneToOnePixelMappingRadius = 1.0;
@@ -132,18 +132,18 @@ namespace GeometryTests
             Assert.AreEqual(level.CellDimensions.Height, cellDimensions.Height / Math.Pow(2, level.Level));
         }
 
-        private static void ValidateSubGridForRegion(RegionPyramidLevel<string> level, GridRectangle VisibleVolumeBounds)
+        private static void ValidateSubGridForRegion(RegionPyramidLevel<string> level, Rectangle VisibleVolumeBounds)
         {
             //Grab the entire volume from the level
             GridRange<string> range = level.SubGridForRegion(VisibleVolumeBounds);
-            Assert.AreEqual(range.Indicies.Width, Math.Ceiling(VisibleVolumeBounds.Width / level.CellDimensions.Width));
-            Assert.AreEqual(range.Indicies.Height, Math.Ceiling(VisibleVolumeBounds.Height / level.CellDimensions.Height));
-            Assert.AreEqual(range.Indicies.iMinX, Math.Floor(VisibleVolumeBounds.Left / level.CellDimensions.Width));
-            Assert.AreEqual(range.Indicies.iMinY, Math.Floor(VisibleVolumeBounds.Bottom / level.CellDimensions.Height));
+            Assert.AreEqual(range.Indices.Width, Math.Ceiling(VisibleVolumeBounds.Width / level.CellDimensions.Width));
+            Assert.AreEqual(range.Indices.Height, Math.Ceiling(VisibleVolumeBounds.Height / level.CellDimensions.Height));
+            Assert.AreEqual(range.Indices.iMinX, Math.Floor(VisibleVolumeBounds.Left / level.CellDimensions.Width));
+            Assert.AreEqual(range.Indices.iMinY, Math.Floor(VisibleVolumeBounds.Bottom / level.CellDimensions.Height));
 
             //Ensure the range returned completely contains the VisibleVolumeBounds
-            List<GridRectangle> cellBounds = [.. range.Indicies.Select(key => level.CellBounds(key.X, key.Y))];
-            GridRectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => unionRect + next);
+            List<Rectangle> cellBounds = [.. range.Indices.Select(key => level.CellBounds(key.X, key.Y))];
+            Rectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => unionRect + next);
 
             Assert.IsTrue(rangeBounds.Contains(VisibleVolumeBounds), "Visible volume is not contained within the range returned");
 
@@ -152,9 +152,9 @@ namespace GeometryTests
         [TestMethod]
         public void TestRegionPyramidLevel()
         {
-            GridRectangle VolumeBounds = new(0, 1024, 0, 1024);
-            GridRectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
-            GridRectangle VisibleVolumeBounds = new(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
+            Rectangle VolumeBounds = new(0, 1024, 0, 1024);
+            Rectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
+            Rectangle VisibleVolumeBounds = new(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
 
 
             double FullVolumeVisibleRadius = VolumeBounds.Width / ScreenBounds.Width;
@@ -177,10 +177,10 @@ namespace GeometryTests
         [TestMethod]
         public void TestRegionPyramidLevelWithSmallerCellDimensions()
         {
-            GridRectangle VolumeBounds = new(0, 1024, 0, 1024);
+            Rectangle VolumeBounds = new(0, 1024, 0, 1024);
             GridCellDimensions cellDimensions = new(VolumeBounds.Width / 2.0, VolumeBounds.Height / 2.0);
-            GridRectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
-            GridRectangle VisibleVolumeBounds = new(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
+            Rectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
+            Rectangle VisibleVolumeBounds = new(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
 
 
             double FullVolumeVisibleRadius = VolumeBounds.Width / ScreenBounds.Width;
@@ -254,8 +254,8 @@ namespace GeometryTests
         public void TestBoundlessRegionPyramid()
         {
             GridCellDimensions cellDimensions = new(1024, 1024);
-            GridRectangle cellRectangle = new(0, cellDimensions.Width, 0, cellDimensions.Height);
-            GridRectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
+            Rectangle cellRectangle = new(0, cellDimensions.Width, 0, cellDimensions.Height);
+            Rectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
 
             double OneToOnePixelMappingRadius = 1.0;
             double OneToTwoPixelMappingRadius = 2.0;
@@ -282,18 +282,18 @@ namespace GeometryTests
         }
 
 
-        private static void ValidateSubGridForRegion(BoundlessRegionPyramidLevel<string> level, GridRectangle VisibleVolumeBounds)
+        private static void ValidateSubGridForRegion(BoundlessRegionPyramidLevel<string> level, Rectangle VisibleVolumeBounds)
         {
             //Grab the entire volume from the level
             GridRange<string> range = level.SubGridForRegion(VisibleVolumeBounds);
-            Assert.AreEqual(range.Indicies.Width, Math.Ceiling((double)VisibleVolumeBounds.Width / (double)level.ScaledCellDimensions.Width));
-            Assert.AreEqual(range.Indicies.Height, Math.Ceiling((double)VisibleVolumeBounds.Height / (double)level.ScaledCellDimensions.Height));
-            Assert.AreEqual(range.Indicies.iMinX, Math.Floor((double)VisibleVolumeBounds.Left / (double)level.ScaledCellDimensions.Width));
-            Assert.AreEqual(range.Indicies.iMinY, Math.Floor((double)VisibleVolumeBounds.Bottom / (double)level.ScaledCellDimensions.Height));
+            Assert.AreEqual(range.Indices.Width, Math.Ceiling((double)VisibleVolumeBounds.Width / (double)level.ScaledCellDimensions.Width));
+            Assert.AreEqual(range.Indices.Height, Math.Ceiling((double)VisibleVolumeBounds.Height / (double)level.ScaledCellDimensions.Height));
+            Assert.AreEqual(range.Indices.iMinX, Math.Floor((double)VisibleVolumeBounds.Left / (double)level.ScaledCellDimensions.Width));
+            Assert.AreEqual(range.Indices.iMinY, Math.Floor((double)VisibleVolumeBounds.Bottom / (double)level.ScaledCellDimensions.Height));
 
             //Ensure the range returned completely contains the VisibleVolumeBounds
-            List<GridRectangle> cellBounds = [.. range.Indicies.Select(key => level.CellBounds(key.X, key.Y))];
-            GridRectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => unionRect + next);
+            List<Rectangle> cellBounds = [.. range.Indices.Select(key => level.CellBounds(key.X, key.Y))];
+            Rectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => unionRect + next);
 
             Assert.IsTrue(rangeBounds.Contains(VisibleVolumeBounds), "Visible volume is not contained within the range returned");
         }
@@ -304,8 +304,8 @@ namespace GeometryTests
             GridCellDimensions cellDimensions = new(100, 100);
             Geometry.BoundlessRegionPyramid<string> pyramid = new(cellDimensions, 2);
 
-            GridRectangle ScreenBounds = new(0, 64, 0, 257); //A 64x128 pixel screen
-            GridRectangle VisibleVolumeBounds = new(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
+            Rectangle ScreenBounds = new(0, 64, 0, 257); //A 64x128 pixel screen
+            Rectangle VisibleVolumeBounds = new(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
 
             BoundlessRegionPyramidLevel<string> level0;
             BoundlessRegionPyramidLevel<string> level1;

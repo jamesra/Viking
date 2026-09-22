@@ -8,7 +8,7 @@ namespace Geometry.Meshing
 {
     public readonly struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>, IComparable<IEdgeKey>, IEquatable<IEdgeKey>, IEdgeKey
     {
-        public int[] Verticies => [A, B]; //The two verticies defining the edge
+        public int[] Vertices => [A, B]; //The two verticies defining the edge
 
         public int A
         {

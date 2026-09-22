@@ -52,14 +52,14 @@ namespace GeometryTests.Algorithms
         [TestMethod]
         public void TestMeshCut()
         {
-            Arb.Register<GridVector2Generators>();
+            Arb.Register<Vector2Generators>();
 
-            Action<GridVector2[]> SplitFunc = GenAndCutMesh;
+            Action<Vector2[]> SplitFunc = GenAndCutMesh;
 
-            Prop.ForAll<GridVector2[]>(SplitFunc).QuickCheckThrowOnFailure();
+            Prop.ForAll<Vector2[]>(SplitFunc).Check(CoreCheck.Config(nameof(TestMeshCut)));
         }
 
-        public void GenAndCutMesh(GridVector2[] points)
+        public void GenAndCutMesh(Vector2[] points)
         {
             if (points.Length < 2)
             {
@@ -78,7 +78,7 @@ namespace GeometryTests.Algorithms
 
         static void RecursivelyCutMesh(TriangulationMesh<Vertex2D> mesh, MeshCut vertSet)
         {
-            if (vertSet.Verticies.Count < 2)
+            if (vertSet.Vertices.Count < 2)
             {
                 //Can't divide zero or one points
                 return;
@@ -91,8 +91,8 @@ namespace GeometryTests.Algorithms
                 int v1 = (int)vertSet.SortedAlongCutAxisVertSet[i];
                 int v2 = (int)vertSet.SortedAlongCutAxisVertSet[i + 1];
 
-                GridVector2 p1 = mesh[v1].Position;
-                GridVector2 p2 = mesh[v2].Position;
+                Vector2 p1 = mesh[v1].Position;
+                Vector2 p2 = mesh[v2].Position;
 
                 if (vertSet.CutAxis == CutDirection.HORIZONTAL)
                 {
@@ -113,22 +113,22 @@ namespace GeometryTests.Algorithms
             }
             ///////////////////////////////////////
 
-            vertSet.SplitIntoHalves(mesh.Verticies, out MeshCut LowerSubset, out MeshCut UpperSubset);
+            vertSet.SplitIntoHalves(mesh.Vertices, out MeshCut LowerSubset, out MeshCut UpperSubset);
 
-            Assert.AreEqual(LowerSubset.Verticies.Union(UpperSubset.Verticies).Count(), vertSet.Verticies.Count);
+            Assert.AreEqual(LowerSubset.Vertices.Union(UpperSubset.Vertices).Count(), vertSet.Vertices.Count);
             Assert.AreEqual(LowerSubset.CutAxis, UpperSubset.CutAxis);
 
             CutDirection cutDir = LowerSubset.CutAxis;
 
-            Assert.IsFalse((LowerSubset.BoundingBox.IntersectionType(UpperSubset.BoundingBox) & (ShapeRelation.INTERSECTING | ShapeRelation.CONTAINED)) > 0);
+            Assert.IsFalse((LowerSubset.BoundingBox.IntersectionType(UpperSubset.BoundingBox) & (ShapeRelation.Intersecting | ShapeRelation.Contained)) > 0);
 
             if (LowerSubset.CutAxis == CutDirection.HORIZONTAL)
             {
-                Assert.IsTrue(mesh[(int)LowerSubset.Verticies[0]].Position.Y <= mesh[(int)UpperSubset.Verticies[0]].Position.Y);
+                Assert.IsTrue(mesh[(int)LowerSubset.Vertices[0]].Position.Y <= mesh[(int)UpperSubset.Vertices[0]].Position.Y);
             }
             else
             {
-                Assert.IsTrue(mesh[(int)LowerSubset.Verticies[0]].Position.X <= mesh[(int)UpperSubset.Verticies[0]].Position.X);
+                Assert.IsTrue(mesh[(int)LowerSubset.Vertices[0]].Position.X <= mesh[(int)UpperSubset.Vertices[0]].Position.X);
             }
 
             MeshCutTest.RecursivelyCutMesh(mesh, LowerSubset);
@@ -137,13 +137,13 @@ namespace GeometryTests.Algorithms
 
         static Property PropertyEachPointInOrder(TriangulationMesh<Vertex2D> mesh)
         {
-            for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 long iA = mesh.XSorted[iVert];
                 long iB = mesh.YSorted[iVert];
 
-                GridVector2 A = mesh[iA].Position;
-                GridVector2 B = mesh[iB].Position;
+                Vector2 A = mesh[iA].Position;
+                Vector2 B = mesh[iB].Position;
 
                 if (A.X > B.X)
                     return false.Label(string.Format("X is not sorted {0} > {1}", A.X, B.X));

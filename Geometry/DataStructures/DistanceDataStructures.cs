@@ -7,9 +7,9 @@ using System.Linq;
 namespace Geometry
 {
 
-    public readonly struct DistanceToPoint<T>(GridVector2 point, double distance, T value) : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
+    public readonly struct DistanceToPoint<T>(Vector2 point, double distance, T value) : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
     {
-        public readonly GridVector2 Point = point;
+        public readonly Vector2 Point = point;
         public readonly double Distance = distance;
         public readonly T Value = value;
 
@@ -57,7 +57,7 @@ namespace Geometry
         public double MaxDistance = double.MinValue;
         public int Count;
 
-        public void Add(GridVector2 point, double distance, T value)
+        public void Add(Vector2 point, double distance, T value)
         {
             DistanceToPoint<T> item = new(point, distance, value);
             Add(item);

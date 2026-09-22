@@ -15,14 +15,14 @@ namespace GeometryTests.FSCheck
     /// </summary>
     internal class QuadTreeModel : List<PointTuple>
     {
-        public List<DistanceToPoint<PointTuple>> Nearest(GridVector2 point)
+        public List<DistanceToPoint<PointTuple>> Nearest(Vector2 point)
         {
-            List<DistanceToPoint<PointTuple>> listPoints = [.. this.Select((p, i) => new DistanceToPoint<PointTuple>(p, GridVector2.Distance(p, point), p))];
+            List<DistanceToPoint<PointTuple>> listPoints = [.. this.Select((p, i) => new DistanceToPoint<PointTuple>(p, Vector2.Distance(p, point), p))];
             listPoints.Sort(new DistanceToPointSorter<PointTuple>());
             return listPoints;
         }
 
-        public bool Contains(GridVector2 point) => this.Any(pt => pt.Point.Equals(point));
+        public bool Contains(Vector2 point) => this.Any(pt => pt.Point.Equals(point));
     }
 
     internal class QuadTreeWithUniqueValuesSpec : ICommandGenerator<QuadTreeWithUniqueValues<int>, QuadTreeModel>
@@ -41,7 +41,7 @@ namespace GeometryTests.FSCheck
                        .Trivial(size == 0);
         }
 
-        public static Property TestFindNearestPoint(GridVector2 Point, QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
+        public static Property TestFindNearestPoint(Vector2 Point, QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
         {
             //Does a brute force search of the model to ensure the correct points is returned from the treeWithUniqueValues
             var modelNearestList = model.Nearest(Point);
@@ -60,7 +60,7 @@ namespace GeometryTests.FSCheck
                     .And(distanceMatched.Label("Nearest point distance matched"));
         }
 
-        public static Property TestFindNearestPoints(GridVector2 Point, int nPoints, QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
+        public static Property TestFindNearestPoints(Vector2 Point, int nPoints, QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
         {
             if (nPoints > model.Count)
                 nPoints = model.Count;
@@ -108,29 +108,29 @@ namespace GeometryTests.FSCheck
         public Gen<Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>> Next(QuadTreeModel value)
         {
             if (value.Count == 0)
-                return GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
+                return Vector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
 
             else
             {
                 /*
-                var command_generators = new Gen<Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>>[] { GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>),
-                                                                              Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator, Arb.Default.Byte().Generator.Where(b => b <= value.Count)).Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>) };
+                var command_generators = new Gen<Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>>[] { Vector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>),
+                                                                              Gen.Zip(Vector2Generators.ArbRandomPoint().Generator, Arb.Default.Byte().Generator.Where(b => b <= value.Count)).Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>) };
 
                 return Gen.OneOf(command_generators);
                 */
 
                 return Gen.Frequency(
-                    Tuple.Create(3, GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
+                    Tuple.Create(3, Vector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
                     Tuple.Create(1, Gen.Choose(0, InitialModel.Count - 1 < 0 ? 0 : InitialModel.Count - 1).Select(i => new RemovePointOperation(value[i]) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
-                    Tuple.Create(1, Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator,
+                    Tuple.Create(1, Gen.Zip(Vector2Generators.ArbRandomPoint().Generator,
                                             Gen.Choose(0, InitialModel.Count))
                                                                         .Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>)));
             }
 
-            //GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
+            //Vector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
         }
 
-        private class AddPointOperation(GridVector2 point) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
+        private class AddPointOperation(Vector2 point) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
             public readonly PointTuple Point = new(point, System.Threading.Interlocked.Increment(ref NextPointID));
 
@@ -200,9 +200,9 @@ namespace GeometryTests.FSCheck
             public override string ToString() => "Add " + Point.ToString();
         }
 
-        private class NearestPointsOperation(GridVector2 point, int num_points) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
+        private class NearestPointsOperation(Vector2 point, int num_points) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
-            public readonly GridVector2 Point = point;
+            public readonly Vector2 Point = point;
             public readonly int nPoints = num_points;
 
             public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)

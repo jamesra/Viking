@@ -88,7 +88,7 @@ namespace Geometry.Graphics
         {
             if (!_HashCode.HasValue)
             {
-                _HashCode = new int?(((int)A << 24 + (int)R << 16 + (int)G << 8 + (int)B));
+                _HashCode = new int?(((int)A << 24) | ((int)R << 16) | ((int)G << 8) | (int)B);
             }
 
             return _HashCode.Value;

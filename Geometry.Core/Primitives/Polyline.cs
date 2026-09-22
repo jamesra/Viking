@@ -1,0 +1,712 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+
+namespace Geometry
+{
+    /// <summary>
+    /// Geometric polyline for predicates and intersection. Distinct from UI <c>Path</c> on the Geometry facade, which raises change events.
+    /// </summary>
+    public class Polyline : IPolyLine2D, IHasControlPoints, IEquatable<Polyline>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
+    {
+        protected readonly List<IPoint2D> _Points;
+
+        public readonly bool AllowsSelfIntersection = false;
+
+        /// <summary>First crossing found when <see cref="AllowsSelfIntersection"/> is true; unused otherwise.</summary>
+        private LineSegment? KnownSelfIntersection;
+
+        public bool HasSelfIntersection
+        {
+            get
+            {
+                if (AllowsSelfIntersection == false)
+                    return false;
+
+                if (KnownSelfIntersection.HasValue)
+                    return true;
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Spatial index of segments. Bulk constructors and <see cref="Translate"/> copy points without
+        /// going through <see cref="Add"/>, so this stays null until rebuilt from the point list.
+        /// </summary>
+        private BoundingBoxIndex<LineSegment> rTree = null;
+
+        /// <summary>
+        /// Slice centering translates polylines via the Vector2 constructor, which never called Add.
+        /// Correspondence then queried a null index. Rebuild from <see cref="LineSegments"/> on first use.
+        /// </summary>
+        private BoundingBoxIndex<LineSegment> SpatialIndex
+        {
+            get
+            {
+                EnsureSpatialIndex();
+                return rTree;
+            }
+        }
+
+        private void EnsureSpatialIndex()
+        {
+            if (rTree != null)
+                return;
+
+            rTree = new BoundingBoxIndex<LineSegment>();
+            _ = SegmentStorage;
+            if (_LineSegments is null)
+                return;
+
+            foreach (LineSegment seg in _LineSegments)
+                rTree.Add(seg.BoundingBox, seg);
+        }
+
+        public int PointCount => _Points.Count;
+
+        public int NumUniqueVertices => _Points.Count;
+
+        public int LineCount => SegmentStorage.Count;
+
+        public Polyline(bool AllowSelfIntersection = false)
+        {
+            this.AllowsSelfIntersection = AllowSelfIntersection;
+            _Points = [];
+        }
+
+        public Polyline(int capacity, bool AllowSelfIntersection = false) : this(AllowSelfIntersection)
+        {
+            _Points = new List<Geometry.IPoint2D>(capacity);
+        }
+
+        public Polyline(IEnumerable<IPoint2D> points, bool AllowSelfIntersection = false)
+        {
+            this.AllowsSelfIntersection = AllowSelfIntersection;
+
+            _Points = new List<IPoint2D>(points.Count());
+
+            foreach (var p in points)
+            {
+                this.Add(p);
+            }
+        }
+
+        public Polyline(IEnumerable<Vector2> points, bool AllowSelfIntersection = false)
+        {
+            this.AllowsSelfIntersection = AllowSelfIntersection;
+
+            _Points = [.. points.Cast<IPoint2D>()];
+        }
+
+        public static explicit operator IPoint2D[](Polyline src)
+        {
+            return [.. src._Points];
+        }
+
+        public static explicit operator List<IPoint2D>(Polyline src)
+        {
+            return [.. src._Points];
+        }
+
+        public static explicit operator Vector2[](Polyline src)
+        {
+            return [.. src._Points.Select(p => new Vector2(p))];
+        }
+
+        public static explicit operator List<Vector2>(Polyline src)
+        {
+            return [.. src._Points.Select(p => new Vector2(p))];
+        }
+
+        public Vector2 this[PolylineIndex index] => _Points[index.VertexIndex].ToVector2();
+
+        /// <summary>
+        /// True if <paramref name="next"/> can be appended without violating self-intersection rules.
+        /// </summary>
+        public bool CanAdd(in IPoint2D next)
+        {
+            if (_Points.Count == 0)
+                return true;
+
+            if (AllowsSelfIntersection)
+                return true;
+
+            if (_Points.Contains(next))
+                return false;
+
+            LineSegment line = new(_Points.Last(), next);
+
+            if (_Points.Count == 1)
+                return true;
+
+            List<LineSegment> intersectionCandidates = SpatialIndex.Intersects(line.BoundingBox);
+            if (line.SelfIntersects([.. this.SegmentStorage.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Add(IPoint2D next)
+        {
+            if (_Points.Count == 0)
+            {
+                _Points.Add(next);
+                InvalidateBoundingBox();
+                return;
+            }
+
+            EnsureSpatialIndex();
+
+            //Figure out why we can't add and throw an exception
+            if (_Points.Contains(next) && AllowsSelfIntersection == false)
+                throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
+
+            if (_Points.Last().Equals(next))
+                throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
+
+            LineSegment line = new(_Points.Last(), next);
+
+            if (_Points.Count == 1)
+            {
+                _Points.Add(next);
+                InvalidateBoundingBox();
+                rTree.Add(line.BoundingBox, line);
+                this._LineSegments = [];
+                _LineSegments.Add(line);
+                return;
+            }
+            else if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
+            {
+                List<LineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
+
+                if (line.SelfIntersects([.. this.SegmentStorage.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline, out LineSegment? intersected))
+                {
+                    this.KnownSelfIntersection = AllowsSelfIntersection == false
+                        ? throw new ArgumentException("Added point created self-intersecting line in Polyline")
+                        : intersected;
+                }
+            }
+
+            var Existing = this._LineSegments;
+            _Points.Add(next);
+            InvalidateBoundingBox();
+            Existing.Add(line);
+            rTree.Add(line.BoundingBox, line);
+            this._LineSegments = Existing;
+        }
+
+        public void Insert(int index, IPoint2D value)
+        {
+            EnsureSpatialIndex();
+
+            if (index < 0 || index > _Points.Count)
+                throw new IndexOutOfRangeException($"{nameof(Polyline)}.{nameof(Insert)}: {index} out of bounds");
+
+            /////////////////////////////////////////////////
+            //Simple cases where intersection is not a factor
+            ///////////////////////////////////////////////// 
+
+            //Case for adding to the beginning of the polyline
+            if (_Points.Count == 0)
+            {
+                Add(value);
+                return;
+            }
+            else if (_Points.Count == 1)
+            {
+                if (_Points[0].Equals(value))
+                    throw new ArgumentException("Inserting point already in Polyline identical to an adjacent point");
+
+                _Points.Insert(index, value);
+                InvalidateBoundingBox();
+                LineSegment line = new(_Points[0], _Points[1]);
+                rTree.Add(line.BoundingBox, line);
+                return;
+            }
+
+            //Case for appending to the end of the polyline
+            if (_Points.Count == index)
+            {
+                if (_Points[index - 1].Equals(value))
+                    throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
+
+                Add(value);
+                return;
+            }
+
+            /////////////////////////////////////////////////
+            //End simple cases
+            /////////////////////////////////////////////////
+
+            //Position the point will be inserted into
+            PolylineIndex insert_index = new(index, this.NumUniqueVertices);
+
+            //Check for adjacent duplicate points
+            bool duplicate_point = _Points.Contains(value);
+            if (duplicate_point)
+            {
+                if (AllowsSelfIntersection == false)
+                    throw new ArgumentException("Inserting point already in Polyline that does not allow self-intersection");
+                else
+                {
+                    //Ensure the adjacent points are not duplicates... perhaps this should be a no-op, but for now throw an exception
+                    if (this[insert_index] == value)
+                        throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
+
+                    if (false == insert_index.IsFirstIndex)
+                    {
+                        if (this[insert_index.Previous.Value] == value)
+                            throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
+                    }
+                }
+            }
+
+            //Copy the existing line segments so we can test new segments against the existing ones minus the replaced segment
+            List<LineSegment> segments = [.. this.SegmentStorage];
+            List<LineSegment> new_segments = [];
+            List<LineSegment> removed_segments = [];
+
+            Debug.Assert(_Points[index].Equals(value) == false, "Seems a bit odd to be inserting a point with the same value into the polyline, creating a duplicate");
+
+            //Remove the segments that will be replaced by the new vertex from our test set
+
+            if (insert_index.IsFirstIndex)
+            {
+                //No segments to remove, we are inserting at either end of the polyline
+            }
+            else
+            {
+                removed_segments.Add(segments[index - 1]);
+                segments.RemoveAt(index - 1);
+            }
+
+            //Create the new segments using the new vertex
+
+            if (insert_index.IsFirstIndex)
+            {
+                new_segments.Add(new LineSegment(value, _Points[index]));
+            }
+            else
+            {
+                new_segments.Add(new LineSegment(_Points[index - 1], value));
+                new_segments.Add(new LineSegment(value, _Points[index]));
+            }
+
+
+            // SelfIntersects(addition, lines) treats addition as appended after the last segment.
+            // Insert splits a mid-polyline edge; sharing a vertex with the previous/next segment is expected.
+            if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
+            {
+                foreach (var new_seg in new_segments)
+                {
+                    foreach (LineSegment existing in segments)
+                    {
+                        if (SharesExactlyOneEndpoint(new_seg, existing))
+                            continue;
+
+                        if (new_seg.Intersects(existing, EndpointsOnRingDoNotIntersect: false) == false)
+                            continue;
+
+                        //Splitting an edge cannot introduce a crossing: the two new segments together cover the
+                        //edge that was removed, so anything they meet was already met by that edge.  Closed curve
+                        //annotations arrive here as polylines whose closing segment crosses the rest of the
+                        //contour, and blaming the caller's vertex for that crossing cost the whole slice its mesh.
+                        if (removed_segments.Any(removed => removed.Intersects(existing, EndpointsOnRingDoNotIntersect: false)))
+                            continue;
+
+                        if (AllowsSelfIntersection == false)
+                            throw new ArgumentException("Added point created self-intersecting line in Polyline");
+
+                        KnownSelfIntersection = existing;
+                        break;
+                    }
+
+                    if (KnownSelfIntersection.HasValue)
+                        break;
+                }
+            }
+
+            //Looks like we passed self-intersection tests.  Update the segments, rtree, and return
+            _Points.Insert(index, value);
+            InvalidateBoundingBox();
+
+            if (insert_index.IsFirstIndex)
+            {
+                segments.InsertRange(0, new_segments);
+            }
+            else
+            {
+                segments.InsertRange(index - 1, new_segments);
+            }
+
+            this._LineSegments = segments;
+
+            foreach (var removed_segment in removed_segments)
+            {
+                rTree.Delete(removed_segment, out var removed_item);
+            }
+
+            foreach (var added_segment in new_segments)
+            {
+                rTree.Add(added_segment.BoundingBox, added_segment);
+            }
+        }
+
+        /// <summary>
+        /// Inserts a vertex on this polyline at every crossing or T-junction with <paramref name="other"/>.
+        /// Endpoint hits count so the second polyline of a pair still sees a shared vertex after the first was split there.
+        /// </summary>
+        public List<Vector2> AddPointsAtIntersections(Polyline other)
+        {
+            List<Vector2> found_or_added_intersections = [];
+
+            //Copy: the per-segment overload inserts vertices, which would invalidate an enumerator over other's live cache if other is this.
+            foreach (var other_ls in other.LineSegments)
+            {
+                found_or_added_intersections.AddRange(this.AddPointsAtIntersections(other_ls));
+            }
+
+            return found_or_added_intersections;
+        }
+
+        /// <summary>
+        /// Inserts a vertex on this polyline at every crossing or T-junction with <paramref name="other"/>.
+        /// Existing vertices are left unchanged and still returned.
+        /// </summary>
+        public List<Vector2> AddPointsAtIntersections(LineSegment other)
+        {
+            Rectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
+            if (!overlap.HasValue)
+                return [];
+
+            List<Vector2> found_or_added_intersections = [];
+            //Snapshot: Insert below rebuilds the segment cache while we iterate.
+            var LineSegmentsCopy = this.SegmentStorage.ToArray();
+
+            for (int i = LineSegmentsCopy.Length - 1; i >= 0; i--) //Go in reverse order so we do not change the index we are inserting into
+            {
+                LineSegment ls = LineSegmentsCopy[i];
+
+                // Count endpoint hits so the second polyline still sees a crossing after the first was split at that point.
+                var intersects = ls.Intersects(other, false, out var intersection);
+                if (intersects)
+                {
+                    if (intersection is IPoint2D point)
+                    {
+                        Vector2 p = point.ToVector2();
+                        found_or_added_intersections.Insert(0, p);
+                        if (_Points.Contains(point) || _Points.Contains(p) || ls.A.Equals(p) || ls.B.Equals(p))
+                            continue;
+
+                        this.Insert(i + 1, point);
+                    }
+                }
+            }
+
+            return found_or_added_intersections;
+        }
+
+        /// <summary>
+        /// Indices of polyline vertices that match any of <paramref name="points"/>.
+        /// </summary>
+        public List<PolylineIndex> TryGetIndices(ICollection<Vector2> points)
+        {
+            List<PolylineIndex> found = new(points.Count);
+            var candidates = points.Where(p => BoundingBox.Covers(p));
+            List<Vector2> notExterior = new(points.Count);
+
+            foreach (Vector2 point in points)
+            {
+                int iVert = this._Points.IndexOf(point);
+                if (iVert < 0)
+                    continue;
+
+                found.Add(new PolylineIndex(iVert, this.PointCount));
+            }
+
+            return found;
+        }
+
+        public double Area => throw new ArgumentException("No area for Polyline");
+
+        public double Length => SegmentStorage.Sum(l => l.Length);
+
+        private Rectangle? _BoundingBox;
+
+        /// <summary>
+        /// Point count the cached box was computed from. <see cref="_Points"/> is append-only
+        /// (<see cref="Add"/> and <see cref="Insert"/> are the only mutators, and neither replaces an
+        /// existing vertex), so an unchanged count means the cache is still correct. Any future edit that
+        /// moves or removes a vertex without changing the count must call <see cref="InvalidateBoundingBox"/>,
+        /// otherwise correspondence silently misses intersections against a stale box.
+        /// </summary>
+        private int _BoundingBoxPointCount = -1;
+
+        private void InvalidateBoundingBox()
+        {
+            _BoundingBox = null;
+            _BoundingBoxPointCount = -1;
+        }
+
+        public Rectangle BoundingBox
+        {
+            get
+            {
+                if (_BoundingBox.HasValue && _BoundingBoxPointCount == _Points.Count)
+                    return _BoundingBox.Value;
+
+                //Preserves the exception the previous LINQ implementation threw for an empty polyline.
+                if (_Points.Count == 0)
+                    throw new InvalidOperationException("Sequence contains no elements");
+
+                double MinX = double.MaxValue;
+                double MaxX = double.MinValue;
+                double MinY = double.MaxValue;
+                double MaxY = double.MinValue;
+
+                for (int i = 0; i < _Points.Count; i++)
+                {
+                    IPoint2D p = _Points[i];
+                    if (p.X < MinX) MinX = p.X;
+                    if (p.X > MaxX) MaxX = p.X;
+                    if (p.Y < MinY) MinY = p.Y;
+                    if (p.Y > MaxY) MaxY = p.Y;
+                }
+
+                _BoundingBox = new Rectangle(MinX, MaxX, MinY, MaxY);
+                _BoundingBoxPointCount = _Points.Count;
+                return _BoundingBox.Value;
+            }
+        }
+
+        public ShapeType2D ShapeType => ShapeType2D.Polyline;
+
+        /// <summary>
+        /// Cached segments. Null or wrong count means dirty; <see cref="LineSegments"/> rebuilds from <see cref="_Points"/>.
+        /// Explicit <see cref="IPolyLine2D.LineSegments"/> must use that getter, not this field.
+        /// </summary>
+        private List<LineSegment> _LineSegments;
+
+        /// <summary>Rebuilds from points when the cache is null or stale. Returns a copy.</summary>
+        public List<LineSegment> LineSegments => [.. SegmentStorage];
+
+        /// <summary>
+        /// The live segment cache, rebuilt if dirty. Read-only use only; callers that edit the returned
+        /// list, or that add points while iterating, must copy it or use <see cref="LineSegments"/>.
+        /// </summary>
+        internal List<LineSegment> SegmentStorage
+        {
+            get
+            {
+                if (_LineSegments != null && _LineSegments.Count == _Points.Count - 1)
+                    return _LineSegments;
+
+                _LineSegments = new List<LineSegment>(this._Points.Count);
+
+                for (int i = 0; i < _Points.Count - 1; i++)
+                {
+                    _LineSegments.Add(new LineSegment(_Points[i], _Points[i + 1]));
+                }
+
+                return _LineSegments;
+            }
+        }
+
+        /// <summary>Uses the cache accessor so a null/stale <see cref="_LineSegments"/> cache is rebuilt.</summary>
+        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => [.. SegmentStorage.Cast<ILineSegment2D>()];
+
+
+        public IReadOnlyList<IPoint2D> Points => this._Points;
+
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => _Points;
+
+        public bool Contains(in IPoint2D p) => GetRelation(p).IsContains();
+
+        public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
+
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
+
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => GetRelation((IPoint2D)other),
+                ShapeType2D.Line => GetRelation(((ILineSegment2D)other).ToLineSegment()),
+                ShapeType2D.Polyline => RelationToPolyline((IPolyLine2D)other),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(this, (IShapeCollection2D)other),
+                _ => RelationFromSegments(other),
+            };
+        }
+
+        ShapeRelation RelationToPolyline(IPolyLine2D other)
+        {
+            List<ShapeRelation> parts = new(other.LineSegments.Count);
+            foreach (ILineSegment2D seg in other.LineSegments)
+                parts.Add(GetRelation(seg.ToLineSegment()));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
+        ShapeRelation RelationFromSegments(IShape2D other)
+        {
+            var segments = SegmentStorage;
+            List<ShapeRelation> parts = new(segments.Count);
+            foreach (LineSegment seg in segments)
+                parts.Add(seg.GetRelation(other));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(new Vector2(p.X, p.Y));
+
+        public ShapeRelation GetRelation(in Vector2 p)
+        {
+            if (_Points.Count == 0)
+                return ShapeRelation.None;
+
+            Vector2 point = p;
+            if (!SegmentStorage.Any(line => line.Covers(point)))
+                return ShapeRelation.None;
+
+            bool atStart = Vector2.DistanceSquared(point, _Points[0]) <= Tolerance.EpsilonSquared;
+            bool atEnd = Vector2.DistanceSquared(point, _Points[_Points.Count - 1]) <= Tolerance.EpsilonSquared;
+            if (atStart || atEnd)
+                return ShapeRelation.Touching;
+
+            return ShapeRelation.Contained;
+        }
+
+        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.ToLineSegment());
+
+        public ShapeRelation GetRelation(in LineSegment line)
+        {
+            ShapeRelation output = ShapeRelation.None;
+            const ShapeRelation exitCondition = ShapeRelation.Intersecting | ShapeRelation.Touching;
+            foreach (LineSegment seg in SegmentStorage)
+            {
+                output |= seg.GetRelation(line);
+                if (output.HasFlag(exitCondition))
+                    return output;
+            }
+
+            return output;
+        }
+
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
+
+        IShape2D IShape2D.Translate(in IPoint2D offset) => this.Translate(offset);
+
+        public Polyline Translate(in IPoint2D offset)
+        {
+            Vector2 local_offset = new(offset.X, offset.Y);
+            var translatedPoints = this._Points.Select(p => new Vector2(p.X + local_offset.X, p.Y + local_offset.Y));
+            return new Polyline(translatedPoints, this.AllowsSelfIntersection);
+        }
+
+        /// <summary>
+        /// Clone with coordinates rounded to <paramref name="precision"/> decimal places; consecutive duplicates are dropped.
+        /// </summary>
+        public Polyline Round(int precision)
+        {
+            Vector2[] roundedPoints = [.. this.Points.Select(e => e.Round(precision))];
+            for (int i = roundedPoints.Length - 1; i > 0; i--)
+            {
+                if (roundedPoints[i] == roundedPoints[i - 1])
+                    roundedPoints.RemoveAt(i);
+            }
+
+            Polyline clone = new(roundedPoints);
+            return clone;
+        }
+
+        public override string ToString() => string.Format("PolyLine: {0}", string.Join(" ", _Points));
+
+        /// <summary>
+        /// True when the segments meet at exactly one vertex. Used by <see cref="Insert"/> so splitting an edge is not treated as a self-crossing.
+        /// </summary>
+        static bool SharesExactlyOneEndpoint(in LineSegment a, in LineSegment b)
+        {
+            bool sharesA = a.A.Equals(b.A) || a.A.Equals(b.B);
+            bool sharesB = a.B.Equals(b.A) || a.B.Equals(b.B);
+            return sharesA != sharesB;
+        }
+
+        public Polyline Clone() => new Polyline(this.Points.ToArray(), this.AllowsSelfIntersection);
+
+        public override int GetHashCode() => 0; //Use a constant since the polyline can change
+
+        public override bool Equals(object obj)
+        {
+            if (obj is Polyline other)
+                return Equals(other);
+
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
+
+            return base.Equals(obj);
+        }
+
+        public bool Equals(Polyline other)
+        {
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            if (this.PointCount != other.PointCount)
+                return false;
+
+            for (int i = 0; i < this.PointCount; i++)
+            {
+                if (false == this._Points[i].Equals(other._Points[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IPolyLine2D otherPolyline)
+                return Equals(otherPolyline);
+            if (other is ILineSegment2D otherLine)
+                return Equals(otherLine);
+
+            return false;
+        }
+
+        public bool Equals(ILineSegment2D other)
+        {
+            if (this.PointCount != 2)
+                return false;
+
+            return (Points[0].Equals(other.A) && Points[1].Equals(other.B)) ||
+                   (Points[1].Equals(other.A) && Points[0].Equals(other.B));
+        }
+
+        public bool Equals(IPolyLine2D other)
+        {
+            if (this.PointCount != other.Points.Count)
+                return false;
+
+            for (int i = 0; i < this.PointCount; i++)
+            {
+                if (false == this._Points[i].Equals(other.Points[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+    }
+}

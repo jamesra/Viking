@@ -65,10 +65,10 @@ namespace GeometryTests
 
         private static Vertex3D[] CreateTetrahedronVerts()
         {
-            return [new(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
-                                     new(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
-                                     new(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
-                                     new(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) ];
+            return [new(new Vector3(0, 0, 0), new Vector3(0, 0, 0)),
+                                     new(new Vector3(0, 1, 0), new Vector3(0, 1, 0)),
+                                     new(new Vector3(0, 0, 1), new Vector3(0, 0, 1)),
+                                     new(new Vector3(1, 0, 0), new Vector3(1, 0, 0)) ];
         }
 
         private static Face[] CreateTetrahedronFaces()

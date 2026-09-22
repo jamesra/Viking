@@ -115,11 +115,11 @@ namespace Geometry
     /*
     public class IndexSetEnumerator : IEnumerator<long>
     {
-        long[] Indicies = null;
+        long[] Indices = null;
         long index = -1;
         public IndexSetEnumerator(long[] indicies)
         {
-            Indicies = indicies;
+            Indices = indicies;
         }
 
         public long Current
@@ -129,10 +129,10 @@ namespace Geometry
                 if (index < 0)
                     throw new InvalidOperationException("MoveNext has not been called on enumerator");
 
-                if (index >= Indicies.LongLength)
+                if (index >= Indices.LongLength)
                     throw new IndexOutOfRangeException("No more elements in enumerator");
 
-                return Indicies[index];
+                return Indices[index];
             }
         }
 
@@ -152,7 +152,7 @@ namespace Geometry
         public bool MoveNext()
         {
             index++;
-            return index < Indicies.LongLength;
+            return index < Indices.LongLength;
         }
 
         public void Reset()
@@ -167,32 +167,32 @@ namespace Geometry
     /// </summary>
     public class IndexSet : IIndexSet
     {
-        private readonly long[] Indicies;
+        private readonly long[] Indices;
 
         public IndexSet(long[] indicies)
         {
-            Indicies = new long[indicies.LongLength];
-            Array.Copy(indicies, Indicies, indicies.Length);
+            Indices = new long[indicies.LongLength];
+            Array.Copy(indicies, Indices, indicies.Length);
         }
 
         public long this[int index] => this[(long)index];
 
-        public long this[long index] => Indicies[index];
+        public long this[long index] => Indices[index];
 
-        public int Count => Indicies.Length;
+        public int Count => Indices.Length;
 
         public IIndexSet Reverse()
         {
-            long[] reversedIndicies = Indicies.Clone() as long[];
+            long[] reversedIndicies = Indices.Clone() as long[];
             Array.Reverse(reversedIndicies);
             return new IndexSet(reversedIndicies);
         }
 
         public IEnumerator<long> GetEnumerator() => new IndexSetEnumerator(this);
 
-        public IIndexSet IncrementStartingIndex(long adjustment) => new IndexSet([.. Indicies.Select(i => i + adjustment)]);
+        public IIndexSet IncrementStartingIndex(long adjustment) => new IndexSet([.. Indices.Select(i => i + adjustment)]);
 
-        IEnumerator IEnumerable.GetEnumerator() => Indicies.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => Indices.GetEnumerator();
     }
 
 
