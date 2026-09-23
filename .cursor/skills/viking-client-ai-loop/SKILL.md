@@ -20,7 +20,7 @@ Prefer a session whose only job is this loop. Do not start it in a chat that alr
 On every tick, follow this request verbatim:
 
 ```
-/loop Every five minutes, check the #ai channel for requests related to the viking client.  if there is no question, add five minutes during work hours or ten minutes off hours to the next check until checking every 20 minutes during work hours and 60 minutes off hours.  At the start of a day, reset to a five minute check.  If a question appears, reset to a five minute check.  Then address and respond to the question.  If a request is addressed to [Viking] with no clarification.  Assess if it is a server or client issue and address it if it is a client issue.
+/loop Every five minutes, check the #ai channel for requests related to the viking client.  if there is no question, add five minutes during work hours or ten minutes off hours to the next check until checking every 20 minutes during work hours and 60 minutes off hours.  At the start of a day, reset to a five minute check.  If a question appears, reset to a five minute check.  Then address and respond to the question.  Prefix replies `[Viking-Client]`.  If a request is addressed to `[Viking]` with no clarification, assess if it is a server or client issue and address it if it is a client issue.
 ```
 
 ## Launch
@@ -63,14 +63,14 @@ The interval starts at 5 minutes. Dates and work hours use America/Los_Angeles. 
    - reactions include `lock`
    - subtype is `channel_topic`, `channel_join`, or `channel_purpose` (Slack system lines such as "set the channel topic: …" are not agent notifications)
    - `ts` is less than or equal to payload `lastSeenTs` and `latest_reply` (if any) is not newer than `lastSeenTs`
-   - `latest_reply` text is known to be from `[Viking]` / this bot without opening the thread (history fields / reply_users pointing only at this bot after your last turn) — if unsure and `ts` is new, open once in Phase B
-   - pinned guideline parents (ONBOARDING, CREATE BOT) unless newly addressed to `[Viking]` or `[All]` since `lastSeenTs`
-3. A candidate is an unlocked parent that looks like an unanswered Viking-client ask, `[Viking]` with no client/server split, or `[All]` since `lastSeenTs`.
+   - `latest_reply` text is known to be from `[Viking-Client]` / this bot without opening the thread (history fields / reply_users pointing only at this bot after your last turn) — if unsure and `ts` is new, open once in Phase B
+   - pinned guideline parents (ONBOARDING, CREATE BOT) unless newly addressed to `[Viking-Client]`, `[Viking]`, or `[All]` since `lastSeenTs`
+3. A candidate is an unlocked parent that looks like an unanswered Viking-client ask, `[Viking-Client]`, `[Viking]` (unsure client vs server), or `[All]` since `lastSeenTs`.
 4. If none: empty tick. Stop after re-arming.
 
 ## Phase B — act
 
-1. `slack_get_thread_replies` only for that one parent. If the last in-thread message is from `[Viking]`, wait (treat as empty for schedule purposes but do not bump as a new question).
-2. Client means Viking or Jotunn desktop: viewing, annotation UI, local settings, deep links, rendering, client commands. Server means SQL-backed image, annotation, identity, export, OData, segmentation, section-correction, deploys, APIs, databases — leave those unanswered by this loop.
-3. `[All]`: review and act. For onboarding or guidelines, update the local Slack rule, reply once `[Viking] ACK [All]:` with what changed. Do not announce updates with `conversations.setTopic` or `conversations.setPurpose` — those only produce `channel_topic` / `channel_purpose` system lines, not an agent ask.
-4. Reply with `slack_reply_to_thread`, prefix `[Viking]`, one reply per thread per turn. Include product version when known. Do not post to other channels. Do not start a new top-level message for a follow-up.
+1. `slack_get_thread_replies` only for that one parent. If the last in-thread message is from `[Viking-Client]`, wait (treat as empty for schedule purposes but do not bump as a new question).
+2. Client means Viking or Jotunn desktop: viewing, annotation UI, local settings, deep links, rendering, client commands. Server means SQL-backed image, annotation, identity, export, OData, segmentation, section-correction, deploys, APIs, databases — leave those unanswered by this loop. `[Viking]` (no client/server split) means assess and answer only if it is client work; reply as `[Viking-Client]`.
+3. `[All]`: review and act. Guideline `[All]` asks are **new top-level posts** (not ONBOARDING replies). Update the local Slack rule, reply once in that thread `[Viking-Client] ACK [All]:` with what changed. After ACKs, that parent can be CLOSE / AGREED / CLOSED and `lock`ed. Do not announce updates with `conversations.setTopic` or `conversations.setPurpose`. Do not post a guideline `[All]` for pin edits that do not need every agent to act.
+4. Reply with `slack_reply_to_thread`, prefix `[Viking-Client]`, one reply per thread per turn. Include product version when known. Do not post to other channels. Do not start a new top-level message for a follow-up unless the Addressing `[All]` protocol calls for a broadcast.
