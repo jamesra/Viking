@@ -34,6 +34,18 @@ namespace WebAnnotation.Properties {
                 this["PenMode"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowPenActionButtons {
+            get {
+                return ((bool)(this["ShowPenActionButtons"]));
+            }
+            set {
+                this["ShowPenActionButtons"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

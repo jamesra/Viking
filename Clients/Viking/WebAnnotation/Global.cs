@@ -578,6 +578,20 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>
+        /// When true, the circular choice buttons are drawn after a pen stroke.
+        /// The Annotation menu toggles this. Shape previews stay clickable when the buttons are hidden.
+        /// </summary>
+        public static bool ShowPenActionButtons
+        {
+            get => WebAnnotation.Properties.Settings.Default.ShowPenActionButtons;
+            set
+            {
+                WebAnnotation.Properties.Settings.Default.ShowPenActionButtons = value;
+                WebAnnotation.Properties.Settings.Default.Save();
+            }
+        }
+
         private static System.Collections.ObjectModel.ObservableCollection<ulong> _UserFavoriteStructureTypes;
 
         public static System.Collections.ObjectModel.ObservableCollection<ulong> UserFavoriteStructureTypes
@@ -715,11 +729,12 @@ namespace WebAnnotation
         public static long? LastEditedAnnotationID;
 
         /// <summary>
-        /// True only when LastEditedAnnotationID is on a different section. Same-section last edit cannot continue (that would duplicate on the same Z).
-        /// LastEditedAnnotationID can point at a deleted location — TryGetObjectByID then returns null and this is false.
+        /// True when a left-click, F3, or Enter on <paramref name="SectionNumber"/> should place a location linked to <see cref="LastEditedAnnotationID"/>.
+        /// Called from the annotation overlay before continue-last-trace.
+        /// A local-cache miss still returns true: the location may have been dropped after the user left its section, including after skipping a bad section. The click handler loads it from the server.
+        /// Same-section last edits return false so the click does not duplicate the disc where it was just placed.
+        /// A deleted id stays set until that server load fails; this method does not treat a cache miss as deleted.
         /// </summary>
-        /// <param name="SectionNumber"></param>
-        /// <returns></returns>
         internal static bool CanContinueLastTrace(int SectionNumber)
         {
             if (LastEditedAnnotationID is null)
@@ -730,7 +745,7 @@ namespace WebAnnotation
 
             WebAnnotationModel.Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out WebAnnotationModel.Objects.LocationObj lastLoc);
             if (lastLoc is null)
-                return false;
+                return true;
 
             return (int)Math.Round(lastLoc.Z) != SectionNumber;
         }
@@ -1057,7 +1072,7 @@ namespace WebAnnotation
                     bool success = await LoadServerUserSettingsAsync(cancellationToken).ConfigureAwait(false);
                     if (!success)
                     {
-                        return;
+                        Trace.WriteLine("User settings download failed; loading the local file.");
                     }
                 }
 

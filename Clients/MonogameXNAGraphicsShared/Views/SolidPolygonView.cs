@@ -17,6 +17,11 @@ namespace VikingXNAGraphics
     {
         PositionColorMeshModel _meshModel = null;
         Task<PositionColorMeshModel> _modelTask = null;
+        /// <summary>
+        /// Set when triangulation fails. A faulted task is IsCompleted, and reading Result throws on every paint.
+        /// That exception leaves the pen command on screen, so later strokes never start.
+        /// </summary>
+        bool _modelFailed;
 
         PositionColorMeshModel meshModel
         {
@@ -26,45 +31,42 @@ namespace VikingXNAGraphics
                 {
                     ModelRWLock.EnterUpgradeableReadLock();
 
+                    if (_modelFailed)
+                        return null;
+
                     if (_meshModel is null)
                     {
                         if (_modelTask is null)
                         {
                             _modelTask = Task<PositionColorMeshModel>.Run(() => InitializeModel(InputPolygon, InputColor));
                         }
-                        else
+                        else if (_modelTask.IsFaulted || _modelTask.IsCanceled)
                         {
-                            if (_modelTask.IsCompleted)
-                            {
-                                try
-                                {
-                                    ModelRWLock.EnterWriteLock();
-                                    _meshModel = _modelTask.Result;
-                                }
-                                finally
-                                {
-                                    ModelRWLock.ExitWriteLock();
-                                }
-
-                                _modelTask = null;
-                                return null;
-                            }
-                            else if (_modelTask.IsFaulted)
-                            {
-                                Trace.WriteLine(string.Format("Could not generate view for polygon {0}", InputPolygon));
-                                _modelTask = null;
-                                return null;
-                            }
-                            else if (_modelTask.IsCanceled)
-                            {
-                                Trace.WriteLine(string.Format("Could not generate view for polygon {0}", InputPolygon));
-                                _modelTask = null;
-                                return null;
-                            }
-
-                            //Task is still running.  Return null for now.
+                            Trace.WriteLine($"Could not generate view for polygon {InputPolygon}: {_modelTask.Exception?.GetBaseException().Message}");
+                            _modelFailed = true;
+                            _modelTask = null;
                             return null;
                         }
+                        else if (_modelTask.IsCompleted)
+                        {
+                            try
+                            {
+                                ModelRWLock.EnterWriteLock();
+                                _meshModel = _modelTask.Result;
+                            }
+                            finally
+                            {
+                                ModelRWLock.ExitWriteLock();
+                            }
+
+                            _modelTask = null;
+                            if (_meshModel is null)
+                                _modelFailed = true;
+                            return _meshModel;
+                        }
+
+                        //Task is still running.  Return null for now.
+                        return null;
                     }
 
                     return _meshModel;
@@ -172,15 +174,28 @@ namespace VikingXNAGraphics
             InputColor = color;
 
             if (LazyInit == false)
+            {
                 _meshModel = InitializeModel(InputPolygon, InputColor);
+                _modelFailed = _meshModel is null;
+            }
         }
 
         private static PositionColorMeshModel InitializeModel(Polygon InputPolygon, Color InputColor)
         {
-            Geometry.Vector2 _Position = InputPolygon.Centroid;
-
-            //Center the polygon to reduce rounding error and because we'll position the polygon with the matrix
-            Polygon centered_poly = InputPolygon.Translate(-_Position);
+            Geometry.Vector2 _Position;
+            Polygon centered_poly;
+            try
+            {
+                _Position = InputPolygon.Centroid;
+                //Center the polygon to reduce rounding error and because we'll position the polygon with the matrix.
+                //Translate rebuilds the ring and rejects a stroke that is not a closed polygon.
+                centered_poly = InputPolygon.Translate(-_Position);
+            }
+            catch (ArgumentException ex)
+            {
+                Trace.WriteLine($"Could not center polygon for display: {ex.Message}");
+                return null;
+            }
             TriangulationMesh<IVertex2D<PolygonIndex>> Mesh;
             try
             {
@@ -202,6 +217,22 @@ namespace VikingXNAGraphics
             var mesh_model = Mesh.ToVertexPositionColorMeshModel(InputColor);
             mesh_model.ModelMatrix = Matrix.CreateTranslation((float)_Position.X, (float)_Position.Y, 0);
             return mesh_model;
+        }
+
+        /// <summary>
+        /// Meshes that are ready to draw. In-progress and failed polygons are omitted so paint does not throw.
+        /// </summary>
+        private static PositionColorMeshModel[] ReadyMeshes(IEnumerable<SolidPolygonView> items)
+        {
+            List<PositionColorMeshModel> meshes = [];
+            foreach (SolidPolygonView item in items)
+            {
+                PositionColorMeshModel mesh = item.meshModel;
+                if (mesh != null)
+                    meshes.Add(mesh);
+            }
+
+            return [.. meshes];
         }
 
         private static TriangulationMesh<IVertex2D<PolygonIndex>> TrySimplifyPolygon(Polygon centered_poly)
@@ -278,12 +309,23 @@ namespace VikingXNAGraphics
             }
         }
 
-        private void UpdateModelMatrix() => meshModel.ModelMatrix = Matrix.CreateScale(_Scale, _Scale, _Scale) * Matrix.CreateTranslation((float)_Position.X, (float)_Position.Y, 0);
+        private void UpdateModelMatrix()
+        {
+            PositionColorMeshModel mesh = meshModel;
+            if (mesh is null)
+                return;
+
+            mesh.ModelMatrix = Matrix.CreateScale(_Scale, _Scale, _Scale) * Matrix.CreateTranslation((float)_Position.X, (float)_Position.Y, 0);
+        }
 
         public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay) => Draw(device, scene, Overlay, new SolidPolygonView[] { this });
 
         public static void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IEnumerable<SolidPolygonView> items)
         {
+            PositionColorMeshModel[] meshes = ReadyMeshes(items);
+            if (meshes.Length == 0)
+                return;
+
             switch (Overlay)
             {
                 case OverlayStyle.Alpha:
@@ -292,7 +334,7 @@ namespace VikingXNAGraphics
                         effect: new BasicEffect(device),
                         cullmode: CullMode.CullClockwiseFace,
                         fillMode: FillMode.Solid,
-                        meshmodels: [.. items.Select(item => item.meshModel)]);
+                        meshmodels: meshes);
                     break;
                 case OverlayStyle.Luma:
                     PolygonOverlayEffect effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device);
@@ -301,7 +343,7 @@ namespace VikingXNAGraphics
                         effect,
                         CullMode.CullClockwiseFace,
                         FillMode.Solid,
-                        meshmodels: items.Select(item => item.meshModel));
+                        meshmodels: meshes);
                     break;
                 default:
                     throw new NotImplementedException();

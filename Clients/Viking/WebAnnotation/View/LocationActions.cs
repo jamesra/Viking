@@ -172,30 +172,14 @@ namespace WebAnnotation
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
-
+                    if (loc.Parent?.Type is null)
+                        return null;
 
                     return new TranslateCircleLocationCommand(Parent,
                                                                 new Circle(volumePosition, loc.Radius),
                                                                 loc.Parent.Type.Color.ToXNAColor(1f),
                                                                 new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
-                                                                   {
-                                                                       IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                                                                       Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-
-                                                                       SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
-
-                                                                       LocationObj newLoc = new(loc.Parent,
-                                                                            MosaicShape.ToShape2D(),
-                                                                            VolumeShape.ToShape2D(),
-                                                                            Parent.Section.Number,
-                                                                            loc.TypeCode);
-
-                                                                       section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
-                                                                       NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
-                                                                       UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
-
-                                                                       Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
-                                                                   }));
+                                                                    QueueLinkedCircle(Parent, loc, NewVolumePosition, NewRadius)));
                 default:
                     return null;
             }
@@ -622,6 +606,28 @@ namespace WebAnnotation
                 default:
                     return null;
             }
+        }
+
+        /// <summary>
+        /// Queues a circle on the open section, linked to <paramref name="source"/>.
+        /// Called when the user releases a continue-last-trace or adjacent-disc drag.
+        /// The click is mapped with the open section's transform only. A bad or missing section between <paramref name="source"/> and the open section does not have to inverse-map the point.
+        /// </summary>
+        private static void QueueLinkedCircle(Viking.UI.Controls.SectionViewerControl parent, LocationObj source, Vector2 newVolumePosition, double newRadius)
+        {
+            if (source?.Parent is null || parent?.Section is null)
+                return;
+
+            IVolumeToSectionTransform destination = parent.Volume.GetSectionToVolumeTransform(parent.Section.Number);
+            if (!destination.TryVolumeToSection(newVolumePosition, out Vector2 mosaic))
+            {
+                MessageBox.Show(parent, "The chosen point is outside mappable volume space, location not created", "Recoverable Error");
+                return;
+            }
+
+            LocationObj newLoc = new(source.Parent, parent.Section.Number, source.TypeCode);
+            UpdateCircleLocationNoSaveCallback(newLoc, newVolumePosition, mosaic, newRadius);
+            parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [parent, source, newLoc]);
         }
 
         /// <summary>

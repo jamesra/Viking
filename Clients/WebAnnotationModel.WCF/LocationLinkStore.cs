@@ -59,8 +59,7 @@ namespace WebAnnotationModel
                     }
                     catch (Exception e)
                     {
-                        //TODO: Better message
-                        Trace.WriteLine("Error creating link between locations, link not created: " + e.Message);
+                        Trace.WriteLine("Error creating link between locations, link not created: " + e);
                         throw;
                     }
                     finally

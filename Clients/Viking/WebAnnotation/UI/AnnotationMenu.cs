@@ -21,6 +21,7 @@ namespace WebAnnotation
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
+        private static ToolStripMenuItem menuShowPenActionButtons;
         private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
         private static System.Threading.Timer _circleOpacityUpdateTimer;
         private static readonly object _circleOpacityUpdateLock = new();
@@ -59,10 +60,14 @@ namespace WebAnnotation
                 Checked = WebAnnotation.Global.PenMode
             };
             menuPenMode.Click += OnPenMode;
-
-
-
             menuRoot.DropDownItems.Add(menuPenMode);
+
+            menuShowPenActionButtons = new ToolStripMenuItem("Show Pen Action Buttons")
+            {
+                Checked = Global.ShowPenActionButtons
+            };
+            menuShowPenActionButtons.Click += OnShowPenActionButtons;
+            menuRoot.DropDownItems.Add(menuShowPenActionButtons);
 
 
             return menuRoot;
@@ -576,6 +581,15 @@ namespace WebAnnotation
         {
             Global.PenMode = !Global.PenMode;
             menuPenMode.Checked = Global.PenMode;
+        }
+
+        /// <summary>
+        /// Toggles the circular choice buttons shown after a pen stroke.
+        /// </summary>
+        public static void OnShowPenActionButtons(object sender, EventArgs e)
+        {
+            Global.ShowPenActionButtons = !Global.ShowPenActionButtons;
+            menuShowPenActionButtons.Checked = Global.ShowPenActionButtons;
         }
 
         [MenuItem("Open Structure")]

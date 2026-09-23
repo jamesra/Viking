@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using Viking.AnnotationServiceTypes.Interfaces;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation.UI;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -209,7 +210,7 @@ namespace WebAnnotation.UI.Commands
             }
             catch (Exception except)
             {
-                MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
+                ExceptionReport.Show("Could not create link between locations.", except);
             }
         }
 
@@ -223,7 +224,7 @@ namespace WebAnnotation.UI.Commands
             }
             catch (Exception except)
             {
-                MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
+                ExceptionReport.Show("Could not create link between structures.", except);
             }
         }
 
@@ -245,7 +246,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 catch (Exception except)
                 {
-                    MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
+                    ExceptionReport.Show("Could not create link between locations.", except);
                 }
             }
             else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
@@ -259,7 +260,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 catch (Exception except)
                 {
-                    MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
+                    ExceptionReport.Show("Could not create link between structures.", except);
                 }
             }
 

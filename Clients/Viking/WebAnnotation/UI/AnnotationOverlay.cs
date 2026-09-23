@@ -672,6 +672,14 @@ namespace WebAnnotation
             //Left mouse button selects objects
             if (e.Button == MouseButtons.Left)
             {
+                // A type chosen in the Structure Types list is an explicit place command.
+                // Pen Mode must not turn that click into a one-point stroke that is discarded.
+                if (Viking.UI.State.SelectedObject is StructureType st)
+                {
+                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE);
+                    return;
+                }
+
                 if (Global.PenMode)
                 {
                     //Id we don't have a command to start, begin creating a path
@@ -679,11 +687,6 @@ namespace WebAnnotation
                     return;
                 }
 
-                if (Viking.UI.State.SelectedObject is StructureType st)
-                {
-                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE);
-                }
-                else
                 {
                     object obj = ObjectAtPosition(WorldPosition, out double distance);
                     //Figure out if it is resizing a location circle
@@ -1688,22 +1691,20 @@ break;
             }
 
             LocationObj lastLoc = await Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
+            // Deleted locations stay in LastEditedAnnotationID until this load misses.
+            if (lastLoc == null)
             {
-                if (lastLoc == null)
-                {
-                    return;
-                }
+                Global.LastEditedAnnotationID = null;
+                return;
+            }
 
-                if (lastLoc.Z != CurrentSectionNumber && IsCommandDefault())
+            if (lastLoc.Z != CurrentSectionNumber && IsCommandDefault())
+            {
+                Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(Parent, lastLoc, WorldPos);
+                if (command != null)
                 {
-                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(Parent, lastLoc, WorldPos);
-                    if (command != null)
-                    {
-                        _Parent.CurrentCommand = command;
-                    }
-
+                    _Parent.CurrentCommand = command;
                     Viking.UI.State.SelectedObject = null;
-                    Global.LastEditedAnnotationID = null;
                 }
             }
         }

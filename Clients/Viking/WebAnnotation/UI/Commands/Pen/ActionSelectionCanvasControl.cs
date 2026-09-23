@@ -16,6 +16,7 @@ using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
 using WebAnnotation.UI.Actions;
 using WebAnnotation.UI.ActionViews;
+using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -37,7 +38,9 @@ namespace WebAnnotation.UI.Commands
         /// A per-action set of objects that either support IRenderable or IActionView
         /// </summary>
         private readonly Dictionary<IAction, List<object>> ActionViews = [];
-        private CircularButton CancelButton;
+        private CircularButton? CancelButton;
+        private readonly List<IAction> _labeledActions = [];
+        private LabelView[] _buttonLabels = [];
         private readonly Dictionary<IAction, IIconTexture> _ActionIcona = [];
 
         //        IReadOnlyDictionary<IAction, CircularButton> _actionButtons = new Dictionary<IAction, CircularButton>();
@@ -115,7 +118,16 @@ namespace WebAnnotation.UI.Commands
         {
             BoundingBox = CalculateBoundingBox(ActionInteractables);
 
+            if (!Global.ShowPenActionButtons)
+            {
+                _Buttons = [];
+                _buttonLabels = [];
+                _labeledActions.Clear();
+                return;
+            }
+
             List<CircularButton> buttons = new(actionIcons.Count);
+            _labeledActions.Clear();
 
             foreach (KeyValuePair<IAction, IIconTexture> item in actionIcons)
             {
@@ -134,6 +146,7 @@ namespace WebAnnotation.UI.Commands
                 //TODO: Sort and Map visuals on the circlular buttons according to action types
                 CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
                 buttons.Add(circularButton);
+                _labeledActions.Add(action);
 
                 if (ActionInteractables.ContainsKey(action))
                 {
@@ -150,7 +163,59 @@ namespace WebAnnotation.UI.Commands
             AppendCancelButton();
 
             LayoutButtons();
+            CreateButtonLabels();
 
+        }
+
+        /// <summary>
+        /// Text drawn beside each choice button. Called after <see cref="LayoutButtons"/> so the label sits on the laid-out circle.
+        /// Cancel is the last button and is not in <see cref="_labeledActions"/>.
+        /// </summary>
+        private void CreateButtonLabels()
+        {
+            List<LabelView> labels = new(Buttons.Length);
+            for (int i = 0; i < Buttons.Length; i++)
+            {
+                string text = i < _labeledActions.Count ? LabelFor(_labeledActions[i]) : "Cancel";
+                Circle circle = Buttons[i].Circle;
+                Geometry.Vector2 position = circle.Center + new Geometry.Vector2(circle.Radius * 1.2, 0);
+                labels.Add(new LabelView(text, position, Color.White, null, Anchor.CenterLeft, true, 18));
+            }
+
+            _buttonLabels = [.. labels];
+        }
+
+        /// <summary>
+        /// Short name for a pen-stroke choice. Structure creates use the structure type name so each favorite is distinct.
+        /// </summary>
+        private static string LabelFor(IAction action)
+        {
+            switch (action)
+            {
+                case CreateStructureActionBase create:
+                    Store.StructureTypes.TryGetObjectByID(create.TypeID, out StructureTypeObj type);
+                    return type?.Name ?? "New structure";
+                case CreateNewLinkedLocationAction:
+                    return "Linked location";
+                case CutHoleAction:
+                    return "Cut hole";
+                case RemoveHoleAction:
+                    return "Remove hole";
+                case Change2DContourAction:
+                    return "Replace boundary";
+                case Change1DContourAction:
+                    return "Replace line";
+                case ChangeToPolygonAction:
+                    return "To polygon";
+                case ChangeToPolylineAction:
+                    return "To line";
+                case LinkLocationAction:
+                    return "Link locations";
+                case LinkStructureAction:
+                    return "Link structures";
+                default:
+                    return action.Type.ToString();
+            }
         }
 
         private Rectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
@@ -273,7 +338,15 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(GraphicsDevice graphicsDevice, Scene scene, BasicEffect basicEffect)
         {
-            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, [.. Buttons.Select(b => b.circleView)]);
+            if (Buttons.Length > 0)
+                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, [.. Buttons.Select(b => b.circleView)]);
+
+            if (_buttonLabels.Length > 0 && Parent.fontArial != null && Parent.spriteBatch != null)
+            {
+                Parent.spriteBatch.Begin();
+                LabelView.Draw(Parent.spriteBatch, Parent.fontArial, scene, _buttonLabels);
+                Parent.spriteBatch.End();
+            }
 
             if (CancelHover)
             {
@@ -327,21 +400,29 @@ namespace WebAnnotation.UI.Commands
 
         private static void DrawView(GraphicsDevice graphicsDevice, Scene scene, object action, bool UseActive)
         {
-            if (action is IActionView)
+            try
             {
-                IActionView view = (IActionView)action;
-                if (UseActive == false || view.Active is null)
+                if (action is IActionView)
                 {
-                    view.Passive?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                    IActionView view = (IActionView)action;
+                    if (UseActive == false || view.Active is null)
+                    {
+                        view.Passive?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                    }
+                    else if (view.Active != null && UseActive)
+                    {
+                        view.Active.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                    }
                 }
-                else if (view.Active != null && UseActive)
+                else if (action is IRenderable view)
                 {
-                    view.Active.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                    view.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
                 }
             }
-            else if (action is IRenderable view)
+            catch (Exception ex)
             {
-                view.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                // A bad preview must not escape paint. The chooser would stay the current command and block the next pen stroke.
+                Trace.WriteLine($"Pen action preview could not be drawn: {ex.GetBaseException().Message}");
             }
         }
 
@@ -381,7 +462,7 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseDown(sender, e);
 
             Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-            if (CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
+            if (CancelButton is not null && CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
             {
                 Deactivated = true;
                 return;
@@ -430,7 +511,7 @@ namespace WebAnnotation.UI.Commands
         {
             Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
-            if (CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Pen, e))
+            if (CancelButton is not null && CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Pen, e))
             {
                 Deactivated = true;
                 return;
@@ -483,7 +564,7 @@ namespace WebAnnotation.UI.Commands
 
         protected void UpdateActiveView(Geometry.Vector2 WorldPosition)
         {
-            if (CancelButton.Contains(WorldPosition))
+            if (CancelButton is not null && CancelButton.Contains(WorldPosition))
             {
                 active_action = null;
                 CancelHover = true;

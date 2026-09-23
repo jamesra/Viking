@@ -120,12 +120,13 @@ namespace WebAnnotation.Tools
         {
             if (!Global.LastEditedAnnotationID.HasValue)
                 return;
-            if (!Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out LocationObj last) || last == null)
-                return;
-            if ((int)Math.Round(last.Z) == _host.SectionNumber)
+            if (Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out LocationObj last) && last != null
+                && (int)Math.Round(last.Z) == _host.SectionNumber)
                 return;
 
-            long lastId = last.ID;
+            // Cache miss still continues: the location may have been dropped after skipping a bad section.
+            // CreateLinkedLocationAsync loads it from the server.
+            long lastId = Global.LastEditedAnnotationID.Value;
             _ = AnnotationToolActions.CreateLinkedLocationAsync(_context, lastId, world, LocationType.CIRCLE, null);
         }
 
