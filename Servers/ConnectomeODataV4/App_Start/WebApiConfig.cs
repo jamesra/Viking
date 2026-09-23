@@ -36,6 +36,11 @@ namespace ConnectomeODataV4
             // Configure OData query options
             config.Count().Filter().OrderBy().Expand().Select().MaxTop(null);
 
+            // Location.Created / LastModified are UTC wall times in timezone-less SQL datetime.
+            // Without this, OData labels them with the host's local offset (Pacific), which
+            // misleads consumers and skews $filter DateTimeOffset comparisons by ~7–8h.
+            config.SetTimeZoneInfo(TimeZoneInfo.Utc);
+
             IEdmModel edmModel = GetModel();
 
             // Configure OData batch handler

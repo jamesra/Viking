@@ -52,6 +52,9 @@ TestResults
 # Cursor plan files (local only, not for version control)
 .cursor/plans/
 
+# Slack/MCP tokens and other local MCP secrets
+.cursor/mcp.json
+
 # Benchmark run output
 /BenchmarkDotNet.Artifacts/
 

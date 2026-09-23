@@ -5,6 +5,8 @@ alwaysApply: true
 
 **Project:** Image viewing, annotation, and analysis suite — Viking client plus servers that serve images and annotations from SQL. Client projects live under `Clients/`, server projects under `Servers/`.
 
+**Where to edit:** Server and container work belongs in this repo. Client work belongs in VikingLegacy-Maintenance, with a best-effort mirror back into this repo's `Clients/` tree. See the repo-roles rule.
+
 **Clients**
 - **Viking** (`Clients/Viking/`) — .NET 4.8, Monogame 3.7.x; current production WinForms client. Keep working until Jotunn covers daily tracing.
 - **VikingAU** (`Clients/VikingAU/`) — Same stack as Viking; auto-adjusts annotation positions in the DB.
