@@ -11,8 +11,10 @@ using System.Windows.Forms;
 using Viking.AnnotationServiceTypes.Interfaces;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation.UI;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel;
+using WebAnnotationModel;
+
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -191,7 +193,7 @@ namespace WebAnnotation.UI.Commands
                     }
                     catch (Exception except)
                     {
-                        MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
+                        ExceptionReport.Show("Could not create link between locations.", except);
                     }
                     finally
                     {
@@ -208,7 +210,7 @@ namespace WebAnnotation.UI.Commands
                     }
                     catch (Exception except)
                     {
-                        MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
+                        ExceptionReport.Show("Could not create link between structures.", except);
                     }
                     finally
                     {
@@ -250,7 +252,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 catch (Exception except)
                 {
-                    MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
+                    ExceptionReport.Show("Could not create link between locations.", except);
                 }
             }
             else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
@@ -264,7 +266,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 catch (Exception except)
                 {
-                    MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
+                    ExceptionReport.Show("Could not create link between structures.", except);
                 }
 
                 //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...

@@ -912,17 +912,21 @@ namespace WebAnnotation
                 if (TryStartLocationActionCommand(WorldPosition, penContact: false))
                     return;
 
+                // A type chosen in the Structure Types list is an explicit place command.
+                // Pen Mode must not turn that click into a one-point stroke that is discarded.
+                if (Viking.UI.State.SelectedObject is StructureType st)
+                {
+                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE, startedByHotkey: true);
+                    return;
+                }
+
                 if (Global.PenMode)
                 {
                     StartPenPath(WorldPosition);
                     return;
                 }
 
-                if (Viking.UI.State.SelectedObject is StructureType st)
-                {
-                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE);
-                }
-                else if (CanContinueLastTrace)
+                if (CanContinueLastTrace)
                 {
                     OnContinueLastTrace(LastMouseDownCoords);
                 }
@@ -1858,6 +1862,10 @@ break;
 
         protected bool CanContinueLastTrace => Global.CanContinueLastTrace(CurrentSectionNumber);
 
+        /// <summary>
+        /// Starts a linked-location command at the cursor for <see cref="Global.LastEditedAnnotationID"/>.
+        /// Called from left-click, F3, and Enter. The id stays set until the new location is saved, so a failed place (bad section between the discs, cancelled drag) can be retried.
+        /// </summary>
         protected void OnContinueLastTrace()
         {
             System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
@@ -1865,6 +1873,10 @@ break;
             OnContinueLastTrace(WorldPos);
         }
 
+        /// <summary>
+        /// Starts a linked-location command at <paramref name="WorldPos"/>.
+        /// Loads the last location from the server when it is no longer in the section cache.
+        /// </summary>
         protected void OnContinueLastTrace(Geometry.Vector2 WorldPos)
         {
             if (!Global.LastEditedAnnotationID.HasValue)
@@ -1873,24 +1885,20 @@ break;
             }
 
             LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, true);
+            // Deleted locations stay in LastEditedAnnotationID until this load misses.
+            if (lastLoc == null)
             {
-                //This can occur if we deleted the last location we editted.
-                if (lastLoc == null)
-                {
-                    return;
-                }
+                Global.LastEditedAnnotationID = null;
+                return;
+            }
 
-                if (lastLoc.Z != CurrentSectionNumber && IsCommandDefault())
+            if (lastLoc.Z != CurrentSectionNumber && IsCommandDefault())
+            {
+                Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(Parent, lastLoc, WorldPos);
+                if (command != null)
                 {
-                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(Parent, lastLoc, WorldPos);
-                    if (command != null)
-                    {
-                        _Parent.CurrentCommand = command;
-                    }
-
+                    _Parent.CurrentCommand = command;
                     Viking.UI.State.SelectedObject = null;
-                    //LastMouseOverObject = null; 
-                    Global.LastEditedAnnotationID = null;
                 }
             }
         }

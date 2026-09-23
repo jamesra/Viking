@@ -777,6 +777,20 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>
+        /// When true, the circular choice buttons are drawn after a pen stroke.
+        /// The Annotation menu toggles this. Shape previews stay clickable when the buttons are hidden.
+        /// </summary>
+        public static bool ShowPenActionButtons
+        {
+            get => WebAnnotation.Properties.Settings.Default.ShowPenActionButtons;
+            set
+            {
+                WebAnnotation.Properties.Settings.Default.ShowPenActionButtons = value;
+                WebAnnotation.Properties.Settings.Default.Save();
+            }
+        }
+
         private static System.Collections.ObjectModel.ObservableCollection<ulong> _UserFavoriteStructureTypes;
 
         public static System.Collections.ObjectModel.ObservableCollection<ulong> UserFavoriteStructureTypes
@@ -914,11 +928,12 @@ namespace WebAnnotation
         public static long? LastEditedAnnotationID;
 
         /// <summary>
-        /// Return true if the last annotation can be continued on the section number. 
-        /// Continuation creates a new annotation on the section and links to the last.
+        /// True when a left-click, F3, or Enter on <paramref name="SectionNumber"/> should place a location linked to <see cref="LastEditedAnnotationID"/>.
+        /// Called from the annotation overlay before <c>OnContinueLastTrace</c>.
+        /// A local-cache miss still returns true: the location may have been dropped after the user left its section, including after skipping a bad section. The click handler loads it from the server.
+        /// Same-section last edits return false so the click does not duplicate the disc where it was just placed.
+        /// A deleted id stays set until that server load fails; this method does not treat a cache miss as deleted.
         /// </summary>
-        /// <param name="SectionNumber"></param>
-        /// <returns></returns>
         internal static bool CanContinueLastTrace(int SectionNumber)
         {
             if (LastEditedAnnotationID is null)
@@ -929,7 +944,7 @@ namespace WebAnnotation
 
             WebAnnotationModel.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
             if (lastLoc is null)
-                return false;
+                return true;
 
             return (int)Math.Round(lastLoc.Z) != SectionNumber;
         }
@@ -1147,6 +1162,37 @@ namespace WebAnnotation
             return;
         }
 
+        /// <summary>
+        /// Downloads a replacement settings file when the local one cannot be parsed.
+        /// Leaves the previous in-memory settings unchanged when the download fails, so a
+        /// bad server response does not erase a shortcuts file the user already had.
+        /// </summary>
+        private static async Task ReplaceUnreadableUserSettingsFromServerAsync(CancellationToken cancellationToken)
+        {
+            bool success = await LoadServerUserSettingsAsync(cancellationToken).ConfigureAwait(false);
+            if (!success)
+            {
+                Trace.WriteLine("User settings could not be parsed and the server copy was not downloaded.");
+                return;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            TryLoadLocalUserSettings();
+        }
+
+        /// <summary>
+        /// Loads <see cref="UserSettingsFilePath"/> after correcting the legacy namespace.
+        /// Called from startup. A missing file leaves <see cref="_userSettingsDoc"/> unchanged.
+        /// </summary>
+        private static bool TryLoadLocalUserSettings()
+        {
+            if (!System.IO.File.Exists(UserSettingsFilePath))
+                return false;
+
+            _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
+            return _userSettingsDoc != null;
+        }
+
         private static Task LoadUserPreferencesAsync()
         {
             // Check if a load is already in progress
@@ -1195,16 +1241,13 @@ namespace WebAnnotation
                     bool success = await LoadServerUserSettingsAsync(cancellationToken).ConfigureAwait(false);
                     if (!success)
                     {
-                        return;
+                        // A failed download must not drop the shortcuts already on disk. That is the C hotkey.
+                        Trace.WriteLine("User settings download failed; loading the local file.");
                     }
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
-
-                if (System.IO.File.Exists(UserSettingsFilePath))
-                {
-                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
-                }
+                TryLoadLocalUserSettings();
             }
             catch (OperationCanceledException)
             {
@@ -1213,35 +1256,12 @@ namespace WebAnnotation
             }
             catch (Xml.Schema.Linq.LinqToXsdException)
             {
-                //We found it locally, but could not parse it
-                bool success = await LoadServerUserSettingsAsync(cancellationToken);
-                if (!success)
-                {
-                    throw;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (System.IO.File.Exists(UserSettingsFilePath))
-                {
-                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
-                }
+                // The local cache did not match the schema. Download the volume's settings file again.
+                await ReplaceUnreadableUserSettingsFromServerAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (System.Xml.XmlException)
             {
-                //We found it locally, but could not parse it
-                bool success = await LoadServerUserSettingsAsync(cancellationToken);
-                if (!success)
-                {
-                    throw;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (System.IO.File.Exists(UserSettingsFilePath))
-                {
-                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
-                }
+                await ReplaceUnreadableUserSettingsFromServerAsync(cancellationToken).ConfigureAwait(false);
             }
             /*
             catch (Exception )
