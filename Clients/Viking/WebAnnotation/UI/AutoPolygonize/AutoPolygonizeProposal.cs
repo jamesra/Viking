@@ -35,8 +35,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Builds overlay data from the highest-scoring segment. Returns null when decode fails.
-        /// Called off the UI thread; does not create a <see cref="Texture2D"/>.
+        /// Builds overlay data from the highest-scoring segment. The server PNG is a probability
+        /// image of the SAM2 logits (128 is the decision boundary), not a 1-bit mask.
+        /// Returns null when decode fails. Called off the UI thread; does not create a <see cref="Texture2D"/>.
         /// </summary>
         public static AutoPolygonizeMaskOverlay? TryCreate(
             SegmentationViewportSession session,
@@ -49,6 +50,16 @@ namespace WebAnnotation.UI.AutoPolygonize
             var (decodedMaskData, decodedWidth, decodedHeight) = session.DecodePngMask(bestSegment.Mask.ToByteArray());
             if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
                 return null;
+
+            int inside = 0;
+            for (int i = 0; i < decodedMaskData.Length; i++)
+            {
+                if (decodedMaskData[i] >= SegmentationMaskPolygonizer.SoftMaskForeground)
+                    inside++;
+            }
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[SegmentationProfile] Mask overlay {decodedWidth}x{decodedHeight} pngBytes={bestSegment.Mask.Length} inside={inside}");
 
             Geometry.Rectangle worldBounds = session.GetSegmentWorldBounds(
                 bestSegment.X,
@@ -63,8 +74,10 @@ namespace WebAnnotation.UI.AutoPolygonize
 
     /// <summary>
     /// Hollow-line preview of a SAM2 polygon over a circle. Double-click accepts; right/middle dismisses.
-    /// When <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> is on, Draw also
-    /// shows the last SegmentImage mask and the green/red prompts that produced it.
+    /// When <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> is on, Draw shows
+    /// the last SegmentImage mask. Rings stay visible unless that mask is showing and
+    /// <see cref="Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings"/> is set.
+    /// Prompt dots follow <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayPrompts"/>.
     /// </summary>
     internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelpStrings
     {
@@ -74,6 +87,19 @@ namespace WebAnnotation.UI.AutoPolygonize
         private const float DefaultAlpha = 0.92f;
         private const float HighlightAlpha = 1.0f;
         private const float MaskOverlayAlpha = 0.35f;
+
+        /// <summary>
+        /// Depth test always passes and stencil is off. <see cref="DepthStencilState.None"/> drops
+        /// the draw: the texture shader writes SV_Depth, and a disabled depth buffer discards those pixels.
+        /// Annotation fills also leave a stencil value that would reject the mask over the circle.
+        /// </summary>
+        private static readonly DepthStencilState MaskOverlayDepthState = new()
+        {
+            DepthBufferEnable = true,
+            DepthBufferWriteEnable = false,
+            DepthBufferFunction = CompareFunction.Always,
+            StencilEnable = false
+        };
 
         private readonly AutoCirclePolygonizeController controller;
         private readonly AutoPolygonizeMaskOverlay? maskOverlayData;
@@ -202,30 +228,74 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Draws the debug mask first, then rings, then the last-sent prompts so clicks
-        /// stay readable on top of the mask. Prompt dots follow
-        /// <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> like the mask.
+        /// True when decoded SAM2 bytes were kept. The GPU texture may still be missing
+        /// until <see cref="EnsureMaskOverlay"/> runs on the graphics thread.
+        /// </summary>
+        public bool HasMaskSource => maskOverlayData?.MaskData is { Length: > 0 };
+
+        /// <summary>
+        /// Creates the mask texture when bytes were kept and the GPU view is missing.
+        /// No-op without mask bytes. Must run on the graphics thread.
+        /// </summary>
+        public void EnsureMaskOverlay(GraphicsDevice? graphicsDevice)
+        {
+            if (maskOverlayView is not null || !HasMaskSource)
+                return;
+
+            AttachMaskOverlay(graphicsDevice);
+        }
+
+        /// <summary>
+        /// Draws rings first, then the mask, then prompt dots. The mask is on top of the outline
+        /// so a tight ring cannot cover it. Rings are skipped when masks are visible and
+        /// <see cref="Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings"/> is set.
         /// </summary>
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
-            bool showDebugOverlay = Global.AnnotationSettings.AutoPolygonizeOverlayMasks;
-            if (showDebugOverlay)
-                maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-
-            double lineWidth = AutoPolygonizeSelection.ProposalLineWidth(CircleRadius, scene.Camera.Downsample);
-            foreach (CurveView ringView in RingViews)
+            if (Global.AnnotationSettings.AutoPolygonizeShowSegmentationRings)
             {
-                ringView.LineWidth = lineWidth;
-                ringView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                double lineWidth = AutoPolygonizeSelection.ProposalLineWidth(CircleRadius, scene.Camera.Downsample);
+                foreach (CurveView ringView in RingViews)
+                {
+                    ringView.LineWidth = lineWidth;
+                    ringView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                }
             }
 
-            if (showDebugOverlay)
+            if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+            {
+                EnsureMaskOverlay(graphicsDevice);
+                DrawMaskOverlay(graphicsDevice, scene);
+            }
+
+            if (Global.AnnotationSettings.AutoPolygonizeOverlayPrompts)
                 DrawPromptOverlays(graphicsDevice, scene);
         }
 
         /// <summary>
+        /// Draws the SAM2 texture with the depth test forced to pass and stencil disabled.
+        /// </summary>
+        private void DrawMaskOverlay(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
+        {
+            if (maskOverlayView is null)
+                return;
+
+            DepthStencilState previous = graphicsDevice.DepthStencilState;
+            graphicsDevice.DepthStencilState = MaskOverlayDepthState;
+            try
+            {
+                maskOverlayView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, MaskOverlayDepthState);
+            }
+            finally
+            {
+                graphicsDevice.DepthStencilState = previous;
+            }
+        }
+
+        /// <summary>
         /// Green foreground / red background circles matching interactive Segment. Depth is
-        /// disabled so the dots sit on the mask. Radius tracks live downsample.
+        /// disabled so the dots sit above annotations. Radius tracks live downsample.
+        /// Drawn only when <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayPrompts"/> is on.
         /// </summary>
         private void DrawPromptOverlays(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
@@ -290,7 +360,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Packs the 1-bit mask into a Color texture: foreground uses <paramref name="color"/>, background is transparent.
+        /// Packs the probability mask into a Color texture. Values on the inside of the
+        /// logit-zero boundary use <paramref name="color"/>; the outside halo stays transparent.
         /// </summary>
         private static Texture2D CreateMaskTexture(
             GraphicsDevice graphicsDevice,
@@ -305,7 +376,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Texture2D texture = new(graphicsDevice, overlay.Width, overlay.Height);
                 Color[] pixels = new Color[overlay.MaskData.Length];
                 for (int i = 0; i < overlay.MaskData.Length; i++)
-                    pixels[i] = overlay.MaskData[i] > 0 ? color : Color.Transparent;
+                    pixels[i] = overlay.MaskData[i] >= SegmentationMaskPolygonizer.SoftMaskForeground
+                        ? color
+                        : Color.Transparent;
 
                 texture.SetData(pixels);
                 return texture;

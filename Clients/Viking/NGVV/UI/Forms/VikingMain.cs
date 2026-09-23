@@ -136,7 +136,7 @@ namespace Viking
             //
             bool MouseInPointerEnabled = WinMsgInput.EnableMouseInPointer(true);
 
-            this.Text = UI.State.volume.Name;
+            this.Text = UI.State.volume.Name + " — Viking " + AboutBox.AssemblyVersion;
 
             /* PORT
             if (UI.State.volume.Sections is null)

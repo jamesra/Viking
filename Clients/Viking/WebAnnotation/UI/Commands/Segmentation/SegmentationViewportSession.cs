@@ -422,7 +422,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Decodes each segment mask and polygonizes in score order. Near-full-frame masks are skipped.
-        /// Cleanup and marching squares run on the downsampled mask.
+        /// Cleanup and marching squares run at mask resolution. Callers apply pen-threshold simplification.
         /// <paramref name="cancellationToken"/> is checked between segments so a newer click can abort.
         /// </summary>
         public IReadOnlyList<Polygon> CreatePolygonsFromResponse(
@@ -490,7 +490,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Decodes a SAM2 1-bit PNG into a packed 0/255 byte mask. Returns null data on invalid PNG.
+        /// Decodes a SAM2 probability PNG into 0–255 bytes. Older 1-bit masks arrive as 0 and 255.
+        /// Returns null data on an invalid PNG.
         /// </summary>
         public (byte[]? maskData, int width, int height) DecodePngMask(byte[] pngBytes)
         {

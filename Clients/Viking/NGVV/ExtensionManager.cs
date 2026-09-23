@@ -843,10 +843,11 @@ namespace Viking.Common
                 }
                 catch (Exception e)
                 {
-                    System.Windows.Forms.MessageBox.Show("Failed to create overlay: " + ObjType.ToString() + " Removing from overlay list. Exception: " + e.ToString(), "Error");
+                    // Leave the viewer up. A launch-token denial initializes the annotation store as
+                    // a broken type; rethrowing here was the error dialog on the second Viking.
+                    Trace.WriteLine("Failed to create overlay: " + ObjType + " " + e, "ExtMan");
                     ExtensionManager.SectionOverlayList.RemoveAt(i);
                     i--;
-                    throw;
                 }
             }
 

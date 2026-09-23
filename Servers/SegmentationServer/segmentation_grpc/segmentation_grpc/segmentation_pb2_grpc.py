@@ -55,6 +55,11 @@ class SegmentationServiceStub:
                 request_serializer=segmentation__pb2.DeleteImageRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.DeleteImageResponse.FromString,
                 _registered_method=True)
+        self.GetVersion = channel.unary_unary(
+                '/segmentation.SegmentationService/GetVersion',
+                request_serializer=segmentation__pb2.GetVersionRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.GetVersionResponse.FromString,
+                _registered_method=True)
 
 
 class SegmentationServiceServicer:
@@ -89,6 +94,13 @@ class SegmentationServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetVersion(self, request, context):
+        """Build identity for clients and other agents. Does not load the model.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SegmentationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -111,6 +123,11 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     servicer.DeleteImage,
                     request_deserializer=segmentation__pb2.DeleteImageRequest.FromString,
                     response_serializer=segmentation__pb2.DeleteImageResponse.SerializeToString,
+            ),
+            'GetVersion': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetVersion,
+                    request_deserializer=segmentation__pb2.GetVersionRequest.FromString,
+                    response_serializer=segmentation__pb2.GetVersionResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -222,6 +239,33 @@ class SegmentationService:
             '/segmentation.SegmentationService/DeleteImage',
             segmentation__pb2.DeleteImageRequest.SerializeToString,
             segmentation__pb2.DeleteImageResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetVersion(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/GetVersion',
+            segmentation__pb2.GetVersionRequest.SerializeToString,
+            segmentation__pb2.GetVersionResponse.FromString,
             options,
             channel_credentials,
             insecure,

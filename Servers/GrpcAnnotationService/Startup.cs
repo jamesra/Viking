@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Viking.ProductVersioning;
 
 namespace gRPCAnnotationService
 {
@@ -38,8 +40,11 @@ namespace gRPCAnnotationService
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
+            var assembly = typeof(Startup).Assembly;
+            logger.LogInformation("{ProductVersion} starting", ProductVersion.Describe(assembly));
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -52,6 +57,11 @@ namespace gRPCAnnotationService
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<LocationService>();
+                endpoints.MapGet("/version", () => Results.Json(new
+                {
+                    name = assembly.GetName().Name,
+                    version = ProductVersion.VersionOf(assembly)
+                }));
 
                 endpoints.MapGet("/", async context =>
                 {

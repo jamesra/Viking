@@ -18,6 +18,9 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks> 
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\Shared\ProductVersion.cs" Link="ProductVersion.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />

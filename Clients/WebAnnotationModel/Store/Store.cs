@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace WebAnnotationModel
 {
@@ -10,6 +11,15 @@ namespace WebAnnotationModel
     public class Store
     {
         public static void Init() => Nested.Init();
+
+        /// <summary>
+        /// Set when startup could not load the annotation stores.
+        /// The nested static constructor records this and continues, so a denied
+        /// GetStructureTypes call does not poison the type for the rest of the process.
+        /// Callers (WebAnnotation module init) show it once; later store use stays empty
+        /// rather than throwing TypeInitializationException on every touch.
+        /// </summary>
+        public static Exception InitializationError => Nested.InitializationError;
 
         public static LocationStore Locations => Nested.Locations;
 
@@ -30,9 +40,28 @@ namespace WebAnnotationModel
         class Nested
         {
             private static bool Initialized = false;
+
+            /// <summary>
+            /// Failure from the first startup load. Null when stores loaded.
+            /// Kept on the nested type so the static constructor can record it
+            /// without a second type initializer.
+            /// </summary>
+            internal static Exception InitializationError { get; private set; }
+
             static Nested()
             {
-                Init();
+                try
+                {
+                    Init();
+                }
+                catch (Exception ex)
+                {
+                    // Rethrowing here wraps as TypeInitializationException and every later
+                    // Store access fails for the life of the process, including after the
+                    // user continues past the unhandled-exception dialog.
+                    InitializationError = ex;
+                    Trace.WriteLine("[WebAnnotationModel] Store startup failed; annotations stay empty. " + ex);
+                }
 
                 RegionLocationsLoader = new RegionLoader<long, LocationObj>(Store.Locations);
                 RegionStructuresLoader = new RegionLoader<long, StructureObj>(Store.Structures);

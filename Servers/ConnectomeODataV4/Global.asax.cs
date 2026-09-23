@@ -5,6 +5,7 @@ using Unity.AspNet.WebApi;
 using Unity.Lifetime;
 using ConnectomeDataModel;
 using Microsoft.Extensions.Logging;
+using Viking.ProductVersioning;
 
 namespace ConnectomeODataV4
 {
@@ -33,6 +34,10 @@ namespace ConnectomeODataV4
             });
 
             GlobalConfiguration.DefaultServer.Configuration.EnsureInitialized();
+
+            _loggerFactory.CreateLogger(typeof(WebApiApplication)).LogInformation(
+                "{ProductVersion} started",
+                ProductVersion.Describe(typeof(WebApiApplication).Assembly));
         }
 
         /// <summary>

@@ -12,6 +12,9 @@ namespace ConnectomicsWebsite
     {
         protected void Application_Start()
         {
+            new System.Diagnostics.TraceSource("ConnectomicsWebsite", System.Diagnostics.SourceLevels.Information)
+                .TraceInformation(Viking.ProductVersioning.ProductVersion.Describe(typeof(MvcApplication).Assembly));
+
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);

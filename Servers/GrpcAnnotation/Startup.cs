@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Viking.ProductVersioning;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,8 +22,11 @@ namespace Viking.gRPC.Annotation
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
+            var assembly = typeof(Startup).Assembly;
+            logger.LogInformation("{ProductVersion} starting", ProductVersion.Describe(assembly));
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -32,6 +37,11 @@ namespace Viking.gRPC.Annotation
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<GreeterService>();
+                endpoints.MapGet("/version", () => Results.Json(new
+                {
+                    name = assembly.GetName().Name,
+                    version = ProductVersion.VersionOf(assembly)
+                }));
 
                 endpoints.MapGet("/", async context =>
                 {

@@ -1,19 +1,126 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<UserSettings xmlns="http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd">
-  <Actions>
-    <CreateStructureCommandAction TypeID="1" Name="CreateCell"/>
-    <CreateStructureCommandAction TypeID="28" Name="GapJunction"/>
-    <CreateStructureCommandAction TypeID="34" Name="Conventional"/>
-    <CreateStructureCommandAction TypeID="35" Name="Postsynapse"/>
-    <CreateStructureCommandAction TypeID="73" Name="Ribbon"/>
-    <CreateStructureCommandAction TypeID="85" Name="Desmosome"/>
-  </Actions>
-  <Shortcuts>
-    <Hotkey KeyName="C" Action="CreateCell"></Hotkey>
-    <Hotkey KeyName="G" Action="GapJunction"></Hotkey>
-    <Hotkey KeyName="S" Action="Conventional"></Hotkey>
-    <Hotkey KeyName="P" Action="Postsynapse"></Hotkey>
-    <Hotkey KeyName="R" Action="Ribbon"></Hotkey>
-    <Hotkey KeyName="D" Action="Desmosome"></Hotkey>
-  </Shortcuts>
-</UserSettings >
+﻿This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<UserSettings xmlns="http://rogue1.codepharm.net/XSD/WebAnnotationUserSettings.xsd">
+<Actions>
+<CreateStructureCommandAction TypeID="1" Name="Annotate Cell with Circle"/>
+<CreateStructureCommandAction TypeID="1" Name="Annotate Cell with Closed Curve" AnnotationType="CurvePolygon"/>
+<CreateStructureCommandAction TypeID="28" Name="Annotate Gap Junction" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="34" Name="Annotate Conventional Synapse" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="35" Name="Annotate Conventional Post-Synaptic Density" Tags="Conventional" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="35" Name="Annotate Ribbon Post-Synaptic Density" Tags="Bipolar;Ribbon;Glutamate" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="35" Name="Annotate Bipolar Cell Conventional Post-Synaptic Density" Tags="Bipolar;Conventional;Glutamate" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="73" Name="Annotate Ribbon Synapse" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="189" Name="Annotate Bipolar Cell Conventional Synapse" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="225" Name="Annotate Multivesicular Body" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="244" Name="Annotate Unknown Structure" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="245" Name="Annotate Nucleolus"/>
+<CreateStructureCommandAction TypeID="243" Name="Annotate Neuroglial Adherens" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="240" Name="Annotate Plaque-like Pre" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="241" Name="Annotate Plaque-like Post" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="236" Name="Annotate Plaque" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="181" Name="Annotate Cistern Pre" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="182" Name="Annotate Cistern Post" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="183" Name="Annotate Cilium" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="229" Name="Annotate Touch" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="237" Name="Annotate Axon"/>
+<CreateStructureCommandAction TypeID="220" Name="Annotate Endocytosis"/>
+<CreateStructureCommandAction TypeID="246" Name="Annotate Mitochondria" AnnotationType="CurvePolygon"/>
+<CreateStructureCommandAction TypeID="85" Name="Annotate Adherens" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="260" Name="Annotate Peri GJ Adherens" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="259" Name="Annotate Bubbles and Swirls"/>
+<CreateStructureCommandAction TypeID="247" Name="Annotate Caveola"/>
+<CreateStructureCommandAction TypeID="262" Name="Coated Pits" AnnotationType="OpenCurve"/>
+<CreateStructureCommandAction TypeID="264" Name="Dense Core Vesicle" AnnotationType="Circle"/>
+<CreateStructureCommandAction TypeID="224" Name="Annotate IPL-INL Boundary" AnnotationType="Circle"/>
+<CreateStructureCommandAction TypeID="235" Name="Annotate IPL-GCL Boundary" AnnotationType="Circle"/>
+<CreateStructureCommandAction TypeID="265" Name="StartVaricosity"/>
+<CreateStructureCommandAction TypeID="267" Name="Annotate Glial Adjacency" AnnotationType="OpenCurve"/>
+<ToggleStructureTagCommandAction Name="Toggle Soma Tag" Tag="Soma" Value="1.0"/>
+<ToggleStructureTagCommandAction Name="Toggle Triad Associated Tag" Tag="TA"/>
+<ToggleStructureTagCommandAction Name="Toggle Marginal Triad Associated Tag" Tag="mNTA"/>
+<ToggleStructureTagCommandAction Name="Toggle Non-Triad Associated Tag" Tag="NTA"/>
+<ToggleStructureTagCommandAction Name="Toggle Bipolar Tag" Tag="Bipolar"/>
+<ToggleStructureTagCommandAction Name="Toggle Conventional Tag" Tag="Conventional"/>
+<ToggleStructureTagCommandAction Name="Toggle Glutamate Tag" Tag="Glutamate"/>
+<ToggleStructureTagCommandAction Name="Toggle GABA Tag" Tag="GABA"/>
+<ToggleStructureTagCommandAction Name="Toggle Glycine Tag" Tag="Glycine"/>
+<ToggleStructureTagCommandAction Name="Toggle Ribbon Tag" Tag="Ribbon"/>
+<ToggleStructureTagCommandAction Name="Toggle Peptide Tag" Tag="Peptide"/>
+<ToggleStructureTagCommandAction Name="Toggle TH Tag" Tag="Tyrosine hydroxylase"/>
+<ToggleStructureTagCommandAction Name="Toggle Stressed Tag" Tag="Stressed"/>
+<ToggleStructureTagCommandAction Name="Toggle In Progress Tag" Tag="In Progress" Value="@Username"/>
+<ToggleStructureTagCommandAction Name="Toggle Check Tag" Tag="Check" Value="@Username"/>
+<ToggleStructureTagCommandAction Name="Toggle Done Tag" Tag="Done" Value="@Username"/>
+<ToggleStructureTagCommandAction Name="Toggle Needs Work Tag" Tag="Needs Work" Value="@Username"/>
+<ToggleStructureTagCommandAction Name="Toggle No Axon" Tag="No Axon" Value="@Username"/>
+<ToggleLocationTagCommandAction Name="Toggle Cell Morphology Region Boundary Tag" Tag="Cell Morphology Region Boundary"/>
+<ToggleLocationTagCommandAction Name="Toggle Marker Tag" Tag="Study Specific Marker"/>
+<ToggleLocationTagCommandAction Name="Toggle VaricosityCap Tag" Tag="Varicosity Cap"/>
+<ToggleLocationTagCommandAction Name="Toggle Questionable Tag" Tag="Questionable" Value="@Username"/>
+<ToggleLocationTagCommandAction Name="Toggle Untraceable Tag" Tag="Untraceable" Value="@Username"/>
+<ToggleLocationTerminalCommandAction Name="Toggle Terminal Tag"/>
+<ChangeLocationAnnotationTypeAction Name="Convert Annotation To Circle" AnnotationType="Circle"/>
+<ChangeLocationAnnotationTypeAction Name="Convert Annotation To Open Curve" AnnotationType="OpenCurve"/>
+<ChangeLocationAnnotationTypeAction Name="Convert Annotation To Closed Curve" AnnotationType="ClosedCurve"/>
+<ChangeLocationAnnotationTypeAction Name="Convert Annotation To Curved Polygon" AnnotationType="CurvePolygon"/>
+</Actions>
+<Shortcuts>
+<Hotkey KeyName="C" Shift="1" Action="Annotate Cell with Closed Curve"/>
+<Hotkey KeyName="C" Action="Annotate Cell with Circle"/>
+<Hotkey KeyName="G" Action="Annotate Gap Junction"/>
+<Hotkey KeyName="S" Action="Annotate Conventional Synapse"/>
+<Hotkey KeyName="S" Ctrl="1" Action="Annotate Conventional Post-Synaptic Density"/>
+<Hotkey KeyName="B" Action="Annotate Bipolar Cell Conventional Synapse"/>
+<Hotkey KeyName="B" Ctrl="1" Action="Annotate Bipolar Cell Conventional Post-Synaptic Density"/>
+<Hotkey KeyName="R" Action="Annotate Ribbon Synapse"/>
+<Hotkey KeyName="R" Ctrl="1" Action="Annotate Ribbon Post-Synaptic Density"/>
+<Hotkey KeyName="V" Action="Annotate Multivesicular Body"/>
+<Hotkey KeyName="U" Action="Annotate Unknown Structure"/>
+<Hotkey KeyName="N" Action="Annotate Nucleolus"/>
+<Hotkey KeyName="D" Action="Annotate Neuroglial Adherens"/>
+<Hotkey KeyName="K" Action="Annotate Plaque-like Pre"/>
+<Hotkey KeyName="L" Action="Annotate Plaque-like Post"/>
+<Hotkey KeyName="Q" Action="Annotate Plaque"/>
+<Hotkey KeyName="H" Action="Annotate Cistern Pre"/>
+<Hotkey KeyName="W" Action="Annotate Cistern Post"/>
+<Hotkey KeyName="I" Action="Annotate Cilium"/>
+<Hotkey KeyName="T" Action="Annotate Touch"/>
+<Hotkey KeyName="X" Action="Annotate Axon"/>
+<Hotkey KeyName="E" Action="Annotate Endocytosis"/>
+<Hotkey KeyName="M" Action="Annotate Mitochondria"/>
+<Hotkey KeyName="O" Action="Annotate Bubbles and Swirls"/>
+<Hotkey KeyName="A" Action="Annotate Adherens"/>
+<Hotkey KeyName="F" Action="Annotate Glial Adjacency"/>
+<Hotkey KeyName="J" Action="Annotate Caveola"/>
+<Hotkey KeyName="A" Ctrl="1" Action="Annotate Peri GJ Adherens"/>
+<Hotkey KeyName="D" Ctrl="1" Action="Dense Core Vesicle"/>
+<Hotkey KeyName="I" Ctrl="1" Action="Annotate IPL-INL Boundary"/>
+<Hotkey KeyName="Z" Ctrl="1" Action="Annotate IPL-GCL Boundary"/>
+<Hotkey KeyName="R" Shift="1" Action="Toggle Ribbon Tag"/>
+<Hotkey KeyName="B" Shift="1" Action="Toggle Bipolar Tag"/>
+<Hotkey KeyName="S" Shift="1" Action="Toggle Conventional Tag"/>
+<Hotkey KeyName="E" Shift="1" Action="Toggle Glutamate Tag"/>
+<Hotkey KeyName="G" Shift="1" Action="Toggle Glycine Tag"/>
+<Hotkey KeyName="P" Shift="1" Action="Toggle Peptide Tag"/>
+<Hotkey KeyName="T" Shift="1" Action="Toggle TH Tag"/>
+<Hotkey KeyName="Y" Shift="1" Action="Toggle GABA Tag"/>
+<Hotkey KeyName="A" Shift="1" Action="Toggle Triad Associated Tag"/>
+<Hotkey KeyName="M" Shift="1" Action="Toggle Marginal Triad Associated Tag"/>
+<Hotkey KeyName="N" Shift="1" Action="Toggle Non-Triad Associated Tag"/>
+<Hotkey KeyName="R" Shift="1" Action="Toggle Cell Morphology Region Boundary Tag"/>
+<Hotkey KeyName="M" Shift="1" Action="Toggle Marker Tag"/>
+<Hotkey KeyName="X" Shift="1" Action="Toggle Terminal Tag"/>
+<Hotkey KeyName="V" Shift="1" Action="Toggle VaricosityCap Tag"/>
+<Hotkey KeyName="Q" Shift="1" Action="Toggle Questionable Tag"/>
+<Hotkey KeyName="U" Shift="1" Action="Toggle Untraceable Tag"/>
+<Hotkey KeyName="X" Ctrl="1" Action="Toggle No Axon"/>
+<Hotkey KeyName="M" Ctrl="1" Action="Toggle Stressed Tag"/>
+<Hotkey KeyName="F2" Action="Toggle Soma Tag"/>
+<Hotkey KeyName="F6" Action="Toggle In Progress Tag"/>
+<Hotkey KeyName="F7" Action="Toggle Check Tag"/>
+<Hotkey KeyName="F8" Action="Toggle Done Tag"/>
+<Hotkey KeyName="F9" Action="Toggle Needs Work Tag"/>
+<Hotkey KeyName="1" Action="Convert Annotation To Circle"/>
+<Hotkey KeyName="2" Action="Convert Annotation To Open Curve"/>
+<Hotkey KeyName="3" Action="Convert Annotation To Curved Polygon"/>
+</Shortcuts>
+</UserSettings>

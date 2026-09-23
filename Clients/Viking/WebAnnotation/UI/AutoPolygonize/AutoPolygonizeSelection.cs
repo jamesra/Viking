@@ -160,11 +160,35 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// World-space Douglas-Peucker after polygonize, then Catmull-Rom control-point fit
-        /// so MosaicShape stores curve-friendly vertices. Tolerance is in world units
-        /// (typically <c>PenSimplifyThreshold * downsample</c>, i.e. screen pixels).
-        /// Falls back to the DP ring when the fit self-intersects. Must not run the Catmull
-        /// fit on a raw marching-squares staircase.
+        /// Screen pixels the preview outline may leave the contour. One pixel tracked
+        /// mask noise; two drops that wiggle and still follows the membrane.
+        /// </summary>
+        internal const double MaskContourTolerancePixels = 2.0;
+
+        /// <summary>
+        /// Screen pixels a saved mask shape may leave the contour. Matches the pen
+        /// simplify default, which is tight enough to keep membrane lobes.
+        /// </summary>
+        internal const double CreatedShapeSimplifyPixels = 8.0;
+
+        /// <summary>
+        /// World-unit form of <see cref="MaskContourTolerancePixels"/> at the current view scale.
+        /// </summary>
+        public static double MaskContourToleranceWorld(double downsample) =>
+            MaskContourTolerancePixels * (downsample > 0 ? downsample : 1);
+
+        /// <summary>
+        /// World-unit form of <see cref="CreatedShapeSimplifyPixels"/> at the current view scale.
+        /// Applied when a proposal or segmentation polygon is written to a location.
+        /// </summary>
+        public static double CreatedShapeSimplifyWorld(double downsample) =>
+            CreatedShapeSimplifyPixels * (downsample > 0 ? downsample : 1);
+
+        /// <summary>
+        /// Douglas-Peucker on the mask contour, then a Catmull-Rom control-point fit so the
+        /// drawn curve stays within <paramref name="tolerance"/> of that polyline. Tolerance
+        /// is in world units (<see cref="MaskContourToleranceWorld"/>). Falls back to the
+        /// Douglas-Peucker ring when the curve fit self-intersects.
         /// </summary>
         public static Polygon SimplifyProposal(Polygon polygon, double tolerance)
         {
@@ -173,8 +197,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Replaces Douglas-Peucker vertices with Catmull-Rom control points. Called after
-        /// staircase collapse; fitting the raw marching-squares ring preserves dense stairs.
+        /// Replaces Douglas-Peucker vertices with Catmull-Rom control points so the drawn
+        /// curve, not only the control polygon, stays inside the tolerance.
         /// </summary>
         internal static Polygon FitCurveControlPoints(Polygon polygon, double tolerance)
         {
@@ -197,7 +221,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// True when live downsample moved by 2× or more versus the cached upload.
-        /// Same rule as annotation reload on camera change.
+        /// Same rule as annotation reload on camera change. Used by image reuse, which
+        /// must recapture in both directions.
         /// </summary>
         public static bool DownsampleChangedByFactorOfTwo(double liveDownsample, double cachedDownsample)
         {
@@ -205,6 +230,20 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return true;
 
             return liveDownsample >= 2 * cachedDownsample || liveDownsample <= cachedDownsample / 2;
+        }
+
+        /// <summary>
+        /// True when the live view is at least twice as fine as the downsample recorded
+        /// when auto-segment last completed. Coarser views return false so an existing
+        /// proposal is kept. Called by <see cref="AutoPolygonizeCache.ShouldProcess"/>.
+        /// A non-positive completed downsample has no baseline and does not resubmit.
+        /// </summary>
+        public static bool ResolutionIncreasedByFactorOfTwo(double liveDownsample, double completedDownsample)
+        {
+            if (completedDownsample <= 0 || liveDownsample <= 0)
+                return false;
+
+            return liveDownsample <= completedDownsample / 2;
         }
 
         /// <summary>

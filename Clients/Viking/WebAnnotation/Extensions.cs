@@ -6,7 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 
@@ -175,9 +175,9 @@ namespace WebAnnotation
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command) => StringToLocationType(command.AnnotationType);
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command) => StringToLocationType(command.AnnotationType);
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
 
         public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
         {

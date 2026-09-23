@@ -33,6 +33,9 @@ namespace WebAnnotation.WPF.Forms
         private bool _originalAutoPolygonizeCircles;
         private double _originalAutoPolygonizeMinRadiusNanometers;
         private bool _originalAutoPolygonizeOverlayMasks;
+        private bool _originalAutoPolygonizeOverlayPrompts;
+        private bool _originalAutoPolygonizeHideSegmentationRings;
+        private double _originalAutoPolygonizeMaxDownsample;
         private double _originalPolygonPointRadius;
         private double _originalSmallestRenderedSize;
         #endregion
@@ -305,7 +308,8 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>
-        /// Debug overlay of returned SAM2 masks on auto-polygonize proposals. Not intended to stay on.
+        /// Debug overlay of returned SAM2 masks on auto-polygonize proposals.
+        /// Debug builds reset this to on; release builds reset it to off.
         /// </summary>
         private bool _autoPolygonizeOverlayMasks;
         public bool AutoPolygonizeOverlayMasks
@@ -316,6 +320,41 @@ namespace WebAnnotation.WPF.Forms
                 if (_autoPolygonizeOverlayMasks != value)
                 {
                     _autoPolygonizeOverlayMasks = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Green foreground and red background clicks on auto-polygonize proposals.
+        /// Debug builds reset this to on; release builds reset it to off. Independent of the mask overlay.
+        /// </summary>
+        private bool _autoPolygonizeOverlayPrompts;
+        public bool AutoPolygonizeOverlayPrompts
+        {
+            get => _autoPolygonizeOverlayPrompts;
+            set
+            {
+                if (_autoPolygonizeOverlayPrompts != value)
+                {
+                    _autoPolygonizeOverlayPrompts = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Hides auto-polygonize outlines while masks are shown. The checkbox is enabled only when masks are on.
+        /// </summary>
+        private bool _autoPolygonizeHideSegmentationRings;
+        public bool AutoPolygonizeHideSegmentationRings
+        {
+            get => _autoPolygonizeHideSegmentationRings;
+            set
+            {
+                if (_autoPolygonizeHideSegmentationRings != value)
+                {
+                    _autoPolygonizeHideSegmentationRings = value;
                     OnPropertyChanged();
                 }
             }
@@ -334,6 +373,25 @@ namespace WebAnnotation.WPF.Forms
                 if (Math.Abs(_autoPolygonizeMinRadiusNanometers - value) > 0.001)
                 {
                     _autoPolygonizeMinRadiusNanometers = MathUtils.Clamp(value, 0.0, 10000.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Coarsest camera downsample at which auto-segment still runs. Default 8.
+        /// A coarser view is not sent to the segmentation service.
+        /// </summary>
+        private double _autoPolygonizeMaxDownsample;
+        public double AutoPolygonizeMaxDownsample
+        {
+            get => _autoPolygonizeMaxDownsample;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, 1.0, 256.0);
+                if (Math.Abs(_autoPolygonizeMaxDownsample - clamped) > 0.001)
+                {
+                    _autoPolygonizeMaxDownsample = clamped;
                     OnPropertyChanged();
                 }
             }
@@ -432,7 +490,10 @@ namespace WebAnnotation.WPF.Forms
             double smallestRenderedSize,
             bool autoPolygonizeCircles,
             double autoPolygonizeMinRadiusNanometers,
-            bool autoPolygonizeOverlayMasks = false)
+            double autoPolygonizeMaxDownsample,
+            bool autoPolygonizeOverlayMasks = false,
+            bool autoPolygonizeOverlayPrompts = false,
+            bool autoPolygonizeHideSegmentationRings = false)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -452,7 +513,10 @@ namespace WebAnnotation.WPF.Forms
             _smallestRenderedSize = smallestRenderedSize;
             _autoPolygonizeCircles = autoPolygonizeCircles;
             _autoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
+            _autoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
             _autoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
+            _autoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
+            _autoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
 
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -474,7 +538,10 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             _originalAutoPolygonizeCircles = autoPolygonizeCircles;
             _originalAutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
+            _originalAutoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
             _originalAutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
+            _originalAutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
+            _originalAutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
             _originalPolygonPointRadius = polygonPointRadius;
             _originalSmallestRenderedSize = smallestRenderedSize;
 
@@ -497,7 +564,10 @@ namespace WebAnnotation.WPF.Forms
             SegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             AutoPolygonizeCircles = autoPolygonizeCircles;
             AutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
+            AutoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
             AutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
+            AutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
+            AutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
             PolygonPointRadius = polygonPointRadius;
             SmallestRenderedSize = smallestRenderedSize;
 
@@ -527,7 +597,10 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationEdgeCleanupRadius = _segmentationEdgeCleanupRadius;
             _originalAutoPolygonizeCircles = _autoPolygonizeCircles;
             _originalAutoPolygonizeMinRadiusNanometers = _autoPolygonizeMinRadiusNanometers;
+            _originalAutoPolygonizeMaxDownsample = _autoPolygonizeMaxDownsample;
             _originalAutoPolygonizeOverlayMasks = _autoPolygonizeOverlayMasks;
+            _originalAutoPolygonizeOverlayPrompts = _autoPolygonizeOverlayPrompts;
+            _originalAutoPolygonizeHideSegmentationRings = _autoPolygonizeHideSegmentationRings;
             _originalPolygonPointRadius = _polygonPointRadius;
             _originalSmallestRenderedSize = _smallestRenderedSize;
         }
@@ -553,7 +626,10 @@ namespace WebAnnotation.WPF.Forms
             _segmentationEdgeCleanupRadius = _originalSegmentationEdgeCleanupRadius;
             _autoPolygonizeCircles = _originalAutoPolygonizeCircles;
             _autoPolygonizeMinRadiusNanometers = _originalAutoPolygonizeMinRadiusNanometers;
+            _autoPolygonizeMaxDownsample = _originalAutoPolygonizeMaxDownsample;
             _autoPolygonizeOverlayMasks = _originalAutoPolygonizeOverlayMasks;
+            _autoPolygonizeOverlayPrompts = _originalAutoPolygonizeOverlayPrompts;
+            _autoPolygonizeHideSegmentationRings = _originalAutoPolygonizeHideSegmentationRings;
             _polygonPointRadius = _originalPolygonPointRadius;
             _smallestRenderedSize = _originalSmallestRenderedSize;
 
@@ -570,7 +646,7 @@ namespace WebAnnotation.WPF.Forms
             _defaultLocationJumpDownsample = 4.0;
             _adjacentLocationRadiusScalar = 0.5;
             _numClosedCurveInterpolationPointsForDisplay = 4;
-            _penSimplifyThreshold = 12;
+            _penSimplifyThreshold = 8;
             _minRadius = 0.5;
             _polygonOpacityParentless = 0.5;
             _polygonOpacityWithParent = 0.33;
@@ -581,7 +657,15 @@ namespace WebAnnotation.WPF.Forms
             _segmentationEdgeCleanupRadius = 2;
             _autoPolygonizeCircles = false;
             _autoPolygonizeMinRadiusNanometers = 75.0;
+            _autoPolygonizeMaxDownsample = 8.0;
+#if DEBUG
+            _autoPolygonizeOverlayMasks = true;
+            _autoPolygonizeOverlayPrompts = true;
+#else
             _autoPolygonizeOverlayMasks = false;
+            _autoPolygonizeOverlayPrompts = false;
+#endif
+            _autoPolygonizeHideSegmentationRings = false;
             _polygonPointRadius = 6.0;
             _smallestRenderedSize = 0.5;
 

@@ -1,4 +1,4 @@
-using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -23,8 +23,6 @@ using Viking.ViewModels;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
-using Viking.DependencyInjection;
-using Viking.Services.Grpc;
 using WebAnnotation.Actions;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Commands;
@@ -126,14 +124,7 @@ namespace WebAnnotation
                 LocationObj loc = Store.Locations.GetObjectByID(locId, true);
                 if (loc is null)
                 {
-                    string volumeLabel = Viking.UI.State.IdentityVolumeName
-                        ?? Viking.UI.State.volume?.Name
-                        ?? "(unknown volume)";
-                    MessageBox.Show(
-                        $"Location ID {locId} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
-                        "Goto Location",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                    ShowLocationLookupFailure(locId);
                     return;
                 }
 
@@ -182,6 +173,14 @@ namespace WebAnnotation
             LocationObj loc = Store.Locations.GetObjectByID(locID, true);
             if (loc is null)
             {
+                if (IsAnnotationAccessDenied(Store.Locations.LastServerFetchError))
+                {
+                    Viking.UI.State.StartupArguments.Remove("Location");
+                    StopStartupLocationRetry();
+                    ShowLocationLookupFailure(locID);
+                    return;
+                }
+
                 if (_startupLocationAttempts < MaxStartupLocationAttempts)
                 {
                     ScheduleStartupLocationRetry();
@@ -189,20 +188,53 @@ namespace WebAnnotation
                 }
 
                 Viking.UI.State.StartupArguments.Remove("Location");
-                string volumeLabel = Viking.UI.State.IdentityVolumeName
-                    ?? Viking.UI.State.volume?.Name
-                    ?? "(unknown volume)";
-                MessageBox.Show(
-                    $"Location ID {locID} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
-                    "Goto Location",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                ShowLocationLookupFailure(locID);
                 return;
             }
 
             Viking.UI.State.StartupArguments.Remove("Location");
             StopStartupLocationRetry();
             GoToLocation(loc);
+        }
+
+        /// <summary>
+        /// Tells a deep-link user why a Location ID did not load.
+        /// A denied GetLocationByID used to share the missing-ID text, which reads as a bad link.
+        /// </summary>
+        private static void ShowLocationLookupFailure(long locId)
+        {
+            string volumeLabel = Viking.UI.State.IdentityVolumeName
+                ?? Viking.UI.State.volume?.Name
+                ?? "(unknown volume)";
+            if (IsAnnotationAccessDenied(Store.Locations.LastServerFetchError))
+            {
+                MessageBox.Show(
+                    $"Location ID {locId} could not be loaded in volume {volumeLabel} because the annotation service denied access.\n\nThe ID may still exist. This is not a missing location.",
+                    "Goto Location",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            MessageBox.Show(
+                $"Location ID {locId} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
+                "Goto Location",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// True when a store fetch failed with WCF access denied, including one level of wrapping.
+        /// </summary>
+        private static bool IsAnnotationAccessDenied(Exception error)
+        {
+            for (Exception current = error; current != null; current = current.InnerException)
+            {
+                if (current is System.ServiceModel.Security.SecurityAccessDeniedException)
+                    return true;
+            }
+
+            return false;
         }
 
         private void ScheduleStartupLocationRetry()
@@ -649,6 +681,15 @@ namespace WebAnnotation
         }
 
         /// <summary>
+        /// Restarts the auto-segment idle wait when it is already on.
+        /// Called after the max-downsample preference changes.
+        /// </summary>
+        public void RequestAutoPolygonizeIdlePass()
+        {
+            autoPolygonizeController?.RequestIdlePass();
+        }
+
+        /// <summary>
         /// Asks auto-polygonize to drop the previous server's screen image and, when the new
         /// endpoint can accept work, segment the current view again.
         /// </summary>
@@ -663,6 +704,24 @@ namespace WebAnnotation
         public void SetAutoPolygonizeOverlayMasksEnabled(bool enabled)
         {
             autoPolygonizeController?.OnOverlayMasksChanged(enabled);
+        }
+
+        /// <summary>
+        /// Forwards the debug prompt-dot preference. Points are already stored on each proposal;
+        /// the next draw shows or hides them.
+        /// </summary>
+        public void SetAutoPolygonizeOverlayPromptsEnabled(bool enabled)
+        {
+            autoPolygonizeController?.OnOverlayPromptsChanged(enabled);
+        }
+
+        /// <summary>
+        /// Redraws auto-polygonize proposals after a preference that only changes what is painted,
+        /// such as hiding rings while the mask overlay is on.
+        /// </summary>
+        public void RefreshAutoPolygonizeOverlay()
+        {
+            autoPolygonizeController?.InvalidateOverlay();
         }
 
         private void OnParentDisposed(object sender, EventArgs e)
@@ -1289,22 +1348,6 @@ break;
             switch (e.KeyCode)
             {
                 //Refresh the annotations on F5
-                case Keys.CapsLock:
-
-                    if (_Parent.CurrentCommand is null || _Parent.CurrentCommand is DefaultCommand)
-                    {
-                        var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                        long structureTypeId = (Viking.UI.State.SelectedObject is WebAnnotation.ViewModel.StructureType st)
-                            ? st.modelObj.ID
-                            : Store.StructureTypes[1].ID;
-                        _Parent.CurrentCommand = new SegmentationCommand(this.Parent,
-                            null,
-                            null,
-                            new SegmentationCommand.OnCommandSuccess((outputPolygon) => SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon)),
-                            channelManager,
-                            structureTypeId);
-                    }
-                    return;
                 case Keys.F5:
                     ResetAnnotations();
                     return;
@@ -1380,7 +1423,7 @@ break;
                             return;
                         }
 
-                        rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
+                        rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
                         if (a != null)
                         {
 

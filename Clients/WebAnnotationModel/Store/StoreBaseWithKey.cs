@@ -383,6 +383,14 @@ namespace WebAnnotationModel
         public IEnumerable<OBJECT> Values => IDToObject.Values;
 
         /// <summary>
+        /// Failure from the last <see cref="GetObjectByID(KEY, bool, bool)"/> server fetch.
+        /// Null after a fetch that returned a row or a clean miss. A cache hit does not change it.
+        /// Goto Location reads this so a <see cref="System.ServiceModel.Security.SecurityAccessDeniedException"/>
+        /// is not reported as a missing ID.
+        /// </summary>
+        public Exception LastServerFetchError { get; private set; }
+
+        /// <summary>
         /// Gets the requested location, first checking locally, then asking the server
         /// </summary>
         /// <param name="ID"></param>
@@ -407,6 +415,7 @@ namespace WebAnnotationModel
 
             //If not check if the server knows what we're asking for
             WCFOBJECT data = null;
+            Exception fetchError = null;
             try
             {
                 var proxy = CreateProxy();
@@ -420,8 +429,11 @@ namespace WebAnnotationModel
             {
                 Trace.WriteLine(e.ToString(), "WebAnnotation");
                 Trace.WriteLine(e.Message, "WebAnnotation");
+                fetchError = e;
                 data = null;
             }
+
+            LastServerFetchError = fetchError;
 
             if (data != null)
             {

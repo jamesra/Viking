@@ -77,6 +77,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\ProductVersion.cs" Link="ProductVersion.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Exclude ASP.NET Core Program.cs - this is an ASP.NET Framework project using Global.asax -->
     <Compile Remove="Program.cs" />
     <None Include="Program.cs" />

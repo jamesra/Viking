@@ -12,9 +12,9 @@
     <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.68.0</ApplicationVersion>
-    <FileVersion>1.2.68.0</FileVersion>
-    <AssemblyVersion>1.2.68.0</AssemblyVersion>
+    <ApplicationVersion>1.2.70.0</ApplicationVersion>
+    <FileVersion>1.2.70.0</FileVersion>
+    <AssemblyVersion>1.2.70.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
@@ -34,6 +34,9 @@
     <PackageReference Include="protobuf-net" Version="3.2.56" />
     <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\Servers\Shared\ProductVersion.cs" Link="ProductVersion.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />

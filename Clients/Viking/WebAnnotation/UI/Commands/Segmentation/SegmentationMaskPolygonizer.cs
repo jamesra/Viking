@@ -7,20 +7,24 @@ using System.Linq;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// Converts a SAM2 binary mask to world-space <see cref="Polygon"/>s.
-    /// Masks are downsampled before morphological cleanup and marching squares so a
-    /// 4K capture does not run open/close at full res. Large-annotation eligibility
-    /// is "fits in the visible scene" on the auto-polygonize path, not a mask-area gate here.
+    /// Converts a SAM2 probability mask to world-space <see cref="Polygon"/>s.
+    /// Each byte is a probability in 0–255. The contour is the logit-zero crossing
+    /// at <see cref="SoftMaskIsoLevel"/>, interpolated between pixels.
+    /// Callers reduce vertex count with <c>MaskContourTolerancePixels</c> (one screen pixel).
+    /// This type does not simplify.
     /// </summary>
     internal static class SegmentationMaskPolygonizer
     {
-        private const double SimplificationTolerancePixels = 2.0;
+        /// <summary>
+        /// Contour level for a uint8 probability mask. Probability 0.5, SAM2's logit zero, encodes as 127.5.
+        /// </summary>
+        internal const float SoftMaskIsoLevel = 127.5f;
 
         /// <summary>
-        /// Marching squares runs on a mask no larger than this; extra resolution is downsampled away.
+        /// First uint8 value on the inside of <see cref="SoftMaskIsoLevel"/>.
+        /// Rounded probability 0.5 is 128. Binary masks of 0 and 255 still count 255 as inside.
         /// </summary>
-        internal const int PolygonizeMaxMaskPixels = 512 * 512;
-
+        internal const byte SoftMaskForeground = 128;
         /// <summary>
         /// Timing and pixel counts from optional morphological cleanup, used by segmentation profile logs.
         /// </summary>
@@ -90,18 +94,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             int foregroundBefore = CountForeground(maskData);
 
-            var (polygonMask, polygonWidth, polygonHeight, scale) =
-                DownsampleUntil(maskData, maskWidth, maskHeight, PolygonizeMaxMaskPixels);
-
-            byte[] workingMask = polygonMask;
+            byte[] workingMask = maskData;
             long cleanupMs = 0;
             if (edgeCleanupRadius > 0)
             {
-                int scaledRadius = scale <= 1
-                    ? edgeCleanupRadius
-                    : Math.Max(1, (int)Math.Round(edgeCleanupRadius / (double)scale));
                 Stopwatch cleanupTimer = Stopwatch.StartNew();
-                workingMask = CleanMask(polygonMask, polygonWidth, polygonHeight, scaledRadius);
+                workingMask = ApplyEdgeCleanup(maskData, maskWidth, maskHeight, edgeCleanupRadius);
                 cleanupMs = cleanupTimer.ElapsedMilliseconds;
             }
 
@@ -110,39 +108,66 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             IReadOnlyList<Polygon> cleanedPolygons = PolygonizeMask(
                 workingMask,
-                polygonWidth,
-                polygonHeight,
+                maskWidth,
+                maskHeight,
                 offsetX,
                 offsetY,
                 imageWidth,
                 imageHeight,
                 viewportBounds,
                 holeDropFraction,
-                preserveHolesContainingWorldPoints,
-                scale);
+                preserveHolesContainingWorldPoints);
 
             if (IsUsable(cleanedPolygons))
                 return cleanedPolygons;
 
-            if (edgeCleanupRadius > 0 && !ReferenceEquals(workingMask, polygonMask))
+            if (edgeCleanupRadius > 0 && !ReferenceEquals(workingMask, maskData))
             {
                 IReadOnlyList<Polygon> originalPolygons = PolygonizeMask(
-                    polygonMask,
-                    polygonWidth,
-                    polygonHeight,
+                    maskData,
+                    maskWidth,
+                    maskHeight,
                     offsetX,
                     offsetY,
                     imageWidth,
                     imageHeight,
                     viewportBounds,
                     holeDropFraction,
-                    preserveHolesContainingWorldPoints,
-                    scale);
+                    preserveHolesContainingWorldPoints);
                 if (IsUsable(originalPolygons))
                     return originalPolygons;
             }
 
             return cleanedPolygons;
+        }
+
+        /// <summary>
+        /// Removes wisps and fills notches on the decision boundary, then writes those edits
+        /// back onto the probability field. Pixels that remain inside keep their original
+        /// soft values so the contour still interpolates the SAM2 edge.
+        /// </summary>
+        internal static byte[] ApplyEdgeCleanup(byte[] field, int width, int height, int radius)
+        {
+            if (field is null || radius <= 0 || width <= 0 || height <= 0)
+                return field;
+
+            byte[] binary = new byte[field.Length];
+            for (int i = 0; i < field.Length; i++)
+                binary[i] = field[i] >= SoftMaskForeground ? (byte)255 : (byte)0;
+
+            byte[] cleaned = CleanMask(binary, width, height, radius);
+            byte[] output = new byte[field.Length];
+            for (int i = 0; i < field.Length; i++)
+            {
+                if (cleaned[i] == 0)
+                    output[i] = 0;
+                else if (field[i] >= SoftMaskForeground)
+                    output[i] = field[i];
+                else
+                    output[i] = 255;
+            }
+
+            return output;
         }
 
         /// <summary>
@@ -182,7 +207,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Marching-squares the (possibly downsampled) mask, keeps the largest exterior, then maps to world.
+        /// Interpolates the probability iso-contour, keeps the largest exterior, then maps to world.
         /// </summary>
         private static IReadOnlyList<Polygon> PolygonizeMask(
             byte[] maskData,
@@ -194,12 +219,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int imageHeight,
             Rectangle viewportBounds,
             double holeDropFraction,
-            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
-            int scale = 1)
+            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints)
         {
-            bool[] mask = Array.ConvertAll(maskData, value => value > 0);
-            List<Vector2[]> contours = [.. MarchingSquares.FindContours(mask, maskWidth, maskHeight)
-                .Select(ring => NormalizeRing(ring, offsetX, offsetY, scale))
+            float[] field = new float[maskData.Length];
+            for (int i = 0; i < maskData.Length; i++)
+                field[i] = maskData[i];
+
+            List<Vector2[]> contours = [.. MarchingSquares.FindContours(field, maskWidth, maskHeight, SoftMaskIsoLevel)
+                .Select(ring => NormalizeRing(ring, offsetX, offsetY))
                 .Where(ring => ring.Length >= 4)];
 
             if (contours.Count == 0)
@@ -259,9 +286,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            Polygon simplifiedPolygon = TrySimplify(pixelPolygon, scale);
             Polygon worldPolygon = TransformToWorld(
-                simplifiedPolygon,
+                pixelPolygon,
                 imageWidth,
                 imageHeight,
                 viewportBounds);
@@ -279,7 +305,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int count = 0;
             for (int i = 0; i < maskData.Length; i++)
             {
-                if (maskData[i] > 0)
+                if (maskData[i] >= SoftMaskForeground)
                     count++;
             }
 
@@ -353,80 +379,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Repeatedly halves the mask until it fits <paramref name="maxPixels"/>. Scale is applied in <see cref="NormalizeRing"/>.
+        /// Translates contour vertices by the mask offset and closes the ring.
         /// </summary>
-        private static (byte[] data, int width, int height, int scale) DownsampleUntil(
-            byte[] maskData,
-            int width,
-            int height,
-            int maxPixels)
+        private static Vector2[] NormalizeRing(IEnumerable<Vector2> ring, int offsetX, int offsetY)
         {
-            byte[] data = maskData;
-            int scale = 1;
-            while (width * height > maxPixels && width >= 2 && height >= 2)
-            {
-                data = DownsampleByTwo(data, width, height);
-                width /= 2;
-                height /= 2;
-                scale *= 2;
-            }
-
-            return (data, width, height, scale);
-        }
-
-        /// <summary>
-        /// 2×2 OR downsample so thin foreground is not dropped.
-        /// </summary>
-        internal static byte[] DownsampleByTwo(byte[] maskData, int width, int height)
-        {
-            int newWidth = width / 2;
-            int newHeight = height / 2;
-            byte[] output = new byte[newWidth * newHeight];
-            for (int y = 0; y < newHeight; y++)
-            {
-                int sourceY = y * 2;
-                int destRow = y * newWidth;
-                for (int x = 0; x < newWidth; x++)
-                {
-                    int sourceX = x * 2;
-                    bool on =
-                        maskData[(sourceY * width) + sourceX] > 0 ||
-                        maskData[(sourceY * width) + sourceX + 1] > 0 ||
-                        maskData[((sourceY + 1) * width) + sourceX] > 0 ||
-                        maskData[((sourceY + 1) * width) + sourceX + 1] > 0;
-                    output[destRow + x] = on ? (byte)255 : (byte)0;
-                }
-            }
-
-            return output;
-        }
-
-        /// <summary>
-        /// Maps downsampled contour vertices back to full-mask pixel space, then closes the ring.
-        /// </summary>
-        private static Vector2[] NormalizeRing(IEnumerable<Vector2> ring, int offsetX, int offsetY, int scale)
-        {
-            int safeScale = scale < 1 ? 1 : scale;
             Vector2[] translated = [.. ring.Select(point =>
-                new Vector2((point.X * safeScale) + offsetX, (point.Y * safeScale) + offsetY))];
+                new Vector2(point.X + offsetX, point.Y + offsetY))];
             return [.. translated.RemoveAdjacentDuplicates().EnsureClosedRing()];
         }
 
         /// <summary>
-        /// Douglas-Peucker in mask-pixel space. Tolerance scales with downsample so a 2px rule
-        /// still collapses staircases after <see cref="NormalizeRing"/> multiplies vertices by <paramref name="scale"/>.
-        /// Catmull-Rom <c>Simplify</c> is not used: it fits the interpolated staircase and leaves traces dense.
-        /// </summary>
-        private static Polygon TrySimplify(Polygon polygon, int scale)
-        {
-            double tolerance = SimplificationTolerancePixels * Math.Max(1, scale);
-            return SimplifyRings(polygon, tolerance);
-        }
-
-        /// <summary>
-        /// Reduces each ring with Douglas-Peucker, then rebuilds the polygon.
-        /// Retries at half tolerance when the result is invalid so a dense original is not kept
-        /// just because the first pass self-intersected.
+        /// Douglas-Peucker each ring in the polygon's own coordinates, then rebuilds it.
+        /// Auto-polygonize and interactive segmentation pass one screen pixel in world units.
+        /// Retries at half tolerance when the
+        /// result self-intersects so a dense marching-squares ring is not kept only because the
+        /// first pass was invalid.
         /// </summary>
         internal static Polygon SimplifyRings(Polygon polygon, double tolerance)
         {
@@ -523,7 +490,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
                 catch (ArgumentException)
                 {
-                    // Simplification can collapse a very narrow hole after coordinate conversion.
+                    // A ring that touches the exterior after the Y flip is not a valid hole.
                 }
             }
 

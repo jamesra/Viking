@@ -77,6 +77,20 @@ namespace WebAnnotation
             menuSelectSegmentation.Click += OnSelectSegmentationService;
             menuRoot.DropDownItems.Add(menuSelectSegmentation);
 
+            ToolStripMenuItem menuUpdateVolumePositions = new("Update Volume Positions…");
+            menuUpdateVolumePositions.Click += OnUpdateVolumePositions;
+            ToolStripSeparator menuUpdateVolumePositionsSeparator = new();
+            menuUpdateVolumePositions.Visible = VolumeAccessRoles.HasReviewAccess();
+            menuUpdateVolumePositionsSeparator.Visible = menuUpdateVolumePositions.Visible;
+            menuRoot.DropDownOpening += (_, _) =>
+            {
+                bool canReview = VolumeAccessRoles.HasReviewAccess();
+                menuUpdateVolumePositions.Visible = canReview;
+                menuUpdateVolumePositionsSeparator.Visible = canReview;
+            };
+            menuRoot.DropDownItems.Add(menuUpdateVolumePositionsSeparator);
+            menuRoot.DropDownItems.Add(menuUpdateVolumePositions);
+
             return menuRoot;
         }
 
@@ -131,7 +145,10 @@ namespace WebAnnotation
                 Global.AnnotationSettings.SmallestRenderedSize,
                 Global.AnnotationSettings.AutoPolygonizeCircles,
                 Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers,
-                Global.AnnotationSettings.AutoPolygonizeOverlayMasks
+                Global.AnnotationSettings.AutoPolygonizeMaxDownsample,
+                Global.AnnotationSettings.AutoPolygonizeOverlayMasks,
+                Global.AnnotationSettings.AutoPolygonizeOverlayPrompts,
+                Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -258,7 +275,10 @@ namespace WebAnnotation
             Global.AnnotationSettings.SegmentationEdgeCleanupRadius = viewModel.SegmentationEdgeCleanupRadius;
             Global.AnnotationSettings.AutoPolygonizeCircles = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers = viewModel.AutoPolygonizeMinRadiusNanometers;
+            Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
             Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
+            Global.AnnotationSettings.AutoPolygonizeOverlayPrompts = viewModel.AutoPolygonizeOverlayPrompts;
+            Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings = viewModel.AutoPolygonizeHideSegmentationRings;
             if (menuAutoPolygonizeCircles != null)
                 menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
@@ -628,6 +648,14 @@ namespace WebAnnotation
 
             if (confirmed == true)
                 SegmentationServiceSession.ApplyEndpoint(selectedEndpoint);
+        }
+
+        private static void OnUpdateVolumePositions(object sender, EventArgs e)
+        {
+            if (!VolumeAccessRoles.HasReviewAccess())
+                return;
+
+            _ = VolumePositionUpdateLauncher.RunAsync();
         }
 
         [MenuItem("Open Structure")]

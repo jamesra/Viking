@@ -1034,6 +1034,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
+            polygons = SimplifyToMaskContour(polygons);
+
             if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
                 return;
 
@@ -1081,12 +1083,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double? holeDropFraction = null,
             int? edgeCleanupRadius = null)
         {
-            IReadOnlyList<Polygon> polygons = viewportSession.CreatePolygonsFromResponse(
+            IReadOnlyList<Polygon> polygons = SimplifyToMaskContour(viewportSession.CreatePolygonsFromResponse(
                 response,
                 holeDropFraction,
                 backgroundPoints,
-                edgeCleanupRadius);
+                edgeCleanupRadius));
             ApplyPolygonViews(polygons, response.Segments.Count);
+        }
+
+        /// <summary>
+        /// Keeps the preview outline within two screen pixels of the mask contour.
+        /// The saved polygon is simplified further in <see cref="Execute"/>.
+        /// </summary>
+        private IReadOnlyList<Polygon> SimplifyToMaskContour(IReadOnlyList<Polygon> polygons)
+        {
+            if (polygons is null || polygons.Count == 0)
+                return polygons;
+
+            double tolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(Parent.Downsample);
+            return [.. polygons.Select(polygon => AutoPolygonizeSelection.SimplifyProposal(polygon, tolerance))];
         }
 
         /// <summary>
@@ -1200,8 +1215,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 for (int i = 0; i < maskData.Length; i++)
                 {
-                    // Non-zero mask values become the mask color
-                    pixels[i] = maskData[i] > 0 ? maskColor : Color.Transparent;
+                    pixels[i] = maskData[i] >= SegmentationMaskPolygonizer.SoftMaskForeground
+                        ? maskColor
+                        : Color.Transparent;
                 }
 
                 texture.SetData(pixels);
@@ -1330,9 +1346,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
-                this.Output = selectedPolygon;
+                Polygon savedPolygon = AutoPolygonizeSelection.SimplifyProposal(
+                    selectedPolygon,
+                    AutoPolygonizeSelection.CreatedShapeSimplifyWorld(Parent.Downsample));
+                this.Output = savedPolygon;
                 placementFinished = true;
-                this?.success_callback(selectedPolygon);
+                this?.success_callback(savedPolygon);
                 // Create structure and location using the selected polygon
                 //CreateAnnotationFromPolygon(selectedPolygon);
 

@@ -154,7 +154,7 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("12")]
+        [global::System.Configuration.DefaultSettingValueAttribute("8")]
         public int PenSimplifyThreshold {
             get {
                 return ((int)(this["PenSimplifyThreshold"]));

@@ -39,6 +39,19 @@ namespace Viking.Tokens
         }
 
         /// <summary>
+        /// True when <paramref name="accessToken"/> has a JWT header and payload.
+        /// Reference-token handles are opaque and return false, so scope claims cannot be read.
+        /// </summary>
+        public static bool IsCompactJwt(string accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+                return false;
+
+            string[] parts = accessToken.Split('.');
+            return parts.Length >= 2 && parts[0].Length > 0 && parts[1].Length > 0;
+        }
+
+        /// <summary>
         /// Parses scope claims from a compact JWT without validating the signature.
         /// </summary>
         public static bool TryGetScopes(string accessToken, out IReadOnlyList<string> scopes)

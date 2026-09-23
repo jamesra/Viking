@@ -34,6 +34,21 @@ namespace GeometryTests.Algorithms
         }
 
         [TestMethod]
+        public void FindContours_SoftEdge_InterpolatesBetweenPixelCenters()
+        {
+            float[] field = new float[4];
+            field[2] = 200f;
+            field[3] = 200f;
+
+            IReadOnlyList<Vector2[]> contours = MarchingSquares.FindContours(field, 2, 2, 127.5f);
+
+            Assert.AreEqual(1, contours.Count);
+            double expectedY = 127.5 / 200.0;
+            Assert.IsTrue(contours[0].Any(point => Math.Abs(point.Y - expectedY) < 0.002),
+                $"Expected a vertex near y={expectedY}");
+        }
+
+        [TestMethod]
         public void FindContours_EmptyMask_ReturnsNoRings()
         {
             IReadOnlyList<Vector2[]> contours = MarchingSquares.FindContours(new bool[4], 2, 2);

@@ -255,15 +255,72 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Preference toggle for the debug SAM2 mask overlay and last-sent prompt
-        /// dots. Turning it off disposes GPU textures; turning it on does not
-        /// backfill mask textures, but stored prompts still draw.
+        /// Preference toggle for the debug SAM2 mask overlay.
+        /// Turning it off disposes GPU textures. Turning it on attaches textures for
+        /// proposals that already kept mask bytes, and asks the idle batch to segment
+        /// again when those bytes were never stored. Prompt dots are a separate preference.
         /// </summary>
-        public void OnOverlayMasksChanged(bool enabled)
+        public void OnOverlayMasksChanged(bool showMasks)
         {
-            if (!enabled)
-                DisposeAllMaskOverlays();
+            AutoPolygonizeProposal[] snapshot;
+            lock (proposalLock)
+                snapshot = [.. DistinctProposalsUnlocked()];
 
+            if (!showMasks)
+            {
+                foreach (AutoPolygonizeProposal proposal in snapshot)
+                    proposal.DisposeMaskOverlay();
+
+                parent.Invalidate();
+                return;
+            }
+
+            bool needsResegment = false;
+            foreach (AutoPolygonizeProposal proposal in snapshot)
+            {
+                if (proposal.HasMaskSource)
+                    proposal.EnsureMaskOverlay(parent.Device);
+                else
+                    needsResegment = true;
+            }
+
+            if (needsResegment)
+                RequestMaskRefresh(snapshot);
+
+            parent.Invalidate();
+        }
+
+        /// <summary>
+        /// Drops the cache skip for on-screen proposals that have no mask bytes and restarts
+        /// the idle settle so the next batch stores a mask. Outlines stay up until that batch publishes.
+        /// </summary>
+        private void RequestMaskRefresh(IReadOnlyList<AutoPolygonizeProposal> snapshot)
+        {
+            foreach (AutoPolygonizeProposal proposal in snapshot)
+            {
+                if (proposal.HasMaskSource)
+                    continue;
+
+                foreach (long locationId in proposal.LocationIds)
+                    cache.InvalidateProposal(locationId);
+            }
+
+            if (enabled)
+                RestartIdleTimer();
+        }
+
+        /// <summary>
+        /// Preference toggle for green foreground and red background prompt dots.
+        /// The points are already on each proposal, so this only redraws.
+        /// </summary>
+        public void OnOverlayPromptsChanged(bool showPrompts)
+        {
+            parent.Invalidate();
+        }
+
+        /// <summary>Asks the viewer to repaint proposals after a draw-only preference change.</summary>
+        public void InvalidateOverlay()
+        {
             parent.Invalidate();
         }
 
@@ -376,6 +433,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 parent.Invalidate();
                 return;
             }
+
+            toApply = AutoPolygonizeSelection.SimplifyProposal(
+                toApply,
+                AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample));
 
             if (!LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent))
                 return;
@@ -490,6 +551,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!enabled)
                 return;
 
+            if (!IsWithinAutoSegmentDownsample())
+                return;
+
             armedBounds = GetCurrentViewportBounds();
             armedDownsample = GetCurrentDownsample();
             armedAtUtc = DateTime.UtcNow;
@@ -538,6 +602,27 @@ namespace WebAnnotation.UI.AutoPolygonize
         private double GetCurrentDownsample() => parent.Camera?.Downsample ?? 0;
 
         /// <summary>
+        /// False when the camera is coarser than <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
+        /// Equality still runs, so downsample 8 is sent when the preference is 8.
+        /// </summary>
+        private bool IsWithinAutoSegmentDownsample()
+        {
+            return GetCurrentDownsample() <= Global.AnnotationSettings.AutoPolygonizeMaxDownsample;
+        }
+
+        /// <summary>
+        /// Restarts the idle wait when auto-segment is on. Used after the max-downsample preference changes
+        /// so a view that is now allowed can run without a camera nudge.
+        /// </summary>
+        public void RequestIdlePass()
+        {
+            if (!enabled)
+                return;
+
+            RestartIdleTimer();
+        }
+
+        /// <summary>
         /// One capture/upload plus sequential SegmentImage calls. GPU capture stays
         /// on the session UI path; polygonize runs on a task per response. A camera
         /// move after upload does not cancel the process token.
@@ -545,6 +630,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         private async Task RunBatchAsync()
         {
             if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || parent.Section is null)
+                return;
+
+            if (!IsWithinAutoSegmentDownsample())
                 return;
 
             if (parent.CurrentCommand is SegmentationCommand)
@@ -604,7 +692,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
                 int sectionNumber = parent.Section.Number;
                 double downsample = parent.Camera.Downsample;
-                double simplifyTolerance = Global.PenSimplifyThreshold * parent.Downsample;
+                double simplifyTolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample);
 
                 stepTimer.Restart();
                 AutoPolygonizeUploadContext? uploadContext = await CaptureSharedViewportAsync(
@@ -651,7 +739,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         break;
                     }
 
-                    if (!cache.ShouldProcess(circle.ID, sectionNumber, circle.LastModified, circle.TypeCode))
+                    if (!cache.ShouldProcess(circle.ID, sectionNumber, circle.LastModified, circle.TypeCode, downsample))
                         continue;
 
                     int generation = cache.MarkPending(circle.ID, sectionNumber, circle, uploadContext);
@@ -785,9 +873,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            AutoPolygonizeMaskOverlay? maskOverlay = null;
-            if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
-                maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
+            AutoPolygonizeMaskOverlay? maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
 
             Stopwatch renderPreparationTimer = Stopwatch.StartNew();
             int verticesBeforeSimplify = polygon.TotalUniqueVertices;
@@ -831,7 +917,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 circle.LastModified,
                 circle.TypeCode,
                 Store.Locations.GetObjectByID(circle.ID, false),
-                TryCreateUploadContext(session, downsample));
+                TryCreateUploadContext(session, downsample),
+                downsample);
             PublishProposal(proposal);
             Debug.WriteLine(
                 $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} ready-to-draw " +
@@ -931,7 +1018,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Circles whose center is at least 5% from each edge, whose disk is fully
         /// on screen, large enough, and not already proposed or dismissed for this LastModified.
-        /// Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
+        /// A proposal completed at a coarser view is eligible again when the camera is at least
+        /// twice as fine. Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
         /// </summary>
         private List<LocationObj> CollectEligibleCircles(Rectangle viewBounds, Rectangle inset)
         {
@@ -940,7 +1028,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             double minRadiusNm = Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers;
             foreach (LocationObj loc in CollectVisibleLocationObjs(viewBounds))
             {
-                if (!cache.ShouldProcess(loc.ID, loc.Section, loc.LastModified, loc.TypeCode))
+                if (!cache.ShouldProcess(loc.ID, loc.Section, loc.LastModified, loc.TypeCode, GetCurrentDownsample()))
                     continue;
 
                 if (!AutoPolygonizeSelection.IsEligibleCircle(
@@ -1194,6 +1282,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || parent.Section is null)
                 return;
 
+            if (!IsWithinAutoSegmentDownsample())
+                return;
+
             if (parent.Section.Number != sectionNumber || parent.CurrentCommand is SegmentationCommand)
                 return;
 
@@ -1299,7 +1390,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     circle,
                     sectionNumber,
                     downsample,
-                    Global.PenSimplifyThreshold * parent.Downsample,
+                    AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample),
                     foreground,
                     background,
                     response,
@@ -1346,7 +1437,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 circle.LastModified,
                 circle.TypeCode,
                 Store.Locations.GetObjectByID(circle.ID, false),
-                TryCreateUploadContext(session, downsample));
+                TryCreateUploadContext(session, downsample),
+                downsample);
         }
 
         /// <summary>
@@ -1370,7 +1462,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     loc?.LastModified ?? lastModifiedFallback,
                     loc?.TypeCode ?? LocationType.CIRCLE,
                     loc,
-                    upload);
+                    upload,
+                    downsample);
             }
         }
 
@@ -1684,6 +1777,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (!enabled || parent.Section is null || parent.Scene is null)
                     return;
 
+                if (!IsWithinAutoSegmentDownsample())
+                    return;
+
                 CancellationToken processToken;
                 lock (lifecycleLock)
                 {
@@ -1786,7 +1882,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         return;
                     }
 
-                    double simplifyTolerance = Global.PenSimplifyThreshold * parent.Downsample;
+                    double simplifyTolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample);
                     polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
                     LocationObj? keepLocation = Store.Locations.GetObjectByID(locationIds[0], false);
                     polygon = CarveAgainstExistingPolygons(
@@ -1805,9 +1901,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         return;
                     }
 
-                    AutoPolygonizeMaskOverlay? maskOverlay = null;
-                    if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
-                        maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
+                    AutoPolygonizeMaskOverlay? maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
 
                     AutoPolygonizeUploadContext? uploadContext = TryCreateUploadContext(session, downsample);
                     foreach (long id in locationIds)
@@ -1819,7 +1913,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                             loc?.LastModified ?? lastModified,
                             loc?.TypeCode ?? LocationType.CIRCLE,
                             loc,
-                            uploadContext);
+                            uploadContext,
+                            downsample);
                     }
 
                     AutoPolygonizeProposal group = new(

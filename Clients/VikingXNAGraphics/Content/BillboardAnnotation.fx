@@ -238,11 +238,13 @@ PixelShaderOutput TexturePixelShaderFunction(TexturePixelShaderInput input)
 {
 	//Blends a greyscale texture, where the grey value indicates luma.
 	PixelShaderOutput output;
-	output.Depth = input.CenterDistance.x + input.CenterDistance.y;
 
 	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord);
 	clip(RGBColor.a <= 0.0 ? -1.0 : 1.0);
 	output.Color = RGBColor;
+	// CenterDistance is about -0.5..0.5, so the raw sum is outside the viewport depth range
+	// and the top of the quad is clipped. Map it into 0..1 so the whole texture survives.
+	output.Depth = saturate((input.CenterDistance.x + input.CenterDistance.y) * 0.5 + 0.5);
 
 	return output;
 }

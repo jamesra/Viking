@@ -37,6 +37,7 @@
     <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />
+    <Compile Include="SectionRangeParserTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
     <Compile Include="VolumePathTests.cs" />
     <Compile Include="DummyCanvas.cs" />

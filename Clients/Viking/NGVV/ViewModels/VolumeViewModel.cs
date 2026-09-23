@@ -176,6 +176,12 @@ namespace Viking.ViewModels
 
         public void ReduceCacheFootprint(object state) => _MappingManager.ReduceCacheFootprint();
 
+        /// <summary>
+        /// Mapping cache for a background job. Separate from the viewer's cache so a long section walk does not evict the transforms on screen.
+        /// The caller drops the manager when the job ends.
+        /// </summary>
+        public MappingManager CreateMappingManager() => new(_Volume);
+
         #region Events
 
 

@@ -20,7 +20,7 @@ using Viking.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Service;
 using System.Net.Http;
-using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
@@ -169,7 +169,7 @@ namespace WebAnnotation
         {
             static AnnotationSettings()
             {
-                // Initialize static accessor properties on application startup
+                Properties.Settings.UpgradeFromPreviousVersionIfNeeded();
                 CircleView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
                 LocationCanvasView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
             }
@@ -207,6 +207,8 @@ namespace WebAnnotation
             private const double MAX_AUTOPOLYGONIZE_RADIUS_PIXELS = 256.0;
             private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
             private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
+            private const double MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 1.0;
+            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 256.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -539,21 +541,111 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Debug overlay of the raw SAM2 mask on auto-polygonize proposals. Default off; not intended for daily use.
+            /// Coarsest camera downsample at which auto-segment still runs. Default 8.
+            /// A view coarser than this is not sent to the segmentation service.
+            /// Changing it restarts the idle timer so a view that is now allowed can run without a camera nudge.
+            /// </summary>
+            public static double AutoPolygonizeMaxDownsample
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeMaxDownsample,
+                    MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE,
+                    MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE);
+                set
+                {
+                    double clamped = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE,
+                        MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE);
+                    if (Math.Abs(Properties.Settings.Default.AutoPolygonizeMaxDownsample - clamped) < 0.001)
+                        return;
+
+                    Properties.Settings.Default.AutoPolygonizeMaxDownsample = clamped;
+                    Properties.Settings.Default.Save();
+                    AnnotationOverlay.CurrentOverlay?.RequestAutoPolygonizeIdlePass();
+                }
+            }
+
+            /// <summary>
+            /// Debug overlay of the raw SAM2 mask on auto-polygonize proposals.
+            /// Debug builds start on until the user toggles this. After a toggle the choice
+            /// is saved and copied into the next Viking version.
             /// </summary>
             public static bool AutoPolygonizeOverlayMasks
             {
-                get => Properties.Settings.Default.AutoPolygonizeOverlayMasks;
+                get
+                {
+#if DEBUG
+                    if (!Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet)
+                        return true;
+#endif
+                    return Properties.Settings.Default.AutoPolygonizeOverlayMasks;
+                }
                 set
                 {
-                    if (Properties.Settings.Default.AutoPolygonizeOverlayMasks == value)
-                        return;
-
+                    bool previous = AutoPolygonizeOverlayMasks;
+                    Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = true;
                     Properties.Settings.Default.AutoPolygonizeOverlayMasks = value;
                     Properties.Settings.Default.Save();
+                    if (previous == value)
+                        return;
+
                     AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayMasksEnabled(value);
                 }
             }
+
+            /// <summary>
+            /// Green foreground and red background clicks on auto-polygonize proposals.
+            /// Debug builds start on until the user toggles this. After a toggle the choice
+            /// is saved and copied into the next Viking version. Independent of the mask overlay.
+            /// </summary>
+            public static bool AutoPolygonizeOverlayPrompts
+            {
+                get
+                {
+#if DEBUG
+                    if (!Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet)
+                        return true;
+#endif
+                    return Properties.Settings.Default.AutoPolygonizeOverlayPrompts;
+                }
+                set
+                {
+                    bool previous = AutoPolygonizeOverlayPrompts;
+                    Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet = true;
+                    Properties.Settings.Default.AutoPolygonizeOverlayPrompts = value;
+                    Properties.Settings.Default.Save();
+                    if (previous == value)
+                        return;
+
+                    AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayPromptsEnabled(value);
+                }
+            }
+
+            /// <summary>
+            /// Omits auto-polygonize outlines while the mask overlay is visible.
+            /// Saved across restarts. Has no effect while masks are off.
+            /// </summary>
+            public static bool AutoPolygonizeHideSegmentationRings
+            {
+                get => Properties.Settings.Default.AutoPolygonizeHideSegmentationRings;
+                set
+                {
+                    if (Properties.Settings.Default.AutoPolygonizeHideSegmentationRings == value)
+                        return;
+
+                    Properties.Settings.Default.AutoPolygonizeHideSegmentationRings = value;
+                    Properties.Settings.Default.Save();
+                    AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeOverlay();
+                }
+            }
+
+            /// <summary>
+            /// Proposal outlines draw while auto-polygonize is on.
+            /// They are omitted only when the mask overlay is visible and <see cref="AutoPolygonizeHideSegmentationRings"/> is set.
+            /// </summary>
+            public static bool AutoPolygonizeShowSegmentationRings =>
+                !AutoPolygonizeOverlayMasks || !AutoPolygonizeHideSegmentationRings;
 
             public static double PolygonPointRadius
             {
@@ -585,7 +677,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.DefaultLocationJumpDownsample = 4.0;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 4;
-                Properties.Settings.Default.PenSimplifyThreshold = 12;
+                Properties.Settings.Default.PenSimplifyThreshold = 8;
                 Properties.Settings.Default.MinRadius = 0.5;
                 Properties.Settings.Default.PolygonOpacityParentless = 0.5f;
                 Properties.Settings.Default.PolygonOpacityWithParent = 0.33f;
@@ -599,7 +691,12 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = 8.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = 75.0;
+                Properties.Settings.Default.AutoPolygonizeMaxDownsample = 8.0;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
+                Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
+                Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;
+                Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet = false;
+                Properties.Settings.Default.AutoPolygonizeHideSegmentationRings = false;
                 Properties.Settings.Default.PolygonPointRadius = 6.0;
                 Properties.Settings.Default.SmallestRenderedSize = 0.5;
                 Properties.Settings.Default.Save();
@@ -613,6 +710,8 @@ namespace WebAnnotation
                     AnnotationOverlay.UpdateCacheSize(NumSectionsInMemory);
                     AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeEnabled(AutoPolygonizeCircles);
                     AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayMasksEnabled(AutoPolygonizeOverlayMasks);
+                    AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayPromptsEnabled(AutoPolygonizeOverlayPrompts);
+                    AnnotationOverlay.CurrentOverlay.RefreshAutoPolygonizeOverlay();
                     RefreshActiveSegmentationPolygons();
                     RefreshActiveSegmentationPromptPoints();
                 }
@@ -936,6 +1035,16 @@ namespace WebAnnotation
                     Trace.WriteLine("LoadUserPreferences timed out during initialization.");
                 }
                 WebAnnotationModel.Store.Init();
+                if (Store.InitializationError != null)
+                {
+                    Trace.WriteLine("[WebAnnotation] Annotation store failed to start: " + Store.InitializationError);
+                    System.Windows.Forms.MessageBox.Show(
+                        "Viking could not load annotations.\n\n" + Store.InitializationError.Message +
+                        "\n\nThe viewer will stay open. Annotations stay unavailable until a later launch is accepted by the annotation service.",
+                        "Viking",
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Warning);
+                }
                 return true;
             }
 
@@ -1185,7 +1294,7 @@ namespace WebAnnotation
         {
             //Try to download the default user settings file
             Uri uri = UserSettingsUri;
-            uri ??= new Uri("http://rouge1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
+            uri ??= new Uri("http://rogue1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
 
             try
             {

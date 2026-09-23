@@ -22,11 +22,25 @@ namespace Viking
         public const string AckVolumeMismatch = "VOLUME_MISMATCH";
 
         private const int ConnectTimeoutMs = 1500;
-        private const int IoTimeoutMs = 2000;
 
         private static CancellationTokenSource? _listenCts;
         private static readonly List<Mutex> _mutexes = [];
         private static Func<string, string>? _handler;
+        private static int _shuttingDown;
+
+        /// <summary>
+        /// True after the primary instance starts teardown. In-flight deep links must not open UI.
+        /// </summary>
+        public static bool IsShuttingDown => Volatile.Read(ref _shuttingDown) != 0;
+
+        /// <summary>
+        /// Called from the main-window close path before viewers are destroyed, so a tools-page
+        /// launch that arrives during exit is rejected instead of creating tabs with no token.
+        /// </summary>
+        public static void BeginShutdown()
+        {
+            Volatile.Write(ref _shuttingDown, 1);
+        }
 
         /// <summary>
         /// If another Viking instance already has this volume open, forward the URL and return true when handled (OK).
@@ -75,6 +89,8 @@ namespace Viking
 
         public static void StopListening()
         {
+            // Do not set IsShuttingDown here. StartListening calls this to drop a previous
+            // listener, and a stuck shutdown flag made every tools-page handoff return NOT_READY.
             try
             {
                 _listenCts?.Cancel();
@@ -107,18 +123,17 @@ namespace Viking
             {
                 using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
                 client.Connect(ConnectTimeoutMs);
-                client.ReadMode = PipeTransmissionMode.Byte;
 
-                using var writer = new StreamWriter(client, Encoding.UTF8, 1024, leaveOpen: true) { AutoFlush = true };
-                using var reader = new StreamReader(client, Encoding.UTF8, false, 1024, leaveOpen: true);
-
-                writer.WriteLine(vikingUrl.Trim());
-                client.WriteTimeout = IoTimeoutMs;
-                client.ReadTimeout = IoTimeoutMs;
-
-                string? ack = reader.ReadLine();
+                WritePipeLine(client, vikingUrl.Trim());
+                string? ack = ReadPipeLine(client);
                 Trace.WriteLine($"[Viking] Deep-link forward ack ({pipeName}): {ack}", "Viking");
-                return string.Equals(ack, AckOk, StringComparison.Ordinal);
+                if (ack is null || !ack.StartsWith(AckOk, StringComparison.Ordinal))
+                    return false;
+
+                // This process was started by the tools-page click, so it may foreground the open window.
+                // The listening instance often cannot: it did not receive the user input.
+                TryForegroundFromAck(ack);
+                return true;
             }
             catch (Exception ex)
             {
@@ -157,6 +172,9 @@ namespace Viking
                 NamedPipeServerStream? server = null;
                 try
                 {
+                    // Synchronous byte mode. The previous async wait plus StreamReader/StreamWriter
+                    // accepted the tools-page client and then broke the pipe before an ack, so the
+                    // new process started a second Viking instead of jumping this one.
                     server = new NamedPipeServerStream(
                         pipeName,
                         PipeDirection.InOut,
@@ -164,28 +182,36 @@ namespace Viking
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
 
-                    IAsyncResult wait = server.BeginWaitForConnection(null, null);
-                    while (!wait.IsCompleted)
+                    Task connect = Task.Factory.FromAsync(
+                        server.BeginWaitForConnection,
+                        server.EndWaitForConnection,
+                        null);
+                    connect.ContinueWith(
+                        t => { _ = t.Exception; },
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
+                    try
                     {
-                        if (token.WaitHandle.WaitOne(100))
-                        {
-                            try { server.Dispose(); } catch { /* ignore */ }
-                            return;
-                        }
+                        connect.Wait(token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
                     }
 
-                    server.EndWaitForConnection(wait);
-
-                    using var reader = new StreamReader(server, Encoding.UTF8, false, 1024, leaveOpen: true);
-                    using var writer = new StreamWriter(server, Encoding.UTF8, 1024, leaveOpen: true) { AutoFlush = true };
-
-                    string? url = reader.ReadLine();
+                    string? url = ReadPipeLine(server);
                     string ack = AckNotReady;
                     try
                     {
                         Func<string, string>? handler = _handler;
-                        if (string.IsNullOrWhiteSpace(url) || handler is null)
+                        if (IsShuttingDown || string.IsNullOrWhiteSpace(url) || handler is null)
+                        {
+                            Trace.WriteLine(
+                                $"[Viking] Deep-link NOT_READY on {pipeName}: shuttingDown={IsShuttingDown} urlEmpty={string.IsNullOrWhiteSpace(url)} handlerMissing={handler is null}",
+                                "Viking");
                             ack = AckNotReady;
+                        }
                         else
                             ack = handler(url!) ?? AckNotReady;
                     }
@@ -195,8 +221,8 @@ namespace Viking
                         ack = AckNotReady;
                     }
 
-                    writer.WriteLine(ack);
-                    try { server.WaitForPipeDrain(); } catch { /* ignore */ }
+                    WritePipeLine(server, ack);
+                    try { server.WaitForPipeDrain(); } catch { /* client may already have read the ack */ }
                 }
                 catch (Exception ex)
                 {
@@ -209,6 +235,60 @@ namespace Viking
                 }
             }
         }
+
+        /// <summary>
+        /// One UTF-8 line, no BOM. Do not set <see cref="Stream.ReadTimeout"/> or
+        /// <see cref="Stream.WriteTimeout"/>: named-pipe streams throw
+        /// "Timeouts are not supported on this stream" and the tools-page process then opens a second Viking.
+        /// </summary>
+        private static void WritePipeLine(Stream stream, string line)
+        {
+            byte[] payload = Encoding.UTF8.GetBytes(line + "\n");
+            stream.Write(payload, 0, payload.Length);
+            stream.Flush();
+        }
+
+        private static string? ReadPipeLine(Stream stream)
+        {
+            var buffer = new List<byte>(256);
+            var one = new byte[1];
+            while (buffer.Count < 8192)
+            {
+                int read = stream.Read(one, 0, 1);
+                if (read == 0)
+                    break;
+                if (one[0] == (byte)'\n')
+                    break;
+                if (one[0] != (byte)'\r')
+                    buffer.Add(one[0]);
+            }
+
+            if (buffer.Count == 0)
+                return null;
+
+            return Encoding.UTF8.GetString(buffer.ToArray());
+        }
+
+        private static void TryForegroundFromAck(string ack)
+        {
+            int space = ack.IndexOf(' ');
+            if (space < 0)
+                return;
+            if (!long.TryParse(ack.Substring(space + 1), out long hwndValue) || hwndValue == 0)
+                return;
+
+            IntPtr hwnd = new(hwndValue);
+            ShowWindow(hwnd, SwRestore);
+            SetForegroundWindow(hwnd);
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SwRestore = 9;
 
         private static IEnumerable<string> PipeNamesFor(string? volumeUrl, string? volumeName)
         {

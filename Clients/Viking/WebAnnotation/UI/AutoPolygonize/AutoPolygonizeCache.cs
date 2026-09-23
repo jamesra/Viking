@@ -60,6 +60,11 @@ namespace WebAnnotation.UI.AutoPolygonize
             public LocationObj? Location;
             public DateTime? ProposalLastModified;
             public LocationType? ProposalTypeCode;
+            /// <summary>
+            /// Camera downsample when the last proposal or empty mask was remembered.
+            /// Null until a completion records one. Not updated by a pending upload.
+            /// </summary>
+            public double? ProposalDownsample;
             public DateTime? DismissedAt;
             public AutoPolygonizeUploadContext? Upload;
             public int Generation;
@@ -67,9 +72,16 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// False when the circle is not a circle, was dismissed at this LastModified, or already has a matching proposal.
-        /// Pending-only entries (batch candidate) stay processable.
+        /// A matching proposal is processed again when <paramref name="liveDownsample"/> is at least twice as fine
+        /// as the downsample stored by <see cref="RememberProposal"/>. Zooming out does not clear that skip.
+        /// Pending-only entries (batch candidate) stay processable. Called by the idle batch.
         /// </summary>
-        public bool ShouldProcess(long locationId, int sectionNumber, DateTime lastModified, LocationType typeCode)
+        public bool ShouldProcess(
+            long locationId,
+            int sectionNumber,
+            DateTime lastModified,
+            LocationType typeCode,
+            double liveDownsample = 0)
         {
             if (typeCode != LocationType.CIRCLE)
                 return false;
@@ -86,7 +98,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     entry.ProposalLastModified.Value == lastModified &&
                     entry.ProposalTypeCode == typeCode)
                 {
-                    return false;
+                    return AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(
+                        liveDownsample,
+                        entry.ProposalDownsample ?? 0);
                 }
 
                 return true;
@@ -94,8 +108,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Records a published proposal so the same LastModified is not segmented again.
+        /// Records a published proposal so the same LastModified is not segmented again
+        /// until the view is at least twice as fine as <paramref name="completedDownsample"/>.
         /// Subscribes when <paramref name="location"/> is provided. Replaces the image lease when upload changes.
+        /// A positive <paramref name="completedDownsample"/> wins; otherwise the upload's downsample is stored.
         /// </summary>
         public void RememberProposal(
             long locationId,
@@ -103,7 +119,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             DateTime lastModified,
             LocationType typeCode,
             LocationObj? location = null,
-            AutoPolygonizeUploadContext? upload = null)
+            AutoPolygonizeUploadContext? upload = null,
+            double completedDownsample = 0)
         {
             List<ulong> released = [];
             lock (gate)
@@ -112,11 +129,27 @@ namespace WebAnnotation.UI.AutoPolygonize
                 entry.DismissedAt = null;
                 entry.ProposalLastModified = lastModified;
                 entry.ProposalTypeCode = typeCode;
+                entry.ProposalDownsample = CompletedDownsample(completedDownsample, upload);
                 AttachLocationUnlocked(entry, location);
                 SetUploadUnlocked(entry, upload, released);
             }
 
             RaiseReleased(released);
+        }
+
+        /// <summary>
+        /// Downsample to store on a completion. The caller's camera value wins so a failed
+        /// upload context still records the view that produced the proposal.
+        /// </summary>
+        private static double? CompletedDownsample(double completedDownsample, AutoPolygonizeUploadContext? upload)
+        {
+            if (completedDownsample > 0)
+                return completedDownsample;
+
+            if (upload.HasValue && upload.Value.Downsample > 0)
+                return upload.Value.Downsample;
+
+            return null;
         }
 
         /// <summary>
@@ -313,6 +346,27 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
 
                 AttachLocationUnlocked(entry, newLocation);
+            }
+        }
+
+        /// <summary>
+        /// Clears the LastModified skip so the next idle batch segments this circle again.
+        /// Does not remove an on-screen proposal or a dismiss. Called when the mask overlay
+        /// is turned on and the proposal was built without SAM2 mask bytes.
+        /// </summary>
+        public void InvalidateProposal(long locationId)
+        {
+            lock (gate)
+            {
+                if (!entries.TryGetValue(locationId, out Entry entry))
+                    return;
+
+                if (entry.DismissedAt.HasValue)
+                    return;
+
+                entry.ProposalLastModified = null;
+                entry.ProposalTypeCode = null;
+                entry.Generation++;
             }
         }
 

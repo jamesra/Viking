@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
+using Viking.ProductVersioning;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -22,6 +24,13 @@ builder.Services.Configure<RouteOptions>(options =>
 });
 
 var app = builder.Build();
+var exportAssembly = typeof(Program).Assembly;
+app.Logger.LogInformation("{ProductVersion} starting", ProductVersion.Describe(exportAssembly));
+app.MapGet("/version", () => Results.Json(new
+{
+    name = exportAssembly.GetName().Name,
+    version = ProductVersion.VersionOf(exportAssembly)
+}));
 
 app.UseDefaultFiles(new DefaultFilesOptions
 {

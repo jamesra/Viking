@@ -1,0 +1,33 @@
+---
+description: VikingLegacy is servers and containers; VikingLegacy-Maintenance is clients; keep client trees in parallel for a later merge
+alwaysApply: true
+---
+
+# Repo roles
+
+Two checkouts share this product. Put the change in the repo that owns that kind of work.
+
+| Work | Repo | Path |
+|------|------|------|
+| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction | **VikingLegacy** | `d:\src\git\VikingLegacy` |
+| Clients (Viking, VikingAU, Jotunn, MonogameTestbed, shared client libraries) | **VikingLegacy-Maintenance** | `d:\src\git\VikingLegacy-Maintenance` |
+
+## Keep clients in parallel
+
+VikingLegacy still has a `Clients/` tree. Keep it aligned with VikingLegacy-Maintenance so the two can merge later.
+
+- Land client changes in **VikingLegacy-Maintenance** first.
+- Mirror the same change into VikingLegacy `Clients/` (and any shared client projects it touches) on a best-effort basis in the same piece of work.
+- If a client fix is made in VikingLegacy, mirror it back into VikingLegacy-Maintenance the same way.
+- Do not let the two client trees drift when the mirror is practical in the same change.
+
+Server and container changes stay in VikingLegacy. Do not start that work in VikingLegacy-Maintenance.
+
+```text
+Jotunn panel change
+  → edit Clients/Jotunn in VikingLegacy-Maintenance
+  → mirror the same edit under Clients/ in VikingLegacy
+
+IdentityServer compose / cert change
+  → edit Servers/ in VikingLegacy only
+```

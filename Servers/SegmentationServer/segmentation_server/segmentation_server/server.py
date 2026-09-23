@@ -26,6 +26,8 @@ from segmentation_grpc import (
     UploadImageResponse,
     DeleteImageRequest,
     DeleteImageResponse,
+    GetVersionRequest,
+    GetVersionResponse,
     SegmentResult,
     SegmentationServiceServicer,
     add_SegmentationServiceServicer_to_server
@@ -34,7 +36,12 @@ from segmentation_grpc import (
 # Import the segmentation model and image cache
 from segmentation_server.segmentation_service import SegmentInfo, SegmentationModel
 from segmentation_server.image_cache import ImageCache
-from segmentation_server.mask_encoding import encode_binary_mask_png, encode_labeled_image_png
+from segmentation_server.mask_encoding import (
+    encode_binary_mask_png,
+    encode_labeled_image_png,
+    encode_probability_mask_png,
+    padded_logit_crop,
+)
 
 
 class SegmentationServicer(SegmentationServiceServicer):
@@ -128,16 +135,19 @@ class SegmentationServicer(SegmentationServiceServicer):
         for segment in segments:
             if 'mask' in segment:
                 mask_bool: NDArray[np.bool_] = segment['mask']
+                logits = segment.get('logits')
 
-                x, y, mask_width, mask_height = SegmentationModel.get_mask_bounds(mask_bool)
-                
-                if mask_width > 0 and mask_height > 0:
-                    cropped_mask = mask_bool[y:y+mask_height, x:x+mask_width]
-                else:
-                    cropped_mask = np.zeros((0, 0), dtype=np.bool_)
-                
                 mask_start = time.perf_counter()
-                mask_bytes = encode_binary_mask_png(cropped_mask)
+                if logits is not None and getattr(logits, "size", 0) > 0:
+                    cropped_logits, x, y = padded_logit_crop(logits, mask_bool)
+                    mask_bytes = encode_probability_mask_png(cropped_logits)
+                else:
+                    x, y, mask_width, mask_height = SegmentationModel.get_mask_bounds(mask_bool)
+                    if mask_width > 0 and mask_height > 0:
+                        cropped_mask = mask_bool[y:y+mask_height, x:x+mask_width]
+                    else:
+                        cropped_mask = np.zeros((0, 0), dtype=np.bool_)
+                    mask_bytes = encode_binary_mask_png(cropped_mask)
                 mask_encode_ms += (time.perf_counter() - mask_start) * 1000.0
             else:
                 mask_bytes = b''
@@ -680,6 +690,34 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return response if response is not None else SegmentationResponse()
 
+    async def GetVersion(
+        self,
+        request: GetVersionRequest,
+        context: ServicerContext,
+    ) -> GetVersionResponse:
+        """Return the installed package version without loading the model.
+
+        Called by clients and other agents that need the running build.
+        ``request`` is empty. This method does not abort ``context``.
+        """
+        return GetVersionResponse(name="segmentation_server", version=package_version())
+
+
+def package_version() -> str:
+    """Installed segmentation_server version for startup logs and --version.
+
+    Returns ``unknown`` when the distribution is not installed (source tree
+    without an editable install) or when Python is older than 3.8.
+    """
+    try:
+        from importlib.metadata import PackageNotFoundError, version as dist_version
+    except ImportError:
+        return "unknown"
+    try:
+        return dist_version("segmentation_server")
+    except PackageNotFoundError:
+        return "unknown"
+
 
 async def serve(port: int = 50051, max_workers: int = 10, inference_workers: Optional[int] = None) -> None:
     """
@@ -716,7 +754,7 @@ async def serve(port: int = 50051, max_workers: int = 10, inference_workers: Opt
 
     # Start the server
     await server.start()
-    print(f"Server started, listening on {server_address}")
+    print(f"segmentation_server {package_version()} listening on {server_address}")
 
     # Keep the server running until it is terminated
     await server.wait_for_termination()

@@ -1,6 +1,7 @@
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System.Linq;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -8,6 +9,26 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class SegmentationMaskPolygonizerTests
     {
+        [TestMethod]
+        public void SoftProbabilityEdgeIsNotSnappedToThePixelGrid()
+        {
+            const int width = 8;
+            const int height = 8;
+            byte[] mask = new byte[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x <= 5; x++)
+                    mask[(y * width) + x] = 255;
+                mask[(y * width) + 6] = 180;
+            }
+
+            Polygon polygon = CreatePolygon(mask, width, height, 0.03);
+            double maxX = polygon.ExteriorRing.Max(point => point.X);
+            double crossing = 6 + ((127.5 - 180.0) / (0.0 - 180.0));
+
+            Assert.AreEqual(crossing, maxX, 0.02);
+        }
+
         [TestMethod]
         public void CShapePreservesConcaveBay()
         {
@@ -49,14 +70,18 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void SimplificationRemovesSinglePixelSpike()
+        public void FullResolutionContourKeepsSinglePixelSpikeUntilPenSimplify()
         {
             byte[] mask = FilledRectangleMask(24, 24, 3, 3, 18, 18);
             mask[(10 * 24) + 19] = 255;
 
-            Polygon polygon = CreatePolygon(mask, 24, 24, 0.03);
+            Polygon raw = CreatePolygon(mask, 24, 24, 0.03);
+            Polygon simplified = WebAnnotation.UI.AutoPolygonize.AutoPolygonizeSelection.SimplifyProposal(raw, 2.0);
 
-            Assert.IsTrue(polygon.TotalUniqueVertices < 12);
+            Assert.IsTrue(raw.TotalUniqueVertices > 16);
+            Assert.IsTrue(simplified.TotalUniqueVertices < raw.TotalUniqueVertices);
+            Assert.IsTrue(simplified.TotalUniqueVertices < 12);
+            Assert.IsFalse(simplified.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
         }
 
         [TestMethod]
@@ -112,7 +137,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void DownsampledMaskStillProducesAPolygon()
+        public void LargeMaskContourFollowsTheMask()
         {
             const int width = 800;
             const int height = 800;
@@ -123,7 +148,7 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(polygon.Area > 0);
             Assert.IsTrue(polygon.Contains(new Vector2(300, 500)));
             Assert.IsFalse(polygon.Contains(new Vector2(50, 50)));
-            Assert.IsTrue(polygon.TotalUniqueVertices < 16);
+            Assert.IsTrue(polygon.TotalUniqueVertices > 16);
         }
 
         [TestMethod]

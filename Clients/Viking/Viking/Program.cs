@@ -10,8 +10,11 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 using System.Windows.Forms;
 using CommandLine.Text;
+using Viking.ProductVersioning;
 using Viking.UI.Forms;
 using VikingCoreResources = Viking.Properties.Resources;
 using System.Linq;
@@ -44,6 +47,7 @@ namespace Viking
     {
         static System.IO.StreamWriter? DebugLogFile = null;
         public static TextWriter? SynchronizedDebugWriter = null;
+        static string? DebugLogPath;
 
         public static string AppWebsite = "";
 
@@ -93,6 +97,22 @@ namespace Viking
             // Note: Velopack version 0.0.1298 doesn't have OnFirstRun/OnAfterUpdate hooks
             // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version
             VelopackApp.Build().Run();
+
+            if (args != null && args.Any(static a =>
+                    string.Equals(a, "--version", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(a, "/version", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    WriteVersionToParentConsole();
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // A missing console must not fall through into the UI.
+                }
+
+                return;
+            }
             
             // Upgrade settings from previous versions (preserves user settings across updates)
             SettingsManager.UpgradeSettingsIfNeeded();
@@ -117,12 +137,12 @@ namespace Viking
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
 
-            // Remove the DefaultTraceListener so nothing writes to OutputDebugString.
-            // In Debug builds CreateDebugListener() re-adds a file-based listener.
-#if !DEBUG
-            Trace.Listeners.Clear();
-#endif
+            // Leave the default listener in place. Clearing it made Release OutputDebugString
+            // silent after the settings-upgrade line, so a DBWIN monitor missed the launch path.
             CreateDebugListener();
+            WriteStartupMarker();
+            SynchronizedDebugWriter?.WriteLine($"{DateTime.Now:O} {ProductVersion.Describe(execAssembly)}");
+            SynchronizedDebugWriter?.Flush();
             InitializeMathnet();
             Viking.UI.GpuExceptionHandling.Register();
 
@@ -207,6 +227,11 @@ namespace Viking
             // After the main window and viewer exist, accept same-volume viking:// activations.
             if (context.MainForm != null && !string.IsNullOrWhiteSpace(UI.State.VolumeUrl))
             {
+                context.MainForm.FormClosing += (_, e) =>
+                {
+                    if (!e.Cancel)
+                        VikingSingleInstance.BeginShutdown();
+                };
                 string? volumeName = UI.State.IdentityVolumeName ?? UI.State.volume?.Name;
                 VikingSingleInstance.StartListening(UI.State.VolumeUrl!, volumeName, VikingDeepLinkActivation.HandleIncomingUrl);
             }
@@ -470,6 +495,11 @@ namespace Viking
                     Viking.Tokens.TokenInjector.BearerTokenAuthority = identityServerUrl;
                 }
 
+                Trace.WriteLine(
+                    "[Viking] Bearer token set. " +
+                    $"Authority={(identityServerUrl ?? "(null)")} AccessTokenLength={wpfLoginWindow.BearerToken.AccessToken?.Length ?? 0}",
+                    "Viking");
+
                 if (string.IsNullOrEmpty(wpfLoginWindow.BearerToken.AccessToken))
                 {
                     Trace.WriteLine("[Viking] Login finished but BearerToken.AccessToken is empty; annotation service will deny access.", "Viking");
@@ -633,6 +663,45 @@ namespace Viking
         }
 
         [Conditional("DEBUG")]
+        /// <summary>
+        /// Prints the entry-assembly version to the parent console.
+        /// Viking is a WinExe, so the process has no console until one is attached,
+        /// and <see cref="Console.Out"/> must be reopened afterwards or the write is dropped.
+        /// Called for <c>--version</c> and <c>/version</c> before the UI starts.
+        /// </summary>
+        private static void WriteVersionToParentConsole()
+        {
+            // Do not AllocConsole: that opens a stray window when there is no parent console.
+            var line = ProductVersion.Describe(Assembly.GetExecutingAssembly()) + Environment.NewLine;
+            var handle = GetStdHandle(StdOutputHandle);
+            if (handle != IntPtr.Zero && handle != new IntPtr(-1))
+            {
+                var bytes = Encoding.UTF8.GetBytes(line);
+                using (var stream = new FileStream(new SafeFileHandle(handle, ownsHandle: false), FileAccess.Write))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush();
+                }
+
+                return;
+            }
+
+            if (!AttachConsole(AttachParentProcess))
+                return;
+
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
+            Console.Write(line);
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool AttachConsole(int dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
+        private const int AttachParentProcess = -1;
+        private const int StdOutputHandle = -11;
+
         private static void CreateDebugListener()
         {
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
@@ -641,6 +710,7 @@ namespace Viking
 
             string FileName = LogPath + "\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
 
+            DebugLogPath = FileName;
             DebugLogFile = System.IO.File.CreateText(FileName);
             SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
 
@@ -649,6 +719,26 @@ namespace Viking
 
             Trace.UseGlobalLock = true;
             TestCultureNumberParsing();
+        }
+
+        /// <summary>
+        /// Records where Release launch traces went. Called from Main after CreateDebugListener.
+        /// debug_output.txt next to Viking.exe is rewritten empty on each build; appending the
+        /// log path there is what a monitor of that file can see on the next run.
+        /// </summary>
+        private static void WriteStartupMarker()
+        {
+            string line = "[Viking] Startup log: " + (DebugLogPath ?? "(none)");
+            Trace.WriteLine(line, "Viking");
+            try
+            {
+                string sideFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_output.txt");
+                File.AppendAllText(sideFile, line + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("[Viking] Could not append debug_output.txt: " + ex.Message, "Viking");
+            }
         }
 
         private static void TestCultureNumberParsing()

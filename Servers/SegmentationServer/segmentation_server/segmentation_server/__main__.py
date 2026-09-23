@@ -14,7 +14,7 @@ from typing import Optional
 from segmentation_grpc.generate_grpc import generate_grpc_code
 
 # Import the serve function from the server module
-from segmentation_server.server import serve
+from segmentation_server.server import package_version, serve
 
 
 @dataclass
@@ -37,7 +37,13 @@ async def main() -> None:
                         help='The number of worker threads for model inference (default: same as --workers)')
     parser.add_argument('--generate-grpc', action='store_true',
                         help='Generate gRPC code before starting the server')
+    parser.add_argument('--version', action='store_true',
+                        help='Print the installed package version and exit')
     args = parser.parse_args()
+
+    if args.version:
+        print(f"segmentation_server {package_version()}")
+        return
 
     cli_args = CLIArgs(
         port=args.port,

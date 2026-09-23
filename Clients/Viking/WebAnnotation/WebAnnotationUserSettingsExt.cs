@@ -1,5 +1,5 @@
 ﻿
-namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
+namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
     //using Xml.Schema.Linq;

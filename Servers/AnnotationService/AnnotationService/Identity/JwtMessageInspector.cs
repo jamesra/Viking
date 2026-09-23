@@ -21,6 +21,7 @@ using MicrosoftSecurityTokenSignatureKeyNotFoundException = Microsoft.IdentityMo
 using log4net;
 using System.Collections.Generic;
 using System.Security.Principal;
+using Viking.ProductVersioning;
 
 namespace Annotation.Identity
 {
@@ -127,9 +128,35 @@ namespace Annotation.Identity
             return null;
         }
 
+        /// <summary>
+        /// Stamps <c>X-Service-Version</c> on HTTP replies so callers can see which
+        /// AnnotationService build answered. Must not throw: a fault here would replace
+        /// the operation reply. Runs on the identity-server endpoint behavior.
+        /// </summary>
         public void BeforeSendReply(ref Message reply, object correlationState)
         {
-            // Clean up if needed
+            if (reply == null)
+                return;
+
+            try
+            {
+                HttpResponseMessageProperty httpResponse;
+                if (reply.Properties.ContainsKey(HttpResponseMessageProperty.Name))
+                {
+                    httpResponse = (HttpResponseMessageProperty)reply.Properties[HttpResponseMessageProperty.Name];
+                }
+                else
+                {
+                    httpResponse = new HttpResponseMessageProperty();
+                    reply.Properties.Add(HttpResponseMessageProperty.Name, httpResponse);
+                }
+
+                httpResponse.Headers["X-Service-Version"] = ProductVersion.VersionOf(typeof(JwtMessageInspector).Assembly);
+            }
+            catch (Exception)
+            {
+                // Version is advisory. Never fail the reply because the header could not be set.
+            }
         }
 
         private string ExtractTokenFromMessage(Message message)

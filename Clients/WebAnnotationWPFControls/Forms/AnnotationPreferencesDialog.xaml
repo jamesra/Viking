@@ -550,6 +550,41 @@
                             TickFrequency="5"
                             PreviewMode="NanometerRadius"/>
 
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Max Auto-Segment Downsample:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeMaxDownsample, Mode=TwoWay}"
+                                    Minimum="1"
+                                    Maximum="256"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeMaxDownsample}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Auto-segment does not run when the view is zoomed out past this downsample. The value itself still runs, so 8 runs and the next coarser view does not."/>
+                        </Grid>
+
                         <CheckBox Margin="0,10,0,0"
                                   IsChecked="{Binding AutoPolygonizeCircles, Mode=TwoWay}"
                                   Content="Auto polygonize circles in view"
@@ -567,7 +602,26 @@
                                    FontSize="10"
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
-                                   Text="Shows the raw SAM2 mask under each auto-polygonize outline so you can compare the service response to the traced polygon. Uses extra GPU memory; leave off during normal tracing."/>
+                                   Text="Shows the raw SAM2 mask under each auto-polygonize outline so you can compare the service response to the traced polygon. Uses extra GPU memory. Debug builds start with this on; turn it off for normal tracing."/>
+                        <CheckBox Margin="28,0,0,0"
+                                  IsChecked="{Binding AutoPolygonizeHideSegmentationRings, Mode=TwoWay}"
+                                  IsEnabled="{Binding AutoPolygonizeOverlayMasks}"
+                                  Content="Hide segmentation rings"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="38,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Hides the auto-polygonize outline while the returned mask is shown. Available only when masks are on. Rings stay visible whenever masks are off."/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeOverlayPrompts, Mode=TwoWay}"
+                                  Content="Show foreground and background points (debug)"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Draws the green foreground and red background clicks sent with each auto-polygonize request. Debug builds start with this on; turn it off for normal tracing."/>
                     </StackPanel>
                 </Expander>
             </StackPanel>

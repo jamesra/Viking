@@ -24,11 +24,19 @@ namespace Viking
 
         public static string HandleIncomingUrl(string vikingUrl)
         {
-            if (string.IsNullOrWhiteSpace(vikingUrl))
+            if (VikingSingleInstance.IsShuttingDown || string.IsNullOrWhiteSpace(vikingUrl))
+            {
+                Trace.WriteLine($"[Viking] Deep-link NOT_READY: shuttingDown={VikingSingleInstance.IsShuttingDown} emptyUrl={string.IsNullOrWhiteSpace(vikingUrl)}", "Viking");
                 return VikingSingleInstance.AckNotReady;
+            }
 
-            if (State.volume is null || State.ViewerForm is null || string.IsNullOrWhiteSpace(State.VolumeUrl))
+            Form? form = (Form?)State.Appwindow ?? State.ViewerForm;
+            if (State.volume is null || form is null || form.IsDisposed || !form.IsHandleCreated
+                || string.IsNullOrWhiteSpace(State.VolumeUrl))
+            {
+                Trace.WriteLine($"[Viking] Deep-link NOT_READY: volume={State.volume is not null} form={form is not null} handle={form?.IsHandleCreated == true} volumeUrl={State.VolumeUrl}", "Viking");
                 return VikingSingleInstance.AckNotReady;
+            }
 
             if (!VikingDeepLinkParser.TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
                 return VikingSingleInstance.AckNotReady;
@@ -39,8 +47,13 @@ namespace Viking
 
             NameValueCollection place = link.Place;
 
-            void Navigate()
+            // WinForms BeginInvoke is pumped by Application.Run. The WPF dispatcher queue was not,
+            // so a tools-page jump sat until close and then built UI after the token was gone.
+            form.BeginInvoke(new Action(() =>
             {
+                if (VikingSingleInstance.IsShuttingDown || form.IsDisposed)
+                    return;
+
                 try
                 {
                     ActivateMainWindow();
@@ -50,22 +63,9 @@ namespace Viking
                 {
                     Trace.WriteLine($"[Viking] Deep-link navigation failed: {ex.Message}", "Viking");
                 }
-            }
+            }));
 
-            if (State.MainThreadDispatcher != null)
-            {
-                State.MainThreadDispatcher.BeginInvoke(new Action(Navigate));
-            }
-            else if (State.ViewerForm.IsHandleCreated)
-            {
-                State.ViewerForm.BeginInvoke(new Action(Navigate));
-            }
-            else
-            {
-                return VikingSingleInstance.AckNotReady;
-            }
-
-            return VikingSingleInstance.AckOk;
+            return VikingSingleInstance.AckOk + " " + form.Handle.ToInt64().ToString(CultureInfo.InvariantCulture);
         }
 
         private static void ApplyPlace(NameValueCollection place)

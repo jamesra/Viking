@@ -34,6 +34,7 @@ class SegmentInfo(TypedDict):
     index: int
     score: float
     mask: MaskArray
+    logits: NDArray[np.float32]
     x: int
     y: int
     width: int
@@ -206,6 +207,21 @@ class SegmentationModel:
             self.service_temp_dir = self.temp_dir
 
     @staticmethod
+    def _sort_logit_masks(
+        masks: NDArray[np.floating],
+        scores: NDArray[np.float32],
+    ) -> Tuple[NDArray[np.bool_], NDArray[np.float32], NDArray[np.float32]]:
+        """Sort full-resolution logits by score and derive the boolean decision mask.
+
+        ``predict(..., return_logits=True)`` returns logits in mask order. SAM2's
+        decision boundary is logit zero, matching ``mask_threshold``.
+        """
+        sorted_ind = np.argsort(scores)[::-1]
+        logits = np.asarray(masks[sorted_ind], dtype=np.float32)
+        sorted_scores = np.asarray(scores[sorted_ind], dtype=np.float32)
+        return logits > 0.0, sorted_scores, logits
+
+    @staticmethod
     def mask_to_polygons(mask: MaskArray) -> List[PolygonArray]:
         """
         Convert a boolean mask to a list of polygons representing the contours.
@@ -335,6 +351,7 @@ class SegmentationModel:
     def _process_masks(
         masks: NDArray[np.bool_],
         scores: NDArray[np.float32],
+        logits: Optional[NDArray[np.float32]] = None,
         empty_shape: Tuple[int, int] = (0, 0)
     ) -> Tuple[LabeledImage, List[SegmentInfo]]:
         """
@@ -344,8 +361,11 @@ class SegmentationModel:
         segment_image_with_predictor() and segment_image() methods.
         
         Args:
-            masks: Boolean mask array of shape (N, H, W) where N is number of masks
+            masks: Boolean mask array of shape (N, H, W) where N is number of masks.
+                True where the SAM2 logit is above zero.
             scores: Score array of shape (N,) with scores for each mask
+            logits: Full-resolution SAM2 logits, same shape and order as masks.
+                The response encodes these, not the boolean mask.
             empty_shape: Shape to use for empty labeled image (default: (0, 0))
             
         Returns:
@@ -385,7 +405,8 @@ class SegmentationModel:
             segment: SegmentInfo = {
                 'index': i,
                 'score': float(scores[i]),
-                'mask': mask,  # Store as boolean numpy array
+                'mask': mask,  # Boolean decision region; labeled image and crop bounds
+                'logits': np.zeros((0, 0), dtype=np.float32) if logits is None else logits[i],
                 'x': x,
                 'y': y,
                 'width': width,
@@ -452,21 +473,18 @@ class SegmentationModel:
         point_coords: NDArray[np.int_] = np.array(coordinates)
         point_labels: NDArray[np.int_] = np.array(labels)
 
-        # Use the pre-initialized predictor
+        # Use the pre-initialized predictor. Logits stay unthresholded so the client
+        # can interpolate the zero crossing instead of a binary stair.
         with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
-            masks, scores, _logits = predictor.predict(
+            masks, scores, _low_res_logits = predictor.predict(
                     point_coords=point_coords,
                     point_labels=point_labels,
                     multimask_output=multimask_output,
+                    return_logits=True,
                 )
 
-        # Sort masks by score
-        sorted_ind = np.argsort(scores)[::-1]
-        masks = masks[sorted_ind].astype(np.bool_)
-        scores = scores[sorted_ind]
-        
-        # Process masks using helper method
-        return self._process_masks(masks, scores, empty_shape=(0, 0))
+        bool_masks, scores, logits = self._sort_logit_masks(masks, scores)
+        return self._process_masks(bool_masks, scores, logits, empty_shape=(0, 0))
     
     def segment_image(self,
                            image_data: bytes, 
@@ -513,20 +531,17 @@ class SegmentationModel:
         point_coords: NDArray[np.int_] = np.array(coordinates)
         point_labels: NDArray[np.int_] = np.array(labels)
 
-        # Set the image for the shared predictor (not thread-safe for concurrent use)
+        # Set the image for the shared predictor (not thread-safe for concurrent use).
+        # return_logits keeps the full-resolution field; mask_threshold is logit zero.
         with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
             self.predictor.set_image(image_np)
 
-            masks, scores, _logits = self.predictor.predict(
+            masks, scores, _low_res_logits = self.predictor.predict(
                     point_coords=point_coords,
                     point_labels=point_labels,
                     multimask_output=multimask_output,
+                    return_logits=True,
                 )
 
-        # Sort masks by score
-        sorted_ind = np.argsort(scores)[::-1]
-        masks = masks[sorted_ind].astype(np.bool_)
-        scores = scores[sorted_ind]
-        
-        # Process masks using helper method (use image dimensions for empty case)
-        return self._process_masks(masks, scores, empty_shape=(height, width))
+        bool_masks, scores, logits = self._sort_logit_masks(masks, scores)
+        return self._process_masks(bool_masks, scores, logits, empty_shape=(height, width))

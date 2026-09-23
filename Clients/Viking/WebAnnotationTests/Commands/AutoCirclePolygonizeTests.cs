@@ -216,6 +216,21 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void InvalidateProposalRerunsCircleAndLeavesDismissedCircleSkipped()
+        {
+            AutoPolygonizeCache cache = new();
+            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            cache.RememberProposal(7, 1, first, LocationType.CIRCLE);
+            cache.InvalidateProposal(7);
+            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE));
+
+            cache.Dismiss(9, 1, first);
+            cache.InvalidateProposal(9);
+            Assert.IsFalse(cache.ShouldProcess(9, 1, first, LocationType.CIRCLE));
+        }
+
+        [TestMethod]
         public void ConvertedPolygonIsNotProcessedAndRemoveClearsProposal()
         {
             AutoPolygonizeCache cache = new();
@@ -344,6 +359,59 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(simplified.ExteriorRing.Length < polygon.ExteriorRing.Length);
             Assert.IsTrue(simplified.TotalUniqueVertices <= 6);
             Assert.IsFalse(simplified.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
+        }
+
+        [TestMethod]
+        public void MaskContourToleranceKeepsALobeThePenThresholdCuts()
+        {
+            Polygon polygon = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(40, 0),
+                new Vector2(40, 20),
+                new Vector2(24, 20),
+                new Vector2(20, 26),
+                new Vector2(16, 20),
+                new Vector2(0, 20),
+                new Vector2(0, 0)
+            ]);
+            Vector2 lobeTip = new(20, 26);
+
+            Polygon tight = AutoPolygonizeSelection.SimplifyProposal(
+                polygon,
+                AutoPolygonizeSelection.MaskContourTolerancePixels);
+            Polygon loose = AutoPolygonizeSelection.SimplifyProposal(polygon, 12);
+            Polygon tightCurve = new(tight.ExteriorRing.CalculateCurvePoints(8, true));
+            Polygon looseCurve = new(loose.ExteriorRing.CalculateCurvePoints(8, true));
+
+            Assert.IsTrue(tightCurve.Distance(lobeTip) <= AutoPolygonizeSelection.MaskContourTolerancePixels + 0.5);
+            Assert.IsTrue(looseCurve.Distance(lobeTip) > 4);
+        }
+
+        [TestMethod]
+        public void CreatedShapeSimplifyKeepsALobeTheLooserThresholdCuts()
+        {
+            Polygon polygon = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(40, 0),
+                new Vector2(40, 20),
+                new Vector2(24, 20),
+                new Vector2(20, 30),
+                new Vector2(16, 20),
+                new Vector2(0, 20),
+                new Vector2(0, 0)
+            ]);
+            Vector2 lobeTip = new(20, 30);
+
+            Polygon created = new(AutoPolygonizeSelection.SimplifyProposal(
+                polygon,
+                AutoPolygonizeSelection.CreatedShapeSimplifyPixels).ExteriorRing.CalculateCurvePoints(8, true));
+            Polygon penDefault = new(AutoPolygonizeSelection.SimplifyProposal(polygon, 12)
+                .ExteriorRing.CalculateCurvePoints(8, true));
+
+            Assert.IsTrue(created.Distance(lobeTip) <= AutoPolygonizeSelection.CreatedShapeSimplifyPixels + 0.5);
+            Assert.IsTrue(penDefault.Distance(lobeTip) > created.Distance(lobeTip));
         }
 
         [TestMethod]
@@ -742,6 +810,59 @@ namespace WebAnnotationTests.Commands
             AutoPolygonizeUploadContext context = new(9, 4, new Rectangle(0, 100, 0, 100), 32, 32);
             Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 4, new Vector2(50, 50)));
             Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 6, new Vector2(50, 50)));
+        }
+
+        [TestMethod]
+        public void FinerViewByFactorOfTwoResubmitsAndCoarserViewKeepsProposal()
+        {
+            AutoPolygonizeCache cache = new();
+            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            cache.RememberProposal(7, 1, first, LocationType.CIRCLE, completedDownsample: 4);
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 4));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 3));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 8));
+            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 2));
+            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
+
+            cache.RememberProposal(7, 1, first, LocationType.CIRCLE, completedDownsample: 2);
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 2));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 4));
+            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
+        }
+
+        [TestMethod]
+        public void DismissedCircleStaysSkippedWhenViewGetsFiner()
+        {
+            AutoPolygonizeCache cache = new();
+            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            cache.Dismiss(9, 1, first);
+            Assert.IsFalse(cache.ShouldProcess(9, 1, first, LocationType.CIRCLE, liveDownsample: 1));
+        }
+
+        [TestMethod]
+        public void UploadDownsampleIsTheCompletionBaselineWhenCallerOmitsIt()
+        {
+            AutoPolygonizeCache cache = new();
+            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            AutoPolygonizeUploadContext upload = new(42, 8, new Rectangle(0, 100, 0, 100), 16, 16);
+
+            cache.RememberProposal(7, 1, first, LocationType.CIRCLE, upload: upload);
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 8));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 16));
+            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 4));
+        }
+
+        [TestMethod]
+        public void ResolutionIncreasedByFactorOfTwoIsOneDirection()
+        {
+            Assert.IsTrue(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(2, 4));
+            Assert.IsTrue(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(1, 4));
+            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(2.1, 4));
+            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(8, 4));
+            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(4, 4));
+            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(2, 0));
         }
 
         [TestMethod]

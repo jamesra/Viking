@@ -33,6 +33,12 @@ namespace ConnectomeODataV4
             // Web API routes 
             config.MapHttpAttributeRoutes();
 
+            // Ahead of the OData catch-all (null prefix) so /version is not an entity set.
+            config.Routes.MapHttpRoute(
+                name: "version",
+                routeTemplate: "version",
+                defaults: new { controller = "Version" });
+
             // Configure OData query options
             config.Count().Filter().OrderBy().Expand().Select().MaxTop(null);
 

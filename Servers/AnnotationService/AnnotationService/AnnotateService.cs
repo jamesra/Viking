@@ -11,6 +11,7 @@ using System.ServiceModel;
 using System.ServiceModel.Activation;
 using System.Threading.Tasks;
 using System.Web;
+using Viking.ProductVersioning;
 using Location = AnnotationService.Types.Location;
 using LocationLink = AnnotationService.Types.LocationLink;
 using Structure = AnnotationService.Types.Structure;
@@ -71,6 +72,16 @@ namespace Annotation
         {
             TryLoadSqlServerTypes();
             Settings.PrepareSerializers();
+            try
+            {
+                // Trace.WriteLine is compiled out of Release. TraceSource is not.
+                new TraceSource("AnnotationService", SourceLevels.Information)
+                    .TraceInformation(ProductVersion.Describe(typeof(AnnotateService).Assembly));
+            }
+            catch (Exception)
+            {
+                // Version logging must not prevent the service host from opening.
+            }
         }
 
         /// <summary>

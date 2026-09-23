@@ -262,7 +262,7 @@ namespace Viking.VolumeModel
 
             var result = listTiles.ToArray();
             //Try to save the transform to our cache
-            SaveToCache(CachedTransformsFileName, [.. listTiles]);
+            await SaveToCache(CachedTransformsFileName, [.. listTiles]).ConfigureAwait(false);
 
             //OK, overwrite the tiles in our class
             return result;

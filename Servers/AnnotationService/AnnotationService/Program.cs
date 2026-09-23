@@ -4,6 +4,7 @@ using System.Linq;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
+using Viking.ProductVersioning;
 
 namespace Annotation
 {
@@ -12,6 +13,8 @@ namespace Annotation
         public static void Main(string[] args)
         {
             AssemblyResolver resolver = new(AppDomain.CurrentDomain);
+
+            Console.WriteLine(ProductVersion.Describe(typeof(Program).Assembly));
 
             ServiceHost serviceHost =
                 new(typeof(AnnotateService));

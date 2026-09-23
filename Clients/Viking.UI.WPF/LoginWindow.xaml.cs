@@ -368,6 +368,34 @@ namespace Viking.UI.WPF
             _segmentationServiceSelectionViewModel?.StatusMessage = message;
         }
 
+        /// <summary>
+        /// Logs whether the launch token's volume Read scope can be seen.
+        /// A reference-token handle is not a JWT, so the two scope spellings must not be printed as if both were missing.
+        /// Called from the volume-auth step before annotation calls.
+        /// </summary>
+        private static void TraceLaunchTokenReadScope(string volumeName, string accessToken)
+        {
+            string hyphenated = ResourceScopeNames.ToScope(volumeName, "Read");
+            string raw = volumeName.Trim() + ".Read";
+            string expected = string.Equals(hyphenated, raw, StringComparison.OrdinalIgnoreCase)
+                ? hyphenated
+                : hyphenated + " or " + raw;
+
+            if (!JwtAccessTokenScopes.IsCompactJwt(accessToken))
+            {
+                Trace.WriteLine(
+                    $"[LoginWindow] Launch/volume token is not a JWT (AccessTokenLength={accessToken?.Length ?? 0}). " +
+                    $"Volume scope {expected} cannot be read from it.");
+                return;
+            }
+
+            if (!JwtAccessTokenScopes.ContainsVolumeRead(accessToken, volumeName))
+            {
+                Trace.WriteLine(
+                    $"[LoginWindow] Launch/volume token may lack Read scope for '{volumeName}' (expected {expected}).");
+            }
+        }
+
         private async Task PrepareSegmentationStageAsync(string volumeName, string volumeUrl)
         {
             try
@@ -428,13 +456,8 @@ namespace Viking.UI.WPF
                 TokenInjector.BearerToken = volumeToken;
                 TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
 
-                if (!string.IsNullOrWhiteSpace(volumeName)
-                    && !JwtAccessTokenScopes.ContainsVolumeRead(volumeToken.AccessToken, volumeName))
-                {
-                    Trace.WriteLine(
-                        $"[LoginWindow] Launch/volume token may lack Read scope for '{volumeName}' " +
-                        $"(expected {ResourceScopeNames.ToScope(volumeName, "Read")} or {volumeName}.Read).");
-                }
+                if (!string.IsNullOrWhiteSpace(volumeName))
+                    TraceLaunchTokenReadScope(volumeName, volumeToken.AccessToken);
 
                 if (!string.IsNullOrWhiteSpace(volumeName))
                     VolumeName = volumeName;
