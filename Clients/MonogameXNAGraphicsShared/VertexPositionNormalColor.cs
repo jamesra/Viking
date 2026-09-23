@@ -50,6 +50,9 @@ namespace VikingXNAGraphics
 
         public override readonly int GetHashCode()
         {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP || NET5_0_OR_GREATER
+            return HashCode.Combine(Position, Normal, Color);
+#else
             unchecked
             {
                 int hash = 17;
@@ -58,6 +61,7 @@ namespace VikingXNAGraphics
                 hash = hash * 23 + Color.GetHashCode();
                 return hash;
             }
+#endif
         }
 
         public override readonly string ToString() => string.Format("P: {0} N: {1} C: {2}", this.vPosition, this.vNormal, this.vColor);

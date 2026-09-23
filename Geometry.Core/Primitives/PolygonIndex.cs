@@ -288,7 +288,6 @@ namespace Geometry
         /// <summary>
         /// Return the specified point, ignoring the ShapeIndex attribute
         /// </summary>
-        /// <param name="Polygon"></param>
         /// <returns></returns>
         public Vector2 Point(in IShape2D shape)
         {
@@ -356,7 +355,6 @@ namespace Geometry
         /// <summary>
         /// Return the specified point, ignoring the ShapeIndex attribute
         /// </summary>
-        /// <param name="Polygon"></param>
         /// <returns></returns>
         public void SetPoint(Polygon Polygon, Vector2 value) => Polygon[this] = value;
 
@@ -386,7 +384,6 @@ namespace Geometry
         /// <summary>
         /// Returns the polygon the index refers to
         /// </summary>
-        /// <param name="poly"></param>
         /// <returns></returns>
         public Polygon Polygon(IReadOnlyList<Polygon> polygons)
         {
@@ -397,7 +394,6 @@ namespace Geometry
         /// <summary>
         /// Returns the polygon the index refers to
         /// </summary>
-        /// <param name="poly"></param>
         /// <returns></returns>
         public Polygon Polygon(IReadOnlyDictionary<int, Polygon> polygons)
         {
@@ -408,8 +404,6 @@ namespace Geometry
         /// <summary>
         /// Return true if the index is adjacent to the other index
         /// </summary>
-        /// <param name="other"></param>
-        /// <param name="Polygons"></param>
         /// <returns></returns>
         public bool AreAdjacent(PolygonIndex other)
         {
@@ -434,7 +428,6 @@ namespace Geometry
         /// <summary>
         /// Returns the verticies before and after this index
         /// </summary>
-        /// <param name="polygons"></param>
         /// <returns></returns>
         private Vector2[] ConnectedVertices(Vector2[] ring)
         {
@@ -504,7 +497,6 @@ namespace Geometry
         /// <summary>
         /// Get the normal of the vertex at this index, do not weight according to the relative length of the connected segments
         /// </summary>
-        /// <param name="poly"></param>
         /// <returns></returns>
         public Vector2 GetOrientation(in IReadOnlyList<IShape2D> Shapes)
         {
@@ -713,14 +705,12 @@ namespace Geometry
         /// <summary>
         /// Return a copy of this PointIndex with ShapeIndex value changed to point at a different polygon index
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolygonIndex Reindex(int shapeIndex) => new PolygonIndex(shapeIndex, this.InnerShapeIndex, this.VertexIndex, this.NumUniqueInRing);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolygonIndex ReindexToSize(int numUniqueInRing) => new PolygonIndex(this.ShapeIndex, this.InnerShapeIndex, this.VertexIndex, numUniqueInRing);
 
@@ -728,7 +718,6 @@ namespace Geometry
         /// Return a copy of this PointIndex with a different size of ring
         /// This is used if the polygon we reference may have changed ring size but we know our index is still correct
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolygonIndex ReindexToSize(Polygon poly) => this.ReindexToSize(this.Polygon(poly).ExteriorRing.Length - 1);
 
@@ -736,7 +725,6 @@ namespace Geometry
         /// Return a copy of this PointIndex with a different size of ring
         /// This is used if the polygon we reference may have changed ring size but we know our index is still correct
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolygonIndex ReindexToSize(IReadOnlyList<Polygon> Polygons) =>
             //return this.ReindexToSize(this.Polygon(Polygons).ExteriorRing.Length - 1);
@@ -765,6 +753,7 @@ namespace Geometry
         /// <summary>
         /// Return a copy of this PointIndex that refers to the inner polygon index as an exterior polygon coordinate
         /// </summary>
+        /// <param name="iInner">Interior ring this index should refer to.</param>
         /// <param name="ShapeIndex">Passing -1 will use the innerPolygon's index as the new ShapeIndex value.  Useful for referencing into arrays of interior polygons from a parent polygon.</param>
         /// <returns></returns>
         public PolygonIndex ReindexToInner(int iInner, int ShapeIndex = 0)

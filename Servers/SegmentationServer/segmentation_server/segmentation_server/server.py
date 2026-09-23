@@ -28,10 +28,14 @@ from segmentation_grpc import (
     SegmentationServiceServicer,
     SegmentImageSetRequest,
     SegmentResult,
+    SegmentTilesRequest,
     ServerStatusRequest,
     ServerStatusResponse,
+    TileCoord,
     UploadImageRequest,
     UploadImageResponse,
+    UploadTileRequest,
+    UploadTileResponse,
     add_SegmentationServiceServicer_to_server,
 )
 from segmentation_server.cuda_errors import UnrecoverableGpuError
@@ -40,8 +44,20 @@ from segmentation_server.image_cache import (
     DEFAULT_MAX_MEMORY_BYTES,
     DEFAULT_TTL_SECONDS,
     ImageCache,
+    TileCacheKey,
 )
-from segmentation_server.mask_utils import SegmentInfo, encode_png, prepare_image_for_sam2
+from segmentation_server.mask_utils import (
+    SegmentInfo,
+    combined_mask_to_segments,
+    encode_png,
+    prepare_image_for_sam2,
+)
+from segmentation_server.tile_growth import (
+    TILE_SIZE,
+    TileIndex,
+    grow_segmentation,
+    max_requested_tiles_from_env,
+)
 
 if TYPE_CHECKING:
     from segmentation_server.segmentation_service import SegmentationModel
@@ -107,7 +123,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         Args:
             cache_max_memory_bytes: Image-byte cap for the cache (default 1 GiB).
             cache_ttl_seconds: Unused-entry lifetime (default 5 minutes).
-            cache_max_images: Max cached images / GPU embeddings (default 8).
+            cache_max_images: Max cached images / GPU embeddings (default 32).
             inference_executor: Thread pool for SAM2 work; None uses the default executor.
             server_start_time: time.monotonic() at process start, for uptime.
             model: Injected SAM2 wrapper; constructed here if omitted.
@@ -132,6 +148,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             create_predictor_func=self.model.create_initialized_predictor,
             release_predictor_func=self.model.release_predictor,
         )
+        self._max_requested_tiles = max_requested_tiles_from_env()
         try:
             self._loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
         except RuntimeError:
@@ -178,13 +195,17 @@ class SegmentationServicer(SegmentationServiceServicer):
         segments: List[SegmentInfo],
         width: int,
         height: int,
+        omit_labeled_image: bool = False,
     ) -> SegmentationResponse:
         """Encode labeled PNG plus per-segment cropped masks and polygons."""
-        response = SegmentationResponse(
-            labeled_image=encode_png(labeled_image),
-            width=width,
-            height=height,
-        )
+        if omit_labeled_image or labeled_image.size == 0:
+            response = SegmentationResponse(width=width, height=height)
+        else:
+            response = SegmentationResponse(
+                labeled_image=encode_png(labeled_image),
+                width=width,
+                height=height,
+            )
 
         for segment in segments:
             if 'mask' in segment:
@@ -586,6 +607,197 @@ class SegmentationServicer(SegmentationServiceServicer):
             inference_workers=self._inference_workers,
         )
 
+    async def UploadTile(
+        self,
+        request: UploadTileRequest,
+        context: ServicerContext,
+    ) -> UploadTileResponse:
+        """Cache one grid cell. Identical bytes for the same coord skip set_image()."""
+        coord = request.coord
+        if coord is None or coord.downsample <= 0:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "UploadTile requires a coord with a positive downsample.",
+            )
+            return UploadTileResponse()
+        if request.width != TILE_SIZE or request.height != TILE_SIZE:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                f"UploadTile requires a {TILE_SIZE}x{TILE_SIZE} image, got {request.width}x{request.height}.",
+            )
+            return UploadTileResponse()
+        image_data: bytes = request.image_data
+        if not image_data:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "UploadTile requires non-empty image_data.")
+            return UploadTileResponse()
+        try:
+            decoded = prepare_image_for_sam2(image_data)
+        except (OSError, ValueError) as e:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Could not decode image_data: {e}")
+            return UploadTileResponse()
+        actual_height, actual_width = decoded.shape[:2]
+        if actual_width != request.width or actual_height != request.height:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                f"width/height {request.width}x{request.height} do not match decoded image {actual_width}x{actual_height}.",
+            )
+            return UploadTileResponse()
+
+        self._load.begin()
+        start_time = time.perf_counter()
+        try:
+            _image_id, already_cached = await self.image_cache.upload_tile(
+                _tile_cache_key(coord),
+                image_data,
+                request.width,
+                request.height,
+                executor=self.inference_executor,
+            )
+        except UnrecoverableGpuError as e:
+            await self._abort_unrecoverable_gpu(e, context)
+            return UploadTileResponse()
+        except Exception as e:
+            logger.exception("Error uploading tile")
+            await context.abort(grpc.StatusCode.INTERNAL, f"Error uploading tile: {e}")
+            return UploadTileResponse()
+        finally:
+            self._load.end(time.perf_counter() - start_time)
+        return UploadTileResponse(already_cached=already_cached)
+
+    async def SegmentTiles(
+        self,
+        request: SegmentTilesRequest,
+        context: ServicerContext,
+    ) -> SegmentationResponse:
+        """Segment uploaded cells that contain foreground points and grow across borders."""
+        if len(request.tiles) == 0:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentTiles requires at least one tile.")
+            return SegmentationResponse()
+        if len(request.foreground) == 0:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "SegmentTiles requires at least one foreground point.",
+            )
+            return SegmentationResponse()
+
+        identity = request.tiles[0]
+        for tile in request.tiles:
+            if not _same_tile_identity(tile, identity):
+                await context.abort(
+                    grpc.StatusCode.INVALID_ARGUMENT,
+                    "SegmentTiles tiles must share volume, section, channel, transform, and downsample.",
+                )
+                return SegmentationResponse()
+
+        self._load.begin()
+        start_time = time.perf_counter()
+        pinned_ids: List[int] = []
+        predictors: dict[Tuple[int, int], Tuple[Any, threading.Lock, int, int]] = {}
+        try:
+            seen: set[TileCacheKey] = set()
+            for tile in request.tiles:
+                key = _tile_cache_key(tile)
+                if key in seen:
+                    continue
+                seen.add(key)
+                pinned = await self.image_cache.get_image_by_tile(key)
+                if pinned is None:
+                    await context.abort(
+                        grpc.StatusCode.NOT_FOUND,
+                        f"TILE_NOT_FOUND row={tile.row} col={tile.col} downsample={tile.downsample}",
+                    )
+                    return SegmentationResponse()
+                image_id, _data, width, height, predictor, predictor_lock = pinned
+                pinned_ids.append(image_id)
+                if predictor is None:
+                    await context.abort(
+                        grpc.StatusCode.UNAVAILABLE,
+                        f"Predictor for tile row={tile.row} col={tile.col} is not ready.",
+                    )
+                    return SegmentationResponse()
+                predictors[(tile.row, tile.col)] = (predictor, predictor_lock, height, width)
+
+            foreground = [(point.x, point.y) for point in request.foreground]
+            background = [(point.x, point.y) for point in request.background]
+            uploaded = [TileIndex(row=tile.row, col=tile.col) for tile in request.tiles]
+            multimask_output = request.multimask_output
+
+            def predict(
+                row: int,
+                col: int,
+                points: List[Tuple[int, int]],
+                labels: List[int],
+            ):
+                predictor, predictor_lock, height, width = predictors[(row, col)]
+                with predictor_lock:
+                    return self.model.predict_tile_union(
+                        predictor,
+                        points,
+                        labels,
+                        multimask_output,
+                        (height, width),
+                    )
+
+            try:
+                result = await asyncio.get_running_loop().run_in_executor(
+                    self.inference_executor,
+                    lambda: grow_segmentation(
+                        uploaded,
+                        foreground,
+                        background,
+                        predict,
+                        max_requested=self._max_requested_tiles,
+                    ),
+                )
+            except UnrecoverableGpuError as e:
+                await self._abort_unrecoverable_gpu(e, context)
+                return SegmentationResponse()
+            except Exception as e:
+                logger.exception("Tile segmentation failed")
+                await context.abort(grpc.StatusCode.INTERNAL, f"Error processing segmentation request: {e}")
+                return SegmentationResponse()
+
+            height, width = (result.mask.shape[0], result.mask.shape[1]) if result.mask.ndim == 2 else (0, 0)
+            labeled_image, segments = combined_mask_to_segments(
+                result.mask,
+                result.score,
+                empty_shape=(height, width),
+            )
+            response = self._build_segmentation_response(
+                labeled_image,
+                segments,
+                width,
+                height,
+                omit_labeled_image=request.omit_labeled_image,
+            )
+            response.origin_x = result.origin_x
+            response.origin_y = result.origin_y
+            for tile in result.requested:
+                response.requested_tiles.append(
+                    TileCoord(
+                        volume=identity.volume,
+                        section=identity.section,
+                        channel=identity.channel,
+                        transform=identity.transform,
+                        downsample=identity.downsample,
+                        row=tile.row,
+                        col=tile.col,
+                    )
+                )
+            logger.info(
+                "SegmentTiles tiles=%s fg=%s segments=%s requested=%s in %.3fs",
+                len(seen),
+                len(foreground),
+                len(segments),
+                len(result.requested),
+                time.perf_counter() - start_time,
+            )
+            return response
+        finally:
+            for image_id in pinned_ids:
+                await self.image_cache.release_image(image_id)
+            self._load.end(time.perf_counter() - start_time)
+
     async def SegmentImage(
         self,
         request: SegmentationRequest,
@@ -669,6 +881,28 @@ class SegmentationServicer(SegmentationServiceServicer):
             finally:
                 self._load.end(time.perf_counter() - start)
             yield response
+
+
+def _tile_cache_key(coord: TileCoord) -> TileCacheKey:
+    return (
+        coord.volume,
+        int(coord.section),
+        coord.channel,
+        coord.transform,
+        int(coord.downsample),
+        int(coord.row),
+        int(coord.col),
+    )
+
+
+def _same_tile_identity(left: TileCoord, right: TileCoord) -> bool:
+    return (
+        left.volume == right.volume
+        and left.section == right.section
+        and left.channel == right.channel
+        and left.transform == right.transform
+        and left.downsample == right.downsample
+    )
 
 
 def _points_from_set(request: SegmentImageSetRequest) -> Tuple[List[Tuple[int, int]], List[int]]:

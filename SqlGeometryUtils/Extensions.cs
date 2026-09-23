@@ -583,7 +583,7 @@ namespace SqlGeometryUtils
             return numInteriorRings.Value > 0;
         }
 
-        public static Rectangle BoundingBox(this SqlGeometry geometry) => Rectangle.GetBoundingBox(geometry.STEnvelope().ToPoints());
+        public static Rectangle BoundingBox(this SqlGeometry geometry) => Rectangle.GetBoundingBox(geometry.ToPoints());
 
 #if NET48
         public static Rectangle BoundingBox(this System.Data.Entity.Spatial.DbGeometry geometry)
@@ -713,16 +713,43 @@ namespace SqlGeometryUtils
 
         public static Vector2 Centroid(this Microsoft.SqlServer.Types.SqlGeometry geometry)
         {
-            SqlGeometry center = geometry.STCentroid();
-            if (!center.IsNull)
-                return new Vector2(System.Math.Round(center.STX.Value, RoundingDigits),
+            try
+            {
+                SqlGeometry center = geometry.STCentroid();
+                if (center is not null && !center.IsNull)
+                    return new Vector2(System.Math.Round(center.STX.Value, RoundingDigits),
                                        System.Math.Round(center.STY.Value, RoundingDigits));
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // SqlServer Types native GL (STEnvelope/some STCentroid paths) is Windows-only.
+            }
 
-            if (center.STNumPoints() == 1)
-                return new Vector2(System.Math.Round(geometry.STX.Value, RoundingDigits),
-                                       System.Math.Round(geometry.STY.Value, RoundingDigits));
+            return ManagedCentroid(geometry);
+        }
 
-            return geometry.STEnvelope().Centroid();
+        static Vector2 ManagedCentroid(SqlGeometry geometry)
+        {
+            Vector2[] points = geometry.ToPoints();
+            if (points is null || points.Length == 0)
+                return Vector2.Zero;
+            if (points.Length == 1)
+                return new Vector2(System.Math.Round(points[0].X, RoundingDigits),
+                                   System.Math.Round(points[0].Y, RoundingDigits));
+
+            Vector2 c;
+            try
+            {
+                c = points.Length >= 3
+                    ? Polygon.CalculateCentroid(points, ValidateRing: false)
+                    : points.Average();
+            }
+            catch (DivideByZeroException)
+            {
+                c = points.Average();
+            }
+
+            return new Vector2(System.Math.Round(c.X, RoundingDigits), System.Math.Round(c.Y, RoundingDigits));
         }
 
         public static string ToGeometryString(SqlString GeometryType, Vector2[] points)

@@ -137,7 +137,7 @@ services:
       - identity-acme-webroot:/var/www/certbot
       - ./certs:/seed-certs:ro
       - type: bind
-        source: ${CF_DNS_API_CREDENTIALS_HOST_PATH:-D:/Docker/Builds/IdentityServer/cloudflare.ini}
+        source: ${CF_DNS_API_CREDENTIALS_HOST_PATH:-D:/Docker/Builds/cloudflare.ini}
         target: /run/secrets/cloudflare.ini
         read_only: true
       - type: bind

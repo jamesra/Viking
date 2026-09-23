@@ -75,11 +75,13 @@ namespace Viking.VolumeModel
 
         protected ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>> TileTasks = new();
 
+#nullable enable annotations
         /// <summary>
         /// Raised on a worker thread after a tile mesh is cached. Jotunn hooks this to
         /// RequestRender so the present loop cannot idle while warped TEM tiles are still building.
         /// </summary>
         public static Action? TileMeshCreated;
+#nullable restore
 
         public override bool HasPendingTileConstruction => !TileTasks.IsEmpty;
 

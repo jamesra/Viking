@@ -64,7 +64,13 @@ namespace Viking.AnnotationServiceTypes
 
         public override int GetHashCode()
         {
-            return (int)(A % int.MaxValue);
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + A.GetHashCode();
+                hash = hash * 23 + B.GetHashCode();
+                return hash;
+            }
         }
 
         public static bool operator ==(LocationLinkKey A, LocationLinkKey B)

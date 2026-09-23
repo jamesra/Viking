@@ -38,7 +38,10 @@ namespace Viking.UI.WPF.Services
             var stopwatch = Stopwatch.StartNew();
             try
             {
-                channel = new Channel(target, ChannelCredentials.Insecure);
+                ChannelCredentials credentials = EndpointRequiresTls(endpoint)
+                    ? new SslCredentials()
+                    : ChannelCredentials.Insecure;
+                channel = new Channel(target, credentials);
                 var client = new SegmentationService.SegmentationServiceClient(channel);
                 var deadline = DateTime.UtcNow.Add(ProbeTimeout);
                 var call = client.GetServerStatusAsync(
@@ -106,6 +109,32 @@ namespace Viking.UI.WPF.Services
             }
 
             return parsedUri.Authority + absolutePath + parsedUri.Query;
+        }
+
+        /// <summary>
+        /// Public HTTPS endpoints and port 443 use the system trust store. Other targets stay cleartext.
+        /// </summary>
+        internal static bool EndpointRequiresTls(string rawEndpoint)
+        {
+            if (string.IsNullOrWhiteSpace(rawEndpoint))
+            {
+                return false;
+            }
+
+            string trimmedEndpoint = rawEndpoint.Trim();
+            bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
+            string endpointToParse = containsScheme ? trimmedEndpoint : "http://" + trimmedEndpoint;
+            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri parsedUri) || parsedUri is null)
+            {
+                return false;
+            }
+
+            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return parsedUri.Port == 443;
         }
     }
 }

@@ -381,7 +381,6 @@ namespace Geometry
         /// <summary>
         /// Remove the interior polygon that contains the hole position
         /// </summary>
-        /// <param name="holePosition"></param>
         public bool TryRemoveInteriorRing(int innerPoly)
         {
             if (innerPoly >= this.InteriorPolygons.Count || innerPoly < 0)
@@ -1003,8 +1002,6 @@ namespace Geometry
         /// <summary>
         /// Return true if the exterior ring intersects itself
         /// </summary>
-        /// <param name="lines"></param>
-        /// <param name="IsClosedRing">True if the polyline forms a closed ring, in which case the first and last points are allowed to overlap</param>
         /// <returns></returns>
         private static bool SelfIntersects(in Polygon poly)
         {
@@ -1163,7 +1160,8 @@ namespace Geometry
         /// <summary>
         /// Return true if the point is one of the polygon verticies
         /// </summary>
-        /// <param name="point">The PointIndex of the point if it is a vertex</param>
+        /// <param name="point">Position to look up.</param>
+        /// <param name="index">Vertex index when <paramref name="point"/> is a vertex.</param>
         /// <returns></returns>
         public bool TryGetIndex(in Vector2 point, out PolygonIndex index)
         {
@@ -1203,7 +1201,6 @@ namespace Geometry
         /// <summary>
         /// Return true if the point is one of the polygon verticies
         /// </summary>
-        /// <param name="point"></param>
         /// <returns></returns>
         public List<PolygonIndex> TryGetIndices(ICollection<Vector2> points)
         {
@@ -1241,7 +1238,6 @@ namespace Geometry
         /// <summary>
         /// Returns true if the vertex on the exterior ring is concave
         /// </summary>
-        /// <param name="iVert"></param>
         /// <returns></returns>
         public Concavity IsVertexConcave(int iVert, out double Angle)
         {
@@ -1273,7 +1269,6 @@ namespace Geometry
         /// <summary>
         /// Returns true if the vertex on the exterior ring is concave
         /// </summary>
-        /// <param name="iVert"></param>
         /// <returns></returns>
         public Concavity[] VertexConcavity(out double[] Angles)
         {
@@ -1295,17 +1290,14 @@ namespace Geometry
         /// <summary>
         /// Returns true if all verticies on the exterior ring are convex or parallel
         /// </summary>
-        /// <param name="iVert"></param>
         /// <returns></returns>
         public bool IsConvex() => this.VertexConcavity(out double[] angles).All(c => c != Concavity.Concave);
 
         /// <summary>
         /// Returns the Polygon vertex closest to the point.  May return interior verticies
         /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param> 
-        /// <param name="nearestPoly">Nearest polygon</param>
-        /// <param name="intersectingPoly">Index of vertex in the ring</param>
+        /// <param name="WorldPosition">Point being measured.</param>
+        /// <param name="nearestVertex">Closest vertex, including interior rings.</param>
         /// <returns></returns>
         public double NearestVertex(in Vector2 WorldPosition, out PolygonIndex nearestVertex)
         {
@@ -2158,7 +2150,6 @@ namespace Geometry
         /// <summary>
         /// Return all segments, both interior and exterior, that fall within the bounding rectangle
         /// </summary>
-        /// <param name="bbox"></param>
         /// <returns></returns>
         public IEnumerable<LineSegment> GetIntersectingSegments(LineSegment line)
         {
@@ -2501,7 +2492,6 @@ namespace Geometry
         /// <summary>
         /// Brute force search for distance
         /// </summary>
-        /// <param name="p"></param>
         /// <returns></returns>
         public double Distance(Polygon other)
         {
@@ -2648,8 +2638,6 @@ namespace Geometry
         /// <summary>
         /// Return true if the polygon contains or intersects the other polygon
         /// </summary>
-        /// <param name="poly"></param>
-        /// <param name="other"></param>
         /// <returns></returns>
         public bool Intersects(in Polygon other)
         {
@@ -2898,7 +2886,7 @@ namespace Geometry
                             }
                         }
                     }
-                    catch (ArgumentException e)
+                    catch (ArgumentException)
                     {
                         Trace.WriteLine($"{this} could not add corresponding point {polyIndex} : {p} ");
                         continue;
@@ -2965,7 +2953,6 @@ namespace Geometry
         /// <summary>
         /// Add a vertex to our rings everywhere the other polygon intersects one of the passed segments
         /// </summary>
-        /// <param name="other"></param>
         public void AddPointsAtIntersections(in LineSegment[] input)
         {
             //Only check the lines that could intersect our polygon
@@ -3015,11 +3002,12 @@ namespace Geometry
         /// <summary>
         /// Given a polyline, find two locations where it intersects the polygon and walk the polygon in either clockwise/counter-clockwise direction from the first intersection of the cutline to the second, add the cutline to close the ring, and return the resulting polygon.
         /// </summary>
-        /// <param name="start_index"></param>
         /// <param name="input">The polygon to cut/extend</param>
         /// <param name="direction">The direction we will walk to connect the starting and ending cut points</param>
         /// <param name="cutLine">The line cutting the polygon.  It should intersect the same polygonal ring in two locations without intersecting any others</param>
-        /// <param name="FirstIntersect">The polygon vertex before the intersected segment, use intersect_index.next to get the endpoint of the intersected segment of the polygon</param>
+        /// <param name="FirstIntersection">Polygon vertex before the first intersected segment. The other end of that segment is <c>FirstIntersection.Next</c>.</param>
+        /// <param name="LastIntersection">Polygon vertex before the second intersected segment.</param>
+        /// <param name="intersecting_cutline_verts">Cut vertices that lie between the two intersections.</param>
         /// <returns></returns>
         public static Polygon WalkPolygonCut(Polygon input, RotationDirection direction, IList<Vector2> cutLine, out PolygonIndex FirstIntersection, out PolygonIndex LastIntersection, out List<Vector2> intersecting_cutline_verts)
         {
@@ -3111,7 +3099,7 @@ namespace Geometry
         /// This can be used to cut a polygon into arbitrary parts.
         /// </summary>
         /// <param name="start_index">The vertex of the polygon the cut begins at</param>
-        /// <param name="intersect_index">The vertex of the polygon the cut ends at</param>
+        /// <param name="end_index">The vertex of the polygon the cut ends at</param>
         /// <param name="originPolygon">Polygon we are cutting</param>
         /// <param name="direction">Build the polygon with a clockwise or counterclockwise rotation order from the start_index</param>
         /// <param name="cutLine">The verticies of the cutline.  Must be entirely inside or outside the polygon and not intersect any rings</param>
@@ -3295,6 +3283,9 @@ namespace Geometry
             return false;
         }
 
+        /// <summary>
+        /// Mutable rings with epsilon equality cannot participate in hash collections.
+        /// </summary>
         public override int GetHashCode()
         {
             throw new InvalidOperationException(

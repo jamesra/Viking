@@ -4,6 +4,7 @@ using Geometry.Transforms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using Viking.AnnotationServiceTypes;
 
 namespace GeometryTests
 {
@@ -168,7 +169,7 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void GridLineSegment_GetHashCode_IsDirectedAndEpsilonStable()
+        public void GridLineSegment_GetHashCode_IsUndirectedAndEpsilonStable()
         {
             LineSegment ab = new(new Vector2(0, 0), new Vector2(10, 0));
             LineSegment ba = new(new Vector2(10, 0), new Vector2(0, 0));
@@ -178,7 +179,7 @@ namespace GeometryTests
 
             Assert.AreNotEqual(ab, ba);
             Assert.IsTrue(ab.EquivalentUndirected(ba));
-            Assert.AreNotEqual(ab.GetHashCode(), ba.GetHashCode());
+            Assert.AreEqual(ab.GetHashCode(), ba.GetHashCode());
             Assert.AreEqual(ab, epsilonEqual);
             Assert.AreEqual(ab.GetHashCode(), epsilonEqual.GetHashCode());
         }
@@ -223,6 +224,64 @@ namespace GeometryTests
             Assert.AreEqual(a, b);
             Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
             Assert.AreNotEqual(a.GetHashCode(), c.GetHashCode());
+        }
+
+        [TestMethod]
+        public void StructureLinkKey_GetHashCode_MatchesBidirectionalEquals()
+        {
+            StructureLinkKey a = new(1, 2, Bidirectional: true);
+            StructureLinkKey b = new(2, 1, Bidirectional: true);
+            StructureLinkKey directed = new(1, 2, Bidirectional: false);
+
+            Assert.AreEqual(a, b);
+            Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
+            Assert.AreNotEqual(a, directed);
+            Assert.AreNotEqual(a.GetHashCode(), directed.GetHashCode());
+        }
+
+        [TestMethod]
+        public void LocationLinkKey_GetHashCode_IncludesBothEndpoints()
+        {
+            LocationLinkKey a = new(10, 20);
+            LocationLinkKey b = new(20, 10);
+            LocationLinkKey other = new(10, 21);
+
+            Assert.AreEqual(a, b);
+            Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
+            Assert.AreNotEqual(a, other);
+            Assert.AreNotEqual(a.GetHashCode(), other.GetHashCode());
+        }
+
+        [TestMethod]
+        public void GeometryHashCode_EqualsImpliesSameHash_ForFixedTypes()
+        {
+            Random rng = new(42);
+            for (int i = 0; i < 40; i++)
+            {
+                double x = rng.Next(0, 100000) / 1000.0;
+                double y = rng.Next(0, 100000) / 1000.0;
+                const double nudge = 1e-7;
+                Vector2 p = new(x, y);
+                Vector2 pClose = new(x + nudge, y);
+                Assert.AreEqual(p, pClose);
+                Assert.AreEqual(p.GetHashCode(), pClose.GetHashCode());
+
+                Vector2 q = new(x + 3, y + 4);
+                LineSegment seg = new(p, q);
+                LineSegment segClose = new(pClose, q);
+                Assert.AreEqual(seg, segClose);
+                Assert.AreEqual(seg.GetHashCode(), segClose.GetHashCode());
+
+                Circle c = new(p, 5);
+                Circle cClose = new(pClose, 5);
+                Assert.AreEqual(c, cClose);
+                Assert.AreEqual(c.GetHashCode(), cClose.GetHashCode());
+
+                Triangle t = new(p, q, new Vector2(x, y + 5));
+                Triangle tClose = new(pClose, q, new Vector2(x, y + 5));
+                Assert.AreEqual(t, tClose);
+                Assert.AreEqual(t.GetHashCode(), tClose.GetHashCode());
+            }
         }
 
         [TestMethod]

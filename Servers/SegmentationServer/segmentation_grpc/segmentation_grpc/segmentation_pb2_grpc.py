@@ -40,6 +40,16 @@ class SegmentationServiceStub:
                 request_serializer=segmentation__pb2.UploadImageRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.UploadImageResponse.FromString,
                 _registered_method=True)
+        self.UploadTile = channel.unary_unary(
+                '/segmentation.SegmentationService/UploadTile',
+                request_serializer=segmentation__pb2.UploadTileRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.UploadTileResponse.FromString,
+                _registered_method=True)
+        self.SegmentTiles = channel.unary_unary(
+                '/segmentation.SegmentationService/SegmentTiles',
+                request_serializer=segmentation__pb2.SegmentTilesRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
+                _registered_method=True)
         self.SegmentImage = channel.unary_unary(
                 '/segmentation.SegmentationService/SegmentImage',
                 request_serializer=segmentation__pb2.SegmentationRequest.SerializeToString,
@@ -73,6 +83,22 @@ class SegmentationServiceServicer:
 
     def UploadImage(self, request, context):
         """Upload an image to the server cache and receive a unique ID
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UploadTile(self, request, context):
+        """Upload one 1024x1024 grid cell. A repeat of the same TileCoord with identical bytes
+        refreshes the cache entry and does not re-encode.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SegmentTiles(self, request, context):
+        """Segment using uploaded grid cells. Polygons are in the fused mosaic. requested_tiles
+        is non-empty when the mask hit a border the server does not have a cell for.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -122,6 +148,16 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     servicer.UploadImage,
                     request_deserializer=segmentation__pb2.UploadImageRequest.FromString,
                     response_serializer=segmentation__pb2.UploadImageResponse.SerializeToString,
+            ),
+            'UploadTile': grpc.unary_unary_rpc_method_handler(
+                    servicer.UploadTile,
+                    request_deserializer=segmentation__pb2.UploadTileRequest.FromString,
+                    response_serializer=segmentation__pb2.UploadTileResponse.SerializeToString,
+            ),
+            'SegmentTiles': grpc.unary_unary_rpc_method_handler(
+                    servicer.SegmentTiles,
+                    request_deserializer=segmentation__pb2.SegmentTilesRequest.FromString,
+                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
             ),
             'SegmentImage': grpc.unary_unary_rpc_method_handler(
                     servicer.SegmentImage,
@@ -177,6 +213,60 @@ class SegmentationService:
             '/segmentation.SegmentationService/UploadImage',
             segmentation__pb2.UploadImageRequest.SerializeToString,
             segmentation__pb2.UploadImageResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UploadTile(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/UploadTile',
+            segmentation__pb2.UploadTileRequest.SerializeToString,
+            segmentation__pb2.UploadTileResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SegmentTiles(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/SegmentTiles',
+            segmentation__pb2.SegmentTilesRequest.SerializeToString,
+            segmentation__pb2.SegmentationResponse.FromString,
             options,
             channel_credentials,
             insecure,

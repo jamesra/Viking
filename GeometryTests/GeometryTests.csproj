@@ -13,5 +13,6 @@
     <ProjectReference Include="..\Geometry.Core\Geometry.Core.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\Utils\Utils.csproj" />
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
   </ItemGroup>
 </Project>

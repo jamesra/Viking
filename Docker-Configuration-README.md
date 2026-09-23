@@ -93,7 +93,7 @@ Once containers are running, access the services at:
   - HTTP (h2c): http://localhost:5010
 - **SegmentationServer**: 
   - Web: http://localhost:8080
-  - gRPC: localhost:50051
+  - gRPC: localhost:40080
 
 ## Troubleshooting
 

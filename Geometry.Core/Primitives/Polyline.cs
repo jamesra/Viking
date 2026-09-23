@@ -642,7 +642,10 @@ namespace Geometry
 
         public Polyline Clone() => new Polyline(this.Points.ToArray(), this.AllowsSelfIntersection);
 
-        public override int GetHashCode() => 0; //Use a constant since the polyline can change
+        /// <summary>
+        /// Constant hash: the polyline is mutable, so a content hash would be unstable in collections.
+        /// </summary>
+        public override int GetHashCode() => 0;
 
         public override bool Equals(object obj)
         {

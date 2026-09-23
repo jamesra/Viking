@@ -51,6 +51,10 @@ namespace Geometry
         /// <summary>
         /// Möller–Trumbore ray-triangle intersection.
         /// </summary>
+        /// <param name="ray">Ray being tested.</param>
+        /// <param name="A">First triangle vertex.</param>
+        /// <param name="B">Second triangle vertex.</param>
+        /// <param name="C">Third triangle vertex.</param>
         /// <param name="cullBackFaces">
         /// When true a ray striking the back of the triangle (per the A,B,C winding) misses. Mesh picking
         /// normally wants false: composite meshes in this suite are not guaranteed to be consistently wound.
@@ -124,6 +128,9 @@ namespace Geometry
         /// <summary>
         /// Slab-method ray intersection against an axis-aligned box.
         /// </summary>
+        /// <param name="ray">Ray being tested.</param>
+        /// <param name="minCorner">Minimum corner of the axis-aligned box.</param>
+        /// <param name="maxCorner">Maximum corner of the axis-aligned box.</param>
         /// <param name="distance">
         /// Parametric distance to the entry point, or zero when the ray origin is already inside the box.
         /// Zero on a miss.

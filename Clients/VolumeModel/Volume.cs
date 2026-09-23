@@ -430,7 +430,6 @@ namespace Viking.VolumeModel
 
             workerThread?.Report(new ProgressInfo($"Requesting {path}", 0, 100));
 
-            XDocument XMLInitData;
             if (uri.Scheme == "http" || uri.Scheme == "https")
                 return LoadHTTPAsync(path, UserCredentials, token);
             else
@@ -510,7 +509,6 @@ namespace Viking.VolumeModel
 
         protected static XDocument LoadLocal(string path)
         {
-            XDocument reader = null;
             using FileStream f = File.OpenRead(path);
             using StreamReader XMLStreamReader = new(f);
             string text = XMLStreamReader.ReadToEnd();
@@ -520,7 +518,6 @@ namespace Viking.VolumeModel
 
         protected static async Task<XDocument> LoadLocalAsync(string path, CancellationToken token)
         {
-            XDocument reader = null;
             using FileStream f = File.OpenRead(path);
             using StreamReader XMLStreamReader = new(f);
             string text = await XMLStreamReader.ReadToEndAsync().ConfigureAwait(false);
@@ -578,7 +575,7 @@ namespace Viking.VolumeModel
                 Trace.WriteLine($"Error connecting to volume server: \n{StosZipPath}\n{e.Message}", "VolumeModel");
                 return false;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Trace.WriteLine($"Could not open StosZip file: {StosZipPath}", "VolumeModel");
             }
@@ -1360,7 +1357,7 @@ namespace Viking.VolumeModel
                                         {
                                             SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
                                         }
-                                        catch (System.Text.Json.JsonException e)
+                                        catch (System.Text.Json.JsonException)
                                         {
 
                                             System.Diagnostics.Debugger.Break();

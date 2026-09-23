@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Viking.GrpcSectionCorrectionService</RootNamespace>
+    <AssemblyName>GrpcSectionCorrectionService</AssemblyName>
+    <DockerfileContext>..\..</DockerfileContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cronos" Version="0.8.4" />
+    <PackageReference Include="Google.Protobuf" Version="3.35.1" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\SectionCorrectionServiceTypes.gRPC\SectionCorrectionServiceTypes.gRPC.csproj" />
+    <ProjectReference Include="..\SectionCorrection\SectionCorrection.csproj" />
+    <ProjectReference Include="..\SectionCorrectionBuilder\SectionCorrectionBuilder.csproj" />
+  </ItemGroup>
+
+</Project>

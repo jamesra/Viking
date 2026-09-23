@@ -76,6 +76,16 @@
       "stopAtEntry": false
     },
     {
+      "name": "GrpcSectionCorrectionService",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-grpc-section-correction-service",
+      "program": "${workspaceFolder}/Servers/GrpcSectionCorrectionService/bin/Debug/net10.0/GrpcSectionCorrectionService.dll",
+      "cwd": "${workspaceFolder}/Servers/GrpcSectionCorrectionService",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
       "name": "MonogameTestbed (BAJAJTEST screenshots)",
       "type": "coreclr",
       "request": "launch",

@@ -37,7 +37,7 @@ Optional controls:
 
 - `CERTBOT_RENEW_INTERVAL_HOURS` (default `12`)
 - `CERTBOT_AUTH_METHOD` (default `dns-cloudflare`; fallback `webroot`)
-- `CF_DNS_API_CREDENTIALS_HOST_PATH` (default `D:/Docker/Builds/IdentityServer/cloudflare.ini`)
+- `CF_DNS_API_CREDENTIALS_HOST_PATH` (default `D:/Docker/Builds/cloudflare.ini`)
 - `CF_DNS_API_CREDENTIALS_FILE` (default `/run/secrets/cloudflare.ini`)
 - `CF_DNS_PROPAGATION_SECONDS` (default `60`)
 - `CERTBOT_WEBROOT_PATH` (default `/var/www/certbot`, only for `webroot` mode)

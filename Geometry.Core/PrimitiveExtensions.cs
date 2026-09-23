@@ -377,7 +377,6 @@ namespace Geometry
         /// <summary>
         /// Return RotationDirection of the points.  Code Assumes points do not cross over themselves. 
         /// </summary>
-        /// <param name="points"></param>
         /// <returns></returns>
         public static RotationDirection Winding(this Vector2 p1, Vector2 p2, Vector2 p3)
         {
@@ -439,7 +438,6 @@ namespace Geometry
         /// <summary>
         /// Create a polyline from points in the collection
         /// </summary>
-        /// <param name="points"></param>
         /// <returns></returns>
         public static Polyline ToPolyline(this ICollection<Vector2> points, bool AllowSelfIntersection = false)
         {
@@ -794,7 +792,6 @@ namespace Geometry
         /// <summary>
         /// Given a set of points, return the closest distance between any two points
         /// </summary>
-        /// <param name="points"></param>
         /// <returns></returns>
         public static double MinDistanceBetweenSequentialPoints(this IReadOnlyList<Vector2> points, out int FirstIndex)
         {
@@ -815,7 +812,6 @@ namespace Geometry
         /// <summary>
         /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
         /// </summary>
-        /// <param name="position"></param>
         /// <returns></returns>
         public static Vector2? IntersectionPoint(this ICollection<Vector2> Vertices, LineSegment testSeg)
         {
@@ -827,9 +823,6 @@ namespace Geometry
         /// <summary>
         /// Returns the index and distance to the nearest point in an array, brute force
         /// </summary>
-        /// <param name="segments"></param>
-        /// <param name="p"></param>
-        /// <param name="MinDistance"></param>
         /// <returns></returns>
         public static int NearestPoint(this ICollection<Vector2> points, Vector2 testPoint, out double MinDistance)
         {
@@ -989,7 +982,8 @@ namespace Geometry
         /// <summary>
         /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
         /// </summary>
-        /// <param name="position"></param>
+        /// <param name="segments">Segments that may be crossed.</param>
+        /// <param name="testSeg">Segment tested for an intersection.</param>
         /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
         /// <returns></returns>
         public static Vector2? IntersectionPoint(this ICollection<LineSegment> segments, LineSegment testSeg, bool IgnoreEndpoints) => IntersectionPoint(segments, testSeg, IgnoreEndpoints, out LineSegment? intersectedSegment);
@@ -997,8 +991,10 @@ namespace Geometry
         /// <summary>
         /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
         /// </summary>
-        /// <param name="position"></param>
+        /// <param name="segments">Segments that may be crossed.</param>
+        /// <param name="testSeg">Segment tested for an intersection.</param>
         /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
+        /// <param name="intersectedSegment">The segment that contained the hit, when one exists.</param>
         /// <returns></returns>
         public static Vector2? IntersectionPoint(this ICollection<LineSegment> segments, LineSegment testSeg, bool IgnoreEndpoints, out LineSegment? intersectedSegment)
         {
@@ -1070,8 +1066,6 @@ namespace Geometry
         /// <summary>
         /// Include the new point in the grid line segment array.  Creates two new segments from (index-1, index) and (index, index + 1) and removes the segment between (index-1 and index) by creating a new segment between the new point and closest vertex in the existing segments.  Preserves order.
         /// </summary>
-        /// <param name="segments"></param>
-        /// <param name="newPoint"></param>
         /// <returns></returns>
         public static LineSegment[] Insert(this ICollection<LineSegment> lineSegs, Vector2 newPointPosition, int segmentIndex)
         {
@@ -1117,7 +1111,6 @@ namespace Geometry
         /// <summary>
         /// Shorten the last segment in a collection to be 99% of the original length.  This is used to prevent false positives in self-intersection tests, often for closed rings
         /// </summary>
-        /// <param name="points"></param>
         /// <returns></returns>
         public static LineSegment[] ShortenLastVertex(this IReadOnlyList<LineSegment> src)
         {

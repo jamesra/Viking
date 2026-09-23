@@ -58,28 +58,24 @@ namespace Geometry
         /// <summary>
         /// Return a copy of this IShapeIndex with ShapeIndex value changed to point at a different polygon index
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         IShapeIndex Reindex(int shapeIndex);
 
         /// <summary>
         /// Return the specified point, ignoring the ShapeIndex attribute
         /// </summary>
-        /// <param name="Polygon"></param>
         /// <returns></returns>
         Vector2 Point(in IShape2D Shape);
 
         /// <summary>
         /// Return the point corresponding to this index
         /// </summary>
-        /// <param name="Polygons"></param>
         /// <returns></returns>
         Vector2 Point(in IReadOnlyList<IShape2D> Shapes);
 
         /// <summary>
         /// Return the point corresponding to this index
         /// </summary>
-        /// <param name="Polygons"></param>
         /// <returns></returns>
         Vector2 Point(in IReadOnlyDictionary<int, IShape2D> Shapes);
 

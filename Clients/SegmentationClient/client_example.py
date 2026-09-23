@@ -28,7 +28,9 @@ from segmentation_grpc import (
     Point,
     Polygon,
     SegmentResult,
-    SegmentationServiceStub
+    SegmentationServiceStub,
+    UploadImageRequest,
+    DeleteImageRequest,
 )
 
 np.random.seed(16)
@@ -188,7 +190,15 @@ def show_labeled_image(original_image, labeled_image, segments, coordinates=None
     plt.show()
 
 
-async def segment_image(server_address: str, image_path: str, coordinates: tuple[int, int], labels: Sequence[bool], multimask_output: bool=True) -> tuple[NDArray, Sequence[Segment]]:
+async def segment_image(
+    server_address: str,
+    image_path: str,
+    coordinates: tuple[int, int],
+    labels: Sequence[bool],
+    multimask_output: bool = True,
+    use_cache: bool = True,
+    tls: bool = False,
+) -> tuple[NDArray, Sequence[Segment]]:
     """
     Segment an image using the segmentation service.
 
@@ -198,35 +208,28 @@ async def segment_image(server_address: str, image_path: str, coordinates: tuple
         coordinates: List of (x, y) coordinates to use as prompts
         labels: List of labels for each coordinate (1 for foreground, 0 for background)
         multimask_output: Whether to output multiple masks per point
+        use_cache: If True (default), UploadImage then SegmentImage by image_id.
+            If False, send image bytes on the segment request (re-encodes).
+        tls: Use TLS. Port 443 also selects TLS when this is false.
 
     Returns:
         A tuple containing:
         - labeled_image: The labeled image as a PIL Image
         - segments: List of segment information
     """
-    # Load the image
     image = Image.open(image_path)
 
-    # Convert to grayscale if needed
     if image.mode != 'L':
         grayscale_image = image.convert('L')
     else:
         grayscale_image = image
 
-    # Convert the image to bytes
     buffer = io.BytesIO()
     grayscale_image.save(buffer, format='PNG')
     image_data = buffer.getvalue()
 
-    # Create the request
-    request = SegmentationRequest(
-        image_data=image_data,
-        width=grayscale_image.width,
-        height=grayscale_image.height,
-        multimask_output=multimask_output
-    )
+    request = SegmentationRequest(multimask_output=multimask_output)
 
-    # Add coordinates and labels
     for x, y in coordinates:
         point = Point(x=x, y=y)
         request.coordinates.append(point)
@@ -234,22 +237,32 @@ async def segment_image(server_address: str, image_path: str, coordinates: tuple
     for label in labels:
         request.labels.append(label)
 
-    # Create a gRPC channel
-    async with grpc.aio.insecure_channel(server_address) as channel:
-        # Create a stub
+    channel_factory = _channel_for(server_address, tls=tls)
+    async with channel_factory as channel:
         stub = SegmentationServiceStub(channel)
-
+        image_id = 0
         try:
-            # Call the service
-            response = await stub.SegmentImage(request) # type: SegmentationResponse
+            if use_cache:
+                upload = await stub.UploadImage(
+                    UploadImageRequest(
+                        image_data=image_data,
+                        width=grayscale_image.width,
+                        height=grayscale_image.height,
+                    )
+                )
+                image_id = upload.image_id
+                request.image_id = image_id
+            else:
+                request.image_data = image_data
+                request.width = grayscale_image.width
+                request.height = grayscale_image.height
 
-            # Process the response
+            response = await stub.SegmentImage(request)
+
             labeled_image = Image.open(io.BytesIO(response.labeled_image))
 
-            # Process segments
             segments = []
             for segment in response.segments:
-                # Extract polygons from the response
                 polygons = []
                 for polygon in segment.polygons:
                     points = [(point.x, point.y) for point in polygon.points]
@@ -267,6 +280,21 @@ async def segment_image(server_address: str, image_path: str, coordinates: tuple
         except grpc.RpcError as e:
             print(f"RPC error: {e.details()}")
             return None, None
+        finally:
+            if image_id:
+                try:
+                    await stub.DeleteImage(DeleteImageRequest(image_id=image_id))
+                except grpc.RpcError:
+                    pass
+
+def _channel_for(server_address: str, tls: bool):
+    """Open a TLS channel for --tls or port 443. Otherwise use cleartext."""
+    _host, separator, port = server_address.rpartition(":")
+    use_tls = tls or (separator == ":" and port == "443")
+    if use_tls:
+        return grpc.aio.secure_channel(server_address, grpc.ssl_channel_credentials())
+    return grpc.aio.insecure_channel(server_address)
+
 
 def pair_of_numbers(value: str):
     try:
@@ -281,8 +309,8 @@ async def main():
     """Main entry point for the client example."""
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Segment an image using the segmentation service.')
-    parser.add_argument('--server', type=str, default='localhost:50051',
-                        help='The address of the segmentation service (default: localhost:50051)')
+    parser.add_argument('--server', type=str, default='localhost:40080',
+                        help='The address of the segmentation service (default: localhost:40080)')
     parser.add_argument('--image', type=str, required=True,
                         help='Path to the image file')
     parser.add_argument('--coordinates', type=pair_of_numbers, nargs='+', required=True,
@@ -291,6 +319,10 @@ async def main():
                         help='Labels as l1,l2,... (e.g., 1,0). 1 indicates the point is in the foreground, 0 in the background.  Defaults to assuming all points are foreground.')
     parser.add_argument('--multimask', action='store_true',
                         help='Output multiple masks per point')
+    parser.add_argument('--inline', action='store_true',
+                        help='Send image bytes on the segment request instead of UploadImage (slow path)')
+    parser.add_argument('--tls', action='store_true',
+                        help='Use TLS. Also implied when --server uses port 443')
     args = parser.parse_args()
 
     # Parse coordinates
@@ -318,7 +350,9 @@ async def main():
         args.image,
         coordinates,
         labels,
-        args.multimask
+        args.multimask,
+        use_cache=not args.inline,
+        tls=args.tls,
     )
 
     if labeled_image is not None and segments is not None:

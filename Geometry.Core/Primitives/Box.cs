@@ -267,7 +267,6 @@ namespace Geometry
         /// Expands the rectange to contain the specified point.
         /// Returns true if the rectangle expands, otherwise false.
         /// </summary>
-        /// <param name="point"></param>
         /// <returns></returns>
         public Box Union(Vector3 point, out bool boundsChanged) => Union(point.Coords, out boundsChanged);
 
@@ -275,7 +274,6 @@ namespace Geometry
         /// Expands the rectange to contain the specified point.
         /// Returns true if the rectangle expands, otherwise false.
         /// </summary>
-        /// <param name="point"></param>
         /// <returns></returns>
         public Box Union(IReadOnlyList<Vector3> points, out bool boundsChanged)
         {

@@ -232,6 +232,29 @@ class SegmentationModel:
         if self.device.type == "cuda":
             torch.cuda.empty_cache()
 
+    def _predict_with_logits(
+        self,
+        predictor: SAM2ImagePredictor,
+        coordinates: Sequence[Point],
+        labels: Sequence[int],
+        multimask_output: bool,
+    ) -> Tuple[NDArray[np.bool_], NDArray[np.float32], Optional[NDArray]]:
+        """Run predict() and keep logits, highest score first."""
+        point_coords: NDArray[np.int_] = np.array(coordinates)
+        point_labels: NDArray[np.int_] = np.array(labels)
+
+        try:
+            with torch.inference_mode(), self._autocast():
+                masks, scores, logits = predictor.predict(
+                    point_coords=point_coords,
+                    point_labels=point_labels,
+                    multimask_output=multimask_output,
+                )
+        except Exception as e:
+            raise_if_cuda_lost(e)
+            raise
+        return self._sort_predict_outputs(masks, scores, logits)
+
     def _predict_raw(
         self,
         predictor: SAM2ImagePredictor,
@@ -240,26 +263,77 @@ class SegmentationModel:
         multimask_output: bool,
     ) -> Tuple[NDArray[np.bool_], NDArray[np.float32]]:
         """Run one predict() on a predictor that already has set_image() applied."""
-        point_coords: NDArray[np.int_] = np.array(coordinates)
-        point_labels: NDArray[np.int_] = np.array(labels)
+        masks_np, scores_np, _logits = self._predict_with_logits(
+            predictor, coordinates, labels, multimask_output
+        )
+        return masks_np, scores_np
 
-        try:
-            with torch.inference_mode(), self._autocast():
-                masks, scores, _logits = predictor.predict(
-                    point_coords=point_coords,
-                    point_labels=point_labels,
-                    multimask_output=multimask_output,
-                )
-        except Exception as e:
-            raise_if_cuda_lost(e)
-            raise
-
+    def _sort_predict_outputs(
+        self,
+        masks: Any,
+        scores: Any,
+        logits: Any,
+    ) -> Tuple[NDArray[np.bool_], NDArray[np.float32], Optional[NDArray]]:
         masks_np = np.asarray(masks)
         if masks_np.ndim == 2:
             masks_np = np.expand_dims(masks_np, 0)
         scores_np = np.asarray(scores, dtype=np.float32).reshape(-1)
         sorted_ind = np.argsort(scores_np)[::-1]
-        return masks_np[sorted_ind].astype(np.bool_), scores_np[sorted_ind]
+        logits_np: Optional[NDArray] = None
+        if logits is not None:
+            raw_logits = np.asarray(logits)
+            if raw_logits.ndim >= 1 and raw_logits.shape[0] == masks_np.shape[0]:
+                logits_np = raw_logits[sorted_ind]
+        return masks_np[sorted_ind].astype(np.bool_), scores_np[sorted_ind], logits_np
+
+    def predict_tile_union(
+        self,
+        predictor: SAM2ImagePredictor,
+        coordinates: Sequence[Point],
+        labels: Sequence[int],
+        multimask_output: bool,
+        empty_shape: Tuple[int, int],
+    ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
+        """One tile predict: union of masks that cover a foreground click, plus best logits.
+
+        Logits are the highest-scoring mask from the first predict (often 256x256).
+        Callers resize them. The returned score is that union's best mask score;
+        cross-tile fusion takes the minimum of these.
+        """
+        if not coordinates:
+            height, width = empty_shape
+            return np.zeros((height, width), dtype=np.bool_), None, 0.0
+
+        masks, scores, logits = self._predict_with_logits(
+            predictor, coordinates, labels, multimask_output
+        )
+        best_logits = None if logits is None or len(logits) == 0 else logits[0]
+
+        def extra_predict(
+            extra_coords: Sequence[Point], extra_labels: Sequence[int]
+        ) -> Tuple[NDArray[np.bool_], NDArray[np.float32]]:
+            extra_masks, extra_scores, _extra_logits = self._predict_with_logits(
+                predictor, extra_coords, extra_labels, multimask_output=False
+            )
+            return extra_masks, extra_scores
+
+        if not any(int(label) == 1 for label in labels):
+            labeled, segments = process_masks(masks, scores, empty_shape=empty_shape)
+            if not segments:
+                height, width = empty_shape
+                return np.zeros((height, width), dtype=np.bool_), best_logits, 0.0
+            return segments[0]["mask"], best_logits, float(segments[0]["score"])
+
+        union, stats = union_masks_covering_positives(
+            masks,
+            scores,
+            coordinates,
+            labels,
+            extra_predict=extra_predict,
+            empty_shape=empty_shape,
+        )
+        self._log_union_stats(stats, empty_shape)
+        return union, best_logits, float(stats.score)
 
     def _log_union_stats(self, stats: UnionMaskStats, empty_shape: Tuple[int, int]) -> None:
         height, width = empty_shape

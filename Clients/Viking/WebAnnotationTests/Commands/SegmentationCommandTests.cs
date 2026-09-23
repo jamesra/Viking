@@ -2,6 +2,7 @@ using Geometry;
 using Rectangle = Geometry.Rectangle;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
 {
@@ -381,6 +382,52 @@ namespace WebAnnotationTests.Commands
             if (t < 1f / 2f) return q;
             if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f;
             return p;
+        }
+
+        #endregion
+
+        #region Tile grid
+
+        [TestMethod]
+        public void CellIndex_UsesDownsampleGridFromVolumeOrigin()
+        {
+            TileCell cell = SegmentationTileGrid.CellIndex(2048, 0, 2);
+            Assert.AreEqual(0, cell.Row);
+            Assert.AreEqual(1, cell.Col);
+
+            TileCell above = SegmentationTileGrid.CellIndex(0, 2048, 2);
+            Assert.AreEqual(1, above.Row);
+            Assert.AreEqual(0, above.Col);
+
+            TileCell onBoundary = SegmentationTileGrid.CellIndex(1024 * 2, 0, 2);
+            Assert.AreEqual(1, onBoundary.Col);
+        }
+
+        [TestMethod]
+        public void CellsCovering_DoesNotIncludeTheNextCellWhenTheEdgeLandsOnABoundary()
+        {
+            List<TileCell> one = SegmentationTileGrid.CellsCovering(0, 0, 2048, 2048, 2);
+            Assert.AreEqual(1, one.Count);
+            Assert.AreEqual(new TileCell(0, 0), one[0]);
+
+            List<TileCell> two = SegmentationTileGrid.CellsCovering(0, 0, 2049, 2048, 2);
+            Assert.AreEqual(2, two.Count);
+        }
+
+        [TestMethod]
+        public void MosaicPixelToWorld_MapsTopLeftPixelToTheHighWorldEdge()
+        {
+            Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 0, 1024, 2);
+            Assert.AreEqual(0, topLeft.X, 1e-6);
+            Assert.AreEqual(2048, topLeft.Y, 1e-6);
+
+            Vector2 bottomLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 1024, 1024, 2);
+            Assert.AreEqual(0, bottomLeft.X, 1e-6);
+            Assert.AreEqual(0, bottomLeft.Y, 1e-6);
+
+            (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(2048, 1024, 2);
+            Assert.AreEqual(1024, x);
+            Assert.AreEqual(512, y);
         }
 
         #endregion

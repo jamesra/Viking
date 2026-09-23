@@ -335,12 +335,12 @@ namespace Geometry
         public static bool Intersects(in LineSegment line, in Triangle tri) => TriangleIntersectionExtensions.Intersects(tri, line);
 
         /// <summary>
-        /// Add a new point where line intersects any other line
+        /// True when <paramref name="line"/> intersects any segment in <paramref name="lines"/>.
         /// </summary>
-        /// <param name="line">Line we add points to</param>
-        /// <param name="lines">Lines we are testing for intersection</param>
-        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
-        /// <returns>The lines that intersect the line parameter</returns>
+        /// <param name="line">Segment being tested.</param>
+        /// <param name="lines">Segments tested for intersection.</param>
+        /// <param name="EndpointsOnRingDoNotIntersect">When true, contact only at an endpoint is not an intersection.</param>
+        /// <returns>True when any segment intersects.</returns>
         public static bool Intersects(this in LineSegment line, in IEnumerable<LineSegment> lines, bool EndpointsOnRingDoNotIntersect = false)
         {
             foreach (LineSegment testLine in lines)
@@ -401,10 +401,10 @@ namespace Geometry
         /// <summary>
         /// Return a list of lines the passed line intersects and the intersection points
         /// </summary>
-        /// <param name="line">Line we are checking</param>
-        /// <param name="lines">Lines we are testing for intersection</param>
-        /// <param name="EndpointsOnLineDoNotIntersect"></param>
-        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <param name="ALines">Segments being tested.</param>
+        /// <param name="BLines">Segments tested for intersection.</param>
+        /// <param name="EndpointsOnLineDoNotIntersect">When true, contact only at an endpoint is not an intersection.</param>
+        /// <param name="IntersectionPoints">Intersection points gathered from each segment in <paramref name="ALines"/>.</param>
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<Tuple<LineSegment, LineSegment>> Intersections(this IEnumerable<LineSegment> ALines, IReadOnlyList<LineSegment> BLines, bool EndpointsOnLineDoNotIntersect, out Vector2[] IntersectionPoints)
         {
@@ -424,10 +424,9 @@ namespace Geometry
         /// <summary>
         /// Return the list line pairs that intersect between the two sets of lines
         /// </summary>
-        /// <param name="line">Line we are checking</param>
-        /// <param name="lines">Lines we are testing for intersection</param>
-        /// <param name="EndpointsOnLineDoNotIntersect"></param>
-        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <param name="ALines">First set of segments.</param>
+        /// <param name="BLines">Second set of segments.</param>
+        /// <param name="EndpointsOnLineDoNotIntersect">When true, contact only at an endpoint is not an intersection.</param>
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<ArrayIntersection<LineSegment>> Intersections(this IReadOnlyList<LineSegment> ALines, IReadOnlyList<LineSegment> BLines, bool EndpointsOnLineDoNotIntersect)
         {

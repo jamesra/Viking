@@ -1,0 +1,38 @@
+# Copy to D:\Docker\Builds\SectionCorrectionService\.env.Docker and fill in real values.
+# Injected as container environment variables (docker-compose env_file).
+# Corrections and stos cache live under D:\Docker\mounted-configs\SectionCorrectionService\
+# (compose bind-mounts those folders; this file only names the in-container paths).
+
+# Identity SQL (lists Resource rows with ResourceTypeId Volume).
+# Database name must match Identity Server SQL_SERVER_IDENTITY_DB (IdentityViking).
+ConnectionStrings__IdentityConnection=Server=192.168.0.110,1433;Database=IdentityViking;User ID=VikingDirect;Password=REPLACE_WITH_SQL_PASSWORD;TrustServerCertificate=True
+
+# Annotation SQL per Identity volume Name. Volumes not listed are skipped.
+# AnnotationConnections__RPC1=Server=host.docker.internal,1433;Database=RPC1;User ID=sa;Password=REPLACE;TrustServerCertificate=True;MultipleActiveResultSets=true
+# AnnotationConnections__RC1=Server=host.docker.internal,1433;Database=RC1;User ID=sa;Password=REPLACE;TrustServerCertificate=True;MultipleActiveResultSets=true
+
+# Optional fallback when a volume is missing from the map. {VolumeName} is replaced.
+# AnnotationConnectionTemplate=Server=host.docker.internal,1433;Database={VolumeName};User ID=sa;Password=REPLACE;TrustServerCertificate=True;MultipleActiveResultSets=true
+
+Corrections__RootDirectory=/corrections
+Corrections__CachePath=/cache
+
+Rebuild__RunOnStartup=true
+Rebuild__Cron=0 2 * * 0
+Rebuild__Force=false
+Rebuild__SkipQuiver=false
+Rebuild__MinLocations=3
+
+# Let's Encrypt. The renewer starts with section-correction-service.
+# Cloudflare credentials are the shared file D:/Docker/Builds/cloudflare.ini.
+# Do not point the domain at segmentation.codepharm.net or identity.codepharm.net.
+LETSENCRYPT_EMAIL=
+LETSENCRYPT_PRIMARY_DOMAIN=corrections.codepharm.net
+CERTBOT_AUTH_METHOD=dns-cloudflare
+CF_DNS_PROPAGATION_SECONDS=60
+CF_DNS_API_CREDENTIALS_FILE=/run/secrets/cloudflare.ini
+CF_DNS_API_CREDENTIALS_HOST_PATH=D:/Docker/Builds/cloudflare.ini
+
+# PEM paths inside the app container. Keep the domain in sync with LETSENCRYPT_PRIMARY_DOMAIN.
+SECTION_CORRECTION_SSL_CERT_CONTAINER_PATH=/etc/letsencrypt/live/corrections.codepharm.net/fullchain.pem
+SECTION_CORRECTION_SSL_KEY_CONTAINER_PATH=/etc/letsencrypt/live/corrections.codepharm.net/privkey.pem

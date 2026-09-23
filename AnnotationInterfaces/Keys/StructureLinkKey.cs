@@ -52,7 +52,23 @@ namespace Viking.AnnotationServiceTypes
 
         public override int GetHashCode()
         {
-            return (int)(SourceID % int.MaxValue);
+            unchecked
+            {
+                long lo = SourceID;
+                long hi = TargetID;
+                if (Bidirectional && lo > hi)
+                {
+                    long swap = lo;
+                    lo = hi;
+                    hi = swap;
+                }
+
+                int hash = 17;
+                hash = hash * 23 + lo.GetHashCode();
+                hash = hash * 23 + hi.GetHashCode();
+                hash = hash * 23 + Bidirectional.GetHashCode();
+                return hash;
+            }
         }
 
         public bool Equals(StructureLinkKey other)

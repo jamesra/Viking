@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_MEMORY_BYTES = 1073741824
 DEFAULT_TTL_SECONDS = 300
-DEFAULT_MAX_ENTRIES = 8
+DEFAULT_MAX_ENTRIES = 32
+
+# volume, section, channel, transform, downsample, row, col
+TileCacheKey = Tuple[str, int, str, str, int, int, int]
 
 
 class PredictorCreationError(RuntimeError):
@@ -35,6 +38,7 @@ class CachedImage:
     predictor: Optional[Any] = field(default=None)
     predictor_lock: threading.Lock = field(default_factory=threading.Lock)
     in_use: int = 0
+    tile_key: Optional[TileCacheKey] = None
 
 
 class ImageCache:
@@ -68,6 +72,7 @@ class ImageCache:
         self._cache: Dict[int, CachedImage] = {}
         # Deleted/evicted while SegmentImage still holds a pin; predictor reset waits for check-in.
         self._retiring: Dict[int, CachedImage] = {}
+        self._coord_index: Dict[TileCacheKey, int] = {}
         self._next_id: int = 1
         self._lock: asyncio.Lock = asyncio.Lock()
         self._max_memory_bytes: int = max_memory_bytes
@@ -173,6 +178,62 @@ class ImageCache:
 
         return image_id
 
+    async def upload_tile(
+        self,
+        tile_key: TileCacheKey,
+        image_data: bytes,
+        width: int,
+        height: int,
+        executor: Optional[Any] = None,
+    ) -> Tuple[int, bool]:
+        """Store a grid cell under tile_key.
+
+        Identical bytes for an existing key refresh TTL and skip set_image().
+        Different bytes replace the entry and encode again.
+
+        Returns:
+            (image_id, already_cached). already_cached is True only for the identical-bytes hit.
+        """
+        async with self._lock:
+            await self._cleanup_expired()
+            existing_id = self._coord_index.get(tile_key)
+            if existing_id is not None:
+                cached = self._cache.get(existing_id)
+                if cached is not None and cached.image_data == image_data:
+                    cached.last_access_time = self._time_fn()
+                    logger.info("Tile cache hit (bytes unchanged): key=%s id=%s", tile_key, existing_id)
+                    return existing_id, True
+                if cached is not None:
+                    await self._delete_image_internal(existing_id)
+
+        image_id = await self.upload_image(image_data, width, height, executor=executor)
+        async with self._lock:
+            cached = self._cache.get(image_id)
+            if cached is None:
+                raise PredictorCreationError(
+                    f"Tile key={tile_key} was evicted before it could be indexed"
+                )
+            cached.tile_key = tile_key
+            self._coord_index[tile_key] = image_id
+        return image_id, False
+
+    async def get_image_by_tile(
+        self, tile_key: TileCacheKey
+    ) -> Optional[Tuple[int, bytes, int, int, Optional[Any], threading.Lock]]:
+        """Pin the cell for tile_key. Returns None when it is not cached.
+
+        Caller must release_image with the returned id.
+        """
+        async with self._lock:
+            image_id = self._coord_index.get(tile_key)
+            if image_id is None or image_id not in self._cache:
+                return None
+        pinned = await self.get_image(image_id)
+        if pinned is None:
+            return None
+        data, width, height, predictor, lock = pinned
+        return image_id, data, width, height, predictor, lock
+
     async def get_image(
         self, image_id: int
     ) -> Optional[Tuple[bytes, int, int, Optional[Any], threading.Lock]]:
@@ -244,6 +305,8 @@ class ImageCache:
         cached_image = self._cache.pop(image_id, None)
         if cached_image is None:
             return False
+        if cached_image.tile_key is not None and self._coord_index.get(cached_image.tile_key) == image_id:
+            del self._coord_index[cached_image.tile_key]
         self._current_memory_bytes -= cached_image.size_bytes
         if cached_image.in_use > 0:
             self._retiring[image_id] = cached_image

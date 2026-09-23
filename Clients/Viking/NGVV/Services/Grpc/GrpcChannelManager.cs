@@ -27,32 +27,53 @@ namespace Viking.Services.Grpc
         /// <inheritdoc />
         public Channel? GetOrCreateChannel()
         {
-            string serviceUrl = _configuration.Endpoint();
-
-            serviceUrl = FormatServiceUrl(serviceUrl);
+            string rawEndpoint = _configuration.Endpoint();
+            bool useTls = EndpointRequiresTls(rawEndpoint);
+            string? serviceUrl = FormatServiceUrl(rawEndpoint);
 
             if (string.IsNullOrWhiteSpace(serviceUrl))
             {
                 return null;
             }
 
+            string channelKey = (useTls ? "https://" : "http://") + serviceUrl;
+
             lock (_lock)
             {
                 if (_channel is null ||
-                    _currentServiceUrl != serviceUrl ||
+                    _currentServiceUrl != channelKey ||
                     _channel.State == ChannelState.Shutdown ||
                     _channel.State == ChannelState.TransientFailure)
                 {
                     ShutdownChannelInternal();
 
-                    _channel = new Channel(serviceUrl, ChannelCredentials.Insecure, SegmentationChannelOptions);
-                    _currentServiceUrl = serviceUrl;
+                    ChannelCredentials credentials = useTls ? new SslCredentials() : ChannelCredentials.Insecure;
+                    _channel = new Channel(serviceUrl, credentials, SegmentationChannelOptions);
+                    _currentServiceUrl = channelKey;
 
-                    Trace.WriteLine($"Created new shared gRPC channel to {serviceUrl}");
+                    Trace.WriteLine($"Created new shared gRPC channel to {serviceUrl} (tls={useTls})");
                 }
 
                 return _channel;
             }
+        }
+
+        /// <summary>
+        /// Public HTTPS endpoints and port 443 use the system trust store. Other targets stay cleartext.
+        /// </summary>
+        internal static bool EndpointRequiresTls(string rawEndpoint)
+        {
+            if (!TryParseEndpoint(rawEndpoint, out Uri? parsedUri) || parsedUri is null)
+            {
+                return false;
+            }
+
+            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return parsedUri.Port == 443;
         }
 
         /// <inheritdoc />
@@ -98,13 +119,7 @@ namespace Viking.Services.Grpc
                 return null;
             }
 
-            string trimmedEndpoint = rawEndpoint.Trim();
-
-            // Ensure we can parse the endpoint by supplying a default scheme if one is missing.
-            bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
-            string endpointToParse = containsScheme ? trimmedEndpoint : $"http://{trimmedEndpoint}";
-
-            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri? parsedUri) || parsedUri is null)
+            if (!TryParseEndpoint(rawEndpoint, out Uri? parsedUri) || parsedUri is null)
             {
                 return null;
             }
@@ -120,6 +135,23 @@ namespace Viking.Services.Grpc
             string query = parsedUri.Query;
 
             return $"{authority}{absolutePath}{query}";
+        }
+
+        /// <summary>
+        /// Parse host:port or an absolute URI. A missing scheme is treated as http so the port can be read.
+        /// </summary>
+        private static bool TryParseEndpoint(string rawEndpoint, out Uri? parsedUri)
+        {
+            parsedUri = null;
+            if (string.IsNullOrWhiteSpace(rawEndpoint))
+            {
+                return false;
+            }
+
+            string trimmedEndpoint = rawEndpoint.Trim();
+            bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
+            string endpointToParse = containsScheme ? trimmedEndpoint : $"http://{trimmedEndpoint}";
+            return Uri.TryCreate(endpointToParse, UriKind.Absolute, out parsedUri) && parsedUri is not null;
         }
 
         private void ShutdownChannelInternal()

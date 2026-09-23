@@ -72,13 +72,44 @@ namespace Viking.SectionCorrectionBuilder
             int minLocations)
         {
             int min = minLocations < 1 ? 3 : minLocations;
+            // Inline equivalent of dbo.ResidualFieldCandidateLocations so DBs without schema v85 still work.
             List<CandidateRow> candidates = await db.Database
-                .SqlQuery<CandidateRow>($"SELECT ID, ParentID, Z, X, Y, Terminal, OffEdge, TypeCode, LastModified FROM dbo.ResidualFieldCandidateLocations({min})")
+                .SqlQuery<CandidateRow>($@"
+SELECT L.ID, L.ParentID, L.Z, L.X, L.Y, L.Terminal, L.OffEdge, L.TypeCode, L.LastModified
+FROM dbo.Location AS L
+INNER JOIN (
+    SELECT ParentID
+    FROM dbo.Location
+    GROUP BY ParentID
+    HAVING COUNT(*) >= {min}
+) AS C ON C.ParentID = L.ParentID")
                 .ToListAsync()
                 .ConfigureAwait(false);
 
             List<LinkRow> links = await db.Database
-                .SqlQuery<LinkRow>($"SELECT A, B, Created FROM dbo.LocationLink WHERE A IN (SELECT ID FROM dbo.ResidualFieldCandidateLocations({min})) AND B IN (SELECT ID FROM dbo.ResidualFieldCandidateLocations({min}))")
+                .SqlQuery<LinkRow>($@"
+SELECT LK.A, LK.B, LK.Created
+FROM dbo.LocationLink AS LK
+WHERE LK.A IN (
+    SELECT L.ID
+    FROM dbo.Location AS L
+    INNER JOIN (
+        SELECT ParentID
+        FROM dbo.Location
+        GROUP BY ParentID
+        HAVING COUNT(*) >= {min}
+    ) AS C ON C.ParentID = L.ParentID
+)
+AND LK.B IN (
+    SELECT L.ID
+    FROM dbo.Location AS L
+    INNER JOIN (
+        SELECT ParentID
+        FROM dbo.Location
+        GROUP BY ParentID
+        HAVING COUNT(*) >= {min}
+    ) AS C ON C.ParentID = L.ParentID
+)")
                 .ToListAsync()
                 .ConfigureAwait(false);
 

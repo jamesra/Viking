@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
@@ -40,6 +41,11 @@ namespace Geometry.Transforms
                 object trans = binaryFormatter.Deserialize(binFile);
                 return trans as ITransform;
             }
+            catch (PlatformNotSupportedException)
+            {
+                // BinaryFormatter was removed in .NET 9+; rebuild the continuous transform in memory.
+                return null;
+            }
             catch (System.Runtime.Serialization.SerializationException e)
             {
                 Trace.WriteLine(string.Format("Remove file with Serialization exception {0}\n{1}", e.Message, CacheStosPath));
@@ -52,9 +58,28 @@ namespace Geometry.Transforms
 
         public static void SaveSerializedTransformToCache(string CacheStosPath, object transform)
         {
-            using Stream binFile = System.IO.File.OpenWrite(CacheStosPath);
-            BinaryFormatter binaryFormatter = new();
-            binaryFormatter.Serialize(binFile, transform);
+            try
+            {
+                using Stream binFile = System.IO.File.OpenWrite(CacheStosPath);
+                BinaryFormatter binaryFormatter = new();
+                binaryFormatter.Serialize(binFile, transform);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                TryDelete(CacheStosPath);
+            }
+        }
+
+        static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (IOException)
+            {
+            }
         }
     }
 }

@@ -224,8 +224,6 @@ namespace Geometry
         /// <summary>
         /// Return true if the index is adjacent to the other index
         /// </summary>
-        /// <param name="other"></param>
-        /// <param name="Polygons"></param>
         /// <returns></returns>
         public bool AreAdjacent(PolylineIndex other)
         {
@@ -250,7 +248,6 @@ namespace Geometry
         /// <summary>
         /// Return the specified point, ignoring the ShapeIndex attribute
         /// </summary>
-        /// <param name="Polygon"></param>
         /// <returns></returns>
         public Vector2 Point(in Polyline line) => new Vector2(line.Points[VertexIndex]);
 
@@ -302,14 +299,12 @@ namespace Geometry
         /// <summary>
         /// Return a copy of this PointIndex with ShapeIndex value changed to point at a different polygon index
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolylineIndex Reindex(int shapeIndex) => new PolylineIndex(shapeIndex, this.VertexIndex, this.NumUnique);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolylineIndex ReindexToSize(int numUnique) => new PolylineIndex(this.ShapeIndex, this.VertexIndex, numUnique);
 
@@ -317,7 +312,6 @@ namespace Geometry
         /// Return a copy of this PointIndex with a different size of ring
         /// This is used if the polygon we reference may have changed ring size but we know our index is still correct
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolylineIndex ReindexToSize(Polyline line) => ReindexToSize(line.PointCount);
 
@@ -325,7 +319,6 @@ namespace Geometry
         /// Return a copy of this PointIndex with a different size of ring
         /// This is used if the polygon we reference may have changed ring size but we know our index is still correct
         /// </summary>
-        /// <param name="old"></param>
         /// <returns></returns>
         public PolylineIndex ReindexToSize(IReadOnlyList<Polyline> lines) => new PolylineIndex(this.ShapeIndex, this.VertexIndex, lines[ShapeIndex].PointCount);
 

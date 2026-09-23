@@ -12,8 +12,9 @@ namespace Geometry
 
     /// <summary>
     /// Distinguishes outside, inside, boundary, and crossing.
-    /// <see cref="IShape2D.Contains"/>, <see cref="IShape2D.Covers"/>, and <see cref="IShape2D.Intersects"/>
-    /// are wrappers over this.
+    /// <see cref="IShape2D.Contains(in IPoint2D)"/>, <see cref="IShape2D.Contains(in IShape2D)"/>,
+    /// <see cref="IShape2D.Covers(in IPoint2D)"/>, <see cref="IShape2D.Covers(in IShape2D)"/>,
+    /// and <see cref="IShape2D.Intersects(in IShape2D)"/> are wrappers over this.
     /// </summary>
     /// <remarks>
     /// Flags so a collection can OR child results.
@@ -136,8 +137,10 @@ namespace Geometry
 
     /// <summary>
     /// 2D geometry with OGC-style predicates. <see cref="GetRelation(in IPoint2D)"/> and
-    /// <see cref="GetRelation(in IShape2D)"/> are the source of truth; <see cref="Contains"/>,
-    /// <see cref="Covers"/>, and (except collections) <see cref="Intersects"/> are wrappers.
+    /// <see cref="GetRelation(in IShape2D)"/> are the source of truth;
+    /// <see cref="Contains(in IPoint2D)"/>, <see cref="Contains(in IShape2D)"/>,
+    /// <see cref="Covers(in IPoint2D)"/>, <see cref="Covers(in IShape2D)"/>,
+    /// and (except collections) <see cref="Intersects(in IShape2D)"/> are wrappers.
     /// </summary>
     public interface IShape2D : IEquatable<IShape2D>
     {
@@ -147,7 +150,7 @@ namespace Geometry
         /// <summary>
         /// OGC Contains: true when <paramref name="p"/> lies in this shape's interior.
         /// Boundary points are false. For hit-testing, AABB culling, or Delaunay in-circle use
-        /// <see cref="Covers"/>; use <see cref="GetRelation(in IPoint2D)"/> to distinguish interior, boundary, and exterior.
+        /// <see cref="Covers(in IPoint2D)"/>; use <see cref="GetRelation(in IPoint2D)"/> to distinguish interior, boundary, and exterior.
         /// </summary>
         bool Contains(in IPoint2D p);
 
@@ -161,7 +164,7 @@ namespace Geometry
         /// <summary>
         /// Classifies <paramref name="p"/> as outside (<see cref="ShapeRelation.None"/>),
         /// interior (<see cref="ShapeRelation.Contained"/>), or boundary (<see cref="ShapeRelation.Touching"/>).
-        /// Source of truth for <see cref="Contains"/> and <see cref="Covers"/>.
+        /// Source of truth for <see cref="Contains(in IPoint2D)"/> and <see cref="Covers(in IPoint2D)"/>.
         /// Point tests return exactly one of those three flags, never <see cref="ShapeRelation.Intersecting"/>.
         /// </summary>
         ShapeRelation GetRelation(in IPoint2D p);

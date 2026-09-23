@@ -90,12 +90,12 @@
       "presentation": { "reveal": "silent" }
     },
     {
-      "label": "build-section-correction-builder",
+      "label": "build-grpc-section-correction-service",
       "command": "dotnet",
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/Servers/SectionCorrectionBuilder/SectionCorrectionBuilder.csproj",
+        "${workspaceFolder}/Servers/GrpcSectionCorrectionService/GrpcSectionCorrectionService.csproj",
         "/p:Configuration=Debug",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary;ForceNoAlign"

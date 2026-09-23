@@ -60,7 +60,14 @@ namespace Viking.AnnotationServiceTypes
 
         public override int GetHashCode()
         {
-            return (int)(SourceTypeID % int.MaxValue);
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + SourceTypeID.GetHashCode();
+                hash = hash * 23 + TargetTypeID.GetHashCode();
+                hash = hash * 23 + Bidirectional.GetHashCode();
+                return hash;
+            }
         }
 
         public bool Equals(PermittedStructureLinkKey other)

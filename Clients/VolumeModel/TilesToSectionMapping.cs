@@ -280,7 +280,7 @@ namespace Viking.VolumeModel
             bool loadedFromServer = transforms != null;
             if (loadedFromServer)
             {
-                Task.Run(() => SaveToCache(this.CachedTransformsFileName, transforms));
+                _ = Task.Run(() => SaveToCache(this.CachedTransformsFileName, transforms));
                 return transforms;
             }
 

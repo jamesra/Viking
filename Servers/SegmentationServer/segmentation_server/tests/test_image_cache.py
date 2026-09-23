@@ -114,7 +114,7 @@ async def test_get_stats_reports_occupancy() -> None:
     assert stats["total_images"] == 1
     assert stats["total_memory_bytes"] == 5
     assert stats["max_memory_bytes"] == 100
-    assert stats["max_entries"] == 8
+    assert stats["max_entries"] == 32
 
 
 @pytest.mark.asyncio
@@ -286,3 +286,45 @@ async def test_delete_while_pinned_defers_predictor_reset() -> None:
     assert await cache.get_image(image_id) is None
     await cache.release_image(image_id)
     assert released == ["pred"]
+
+_TILE_KEY = ("vol", 3, "TEM", "none|rigid", 1, 0, 1)
+
+
+@pytest.mark.asyncio
+async def test_upload_tile_identical_bytes_skips_new_predictor() -> None:
+    created: list[bytes] = []
+
+    def create(data: bytes) -> str:
+        created.append(data)
+        return f"pred-{len(created)}"
+
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60, create_predictor_func=create)
+    first_id, already = await cache.upload_tile(_TILE_KEY, b"png", 8, 8)
+    assert already is False
+    second_id, already_again = await cache.upload_tile(_TILE_KEY, b"png", 8, 8)
+    assert already_again is True
+    assert second_id == first_id
+    assert created == [b"png"]
+    pinned = await cache.get_image_by_tile(_TILE_KEY)
+    assert pinned is not None
+    assert pinned[0] == first_id
+    await cache.release_image(first_id)
+
+
+@pytest.mark.asyncio
+async def test_upload_tile_new_bytes_replace_entry() -> None:
+    created: list[bytes] = []
+    cache = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        create_predictor_func=lambda data: created.append(data) or data,
+    )
+    await cache.upload_tile(_TILE_KEY, b"old", 8, 8)
+    image_id, already = await cache.upload_tile(_TILE_KEY, b"new", 8, 8)
+    assert already is False
+    pinned = await cache.get_image_by_tile(_TILE_KEY)
+    assert pinned is not None
+    assert pinned[0] == image_id
+    assert pinned[1] == b"new"
+    await cache.release_image(image_id)
+    assert created == [b"old", b"new"]

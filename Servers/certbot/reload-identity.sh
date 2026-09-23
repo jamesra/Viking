@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONTAINER_NAME="${IDENTITY_CONTAINER_NAME:-identity-all-services}"
+CONTAINER_NAME="${CERTBOT_RESTART_CONTAINER:-${IDENTITY_CONTAINER_NAME:-identity-all-services}}"
 LETSENCRYPT_PRIMARY_DOMAIN="${LETSENCRYPT_PRIMARY_DOMAIN:-}"
 
 # Copy the live lineage with the longest remaining validity onto the canonical
@@ -112,6 +112,30 @@ find_identity_container() {
   return 1
 }
 
+# Certbot creates live/ and archive/ as mode 700. The segmentation server runs as a
+# non-root user with the volume mounted read-only, so it cannot traverse those
+# directories or read the private key until they are world-readable.
+others_can_enter() {
+  local path="$1"
+  local mode other
+  [ -d "${path}" ] || return 0
+  mode="$(stat -c %a "${path}")"
+  other="${mode: -1}"
+  case "${other}" in
+    1|3|5|7) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+expose_live_certs_to_app_user() {
+  local dir
+  for dir in /etc/letsencrypt/live /etc/letsencrypt/archive; do
+    if [ -d "${dir}" ]; then
+      chmod -R a+rX "${dir}"
+    fi
+  done
+}
+
 needs_restart=1
 if [ -n "${LETSENCRYPT_PRIMARY_DOMAIN}" ]; then
   set +e
@@ -126,6 +150,16 @@ if [ -n "${LETSENCRYPT_PRIMARY_DOMAIN}" ]; then
   fi
 fi
 
+certs_were_hidden=0
+if ! others_can_enter /etc/letsencrypt/live || ! others_can_enter /etc/letsencrypt/archive; then
+  certs_were_hidden=1
+fi
+expose_live_certs_to_app_user
+if [ "${certs_were_hidden}" -eq 1 ]; then
+  echo "[certbot] Opened live/archive certificates for the non-root app user."
+  needs_restart=1
+fi
+
 if [ "${needs_restart}" -eq 0 ]; then
   exit 0
 fi
@@ -134,5 +168,5 @@ if target="$(find_identity_container)"; then
   echo "[certbot] Certificate changed; restarting ${target} to pick up new files..."
   docker restart "${target}" >/dev/null
 else
-  echo "[certbot] No running container matched IDENTITY_CONTAINER_NAME=${CONTAINER_NAME} (compose service or name)."
+  echo "[certbot] No running container matched CERTBOT_RESTART_CONTAINER/IDENTITY_CONTAINER_NAME=${CONTAINER_NAME} (compose service or name)."
 fi
