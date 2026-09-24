@@ -34,7 +34,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// <summary>
     /// 1024x1024 partition anchored at the volume origin, in the view's pyramid downsample.
     /// Mosaic pixels are world divided by downsample, Y up. The segmentation server flips Y
-    /// inside each tile image, which is stored top-left.
+    /// inside each tile image, which is stored top-left. Downsample is always ≥ 1 (DS1 floor).
     /// </summary>
     public static class SegmentationTileGrid
     {
