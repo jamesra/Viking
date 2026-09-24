@@ -643,11 +643,14 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return UploadTileResponse()
 
+        # Public reusable identity is TileCoord (volume/section/channel/transform/ds/row/col).
+        # cache_id is an internal sequential handle for predictors; clients must key on Coord.
+        tile_key = _tile_cache_key(coord)
         self._load.begin()
         start_time = time.perf_counter()
         try:
-            _image_id, already_cached = await self.image_cache.upload_tile(
-                _tile_cache_key(coord),
+            cache_id, already_cached = await self.image_cache.upload_tile(
+                tile_key,
                 image_data,
                 request.width,
                 request.height,
@@ -662,6 +665,23 @@ class SegmentationServicer(SegmentationServiceServicer):
             return UploadTileResponse()
         finally:
             self._load.end(time.perf_counter() - start_time)
+        logger.info(
+            "UploadTile ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s|row=%s|col=%s "
+            "cache_id=%s %sx%s %s bytes already_cached=%s in %.3fs",
+            coord.volume,
+            coord.section,
+            coord.channel,
+            coord.transform,
+            coord.downsample,
+            coord.row,
+            coord.col,
+            cache_id,
+            request.width,
+            request.height,
+            len(image_data),
+            already_cached,
+            time.perf_counter() - start_time,
+        )
         return UploadTileResponse(already_cached=already_cached)
 
     async def SegmentTiles(
@@ -785,7 +805,13 @@ class SegmentationServicer(SegmentationServiceServicer):
                     )
                 )
             logger.info(
-                "SegmentTiles tiles=%s fg=%s segments=%s requested=%s in %.3fs",
+                "SegmentTiles ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "
+                "tiles=%s fg=%s segments=%s requested=%s in %.3fs",
+                identity.volume,
+                identity.section,
+                identity.channel,
+                identity.transform,
+                identity.downsample,
                 len(seen),
                 len(foreground),
                 len(segments),

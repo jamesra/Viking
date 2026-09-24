@@ -79,15 +79,29 @@ Example of running Python code to display masks:
 
 ## Cached vs inline
 
-SAM2 `set_image()` (the Hiera encoder) is expensive. `predict()` from stored embeddings is cheap. Clients should encode once and reuse:
+SAM2 `set_image()` (the Hiera encoder) is expensive. `predict()` from stored embeddings is cheap. Clients should encode once and reuse.
 
-1. `UploadImage` — server runs `set_image()` once and returns `image_id`.
-2. `SegmentImage` / `MultiSegmentImage` with that `image_id` — `predict()` only. Viking does this for each click.
+### Full-frame path (`UploadImage`)
+
+1. `UploadImage` — server runs `set_image()` once and returns a session `image_id`.
+2. `SegmentImage` / `MultiSegmentImage` with that `image_id` — `predict()` only.
 3. `DeleteImage` when the viewport changes or the tool deactivates.
 
 `image_id == 0` plus inline `image_data` is the slow fallback: the encoder runs on every request. Keep it for one-shot tools; do not use it for interactive tracing.
 
-Cache defaults: 5 minute idle TTL, 1 GiB of encoded image bytes, and 8 images (VRAM proxy for embeddings). Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing IDs return `NOT_FOUND`; Viking re-uploads.
+### Tile path (`UploadTile` / `SegmentTiles`)
+
+Interactive Viking uses 1024×1024 mosaic cells. The reusable identity is **`TileCoord`**
+(`volume`, `section`, `channel`, `transform`, `downsample`, `row`, `col`) — not a sequential
+`image_id`. Any client that uploads the same coord with identical bytes gets `already_cached=true`
+and skips `set_image()`. `SegmentTiles` looks up cells by those coords. An internal cache id may
+appear in server logs for predictor bookkeeping; clients must not treat it as the tile identity.
+
+1. `UploadTile` for each visible (and growth-requested) cell.
+2. `SegmentTiles` with those `TileCoord`s and mosaic-space prompts.
+3. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim cells.
+
+Cache defaults: 5 minute idle TTL, 1 GiB of encoded image bytes, and 8 images (VRAM proxy for embeddings). Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`; missing tiles return `TILE_NOT_FOUND` with row/col so the client can re-upload.
 
 ## GPU / CUDA
 

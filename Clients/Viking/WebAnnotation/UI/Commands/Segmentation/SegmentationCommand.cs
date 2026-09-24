@@ -977,10 +977,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Height = height
                 };
                 CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
+                Debug.WriteLine(
+                    $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
+                    $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} bytes={png.Length}");
                 UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
                 uploadedTileKeys.Add(key);
                 anyReady = true;
-                Debug.WriteLine($"Tile row={cell.Row} col={cell.Col} ds={signature.Downsample} alreadyCached={response.AlreadyCached}");
+                Debug.WriteLine(
+                    $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
+                    $"alreadyCached={response.AlreadyCached}");
             }
             return anyReady;
         }

@@ -186,10 +186,11 @@ class ImageCache:
         height: int,
         executor: Optional[Any] = None,
     ) -> Tuple[int, bool]:
-        """Store a grid cell under tile_key.
+        """Store a grid cell under tile_key (the cross-client reusable identity).
 
         Identical bytes for an existing key refresh TTL and skip set_image().
-        Different bytes replace the entry and encode again.
+        Different bytes replace the entry and encode again. The returned image_id is
+        an internal predictor handle; callers that speak gRPC use TileCoord, not this id.
 
         Returns:
             (image_id, already_cached). already_cached is True only for the identical-bytes hit.

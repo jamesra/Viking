@@ -312,6 +312,30 @@ async def test_upload_tile_identical_bytes_skips_new_predictor() -> None:
 
 
 @pytest.mark.asyncio
+async def test_upload_tile_coord_key_shared_across_callers() -> None:
+    """Same TileCoord from independent callers reuses one encoded entry (cross-client)."""
+    created: list[bytes] = []
+    cache = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        create_predictor_func=lambda data: created.append(data) or f"pred-{len(created)}",
+    )
+    client_a_id, a_hit = await cache.upload_tile(_TILE_KEY, b"shared-png", 8, 8)
+    client_b_id, b_hit = await cache.upload_tile(_TILE_KEY, b"shared-png", 8, 8)
+    assert a_hit is False
+    assert b_hit is True
+    assert client_a_id == client_b_id
+    assert created == [b"shared-png"]
+    other_key = ("vol", 3, "TEM", "none|rigid", 1, 0, 2)
+    other_id, other_hit = await cache.upload_tile(other_key, b"shared-png", 8, 8)
+    assert other_hit is False
+    assert other_id != client_a_id
+    assert created == [b"shared-png", b"shared-png"]
+    await cache.release_image(client_a_id)
+    await cache.release_image(other_id)
+
+
+@pytest.mark.asyncio
 async def test_upload_tile_new_bytes_replace_entry() -> None:
     created: list[bytes] = []
     cache = ImageCache(
