@@ -325,8 +325,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         await ReadViewTilesAsync().ConfigureAwait(false);
                     mosaicDownsample = downsample;
                     List<TileCell> needed = [.. visible, .. extras];
+                    SegmentationDiag.Log(
+                        $"SegmentAsync round={round} ds={downsample} visible={visible.Count} extras={extras.Count} " +
+                        $"vol={signature.Volume} sec={signature.Section}");
+                    if (needed.Count == 0)
+                    {
+                        SegmentationDiag.Log("SegmentAsync: no tile cells for viewport");
+                        return lastResponse;
+                    }
+
                     if (!await UploadMissingTilesAsync(signature, needed, grayscale, cancellationToken).ConfigureAwait(false))
                     {
+                        SegmentationDiag.Log("SegmentAsync: UploadMissingTilesAsync returned false");
                         Debug.WriteLine("No segmentation tiles could be uploaded");
                         return lastResponse;
                     }
@@ -385,10 +395,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             catch (OperationCanceledException)
             {
+                SegmentationDiag.Log("SegmentAsync cancelled");
                 return null;
             }
             catch (Exception ex)
             {
+                SegmentationDiag.Log($"SegmentAsync error: {ex.GetType().Name}: {ex.Message}");
                 Debug.WriteLine($"Segmentation error: {ex.Message}");
                 return null;
             }

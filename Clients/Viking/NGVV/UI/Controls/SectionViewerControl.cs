@@ -1322,6 +1322,10 @@ namespace Viking.UI.Controls
             if (token.IsCancellationRequested)
                 return null;
 
+            // LookAt must be set before preload; otherwise QueueTextureLoads uses the default
+            // camera position and tile capture hangs or loads the wrong cells.
+            TileScene.Camera.LookAt = new Vector2(CenterX, CenterY);
+
             if (!asyncTextureLoad)
                 await PreloadSceneTexturesAsync(TileScene, Z, asyncTextureLoad, token);
             else
@@ -1342,7 +1346,6 @@ namespace Viking.UI.Controls
             this.Section = State.volume.SectionViewModels[Z];
 
             GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
-            TileScene.Camera.LookAt = new Vector2(CenterX, CenterY);
 
             RenderTarget2D renderTargetTile = new(graphicsDevice, TileScene.Viewport.Width, TileScene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
 

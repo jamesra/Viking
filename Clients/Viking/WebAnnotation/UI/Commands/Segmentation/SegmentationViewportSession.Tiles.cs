@@ -59,9 +59,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }).Task.ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Pyramid level for UploadTile. Snaps to an available mosaic level and never goes
+        /// finer than DS1 — digital zoom past full-res (camera downsample &lt; 1) still uploads DS1.
+        /// Coarser zooms use DS2/DS4/… so we do not over-fetch full-res cells.
+        /// </summary>
         private int CurrentPyramidDownsample()
         {
-            double requested = parent.Downsample;
+            // Tile lattice is pyramid-aligned; do not request a level finer than full-res DS1.
+            double requested = Math.Max(1.0, parent.Downsample);
             try
             {
                 MappingBase mapping = parent.Section?.VolumeViewModel?.GetTileMapping(
@@ -72,7 +78,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 {
                     int level = mapping.NearestAvailableLevel(requested);
                     if (level > 0 && level != int.MaxValue)
-                        return level;
+                        return Math.Max(1, level);
                 }
             }
             catch (Exception ex)
@@ -139,6 +145,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 var (png, width, height) = await CaptureTileImage(cell, signature.Downsample, grayscale, token).ConfigureAwait(false);
                 if (png is null || png.Length == 0)
                 {
+                    SegmentationDiag.Log($"Capture failed row={cell.Row} col={cell.Col} ds={signature.Downsample}");
                     Debug.WriteLine($"Failed to capture tile row={cell.Row} col={cell.Col}");
                     continue;
                 }
@@ -151,15 +158,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Height = height
                 };
                 CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
+                SegmentationDiag.Log(
+                    $"UploadTile row={cell.Row} col={cell.Col} ds={signature.Downsample} bytes={png.Length}");
                 Debug.WriteLine(
                     $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
                     $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} bytes={png.Length}");
-                UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
-                uploadedTileKeys.Add(key);
-                anyReady = true;
-                Debug.WriteLine(
-                    $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
-                    $"alreadyCached={response.AlreadyCached}");
+                try
+                {
+                    UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
+                    uploadedTileKeys.Add(key);
+                    anyReady = true;
+                    SegmentationDiag.Log($"UploadTile ok alreadyCached={response.AlreadyCached}");
+                    Debug.WriteLine(
+                        $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
+                        $"alreadyCached={response.AlreadyCached}");
+                }
+                catch (RpcException rpcEx)
+                {
+                    SegmentationDiag.Log($"UploadTile RPC {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
+                    throw;
+                }
             }
 
             return anyReady;
@@ -251,10 +269,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
                 float centerX = (float)((cell.Col + 0.5) * cellWorld);
                 float centerY = (float)((cell.Row + 0.5) * cellWorld);
-                Camera camera = new() { Downsample = downsample };
+                Camera camera = new() { Downsample = downsample, LookAt = new Microsoft.Xna.Framework.Vector2(centerX, centerY) };
                 VikingXNA.Scene tileScene = new(
                     new Viewport(0, 0, SegmentationTileGrid.TileSize, SegmentationTileGrid.TileSize),
                     camera);
+                SegmentationDiag.Log($"CaptureTile start row={cell.Row} col={cell.Col} center=({centerX},{centerY}) ds={downsample}");
                 RenderTarget2D renderTarget = await parent.RenderSceneToTexture(
                     tileScene,
                     centerX,
@@ -277,6 +296,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         return buffer;
                     }).Task.ConfigureAwait(false);
                     byte[] pngData = SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale);
+                    SegmentationCaptureEncoder.SaveCaptureForReview(pngData, width, height);
                     var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
                     if (!isValid)
                     {
