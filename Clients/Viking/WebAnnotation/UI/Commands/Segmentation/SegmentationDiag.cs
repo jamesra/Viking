@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace WebAnnotation.UI.Commands.Segmentation
@@ -10,6 +11,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
     {
         private static readonly string LogPath = Path.Combine(Path.GetTempPath(), "viking-seg-diag.log");
         private static readonly object Gate = new();
+
+        static SegmentationDiag()
+        {
+            Log($"SegmentationDiag loaded pid={Process.GetCurrentProcess().Id}");
+        }
 
         /// <summary>Append one timestamped line. Failures are ignored so diagnostics never break the path.</summary>
         public static void Log(string message)

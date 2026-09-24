@@ -44,15 +44,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// True when <paramref name="context"/> is the same screen: bounds within 1% of the longer side
-        /// and downsample has not moved by 2×. Used by auto-polygonize and segmentation commands.
+        /// True when <paramref name="context"/> covers the same screen bounds (within 1%)
+        /// and was uploaded at the same resolved tile downsample as the live camera.
         /// </summary>
         public static bool CanReuse(in AutoPolygonizeUploadContext context, Rectangle liveBounds, double liveDownsample)
         {
             if (!context.IsUsable)
                 return false;
 
-            if (AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(liveDownsample, context.Downsample))
+            int submitted = SegmentationViewportSession.ResolveTileDownsample(liveDownsample);
+            if ((int)context.Downsample != submitted)
                 return false;
 
             return SegmentationViewportSession.AreViewportBoundsSimilar(context.WorldBounds, liveBounds);
@@ -60,16 +61,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Copies a finished upload into the lease shape. Null when the session never recorded tile or image dimensions.
+        /// Downsample is the session mosaic level (resolved from camera), not a raw fractional zoom.
         /// </summary>
         public static AutoPolygonizeUploadContext? TryCreateContext(SegmentationViewportSession session, double downsample)
         {
             if (session is null || session.UploadedImageWidth <= 0 || session.UploadedImageHeight <= 0)
                 return null;
 
+            _ = downsample;
             Rectangle bounds = session.UploadedImageBounds ?? session.ViewportBounds;
             return new AutoPolygonizeUploadContext(
                 session.CurrentImageId ?? 0,
-                downsample,
+                session.MosaicDownsample,
                 bounds,
                 session.UploadedImageWidth,
                 session.UploadedImageHeight);
@@ -214,8 +217,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private bool InFlightMatches(Rectangle liveBounds, double liveDownsample)
         {
-            if (AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(liveDownsample, inFlightDownsample))
+            if (SegmentationViewportSession.ResolveTileDownsample(inFlightDownsample) !=
+                SegmentationViewportSession.ResolveTileDownsample(liveDownsample))
+            {
                 return false;
+            }
 
             return SegmentationViewportSession.AreViewportBoundsSimilar(inFlightBounds, liveBounds);
         }

@@ -256,7 +256,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             if (!viewportSession.TryInitializeClient())
+            {
+                SegmentationDiag.Log("SegmentationCommand.OnActivate: TryInitializeClient failed");
                 Debug.WriteLine("Failed to initialize segmentation gRPC client");
+            }
+            else
+                SegmentationDiag.Log("SegmentationCommand.OnActivate: client ready");
 
             // Check if we have initial points from constructor
             bool hasInitialPoints = foregroundPoints.Count > 0 || backgroundPoints.Count > 0;
@@ -919,37 +924,56 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private async Task RequestSegmentation()
         {
             if (placementFinished || Deactivated)
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: finished/deactivated");
                 return;
+            }
 
             if (!viewportSession.HasClient)
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: no gRPC client");
                 return;
+            }
 
             if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: no points");
                 return;
+            }
 
             if (viewportSession.IsUploading)
             {
                 requestCoalescer.MarkDirty();
+                SegmentationDiag.Log("RequestSegmentation defer: upload in progress");
                 Debug.WriteLine("Upload in progress, segmentation will be requested after upload completes");
                 return;
             }
 
             if (!requestCoalescer.TryStart(out int generation))
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: coalescer busy");
                 return;
+            }
 
             try
             {
+                SegmentationDiag.Log(
+                    $"RequestSegmentation start gen={generation} fg={foregroundPoints.Count} bg={backgroundPoints.Count} " +
+                    $"tilesReady={viewportSession.HasUploadedTiles}");
                 Debug.WriteLine(
                     $"Sending SegmentTiles request: tilesReady={viewportSession.HasUploadedTiles}, " +
                     $"{viewportSession.UploadedImageWidth}x{viewportSession.UploadedImageHeight}, " +
                     $"{foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
                 CancellationToken segmentToken = segmentRequestCts.Token;
                 var response = await viewportSession.SegmentAsync(foregroundPoints, backgroundPoints, segmentToken).ConfigureAwait(false);
+                SegmentationDiag.Log(
+                    $"RequestSegmentation done responseNull={response is null} segments={response?.Segments.Count ?? -1}");
                 if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))
                     StartProcessSegmentationResponse(response, generation);
             }
             catch (Exception ex)
             {
+                SegmentationDiag.Log($"RequestSegmentation error: {ex.Message}");
                 Debug.WriteLine($"Segmentation error: {ex.Message}");
             }
             finally

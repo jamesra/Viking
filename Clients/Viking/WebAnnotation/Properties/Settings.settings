@@ -96,7 +96,7 @@
       <Value Profile="(Default)">75</Value>
     </Setting>
     <Setting Name="AutoPolygonizeMaxDownsample" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">8</Value>
+      <Value Profile="(Default)">4</Value>
     </Setting>
     <Setting Name="AutoPolygonizeOverlayMasks" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>

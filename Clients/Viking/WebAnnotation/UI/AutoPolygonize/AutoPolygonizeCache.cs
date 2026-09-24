@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
+using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotation.UI.AutoPolygonize
 {
@@ -71,10 +72,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// False when the circle is not a circle, was dismissed at this LastModified, or already has a matching proposal.
-        /// A matching proposal is processed again when <paramref name="liveDownsample"/> is at least twice as fine
-        /// as the downsample stored by <see cref="RememberProposal"/>. Zooming out does not clear that skip.
-        /// Pending-only entries (batch candidate) stay processable. Called by the idle batch.
+        /// False when the circle is not a circle, was dismissed at this LastModified, or already has a matching proposal
+        /// at the same resolved tile downsample. Crossing the submit boundary (e.g. camera 1.0 → 1.21 maps to
+        /// submitted 1 → 2) re-queues. Called by the idle batch.
         /// </summary>
         public bool ShouldProcess(
             long locationId,
@@ -98,9 +98,16 @@ namespace WebAnnotation.UI.AutoPolygonize
                     entry.ProposalLastModified.Value == lastModified &&
                     entry.ProposalTypeCode == typeCode)
                 {
-                    return AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(
-                        liveDownsample,
-                        entry.ProposalDownsample ?? 0);
+                    if (liveDownsample > 0 &&
+                        entry.ProposalDownsample is double completed &&
+                        completed > 0 &&
+                        SegmentationViewportSession.ResolveTileDownsample(liveDownsample) !=
+                        SegmentationViewportSession.ResolveTileDownsample(completed))
+                    {
+                        return true;
+                    }
+
+                    return false;
                 }
 
                 return true;
@@ -108,10 +115,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Records a published proposal so the same LastModified is not segmented again
-        /// until the view is at least twice as fine as <paramref name="completedDownsample"/>.
+        /// Records a published proposal so the same LastModified is not segmented again.
         /// Subscribes when <paramref name="location"/> is provided. Replaces the image lease when upload changes.
-        /// A positive <paramref name="completedDownsample"/> wins; otherwise the upload's downsample is stored.
+        /// <paramref name="completedDownsample"/> is stored so a later camera change that
+        /// crosses the resolved tile-downsample boundary (1 vs 2) can re-queue.
         /// </summary>
         public void RememberProposal(
             long locationId,
@@ -138,18 +145,54 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Downsample to store on a completion. The caller's camera value wins so a failed
-        /// upload context still records the view that produced the proposal.
+        /// Downsample to store on a completion. Prefers the caller's camera value, else the
+        /// upload mosaic level. Always stores the resolved tile pyramid (1 or 2) so zoom
+        /// across the DS≤1 boundary compares cleanly.
         /// </summary>
         private static double? CompletedDownsample(double completedDownsample, AutoPolygonizeUploadContext? upload)
         {
+            double raw = 0;
             if (completedDownsample > 0)
-                return completedDownsample;
+                raw = completedDownsample;
+            else if (upload.HasValue && upload.Value.Downsample > 0)
+                raw = upload.Value.Downsample;
 
-            if (upload.HasValue && upload.Value.Downsample > 0)
-                return upload.Value.Downsample;
+            if (raw <= 0)
+                return null;
 
-            return null;
+            return SegmentationViewportSession.ResolveTileDownsample(raw);
+        }
+
+        /// <summary>
+        /// Clears LastModified skips whose stored tile level differs from
+        /// <paramref name="liveResolvedTileDownsample"/>. Called when the camera crosses
+        /// the DS≤1 submit boundary so zoom-out and zoom-in both resegment.
+        /// </summary>
+        public void InvalidateCompletionsAtOtherTileDownsample(int liveResolvedTileDownsample)
+        {
+            lock (gate)
+            {
+                foreach (Entry entry in entries.Values)
+                {
+                    if (!entry.ProposalLastModified.HasValue)
+                        continue;
+
+                    if (entry.ProposalDownsample is not double completed || completed <= 0)
+                    {
+                        entry.ProposalLastModified = null;
+                        entry.ProposalTypeCode = null;
+                        entry.ProposalDownsample = null;
+                        continue;
+                    }
+
+                    if (SegmentationViewportSession.ResolveTileDownsample(completed) != liveResolvedTileDownsample)
+                    {
+                        entry.ProposalLastModified = null;
+                        entry.ProposalTypeCode = null;
+                        entry.ProposalDownsample = null;
+                    }
+                }
+            }
         }
 
         /// <summary>

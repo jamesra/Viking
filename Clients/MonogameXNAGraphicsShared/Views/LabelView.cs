@@ -509,19 +509,23 @@ namespace VikingXNAGraphics
             SamplerState originalSamplerState = spriteBatch.GraphicsDevice.SamplerStates[0];
             SamplerState originalVSamplerState = spriteBatch.GraphicsDevice.VertexSamplerStates[0];
 
+            // End must run even if a label draw throws; a skipped End leaves SpriteBatch open for the rest of the frame.
+            bool batchBegun = false;
             try
             {
                 spriteBatch.Begin();
+                batchBegun = true;
 
                 foreach (LabelView label in Labels.Where(l => l != null))
                 {
                     label.Draw(spriteBatch, font, scene as VikingXNA.Scene);
                 }
-
-                spriteBatch.End();
             }
             finally
             {
+                if (batchBegun)
+                    spriteBatch.End();
+
                 if (originalBlendState != null)
                     spriteBatch.GraphicsDevice.BlendState = originalBlendState;
 
@@ -631,7 +635,7 @@ namespace VikingXNAGraphics
                     return;
                 }
 
-                var texture = CreateTextureForLabel(device, spriteBatch, font);
+                var texture = CreateTextureForLabel(device, font);
 
                 // Only assign if not cancelled
                 if (!token.IsCancellationRequested)
@@ -675,8 +679,9 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Create a texture for this label, rendering text in white so color can be applied as tint at draw time.
         /// Supports multi-line text using existing _Rows and _RowMeasurements.
+        /// Uses a dedicated SpriteBatch so async generation cannot nest Begin on the caller's shared batch.
         /// </summary>
-        private RenderTarget2D CreateTextureForLabel(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font)
+        private RenderTarget2D CreateTextureForLabel(GraphicsDevice device, SpriteFont font)
         {
             if (string.IsNullOrEmpty(this.Text) || font == null)
                 return null;
@@ -709,18 +714,19 @@ namespace VikingXNAGraphics
             device.SetRenderTarget(target);
             device.Clear(Color.Transparent);
 
-            spriteBatch.Begin();
-
-            // Draw all rows in white (color will be applied as tint at draw time)
-            float yPos = 0;
-            for (int iRow = 0; iRow < _Rows.Length; iRow++)
+            // Own batch for offscreen text; spriteBatch is only used for device affinity and must not be nested.
+            using (SpriteBatch offlineBatch = new(device))
             {
-                spriteBatch.DrawString(font, _Rows[iRow], new Vector2(0, yPos), Color.White, 
-                    this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
-                yPos += _RowMeasurements[iRow].Y * fontScale;
+                offlineBatch.Begin();
+                float yPos = 0;
+                for (int iRow = 0; iRow < _Rows.Length; iRow++)
+                {
+                    offlineBatch.DrawString(font, _Rows[iRow], new Vector2(0, yPos), Color.White,
+                        this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                    yPos += _RowMeasurements[iRow].Y * fontScale;
+                }
+                offlineBatch.End();
             }
-
-            spriteBatch.End();
 
             // Restore render targets
             device.SetRenderTargets(oldRenderTargets);

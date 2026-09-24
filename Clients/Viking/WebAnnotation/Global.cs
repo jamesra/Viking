@@ -541,7 +541,7 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Coarsest camera downsample at which auto-segment still runs. Default 8.
+            /// Coarsest camera downsample at which auto-segment still runs. Default 4.
             /// A view coarser than this is not sent to the segmentation service.
             /// Changing it restarts the idle timer so a view that is now allowed can run without a camera nudge.
             /// </summary>
@@ -691,7 +691,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = 8.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = 75.0;
-                Properties.Settings.Default.AutoPolygonizeMaxDownsample = 8.0;
+                Properties.Settings.Default.AutoPolygonizeMaxDownsample = 4.0;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;

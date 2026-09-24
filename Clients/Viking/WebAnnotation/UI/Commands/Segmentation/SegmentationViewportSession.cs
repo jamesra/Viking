@@ -48,6 +48,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly int maxTileRounds;
 
         /// <summary>
+        /// Ceiling for submitted tile downsample from appSettings
+        /// <c>SegmentationTileDownsample</c> (default 2). Camera zoom may submit a finer
+        /// level down to 1; never coarser than this.
+        /// </summary>
+        public static int MaxTileDownsample { get; } =
+            int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int ds) && ds >= 1
+                ? ds
+                : 2;
+
+        /// <summary>
+        /// Legacy name for <see cref="MaxTileDownsample"/>. Prefer the max name.
+        /// </summary>
+        public static int PinnedTileDownsample => MaxTileDownsample;
+
+        /// <summary>
+        /// Maps camera downsample to the integer pyramid level sent to UploadTile/SegmentTiles.
+        /// Values at or below 1 submit 1; larger values round up (ceil) and clamp to
+        /// <see cref="MaxTileDownsample"/>. Example: 1.21 → 2, 4 → 2 when max is 2.
+        /// </summary>
+        /// <param name="cameraDownsample">Live camera downsample (may be fractional).</param>
+        public static int ResolveTileDownsample(double cameraDownsample)
+        {
+            if (double.IsNaN(cameraDownsample) || double.IsInfinity(cameraDownsample) || cameraDownsample <= 0)
+                return 1;
+
+            int roundedUp = (int)Math.Ceiling(cameraDownsample);
+            if (roundedUp < 1)
+                roundedUp = 1;
+
+            return Math.Min(MaxTileDownsample, roundedUp);
+        }
+
+        /// <summary>
         /// Binds the session to a viewer. ViewportBounds starts as the live camera rectangle.
         /// </summary>
         public SegmentationViewportSession(SectionViewerControl parent)
@@ -57,6 +90,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             maxTileRounds = int.TryParse(ConfigurationManager.AppSettings["SegmentationMaxTileRounds"], out var rounds) && rounds >= 0
                 ? rounds
                 : 4;
+            mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
         }
 
         public Geometry.Rectangle ViewportBounds { get; set; }
@@ -68,6 +102,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public int UploadedImageWidth => uploadedImageWidth;
 
         public int UploadedImageHeight => uploadedImageHeight;
+
+        /// <summary>Pyramid level used for the last tile upload/segment (resolved from camera, capped).</summary>
+        public int MosaicDownsample => mosaicDownsample > 0 ? mosaicDownsample : MaxTileDownsample;
 
         /// <summary>True when this session has accepted at least one UploadTile for the current view identity.</summary>
         public bool HasUploadedTiles => uploadedTileKeys.Count > 0;
@@ -85,13 +122,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 var channel = ServiceLocator.GrpcChannelManager?.GetOrCreateChannel();
                 if (channel is null)
+                {
+                    SegmentationDiag.Log("TryInitializeClient: GrpcChannelManager/channel is null");
                     return false;
+                }
 
                 grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
+                SegmentationDiag.Log("TryInitializeClient: ok");
                 return true;
             }
             catch (Exception ex)
             {
+                SegmentationDiag.Log($"TryInitializeClient failed: {ex.Message}");
                 Debug.WriteLine($"Failed to initialize segmentation gRPC client: {ex.Message}");
                 grpcClient = null;
                 return false;
@@ -171,7 +213,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedImageWidth = 0;
             uploadedImageHeight = 0;
             uploadedTileKeys.Clear();
-            mosaicDownsample = 1;
+            mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
             mosaicOriginX = 0;
             mosaicOriginY = 0;
             Interlocked.Exchange(ref isUploadingImage, 0);

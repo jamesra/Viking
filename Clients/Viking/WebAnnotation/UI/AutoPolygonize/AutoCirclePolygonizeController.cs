@@ -68,6 +68,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly List<ProcessBatch> processBatches = [];
         private readonly object lifecycleLock = new();
         private Rectangle lastViewBounds;
+        /// <summary>
+        /// Last submitted tile pyramid level from <see cref="SegmentationViewportSession.ResolveTileDownsample"/>.
+        /// Crossing 1↔2 (zoom in or out past the DS≤1 boundary) drops stale proposals and re-queues.
+        /// </summary>
+        private int lastResolvedTileDownsample;
         private AutoPolygonizeProposal? hoveredProposal;
         private readonly HashSet<string> overlapResubmitsInFlight = [];
 
@@ -119,6 +124,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             enabled = value;
+            SegmentationDiag.Log($"AutoPolygonize.SetEnabled={value} svc={Global.IsSegmentationServiceAvailable}");
             if (enabled)
             {
                 Store.Locations.OnCollectionChanged += OnLocationsChanged;
@@ -133,6 +139,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 };
                 confirmTimer.Elapsed += OnConfirmElapsed;
                 lastViewBounds = GetCurrentViewportBounds();
+                lastResolvedTileDownsample = SegmentationViewportSession.ResolveTileDownsample(GetCurrentDownsample());
                 lastCameraChangeUtc = DateTime.UtcNow;
                 RestartIdleTimer();
             }
@@ -189,7 +196,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Restarts settle when the view actually moved. Aborts capture/encode only;
+        /// Restarts settle when the view moved or the resolved tile downsample crossed
+        /// the DS≤1 / DS=2 boundary (zoom in or out). Aborts capture/encode only;
         /// an already-uploaded batch keeps segmenting.
         /// </summary>
         public void OnCameraChanged()
@@ -198,15 +206,43 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             Rectangle current = GetCurrentViewportBounds();
-            if (SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, current))
+            int resolvedTile = SegmentationViewportSession.ResolveTileDownsample(GetCurrentDownsample());
+            bool boundsMoved = !SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, current);
+            bool tileLevelChanged = lastResolvedTileDownsample != 0 && resolvedTile != lastResolvedTileDownsample;
+            if (!boundsMoved && !tileLevelChanged)
                 return;
 
             lastViewBounds = current;
             lastCameraChangeUtc = DateTime.UtcNow;
+            if (tileLevelChanged)
+            {
+                DropProposalsForTileDownsampleChange();
+                cache.InvalidateCompletionsAtOtherTileDownsample(resolvedTile);
+            }
+
+            lastResolvedTileDownsample = resolvedTile;
             viewportImageLease.ForgetIfViewMoved(current, GetCurrentDownsample());
             CancelUploadPhase();
             CancelConfirmTimer();
             RestartIdleTimer();
+        }
+
+        /// <summary>
+        /// Removes on-screen proposal rings when the submitted tile level changes so a
+        /// zoom out past DS=1 (or zoom in back to DS=1) does not leave the old masks.
+        /// </summary>
+        private void DropProposalsForTileDownsampleChange()
+        {
+            lock (proposalLock)
+            {
+                foreach (AutoPolygonizeProposal proposal in proposals.Values)
+                    proposal.DisposeMaskOverlay();
+
+                proposals.Clear();
+            }
+
+            hoveredProposal = null;
+            parent.Invalidate();
         }
 
         /// <summary>
@@ -622,6 +658,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             RestartIdleTimer();
         }
 
+        private int batchRunning;
+
         /// <summary>
         /// One capture/upload plus sequential SegmentImage calls. GPU capture stays
         /// on the session UI path; polygonize runs on a task per response. A camera
@@ -629,14 +667,40 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private async Task RunBatchAsync()
         {
+            if (Interlocked.CompareExchange(ref batchRunning, 1, 0) != 0)
+            {
+                SegmentationDiag.Log("RunBatch skip: already running");
+                return;
+            }
+
+            try
+            {
+                await RunBatchBodyAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref batchRunning, 0);
+            }
+        }
+
+        /// <summary>Body of an auto-polygonize batch; only one runs at a time via <see cref="batchRunning"/>.</summary>
+        private async Task RunBatchBodyAsync()
+        {
+            SegmentationDiag.Log(
+                $"RunBatch enter enabled={enabled} svc={Global.IsSegmentationServiceAvailable} " +
+                $"sceneNull={parent.Scene is null} sectionNull={parent.Section is null}");
             if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || parent.Section is null)
                 return;
 
             if (!IsWithinAutoSegmentDownsample())
+            {
+                SegmentationDiag.Log($"RunBatch skip: downsample out of range ds={parent.Camera?.Downsample}");
                 return;
+            }
 
             if (parent.CurrentCommand is SegmentationCommand)
             {
+                SegmentationDiag.Log("RunBatch skip: SegmentationCommand active");
                 CancelProcessPhase();
                 if (!viewportImageLease.HasInFlight)
                     CancelUploadPhase();
@@ -661,17 +725,25 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Stopwatch stepTimer = Stopwatch.StartNew();
                 requestAnnotationLoad();
 
-                if (!await WaitForAnnotationsLoadedAsync(uploadToken).ConfigureAwait(false))
+                bool annotationsReady = await WaitForAnnotationsLoadedAsync(uploadToken).ConfigureAwait(false);
+                SegmentationDiag.Log($"RunBatch annotationsReady={annotationsReady} cancelled={uploadToken.IsCancellationRequested}");
+                if (!annotationsReady)
                     return;
 
                 long annotationLoadMs = stepTimer.ElapsedMilliseconds;
                 if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
+                {
+                    SegmentationDiag.Log("RunBatch abort after annotations (cancel/disabled/command)");
                     return;
+                }
 
                 stepTimer.Restart();
                 localUploadSession = new SegmentationViewportSession(parent);
                 if (!localUploadSession.TryInitializeClient())
+                {
+                    SegmentationDiag.Log("RunBatch abort: TryInitializeClient failed");
                     return;
+                }
 
                 lock (lifecycleLock)
                 {
@@ -682,6 +754,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Rectangle viewBounds = localUploadSession.ViewportBounds;
                 Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
                 List<LocationObj> candidates = CollectEligibleCircles(viewBounds, inset);
+                SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds}");
                 if (candidates.Count == 0)
                 {
                     ScheduleSavedSiblingOverlapScan();
@@ -695,11 +768,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                 double simplifyTolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample);
 
                 stepTimer.Restart();
+                SegmentationDiag.Log("RunBatch CaptureSharedViewportAsync begin");
                 AutoPolygonizeUploadContext? uploadContext = await CaptureSharedViewportAsync(
                     localUploadSession,
                     viewBounds,
                     downsample,
                     uploadToken).ConfigureAwait(false);
+                SegmentationDiag.Log(
+                    $"RunBatch CaptureSharedViewportAsync done null={uploadContext is null} " +
+                    $"imageId={uploadContext?.ImageId} wh={uploadContext?.Width}x{uploadContext?.Height}");
                 if (uploadContext is null)
                     return;
 
@@ -1019,8 +1096,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Circles whose center is at least 5% from each edge, whose disk is fully
         /// on screen, large enough, and not already proposed or dismissed for this LastModified.
-        /// A proposal completed at a coarser view is eligible again when the camera is at least
-        /// twice as fine. Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
+        /// Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
         /// </summary>
         private List<LocationObj> CollectEligibleCircles(Rectangle viewBounds, Rectangle inset)
         {

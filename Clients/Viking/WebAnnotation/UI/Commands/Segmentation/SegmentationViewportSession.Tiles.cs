@@ -10,7 +10,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.gRPC.SegmentationServiceTypes.V1;
-using Viking.VolumeModel;
 using VikingXNA;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
@@ -60,35 +59,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Pyramid level for UploadTile. Snaps to an available mosaic level and never goes
-        /// finer than DS1 — digital zoom past full-res (camera downsample &lt; 1) still uploads DS1.
-        /// Coarser zooms use DS2/DS4/… so we do not over-fetch full-res cells.
+        /// Pyramid level for UploadTile/SegmentTiles from the live camera via
+        /// <see cref="ResolveTileDownsample"/>.
         /// </summary>
         private int CurrentPyramidDownsample()
-        {
-            // Tile lattice is pyramid-aligned; do not request a level finer than full-res DS1.
-            double requested = Math.Max(1.0, parent.Downsample);
-            try
-            {
-                MappingBase mapping = parent.Section?.VolumeViewModel?.GetTileMapping(
-                    parent.Section.Number,
-                    parent.CurrentChannel,
-                    parent.CurrentTransform);
-                if (mapping is not null)
-                {
-                    int level = mapping.NearestAvailableLevel(requested);
-                    if (level > 0 && level != int.MaxValue)
-                        return Math.Max(1, level);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Pyramid downsample lookup failed: {ex.Message}");
-            }
-
-            int fallback = (int)Math.Round(requested);
-            return Math.Max(1, fallback);
-        }
+            => ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
 
         private TileSignature CurrentTileSignature(int downsample)
         {

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using VikingXNA;
+using VikingXNA;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -190,9 +190,13 @@ namespace VikingXNAGraphics
 
             device.Clear(Color.Transparent);
 
-            spriteBatch.Begin();
-            spriteBatch.DrawString(font, label, new Vector2(0, 0), color, 0, new Vector2(0, 0), scale, SpriteEffects.None, 0);
-            spriteBatch.End();
+            // Own batch for offscreen text; nesting Begin on the caller's SpriteBatch races with live draws.
+            using (SpriteBatch offlineBatch = new(device))
+            {
+                offlineBatch.Begin();
+                offlineBatch.DrawString(font, label, new Vector2(0, 0), color, 0, new Vector2(0, 0), scale, SpriteEffects.None, 0);
+                offlineBatch.End();
+            }
 
             device.SetRenderTargets(null);
 

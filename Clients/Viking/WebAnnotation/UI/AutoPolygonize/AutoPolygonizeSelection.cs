@@ -247,8 +247,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// True when the cached SAM2 image can be reused for a single-ID refresh:
-        /// id present, zoom not 2× away, and the circle center still inside the uploaded world rectangle.
+        /// True when the cached SAM2 tiles can be reused for a single-ID refresh:
+        /// usable context, matching resolved tile downsample, and the circle center still
+        /// inside the uploaded world rectangle.
         /// </summary>
         public static bool CanReuseUploadedImage(
             in AutoPolygonizeUploadContext context,
@@ -257,8 +258,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             if (!context.IsUsable)
                 return false;
-            if (DownsampleChangedByFactorOfTwo(liveDownsample, context.Downsample))
+
+            int submitted = SegmentationViewportSession.ResolveTileDownsample(liveDownsample);
+            if ((int)context.Downsample != submitted)
                 return false;
+
             return context.WorldBounds.Covers(volumeCenter);
         }
 

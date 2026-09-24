@@ -677,9 +677,13 @@ namespace VikingXNAGraphics
             RasterizerState originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             SamplerState originalSamplerState = spriteBatch.GraphicsDevice.SamplerStates[0];
 
+            // End must run even if a digit draw throws; otherwise the next frame's Begin fails with
+            // "Begin cannot be called again until End has been successfully called."
+            bool batchBegun = false;
             try
             {
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+                batchBegun = true;
 
                 // Draw all section numbers visible given current PID position (bottom to top, higher Z at top)
                 for (int sectionNumber = sectionMin; sectionNumber <= sectionMax; sectionNumber++)
@@ -707,11 +711,12 @@ namespace VikingXNAGraphics
 
                     NumberDisplayView.Draw(_drawContext, sectionNumber, new Vector2((float)xPos, (float)yPos), color, drawScale);
                 }
-
-                spriteBatch.End();
             }
             finally
             {
+                if (batchBegun)
+                    spriteBatch.End();
+
                 if (originalBlendState != null)
                     spriteBatch.GraphicsDevice.BlendState = originalBlendState;
                 if (originalDepthState != null)
