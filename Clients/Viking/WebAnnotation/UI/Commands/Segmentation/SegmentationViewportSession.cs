@@ -5,28 +5,30 @@ using Microsoft.Xna.Framework.Graphics;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.DependencyInjection;
 using Viking.gRPC.SegmentationServiceTypes.V1;
 using Viking.UI;
 using Viking.UI.Controls;
+using Viking.VolumeModel;
+using VikingXNA;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 using Polygon = Geometry.Polygon;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
-using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// Captures the current viewport, uploads it to the segmentation service, and converts
-    /// SegmentImage responses into world-space polygons. Shared by interactive SegmentationCommand
-    /// and AutoCirclePolygonizeController.
+    /// Uploads 1024×1024 mosaic tiles and converts SegmentTiles responses into world-space polygons.
+    /// Shared by interactive SegmentationCommand and AutoCirclePolygonizeController.
     /// </summary>
-    internal sealed class SegmentationViewportSession
+    internal sealed partial class SegmentationViewportSession
     {
         private readonly SectionViewerControl parent;
         private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
@@ -39,6 +41,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private CancellationTokenSource renderCancellationTokenSource;
         private CancellationTokenSource linkedRenderCancellationTokenSource;
         private CancellationTokenSource uploadCancellationTokenSource;
+        private readonly HashSet<string> uploadedTileKeys = [];
+        private int mosaicDownsample = 1;
+        private int mosaicOriginX;
+        private int mosaicOriginY;
+        private readonly int maxTileRounds;
 
         /// <summary>
         /// Binds the session to a viewer. ViewportBounds starts as the live camera rectangle.
@@ -47,6 +54,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             ViewportBounds = GetCurrentViewportBounds();
+            maxTileRounds = int.TryParse(ConfigurationManager.AppSettings["SegmentationMaxTileRounds"], out var rounds) && rounds >= 0
+                ? rounds
+                : 4;
         }
 
         public Geometry.Rectangle ViewportBounds { get; set; }
@@ -58,6 +68,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public int UploadedImageWidth => uploadedImageWidth;
 
         public int UploadedImageHeight => uploadedImageHeight;
+
+        /// <summary>True when this session has accepted at least one UploadTile for the current view identity.</summary>
+        public bool HasUploadedTiles => uploadedTileKeys.Count > 0;
 
         public bool IsUploading => Interlocked.CompareExchange(ref isUploadingImage, 0, 0) != 0;
 
@@ -157,6 +170,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedImageBounds = null;
             uploadedImageWidth = 0;
             uploadedImageHeight = 0;
+            uploadedTileKeys.Clear();
+            mosaicDownsample = 1;
+            mosaicOriginX = 0;
+            mosaicOriginY = 0;
             Interlocked.Exchange(ref isUploadingImage, 0);
         }
 
@@ -200,10 +217,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Waits for visible tiles, GPU-captures, encodes off-UI, then uploads if the live view still matches.
-        /// UploadImage is not passed the cancel token so a completed RPC always yields an ID; cancel after assign deletes.
+        /// Uploads every 1024x1024 mosaic cell that intersects the current viewport.
+        /// Tile mode does not use UploadImage; CurrentImageId stays unset.
         /// </summary>
-        /// <returns>True only when the server image is recorded and the client was not cancelled after assign.</returns>
+        /// <returns>True when at least one needed cell is ready on the server.</returns>
         public async Task<bool> UploadCurrentImageAsync(CancellationToken cancellationToken)
         {
             if (grpcClient is null)
@@ -212,81 +229,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (Interlocked.CompareExchange(ref isUploadingImage, 1, 0) != 0)
                 return false;
 
-            Stopwatch totalTimer = Stopwatch.StartNew();
-            ulong? assignedId = null;
             try
             {
                 uploadCancellationTokenSource?.Cancel();
                 uploadCancellationTokenSource?.Dispose();
                 uploadCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                Stopwatch captureTimer = Stopwatch.StartNew();
-                var (imageData, width, height, capturedBounds) = await CaptureViewportImage(uploadCancellationTokenSource.Token).ConfigureAwait(false);
-                long captureMs = captureTimer.ElapsedMilliseconds;
-                if (imageData is null || imageData.Length == 0)
+                (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
+                    await ReadViewTilesAsync().ConfigureAwait(false);
+                mosaicDownsample = downsample;
+                if (!await UploadMissingTilesAsync(signature, visible, grayscale, uploadCancellationTokenSource.Token).ConfigureAwait(false))
                 {
-                    Debug.WriteLine("Failed to capture viewport image for upload");
+                    Debug.WriteLine("Failed to upload visible segmentation tiles");
                     return false;
                 }
 
-                Geometry.Rectangle liveBounds = await GetLiveViewportBoundsAsync().ConfigureAwait(false);
-                if (!ShouldUploadEncodedCapture(capturedBounds, liveBounds))
-                {
-                    Debug.WriteLine("[SegmentationProfile] Skipping upload: view moved during encode");
-                    return false;
-                }
-
-                UploadImageRequest uploadRequest = new()
-                {
-                    ImageData = Google.Protobuf.ByteString.CopyFrom(imageData),
-                    Width = width,
-                    Height = height
-                };
-
-                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30));
-
-                Stopwatch rpcTimer = Stopwatch.StartNew();
-                var uploadResponse = await grpcClient.UploadImageAsync(uploadRequest, callOptions).ResponseAsync.ConfigureAwait(false);
-                long rpcMs = rpcTimer.ElapsedMilliseconds;
-
-                assignedId = uploadResponse.ImageId;
-                currentImageId = assignedId;
+                ViewportBounds = GetCurrentViewportBounds();
                 uploadedImageBounds = ViewportBounds;
-                uploadedImageWidth = width;
-                uploadedImageHeight = height;
-
-                Debug.WriteLine(
-                    $"[SegmentationProfile] Upload image={currentImageId} dimensions={width}x{height} bytes={imageData.Length} " +
-                    $"capture={captureMs}ms uploadRpc={rpcMs}ms total={totalTimer.ElapsedMilliseconds}ms");
+                uploadedImageWidth = SegmentationTileGrid.TileSize;
+                uploadedImageHeight = SegmentationTileGrid.TileSize;
+                currentImageId = null;
 
                 if (uploadCancellationTokenSource.Token.IsCancellationRequested)
-                {
-                    Debug.WriteLine("Image upload cancelled after server assigned id; deleting");
-                    await DeleteCurrentImageAsync().ConfigureAwait(false);
                     return false;
-                }
 
                 return true;
             }
             catch (OperationCanceledException)
             {
-                Debug.WriteLine("Image upload cancelled due to view change");
-                await DeleteAssignedImageOrClearAsync(assignedId).ConfigureAwait(false);
-            }
-            catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.Cancelled)
-            {
-                Debug.WriteLine("Image upload cancelled due to view change");
-                await DeleteAssignedImageOrClearAsync(assignedId).ConfigureAwait(false);
-            }
-            catch (RpcException rpcEx)
-            {
-                Debug.WriteLine($"gRPC error during upload: {rpcEx.Status.Detail}");
-                await DeleteAssignedImageOrClearAsync(assignedId).ConfigureAwait(false);
+                Debug.WriteLine("Tile upload cancelled due to view change");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error uploading image: {ex.Message}");
-                await DeleteAssignedImageOrClearAsync(assignedId).ConfigureAwait(false);
+                Debug.WriteLine($"Tile upload error: {ex.Message}");
             }
             finally
             {
@@ -297,23 +272,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Deletes the server image when UploadImage assigned an ID before the client cancelled or failed.
-        /// Otherwise only clears local state so we do not leave an orphaned SAM2 cache entry.
-        /// </summary>
-        private async Task DeleteAssignedImageOrClearAsync(ulong? assignedId)
-        {
-            if (assignedId.HasValue)
-            {
-                currentImageId = assignedId;
-                await DeleteCurrentImageAsync().ConfigureAwait(false);
-                return;
-            }
-
-            ClearImageId();
-        }
-
-        /// <summary>
-        /// Best-effort DeleteImage RPC, then clears <see cref="CurrentImageId"/>. Failures are logged only.
+        /// Best-effort DeleteImage RPC, then clears CurrentImageId. Failures are logged only.
         /// </summary>
         public async Task DeleteCurrentImageAsync()
         {
@@ -340,8 +299,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads if needed, then SegmentImage with the given world-space prompts.
-        /// NotFound re-uploads once. Returns null when cancelled or the client is missing.
+        /// Uploads visible (and server-requested) tiles, then SegmentTiles with growth rounds.
+        /// Returns the last response, including a partial mask when growth still needs cells.
         /// </summary>
         public async Task<SegmentationResponse?> SegmentAsync(
             IReadOnlyList<Geometry.Vector2> foregroundPoints,
@@ -355,59 +314,74 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 (backgroundPoints is null || backgroundPoints.Count == 0))
                 return null;
 
-            if (!currentImageId.HasValue && !IsUploading)
-            {
-                if (!await UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
-                    return null;
-            }
-
-            if (IsUploading || !currentImageId.HasValue)
-                return null;
-
             try
             {
-                Stopwatch totalTimer = Stopwatch.StartNew();
-                Stopwatch requestTimer = Stopwatch.StartNew();
-                SegmentationRequest? request = BuildSegmentationRequest(foregroundPoints, backgroundPoints);
-                if (request is null)
-                    return null;
-                long requestMs = requestTimer.ElapsedMilliseconds;
+                List<TileCell> extras = [];
+                SegmentationResponse? lastResponse = null;
+                for (int round = 0; round <= maxTileRounds; round++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
+                        await ReadViewTilesAsync().ConfigureAwait(false);
+                    mosaicDownsample = downsample;
+                    List<TileCell> needed = [.. visible, .. extras];
+                    if (!await UploadMissingTilesAsync(signature, needed, grayscale, cancellationToken).ConfigureAwait(false))
+                    {
+                        Debug.WriteLine("No segmentation tiles could be uploaded");
+                        return lastResponse;
+                    }
 
-                CallOptions callOptions = new(
-                    deadline: DateTime.UtcNow.AddSeconds(30),
-                    cancellationToken: cancellationToken);
+                    SegmentationResponse response;
+                    try
+                    {
+                        response = await SegmentUploadedTilesAsync(
+                            signature,
+                            foregroundPoints,
+                            backgroundPoints,
+                            cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
+                        TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
+                    {
+                        uploadedTileKeys.Remove(TileKey(signature, missingRow, missingCol));
+                        if (!await UploadMissingTilesAsync(
+                            signature,
+                            [new TileCell(missingRow, missingCol)],
+                            grayscale,
+                            cancellationToken).ConfigureAwait(false))
+                        {
+                            return lastResponse;
+                        }
 
-                Stopwatch rpcTimer = Stopwatch.StartNew();
-                SegmentationResponse response =
-                    await grpcClient.SegmentImageAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
-                long rpcMs = rpcTimer.ElapsedMilliseconds;
-                int responseBytes = response.Segments.Sum(segment => segment.Mask.Length);
-                Debug.WriteLine(
-                    $"[SegmentationProfile] Segment image={currentImageId} foreground={foregroundPoints?.Count ?? 0} " +
-                    $"background={backgroundPoints?.Count ?? 0} request={requestMs}ms rpc={rpcMs}ms " +
-                    $"segments={response.Segments.Count} responseBytes={responseBytes} total={totalTimer.ElapsedMilliseconds}ms");
-                return response;
-            }
-            catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound)
-            {
-                Debug.WriteLine($"Image not found in cache, re-uploading: {rpcEx.Status.Detail}");
-                currentImageId = null;
-                uploadedImageBounds = null;
+                        response = await SegmentUploadedTilesAsync(
+                            signature,
+                            foregroundPoints,
+                            backgroundPoints,
+                            cancellationToken).ConfigureAwait(false);
+                    }
 
-                if (!await UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
-                    return null;
+                    lastResponse = response;
+                    mosaicOriginX = response.OriginX;
+                    mosaicOriginY = response.OriginY;
+                    uploadedImageBounds = MosaicWorldBounds(response);
+                    uploadedImageWidth = Math.Max(1, response.Width);
+                    uploadedImageHeight = Math.Max(1, response.Height);
 
-                SegmentationRequest? retry = BuildSegmentationRequest(foregroundPoints, backgroundPoints);
-                if (retry is null)
-                    return null;
+                    if (response.RequestedTiles.Count == 0 || round == maxTileRounds)
+                        break;
 
-                CallOptions retryOptions = new(
-                    deadline: DateTime.UtcNow.AddSeconds(30),
-                    cancellationToken: cancellationToken);
+                    extras.Clear();
+                    foreach (TileCoord tile in response.RequestedTiles)
+                    {
+                        if (tile.Downsample == downsample)
+                            extras.Add(new TileCell(tile.Row, tile.Col));
+                    }
 
-                SegmentationResponse retryResponse =
-                    await grpcClient.SegmentImageAsync(retry, retryOptions).ResponseAsync.ConfigureAwait(false);
-                return retryResponse;
+                    if (extras.Count == 0)
+                        break;
+                }
+
+                return lastResponse;
             }
             catch (OperationCanceledException)
             {
@@ -456,8 +430,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (decodedMaskData is null)
                     continue;
 
-                int captureWidth = uploadedImageWidth > 0 ? uploadedImageWidth : response.Width;
-                int captureHeight = uploadedImageHeight > 0 ? uploadedImageHeight : response.Height;
+                int captureWidth = Math.Max(1, response.Width > 0 ? response.Width : uploadedImageWidth);
+                int captureHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight);
+                Geometry.Rectangle mosaicBounds = MosaicWorldBounds(response);
 
                 Stopwatch polygonizeTimer = Stopwatch.StartNew();
                 polygons.AddRange(SegmentationMaskPolygonizer.CreatePolygons(
@@ -468,7 +443,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     segment.Y,
                     captureWidth,
                     captureHeight,
-                    ViewportBounds,
+                    mosaicBounds,
                     dropFraction,
                     preserveHolesContainingWorldPoints,
                     cleanupRadius,
@@ -580,7 +555,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// World rectangle of a SAM2 segment. Mask Y is top-origin, so Y is flipped against Viking world-up.
+        /// World rectangle of a SAM2 segment on the fused mosaic.
+        /// Mask Y is top-origin; MosaicPixelToWorld flips into Viking world-up.
         /// </summary>
         public Geometry.Rectangle GetSegmentWorldBounds(
             int segmentX,
@@ -590,18 +566,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int responseWidth,
             int responseHeight)
         {
-            int imageWidth = uploadedImageWidth > 0 ? uploadedImageWidth : responseWidth;
-            int imageHeight = uploadedImageHeight > 0 ? uploadedImageHeight : responseHeight;
-            Geometry.Vector2 topLeft = ViewportToWorld(
+            int imageHeight = Math.Max(1, responseHeight > 0 ? responseHeight : uploadedImageHeight);
+            int downsample = Math.Max(1, mosaicDownsample);
+            Geometry.Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(
+                mosaicOriginX,
+                mosaicOriginY,
                 segmentX,
-                responseHeight - segmentY,
-                imageWidth,
-                imageHeight);
-            Geometry.Vector2 bottomRight = ViewportToWorld(
+                segmentY,
+                imageHeight,
+                downsample);
+            Geometry.Vector2 bottomRight = SegmentationTileGrid.MosaicPixelToWorld(
+                mosaicOriginX,
+                mosaicOriginY,
                 segmentX + maskWidth,
-                (responseHeight - segmentY) - maskHeight,
-                imageWidth,
-                imageHeight);
+                segmentY + maskHeight,
+                imageHeight,
+                downsample);
             return new Geometry.Rectangle(topLeft, bottomRight);
         }
 

@@ -28,8 +28,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         public int Width { get; }
         public int Height { get; }
 
-        /// <summary>False when the session never recorded a usable server image.</summary>
-        public bool IsUsable => ImageId != 0 && Width > 0 && Height > 0;
+        /// <summary>False when width/height were never recorded. ImageId may be 0 in tiled mode.</summary>
+        public bool IsUsable => Width > 0 && Height > 0;
     }
 
     /// <summary>

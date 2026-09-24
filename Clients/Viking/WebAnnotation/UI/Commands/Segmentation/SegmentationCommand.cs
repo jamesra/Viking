@@ -293,11 +293,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             panZoomDebounceTimer.Elapsed += OnPanZoomDebounceElapsed;
             panZoomDebounceTimer.AutoReset = false;
 
-            // If we have initial points, automatically upload image and request segmentation
+            // If we have initial points, segment immediately; SegmentAsync uploads tiles first.
             if (hasInitialPoints)
             {
                 Debug.WriteLine($"SegmentationCommand activated with {foregroundPoints.Count} foreground and {backgroundPoints.Count} background points");
-                UploadCurrentImage().ContinueWith(ContinueAfterUpload, TaskScheduler.FromCurrentSynchronizationContext());
+                _ = RequestSegmentation();
             }
         }
 
@@ -419,23 +419,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads image if needed (first point) and requests segmentation
+        /// Uploads any missing grid cells and requests segmentation. Matches VikingLegacy:
+        /// SegmentAsync owns tile upload, so clicks do not wait on a separate UploadImage phase.
         /// </summary>
         private void UploadImageAndRequestSegmentation()
         {
-            bool isFirstPoint = (foregroundPoints.Count + backgroundPoints.Count == 1);
-
-            // Check if already uploading using Interlocked
-            bool currentlyUploading = viewportSession.IsUploading;
-            if (isFirstPoint && !viewportSession.CurrentImageId.HasValue && !currentlyUploading)
-            {
-                Debug.WriteLine("First point placed, uploading image to server cache");
-                UploadCurrentImage().ContinueWith(ContinueAfterUpload, TaskScheduler.FromCurrentSynchronizationContext());
-            }
-            else
-            {
-                RequestSegmentation();
-            }
+            _ = RequestSegmentation();
         }
 
         /// <summary>
@@ -795,8 +784,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return false;
             }
 
-            if (viewportSession.CurrentImageId != ready.ImageId)
+            if (ready.ImageId != 0 && viewportSession.CurrentImageId != ready.ImageId)
                 viewportSession.AdoptUploadedImage(ready.ImageId, ready.WorldBounds, ready.Width, ready.Height);
+            else if (ready.ImageId == 0 && !viewportSession.HasUploadedTiles)
+            {
+                // Lease contexts use ImageId 0 in tile mode; keys are per-session and must be filled here.
+                viewportSession.ViewportBounds = bounds;
+                return await viewportSession.UploadCurrentImageAsync(segmentRequestCts.Token).ConfigureAwait(false);
+            }
 
             return true;
         }
@@ -824,11 +819,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, viewportSession.GetCurrentViewportBounds()))
                 return;
 
-            if (task.Status == TaskStatus.RanToCompletion && task.Result && viewportSession.CurrentImageId is ulong imageId)
-            {
+            if (task.Status != TaskStatus.RanToCompletion || !task.Result)
+                return;
+
+            // Tile mode leaves CurrentImageId unset; only UploadImage ids need a cache hold.
+            if (viewportSession.CurrentImageId is ulong imageId)
                 HoldSharedImage(imageId);
-                RequestSegmentation();
-            }
+
+            RequestSegmentation();
         }
 
         private void HoldSharedImage(ulong imageId)
@@ -941,7 +939,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
-                Debug.WriteLine($"Sending segmentation request with image ID {viewportSession.CurrentImageId}: {viewportSession.UploadedImageWidth}x{viewportSession.UploadedImageHeight}, {foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
+                Debug.WriteLine(
+                    $"Sending SegmentTiles request: tilesReady={viewportSession.HasUploadedTiles}, " +
+                    $"{viewportSession.UploadedImageWidth}x{viewportSession.UploadedImageHeight}, " +
+                    $"{foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
                 CancellationToken segmentToken = segmentRequestCts.Token;
                 var response = await viewportSession.SegmentAsync(foregroundPoints, backgroundPoints, segmentToken).ConfigureAwait(false);
                 if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))

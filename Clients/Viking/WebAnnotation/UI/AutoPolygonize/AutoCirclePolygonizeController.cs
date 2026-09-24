@@ -706,7 +706,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
                     return;
 
-                cache.AcquireBatchHold(uploadContext.Value.ImageId);
+                if (uploadContext.Value.ImageId != 0)
+                    cache.AcquireBatchHold(uploadContext.Value.ImageId);
 
                 long uploadMs = stepTimer.ElapsedMilliseconds;
                 Debug.WriteLine(
@@ -1330,7 +1331,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             {
                 bool reuse = cache.TryGetUploadContext(locationId, out AutoPolygonizeUploadContext uploadContext) &&
                              AutoPolygonizeSelection.CanReuseUploadedImage(uploadContext, downsample, circle.VolumePosition);
-                if (reuse)
+                if (reuse && uploadContext.ImageId != 0)
                 {
                     session.AdoptUploadedImage(
                         uploadContext.ImageId,
@@ -1339,6 +1340,17 @@ namespace WebAnnotation.UI.AutoPolygonize
                         uploadContext.Height);
                     if (SharedViewportImageLease.CanReuse(uploadContext, viewBounds, downsample))
                         viewportImageLease.Publish(uploadContext);
+                }
+                else if (reuse)
+                {
+                    // Tiled mode: ImageId is 0. Refresh tiles on this session; do not Adopt/DeleteImage.
+                    AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
+                        session,
+                        viewBounds,
+                        downsample,
+                        processToken).ConfigureAwait(false);
+                    if (uploaded is null)
+                        return;
                 }
                 else
                 {
@@ -1350,9 +1362,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (uploaded is null)
                         return;
 
-                    cache.AcquireBatchHold(uploaded.Value.ImageId);
-                    acquiredHold = true;
-                    holdImageId = uploaded.Value.ImageId;
+                    if (uploaded.Value.ImageId != 0)
+                    {
+                        cache.AcquireBatchHold(uploaded.Value.ImageId);
+                        acquiredHold = true;
+                        holdImageId = uploaded.Value.ImageId;
+                    }
                 }
 
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
@@ -1377,11 +1392,13 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 downsample = GetCurrentDownsample();
                 AutoPolygonizeUploadContext? afterSegment = TryCreateUploadContext(session, downsample);
-                if (afterSegment.HasValue && holdImageId is ulong held && held != afterSegment.Value.ImageId)
+                if (afterSegment is { ImageId: not 0 } next &&
+                    holdImageId is ulong held &&
+                    held != next.ImageId)
                 {
-                    cache.AcquireBatchHold(afterSegment.Value.ImageId);
+                    cache.AcquireBatchHold(next.ImageId);
                     cache.ReleaseBatchHold(held);
-                    holdImageId = afterSegment.Value.ImageId;
+                    holdImageId = next.ImageId;
                 }
 
                 int liveGeneration = cache.MarkPending(circle.ID, sectionNumber, circle, afterSegment);
@@ -1505,13 +1522,20 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return null;
             }
 
-            if (session.CurrentImageId != ready.ImageId)
+            if (ready.ImageId != 0 && session.CurrentImageId != ready.ImageId)
             {
                 session.AdoptUploadedImage(
                     ready.ImageId,
                     ready.WorldBounds,
                     ready.Width,
                     ready.Height);
+            }
+            else if (ready.ImageId == 0 && !session.HasUploadedTiles)
+            {
+                session.ViewportBounds = viewBounds;
+                if (!await session.UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
+                    return null;
+                return SharedViewportImageLease.TryCreateContext(session, downsample);
             }
 
             return ready;
@@ -1802,7 +1826,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     foreach (long id in locationIds)
                     {
                         if (cache.TryGetUploadContext(id, out AutoPolygonizeUploadContext upload) &&
-                            upload.IsUsable)
+                            upload.IsUsable &&
+                            upload.ImageId != 0)
                         {
                             session.AdoptUploadedImage(
                                 upload.ImageId,
@@ -1826,9 +1851,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                         if (uploaded is null)
                             return;
 
-                        cache.AcquireBatchHold(uploaded.Value.ImageId);
-                        acquiredHold = true;
-                        holdImageId = uploaded.Value.ImageId;
+                        if (uploaded.Value.ImageId != 0)
+                        {
+                            cache.AcquireBatchHold(uploaded.Value.ImageId);
+                            acquiredHold = true;
+                            holdImageId = uploaded.Value.ImageId;
+                        }
                     }
 
                     IReadOnlyList<Polygon> promptPolygons = CollectOverlapPromptPolygons(members, locationIds);

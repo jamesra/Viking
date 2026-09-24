@@ -59,16 +59,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Copies a finished upload into the lease shape. Null when the session never recorded a server image.
+        /// Copies a finished upload into the lease shape. Null when the session never recorded tile or image dimensions.
         /// </summary>
         public static AutoPolygonizeUploadContext? TryCreateContext(SegmentationViewportSession session, double downsample)
         {
-            if (session?.CurrentImageId is not ulong imageId || imageId == 0 || session.UploadedImageWidth <= 0)
+            if (session is null || session.UploadedImageWidth <= 0 || session.UploadedImageHeight <= 0)
                 return null;
 
             Rectangle bounds = session.UploadedImageBounds ?? session.ViewportBounds;
             return new AutoPolygonizeUploadContext(
-                imageId,
+                session.CurrentImageId ?? 0,
                 downsample,
                 bounds,
                 session.UploadedImageWidth,
@@ -294,11 +294,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
             lock (gate)
             {
                 published = context;
-                if (leaseHoldId != context.ImageId)
+                // Tiled uploads use ImageId 0 and are not DeleteImage-held.
+                ulong nextHold = context.ImageId == 0 ? 0 : context.ImageId;
+                if (leaseHoldId != nextHold && nextHold != 0)
                 {
                     releaseId = leaseHoldId;
-                    leaseHoldId = context.ImageId;
-                    acquireId = context.ImageId;
+                    leaseHoldId = nextHold;
+                    acquireId = nextHold;
+                }
+                else if (nextHold == 0 && leaseHoldId is ulong previous)
+                {
+                    releaseId = previous;
+                    leaseHoldId = null;
                 }
             }
 
