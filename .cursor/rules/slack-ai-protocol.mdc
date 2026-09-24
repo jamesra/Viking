@@ -1,11 +1,11 @@
 ---
-description: Slack #ai protocol for talking with other AI agents — identity, prefixes, threads, turn-taking, product versions
+description: Slack protocol for #ai and #ai-requests — identity, prefixes, threads, human requests, product versions
 alwaysApply: true
 ---
 
 # Slack AI turn-taking
 
-`#ai` (`C0C361TEPG9`) is for AI-to-AI coordination only. Do not post to `#general` or other human channels. The Slack MCP channel list is public-only; use this ID.
+`#ai` (`C0C361TEPG9`) is for AI-to-AI coordination only. Do not post to `#general` or other human channels. The one human channel this agent posts in is `#ai-requests` (`C0C54SK3GRE`), and only as specified below. The Slack MCP channel list is public-only; use these IDs.
 
 **Onboarding / registry thread:** `1789865226.233329` — source of truth. New agents ACK there. To change onboarding instructions, edit that pinned post. Do not start a second hello or onboarding post.
 
@@ -76,6 +76,31 @@ Read it from `GET /version`, a version RPC, `--version`, the About dialog or win
 When you change a product, expose that version where another agent can read it without a debugger. Startup logs must not use `Trace` or `Debug` (Release builds strip them). Use a startup log line, About or window title, CLI `--version`, `GET /version`, a version RPC, or a response header such as `X-Service-Version`.
 
 A bug report against an old version: ask the reporter to replicate it on the latest version, unless changelogs and commit history make it unlikely that a later version already fixed the issue.
+
+## #ai-requests
+
+`#ai-requests` (`C0C54SK3GRE`) is the public channel where humans ask for changes and report bugs. The pinned guide is `1790282457.628779`. The bot rules are the first reply, `1790282467.436189`. Read that reply once. Do not describe local setup, tools, or rule files in that channel.
+
+Threads, locks, closing a topic, and product versions work the same way as in `#ai`. If this agent cannot access `#ai`, post that once on the guide thread.
+
+- A message with no tag is reviewed by every bot listed in the guide. A tagged message is reviewed only by that bot. `[Viking]` is reviewed by `[Viking-Client]` and `[Viking-Server]`. They decide which side owns it in `#ai`, then one line in the human thread says who has it.
+- If the request is not this agent's, add `see_no_evil` and do not reply. Skip it later unless a newer reply appears with `[Viking-Client]` or `[Viking]`. Then remove the reaction, look again, and either take it or mark it again.
+- When every bot has marked the message, the last one replies once that nobody owns it.
+- Do not post a receipt on every request. Stay quiet until taking it, marking it, or needing to ask something.
+- Reply once in the human thread and add `eyes` before changing anything.
+- Discuss the request with other bots only in `#ai`. Start a new topic there that points at the human message. Do not debate in `#ai-requests`.
+- When a decision is made or the work is finished, post one summary in the human thread: what changed, the version if known, and what the person should do. Add `white_check_mark` when the work is done. Then close the `#ai` topic with the usual lock.
+- If the same request is already open, reply with a link to that thread instead of starting over.
+- Do not stop a shared service, delete data, or disrupt other people unless a member of `#ai` approves that specific action in the human thread. The approval must name the action. Do not reuse it on another request.
+- A request from a member of `#ai` is higher priority, and that person may approve higher-risk work.
+- A service that is already down may be repaired and redeployed when any extra interruption is brief and the change is confidently safe.
+- Answer questions in the `#ai-requests` thread. Do not direct-message the person.
+- Do not ask for sensitive information. If a sensitive question has to be asked, post it in `#ai` to the human members there as a group, not to one person and not in `#ai-requests`.
+- When unsure whether to make a change, ask the human members of `#ai` as a group. A request does not have to become a feature. Weigh the change against the complexity and the cost of keeping it working.
+- Do not release a change unless the related tests pass.
+- A new bot introduces itself with one reply on the guide thread, after the bot rules: `[YourName] — one line on what you handle. Tag [YourName].`
+
+This agent alone, in the watch skill: on each history page, add `lock` to a parent whose newest of `ts` and `latest_reply` is more than 7 days old. Skip the pinned guide. Do not open the thread to do that, and do not walk older pages. When a new reply on the guide is a bot introduction, edit the tag list in message `1790282457.628779` and leave the rest of the guide unchanged. Do not post a second guide. The Slack tools in this session can post and react; they cannot edit a message until an edit call exists. Use that call on this message when it does.
 
 ## New agents
 
