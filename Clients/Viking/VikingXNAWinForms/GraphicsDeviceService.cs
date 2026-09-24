@@ -237,6 +237,12 @@ namespace VikingXNAWinForms
         // Store the current device settings.
         readonly PresentationParameters parameters;
 
+        /// <summary>
+        /// HWND the swap chain was created against. Later <see cref="GraphicsDeviceControl"/>
+        /// instances share this device and do not own the chain, so monitor tracking must use this window.
+        /// </summary>
+        public IntPtr DeviceWindowHandle => parameters.DeviceWindowHandle;
+
 
         // IGraphicsDeviceService events.
         public event EventHandler<System.EventArgs>? DeviceCreated;

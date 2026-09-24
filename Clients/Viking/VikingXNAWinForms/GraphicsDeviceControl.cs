@@ -8,9 +8,12 @@
 #endregion
 
 #region Using Statements
+using Microsoft.Win32;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using VikingXNAGraphics;
 using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
@@ -54,6 +57,27 @@ namespace VikingXNAWinForms
         public ServiceContainer Services => services;
 
         readonly ServiceContainer services = new();
+
+        /// <summary>
+        /// Output the swap-chain window was last presented on.
+        /// </summary>
+        IntPtr _outputMonitor;
+
+        /// <summary>
+        /// Advanced color (HDR) state the swap chain was last created for.
+        /// A move between two monitors with the same state does not reset the device.
+        /// </summary>
+        bool _knownAdvancedColor;
+
+        bool _advancedColorEnabled;
+
+        /// <summary>
+        /// Top-level form whose <see cref="Form.LocationChanged"/> we subscribe to.
+        /// Child controls do not receive move messages when the user drags the window.
+        /// </summary>
+        Form? _trackedForm;
+
+        bool _listeningForDisplaySettings;
 
         private Microsoft.Xna.Framework.Content.ContentManager? _Content;
         public Microsoft.Xna.Framework.Content.ContentManager Content =>
@@ -113,9 +137,133 @@ namespace VikingXNAWinForms
 
                 // Ensure we load a default font
                 VikingXNAGraphics.DeviceFontStore.GetOrCreateForDevice(this.Device, this.Content);
+
+                // DWM keeps the HDR color space on the swap chain after the window leaves an HDR
+                // monitor. Recreating the chain (GraphicsDevice.Reset) drops that stuck space.
+                if (graphicsDeviceService?.DeviceWindowHandle == Handle)
+                {
+                    NoteOutput(MonitorFromWindow(Handle, MonitorDefaultToNearest));
+                    AttachOutputTracking();
+                    SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+                    _listeningForDisplaySettings = true;
+                }
             }
 
             base.OnCreateControl();
+        }
+
+        /// <summary>
+        /// Follows the control onto whichever top-level form currently hosts it.
+        /// Called from create and from parent changes, because <see cref="FindForm"/> is often null at create.
+        /// </summary>
+        void AttachOutputTracking()
+        {
+            Form? form = FindForm();
+            if (ReferenceEquals(form, _trackedForm))
+                return;
+
+            if (_trackedForm != null)
+                _trackedForm.LocationChanged -= OnFormLocationChanged;
+
+            _trackedForm = form;
+            if (_trackedForm != null)
+                _trackedForm.LocationChanged += OnFormLocationChanged;
+        }
+
+        /// <summary>
+        /// Notes the monitor under the swap-chain window. Resets only when that monitor's HDR state differs.
+        /// </summary>
+        void OnFormLocationChanged(object? sender, EventArgs e)
+        {
+            if (!IsHandleCreated || graphicsDeviceService is null)
+                return;
+            if (graphicsDeviceService.DeviceWindowHandle != Handle)
+                return;
+
+            IntPtr monitor = MonitorFromWindow(Handle, MonitorDefaultToNearest);
+            if (monitor == IntPtr.Zero || monitor == _outputMonitor)
+                return;
+
+            NoteOutput(monitor);
+        }
+
+        /// <summary>
+        /// Re-reads HDR after a display-settings change, including a toggle on the current monitor.
+        /// Raised on a background thread.
+        /// </summary>
+        void OnDisplaySettingsChanged(object? sender, EventArgs e)
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            try
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    IntPtr monitor = MonitorFromWindow(Handle, MonitorDefaultToNearest);
+                    if (monitor == IntPtr.Zero)
+                        monitor = _outputMonitor;
+                    NoteOutput(monitor);
+                }));
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle torn down during shutdown.
+            }
+        }
+
+        /// <summary>
+        /// Stores <paramref name="monitor"/> and recreates the swap chain only when its advanced-color
+        /// (HDR) bit differs from the bit the chain was last created for. The first successful read
+        /// is the baseline and does not reset.
+        /// </summary>
+        void NoteOutput(IntPtr monitor)
+        {
+            if (monitor == IntPtr.Zero)
+                return;
+
+            _outputMonitor = monitor;
+            if (!MonitorAdvancedColor.TryGetEnabled(monitor, out bool enabled))
+                return;
+
+            if (!_knownAdvancedColor)
+            {
+                _knownAdvancedColor = true;
+                _advancedColorEnabled = enabled;
+                return;
+            }
+
+            if (enabled == _advancedColorEnabled)
+                return;
+
+            _advancedColorEnabled = enabled;
+            ResetSwapChainForOutputChange();
+        }
+
+        /// <summary>
+        /// Recreates the swap chain at the current client size so DWM rebinds the window to the
+        /// output it is actually on. Called from the UI thread after a monitor or display change.
+        /// </summary>
+        void ResetSwapChainForOutputChange()
+        {
+            if (graphicsDeviceService is null || Device is null || Device.IsDisposed)
+                return;
+            if (graphicsDeviceService.DeviceWindowHandle != Handle)
+                return;
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+                return;
+            if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Lost)
+                return;
+
+            try
+            {
+                graphicsDeviceService.ResetDevice(ClientSize.Width, ClientSize.Height);
+                Invalidate();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Swap chain reset after display change failed: {ex.Message}");
+            }
         }
 
 
@@ -124,12 +272,34 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void Dispose(bool disposing)
         {
+            if (_trackedForm != null)
+            {
+                _trackedForm.LocationChanged -= OnFormLocationChanged;
+                _trackedForm = null;
+            }
+
+            if (_listeningForDisplaySettings)
+            {
+                SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+                _listeningForDisplaySettings = false;
+            }
+
             graphicsDeviceService?.Release(disposing);
             graphicsDeviceService = null;
             _Content?.Dispose();
             _Content = null;
 
             base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Rebinds monitor tracking when the control moves to a different form.
+        /// </summary>
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            if (!DesignMode && graphicsDeviceService != null && graphicsDeviceService.DeviceWindowHandle == Handle)
+                AttachOutputTracking();
         }
 
 
@@ -370,5 +540,13 @@ namespace VikingXNAWinForms
             this.ResumeLayout(false);
 
         }
+
+        const uint MonitorDefaultToNearest = 2;
+
+        /// <summary>
+        /// Returns the monitor the window is on, or the nearest monitor when the window does not intersect one.
+        /// </summary>
+        [DllImport("user32.dll")]
+        static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
     }
 }
