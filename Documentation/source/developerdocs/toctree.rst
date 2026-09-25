@@ -9,4 +9,5 @@ Developer Documentation
    
   
    Mesh Generation <mesh/overview>
+   gRPC protocols <grpc/toctree>
    
