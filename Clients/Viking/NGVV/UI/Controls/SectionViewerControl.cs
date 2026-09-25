@@ -1950,24 +1950,17 @@ namespace Viking.UI.Controls
                 ///This is a bad way to know if we are capturing a screenshot, but works for now
                 if (AsynchTextureLoad)
                 {
-                    try
+                    if (CurrentCommand != null)
                     {
-                        if (CurrentCommand != null)
-                        {
+                        ++NextStencilValue;
+                        graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, true);
+                        VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, NextStencilValue);
 
-                            ++NextStencilValue;
-                            graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, true);
-                            VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, NextStencilValue);
+                        graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
 
-                            graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
-
-                            CurrentCommand.OnDraw(graphicsDevice, scene, basicEffect);
-                        }
-
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        Trace.WriteLine("Could not create render target for channels", "UI");
+                        // Do not catch InvalidOperationException here: SpriteBatch Begin/End mistakes must
+                        // surface. Swallowing them leaves Begin open and the next overlay draw fails obscurely.
+                        CurrentCommand.OnDraw(graphicsDevice, scene, basicEffect);
                     }
                 }
 

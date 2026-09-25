@@ -2436,15 +2436,24 @@ break;
             }).Cast<ILabelView>();
 
             DeviceStateManager.SaveDeviceState(_Parent.Device);
-            _Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
-
-            foreach (ILabelView loc in listLocationsWithVisibleLabels)
+            bool batchBegun = false;
+            try
             {
-                loc.DrawLabel(_Parent.spriteBatch,
-                              _Parent.fontArial,
-                              scene);
+                _Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+                batchBegun = true;
+
+                foreach (ILabelView loc in listLocationsWithVisibleLabels)
+                {
+                    loc.DrawLabel(_Parent.spriteBatch,
+                                  _Parent.fontArial,
+                                  scene);
+                }
             }
-            _Parent.spriteBatch.End();
+            finally
+            {
+                if (batchBegun)
+                    _Parent.spriteBatch.End();
+            }
 
             IEnumerable<IRenderedLabelView> listLocationsWithVisibleRenderedLabels = locations.Where(l =>
             {
