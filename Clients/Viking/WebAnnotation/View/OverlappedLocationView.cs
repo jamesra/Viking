@@ -60,12 +60,6 @@ namespace WebAnnotation.View
             Microsoft.Xna.Framework.Color typeColor = obj.Parent?.Type is null
                 ? Microsoft.Xna.Framework.Color.Gray
                 : obj.Parent.Type.Color.ToXNAColor();
-            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.GetLocationLinkColor(
-                typeColor,
-                1,
-                Up ? 1 : -1,
-                false).SetAlpha(1.0f);
-
             label = new LabelView(LocationLabel(obj), gridCircle.Center)
             {
                 _Color = Microsoft.Xna.Framework.Color.Red
