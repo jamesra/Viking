@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\StructureColorForIdTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="DialogSmokeTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />

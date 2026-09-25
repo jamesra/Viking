@@ -520,7 +520,7 @@ namespace WebAnnotation
                                 mosaic_shape_poly,
                                 volumePosition,
                                 [mosaic_centroid], //medial_axis_points,
-                                loc.Parent.Type.Color.ToXNAColor(0.25f),
+                                WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f),
                                 (polygon, points) =>
                                 {
                                     var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(mosaic_shape_poly);
@@ -552,7 +552,7 @@ namespace WebAnnotation
                             return new TranslatePolygonCommand(Parent,
                                                                  MosaicShape.ToPolygon(),
                                                                  volumePosition,
-                                                                 loc.Parent.Type.Color.ToXNAColor(0.25f),
+                                                                 WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f),
                                                                  (mosaicPolygon, points) =>
                                                                  {
                                                                      LocationObj newLoc = new(loc.Parent,

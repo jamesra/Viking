@@ -45,6 +45,29 @@ namespace WebAnnotationModel.Objects
             get;
         }
 
+        private uint? _Color;
+
+        /// <summary>
+        /// Per-cell color. Unset values use <see cref="ColorForId"/> so polygons, circles, and segmentation share one hue.
+        /// </summary>
+        public uint Color
+        {
+            get
+            {
+                if (_Color.HasValue == false)
+                    _Color = ColorForId(ID);
+
+                return _Color.Value;
+            }
+            set => _Color = value;
+        }
+
+        /// <summary>
+        /// Packed ARGB for a cell, stable for one structure id. The mask forces opaque alpha and a little blue so a zero hash stays visible.
+        /// </summary>
+        public static uint ColorForId(long structureId) =>
+            (uint)structureId.ToString().GetHashCode() | 0xFF0707FF;
+
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
         /// In this case make sure we always return the same hash code.  As a result this is called for each object only once.

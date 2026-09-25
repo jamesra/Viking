@@ -168,7 +168,9 @@ namespace WebAnnotation.View
 
         private void CreateViewObjects(Circle MosaicCircle, IVolumeToSectionTransform mapper)
         {
-            var color = (modelObj.Parent?.Type?.Color ?? 0x808080u).ToXNAColor(0.5f);
+            var color = modelObj.Parent is null
+                ? Microsoft.Xna.Framework.Color.Gray.SetAlpha(0.5f)
+                : ColorForStructure(modelObj.Parent, 0.5f);
             upCircleView = TextureCircleView.CreateUpArrow(_VolumeCircle, color);
             downCircleView = TextureCircleView.CreateDownArrow(_VolumeCircle, color);
         }
@@ -342,7 +344,7 @@ namespace WebAnnotation.View
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(modelObj.TypeCode, hasParent);
             Color color = modelObj.Parent is null
                 ? Color.Gray.SetAlpha(opacity)
-                : modelObj.Parent.Type.Color.ToXNAColor(opacity);
+                : ColorForStructure(modelObj.Parent, opacity);
             circleView = new CircleView(new Circle(VolumePosition, modelObj.Radius), color);
         }
 

@@ -10,6 +10,7 @@ using System.Windows.Forms;
 #endif
 using Viking.Common;
 using VikingXNA;
+using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -38,6 +39,12 @@ namespace WebAnnotation.View
         /// If null, the smallest rendered size check is skipped.
         /// </summary>
         public static Func<double> SmallestRenderedSizeAccessor { get; set; }
+
+        /// <summary>
+        /// Cells (type 1) use <see cref="StructureObj.Color"/>. Other types keep the structure-type color. Location views call this.
+        /// </summary>
+        public static Microsoft.Xna.Framework.Color ColorForStructure(StructureObj parent, float alpha) =>
+            (parent.TypeID == 1 ? parent.Color : parent.Type.Color).ToXNAColor(alpha);
 
         /// <summary>
         /// Return true if a polygon with the given bounding box would be visible if rendered into the scene.

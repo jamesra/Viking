@@ -43,7 +43,7 @@ namespace WebAnnotation.View
 
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
-            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : obj.Parent.Type.Color.ToXNAColor(opacity);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
             curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
                 lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0,
                 ShowControlPoints: !Global.PenMode);
@@ -57,7 +57,7 @@ namespace WebAnnotation.View
 
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
-            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : obj.Parent.Type.Color.ToXNAColor(opacity);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
             curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
                 lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular, controlPointRadius: obj.Width.Value / 2.0,
                 ShowControlPoints: !Global.PenMode);

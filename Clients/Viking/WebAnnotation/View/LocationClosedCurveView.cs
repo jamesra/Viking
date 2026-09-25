@@ -59,7 +59,7 @@ namespace WebAnnotation.View
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
-            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : obj.Parent.Type.Color.ToXNAColor(opacity);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
             curveView = new CurveView(VolumeControlPoints, color, true, lineWidth: VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
             CreateLabelObjects();
         }

@@ -204,7 +204,7 @@ namespace WebAnnotation.View
             }
             else
             {
-                Color = obj.Parent.Type.Color.ToXNAColor(opacity);
+                Color = ColorForStructure(obj.Parent, opacity);
             }
 
             ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
