@@ -95,6 +95,13 @@ namespace WebAnnotation
         internal SharedViewportImageLease? SharedViewportImages => autoPolygonizeController?.ViewportImages;
 
         /// <summary>
+        /// True when auto-polygonize is hovering a proposal ring for this location.
+        /// Used by circle draw to cut the annotation's alpha in half as a linked highlight.
+        /// </summary>
+        internal bool IsAutoPolygonizeHoverSource(long locationId)
+            => autoPolygonizeController?.IsHoveredSourceLocation(locationId) == true;
+
+        /// <summary>
         /// Per-section cancellation for annotation loads. When section changes we only cancel loads for sections outside the keep set (current ± radius from Global.NumSectionsInMemory).
         /// </summary>
         private readonly Dictionary<int, CancellationTokenSource> _sectionAnnotationLoadBySection = new();

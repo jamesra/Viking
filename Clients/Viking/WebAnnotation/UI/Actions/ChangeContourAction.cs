@@ -163,10 +163,19 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
+            Microsoft.SqlServer.Types.SqlGeometry originalShape = Location.MosaicShape;
             Polyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
 
-            Store.Locations.Save();
+            try
+            {
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                Location.SetShapeFromGeometryInSection(Transform, originalShape);
+            }
         }
 
         public bool Equals(IAction other)

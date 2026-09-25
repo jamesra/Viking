@@ -414,7 +414,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             return proposal is not null;
         }
 
-        /// <summary>Highlights the proposal under the cursor and invalidates when the hit changes.</summary>
+        /// <summary>Highlights the proposal under the cursor and invalidates when the hit changes.
+        /// Also dims the source circle annotation(s) via <see cref="IsHoveredSourceLocation"/>.
+        /// </summary>
         public void UpdateHover(Vector2 worldPosition)
         {
             TryHit(worldPosition, out AutoPolygonizeProposal nextProposal, out _);
@@ -429,6 +431,26 @@ namespace WebAnnotation.UI.AutoPolygonize
                 hoveredProposal.IsHighlighted = true;
 
             parent.Invalidate();
+        }
+
+        /// <summary>
+        /// True when <paramref name="locationId"/> belongs to the hovered proposal ring.
+        /// Called from <see cref="View.LocationCircleView.Draw"/> so the source circle is
+        /// drawn at half opacity while the ring is highlighted.
+        /// </summary>
+        internal bool IsHoveredSourceLocation(long locationId)
+        {
+            if (hoveredProposal is null)
+                return false;
+
+            IReadOnlyList<long> ids = hoveredProposal.LocationIds;
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (ids[i] == locationId)
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

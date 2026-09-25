@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotationModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -423,15 +424,43 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ShowControlPoints: false);
 
         /// <summary>
-        /// Stable hue from location ID so the same circle keeps the same color across refreshes.
-        /// Highlighted (cursor over the ring) uses a lighter, fully opaque color.
+        /// Ring color for a location. A cell uses that structure's hue with the ring lightness and alpha. Other locations keep a stable hue from the location id so a refresh does not recolor the ring. Highlighted (cursor over the ring) is lighter and fully opaque.
         /// </summary>
         public static Color ColorForLocation(long locationId, bool highlighted = false)
         {
-            float hue = (float)((locationId * 0.6180339887) % 1.0);
             float lightness = highlighted ? HighlightLightness : DefaultLightness;
             float alpha = highlighted ? HighlightAlpha : DefaultAlpha;
+            LocationObj location = Store.Locations.GetObjectByID(locationId, false);
+            if (location?.Parent is { TypeID: 1 } cell)
+            {
+                return ColorFromHsl(HueOf(cell.Color.ToXNAColor(1f)), RingSaturation, lightness, alpha);
+            }
+
+            float hue = (float)((locationId * 0.6180339887) % 1.0);
             return ColorFromHsl(hue, RingSaturation, lightness, alpha);
+        }
+
+        /// <summary>
+        /// Hue in 0..1 from an RGB color. Autoseg uses this so a cell ring matches <see cref="StructureObj.Color"/> while keeping ring lightness.
+        /// </summary>
+        private static float HueOf(Color color)
+        {
+            float r = color.R / 255f;
+            float g = color.G / 255f;
+            float b = color.B / 255f;
+            float max = Math.Max(r, Math.Max(g, b));
+            float min = Math.Min(r, Math.Min(g, b));
+            float delta = max - min;
+            if (delta <= 0f)
+                return 0f;
+
+            float hue = max == r
+                ? ((g - b) / delta) % 6f
+                : max == g
+                    ? ((b - r) / delta) + 2f
+                    : ((r - g) / delta) + 4f;
+            hue /= 6f;
+            return hue < 0f ? hue + 1f : hue;
         }
 
         private static Color ColorFromHsl(float hue, float saturation, float lightness, float alpha)

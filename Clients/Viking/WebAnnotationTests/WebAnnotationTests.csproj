@@ -31,6 +31,7 @@
         <Compile Include="Commands\PenModeContactTests.cs" />
         <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
         <Compile Include="Commands\CommandConstructorBinderTests.cs" />
+    <Compile Include="Commands\StructureColorForIdTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="Commands\SegmentationRequestCoalescerTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />

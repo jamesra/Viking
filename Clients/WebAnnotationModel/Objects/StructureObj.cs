@@ -40,13 +40,19 @@ namespace WebAnnotationModel
             {
                 if (_Color.HasValue == false)
                 {
-                    _Color = (uint)ID.ToString().GetHashCode() | 0xFF0707FF;
+                    _Color = ColorForId(ID);
                 }
 
                 return _Color.Value;
             }
             set => _Color = value;
         }
+
+        /// <summary>
+        /// Packed ARGB for a cell, stable for one structure id. Location views, segmentation, and autoseg call this so a cell and its mask share one hue. The mask forces opaque alpha and a little blue so a zero hash stays visible.
+        /// </summary>
+        public static uint ColorForId(long structureId) =>
+            (uint)structureId.ToString().GetHashCode() | 0xFF0707FF;
 
 
         /// <summary>

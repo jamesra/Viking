@@ -79,23 +79,11 @@ RemoveLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCom
 
             Array.Copy(OriginalControlPoints, newControlPoints, iNearestPoint);
             Array.Copy(OriginalControlPoints, iNearestPoint + 1, newControlPoints, iNearestPoint, OriginalControlPoints.Length - (iNearestPoint + 1));
-            /*
-            for (int iOldPoint=0; iOldPoint < iNearestPoint; iOldPoint++)
-            {
-                newControlPoints[iOldPoint] = OriginalControlPoints[iOldPoint];
-            }
 
-            for (int iOldPoint = iNearestPoint+1; iOldPoint < OriginalControlPoints.Length; iOldPoint++)
-            {
-                newControlPoints[iOldPoint-1] = OriginalControlPoints[iOldPoint];
-            }
-
-            //The first point in a closed shape is equal to the last point.  If we remove the first point we must update the last point to match the new first point.
-            if(IsClosedShape && iNearestPoint == 0)
-            {
+            // Closed rings store the first vertex again as the last. Removing the first must copy the new first onto the last.
+            if (IsClosedShape && iNearestPoint == 0 && newControlPoints.Length > 0)
                 newControlPoints[newControlPoints.Length - 1] = newControlPoints[0];
-            }
-            */
+
             return newControlPoints;
         }
 

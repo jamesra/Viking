@@ -699,6 +699,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Color Generation
         /// <summary>
+        /// Overlay color for one mask polygon. A known cell uses that structure's hue at the overlay alpha. Called from <see cref="ApplyPolygonViews"/>.
+        /// </summary>
+        private Color ColorForSegment(int index, int total)
+        {
+            if (structureIdToExcludeFromBackgroundPoints is long structureId)
+            {
+                StructureObj structure = Store.Structures.GetObjectByID(structureId, false);
+                uint packed = structure?.Color ?? StructureObj.ColorForId(structureId);
+                return packed.ToXNAColor(0.25f);
+            }
+
+            return GenerateDistinctColor(index, total);
+        }
+
+        /// <summary>
         /// Generates a distinct color for a segment based on its index
         /// </summary>
         /// <param name="index">Index of the segment</param>
@@ -1141,7 +1156,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int polygonIndex = 0;
             foreach (Polygon gridPolygon in polygons)
             {
-                Color polygonColor = GenerateDistinctColor(polygonIndex, totalPolygons);
+                Color polygonColor = ColorForSegment(polygonIndex, totalPolygons);
                 segmentPolygonViews.Add(new SolidPolygonView(gridPolygon, polygonColor));
                 segmentPolygonRingViews.Add(CreateRingView(gridPolygon.ExteriorRing, polygonColor));
                 segmentPolygonRingViews.AddRange(gridPolygon.InteriorRings.Select(ring => CreateRingView(ring, polygonColor)));

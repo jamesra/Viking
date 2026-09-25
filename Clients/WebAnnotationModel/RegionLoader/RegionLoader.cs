@@ -50,7 +50,8 @@ namespace WebAnnotationModel
         public bool HasBeenQueried => LastQuery.HasValue;
 
         /// <summary>
-        /// True if a query has been sent to the server but has not returned
+        /// True while a query has been sent and the async result has not completed.
+        /// Callers attach a second callback only in this state. A finished result is not outstanding.
         /// </summary>
         public bool OutstandingQuery
         {
@@ -59,7 +60,7 @@ namespace WebAnnotationModel
                 if (this.AsyncResult is null)
                     return false;
 
-                return AsyncResult.IsCompleted;
+                return !AsyncResult.IsCompleted;
             }
         }
 
@@ -283,7 +284,7 @@ namespace WebAnnotationModel
         /// <summary>
         /// True when every pyramid cell covering the mosaic FOV has completed a server query
         /// (HasBeenQueried and AsyncResult is null). Missing cells or in-flight queries return false.
-        /// Does not use OutstandingQuery, which is inverted relative to its comment.
+        /// In-flight cells fail via a non-null AsyncResult. OutstandingQuery is true only while that result is incomplete.
         /// </summary>
         public bool AreRegionQueriesComplete(Rectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber)
         {

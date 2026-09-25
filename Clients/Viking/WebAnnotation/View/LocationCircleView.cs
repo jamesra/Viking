@@ -166,7 +166,7 @@ namespace WebAnnotation.View
         {
             Microsoft.Xna.Framework.Color color = modelObj.Parent is null
                 ? Microsoft.Xna.Framework.Color.Gray.SetAlpha(0.5f)
-                : modelObj.Parent.Type.Color.ToXNAColor(0.5f);
+                : ColorForStructure(modelObj.Parent, 0.5f);
             upCircleView = TextureCircleView.CreateUpArrow(_VolumeCircle, color);
             downCircleView = TextureCircleView.CreateDownArrow(_VolumeCircle, color);
         }
@@ -345,7 +345,7 @@ namespace WebAnnotation.View
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(modelObj.TypeCode, hasParent);
             Color color = modelObj.Parent is null
                 ? Color.Gray.SetAlpha(opacity)
-                : modelObj.Parent.Type.Color.ToXNAColor(opacity);
+                : ColorForStructure(modelObj.Parent, opacity);
             circleView = new CircleView(new Circle(VolumePosition, modelObj.Radius), color);
         }
 
@@ -545,6 +545,12 @@ namespace WebAnnotation.View
 
         #endregion
 
+        /// <summary>
+        /// Alpha multiplier applied to a circle while its auto-polygonize proposal ring is hovered.
+        /// Half opacity reads as a clear link without changing hue.
+        /// </summary>
+        private const float ProposalHoverAlphaScale = 0.5f;
+
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
@@ -556,13 +562,15 @@ namespace WebAnnotation.View
 
             float[] originalAlpha = [.. listToDraw.Select(loc => loc.Alpha)];
             float[] fadeFactor = [.. listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene))];
+            var overlay = AnnotationOverlay.CurrentOverlay;
 
             listToDraw.ForEach((view, i) =>
                 {
-                    if (fadeFactor[i] < 1.0f)
-                    {
-                        view.Alpha = originalAlpha[i] * fadeFactor[i];
-                    }
+                    float alpha = originalAlpha[i] * fadeFactor[i];
+                    if (overlay?.IsAutoPolygonizeHoverSource(view.ID) == true)
+                        alpha *= ProposalHoverAlphaScale;
+                    if (alpha != originalAlpha[i])
+                        view.Alpha = alpha;
                 });
 
             OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];

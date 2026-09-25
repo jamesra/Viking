@@ -5,7 +5,7 @@ using System;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using WebAnnotationModel;
+using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -155,11 +155,22 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
+            Microsoft.SqlServer.Types.SqlGeometry originalShape = Location.MosaicShape;
+            LocationType originalType = Location.TypeCode;
             Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.TypeCode = LocationType.POLYLINE;
             Location.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
 
-            Store.Locations.Save();
+            try
+            {
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                Location.TypeCode = originalType;
+                Location.SetShapeFromGeometryInSection(Transform, originalShape);
+            }
         }
 
         public void CreateDefaultVisuals()

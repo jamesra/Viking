@@ -508,45 +508,48 @@ namespace Viking.VolumeModel
 
         private static async Task<bool> FetchStosZip(Uri StosZipPath, System.Net.NetworkCredential UserCredentials, string LocalCachePath)
         {
-            HttpClient request = new()
+            _ = UserCredentials;
+            using HttpClient request = new()
             {
                 BaseAddress = StosZipPath
             };
 
-            //HttpWebRequest request = WebRequest.Create(StosZipPath) as HttpWebRequest;
-            //if (StosZipPath.Scheme.ToLower() == "https")
-            //request.Credentials = UserCredentials;
-
-
-            //request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-
             try
             {
                 using Stream responseStream = await request.GetStreamAsync(StosZipPath).ConfigureAwait(false);
-                /*
-                    Byte[] buffer = responseStream.ReadToBuffer(responseStream.Length);
-                    using (MemoryStream memStream = new MemoryStream(buffer))
-                    */
                 using ZipArchive archive = new(responseStream, ZipArchiveMode.Read);
                 if (false == System.IO.Directory.Exists(LocalCachePath))
-                    archive.ExtractToDirectory(LocalCachePath);
-                else
-                {
+                    System.IO.Directory.CreateDirectory(LocalCachePath);
 
-                    foreach (var entry in archive.Entries)
+                string cacheRoot = System.IO.Path.GetFullPath(LocalCachePath);
+                if (!cacheRoot.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString()))
+                    cacheRoot += System.IO.Path.DirectorySeparatorChar;
+
+                foreach (var entry in archive.Entries)
+                {
+                    if (string.IsNullOrEmpty(entry.Name))
+                        continue;
+
+                    if (entry.FullName.Contains(".."))
+                        return false;
+
+                    var expectedCachePath = System.IO.Path.GetFullPath(System.IO.Path.Combine(LocalCachePath, entry.FullName));
+                    if (!expectedCachePath.StartsWith(cacheRoot, StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    var entryWriteTimeUTC = entry.LastWriteTime.DateTime.ToUniversalTime();
+                    FileInfo info = new(expectedCachePath);
+                    if (info.Exists == false)
                     {
-                        var entryWriteTimeUTC = entry.LastWriteTime.DateTime.ToUniversalTime();
-                        var expectedCachePath = System.IO.Path.Combine(LocalCachePath, entry.FullName);
-                        FileInfo info = new(expectedCachePath);
-                        if (info.Exists == false)
-                        {
-                            entry.ExtractToFile(expectedCachePath);
-                        }
-                        else if (info.LastWriteTimeUtc < entryWriteTimeUTC)
-                        {
-                            System.IO.File.Delete(expectedCachePath);
-                            entry.ExtractToFile(expectedCachePath);
-                        }
+                        string directory = System.IO.Path.GetDirectoryName(expectedCachePath);
+                        if (!string.IsNullOrEmpty(directory))
+                            System.IO.Directory.CreateDirectory(directory);
+                        entry.ExtractToFile(expectedCachePath);
+                    }
+                    else if (info.LastWriteTimeUtc < entryWriteTimeUTC)
+                    {
+                        System.IO.File.Delete(expectedCachePath);
+                        entry.ExtractToFile(expectedCachePath);
                     }
                 }
             }
@@ -558,6 +561,7 @@ namespace Viking.VolumeModel
             catch (Exception)
             {
                 Trace.WriteLine($"Could not open StosZip file: {StosZipPath}", "VolumeModel");
+                return false;
             }
 
             return true;

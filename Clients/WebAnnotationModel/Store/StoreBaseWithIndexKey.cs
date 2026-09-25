@@ -59,9 +59,14 @@ namespace WebAnnotationModel
                         newIDs = ProxyUpdate((INTERFACE)proxy, [.. changedDBObj]);
                     }
                 }
+                catch (FaultException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
+                    RestoreChangedObjects(input);
                     return false;
                 }
 
@@ -95,26 +100,19 @@ namespace WebAnnotationModel
                         switch (data.DBAction)
                         {
                             case DBACTION.INSERT:
-                                //Remove from our old spot in the database
                                 listDeleted.Add(InternalDelete(keyObj.ID));
-
-                                break;
-
-                            case DBACTION.DELETE:
-                                //Just reset our DBState to none after case statement
+                                data.DBAction = DBACTION.NONE;
                                 break;
 
                             default:
                                 break;
                         }
-
-                        data.DBAction = DBACTION.NONE;
                     }
 
                     CallOnCollectionChangedForDelete(listDeleted);
+                    RestoreChangedObjects(input);
                 }
 
-                //If we caught an exception return false
                 return false;
             }
 

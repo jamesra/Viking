@@ -282,17 +282,16 @@ namespace WebAnnotationModel
 
                 listOldObjs.Add(oldObj);
 
-                //Remove ourselves from the root list if we have a ParentID
+                // ParentID changed: a former root leaves RootObjects; a former child detaches before the new parent is applied.
                 if (false == existingObj.ParentID.Equals(updateObj.ParentID))
                 {
                     if (existingObj.ParentID.HasValue)
                     {
-                        TryRemoveRootObject(existingObj.ID);
+                        existingObj.Parent = null;
                     }
                     else
                     {
-                        //Remove ourselves from our parent object
-                        existingObj.Parent = null;
+                        TryRemoveRootObject(existingObj.ID);
                     }
                 }
 

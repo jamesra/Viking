@@ -224,7 +224,7 @@ namespace RTree
             {
                 rwLock.EnterUpgradeableReadLock();
 
-                if (this.Contains(item))
+                if (ContainsKeyUnlocked(item))
                     return false;
 
                 this.Add(r, item);
@@ -307,25 +307,33 @@ namespace RTree
         /// <returns></returns>
         public void Update(T oldValue, T newValue)
         {
-            if (ItemsToIds.ContainsKey(newValue))
+            rwLock.EnterWriteLock();
+            try
             {
-                throw new ArgumentException(string.Format("{0} is already in the RTree, cannot be used to replace {1}", newValue, oldValue));
-            }
+                if (ItemsToIds.ContainsKey(newValue))
+                {
+                    throw new ArgumentException(string.Format("{0} is already in the RTree, cannot be used to replace {1}", newValue, oldValue));
+                }
 
-            if (ItemsToIds.TryGetValue(oldValue, out int NodeID) == false)
+                if (ItemsToIds.TryGetValue(oldValue, out int NodeID) == false)
+                {
+                    throw new KeyNotFoundException(string.Format("{0} is not in the RTree and cannot be replaced", oldValue));
+                }
+
+                var rect = ItemsToRects[oldValue];
+
+                ItemsToIds.Remove(oldValue);
+                ItemsToIds.Add(newValue, NodeID);
+
+                ItemsToRects.Remove(oldValue);
+                ItemsToRects.Add(newValue, rect);
+
+                this.IdsToItems[NodeID] = newValue;
+            }
+            finally
             {
-                throw new KeyNotFoundException(string.Format("{0} is not in the RTree and cannot be replaced", oldValue));
+                rwLock.ExitWriteLock();
             }
-
-            var rect = ItemsToRects[oldValue];
-
-            ItemsToIds.Remove(oldValue);
-            ItemsToIds.Add(newValue, NodeID);
-
-            ItemsToRects.Remove(oldValue);
-            ItemsToRects.Add(newValue, rect);
-
-            this.IdsToItems[NodeID] = newValue;
         }
 
         /// <summary>
@@ -343,7 +351,7 @@ namespace RTree
 
                 rwLock.EnterUpgradeableReadLock();
 
-                if (!this.Contains(item))
+                if (!ContainsKeyUnlocked(item))
                     return false;
 
                 Rectangle r = ItemsToRects[item];
@@ -400,7 +408,7 @@ namespace RTree
 
                 rwLock.EnterUpgradeableReadLock();
 
-                if (!this.Contains(item))
+                if (!ContainsKeyUnlocked(item))
                     return false;
 
                 try
@@ -667,7 +675,7 @@ namespace RTree
             try
             {
                 rwLock.EnterReadLock();
-                return ItemsToIds.ContainsKey(obj);
+                return ContainsKeyUnlocked(obj);
             }
             finally
             {
@@ -675,6 +683,12 @@ namespace RTree
             }
 
         }
+
+        /// <summary>
+        /// Membership check for callers that already hold the upgradeable or write lock.
+        /// <see cref="Contains(T)"/> would take a nested read lock, which NoRecursion rejects.
+        /// </summary>
+        private bool ContainsKeyUnlocked(T obj) => ItemsToIds.ContainsKey(obj);
 
         private void contains(Rectangle r, intproc v)
         {

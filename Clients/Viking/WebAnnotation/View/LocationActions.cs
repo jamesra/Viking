@@ -507,7 +507,7 @@ namespace WebAnnotation
                         SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
 
                         Polygon mosaicPolygon = MosaicShape.ToPolygon();
-                        Microsoft.Xna.Framework.Color color = loc.Parent.Type.Color.ToXNAColor(0.25f);
+                        Microsoft.Xna.Framework.Color color = WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f);
 
                         void PlaceLinkedMosaicPolygon(Polygon placedMosaicPolygon)
                         {

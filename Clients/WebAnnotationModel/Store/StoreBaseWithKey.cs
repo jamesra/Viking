@@ -966,6 +966,19 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public virtual bool RemoveSection(int SectionNumber) => throw new NotImplementedException();
 
+        /// <summary>
+        /// Puts failed saves back on the dirty set so a later Save retries them.
+        /// INSERT rows already rolled back to NONE are left out.
+        /// </summary>
+        protected void RestoreChangedObjects(IEnumerable<OBJECT> objects)
+        {
+            foreach (OBJECT obj in objects)
+            {
+                if (obj.DBAction != DBACTION.NONE)
+                    ChangedObjects.TryAdd(obj.ID, obj);
+            }
+        }
+
         public virtual bool Save()
         {
             List<OBJECT> changed = new(ChangedObjects.Count);
@@ -1019,6 +1032,7 @@ namespace WebAnnotationModel
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
+                    RestoreChangedObjects(changedObjects);
                     throw;
                 }
 
@@ -1073,19 +1087,19 @@ namespace WebAnnotationModel
                     for (int iObj = 0; iObj < changedDBObj.Count; iObj++)
                     {
                         WCFOBJECT data = changedDBObj[iObj];
+                        DBACTION action = data.DBAction;
+                        if (action != DBACTION.INSERT)
+                            continue;
+
                         data.DBAction = DBACTION.NONE;
+                        if (data is not WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj)
+                            continue;
 
-                        if (data.DBAction == DBACTION.INSERT)
-                        {
-                            if (data is not WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj)
-                                continue;
-
-                            InternalDelete(keyObj.ID);
-                        }
+                        InternalDelete(keyObj.ID);
                     }
                 }
 
-                //If we caught an exception return false
+                RestoreChangedObjects(changedObjects);
                 throw;
             }
 

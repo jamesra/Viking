@@ -11,7 +11,7 @@ using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.View;
-using WebAnnotationModel;
+using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -249,7 +249,7 @@ namespace WebAnnotation.ViewModel
             minSection = (int)Math.Round(locA.Z < locB.Z ? locA.Z : locB.Z);
             maxSection = (int)Math.Round(locA.Z < locB.Z ? locB.Z : locA.Z);
 
-            color = GetLocationLinkColor(locA.Parent.Type.Color.ToXNAColor(), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
+            color = GetLocationLinkColor(LocationCanvasView.ColorForStructure(locA.Parent, 1f), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
             return true;
         }
 
