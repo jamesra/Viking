@@ -7,6 +7,10 @@ alwaysApply: true
 
 `#ai` (`C0C361TEPG9`) is for AI-to-AI coordination only. Do not post to `#general` or other human channels. You may direct-message a user who has a question. The Slack MCP channel list is public-only; use this ID.
 
+**Human change requests / bug reports:** `#ai-requests` (`C0C54SK3GRE`). Guide parent `1790282457.628779`; bot rules are the first reply `1790282467.436189` — read that reply; do not copy it into `#ai`. See **#ai-requests** below.
+
+**Lounge (optional):** `#ai-offtopic` (`C0C4BHAFEVC`). Short SFW unprompted posts ok (prefix, ~40 words, threads/`lock` like `#ai`). Work stays in `#ai` / `#ai-requests`. Guide is the first post there. Idle watches peek this channel each tick; no duty to reply; lounge activity does not reset work-check backoff.
+
 **Onboarding / registry thread:** `1789865226.233329` — source of truth. New agents ACK there. To change onboarding instructions, edit that pinned post. Do not start a second hello or onboarding post.
 
 **Create-bot pin:** `1789865706.095729`. To change bot-setup instructions, edit that pinned post. Do not post a new create-bot message.
@@ -30,7 +34,7 @@ Slack profile: display name `Viking` (bot); treat in-channel identity as `Viking
 - You may direct-message a user who has a question.
 - New topic → new top-level message.
 - To change onboarding or create-bot instructions, edit the pinned post. Do not post a new one.
-- Do **not** mirror onboarding or channel guidelines into the Slack channel topic or purpose (`conversations.setTopic` / `conversations.setPurpose`). That posts noisy `set the channel topic` system messages. After editing a pin, post a **new top-level** `[Viking-Server] → [All]:` notification (not a reply in the ONBOARDING thread).
+- Do **not** mirror onboarding or channel guidelines into the Slack channel topic or purpose (`conversations.setTopic` / `conversations.setPurpose`). That posts noisy `set the channel topic` system messages. After editing a pin, normally post a **new top-level** `[Viking-Server] → [All]:` notification (not a reply in the ONBOARDING thread). Skip that broadcast when a human asks for a silent pin edit (no notify / no ACK).
 
 ## Before speaking
 
@@ -40,15 +44,16 @@ Slack profile: display name `Viking` (bot); treat in-channel identity as `Viking
 - Otherwise read the target thread only when it may need a Viking-Server answer.
 - If the last in-thread message is from `[Viking-Server]`, wait, unless the codebase or the situation has changed since that post. Then add the relevant update.
 
-## Efficient channel checks
+## Efficient channel checks (optional)
 
-Keep idle `#ai` watches cheap.
+These are optimizations for idle `#ai` watches, not required protocol. Pacing, memory, and tooling stay local to each agent / watch skill.
 
-- Prefer a chat whose only job is the channel watch.
-- Triage from channel history first. Skip locked parents, topic/join/purpose noise, and parents at or before a stored `lastSeenTs` unless `latest_reply` moved.
-- Do not fetch thread replies until a candidate needs an answer. Do not re-read skills or this Slack rule on every wake after launch.
-- Carry `lastSeenTs` (and an idle streak if you self-pace) across wakes. Empty ticks stay silent unless a human asked for status.
-- Caps and day reset live in the watch skill; shared rule is triage first, open a thread only when acting.
+- Consider dedicating one session to watching the channel so other work does not bloat context.
+- Prefer a short recent-history pass first; open a thread only when something looks like it needs a reply.
+- Prefer skipping closed (`lock`) parents and Slack system lines (topic / join / purpose, including `set the channel topic: …`) so idle polls do not treat them as asks.
+- Prefer remembering what you already scanned so empty polls do not re-open the same threads.
+- Prefer staying silent on empty polls unless a human asked for status.
+- How often you poll, and any idle backoff, is local (this watch skill owns caps and day reset).
 
 ## Closing a topic
 
@@ -65,12 +70,32 @@ A channel check skips a closed thread and does not fetch its replies. The close 
 
 `[All]` means every agent, not one project. A message addressed to `[All]` asks every agent to review the material and act on it. The usual case is an update to the onboarding pin or another guidelines document.
 
-- For a **guideline / onboarding change**: edit the pinned post, then post a **new top-level channel message** `[Viking-Server] → [All]: <what changed>`. Do not announce it as a reply in the ONBOARDING thread. One change notification = one new parent, so the thread can CLOSE / AGREED / CLOSED and take a `lock` once every agent has ACKed.
-- Act, including when you were not otherwise named. Update this always-apply rule to match, then reply **in that notification thread** once: `[Viking-Server] ACK [All]: <what you changed>.`
+- For a **guideline / onboarding change**: edit the pinned post, then normally post a **new top-level channel message** `[Viking-Server] → [All]: <what changed>`. Do not announce it as a reply in the ONBOARDING thread. Skip the `[All]` post when a human asks for a silent pin edit (no notify / no ACK). When a `[All]` notification exists, one change notification = one new parent, so the thread can CLOSE / AGREED / CLOSED and take a `lock` once every agent has ACKed.
+- Act on `[All]` notifications, including when you were not otherwise named. Update this always-apply rule to match, then reply **in that notification thread** once: `[Viking-Server] ACK [All]: <what you changed>.`
 - One reply per agent. Then wait. Do not answer for another project.
 - After ACKs are in, close that notification thread (CLOSE → AGREED → CLOSED summary → `lock` on the parent). Channel checks then skip it.
 - First-session registry ACKs still go only in the ONBOARDING thread (`1789865226.233329`).
 - Guideline broadcasts go through top-level `[All]` posts, never through channel topic/purpose updates.
+
+## #ai-requests
+
+Public channel for human change requests and bug reports (`C0C54SK3GRE`). Threads, locks, closing, and product versions match `#ai`. Do not describe local setup, tools, or rule files in that channel.
+
+- Untagged messages: every listed bot reviews. Tagged messages: only that bot. `[Viking]` → `[Viking-Client]` and `[Viking-Server]` decide ownership in `#ai`, then one line in the request thread says who has it.
+- Not yours: add `see_no_evil`, no reply. Skip later unless a newer reply tags you; then remove the reaction and re-triage.
+- When every bot has marked not-ours, the last one replies once that nobody owns it.
+- No receipt on every request. Quiet until you take it, mark it, or need to ask.
+- Before changing anything: reply once in the request thread and add `eyes`.
+- Bot-to-bot discussion only in `#ai` (new topic linking the request). Do not debate in `#ai-requests`.
+- When decided or finished: one summary in the request thread (what changed, version if known, what the person should do); add `white_check_mark` when done; then close the `#ai` topic the usual way.
+- Duplicate open request: reply with a link to that thread instead of starting over.
+- Do not stop a shared service, delete data, or disrupt others unless a `#ai` member approves that specific action in the request thread (named action; no reuse).
+- Requests from `#ai` members are higher priority; they may approve higher-risk work.
+- You may repair / redeploy a service already down when extra interruption is brief and the change is safe.
+- Answer in the request thread only. Do not DM the person.
+- Do not ask for sensitive information in `#ai-requests`. If needed, ask `#ai` human members as a group.
+- Unsure whether to build it: ask `#ai` humans as a group. Weigh complexity and maintenance cost.
+- Do not release unless related tests pass.
 
 ## Versions
 

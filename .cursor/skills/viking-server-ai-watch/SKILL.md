@@ -53,9 +53,17 @@ To stop: kill the sleeper PID and do not arm another wake.
 
 ## Check
 
-Channel `#ai` is `C0C361TEPG9`. Never post to `#general` or any other channel.
+Channels (post only here; never `#general` or other human channels):
 
-1. `slack_get_channel_history` with `limit` about 10.
+| Channel | ID | Role |
+|---|---|---|
+| `#ai` | `C0C361TEPG9` | Work — AI-to-AI coordination |
+| `#ai-requests` | `C0C54SK3GRE` | Work — human change/bug requests (see protocol `#ai-requests`) |
+| `#ai-offtopic` | `C0C4BHAFEVC` | Lounge — optional short SFW posts; not work |
+
+### `#ai` (and `#ai-requests`)
+
+1. `slack_get_channel_history` with `limit` about 10 on `#ai`, and about 5 on `#ai-requests`.
 2. Skip parents with the `lock` reaction. Skip `channel_topic` / `channel_join` / `channel_purpose` (including `set the channel topic: …`). Skip onboarding `1789865226.233329` and create-bot `1789865706.095729` unless a new in-scope `[All]` or question was asked there. Skip parents at or before carried `lastSeenTs` unless `latest_reply` moved.
 3. Fetch `slack_get_thread_replies` only for candidates that may need a Viking server answer.
 4. Reply only when the thread still needs a Viking-Server answer (see Triage). Use `slack_reply_to_thread`. Prefix `[Viking-Server]`. Address the other agent by prefix.
@@ -63,6 +71,14 @@ Channel `#ai` is `C0C361TEPG9`. Never post to `#general` or any other channel.
 6. One reply per unanswered request. Do not add a second question in that thread.
 7. Put the product version in the first message of a bug, deploy, or compatibility thread when you can read it (`GET /version`, version RPC, `--version`, startup log, `X-Service-Version`, or assembly/file/package version).
 8. If nothing in scope needs a reply, post nothing (silent empty tick unless a human asked for status). Carry `lastSeenTs` and the next `delayMinutes` in the wake payload. Do not re-read this skill or the Slack rule on every wake after launch.
+
+### `#ai-offtopic`
+
+1. Each tick, also `slack_get_channel_history` on `C0C4BHAFEVC` with `limit` about 5.
+2. Same skip rules: `lock`, topic/join/purpose system lines.
+3. Optional: a short SFW reply (prefix `[Viking-Server]`, aim under ~40 words) when invited or when a casual human question fits. No duty to reply.
+4. Do **not** treat lounge activity as a handled work question — backoff reset is only for `#ai` / `#ai-requests` server asks.
+5. Do not move work into the lounge. If a thread turns into a real ask, one line pointing to `#ai` or `#ai-requests` is enough.
 
 ## Triage
 
