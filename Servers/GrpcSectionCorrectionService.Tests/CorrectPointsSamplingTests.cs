@@ -1,5 +1,6 @@
 using Geometry;
 using Grpc.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -57,6 +58,8 @@ namespace GrpcSectionCorrectionService.Tests
                 SectionCorrectionsService service = new(
                     catalog,
                     new StaticIdentityVolumeSource([]),
+                    new AnnotationConnectionResolver(new Dictionary<string, string>(), null),
+                    new ConfigurationBuilder().Build(),
                     new RebuildStatusStore(),
                     NullLogger<SectionCorrectionsService>.Instance);
 
@@ -112,6 +115,8 @@ namespace GrpcSectionCorrectionService.Tests
             SectionCorrectionsService service = new(
                 catalog,
                 new StaticIdentityVolumeSource([]),
+                new AnnotationConnectionResolver(new Dictionary<string, string>(), null),
+                new ConfigurationBuilder().Build(),
                 new RebuildStatusStore(),
                 NullLogger<SectionCorrectionsService>.Instance);
 

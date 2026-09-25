@@ -1,12 +1,15 @@
 using AnnotationVizLib;
 using Geometry;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Grpc.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.Common;
 using Viking.GrpcSectionCorrectionService;
@@ -18,8 +21,9 @@ using Path = System.IO.Path;
 namespace GrpcSectionCorrectionService.Tests
 {
     /// <summary>
-    /// BajajMultiTest default load (RC1 structure 180 + 2000 nm neighbors) versus CorrectPoints.
-    /// CurveFit is not compared. Leave-one-out ApplyNeighborCorrection is Oracle B (median cap, not bit equality).
+    /// BajajMultiTest load of RC1 structure 180 versus the section-correction service.
+    /// Oracle A–C compare CorrectPoints. Leave-one-out neighbor correction is Oracle B (median cap, not bit equality).
+    /// <see cref="CorrectStructuresMatchesBajajCenters"/> compares final centers after the published field and curve fit.
     /// </summary>
     [TestClass]
     public class BajajMultiTestODataParityTests
@@ -219,8 +223,138 @@ namespace GrpcSectionCorrectionService.Tests
             Assert.IsTrue(rmse < 5000, $"published RMSE {rmse:F1} nm exceeds 5000 nm sanity bound");
         }
 
-        static SectionCorrectionsService CreateService(VolumeCorrectionCatalog catalog) =>
-            new(catalog, new StaticIdentityVolumeSource([]), new RebuildStatusStore(),
+        /// <summary>
+        /// Published-field registration the way BajajMultiTest does with --corrections-dir, versus CorrectStructures.
+        /// Centers are volume nm. Polygons can differ by the warp of a centroid versus the centroid of a warped outline.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("LiveData")]
+        [Timeout(600000)]
+        public async Task CorrectStructuresMatchesBajajCenters()
+        {
+            string correctionsRoot = Environment.GetEnvironmentVariable("CORRECTIONS_ROOT");
+            string annotationConnection = Environment.GetEnvironmentVariable("ANNOTATION_CONNECTION");
+            string vikingXmlUrl = Environment.GetEnvironmentVariable("VIKINGXML_URL");
+            if (string.IsNullOrWhiteSpace(correctionsRoot) || !Directory.Exists(correctionsRoot))
+            {
+                Assert.Inconclusive("Set CORRECTIONS_ROOT to the published catalog the correction service serves.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(annotationConnection) || string.IsNullOrWhiteSpace(vikingXmlUrl))
+            {
+                Assert.Inconclusive("Set ANNOTATION_CONNECTION and VIKINGXML_URL for the RC1 annotation database and VikingXML endpoint.");
+                return;
+            }
+
+            MorphologyGraph graph;
+            try
+            {
+                graph = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataAsync(
+                    [StructureId], include_children: true, Rc1Endpoint);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TimeoutException)
+            {
+                Assert.Inconclusive($"RC1 OData unreachable: {ex.Message}");
+                return;
+            }
+
+            string stosGroup = Environment.GetEnvironmentVariable("STOS_GROUP");
+            if (string.IsNullOrWhiteSpace(stosGroup))
+                stosGroup = StosGroup;
+
+            using VolumeCorrectionCatalog catalog = new(correctionsRoot);
+            catalog.Load();
+            if (!catalog.TryGet(VolumeName, stosGroup, out PublishedCorrectionSet published))
+            {
+                Assert.Inconclusive($"No published set '{VolumeName}' / '{stosGroup}' under {correctionsRoot}");
+                return;
+            }
+
+            double pitch = published.Provenance?.PitchNm > 0 ? published.Provenance.PitchNm : NeighborResidualField.GridSizeNm;
+            double kernel = published.Provenance?.KernelRadiusNm > 0 ? published.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
+            NeighborResidualField field = NeighborResidualField.FromLattice(published.EnumerateLattice(), pitch, kernel);
+            MorphologyGraph.ApplyResidualField(graph, field);
+            MorphologyGraph.CurveFitProcesses(graph, MorphologyGraph.CurveFitOptions.Default);
+
+            Dictionary<long, (long Z, Vector2 Xy)> bajaj = [];
+            CollectCenters(graph, bajaj);
+            Assert.IsTrue(bajaj.Count > 0, "structure 180 had no locations after Bajaj registration");
+
+            SectionCorrectionsService service = CreateService(
+                catalog,
+                new StaticIdentityVolumeSource([new IdentityVolumeRow(VolumeName, vikingXmlUrl, "")]),
+                new AnnotationConnectionResolver(new Dictionary<string, string> { [VolumeName] = annotationConnection }, null));
+            CorrectStructuresResponse response = await service.CorrectStructures(
+                new CorrectStructuresRequest
+                {
+                    VolumeName = VolumeName,
+                    StosGroup = stosGroup,
+                    StructureIds = { StructureId },
+                    IncludeChildren = true
+                },
+                new TestCallContext());
+
+            Dictionary<long, CorrectedLocation> serviceById = [];
+            foreach (CorrectedLocation location in response.Locations)
+                serviceById[location.LocationId] = location;
+
+            List<long> missing = [.. bajaj.Keys.Where(id => !serviceById.ContainsKey(id)).OrderBy(id => id)];
+            List<(long Id, long Z, double Magnitude, Vector2 Bajaj, Vector2 Service)> deltas = [];
+            foreach ((long id, (long z, Vector2 xy)) in bajaj)
+            {
+                if (!serviceById.TryGetValue(id, out CorrectedLocation corrected))
+                    continue;
+                Vector2 serviceXy = new(corrected.X, corrected.Y);
+                deltas.Add((id, z, (xy - serviceXy).Magnitude, xy, serviceXy));
+            }
+
+            deltas.Sort((a, b) => a.Magnitude.CompareTo(b.Magnitude));
+            double median = deltas.Count == 0 ? double.NaN : deltas[deltas.Count / 2].Magnitude;
+            double p95 = deltas.Count == 0 ? double.NaN : deltas[(int)Math.Ceiling(deltas.Count * 0.95) - 1].Magnitude;
+            double max = deltas.Count == 0 ? double.NaN : deltas[^1].Magnitude;
+            string worst = FormatWorst(deltas);
+
+            Console.WriteLine(
+                $"CorrectStructures vs Bajaj centers: bajaj={bajaj.Count} service={serviceById.Count} matched={deltas.Count} missing={missing.Count} " +
+                $"median={median:F1} nm p95={p95:F1} nm max={max:F1} nm");
+            if (missing.Count > 0)
+                Console.WriteLine("Missing location ids: " + string.Join(", ", missing.Take(20)));
+            Console.WriteLine(worst);
+
+            string detail = $"missing={missing.Count} matched={deltas.Count} median={median:F1} nm p95={p95:F1} nm max={max:F1} nm\n{worst}";
+            Assert.AreEqual(0, missing.Count, "OData locations absent from CorrectStructures. " + detail);
+            Assert.IsTrue(deltas.Count > 0 && median <= OracleBMedianCapNm,
+                $"median |Bajaj − CorrectStructures| {median:F1} nm exceeds {OracleBMedianCapNm} nm. {detail}");
+        }
+
+        static void CollectCenters(MorphologyGraph graph, Dictionary<long, (long Z, Vector2 Xy)> into)
+        {
+            if (graph is null)
+                return;
+            foreach (MorphologyNode node in graph.Nodes.Values)
+                into[(long)node.Key] = (node.Location.UnscaledZ, node.Center.XY());
+            foreach (MorphologyGraph child in graph.Subgraphs.Values)
+                CollectCenters(child, into);
+        }
+
+        static string FormatWorst(List<(long Id, long Z, double Magnitude, Vector2 Bajaj, Vector2 Service)> deltas)
+        {
+            if (deltas.Count == 0)
+                return "(no matched locations)";
+            return string.Join("\n", deltas.TakeLast(10).Reverse().Select(d =>
+                $"location {d.Id} z={d.Z} |d|={d.Magnitude:F1} nm bajaj=({d.Bajaj.X:F1},{d.Bajaj.Y:F1}) service=({d.Service.X:F1},{d.Service.Y:F1})"));
+        }
+
+        static SectionCorrectionsService CreateService(
+            VolumeCorrectionCatalog catalog,
+            IIdentityVolumeSource volumes = null,
+            AnnotationConnectionResolver connections = null) =>
+            new(catalog,
+                volumes ?? new StaticIdentityVolumeSource([]),
+                connections ?? new AnnotationConnectionResolver(new Dictionary<string, string>(), null),
+                new ConfigurationBuilder().Build(),
+                new RebuildStatusStore(),
                 NullLogger<SectionCorrectionsService>.Instance);
 
         static List<MorphologyGraph> ResidualCells(MorphologyGraph root, MorphologyGraph neighbors)
@@ -284,6 +418,25 @@ namespace GrpcSectionCorrectionService.Tests
             }
 
             return null;
+        }
+
+        sealed class TestCallContext : ServerCallContext
+        {
+            protected override string MethodCore => "AnnotateSectionCorrections/CorrectStructures";
+            protected override string HostCore => "localhost";
+            protected override string PeerCore => "127.0.0.1";
+            protected override DateTime DeadlineCore => DateTime.MaxValue;
+            protected override Metadata RequestHeadersCore { get; } = [];
+            protected override CancellationToken CancellationTokenCore => CancellationToken.None;
+            protected override Metadata ResponseTrailersCore { get; } = [];
+            protected override Status StatusCore { get; set; }
+            protected override WriteOptions WriteOptionsCore { get; set; }
+            protected override AuthContext AuthContextCore => null;
+
+            protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions options) =>
+                throw new NotSupportedException();
+
+            protected override Task WriteResponseHeadersAsyncCore(Metadata responseHeaders) => Task.CompletedTask;
         }
     }
 }

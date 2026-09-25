@@ -1,14 +1,22 @@
 using Grpc.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using AnnotationVizLib;
 using Viking.SectionCorrection;
+using Viking.SectionCorrectionBuilder;
 using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
 using Google.Protobuf.WellKnownTypes;
 using Geometry;
 using SectionCorrectionMsg = Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos.SectionCorrection;
+using FitMode = AnnotationVizLib.CorrectionMode;
+using ProtoFitMode = Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos.CorrectionMode;
 
 namespace Viking.GrpcSectionCorrectionService
 {
@@ -20,17 +28,23 @@ namespace Viking.GrpcSectionCorrectionService
     {
         readonly VolumeCorrectionCatalog _catalog;
         readonly IIdentityVolumeSource _volumes;
+        readonly AnnotationConnectionResolver _connections;
+        readonly IConfiguration _configuration;
         readonly RebuildStatusStore _rebuild;
         readonly ILogger<SectionCorrectionsService> _logger;
 
         public SectionCorrectionsService(
             VolumeCorrectionCatalog catalog,
             IIdentityVolumeSource volumes,
+            AnnotationConnectionResolver connections,
+            IConfiguration configuration,
             RebuildStatusStore rebuild,
             ILogger<SectionCorrectionsService> logger)
         {
             _catalog = catalog;
             _volumes = volumes;
+            _connections = connections;
+            _configuration = configuration;
             _rebuild = rebuild;
             _logger = logger;
         }
@@ -178,7 +192,9 @@ namespace Viking.GrpcSectionCorrectionService
                     throw new RpcException(new Status(StatusCode.InvalidArgument, $"duplicate z {section.Z}"));
             }
 
-            PublishedCorrectionSet set = RequireSet(request.VolumeName, request.StosGroup);
+            FitMode mode = ResolveMode(request.HasCorrection, request.Correction);
+            bool sampleField = mode.HasFlag(FitMode.Neighbor);
+            PublishedCorrectionSet set = sampleField ? RequireSet(request.VolumeName, request.StosGroup) : null;
             CorrectPointsResponse response = new()
             {
                 VolumeName = request.VolumeName,
@@ -187,7 +203,22 @@ namespace Viking.GrpcSectionCorrectionService
             foreach (SectionPoints section in request.Sections)
             {
                 CorrectedSection outSection = new() { Z = section.Z };
-                if (!set.TryGetSection(section.Z, out SectionVectorField field))
+                if (!sampleField)
+                {
+                    outSection.FoundSection = true;
+                    foreach (VolumeXY p in section.Points)
+                    {
+                        outSection.Points.Add(new CorrectedXY
+                        {
+                            X = p.X,
+                            Y = p.Y,
+                            Dx = 0,
+                            Dy = 0,
+                            Trusted = false
+                        });
+                    }
+                }
+                else if (!set.TryGetSection(section.Z, out SectionVectorField field))
                 {
                     outSection.FoundSection = false;
                     foreach (VolumeXY p in section.Points)
@@ -223,6 +254,114 @@ namespace Viking.GrpcSectionCorrectionService
             }
 
             return Task.FromResult(response);
+        }
+
+        public override async Task<CorrectStructuresResponse> CorrectStructures(
+            CorrectStructuresRequest request,
+            ServerCallContext context)
+        {
+            if (request.StructureIds is null || request.StructureIds.Count == 0)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "structure_ids is empty"));
+
+            FitMode mode = ResolveMode(request.HasCorrection, request.Correction);
+            string connection = _connections.Resolve(request.VolumeName);
+            if (string.IsNullOrWhiteSpace(connection))
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, $"no annotation SQL mapping for '{request.VolumeName}'"));
+
+            string volumeUrl = await VolumeUrlAsync(request.VolumeName, context).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(volumeUrl))
+                throw new RpcException(new Status(StatusCode.NotFound, $"no VikingXML endpoint for '{request.VolumeName}'"));
+
+            List<MorphologyGraph> cells;
+            try
+            {
+                cells = await SqlMorphologyLoader.LoadStructuresAsync(
+                    connection,
+                    volumeUrl,
+                    request.StosGroup,
+                    request.StructureIds,
+                    request.IncludeChildren,
+                    _configuration["Corrections:CachePath"],
+                    context.CancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is ObjectDisposedException or WebException or HttpRequestException or IOException)
+            {
+                // Volume XML / stos HTTP load shares the host with rebuild traffic; map transient load
+                // failures to UNAVAILABLE so clients can wait rather than treat UNKNOWN as a hard fault.
+                throw new RpcException(new Status(
+                    StatusCode.Unavailable,
+                    $"volume mapping temporarily unavailable for '{request.VolumeName}': {ex.Message}"));
+            }
+
+            NeighborResidualField field = null;
+            if (mode.HasFlag(FitMode.Neighbor) &&
+                _catalog.TryGet(request.VolumeName, request.StosGroup, out PublishedCorrectionSet published))
+                field = ToNeighborField(published);
+
+            CorrectStructuresResponse response = new()
+            {
+                VolumeName = request.VolumeName ?? "",
+                StosGroup = request.StosGroup ?? ""
+            };
+            foreach (MorphologyGraph cell in cells)
+            {
+                Dictionary<ulong, Vector2> before = [];
+                foreach (MorphologyNode node in cell.Nodes.Values)
+                    before[node.Key] = new Vector2(node.Center.X, node.Center.Y);
+
+                if (mode.HasFlag(FitMode.Neighbor))
+                    MorphologyGraph.ApplyResidualField(cell, field);
+                if (mode.HasFlag(FitMode.CurveFit))
+                    MorphologyGraph.CurveFitProcesses(cell, new MorphologyGraph.CurveFitOptions(
+                        MorphologyGraph.DefaultCurveFitHalfWindow, null, null));
+
+                foreach (MorphologyNode node in cell.Nodes.Values)
+                {
+                    Vector2 origin = before[node.Key];
+                    Vector3 corrected = node.Center;
+                    response.Locations.Add(new CorrectedLocation
+                    {
+                        LocationId = (long)node.Key,
+                        StructureId = (long)cell.StructureID,
+                        Z = node.Location.UnscaledZ,
+                        X = corrected.X,
+                        Y = corrected.Y,
+                        Dx = corrected.X - origin.X,
+                        Dy = corrected.Y - origin.Y
+                    });
+                }
+            }
+
+            return response;
+        }
+
+        static FitMode ResolveMode(bool hasCorrection, ProtoFitMode value)
+        {
+            if (!hasCorrection)
+                return FitMode.All;
+
+            FitMode mode = (FitMode)(int)value;
+            if ((mode & ~FitMode.All) != 0)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, $"unknown correction mode {value}"));
+            return mode;
+        }
+
+        static NeighborResidualField ToNeighborField(PublishedCorrectionSet set)
+        {
+            double pitch = set.Provenance?.PitchNm > 0 ? set.Provenance.PitchNm : NeighborResidualField.GridSizeNm;
+            double kernel = set.Provenance?.KernelRadiusNm > 0 ? set.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
+            return NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
+        }
+
+        async Task<string> VolumeUrlAsync(string volumeName, ServerCallContext context)
+        {
+            foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
+            {
+                if (string.Equals(row.Name, volumeName, StringComparison.OrdinalIgnoreCase))
+                    return row.VikingXmlEndpoint;
+            }
+
+            return "";
         }
 
         PublishedCorrectionSet RequireSet(string volumeName, string stosGroup)

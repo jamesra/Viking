@@ -583,7 +583,39 @@ namespace SqlGeometryUtils
             return numInteriorRings.Value > 0;
         }
 
-        public static Rectangle BoundingBox(this SqlGeometry geometry) => Rectangle.GetBoundingBox(geometry.ToPoints());
+        public static Rectangle BoundingBox(this SqlGeometry geometry)
+        {
+            // CURVEPOLYGON.ToPoints builds a circle from this box. Reading the envelope here avoids that cycle.
+            if (geometry.GeometryType() == SupportedGeometryType.CURVEPOLYGON)
+                return CurvePolygonBounds(geometry);
+
+            return Rectangle.GetBoundingBox(geometry.ToPoints());
+        }
+
+        static Rectangle CurvePolygonBounds(SqlGeometry geometry)
+        {
+            SqlGeometry envelope = geometry.STEnvelope();
+            if (envelope is null || envelope.IsNull || envelope.STNumPoints().IsNull || envelope.STNumPoints().Value < 1)
+                return default;
+
+            double minX = double.PositiveInfinity;
+            double minY = double.PositiveInfinity;
+            double maxX = double.NegativeInfinity;
+            double maxY = double.NegativeInfinity;
+            int count = envelope.STNumPoints().Value;
+            for (int i = 1; i <= count; i++)
+            {
+                SqlGeometry point = envelope.STPointN(i);
+                double x = point.STX.Value;
+                double y = point.STY.Value;
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+
+            return new Rectangle(minX, maxX, minY, maxY);
+        }
 
 #if NET48
         public static Rectangle BoundingBox(this System.Data.Entity.Spatial.DbGeometry geometry)
@@ -595,18 +627,89 @@ namespace SqlGeometryUtils
 
         public static bool Intersects(this SqlGeometry geometry, Vector2 point)
         {
-            SqlGeometry p = point.ToSqlGeometry();
-            bool intersects = geometry.STIntersects(p).IsTrue;
-            return intersects;
-            //return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
+            try
+            {
+                return geometry.STIntersects(point.ToSqlGeometry()).IsTrue;
+            }
+            catch (PlatformNotSupportedException)
+            {
+                return SoftIntersects(geometry, point.ToSqlGeometry());
+            }
         }
 
         public static bool Intersects(this SqlGeometry geometry, LineSegment line)
         {
-            SqlGeometry p = line.ToSqlGeometry();
-            bool intersects = geometry.STIntersects(p).IsTrue;
-            return intersects;
-            //return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
+            try
+            {
+                return geometry.STIntersects(line.ToSqlGeometry()).IsTrue;
+            }
+            catch (PlatformNotSupportedException)
+            {
+                return SoftIntersects(geometry, line.ToSqlGeometry());
+            }
+        }
+
+        /// <summary>
+        /// STIntersects with a managed fallback. SqlServer.Types native GL is Windows-only;
+        /// Linux containers (section-correction CurveFit) hit PlatformNotSupportedException otherwise.
+        /// </summary>
+        public static bool SoftIntersects(this SqlGeometry geometry, SqlGeometry other)
+        {
+            if (geometry is null || other is null || geometry.IsNull || other.IsNull)
+                return false;
+
+            try
+            {
+                return geometry.STIntersects(other).IsTrue;
+            }
+            catch (PlatformNotSupportedException)
+            {
+                return ManagedIntersects(geometry, other);
+            }
+        }
+
+        static bool ManagedIntersects(SqlGeometry a, SqlGeometry b)
+        {
+            Vector2[] pa = a.ToPoints();
+            Vector2[] pb = b.ToPoints();
+            if (pa is null || pb is null || pa.Length == 0 || pb.Length == 0)
+                return false;
+
+            if (pa.Length == 1 && pb.Length == 1)
+                return Vector2.DistanceSquared(pa[0], pb[0]) <= Tolerance.EpsilonSquared;
+
+            try
+            {
+                if (pa.Length == 1)
+                    return SoftContains(b, pa[0]);
+                if (pb.Length == 1)
+                    return SoftContains(a, pb[0]);
+
+                IShape2D sa = a.ToIShape2D();
+                IShape2D sb = b.ToIShape2D();
+                return sa.Intersects(in sb);
+            }
+            catch (NotImplementedException)
+            {
+                return a.BoundingBox().Intersects(b.BoundingBox());
+            }
+        }
+
+        static bool SoftContains(SqlGeometry geometry, Vector2 point)
+        {
+            try
+            {
+                SupportedGeometryType type = geometry.GeometryType();
+                if (type == SupportedGeometryType.POLYLINE)
+                    return geometry.ToPolyLine().Contains(in point);
+                if (type == SupportedGeometryType.POLYGON || type == SupportedGeometryType.CURVEPOLYGON)
+                    return geometry.ToPolygon().Contains(in point);
+            }
+            catch (NotImplementedException)
+            {
+            }
+
+            return geometry.BoundingBox().Contains(in point);
         }
 
         public static double Distance(this SqlGeometry geometry, Vector2 point) => geometry.STDistance(point.ToSqlGeometry()).Value;

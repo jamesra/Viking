@@ -1,3 +1,4 @@
+using AnnotationVizLib;
 using Geometry;
 using Rectangle = Geometry.Rectangle;
 using Geometry.JSON;

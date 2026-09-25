@@ -26,6 +26,7 @@ namespace Viking.GrpcSectionCorrectionService
         {
             services.AddGrpc(options =>
             {
+                options.Interceptors.Add<CorrectionRequestLoggingInterceptor>();
 #if DEBUG
                 options.EnableDetailedErrors = true;
 #endif

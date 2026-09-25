@@ -794,7 +794,7 @@ namespace AnnotationVizLib
                     || otherBox.Bottom > reach.Top + pad || otherBox.Top < reach.Bottom - pad)
                     continue;
 
-                if (node.Geometry.STIntersects(other.Geometry).IsTrue)
+                if (node.Geometry.SoftIntersects(other.Geometry))
                     continue;
 
                 neighbours.Add(other);
@@ -811,7 +811,7 @@ namespace AnnotationVizLib
                 blockers = null;
                 foreach (MorphologyNode other in neighbours)
                 {
-                    if (!moved.STIntersects(other.Geometry).IsTrue)
+                    if (!moved.SoftIntersects(other.Geometry))
                         continue;
                     blockers ??= [];
                     blockers.Add(other.Key);

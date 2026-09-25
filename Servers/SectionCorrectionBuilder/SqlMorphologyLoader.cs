@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnitsAndScale;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -13,7 +15,7 @@ using Viking.VolumeModel;
 
 namespace Viking.SectionCorrectionBuilder
 {
-    static class SqlMorphologyLoader
+    public static class SqlMorphologyLoader
     {
         public sealed class CandidateRow
         {
@@ -22,6 +24,9 @@ namespace Viking.SectionCorrectionBuilder
             public long Z { get; set; }
             public double X { get; set; }
             public double Y { get; set; }
+            public double VolumeX { get; set; }
+            public double VolumeY { get; set; }
+            public bool HasVolumePosition { get; set; }
             public bool Terminal { get; set; }
             public bool OffEdge { get; set; }
             public short TypeCode { get; set; }
@@ -164,12 +169,22 @@ AND LK.B IN (
                 MorphologyGraph graph = new((ulong)group.Key, scale);
                 foreach (CandidateRow row in group)
                 {
-                    IVolumeToSectionTransform map = MapFor(row.Z);
-                    if (!map.TrySectionToVolume(new Vector2(row.X, row.Y), out Vector2 volumeDb))
-                        continue;
+                    double xNm;
+                    double yNm;
+                    if (row.HasVolumePosition)
+                    {
+                        xNm = row.VolumeX * scale.X.Value;
+                        yNm = row.VolumeY * scale.Y.Value;
+                    }
+                    else
+                    {
+                        IVolumeToSectionTransform map = MapFor(row.Z);
+                        if (!map.TrySectionToVolume(new Vector2(row.X, row.Y), out Vector2 volumeDb))
+                            continue;
 
-                    double xNm = volumeDb.X * scale.X.Value;
-                    double yNm = volumeDb.Y * scale.Y.Value;
+                        xNm = volumeDb.X * scale.X.Value;
+                        yNm = volumeDb.Y * scale.Y.Value;
+                    }
                     graph.AddNode(new MorphologyNode((ulong)row.ID, new VolumePointLocation(row, xNm, yNm, scale), graph));
                     accepted.Add((ulong)row.ID);
                     parentById[row.ID] = row.ParentID;
@@ -192,6 +207,111 @@ AND LK.B IN (
             }
 
             return [.. cells.Values];
+        }
+
+        /// <summary>
+        /// Locations for the requested structures, plus child structures when <paramref name="includeChildren"/> is set.
+        /// Positions are the stored volume centroid (VolumeX/VolumeY times scale), the same point Bajaj reads from VolumeShape.
+        /// A location with no volume centroid falls back to mosaic XY mapped through the stos group.
+        /// </summary>
+        public static async Task<List<MorphologyGraph>> LoadStructuresAsync(
+            string annotationConnection,
+            string volumeUrl,
+            string stosGroup,
+            IReadOnlyList<long> structureIds,
+            bool includeChildren,
+            string cachePath,
+            CancellationToken cancellationToken)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(annotationConnection);
+            ArgumentException.ThrowIfNullOrWhiteSpace(volumeUrl);
+            if (structureIds is null || structureIds.Count == 0)
+                return [];
+
+            var dbOptions = new DbContextOptionsBuilder<AnnotationContext>()
+                .UseSqlServer(annotationConnection, sql => sql.UseNetTopologySuite())
+                .Options;
+            await using AnnotationContext db = new(dbOptions);
+
+            HashSet<long> ids = [.. structureIds];
+            if (includeChildren)
+            {
+                List<long> children = await db.Structures.AsNoTracking()
+                    .Where(s => s.ParentId != null && ids.Contains(s.ParentId.Value))
+                    .Select(s => s.Id)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                foreach (long child in children)
+                    ids.Add(child);
+            }
+
+            // Open curves often leave Location.X/Y at 0; MosaicShape still has the real section geometry.
+            var raw = await db.Locations.AsNoTracking()
+                .Where(l => ids.Contains(l.ParentId))
+                .Select(l => new
+                {
+                    l.Id,
+                    l.ParentId,
+                    l.Z,
+                    l.X,
+                    l.Y,
+                    l.VolumeX,
+                    l.VolumeY,
+                    l.MosaicShape,
+                    l.Terminal,
+                    l.OffEdge,
+                    l.TypeCode,
+                    l.LastModified
+                })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            List<CandidateRow> candidates = [];
+            foreach (var l in raw)
+            {
+                double x = l.X;
+                double y = l.Y;
+                bool hasVolume = l.VolumeX != 0 || l.VolumeY != 0;
+                if (!hasVolume && x == 0 && y == 0 && l.MosaicShape is not null && !l.MosaicShape.IsEmpty)
+                {
+                    var c = l.MosaicShape.Centroid;
+                    if (c is not null && !c.IsEmpty)
+                    {
+                        x = c.X;
+                        y = c.Y;
+                    }
+                }
+
+                candidates.Add(new CandidateRow
+                {
+                    ID = l.Id,
+                    ParentID = l.ParentId,
+                    Z = l.Z,
+                    X = x,
+                    Y = y,
+                    VolumeX = l.VolumeX,
+                    VolumeY = l.VolumeY,
+                    HasVolumePosition = hasVolume,
+                    Terminal = l.Terminal,
+                    OffEdge = l.OffEdge,
+                    TypeCode = l.TypeCode,
+                    LastModified = l.LastModified
+                });
+            }
+
+            List<long> locationIds = [.. candidates.Select(c => c.ID)];
+            List<LinkRow> links = await db.LocationLinks.AsNoTracking()
+                .Where(l => locationIds.Contains(l.A) && locationIds.Contains(l.B))
+                .Select(l => new LinkRow { A = l.A, B = l.B, Created = l.Created })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            UnitsAndScale.Scale scale = await LoadScaleAsync(db).ConfigureAwait(false);
+            string cache = cachePath ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "SectionCorrectionBuilder");
+            Directory.CreateDirectory(cache);
+            Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
+            await volume.Initialize(cancellationToken).ConfigureAwait(false);
+            return BuildCells(candidates, links, volume, scale, stosGroup);
         }
 
         static async Task<T> ScalarAsync<T>(AnnotationContext db, string sql)
