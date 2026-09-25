@@ -891,34 +891,34 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Pyramid level for UploadTile. Snaps to an available mosaic level and never goes
-        /// finer than DS1 — digital zoom past full-res (camera downsample &lt; 1) still uploads DS1.
-        /// Coarser zooms use DS2/DS4/… so we do not over-fetch full-res cells.
+        /// Ceiling for submitted tile downsample from appSettings SegmentationTileDownsample (default 2).
+        /// </summary>
+        private static int MaxTileDownsample =>
+            int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int max) && max >= 1
+                ? max
+                : 2;
+
+        /// <summary>
+        /// Maps camera downsample to UploadTile/SegmentTiles pyramid level: ≤1 → 1, else ceil and clamp to max.
+        /// </summary>
+        private static int ResolveTileDownsample(double cameraDownsample)
+        {
+            if (double.IsNaN(cameraDownsample) || double.IsInfinity(cameraDownsample) || cameraDownsample <= 0)
+                return 1;
+
+            int roundedUp = (int)Math.Ceiling(cameraDownsample);
+            if (roundedUp < 1)
+                roundedUp = 1;
+
+            return Math.Min(MaxTileDownsample, roundedUp);
+        }
+
+        /// <summary>
+        /// Pyramid level for UploadTile/SegmentTiles from the live camera via
+        /// <see cref="ResolveTileDownsample"/>.
         /// </summary>
         private int CurrentPyramidDownsample()
-        {
-            // Tile lattice is pyramid-aligned; do not request a level finer than full-res DS1.
-            double requested = Math.Max(1.0, Parent.Downsample);
-            try
-            {
-                MappingBase mapping = Parent.Section?.VolumeViewModel?.GetTileMapping(
-                    Parent.Section.Number,
-                    Parent.CurrentChannel,
-                    Parent.CurrentTransform);
-                if (mapping is not null)
-                {
-                    int level = mapping.NearestAvailableLevel(requested);
-                    if (level > 0 && level != int.MaxValue)
-                        return Math.Max(1, level);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Pyramid downsample lookup failed: {ex.Message}");
-            }
-            int fallback = (int)Math.Round(requested);
-            return Math.Max(1, fallback);
-        }
+            => ResolveTileDownsample(Parent.Camera?.Downsample ?? Parent.Downsample);
 
         private TileSignature CurrentTileSignature(int downsample)
         {
