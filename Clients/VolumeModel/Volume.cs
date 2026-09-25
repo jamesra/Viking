@@ -456,16 +456,6 @@ namespace Viking.VolumeModel
         {
             Uri pathURI = new(path);
 
-            HttpClientHandler handler = pathURI.Scheme.ToLower() == "https" && UserCredentials != null
-                ? new HttpClientHandler
-                {
-                    Credentials = UserCredentials
-                }
-                : new HttpClientHandler
-                {
-                    UseDefaultCredentials = true
-                };
-
             Exception lastException = null;
             for (int attempt = 0; attempt <= VolumeXmlMaxRetries; attempt++)
             {
@@ -478,6 +468,17 @@ namespace Viking.VolumeModel
                     await Task.Delay(1000 * attempt, token).ConfigureAwait(false);
                 }
 
+                // New handler per attempt: disposing HttpClient also disposes its handler by default,
+                // which broke retries (and CorrectStructures under rebuild load) with ObjectDisposedException.
+                using HttpClientHandler handler = pathURI.Scheme.ToLower() == "https" && UserCredentials != null
+                    ? new HttpClientHandler
+                    {
+                        Credentials = UserCredentials
+                    }
+                    : new HttpClientHandler
+                    {
+                        UseDefaultCredentials = true
+                    };
                 using HttpClient httpClient = new(handler);
                 httpClient.Timeout = TimeSpan.FromSeconds(VolumeXmlRequestTimeoutSeconds);
                 try
@@ -494,7 +495,7 @@ namespace Viking.VolumeModel
 
                     return XDocument.Parse(content);
                 }
-                catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException or ObjectDisposedException)
                 {
                     lastException = e;
                     if (attempt == VolumeXmlMaxRetries)
