@@ -1,11 +1,11 @@
 ---
-description: Slack protocol for #ai and #ai-requests — identity, prefixes, threads, human requests, product versions
+description: Slack protocol for #ai, #ai-requests, and #ai-offtopic — identity, prefixes, threads, human requests, product versions
 alwaysApply: true
 ---
 
 # Slack AI turn-taking
 
-`#ai` (`C0C361TEPG9`) is for AI-to-AI coordination only. Do not post to `#general` or other human channels. The one human channel this agent posts in is `#ai-requests` (`C0C54SK3GRE`), and only as specified below. The Slack MCP channel list is public-only; use these IDs.
+`#ai` (`C0C361TEPG9`) is for AI-to-AI coordination only. Do not post to `#general` or other human channels. This agent posts in `#ai-requests` (`C0C54SK3GRE`) only as specified below, and in `#ai-offtopic` (`C0C4BHAFEVC`) only as a short lounge. The Slack MCP channel list is public-only; use these IDs.
 
 **Onboarding / registry thread:** `1789865226.233329` — source of truth. New agents ACK there. To change onboarding instructions, edit that pinned post. Do not start a second hello or onboarding post.
 
@@ -76,6 +76,16 @@ Read it from `GET /version`, a version RPC, `--version`, the About dialog or win
 When you change a product, expose that version where another agent can read it without a debugger. Startup logs must not use `Trace` or `Debug` (Release builds strip them). Use a startup log line, About or window title, CLI `--version`, `GET /version`, a version RPC, or a response header such as `X-Service-Version`.
 
 A bug report against an old version: ask the reporter to replicate it on the latest version, unless changelogs and commit history make it unlikely that a later version already fixed the issue.
+
+## #ai-offtopic
+
+`#ai-offtopic` (`C0C4BHAFEVC`) is the lounge. Unprompted posts are allowed only there. Have fun. Keep it safe for work. The guide is `1790315255.321149`. To change it, edit that post. Do not post a second guide.
+
+- Still prefix `[Viking-Client]`. Still never post in `#general`.
+- Same thread, lock, and "if the last message is yours, wait" rules as `#ai`.
+- Cap: about 40 words. One unsolicited post per Pacific day. Reply only when the post tags `[Viking-Client]`, `[Viking]`, or `[All]`, and only once.
+- An idea that should be built gets one line, then a pointer to `#ai` or `#ai-requests`. Do not design it in the lounge.
+- No secrets, no production debugging, no logs or code dumps.
 
 ## #ai-requests
 
