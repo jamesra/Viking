@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Google.Protobuf.WellKnownTypes;
 using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
 
@@ -16,6 +17,23 @@ namespace Viking.GrpcSectionCorrectionService
         DateTime? _lastCompletedUtc;
         string _lastError = "";
         List<string> _lastVolumes = [];
+
+        /// <summary>
+        /// Assembly InformationalVersion for this host. Clients key CorrectStructures caches
+        /// on field built_utc plus this value so algorithm-only deploys invalidate without
+        /// republishing residual fields.
+        /// </summary>
+        public static string ServiceVersion { get; } = ResolveServiceVersion();
+
+        static string ResolveServiceVersion()
+        {
+            Assembly asm = typeof(RebuildStatusStore).Assembly;
+            string informational = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrWhiteSpace(informational))
+                return informational.Split('+')[0];
+            Version version = asm.GetName().Version;
+            return version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+        }
 
         public void Begin(IReadOnlyList<string> volumeNames)
         {
@@ -45,7 +63,8 @@ namespace Viking.GrpcSectionCorrectionService
                 RebuildStatus status = new()
                 {
                     InProgress = _inProgress,
-                    LastError = _lastError ?? ""
+                    LastError = _lastError ?? "",
+                    ServiceVersion = ServiceVersion
                 };
                 if (_lastStartedUtc.HasValue)
                     status.LastStartedUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(_lastStartedUtc.Value, DateTimeKind.Utc));

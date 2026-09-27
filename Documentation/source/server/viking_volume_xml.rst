@@ -198,5 +198,5 @@ Channel
    :Channel: The name of the channel, either a pyramid or tileset, to load, or "Selected" for user selected channel
    :Color: Color to use when displaying channel, specify as a web color i.e. #00ff00
 
-.. _snippet of VikingXML: http://connectomes.utah.edu/Rabbit/Volume.VikingXML
-.. _XML Schema Definition for VikingXML:https://github.com/jamesra/Viking/VikingXML.xsd
+.. _snippet of VikingXML: http://codepharm.net/Rabbit/Volume.VikingXML
+.. _XML Schema Definition for VikingXML: https://github.com/jamesra/Viking/blob/dev/VikingXML.xsd

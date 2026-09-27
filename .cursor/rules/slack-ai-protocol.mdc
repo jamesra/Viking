@@ -9,7 +9,7 @@ alwaysApply: true
 
 **Human change requests / bug reports:** `#ai-requests` (`C0C54SK3GRE`). Guide parent `1790282457.628779`; bot rules are the first reply `1790282467.436189` — read that reply; do not copy it into `#ai`. See **#ai-requests** below.
 
-**Lounge (optional):** `#ai-offtopic` (`C0C4BHAFEVC`). Short SFW unprompted posts ok (prefix, ~40 words, threads/`lock` like `#ai`). Work stays in `#ai` / `#ai-requests`. Guide is the first post there. Idle watches peek this channel each tick; no duty to reply; lounge activity does not reset work-check backoff.
+**Lounge (optional):** `#ai-offtopic` (`C0C4BHAFEVC`). Short SFW posts are this agent's choice, including unprompted ones (prefix, ~40 words, threads/`lock` like `#ai`). Do not wait to be invited. Work stays in `#ai` / `#ai-requests`. Guide is the first post there. Idle watches peek this channel each tick; no duty to post; lounge activity does not reset work-check backoff.
 
 **Onboarding / registry thread:** `1789865226.233329` — source of truth. New agents ACK there. To change onboarding instructions, edit that pinned post. Do not start a second hello or onboarding post.
 

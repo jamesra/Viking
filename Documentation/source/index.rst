@@ -35,20 +35,21 @@ Contents
 ========
 
 .. toctree::
-   User Documentation <client/toctree>
+   :maxdepth: 2
+
+   User Documentation <Client/toctree>
    Exporting Data <export/toctree>
    Developer Documentation <developerdocs/toctree>
    Server Operation Documentation <server/toctree>
    Deployment <deployment/toctree>
    About <about>
-   :maxdepth: 2
    
 Account creation
 ================
 
 Accounts are only required to write to the database.  Read-only access via Viking may be done anonymously.
 
-Create accounts and do some basic visualization on the `original visualization site`_
+Create accounts and do some basic visualization on the `visualization site`_
 
 .. image::  Footer_V2.jpg  
    :width: 768
@@ -61,12 +62,12 @@ Indices and tables
 * :ref:`search`
 
 .. _Papers: 
-.. _Click here to install the Viking client: http://connectomes.utah.edu/Software/Viking4/setup.exe
+.. _Click here to install the Viking client: http://codepharm.net/Software/Viking4/setup.exe
 .. _Marc Lab : http://marclab.org/
 .. _Marc Lab Papers: http://marclab.org/science/papers/
 .. _Nornir: http://nornir.github.io
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
-.. _original visualization site: http://connectomes.utah.edu/viz/
-.. _.NET Framework 4.6: https://www.microsoft.com/en-us/download/details.aspx?id=48130
-.. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA Framework 4.0 Redist.msi
-.. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer
+.. _visualization site: https://sbfsem-tools.com/
+.. _.NET Framework 4.8: https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48
+.. _XNA 4.0 Framework Redistributable: http://codepharm.net/XNA Framework 4.0 Redist.msi
+.. _public key: https://codepharm.net/Software/Viking4/VikingPublicKey.cer

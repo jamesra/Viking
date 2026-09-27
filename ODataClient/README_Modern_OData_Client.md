@@ -59,7 +59,7 @@ dotnet build ODataClient.csproj
 
 ```cmd
 # Generate OData client directly
-odata-cli generate -m "http://webdev.connectomes.utah.edu/RC1Test/OData/$metadata" -ns "ODataClient" -et -o "Generated" -fn "ODataClient.cs"
+odata-cli generate -m "http://webdev.codepharm.net/RC1Test/OData/$metadata" -ns "ODataClient" -et -o "Generated" -fn "ODataClient.cs"
 ```
 
 ## Configuration

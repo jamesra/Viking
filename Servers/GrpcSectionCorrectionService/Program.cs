@@ -14,6 +14,8 @@ namespace Viking.GrpcSectionCorrectionService
     {
         public static void Main(string[] args)
         {
+            // Release builds strip Trace/Debug; Console keeps the version visible without a debugger.
+            Console.WriteLine($"GrpcSectionCorrectionService starting, service_version={RebuildStatusStore.ServiceVersion}");
             CreateHostBuilder(args).Build().Run();
         }
 

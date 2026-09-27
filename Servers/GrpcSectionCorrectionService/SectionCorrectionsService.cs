@@ -301,7 +301,8 @@ namespace Viking.GrpcSectionCorrectionService
             CorrectStructuresResponse response = new()
             {
                 VolumeName = request.VolumeName ?? "",
-                StosGroup = request.StosGroup ?? ""
+                StosGroup = request.StosGroup ?? "",
+                ServiceVersion = RebuildStatusStore.ServiceVersion
             };
             foreach (MorphologyGraph cell in cells)
             {

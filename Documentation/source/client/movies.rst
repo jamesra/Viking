@@ -10,7 +10,7 @@ Tracing efficiently can be a challenge for new users. As an aid to people wantin
    * `Retinal Networks 2`_ (302 MB)
    * `Error correction`_ (682 MB)
 
-.. _Structure Identification : http://storage1.connectomes.utah.edu/movies/tutorials/StructureIdentification.wmv
-.. _Retinal Networks 1 : http://storage1.connectomes.utah.edu/movies/tutorials/RetinalNetworksPart1.wmv
-.. _Retinal Networks 2 : http://storage1.connectomes.utah.edu/movies/tutorials/RetinalNetworksPart2.wmv
-.. _Error correction : http://storage1.connectomes.utah.edu/movies/tutorials/ErrorCorrection.wmv
+.. _Structure Identification : http://storage1.codepharm.net/movies/tutorials/StructureIdentification.wmv
+.. _Retinal Networks 1 : http://storage1.codepharm.net/movies/tutorials/RetinalNetworksPart1.wmv
+.. _Retinal Networks 2 : http://storage1.codepharm.net/movies/tutorials/RetinalNetworksPart2.wmv
+.. _Error correction : http://storage1.codepharm.net/movies/tutorials/ErrorCorrection.wmv

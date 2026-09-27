@@ -5,6 +5,8 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Viking.GrpcSectionCorrectionService</RootNamespace>
     <AssemblyName>GrpcSectionCorrectionService</AssemblyName>
+    <Version>1.1.0</Version>
+    <InformationalVersion>1.1.0</InformationalVersion>
     <DockerfileContext>..\..</DockerfileContext>
   </PropertyGroup>
 

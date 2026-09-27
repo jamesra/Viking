@@ -279,7 +279,7 @@ Optional ``cells`` and ``technique`` query parameters are for a future Viking co
 management site. Map your renderer ids on your side.
 
 Opening a place in Viking from SBFSEM-tools
-==========================================
+===========================================
 
 Send the browser to:
 
@@ -293,13 +293,18 @@ one-use launch code and redirects to ``viking://open?...``. If it does not,
 (``volumeName`` and ``location`` intact) after sign-in. A signed-out request
 must not 500.
 
-=============  =============================================================
-Parameter      Meaning
-=============  =============================================================
-``volumeName`` Identity volume name (``AccessibleVolumes`` ``name``). Preferred.
-``volume``     Alternate: volume id, endpoint URL, or name (legacy).
-``location``   Optional Location ID, or ``x,y,z[,downsample]`` for a camera jump.
-=============  =============================================================
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Parameter
+     - Meaning
+   * - ``volumeName``
+     - Identity volume name (``AccessibleVolumes`` ``name``). Preferred.
+   * - ``volume``
+     - Alternate: volume id, endpoint URL, or name (legacy).
+   * - ``location``
+     - Optional Location ID, or ``x,y,z[,downsample]`` for a camera jump.
 
 ``CreateCode`` persists ``VolumeName`` on the launch code (for volume-scoped
 tokens at exchange). ``location`` remains query-only on the ``viking://`` URL.

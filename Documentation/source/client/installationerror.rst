@@ -39,4 +39,4 @@ Known issues with specific versions of Viking
 	 
 	 
 .. _contact: https://github.com/connectomes/Viking/issues
-.. _Installation Requirements: http://connectomes.utah.edu/
+.. _Installation Requirements: http://codepharm.net/

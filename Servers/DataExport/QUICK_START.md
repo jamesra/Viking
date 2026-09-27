@@ -103,8 +103,8 @@ Main configuration file with default settings:
 ```json
 {
   "AppSettings": {
-    "VolumeURL": "https://connectomes.utah.edu/RC1",
-    "ODataURL": "https://connectomes.utah.edu/RC1/OData"
+    "VolumeURL": "https://codepharm.net/RC1",
+    "ODataURL": "https://codepharm.net/RC1/OData"
   }
 }
 ```
@@ -117,8 +117,8 @@ Development-specific overrides:
 ```json
 {
   "AppSettings": {
-    "VolumeURL": "https://webdev.connectomes.utah.edu/RC1Test",
-    "ODataURL": "https://webdev.connectomes.utah.edu/RC1Test/OData"
+    "VolumeURL": "https://webdev.codepharm.net/RC1Test",
+    "ODataURL": "https://webdev.codepharm.net/RC1Test/OData"
   }
 }
 ```

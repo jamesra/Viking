@@ -10,6 +10,21 @@
   ],
   "configurations": [
     {
+      "name": "Viking",
+      "type": "node-terminal",
+      "request": "launch",
+      "preLaunchTask": "build-viking",
+      "command": "Start-Process -FilePath '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe' -WorkingDirectory '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48' -Wait; exit",
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48"
+    },
+    {
+      "name": "Viking (no build)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "Start-Process -FilePath '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe' -WorkingDirectory '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48' -Wait; exit",
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48"
+    }
+    {
       "name": "MonogameTestbed (RC2 Vasculature)",
       "type": "coreclr",
       "request": "launch",
@@ -459,16 +474,5 @@
       "processId": "${command:pickProcess}",
       "justMyCode": false
     },
-    {
-      "name": "Viking (Debug)",
-      "type": "clr",
-      "request": "launch",
-      "preLaunchTask": "build-viking",
-      "program": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48",
-      "console": "internalConsole",
-      "stopAtEntry": false
-    }
   ]
 }

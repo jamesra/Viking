@@ -137,6 +137,11 @@ html_theme = u'alabaster'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = [u'_static']
 
+# GitHub Pages runs Jekyll, which omits directories whose names start with
+# an underscore. Sphinx writes images and CSS under _images and _static, so
+# the banner and other figures 404 unless this marker is copied to the site root.
+html_extra_path = ['_extra']
+
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
