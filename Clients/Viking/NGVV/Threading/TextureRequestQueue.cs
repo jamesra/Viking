@@ -96,25 +96,35 @@ namespace Viking
         /// </summary>
         private static RequestItem? TryDequeueNext()
         {
+            List<RequestItem>? cancelled = null;
+            RequestItem? item = null;
             lock (_lock)
             {
-                RequestItem? item = null;
-                while(item is null)
-                { 
+                while (item is null)
+                {
                     if (_requests.Count == 0)
-                        return null;
+                        break;
+
                     item = _requests[0];
                     _requests.RemoveAt(0);
 
-                    if(item.TileView.SectionLoadingCancelled)
+                    if (item.SectionToken.IsCancellationRequested || item.TileView.SectionLoadingCancelled)
                     {
-                        Trace.WriteLine($"{item.TileView} cancelled and dropped from Queue");
+                        Trace.WriteLine($"{item.TileView} cancelled and completed from Queue");
+                        cancelled ??= [];
+                        cancelled.Add(item);
                         item = null;
-                        continue; 
-                    } 
+                    }
                 }
-                return item;
             }
+
+            if (cancelled is not null)
+            {
+                foreach (RequestItem dropped in cancelled)
+                    CompleteRequest(dropped, null);
+            }
+
+            return item;
         }
 
         /// <summary>

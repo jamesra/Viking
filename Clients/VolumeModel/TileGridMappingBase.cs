@@ -414,8 +414,21 @@ namespace Viking.VolumeModel
                         int iyc = iY;
                         int rd = roundedDownsample;
                         var tileTask = Task.Run<CreateTileTaskResult>(() => CreateTile(UniqueID, tilekey, TextureFileName, Name));
-                        tileTask.ContinueWith(previousTask => OnTileCreated(previousTask.Result));
-                        TileTasks.TryAdd(tilekey, tileTask);
+                        if (!TileTasks.TryAdd(tilekey, tileTask))
+                            continue;
+
+                        tileTask.ContinueWith(previousTask =>
+                        {
+                            try
+                            {
+                                if (previousTask.Status == TaskStatus.RanToCompletion)
+                                    OnTileCreated(previousTask.Result);
+                            }
+                            finally
+                            {
+                                TileTasks.TryRemove(tilekey, out _);
+                            }
+                        });
 
                         //tileTasks.Add(T);
                         //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));

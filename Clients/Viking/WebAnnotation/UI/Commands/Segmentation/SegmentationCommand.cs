@@ -1204,39 +1204,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
 #if DEBUG
         /// <summary>
-        /// Creates a debug mask overlay texture for visualization (DEBUG only)
+        /// Builds the debug SAM2 texture for the pen command. The rectangle is the fused mosaic
+        /// bounds from <see cref="SegmentationViewportSession.GetSegmentWorldBounds"/>, the same
+        /// mapping the polygon and the prompt clicks use. Camera-rectangle mapping shifts the
+        /// texture off the points. <see cref="OnDraw"/> shows it only when the overlay preference is on.
         /// </summary>
         private void CreateDebugMaskOverlay(SegmentationServiceTypes.SegmentationResponse response)
         {
             var bestSegment = response.Segments.OrderByDescending(s => s.Score).First();
-            
-            // Decode PNG mask to get dimensions and pixel data
+
             byte[] pngBytes = bestSegment.Mask.ToByteArray();
             var (decodedMaskData, decodedWidth, decodedHeight) = viewportSession.DecodePngMask(pngBytes);
-            
-            // Store mask data
+            if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
+            {
+                maskOverlayView = null;
+                return;
+            }
+
             currentMaskData = decodedMaskData;
             maskWidth = decodedWidth;
             maskHeight = decodedHeight;
 
-            // Create texture for rendering
             maskTexture?.Dispose();
             maskTexture = CreateMaskTexture(currentMaskData, maskWidth, maskHeight);
-
-            // Create TextureOverlayView for rendering
-            if (maskTexture != null)
+            if (maskTexture is null)
             {
-                // Transform segment bounds from viewport coordinates to world coordinates
-                Geometry.Vector2 topLeft = viewportSession.ViewportToWorld(bestSegment.X, response.Height - bestSegment.Y, viewportSession.UploadedImageWidth, viewportSession.UploadedImageHeight);
-                Geometry.Vector2 bottomRight = viewportSession.ViewportToWorld(
-                    bestSegment.X + decodedWidth,
-                    (response.Height - bestSegment.Y) - decodedHeight,
-                    viewportSession.UploadedImageWidth,
-                    viewportSession.UploadedImageHeight
-                );
-                Geometry.Rectangle segmentBounds = new(topLeft, bottomRight);
-                maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
+                maskOverlayView = null;
+                return;
             }
+
+            Geometry.Rectangle segmentBounds = viewportSession.GetSegmentWorldBounds(
+                bestSegment.X,
+                bestSegment.Y,
+                decodedWidth,
+                decodedHeight,
+                response.Width,
+                response.Height);
+            maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
         }
 #endif
         #endregion
@@ -1326,8 +1330,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             var previousDepthStencilState = graphicsDevice.DepthStencilState;
 
 #if DEBUG
-            // Draw mask overlay if available (using TextureOverlayView) - DEBUG only
-            maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+                maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 #endif
 
             hoveredPolygonView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);

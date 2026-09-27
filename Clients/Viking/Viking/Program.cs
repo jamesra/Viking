@@ -169,10 +169,6 @@ namespace Viking
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Check for updates before showing login dialog
-            // This runs on the UI thread with proper message pumping
-            UpdateService.CheckForUpdatesAtStartup();
-
             ApplicationSettings? appSettings = null;
 
             // Handle viking://open?code=...&volume=...&location=... protocol (one-use launch code)
@@ -183,6 +179,7 @@ namespace Viking
             }
             else
             {
+                CheckForUpdatesUnlessForwarded();
                 var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
                 options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
@@ -405,6 +402,7 @@ namespace Viking
 
         private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)
         {
+            CheckForUpdatesUnlessForwarded();
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialApiToken = initialApiToken;
             wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
@@ -412,6 +410,20 @@ namespace Viking
             wpfLoginWindow.InitialVolumeName = string.IsNullOrWhiteSpace(initialVolumeName) ? null : initialVolumeName;
             wpfLoginWindow.AutoAdvanceFromDeepLink = true;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
+
+        private static bool _checkedForUpdates;
+
+        /// <summary>
+        /// Update check for a process that will show UI. A deep link that joined
+        /// the running Viking returns before this, so that handoff stays quiet.
+        /// </summary>
+        private static void CheckForUpdatesUnlessForwarded()
+        {
+            if (_checkedForUpdates)
+                return;
+            _checkedForUpdates = true;
+            UpdateService.CheckForUpdatesAtStartup();
         }
 
         /// <summary>
@@ -440,6 +452,7 @@ namespace Viking
             bool autoAdvanceFromDeepLink = false,
             string? launchStatusMessage = null)
         {
+            CheckForUpdatesUnlessForwarded();
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? null : volumePath;
             wpfLoginWindow.InitialUsername = username;

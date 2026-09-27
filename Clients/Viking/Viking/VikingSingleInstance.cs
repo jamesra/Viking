@@ -269,6 +269,13 @@ namespace Viking
             return Encoding.UTF8.GetString(buffer.ToArray());
         }
 
+        /// <summary>
+        /// Brings the already-open Viking window forward after a successful pipe ack.
+        /// Called by the short-lived process that forwarded the viking:// link; that process
+        /// still holds the user-input foreground right the listener often lacks.
+        /// <c>SW_RESTORE</c> returns a maximized window to its restored rectangle, so it runs
+        /// only while the window is minimized.
+        /// </summary>
         private static void TryForegroundFromAck(string ack)
         {
             int space = ack.IndexOf(' ');
@@ -278,7 +285,8 @@ namespace Viking
                 return;
 
             IntPtr hwnd = new(hwndValue);
-            ShowWindow(hwnd, SwRestore);
+            if (IsIconic(hwnd))
+                ShowWindow(hwnd, SwRestore);
             SetForegroundWindow(hwnd);
         }
 
@@ -287,6 +295,9 @@ namespace Viking
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
 
         private const int SwRestore = 9;
 

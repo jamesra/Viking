@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Viking;
 using Viking.UI;
-using Viking.VolumeModel;
+using Viking.VolumeModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -74,7 +74,14 @@ namespace Viking.ViewModels
         private volatile bool _loadQueued;
 
         private CancellationToken? _SectionLoadingToken;
-        public bool SectionLoadingCancelled => _SectionLoadingToken?.IsCancellationRequested ?? false;
+        /// <summary>
+        /// Set by <see cref="AbortRequest"/> and cleared when a new load starts.
+        /// Kept separate from the section token so abort still looks cancelled after that token field is replaced.
+        /// </summary>
+        private int _loadAborted;
+
+        public bool SectionLoadingCancelled =>
+            Volatile.Read(ref _loadAborted) != 0 || (_SectionLoadingToken?.IsCancellationRequested ?? false);
 
         /// <summary>
         /// This should only be written via the texture member 
@@ -306,6 +313,7 @@ namespace Viking.ViewModels
 
         public void AbortRequest()
         {
+            Interlocked.Exchange(ref _loadAborted, 1);
             var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
             if (tokenSource != null && !tokenSource.IsCancellationRequested)
             {
@@ -313,8 +321,6 @@ namespace Viking.ViewModels
                 tokenSource.Cancel();
             }
             tokenSource?.Dispose();
-
-            _SectionLoadingToken = null;
         }
 
         /// <summary>
@@ -325,6 +331,7 @@ namespace Viking.ViewModels
         public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice, CancellationToken token)
         {
             _loadQueued = false;
+            Interlocked.Exchange(ref _loadAborted, 0);
             _SectionLoadingToken = token;
 
             if (token.IsCancellationRequested)
