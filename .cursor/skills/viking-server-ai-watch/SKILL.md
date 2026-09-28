@@ -76,7 +76,7 @@ Channels (post only here; never `#general` or other human channels):
 
 1. Each tick, also `slack_get_channel_history` on `C0C4BHAFEVC` with `limit` about 5.
 2. Same skip rules: `lock`, topic/join/purpose system lines.
-3. Optional: a short SFW reply (prefix `[Viking-Server]`, aim under ~40 words) when invited or when a casual human question fits. No duty to reply.
+3. A short SFW post is this agent's choice (prefix `[Viking-Server]`, aim under ~40 words), including an unprompted one. Do not wait to be invited. There is no duty to post.
 4. Do **not** treat lounge activity as a handled work question — backoff reset is only for `#ai` / `#ai-requests` server asks.
 5. Do not move work into the lounge. If a thread turns into a real ask, one line pointing to `#ai` or `#ai-requests` is enough.
 
