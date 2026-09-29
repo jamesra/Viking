@@ -14,9 +14,10 @@ namespace WebAnnotation.UI
         private readonly string? _fixedTransform;
         private readonly HashSet<int> _volumeSections;
         private readonly TextBox _sectionsText;
-        private readonly Label _interpretation;
+        private readonly TextBox _interpretation;
         private readonly Button _start;
         private SectionRangeParse _parse;
+        private VolumeSectionSelection _selection;
 
         /// <summary>Transform group name, or null when the volume has no named transform and mosaic space is used.</summary>
         public string? TransformName { get; private set; }
@@ -44,7 +45,7 @@ namespace WebAnnotation.UI
             ShowIcon = false;
             ShowInTaskbar = false;
             FormBorderStyle = FormBorderStyle.FixedDialog;
-            ClientSize = new System.Drawing.Size(540, 420);
+            ClientSize = new System.Drawing.Size(540, 468);
             AutoScaleMode = AutoScaleMode.Font;
 
             var transformCaption = new Label
@@ -87,8 +88,8 @@ namespace WebAnnotation.UI
             {
                 AutoSize = false,
                 Location = new System.Drawing.Point(12, 72),
-                Size = new System.Drawing.Size(516, 36),
-                Text = "Sections (blank = all). Separate numbers with commas, spaces, or new lines. A range uses a dash, for example 1-100, 250, 400-410."
+                Size = new System.Drawing.Size(516, 52),
+                Text = "Sections (blank = all). Separate numbers or ranges with commas, spaces, or new lines. Example: 1-100, 250, 400-410. A range can cross missing sections; those numbers are skipped."
             });
 
             _sectionsText = new TextBox
@@ -97,8 +98,8 @@ namespace WebAnnotation.UI
                 AcceptsTab = false,
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
-                Location = new System.Drawing.Point(12, 112),
-                Size = new System.Drawing.Size(516, 160),
+                Location = new System.Drawing.Point(12, 128),
+                Size = new System.Drawing.Size(516, 148),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             _sectionsText.TextChanged += (_, _) => RefreshInterpretation();
@@ -107,16 +108,19 @@ namespace WebAnnotation.UI
             Controls.Add(new Label
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(12, 280),
+                Location = new System.Drawing.Point(12, 284),
                 Text = "Interpreted as:"
             });
 
-            _interpretation = new Label
+            _interpretation = new TextBox
             {
-                AutoSize = false,
+                ReadOnly = true,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                TabStop = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Location = new System.Drawing.Point(12, 300),
-                Size = new System.Drawing.Size(516, 64),
+                Location = new System.Drawing.Point(12, 304),
+                Size = new System.Drawing.Size(516, 88),
                 Text = "All sections"
             };
             Controls.Add(_interpretation);
@@ -125,13 +129,13 @@ namespace WebAnnotation.UI
             {
                 Text = "Cancel",
                 DialogResult = DialogResult.Cancel,
-                Location = new System.Drawing.Point(372, 376),
+                Location = new System.Drawing.Point(372, 404),
                 Size = new System.Drawing.Size(75, 28)
             };
             _start = new Button
             {
                 Text = "Start",
-                Location = new System.Drawing.Point(453, 376),
+                Location = new System.Drawing.Point(453, 404),
                 Size = new System.Drawing.Size(75, 28)
             };
             _start.Click += OnStart;
@@ -152,7 +156,7 @@ namespace WebAnnotation.UI
                 ? _fixedTransform
                 : _transformCombo.SelectedItem as string;
             IsAllSections = _parse.IsAllSections;
-            Sections = _parse.Sections;
+            Sections = _parse.IsAllSections ? _parse.Sections : _selection.Present;
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -181,16 +185,9 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            string? membership = SectionRangeParser.VolumeMembershipError(_parse.Sections, _volumeSections);
-            if (membership is not null)
-            {
-                _interpretation.Text = _parse.Interpretation + Environment.NewLine + membership;
-                _start.Enabled = false;
-                return;
-            }
-
-            _interpretation.Text = _parse.Interpretation;
-            _start.Enabled = true;
+            _selection = SectionRangeParser.SelectInVolume(_parse.Sections, _volumeSections);
+            _interpretation.Text = _selection.Interpretation;
+            _start.Enabled = _selection.CanStart;
         }
     }
 }

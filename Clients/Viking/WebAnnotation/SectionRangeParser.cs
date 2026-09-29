@@ -32,8 +32,35 @@ namespace WebAnnotation
     }
 
     /// <summary>
+    /// Requested section numbers split by whether they exist in the open volume.
+    /// The volume-position dialog shows <see cref="Interpretation"/> and starts the job only when <see cref="CanStart"/> is true.
+    /// </summary>
+    public readonly struct VolumeSectionSelection
+    {
+        /// <summary>Requested sections that exist in the volume, sorted.</summary>
+        public IReadOnlyList<long> Present { get; }
+
+        /// <summary>Requested sections that are not in the volume, sorted. These are not updated.</summary>
+        public IReadOnlyList<long> Missing { get; }
+
+        /// <summary>Dialog text: the sections that will run, plus any numbers that were skipped.</summary>
+        public string Interpretation { get; }
+
+        /// <summary>False when every requested section is missing, so the dialog must not start.</summary>
+        public bool CanStart => Present.Count > 0;
+
+        public VolumeSectionSelection(IReadOnlyList<long> present, IReadOnlyList<long> missing, string interpretation)
+        {
+            Present = present;
+            Missing = missing;
+            Interpretation = interpretation;
+        }
+    }
+
+    /// <summary>
     /// Parses free-text section lists into a sorted, de-duplicated set and a canonical range string.
     /// Called by the volume-position dialog as the user types. Adjacent and overlapping numbers collapse into inclusive ranges.
+    /// A range may include numbers the volume does not have; <see cref="SelectInVolume"/> drops those before the job starts.
     /// </summary>
     public static class SectionRangeParser
     {
@@ -88,23 +115,36 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Null when every section is in the volume. Otherwise an error listing the missing numbers in canonical form.
+        /// Keeps requested sections that exist in the open volume and lists the rest as skipped.
+        /// Called by the volume-position dialog so one range can cross gaps. A missing section is omitted; the job still runs on every number that is present.
+        /// <see cref="VolumeSectionSelection.CanStart"/> is false only when none of the requested numbers exist.
         /// </summary>
-        public static string? VolumeMembershipError(IReadOnlyList<long> sections, IEnumerable<int> volumeSectionNumbers)
+        public static VolumeSectionSelection SelectInVolume(IReadOnlyList<long> sections, IEnumerable<int> volumeSectionNumbers)
         {
             var volume = volumeSectionNumbers as HashSet<int> ?? new HashSet<int>(volumeSectionNumbers);
+            var present = new List<long>();
             var missing = new List<long>();
             foreach (long section in sections)
             {
-                if (section < int.MinValue || section > int.MaxValue || !volume.Contains((int)section))
+                if (section >= int.MinValue && section <= int.MaxValue && volume.Contains((int)section))
+                    present.Add(section);
+                else
                     missing.Add(section);
             }
 
-            if (missing.Count == 0)
-                return null;
-
+            present.Sort();
             missing.Sort();
-            return "Not in this volume: " + FormatCanonical(missing);
+
+            string interpretation;
+            if (present.Count == 0)
+                interpretation = "None of these sections are in this volume: " + FormatCanonical(missing);
+            else if (missing.Count == 0)
+                interpretation = FormatCanonical(present);
+            else
+                interpretation = "Will update: " + FormatCanonical(present) + Environment.NewLine
+                    + "Skipped (not in this volume): " + FormatCanonical(missing);
+
+            return new VolumeSectionSelection(present, missing, interpretation);
         }
 
         /// <summary>

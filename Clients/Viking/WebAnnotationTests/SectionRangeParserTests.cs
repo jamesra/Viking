@@ -108,19 +108,49 @@ namespace WebAnnotationTests
         [TestMethod]
         public void UnknownSectionsAreListedCanonically()
         {
-            string? error = SectionRangeParser.VolumeMembershipError(
+            VolumeSectionSelection selection = SectionRangeParser.SelectInVolume(
                 new long[] { 1, 3, 4, 9 },
                 new HashSet<int> { 1, 2, 3, 4 });
-            Assert.AreEqual("Not in this volume: 9", error);
+            Assert.IsTrue(selection.CanStart);
+            CollectionAssert.AreEqual(new long[] { 1, 3, 4 }, (System.Collections.ICollection)selection.Present);
+            CollectionAssert.AreEqual(new long[] { 9 }, (System.Collections.ICollection)selection.Missing);
+            Assert.AreEqual("Will update: 1, 3-4" + System.Environment.NewLine + "Skipped (not in this volume): 9", selection.Interpretation);
         }
 
         [TestMethod]
         public void KnownSectionsHaveNoMembershipError()
         {
-            string? error = SectionRangeParser.VolumeMembershipError(
+            VolumeSectionSelection selection = SectionRangeParser.SelectInVolume(
                 new long[] { 2, 4 },
                 new[] { 1, 2, 4 });
-            Assert.IsNull(error);
+            Assert.IsTrue(selection.CanStart);
+            Assert.AreEqual(0, selection.Missing.Count);
+            Assert.AreEqual("2, 4", selection.Interpretation);
+        }
+
+        [TestMethod]
+        public void RangeAcrossMissingSectionsKeepsEveryPresentNumber()
+        {
+            SectionRangeParse parsed = SectionRangeParser.Parse("1-10, 20-22");
+            VolumeSectionSelection selection = SectionRangeParser.SelectInVolume(
+                parsed.Sections,
+                new HashSet<int> { 1, 2, 3, 5, 8, 9, 10, 21 });
+            Assert.IsTrue(selection.CanStart);
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3, 5, 8, 9, 10, 21 }, (System.Collections.ICollection)selection.Present);
+            CollectionAssert.AreEqual(new long[] { 4, 6, 7, 20, 22 }, (System.Collections.ICollection)selection.Missing);
+            StringAssert.Contains(selection.Interpretation, "Will update: 1-3, 5, 8-10, 21");
+            StringAssert.Contains(selection.Interpretation, "Skipped (not in this volume): 4, 6-7, 20, 22");
+        }
+
+        [TestMethod]
+        public void NoPresentSectionsCannotStart()
+        {
+            VolumeSectionSelection selection = SectionRangeParser.SelectInVolume(
+                new long[] { 4, 6, 7 },
+                new HashSet<int> { 1, 2, 3 });
+            Assert.IsFalse(selection.CanStart);
+            Assert.AreEqual(0, selection.Present.Count);
+            Assert.AreEqual("None of these sections are in this volume: 4, 6-7", selection.Interpretation);
         }
     }
 }
