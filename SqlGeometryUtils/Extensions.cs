@@ -384,9 +384,17 @@ namespace SqlGeometryUtils
             builder.EndGeometry();
 
             SqlGeometry polygon = builder.ConstructedGeometry;
+            if (polygon.STIsValid().IsTrue)
+                return polygon;
+
+            // A pen cut can be valid in Geometry and still fail SQL Server (a spike at the join,
+            // or a section transform that folds a dense ring). MakeValid keeps the large piece
+            // so the save does not throw and the far side of the cell is not curve-fit.
+            SqlGeometry repaired = LargestPolygonPart(polygon.MakeValid());
+            if (repaired is not null && repaired.STIsValid().IsTrue)
+                return repaired;
 
             polygon.ThrowIfInvalid();
-
             return polygon;
 
             /*
@@ -397,6 +405,44 @@ namespace SqlGeometryUtils
             PolyStringBuilder.Append(")");
             return SqlGeometry.STPolyFromText(PolyStringBuilder.ToString().ToSqlChars(), 0);
             */
+        }
+
+        /// <summary>
+        /// The polygon part of <paramref name="geometry"/> with the largest area.
+        /// MakeValid returns a MultiPolygon or GeometryCollection when a ring crosses itself.
+        /// Returns null when no polygon part is present. Callers are saving one annotation outline.
+        /// </summary>
+        private static SqlGeometry LargestPolygonPart(SqlGeometry geometry)
+        {
+            if (geometry is null || geometry.IsNull || geometry.STIsEmpty().IsTrue)
+                return null;
+
+            if (string.Equals(geometry.STGeometryType().Value, "Polygon", StringComparison.OrdinalIgnoreCase))
+                return geometry;
+
+            SqlInt32 count = geometry.STNumGeometries();
+            if (count.IsNull || count.Value < 1)
+                return null;
+
+            SqlGeometry best = null;
+            double bestArea = double.NegativeInfinity;
+            for (int i = 1; i <= count.Value; i++)
+            {
+                SqlGeometry part = geometry.STGeometryN(i);
+                if (part is null || part.IsNull)
+                    continue;
+                if (!string.Equals(part.STGeometryType().Value, "Polygon", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                double area = part.STArea().IsNull ? 0 : part.STArea().Value;
+                if (area > bestArea)
+                {
+                    bestArea = area;
+                    best = part;
+                }
+            }
+
+            return best;
         }
 
         /// <summary>

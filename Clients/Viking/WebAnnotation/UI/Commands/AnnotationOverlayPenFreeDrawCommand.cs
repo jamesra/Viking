@@ -10,7 +10,7 @@ using Viking.UI.Controls;
 using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel;
+using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -213,7 +213,7 @@ namespace WebAnnotation.UI.Commands
 
                         try
                         {
-                            Loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                            cmd.ApplyCut(Loc);
                         }
                         catch (ArgumentException r)
                         {

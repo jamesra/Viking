@@ -31,6 +31,13 @@ namespace Viking.UI.Controls
     public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings, IPenEvents, IGestureEvents
     {
         Viking.UI.Commands.Command? _CurrentCommand;
+
+        /// <summary>
+        /// F1 lines for <see cref="DefaultCommand"/>. A command that does not implement
+        /// <see cref="IObservableHelpStrings"/> binds this instead of leaving the previous command's text on the bar.
+        /// </summary>
+        private IObservableHelpStrings? _idleHelp;
+
         public Viking.UI.Commands.Command? CurrentCommand
         {
             get => _CurrentCommand;
@@ -43,15 +50,7 @@ namespace Viking.UI.Controls
                 }
 
                 _CurrentCommand = value;
-                if (_CurrentCommand as IObservableHelpStrings != null && commandHelpText != null)
-                {
-                    commandHelpText.DataContext = _CurrentCommand as IObservableHelpStrings;
-                    commandHelpText.TextArray = ((IObservableHelpStrings)_CurrentCommand).ObservableHelpStrings;
-                    //commandHelpText.TextArrayIndex = 0;
-                    //IHelpStrings obj = _CurrentCommand as IHelpStrings;
-                    //commandHelpText.TextArray = obj.HelpStrings;
-                    //    commandHelpText.DataContext = _CurrentCommand as IHelpStrings;
-                }
+                BindCommandHelp(_CurrentCommand);
 
                 if (_CurrentCommand != null)
                 {
@@ -66,6 +65,26 @@ namespace Viking.UI.Controls
                     Trace.WriteLine("Set current command: Null", "Command");
                 }
             }
+        }
+
+        /// <summary>
+        /// Points the F1 bar at the active command when that command publishes help.
+        /// Otherwise restores the idle catalog captured from <see cref="DefaultCommand"/>.
+        /// </summary>
+        private void BindCommandHelp(Viking.UI.Commands.Command? command)
+        {
+            if (command is DefaultCommand idle)
+                _idleHelp = idle;
+
+            if (commandHelpText is null)
+                return;
+
+            IObservableHelpStrings? help = command as IObservableHelpStrings ?? _idleHelp;
+            if (help is null)
+                return;
+
+            commandHelpText.DataContext = help;
+            commandHelpText.TextArray = help.ObservableHelpStrings;
         }
 
         public Viking.UI.Commands.CommandQueue CommandQueue = new();
@@ -968,7 +987,7 @@ namespace Viking.UI.Controls
         #endregion
 
         /// <summary>
-        /// Need to enable arrow keys as input keys
+        /// Arrow keys pan the view. Tab starts segmentation, so it must not move focus.
         /// </summary>
         /// <param name="keyData"></param>
         /// <returns></returns>
@@ -976,7 +995,7 @@ namespace Viking.UI.Controls
         {
             return keyData switch
             {
-                Keys.Right or Keys.Left or Keys.Up or Keys.Down => true,
+                Keys.Right or Keys.Left or Keys.Up or Keys.Down or Keys.Tab => true,
                 Keys.Shift | Keys.Right or Keys.Shift | Keys.Left or Keys.Shift | Keys.Up or Keys.Shift | Keys.Down => true,
                 _ => base.IsInputKey(keyData),
             };

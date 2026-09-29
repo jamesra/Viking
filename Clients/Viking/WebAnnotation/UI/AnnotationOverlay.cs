@@ -463,6 +463,8 @@ namespace WebAnnotation
                     helpstrings.Add("Double right-click result polyline: Dismiss auto polygonalization");
                 }
 
+                helpstrings.Add("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off");
+
                 return [.. helpstrings];
             }
         }
@@ -1098,6 +1100,8 @@ namespace WebAnnotation
                 return;
             }
 
+            AddConvertCircleActions(sender_cmd, actions);
+
             //Check if we should add actions to create new structures
             foreach (ulong favoriteStructureID in Global.UserFavoriteStructureTypes)
             {
@@ -1156,6 +1160,36 @@ namespace WebAnnotation
 
         }
 
+        /// <summary>
+        /// Adds a convert-to-polygon choice for each circle on this section that the closed
+        /// pen loop overlaps. The stroke log only includes circles the path entered, so a
+        /// loop drawn around a circle would otherwise have no convert button.
+        /// Called from <see cref="OnPenPathCompleted"/> before the choice buttons are shown.
+        /// Skips a circle that already has a <see cref="WebAnnotation.UI.Actions.ChangeToPolygonAction"/>.
+        /// </summary>
+        private void AddConvertCircleActions(AnnotationOverlayPenFreeDrawCommandV2 sender, List<IAction> actions)
+        {
+            if (!sender.Path.HasSelfIntersection)
+                return;
+
+            Polygon loop = new(sender.Path.SimplifiedFirstLoop);
+            List<LocationCircleView> circles = AnnotationOverlayPenFreeDrawCommand.IntersectedCirclesOnSection(CurrentSectionNumber, loop);
+            if (circles is null)
+                return;
+
+            foreach (LocationCircleView circle in circles)
+            {
+                if (actions.OfType<WebAnnotation.UI.Actions.ChangeToPolygonAction>().Any(existing => existing.Location.ID == circle.ID))
+                    continue;
+
+                LocationObj location = Store.Locations.GetObjectByID(circle.ID, false);
+                if (location is null || location.TypeCode != LocationType.CIRCLE)
+                    continue;
+
+                actions.Add(new WebAnnotation.UI.Actions.ChangeToPolygonAction(location, loop));
+            }
+        }
+
         protected void OnMouseUp(object sender, MouseEventArgs e)
         {
         }
@@ -1194,6 +1228,7 @@ break;
             return new string[]
             {
                 "F3 or Enter Key: Create new annotation linked to the last placed annotation",
+                "Tab: Place a new structure with segmentation",
                 "F5 Key: Reload section annotations",
                 "Back Key: Return to last edited location",
                 "F12: Open goto location ID dialog",
@@ -1358,6 +1393,11 @@ break;
         {
             switch (e.KeyCode)
             {
+                case Keys.Tab:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    StartNewStructureSegmentation();
+                    return;
                 //Refresh the annotations on F5
                 case Keys.F5:
                     ResetAnnotations();
@@ -1541,6 +1581,33 @@ break;
         }
 
 
+
+        /// <summary>
+        /// Tab starts <see cref="SegmentationCommand"/> so clicks place a new structure.
+        /// Called from <see cref="OnKeyDown"/> when the default command is active.
+        /// The saved type is the structure selected in the list, or cell type 1.
+        /// Accepting the mask saves through <see cref="SegmentationCommand.CreateAnnotationFromPolygon"/>.
+        /// </summary>
+        private void StartNewStructureSegmentation()
+        {
+            if (!IsCommandDefault())
+                return;
+
+            if (!Global.IsSegmentationServiceAvailable)
+            {
+                MessageBox.Show(Parent, "No segmentation service is selected.", "Segmentation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            long structureTypeId = Viking.UI.State.SelectedObject is StructureType selected
+                ? selected.ID
+                : Store.StructureTypes[1].ID;
+
+            Parent.CurrentCommand = new SegmentationCommand(
+                Parent,
+                outputPolygon => SegmentationCommand.CreateAnnotationFromPolygon(Parent, null, outputPolygon),
+                structureTypeId: structureTypeId);
+        }
 
         /// <summary>
         /// Queues a new structure and its placement command. Hotkey callers pass

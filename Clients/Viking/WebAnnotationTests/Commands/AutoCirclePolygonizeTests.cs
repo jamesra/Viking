@@ -807,10 +807,11 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void SameZoomAndBoundsReusesUploadedImage()
         {
-            AutoPolygonizeUploadContext context = new(9, 2, new Rectangle(0, 100, 0, 100), 32, 32);
-            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 2, new Vector2(50, 50)));
+            AutoPolygonizeUploadContext context = new(9, 1, new Rectangle(0, 100, 0, 100), 32, 32);
+            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1, new Vector2(50, 50)));
             Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1.5, new Vector2(50, 50)));
-            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1, new Vector2(50, 50)));
+            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 4, new Vector2(50, 50)));
+            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1, new Vector2(200, 200)));
         }
 
         [TestMethod]
@@ -823,12 +824,12 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 2));
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1.5));
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 4));
-            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
 
             cache.RememberProposal(7, 1, first, LocationType.CIRCLE, completedDownsample: 1);
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 0.8));
-            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1.21));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1.21));
         }
 
         [TestMethod]
@@ -845,7 +846,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void InvalidateCompletionsAtOtherTileDownsampleClearsSkipOnZoomInToDs1()
+        public void InvalidateCompletionsAtOtherTileDownsampleKeepsSkipWhenStoredLevelIsAlready1()
         {
             AutoPolygonizeCache cache = new();
             DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -854,6 +855,9 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 2));
 
             cache.InvalidateCompletionsAtOtherTileDownsample(1);
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
+
+            cache.InvalidateCompletionsAtOtherTileDownsample(2);
             Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
         }
 
@@ -868,7 +872,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void UploadDownsampleBaselineResubmitsWhenResolvedTileDownsampleChanges()
+        public void UploadDownsampleBaselineStaysSkippedWhenResolvedLevelIs1()
         {
             AutoPolygonizeCache cache = new();
             DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -877,7 +881,7 @@ namespace WebAnnotationTests.Commands
             cache.RememberProposal(7, 1, first, LocationType.CIRCLE, upload: upload);
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 2));
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 4));
-            Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
+            Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
         }
 
         [TestMethod]
@@ -898,8 +902,10 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(8, 4));
             Assert.IsTrue(AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(2, 4));
             Assert.IsFalse(AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(4, 4));
-            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1.5, new Vector2(50, 50)));
+            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1.5, new Vector2(50, 50)));
             Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1, new Vector2(50, 50)));
+            AutoPolygonizeUploadContext atDs1 = new(9, 1, new Rectangle(0, 100, 0, 100), 32, 32);
+            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(atDs1, 1.5, new Vector2(50, 50)));
             Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 2, new Vector2(200, 200)));
         }
 
@@ -908,9 +914,9 @@ namespace WebAnnotationTests.Commands
         {
             Assert.AreEqual(1, SegmentationViewportSession.ResolveTileDownsample(0.5));
             Assert.AreEqual(1, SegmentationViewportSession.ResolveTileDownsample(1.0));
-            Assert.AreEqual(2, SegmentationViewportSession.ResolveTileDownsample(1.21));
-            Assert.AreEqual(2, SegmentationViewportSession.ResolveTileDownsample(2.0));
-            Assert.AreEqual(2, SegmentationViewportSession.ResolveTileDownsample(4.0));
+            Assert.AreEqual(1, SegmentationViewportSession.ResolveTileDownsample(1.21));
+            Assert.AreEqual(1, SegmentationViewportSession.ResolveTileDownsample(2.0));
+            Assert.AreEqual(1, SegmentationViewportSession.ResolveTileDownsample(4.0));
         }
 
         [TestMethod]

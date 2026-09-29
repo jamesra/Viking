@@ -2,7 +2,7 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using System;
 using VikingXNAGraphics;
-using WebAnnotation.UI.Actions;
+using WebAnnotation.UI.Actions;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -42,10 +42,18 @@ namespace WebAnnotation.UI.ActionViews
 
         public void CreateDefaultVisuals()
         {
-            Polygon smoothedPoly = model.NewSmoothedVolumePolygon; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            SolidPolygonView view = new(model.NewVolumePolygon, GetShapeColor(model.RetraceType).SetAlpha(0.5f));
+            Color color = GetShapeColor(model.RetraceType);
+            if (model.PreviewOriginal is not null && (model.PreviewExcludedPatch is not null || model.PreviewAddedPatch is not null))
+            {
+                // The far side of the cell is the cached triangulation. Only the local patch is meshed again.
+                Passive = new CutChoiceFillView(model.PreviewOriginal, model.PreviewExcludedPatch, model.PreviewAddedPatch, model.PreviewPath, color.SetAlpha(0.5f));
+                Active = new CutChoiceFillView(model.PreviewOriginal, model.PreviewExcludedPatch, model.PreviewAddedPatch, model.PreviewPath, color.SetAlpha(0.75f));
+                return;
+            }
+
+            SolidPolygonView view = new(model.NewVolumePolygon, color.SetAlpha(0.5f));
             Passive = view;
-            Active = new SolidPolygonView(model.NewVolumePolygon, GetShapeColor(model.RetraceType).SetAlpha(0.75f));
+            Active = new SolidPolygonView(model.NewVolumePolygon, color.SetAlpha(0.75f));
         }
 
         public Color GetShapeColor(RetraceCommandAction action)

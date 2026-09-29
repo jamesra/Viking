@@ -597,7 +597,7 @@ namespace WebAnnotation
 
                                                                      try
                                                                      {
-                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                                                                         cmd.ApplyCut(loc);
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {

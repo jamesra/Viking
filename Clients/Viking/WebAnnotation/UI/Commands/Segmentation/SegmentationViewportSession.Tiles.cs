@@ -158,8 +158,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return anyReady;
         }
 
+        /// <summary>
+        /// SegmentTiles for <paramref name="cells"/> only. Other keys in the session stay
+        /// out of the request so an earlier viewport upload cannot overflow the server cache.
+        /// </summary>
         private async Task<SegmentationResponse> SegmentUploadedTilesAsync(
             TileSignature signature,
+            IReadOnlyList<TileCell> cells,
             IReadOnlyList<Geometry.Vector2> foregroundPoints,
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             CancellationToken token)
@@ -172,27 +177,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 MultimaskOutput = false,
                 OmitLabeledImage = true
             };
-            string prefix = $"{signature.Volume}\n{signature.Section}\n{signature.Channel}\n{signature.Transform}\n{signature.Downsample}\n";
-            foreach (string key in uploadedTileKeys)
+            foreach (TileCell cell in cells)
             {
-                if (!key.StartsWith(prefix, StringComparison.Ordinal))
+                if (!uploadedTileKeys.Contains(TileKey(signature, cell.Row, cell.Col)))
                     continue;
 
-                string[] parts = key.Split('\n');
-                if (parts.Length < 7)
-                    continue;
-
-                request.Tiles.Add(new TileCoord
-                {
-                    Volume = signature.Volume,
-                    Section = signature.Section,
-                    Channel = signature.Channel,
-                    Transform = signature.Transform,
-                    Downsample = signature.Downsample,
-                    Row = int.Parse(parts[5]),
-                    Col = int.Parse(parts[6])
-                });
+                request.Tiles.Add(ToCoord(signature, cell));
             }
+
+            if (request.Tiles.Count == 0)
+                throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
 
             if (foregroundPoints is not null)
             {

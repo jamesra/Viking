@@ -181,11 +181,8 @@ namespace WebAnnotation.UI.Commands
 
 
     /// <summary>
-    /// Left-click once to create a new vertex in the poly line
-    /// Left-click an existing vertex to complete polyline creation
-    /// Double left-click to complete polyline creation
-    /// Right-click to remove the last polyline vertex
-    /// </summary> 
+    /// Freehand pen stroke. Release finishes the stroke. A closed loop opens the choice buttons.
+    /// </summary>
     internal abstract class PlaceGeometryWithPenCommandBase : LineGeometryCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         public abstract uint NumCurveInterpolations
@@ -205,23 +202,15 @@ namespace WebAnnotation.UI.Commands
         public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. PlaceCurveCommand.DefaultMouseHelpStrings, .. PlaceCurveCommand.DefaultKeyHelpStrings];
-
-                return [.. s];
-            }
-
-        }
+        public string[] HelpStrings =>
+        [
+            .. DefaultMouseHelpStrings,
+            .. DefaultKeyHelpStrings
+        ];
 
         public new static string[] DefaultMouseHelpStrings = [
-            "Double Left Click: Place final control point, save and exit command",
-            "Double Right Click: Pop last control point",
-            "Left Click and Drag Control Point: Move existing control point",
-            "Left Click last control point: Save and exit command",
-            "No cursor: Command cannot be completed at this location due to invalid geometry. Typically crossed lines."
+            "Release to finish the stroke",
+            "A closed loop opens the choice buttons"
             ];
 
         public new static string[] DefaultKeyHelpStrings = [

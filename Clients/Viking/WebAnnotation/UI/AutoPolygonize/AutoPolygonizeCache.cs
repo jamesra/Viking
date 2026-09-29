@@ -118,7 +118,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Records a published proposal so the same LastModified is not segmented again.
         /// Subscribes when <paramref name="location"/> is provided. Replaces the image lease when upload changes.
         /// <paramref name="completedDownsample"/> is stored so a later camera change that
-        /// crosses the resolved tile-downsample boundary (1 vs 2) can re-queue.
+        /// resolves to a different tile pyramid level can re-queue. The current ceiling is 1.
         /// </summary>
         public void RememberProposal(
             long locationId,
@@ -146,8 +146,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Downsample to store on a completion. Prefers the caller's camera value, else the
-        /// upload mosaic level. Always stores the resolved tile pyramid (1 or 2) so zoom
-        /// across the DS≤1 boundary compares cleanly.
+        /// upload mosaic level. Always stores the resolved tile pyramid so zoom that
+        /// changes that level compares cleanly. The current ceiling is 1.
         /// </summary>
         private static double? CompletedDownsample(double completedDownsample, AutoPolygonizeUploadContext? upload)
         {

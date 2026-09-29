@@ -40,6 +40,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
     {
         #region Constants
         private const int DEFAULT_DEBOUNCE_MS = 500;
+
+        /// <summary>
+        /// Screen-pixel width of the resegment preview outline. World width is this times
+        /// <c>Parent.Downsample</c> so a rebuilt ring stays the same size on screen.
+        /// Four times the previous two-pixel stroke, which was too thin to see.
+        /// </summary>
+        private const double PreviewRingWidthPixels = 8.0;
         #endregion
 
         #region Fields
@@ -1166,13 +1173,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Debug.WriteLine($"Created {segmentPolygonViews.Count} polygon views");
         }
 
+        /// <summary>
+        /// Closed outline for one mask ring. Called from <see cref="ApplyPolygonViews"/> while resegment is active.
+        /// Stroke is <see cref="PreviewRingWidthPixels"/> screen pixels, with a world-unit floor so a zoomed-in ring stays visible.
+        /// </summary>
         private CurveView CreateRingView(IEnumerable<Geometry.Vector2> ring, Color color) =>
             new(
                 [.. ring],
                 color.SetAlpha(0.65f),
                 TryToClose: true,
                 numInterpolations: 0,
-                lineWidth: Math.Max(1.0, Parent.Downsample * 2.0),
+                lineWidth: Math.Max(PreviewRingWidthPixels * 0.5, Parent.Downsample * PreviewRingWidthPixels),
                 lineStyle: LineStyle.Tubular,
                 ShowControlPoints: false);
 
@@ -1413,6 +1424,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             base.Execute();
         }
 
+        /// <summary>
+        /// Saves <paramref name="polygon"/> as a new polygon location. Called when Tab segmentation accepts a mask.
+        /// <paramref name="type"/> null uses the structure selected in the list, or cell type 1.
+        /// A type that requires a parent enqueues <see cref="LinkStructureToParentCommand"/> before the save.
+        /// </summary>
         public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, Polygon polygon)
         {
             StructureTypeObj typeObj = GetDefaultStructureType(type);
@@ -1432,7 +1448,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
                 newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, mosaicGeometry);
 
-                // Enqueue command to save the structure
+                if (typeObj.ParentID.HasValue)
+                {
+                    Parent.CommandQueue.EnqueueCommand(
+                        typeof(LinkStructureToParentCommand),
+                        [Parent, newStruct, newLocation]);
+                }
+
                 Parent.CommandQueue.EnqueueCommand(
                     typeof(CreateNewStructureCommand),
                     [Parent, newStruct, newLocation]);

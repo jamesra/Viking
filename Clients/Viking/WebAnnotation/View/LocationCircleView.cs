@@ -249,7 +249,10 @@ namespace WebAnnotation.View
         }
 
         public override string[] HelpStrings => [
-                    "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
+                    "Pen contact: Start a freehand stroke",
+                    "Shift or Ctrl: Create a linked location on the adjacent section",
+                    "A closed loop over this arrow offers Linked location: a new polygon on this section, not a replacement of the other section's circle",
+                    "Hold left click and drag the inscribed arrow: Create a linked annotation on the adjacent section"
                 ];
 
         public static void Draw(GraphicsDevice device,
@@ -418,8 +421,11 @@ namespace WebAnnotation.View
                 if (Z == VisibleSectionNumber)
                 {
                     Polygon closedpath = new(path.SimplifiedFirstLoop);
-                    ChangeToPolygonAction action = new(modelObj, closedpath);
-                    listActions.Add(action);
+                    if (VolumeCircle.Intersects(closedpath) || closedpath.Contains(VolumeCircle))
+                    {
+                        ChangeToPolygonAction action = new(modelObj, closedpath);
+                        listActions.Add(action);
+                    }
 
                     if (VolumeCircle.Covers(closedpath))
                     {
@@ -496,9 +502,12 @@ namespace WebAnnotation.View
         }
 
         public override string[] HelpStrings => [
-                    "Hold left click on circle edge: Resize",
-                    "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section.",
-                    "Hold left click on circle center: Move annotation"
+                    "Pen contact: Start a freehand stroke",
+                    "Pen contact near the center: Resize and move",
+                    "A closed loop that overlaps this circle offers Convert id to polygon",
+                    "Hold left click on the edge: Resize",
+                    "Hold left click between the edge and the center: Create a link",
+                    "Hold left click on the center: Move the annotation"
                 ];
 
 

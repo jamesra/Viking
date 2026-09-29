@@ -33,7 +33,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
     /// <summary>
     /// 1024x1024 partition anchored at the volume origin, at the resolved tile downsample
-    /// (camera ceil, capped by <c>SegmentationTileDownsample</c>, currently max DS2). Mosaic pixels are world divided by
+    /// (camera ceil, capped by <c>SegmentationTileDownsample</c>, currently max DS1). Mosaic pixels are world divided by
     /// downsample, Y up. The segmentation server flips Y inside each tile image, which is stored top-left.
     /// </summary>
     public static class SegmentationTileGrid
@@ -77,6 +77,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 for (int col = low.Col; col <= high.Col; col++)
                     cells.Add(new TileCell(row, col));
             }
+            return cells;
+        }
+
+        /// <summary>
+        /// Distinct cells that contain <paramref name="worldPoints"/>.
+        /// SegmentTiles names these cells, not every cell in the viewport.
+        /// The server keeps a few dozen embeddings; listing a whole DS1 view
+        /// evicts the prompt cells and the RPC returns TILE_NOT_FOUND.
+        /// </summary>
+        public static List<TileCell> CellsContainingPoints(IReadOnlyList<Vector2> worldPoints, int downsample)
+        {
+            if (downsample <= 0)
+                throw new ArgumentOutOfRangeException(nameof(downsample));
+            if (worldPoints is null || worldPoints.Count == 0)
+                return [];
+
+            List<TileCell> cells = new();
+            HashSet<(int Row, int Col)> seen = new();
+            foreach (Vector2 point in worldPoints)
+            {
+                TileCell cell = CellIndex(point.X, point.Y, downsample);
+                if (seen.Add((cell.Row, cell.Col)))
+                    cells.Add(cell);
+            }
+
             return cells;
         }
 

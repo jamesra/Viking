@@ -49,13 +49,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Ceiling for submitted tile downsample from appSettings
-        /// <c>SegmentationTileDownsample</c> (default 2). Camera zoom may submit a finer
-        /// level down to 1; never coarser than this.
+        /// <c>SegmentationTileDownsample</c> (default 1). Camera zoom may submit a finer
+        /// level down to 1; never coarser than this. A coarser camera still uploads at this
+        /// level until <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
         /// </summary>
         public static int MaxTileDownsample { get; } =
             int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int ds) && ds >= 1
                 ? ds
-                : 2;
+                : 1;
 
         /// <summary>
         /// Legacy name for <see cref="MaxTileDownsample"/>. Prefer the max name.
@@ -63,9 +64,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public static int PinnedTileDownsample => MaxTileDownsample;
 
         /// <summary>
+        /// False when the live camera is coarser than
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
+        /// Equality still submits. Called by <see cref="UploadCurrentImageAsync"/> and
+        /// <see cref="SegmentAsync"/> before any tile is sent. Auto-segment checks the same
+        /// cutoff earlier so an idle batch never starts.
+        /// </summary>
+        private bool IsCameraWithinTileSubmission()
+        {
+            double cameraDownsample = parent.Camera?.Downsample ?? parent.Downsample;
+            double maxCameraDownsample = WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample;
+            if (cameraDownsample <= maxCameraDownsample)
+                return true;
+
+            SegmentationDiag.Log(
+                $"Tile submit skip: downsample out of range ds={cameraDownsample} max={maxCameraDownsample}");
+            return false;
+        }
+
+        /// <summary>
         /// Maps camera downsample to the integer pyramid level sent to UploadTile/SegmentTiles.
         /// Values at or below 1 submit 1; larger values round up (ceil) and clamp to
-        /// <see cref="MaxTileDownsample"/>. Example: 1.21 → 2, 4 → 2 when max is 2.
+        /// <see cref="MaxTileDownsample"/>. Example: 1.21 and 4 both submit 1 when max is 1.
         /// </summary>
         /// <param name="cameraDownsample">Live camera downsample (may be fractional).</param>
         public static int ResolveTileDownsample(double cameraDownsample)
@@ -259,13 +279,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads every 1024x1024 mosaic cell that intersects the current viewport.
+        /// Records the live viewport as the tile-mode capture. Does not upload every visible cell.
+        /// SegmentAsync uploads the cells that contain foreground points, then any cells growth asks for.
+        /// A full DS1 view is often larger than the server embedding cache (32). Uploading it first
+        /// evicts the prompt cells, and the following SegmentTiles call returns TILE_NOT_FOUND.
         /// Tile mode does not use UploadImage; CurrentImageId stays unset.
         /// </summary>
-        /// <returns>True when at least one needed cell is ready on the server.</returns>
+        /// <returns>True when the camera is inside the tile-submission range and the viewport was recorded.</returns>
         public async Task<bool> UploadCurrentImageAsync(CancellationToken cancellationToken)
         {
             if (grpcClient is null)
+                return false;
+
+            if (!IsCameraWithinTileSubmission())
                 return false;
 
             if (Interlocked.CompareExchange(ref isUploadingImage, 1, 0) != 0)
@@ -277,24 +303,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadCancellationTokenSource?.Dispose();
                 uploadCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
-                    await ReadViewTilesAsync().ConfigureAwait(false);
-                mosaicDownsample = downsample;
-                if (!await UploadMissingTilesAsync(signature, visible, grayscale, uploadCancellationTokenSource.Token).ConfigureAwait(false))
-                {
-                    Debug.WriteLine("Failed to upload visible segmentation tiles");
+                (int downsample, _, _, _) = await ReadViewTilesAsync().ConfigureAwait(false);
+                if (uploadCancellationTokenSource.Token.IsCancellationRequested)
                     return false;
-                }
 
-                ViewportBounds = GetCurrentViewportBounds();
+                mosaicDownsample = downsample;
                 uploadedImageBounds = ViewportBounds;
                 uploadedImageWidth = SegmentationTileGrid.TileSize;
                 uploadedImageHeight = SegmentationTileGrid.TileSize;
                 currentImageId = null;
-
-                if (uploadCancellationTokenSource.Token.IsCancellationRequested)
-                    return false;
-
                 return true;
             }
             catch (OperationCanceledException)
@@ -311,6 +328,95 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Foreground cells plus growth neighbors, without duplicates.
+        /// Background points are not used to choose cells: they can cover the whole view,
+        /// and the server applies a background click only on a tile it actually predicts.
+        /// </summary>
+        private static List<TileCell> TilesForRound(
+            IReadOnlyList<Geometry.Vector2> foregroundPoints,
+            int downsample,
+            IReadOnlyList<TileCell> extras)
+        {
+            List<TileCell> cells = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
+            if (extras is null || extras.Count == 0)
+                return cells;
+
+            HashSet<(int Row, int Col)> seen = new(cells.Select(cell => (cell.Row, cell.Col)));
+            foreach (TileCell extra in extras)
+            {
+                if (seen.Add((extra.Row, extra.Col)))
+                    cells.Add(extra);
+            }
+
+            return cells;
+        }
+
+        /// <summary>
+        /// Calls SegmentTiles. On TILE_NOT_FOUND, drops that cell and uploads it again.
+        /// One retry is not enough: the cache evicts several prompt cells, and the second
+        /// missing cell used to abort the whole request.
+        /// Returns null when a cell still cannot be uploaded.
+        /// </summary>
+        private async Task<SegmentationResponse?> SegmentWithMissingTileRetriesAsync(
+            TileSignature signature,
+            List<TileCell> needed,
+            IReadOnlyList<Geometry.Vector2> foregroundPoints,
+            IReadOnlyList<Geometry.Vector2> backgroundPoints,
+            bool grayscale,
+            CancellationToken cancellationToken)
+        {
+            const int maxNotFoundRetries = 16;
+            string? lastMissingKey = null;
+            int sameTileMisses = 0;
+            for (int attempt = 0; attempt <= maxNotFoundRetries; attempt++)
+            {
+                try
+                {
+                    return await SegmentUploadedTilesAsync(
+                        signature,
+                        needed,
+                        foregroundPoints,
+                        backgroundPoints,
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
+                    TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
+                {
+                    string missingKey = TileKey(signature, missingRow, missingCol);
+                    if (missingKey == lastMissingKey)
+                    {
+                        sameTileMisses++;
+                        if (sameTileMisses >= 2)
+                            throw;
+                    }
+                    else
+                    {
+                        lastMissingKey = missingKey;
+                        sameTileMisses = 0;
+                    }
+
+                    SegmentationDiag.Log(
+                        $"SegmentTiles TILE_NOT_FOUND row={missingRow} col={missingCol} retry={attempt}");
+                    uploadedTileKeys.Remove(missingKey);
+                    TileCell missing = new(missingRow, missingCol);
+                    if (!needed.Any(cell => cell.Row == missingRow && cell.Col == missingCol))
+                        needed.Add(missing);
+
+                    if (!await UploadMissingTilesAsync(
+                        signature,
+                        [missing],
+                        grayscale,
+                        cancellationToken).ConfigureAwait(false))
+                    {
+                        return null;
+                    }
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -341,7 +447,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads visible (and server-requested) tiles, then SegmentTiles with growth rounds.
+        /// Uploads cells that contain foreground points (and server-requested neighbors),
+        /// then SegmentTiles with growth rounds. Does not name every viewport cell.
         /// Returns the last response, including a partial mask when growth still needs cells.
         /// </summary>
         public async Task<SegmentationResponse?> SegmentAsync(
@@ -356,6 +463,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 (backgroundPoints is null || backgroundPoints.Count == 0))
                 return null;
 
+            if (!IsCameraWithinTileSubmission())
+                return null;
+
             try
             {
                 List<TileCell> extras = [];
@@ -366,13 +476,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
                         await ReadViewTilesAsync().ConfigureAwait(false);
                     mosaicDownsample = downsample;
-                    List<TileCell> needed = [.. visible, .. extras];
+                    List<TileCell> needed = TilesForRound(foregroundPoints, downsample, extras);
                     SegmentationDiag.Log(
-                        $"SegmentAsync round={round} ds={downsample} visible={visible.Count} extras={extras.Count} " +
+                        $"SegmentAsync round={round} ds={downsample} visible={visible.Count} " +
+                        $"promptTiles={needed.Count} extras={extras.Count} " +
                         $"vol={signature.Volume} sec={signature.Section}");
                     if (needed.Count == 0)
                     {
-                        SegmentationDiag.Log("SegmentAsync: no tile cells for viewport");
+                        SegmentationDiag.Log("SegmentAsync: no tile cells for prompts");
                         return lastResponse;
                     }
 
@@ -383,34 +494,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         return lastResponse;
                     }
 
-                    SegmentationResponse response;
-                    try
-                    {
-                        response = await SegmentUploadedTilesAsync(
-                            signature,
-                            foregroundPoints,
-                            backgroundPoints,
-                            cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
-                        TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
-                    {
-                        uploadedTileKeys.Remove(TileKey(signature, missingRow, missingCol));
-                        if (!await UploadMissingTilesAsync(
-                            signature,
-                            [new TileCell(missingRow, missingCol)],
-                            grayscale,
-                            cancellationToken).ConfigureAwait(false))
-                        {
-                            return lastResponse;
-                        }
-
-                        response = await SegmentUploadedTilesAsync(
-                            signature,
-                            foregroundPoints,
-                            backgroundPoints,
-                            cancellationToken).ConfigureAwait(false);
-                    }
+                    SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
+                        signature,
+                        needed,
+                        foregroundPoints,
+                        backgroundPoints,
+                        grayscale,
+                        cancellationToken).ConfigureAwait(false);
+                    if (response is null)
+                        return lastResponse;
 
                     lastResponse = response;
                     mosaicOriginX = response.OriginX;
@@ -425,8 +517,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     extras.Clear();
                     foreach (TileCoord tile in response.RequestedTiles)
                     {
-                        if (tile.Downsample == downsample)
-                            extras.Add(new TileCell(tile.Row, tile.Col));
+                        if (tile.Downsample != downsample)
+                            continue;
+
+                        // The server asks only for cells it does not have. A key left from an
+                        // earlier upload would skip the re-upload and growth would stall.
+                        uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
+                        extras.Add(new TileCell(tile.Row, tile.Col));
                     }
 
                     if (extras.Count == 0)

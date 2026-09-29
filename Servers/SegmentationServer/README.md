@@ -7,7 +7,7 @@ Segment Anything 2 in Docker. A simple, easy to use Docker image for Meta's SAM2
 
 📰 New: The project has been restructured into three separate components:
 1. **segmentation_grpc**: Contains the gRPC interface definition and code generation
-2. **SegmentationClient**: Contains the client implementation for interacting with the segmentation service
+2. **Example**: The Python point-prompt sample lives in VikingLegacy at `Servers/SegmentationServer/Example`.
 3. **segmentation_server**: Contains the server implementation that runs in the Docker container
 
 📰 We also have a ROS Noetic supported image in the [ROS Noetic branch](https://github.com/peasant98/SAM2-Docker/tree/ros-noetic)!
@@ -89,26 +89,9 @@ To generate the gRPC code:
 python -m segmentation_grpc
 ```
 
-### SegmentationClient
+### Example
 
-This project contains the client implementation for interacting with the segmentation service.
-
-To segment an image:
-
-```bash
-python -m SegmentationClient --image path/to/image.png --coordinates 100,200 300,400
-```
-
-Optional arguments:
-- `--server`: The address of the segmentation service (default: localhost:50051)
-- `--labels`: Labels as l1,l2,... (e.g., 1,0). 1 indicates the point is in the foreground, 0 in the background. Defaults to assuming all points are foreground.
-- `--multimask`: Output multiple masks per point
-
-To test the service:
-
-```bash
-python -m SegmentationClient.test_service
-```
+The command-line sample is `Servers/SegmentationServer/Example` in the VikingLegacy repo (`python client_example.py`). This tree no longer contains a copy.
 
 ### segmentation_server
 

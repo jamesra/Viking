@@ -38,15 +38,14 @@ namespace WebAnnotation.View
                 List<string> listStrings = [];
                 if (Global.PenMode)
                 {
-                    listStrings.Add("Hold Left Click + SHIFT drag the interior: Move shape");
-                    listStrings.Add("Hold Left Click + SHIFT drag near edge: Create link");
-                    listStrings.Add("Draw path across shape: Replace annotation boundary");
+                    listStrings.Add("Pen: Draw across the shape to replace the boundary");
+                    listStrings.Add("Shift: Move the shape or create a link");
+                    listStrings.Add("Ctrl: Cut a hole or remove a hole");
                 }
                 else
                 {
                     listStrings.Add("SHIFT + Hold Left Button near the interior: Move shape");
                     listStrings.Add("SHIFT + Hold Left Button near edge: Create link");
-                    listStrings.Add("SHIFT + Left Click and drag: Move shape");
                     listStrings.Add("CTRL + Left click off control point: Add a control point");
                     listStrings.Add("CTRL + Left click on control point: Remove control point");
                 }
@@ -254,6 +253,8 @@ namespace WebAnnotation.View
             }
 
             polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, HSLColor);
+            // Warm the cut-fill cache while the cell is on screen so a later retrace does not triangulate it on the pen thread.
+            WebAnnotation.UI.Commands.PolygonCutFillCache.Begin(SmoothedVolumePolygon);
             CreateLabelObjects();
 
             InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];

@@ -22,11 +22,12 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// <summary>
     /// Idle-driven SAM2 proposals for circles in the current view. Owned by
     /// <see cref="AnnotationOverlay"/>; not a Viking command.
-    /// Capture uses a two-phase settle so a UI hitch cannot pass the 500ms idle
-    /// timer. After upload, camera moves cancel only the upload phase so already
-    /// collected points still segment. Section changes cancel both phases. An
-    /// interactive <see cref="SegmentationCommand"/> cancels proposal work but
-    /// leaves an in-flight viewport upload so that command can adopt the same image.
+        /// Capture uses a two-phase settle so a UI hitch cannot pass the 500ms idle
+        /// timer. A camera move cancels the upload and any in-flight SegmentTiles
+        /// queue, then the next idle batch orders circles from the new view center.
+        /// Section changes cancel both phases. An interactive
+        /// <see cref="SegmentationCommand"/> cancels proposal work but
+        /// leaves an in-flight viewport upload so that command can adopt the same image.
     /// </summary>
     internal sealed class AutoCirclePolygonizeController
     {
@@ -59,10 +60,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Updated on the UI thread. A confirm callback aborts if this is newer than <see cref="armedAtUtc"/>.</summary>
         private DateTime lastCameraChangeUtc;
 
-        /// <summary>Cancelled on camera/section change. Does not cancel in-flight SegmentImage work.</summary>
+        /// <summary>Cancelled on camera or section change. Stops capture and upload only.</summary>
         private CancellationTokenSource? uploadCts;
 
-        /// <summary>Cancelled on section change, dispose, or when SegmentationCommand is active.</summary>
+        /// <summary>
+        /// Cancelled when the view moves, the section changes, this controller is disposed,
+        /// or a <see cref="SegmentationCommand"/> starts. Stops the circle queue and the in-flight RPC.
+        /// </summary>
         private CancellationTokenSource processCts = new();
         private SegmentationViewportSession? uploadSession;
         private readonly List<ProcessBatch> processBatches = [];
@@ -70,7 +74,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private Rectangle lastViewBounds;
         /// <summary>
         /// Last submitted tile pyramid level from <see cref="SegmentationViewportSession.ResolveTileDownsample"/>.
-        /// Crossing 1↔2 (zoom in or out past the DS≤1 boundary) drops stale proposals and re-queues.
+        /// A change in that level drops stale proposals and re-queues. The current ceiling is 1.
         /// </summary>
         private int lastResolvedTileDownsample;
         private AutoPolygonizeProposal? hoveredProposal;
@@ -82,8 +86,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private sealed class ProcessBatch(SegmentationViewportSession session)
         {
+            private int finishStarted;
+
             public SegmentationViewportSession Session { get; } = session;
             public List<Task> ResponseTasks { get; } = [];
+
+            /// <summary>True for the first caller. Camera-move cancel and batch finally both finish the batch.</summary>
+            public bool TryBeginFinish() => Interlocked.Exchange(ref finishStarted, 1) == 0;
         }
 
         public AutoCirclePolygonizeController(SectionViewerControl parent, Action requestAnnotationLoad)
@@ -196,9 +205,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Restarts settle when the view moved or the resolved tile downsample crossed
-        /// the DS≤1 / DS=2 boundary (zoom in or out). Aborts capture/encode only;
-        /// an already-uploaded batch keeps segmenting.
+        /// Restarts settle when the view moved or the resolved tile pyramid level changed.
+        /// Cancels upload and the in-flight circle queue so the server stops growing the old view.
+        /// The next idle batch orders remaining circles from the new view center.
         /// </summary>
         public void OnCameraChanged()
         {
@@ -214,6 +223,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             lastViewBounds = current;
             lastCameraChangeUtc = DateTime.UtcNow;
+            Interlocked.Increment(ref cameraGeneration);
             if (tileLevelChanged)
             {
                 DropProposalsForTileDownsampleChange();
@@ -223,6 +233,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             lastResolvedTileDownsample = resolvedTile;
             viewportImageLease.ForgetIfViewMoved(current, GetCurrentDownsample());
             CancelUploadPhase();
+            CancelProcessPhase();
             CancelConfirmTimer();
             RestartIdleTimer();
         }
@@ -284,6 +295,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             lastCameraChangeUtc = DateTime.UtcNow;
+            Interlocked.Increment(ref cameraGeneration);
             CancelUploadPhase();
             CancelProcessPhase();
             CancelConfirmTimer();
@@ -682,16 +694,24 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private int batchRunning;
 
+        /// <summary>Set when a newer view asked to run while a batch was still winding down.</summary>
+        private int rerunAfterBatch;
+
+        /// <summary>Bumped on camera and section changes so a batch does not start SegmentTiles for a view it already left.</summary>
+        private int cameraGeneration;
+
         /// <summary>
-        /// One capture/upload plus sequential SegmentImage calls. GPU capture stays
-        /// on the session UI path; polygonize runs on a task per response. A camera
-        /// move after upload does not cancel the process token.
+        /// One capture/upload plus sequential SegmentTiles calls, nearest circle first.
+        /// A camera move cancels this batch. If the confirm timer fires before the
+        /// cancelled call returns, the finish path restarts the idle settle so the
+        /// new view is not dropped.
         /// </summary>
         private async Task RunBatchAsync()
         {
             if (Interlocked.CompareExchange(ref batchRunning, 1, 0) != 0)
             {
-                SegmentationDiag.Log("RunBatch skip: already running");
+                Interlocked.Exchange(ref rerunAfterBatch, 1);
+                SegmentationDiag.Log("RunBatch skip: already running; queued rerun");
                 return;
             }
 
@@ -702,6 +722,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             finally
             {
                 Interlocked.Exchange(ref batchRunning, 0);
+                if (Interlocked.Exchange(ref rerunAfterBatch, 0) == 1 && enabled)
+                    RestartIdleTimer();
             }
         }
 
@@ -774,6 +796,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 localUploadSession.ViewportBounds = localUploadSession.GetCurrentViewportBounds();
                 Rectangle viewBounds = localUploadSession.ViewportBounds;
+                int viewGeneration = Volatile.Read(ref cameraGeneration);
                 Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
                 List<LocationObj> candidates = CollectEligibleCircles(viewBounds, inset);
                 SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds}");
@@ -830,7 +853,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 foreach (LocationObj circle in candidates)
                 {
-                    if (processToken.IsCancellationRequested || !enabled)
+                    if (processToken.IsCancellationRequested ||
+                        !enabled ||
+                        Volatile.Read(ref cameraGeneration) != viewGeneration)
                         break;
 
                     if (parent.CurrentCommand is SegmentationCommand)
@@ -1200,7 +1225,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Cancels in-flight SegmentImage and per-response CPU work (section change, dispose, Segment command).
+        /// Cancels in-flight SegmentTiles and per-response CPU work.
+        /// Called when the view moves, the section changes, this controller stops, or Segment starts.
         /// </summary>
         private void CancelProcessPhase()
         {
@@ -1262,10 +1288,14 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Waits for remaining polygonize tasks, then DeleteImage so the SAM2 cache does not keep an orphan.</summary>
         private async Task FinishProcessBatchAsync(ProcessBatch batch)
         {
+            if (!batch.TryBeginFinish())
+                return;
+
             try
             {
-                if (batch.ResponseTasks.Count > 0)
-                    await Task.WhenAll(batch.ResponseTasks).ConfigureAwait(false);
+                Task[] pending = [.. batch.ResponseTasks];
+                if (pending.Length > 0)
+                    await Task.WhenAll(pending).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

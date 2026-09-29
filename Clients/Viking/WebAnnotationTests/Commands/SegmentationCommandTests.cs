@@ -410,6 +410,23 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void CellsContainingPoints_NamesOnlyCellsThatHoldThePoints()
+        {
+            List<Vector2> points =
+            [
+                new Vector2(100, 100),
+                new Vector2(200, 200),
+                new Vector2(1500, 100)
+            ];
+
+            List<TileCell> cells = SegmentationTileGrid.CellsContainingPoints(points, 1);
+
+            Assert.AreEqual(2, cells.Count);
+            CollectionAssert.Contains(cells, new TileCell(0, 0));
+            CollectionAssert.Contains(cells, new TileCell(0, 1));
+        }
+
+        [TestMethod]
         public void MosaicPixelToWorld_MapsTopLeftPixelToTheHighWorldEdge()
         {
             Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 0, 1024, 2);
