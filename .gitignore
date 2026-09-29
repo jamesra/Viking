@@ -48,3 +48,9 @@ TestResults
 
 # Optional local mirror of another Viking checkout (not part of this tree)
 /Viking/
+
+# Cursor plan files (local only, not for version control)
+.cursor/plans/
+
+# Slack/MCP tokens and other local MCP secrets
+.cursor/mcp.json
