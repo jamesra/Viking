@@ -1,17 +1,37 @@
 # Viking changelog
 
-Committed application version: **1.2.68.0**  
-(Working tree may already bump toward **1.2.70.0**; see Unreleased.)
+Committed application version: **1.2.76.0**  
+(1.2.70 and 1.2.75 were intermediate bumps and have no section of their own.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## Unreleased (working tree → 1.2.70)
+## 1.2.76 — 2026-09-29
 
-* `--version` / `/version` prints the entry-assembly version to the parent console before the UI starts.
-* Single-instance / deep-link shutdown: reject in-flight tools-page launches while Viking is closing; restore and foreground the existing window from the pipe ACK.
-* Auto-polygonize preference surface continues to grow (coarsest downsample gate, mask-overlay user sticky flag, related Annotation Preferences controls).
+*(csproj jumped 1.2.68 → 1.2.70 → 1.2.74 → 1.2.76. These notes cover that span. 1.2.74 was the previous committed build.)*
+
+* F1 help follows the idle catalog, the annotation under the mouse or pen, and the active command. Pen choice buttons list their captions. Circle, polygon, and freehand lines match the pen and mouse actions, and the bar notes that **Auto polygonize circles in view** turns idle segmentation off.
+* **Resegment** preview outline is 8 screen pixels wide, four times the previous 2-pixel stroke.
+* Segmentation uploads **1024×1024 mosaic tiles** (`UploadTile` / `SegmentTiles`) for the cells under the pen prompts, then any cells the mask asks to grow into. A tile the server reports missing is uploaded again. The default tile pyramid is full resolution (`SegmentationTileDownsample` = 1), so zoom no longer steps the upload up to DS2. Upload and segment are skipped when the camera is coarser than **Max Auto-Segment Downsample**. Growth can request more cells (up to 14 rounds). The debug mask overlay is drawn on the mosaic tile bounds, in line with the prompts. A jump sets the camera before tiles preload.
+* A closed pen loop that surrounds a circle offers **Convert {location id} to polygon**, including a circle the stroke never entered. The loop has to intersect the circle or contain it.
+* **Tab** starts segmentation to place a new structure. Clicks add prompts; click inside the mask to save. The type is the one selected in the structure list, or Cell when none is selected. A type that needs a parent still asks for one before the save.
+* Pen choice buttons sit in a column on the right. Each caption sits under its circle, wraps to the button width, and draws above the stroke preview. The column is spaced so the next button does not cover the caption. The Annotation menu can hide the buttons (**Show Pen Action Buttons**); the shape previews stay clickable. In Pen Mode, a structure hotkey places the annotation instead of starting a one-point stroke that was thrown away.
+* Retrace cut: **Ctrl** chooses which piece stays on the original location. **Shift** keeps both pieces. The other piece is saved as a second, unlinked annotation on the same structure and section. Help text lists both modifiers.
+* A polygon cut preview reuses a triangulation built when the cell is shown, so drawing the cut does not refit the whole outline. Vertices away from the cut stay at their saved positions.
+* A saved cut drops the extra samples from the smooth display outline. Points that remain are original vertices.
+* Saving a polygon that SQL Server would reject keeps the largest valid piece instead of an unhandled "Geometry invalid" error.
+* Continue-last-trace still works after the last location has left the local cache, including across a missing or bad section. The new disc is mapped with the open section only. A click on the section where that location was just placed does not duplicate it.
+* `--version` / `/version` prints the entry-assembly version to the parent console before the UI starts. The startup log line includes the same version.
+* A second launch or tools-page deep link is rejected while Viking is closing. A deep link to the running instance restores a minimized window and brings it forward, and leaves a maximized window maximized.
+* **Goto Location** says when the annotation service denied access. That used to share the missing-ID text.
+* Annotation Preferences: **Max Auto-Segment Downsample** (auto-segment does not run when the view is zoomed out past this value). Leave this control alone; it will later be set from the segmentation model you choose. The SAM2 mask overlay is a saved preference, with **Hide segmentation rings** and prompt overlay next to it. Proposal rings use the structure hue. The circle dims while its proposal ring is under the cursor.
+* Annotation menu **Update Volume Positions…** (review access only) corrects stored volume positions for a typed section list or range. Progress shows on the viewer status bar.
+* Moving the window between an HDR monitor and an SDR monitor recreates the swap chain so the view does not stay washed out.
+* A failed location or structure link save shows the inner database or fault message.
+* An unreadable shortcuts file is replaced from the server. A failed download leaves the settings already in memory.
+* The Python SegmentationClient sample is no longer in this tree. The point-prompt example lives in VikingLegacy at `Servers/SegmentationServer/Example`.
+* Stability: evicted tile-cache entries are disposed; SQL spatial types stay on version 16; a stos zip entry that would write outside the cache folder is rejected; in-flight region queries and a failed save no longer leave the canvas empty or the edit half-applied; nested R-tree locks no longer deadlock. Identity discovery failures include the server error text.
 
 ## 1.2.68 — 2026-09-22
 
