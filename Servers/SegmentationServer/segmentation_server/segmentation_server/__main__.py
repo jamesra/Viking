@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from segmentation_grpc.generate_grpc import generate_grpc_code
 from segmentation_server.compile_config import env_compile_image_encoder_enabled
+from segmentation_server.demo_site import DEFAULT_DEMO_PORT, demo_enabled
 from segmentation_server.image_cache import (
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_MEMORY_BYTES,
@@ -29,6 +30,8 @@ class CLIArgs:
     cache_max_memory_bytes: int
     cache_max_images: int
     compile_image_encoder: bool
+    demo_site: bool
+    demo_port: int
 
 
 async def main() -> None:
@@ -62,7 +65,10 @@ async def main() -> None:
         '--cache-max-images',
         type=int,
         default=DEFAULT_MAX_ENTRIES,
-        help=f'Max cached images / GPU embeddings (default: {DEFAULT_MAX_ENTRIES})',
+        help=(
+            f'Max arbitrary uploaded images (default: {DEFAULT_MAX_ENTRIES}). '
+            'Shared tiles ignore this and stay until the byte cap or GPU memory requires a drop.'
+        ),
     )
     parser.add_argument(
         '--compile-image-encoder',
@@ -72,6 +78,21 @@ async def main() -> None:
             'torch.compile SAM2 Hiera encoder on CUDA (default on). '
             'Use --no-compile-image-encoder to disable. First warmup can take minutes.'
         ),
+    )
+    parser.add_argument(
+        '--demo-site',
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            'Serve the optional HTTPS point-prompt page '
+            f'(default: SEGMENTATION_DEMO_SITE, off). Port {DEFAULT_DEMO_PORT}.'
+        ),
+    )
+    parser.add_argument(
+        '--demo-port',
+        type=int,
+        default=DEFAULT_DEMO_PORT,
+        help=f'HTTPS port for the demo page (default: {DEFAULT_DEMO_PORT})',
     )
     args = parser.parse_args()
 
@@ -89,6 +110,8 @@ async def main() -> None:
         cache_max_memory_bytes=args.cache_max_memory_bytes,
         cache_max_images=args.cache_max_images,
         compile_image_encoder=compile_image_encoder,
+        demo_site=demo_enabled(args.demo_site),
+        demo_port=args.demo_port,
     )
 
     if cli_args.generate_grpc:
@@ -101,7 +124,8 @@ async def main() -> None:
 
     logger.info(
         "Starting segmentation service on port %s with %s gRPC workers and %s inference workers "
-        "(cache ttl=%ss, max_memory=%s bytes, max_images=%s, compile_image_encoder=%s)",
+        "(cache ttl=%ss, max_memory=%s bytes, max_images=%s, compile_image_encoder=%s, "
+        "demo_site=%s, demo_port=%s)",
         cli_args.port,
         cli_args.workers,
         cli_args.inference_workers,
@@ -109,6 +133,8 @@ async def main() -> None:
         cli_args.cache_max_memory_bytes,
         cli_args.cache_max_images,
         cli_args.compile_image_encoder,
+        cli_args.demo_site,
+        cli_args.demo_port,
     )
     await serve(
         port=cli_args.port,
@@ -118,6 +144,8 @@ async def main() -> None:
         cache_max_memory_bytes=cli_args.cache_max_memory_bytes,
         cache_max_images=cli_args.cache_max_images,
         compile_image_encoder=cli_args.compile_image_encoder,
+        demo_site=cli_args.demo_site,
+        demo_port=cli_args.demo_port,
     )
 
 

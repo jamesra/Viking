@@ -352,3 +352,74 @@ async def test_upload_tile_new_bytes_replace_entry() -> None:
     assert pinned[1] == b"new"
     await cache.release_image(image_id)
     assert created == [b"old", b"new"]
+
+
+def _tile_key(row: int) -> tuple:
+    return ("vol", 1, "TEM", "grid", 1, row, 0)
+
+
+@pytest.mark.asyncio
+async def test_shared_tiles_ignore_entry_cap_and_ttl() -> None:
+    clock = FakeClock()
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=10, max_entries=1, time_fn=clock)
+    first, _hit = await cache.upload_tile(_tile_key(0), b"a", 1, 1)
+    second, _hit = await cache.upload_tile(_tile_key(1), b"b", 1, 1)
+    clock.advance(30)
+    assert await cache.get_image(first) is not None
+    await cache.release_image(first)
+    assert await cache.get_image(second) is not None
+    await cache.release_image(second)
+
+
+@pytest.mark.asyncio
+async def test_entry_cap_does_not_evict_a_shared_tile() -> None:
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60, max_entries=1)
+    tile_id, _hit = await cache.upload_tile(_tile_key(0), b"tile", 1, 1)
+    first = await cache.upload_image(b"one", 1, 1)
+    second = await cache.upload_image(b"two", 1, 1)
+    assert await cache.get_image(tile_id) is not None
+    await cache.release_image(tile_id)
+    assert await cache.get_image(first) is None
+    assert await cache.get_image(second) is not None
+    await cache.release_image(second)
+
+
+@pytest.mark.asyncio
+async def test_shared_tile_client_delete_is_ignored_until_memory_is_needed() -> None:
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60, max_entries=1)
+    tile_id, _hit = await cache.upload_tile(_tile_key(0), b"tile", 1, 1)
+    assert await cache.delete_image(tile_id) is True
+    pinned = await cache.get_image_by_tile(_tile_key(0))
+    assert pinned is not None
+    await cache.release_image(pinned[0])
+
+    pressure = {"on": False}
+    pressured = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        gpu_under_pressure=lambda: pressure["on"] is True,
+    )
+    tile_id, _hit = await pressured.upload_tile(_tile_key(0), b"tile", 1, 1)
+    pressure["on"] = True
+    assert await pressured.delete_image(tile_id) is True
+    assert await pressured.get_image_by_tile(_tile_key(0)) is None
+
+
+@pytest.mark.asyncio
+async def test_shared_tiles_evict_when_byte_cap_or_gpu_is_hit() -> None:
+    cache = ImageCache(max_memory_bytes=2, ttl_seconds=60, max_entries=8)
+    first, _hit = await cache.upload_tile(_tile_key(0), b"ab", 1, 1)
+    _second, _hit = await cache.upload_tile(_tile_key(1), b"cd", 1, 1)
+    assert await cache.get_image(first) is None
+
+    pressure = {"on": False}
+    gpu_cache = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        max_entries=8,
+        gpu_under_pressure=lambda: pressure["on"] is True,
+    )
+    kept, _hit = await gpu_cache.upload_tile(_tile_key(0), b"a", 1, 1)
+    pressure["on"] = True
+    _new, _hit = await gpu_cache.upload_tile(_tile_key(1), b"b", 1, 1)
+    assert await gpu_cache.get_image(kept) is None

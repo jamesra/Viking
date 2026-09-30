@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SAM2 Segmentation Demo</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header>
+    <h1>SAM2 Segmentation Demo</h1>
+    <p>Open an image. Left-click adds a foreground point. Right-click adds a background point. Click a point again to remove it.</p>
+  </header>
+  <div class="toolbar">
+    <label class="file">
+      Image
+      <input id="file" type="file" accept="image/png,image/jpeg,image/webp">
+    </label>
+    <button id="clear" type="button" disabled>Clear points</button>
+    <span id="status">Choose an image.</span>
+  </div>
+  <div id="stage" hidden>
+    <canvas id="canvas"></canvas>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

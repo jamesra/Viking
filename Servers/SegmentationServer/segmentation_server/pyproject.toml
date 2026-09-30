@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio"]
+dev = ["pytest", "pytest-asyncio", "hypothesis"]
 
 [project.scripts]
 segmentation-server = "segmentation_server.__main__:run"

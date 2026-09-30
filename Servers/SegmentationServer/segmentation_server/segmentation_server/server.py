@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import importlib.metadata
 import logging
 import os
@@ -39,6 +40,7 @@ from segmentation_grpc import (
     add_SegmentationServiceServicer_to_server,
 )
 from segmentation_server.cuda_errors import UnrecoverableGpuError
+from segmentation_server.growth_memory import GrowthMemory, grow_remembering, prompt_key
 from segmentation_server.image_cache import (
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_MEMORY_BYTES,
@@ -52,11 +54,19 @@ from segmentation_server.mask_utils import (
     encode_png,
     prepare_image_for_sam2,
 )
+from segmentation_server.tile_work import (
+    install_sam2_log_filter,
+    install_tile_work_logging,
+    tile_work,
+)
 from segmentation_server.tile_growth import (
     TILE_SIZE,
+    GrowthCancelled,
+    PredictUnavailable,
     TileIndex,
-    grow_segmentation,
     max_requested_tiles_from_env,
+    stitch_half_tile,
+    tile_of_point,
 )
 
 if TYPE_CHECKING:
@@ -69,6 +79,25 @@ _TLS_PORT = 443
 _MISSING_IMAGE_ID_MESSAGE = "image_id is required on the first SegmentImageSets message."
 _MIXED_IMAGE_ID_MESSAGE = "SegmentImageSets messages must use one image_id for the whole stream."
 _EMPTY_FOREGROUND_POINTS_MESSAGE = "No foreground_points provided. At least one point is required."
+
+
+def _remember_tile_image(
+    images: dict,
+    row: int,
+    col: int,
+    image_bytes: bytes,
+) -> None:
+    """Decode a pinned tile so a seam can be stitched without another upload.
+
+    A decode failure leaves the cell out of the map. Growth then asks for the
+    cell again instead of prompting on the tile cut.
+    """
+    if not image_bytes or (row, col) in images:
+        return
+    try:
+        images[(row, col)] = prepare_image_for_sam2(image_bytes)
+    except (OSError, ValueError):
+        logger.exception("Could not decode tile row=%s col=%s for a half-tile", row, col)
 
 
 class RequestLoadTracker:
@@ -122,8 +151,10 @@ class SegmentationServicer(SegmentationServiceServicer):
         """
         Args:
             cache_max_memory_bytes: Image-byte cap for the cache (default 1 GiB).
-            cache_ttl_seconds: Unused-entry lifetime (default 5 minutes).
-            cache_max_images: Max cached images / GPU embeddings (default 32).
+                Shared tiles are kept until this cap, or until the GPU needs room.
+            cache_ttl_seconds: Unused-entry lifetime for arbitrary uploads (default 5 minutes).
+                Shared tiles are not expired by the TTL.
+            cache_max_images: Max arbitrary uploads (default 32). Shared tiles do not count.
             inference_executor: Thread pool for SAM2 work; None uses the default executor.
             server_start_time: time.monotonic() at process start, for uptime.
             model: Injected SAM2 wrapper; constructed here if omitted.
@@ -147,14 +178,27 @@ class SegmentationServicer(SegmentationServiceServicer):
             max_entries=cache_max_images,
             create_predictor_func=self.model.create_initialized_predictor,
             release_predictor_func=self.model.release_predictor,
+            gpu_under_pressure=self._gpu_under_pressure,
         )
         self._max_requested_tiles = max_requested_tiles_from_env()
+        self._growth_memory = GrowthMemory()
         try:
             self._loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
         except RuntimeError:
             self._loop = None
         if hasattr(self.model, "set_on_compiled_ready"):
             self.model.set_on_compiled_ready(self._flush_cache_after_compile)
+
+    def _gpu_under_pressure(self) -> bool:
+        """True when the model says the next shared-tile embedding needs GPU memory."""
+        check = getattr(self.model, "gpu_memory_under_pressure", None)
+        if not callable(check):
+            return False
+        try:
+            return check() is True
+        except Exception:
+            logger.exception("GPU memory check failed")
+            return False
 
     def _flush_cache_after_compile(self) -> None:
         """Drop eager embeddings once the compiled encoder is serving."""
@@ -656,6 +700,11 @@ class SegmentationServicer(SegmentationServiceServicer):
                 request.height,
                 executor=self.inference_executor,
             )
+            if already_cached and hasattr(self.model, "note_disk_embedding_used"):
+                try:
+                    self.model.note_disk_embedding_used(image_data)
+                except Exception:
+                    logger.exception("Embedding disk touch failed")
         except UnrecoverableGpuError as e:
             await self._abort_unrecoverable_gpu(e, context)
             return UploadTileResponse()
@@ -682,6 +731,16 @@ class SegmentationServicer(SegmentationServiceServicer):
             already_cached,
             time.perf_counter() - start_time,
         )
+        if not already_cached:
+            self._growth_memory.invalidate_tile(
+                coord.volume,
+                int(coord.section),
+                coord.channel,
+                coord.transform,
+                int(coord.downsample),
+                int(coord.row),
+                int(coord.col),
+            )
         return UploadTileResponse(already_cached=already_cached)
 
     async def SegmentTiles(
@@ -713,34 +772,58 @@ class SegmentationServicer(SegmentationServiceServicer):
         start_time = time.perf_counter()
         pinned_ids: List[int] = []
         predictors: dict[Tuple[int, int], Tuple[Any, threading.Lock, int, int]] = {}
+        images: dict[Tuple[int, int], NDArray[np.uint8]] = {}
         try:
+            foreground = [(point.x, point.y) for point in request.foreground]
+            background = [(point.x, point.y) for point in request.background]
             seen: set[TileCacheKey] = set()
+            uploaded: List[TileIndex] = []
             for tile in request.tiles:
                 key = _tile_cache_key(tile)
                 if key in seen:
                     continue
                 seen.add(key)
+                holds_foreground = _tile_contains_foreground(tile, foreground)
                 pinned = await self.image_cache.get_image_by_tile(key)
                 if pinned is None:
-                    await context.abort(
-                        grpc.StatusCode.NOT_FOUND,
-                        f"TILE_NOT_FOUND row={tile.row} col={tile.col} downsample={tile.downsample}",
+                    if holds_foreground:
+                        await context.abort(
+                            grpc.StatusCode.NOT_FOUND,
+                            f"TILE_NOT_FOUND row={tile.row} col={tile.col} downsample={tile.downsample}",
+                        )
+                        return SegmentationResponse()
+                    logger.info(
+                        "SegmentTiles skip uncached tile row=%s col=%s ds=%s (no foreground)",
+                        tile.row,
+                        tile.col,
+                        tile.downsample,
                     )
-                    return SegmentationResponse()
-                image_id, _data, width, height, predictor, predictor_lock = pinned
+                    continue
+                image_id, image_bytes, width, height, predictor, predictor_lock = pinned
                 pinned_ids.append(image_id)
+                _remember_tile_image(images, int(tile.row), int(tile.col), image_bytes)
                 if predictor is None:
-                    await context.abort(
-                        grpc.StatusCode.UNAVAILABLE,
-                        f"Predictor for tile row={tile.row} col={tile.col} is not ready.",
-                    )
-                    return SegmentationResponse()
+                    if holds_foreground:
+                        await context.abort(
+                            grpc.StatusCode.UNAVAILABLE,
+                            f"Predictor for tile row={tile.row} col={tile.col} is not ready.",
+                        )
+                        return SegmentationResponse()
+                    continue
                 predictors[(tile.row, tile.col)] = (predictor, predictor_lock, height, width)
-
-            foreground = [(point.x, point.y) for point in request.foreground]
-            background = [(point.x, point.y) for point in request.background]
-            uploaded = [TileIndex(row=tile.row, col=tile.col) for tile in request.tiles]
+                uploaded.append(TileIndex(row=int(tile.row), col=int(tile.col)))
             multimask_output = request.multimask_output
+            session = prompt_key(
+                identity.volume,
+                int(identity.section),
+                identity.channel,
+                identity.transform,
+                int(identity.downsample),
+                multimask_output,
+                foreground,
+                background,
+            )
+            await self._pin_remembered_tiles(identity, session, predictors, pinned_ids, images)
 
             def predict(
                 row: int,
@@ -748,27 +831,75 @@ class SegmentationServicer(SegmentationServiceServicer):
                 points: List[Tuple[int, int]],
                 labels: List[int],
             ):
-                predictor, predictor_lock, height, width = predictors[(row, col)]
+                found = predictors.get((row, col))
+                if found is None:
+                    raise PredictUnavailable(f"row={row} col={col}")
+                predictor, predictor_lock, height, width = found
                 with predictor_lock:
-                    return self.model.predict_tile_union(
-                        predictor,
+                    with tile_work(identity.volume, int(identity.section), col, row):
+                        return self.model.predict_tile_union(
+                            predictor,
+                            points,
+                            labels,
+                            multimask_output,
+                            (height, width),
+                        )
+
+            def seam_predict(
+                src_row: int,
+                src_col: int,
+                dst_row: int,
+                dst_col: int,
+                side: str,
+                points: List[Tuple[int, int]],
+                labels: List[int],
+            ):
+                source = images.get((src_row, src_col))
+                neighbor = images.get((dst_row, dst_col))
+                if source is None or neighbor is None or source.shape[:2] != neighbor.shape[:2]:
+                    raise PredictUnavailable(
+                        f"seam row={src_row} col={src_col} side={side}"
+                    )
+                stitched = stitch_half_tile(source, neighbor, side)
+                height, width = int(stitched.shape[0]), int(stitched.shape[1])
+                logger.info(
+                    "seam half-tile side=%s from row=%s col=%s to row=%s col=%s",
+                    side,
+                    src_row,
+                    src_col,
+                    dst_row,
+                    dst_col,
+                )
+                with tile_work(identity.volume, int(identity.section), src_col, src_row):
+                    return self.model.predict_ephemeral(
+                        stitched,
                         points,
                         labels,
                         multimask_output,
                         (height, width),
                     )
 
+            stop_growth = threading.Event()
+            cancel_watch = asyncio.create_task(self._watch_rpc_cancel(context, stop_growth))
             try:
-                result = await asyncio.get_running_loop().run_in_executor(
+                outcome = await asyncio.get_running_loop().run_in_executor(
                     self.inference_executor,
-                    lambda: grow_segmentation(
+                    lambda: grow_remembering(
+                        self._growth_memory,
+                        session,
                         uploaded,
                         foreground,
                         background,
                         predict,
+                        should_stop=stop_growth.is_set,
                         max_requested=self._max_requested_tiles,
+                        seam_predict=seam_predict,
                     ),
                 )
+                result = outcome.result
+            except GrowthCancelled:
+                logger.info("SegmentTiles stopped because the client cancelled the call")
+                return SegmentationResponse()
             except UnrecoverableGpuError as e:
                 await self._abort_unrecoverable_gpu(e, context)
                 return SegmentationResponse()
@@ -776,6 +907,13 @@ class SegmentationServicer(SegmentationServiceServicer):
                 logger.exception("Tile segmentation failed")
                 await context.abort(grpc.StatusCode.INTERNAL, f"Error processing segmentation request: {e}")
                 return SegmentationResponse()
+            finally:
+                stop_growth.set()
+                cancel_watch.cancel()
+                try:
+                    await cancel_watch
+                except asyncio.CancelledError:
+                    pass
 
             height, width = (result.mask.shape[0], result.mask.shape[1]) if result.mask.ndim == 2 else (0, 0)
             labeled_image, segments = combined_mask_to_segments(
@@ -806,23 +944,73 @@ class SegmentationServicer(SegmentationServiceServicer):
                 )
             logger.info(
                 "SegmentTiles ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "
-                "tiles=%s fg=%s segments=%s requested=%s in %.3fs",
+                "tiles=%s fg=%s segments=%s requested=%s reused=%s predicted=%s in %.3fs session=%s",
                 identity.volume,
                 identity.section,
                 identity.channel,
                 identity.transform,
                 identity.downsample,
-                len(seen),
+                len(uploaded),
                 len(foreground),
                 len(segments),
                 len(result.requested),
+                outcome.reused,
+                outcome.predicted,
                 time.perf_counter() - start_time,
+                hashlib.blake2s(repr(session).encode(), digest_size=4).hexdigest(),
             )
             return response
         finally:
             for image_id in pinned_ids:
                 await self.image_cache.release_image(image_id)
             self._load.end(time.perf_counter() - start_time)
+
+    async def _watch_rpc_cancel(self, context: ServicerContext, stop_growth: threading.Event) -> None:
+        """Sets ``stop_growth`` when the client drops the RPC, so tile growth stops between SAM2 calls."""
+        try:
+            while not stop_growth.is_set():
+                if context.cancelled():
+                    stop_growth.set()
+                    return
+                await asyncio.sleep(0.05)
+        except asyncio.CancelledError:
+            return
+
+    async def _pin_remembered_tiles(
+        self,
+        identity: TileCoord,
+        session: tuple,
+        predictors: dict,
+        pinned_ids: List[int],
+        images: dict,
+    ) -> None:
+        """Pin embeddings still cached for cells this prompt set already segmented.
+
+        A remembered mask does not need the predictor. Pinning one lets a cache
+        miss run SAM2. If the embedding is gone, the walk asks for the cell again
+        and the stored mask stays in the composite.
+        """
+        for index in self._growth_memory.tile_indexes(session):
+            if (index.row, index.col) in predictors:
+                continue
+            key = (
+                identity.volume,
+                int(identity.section),
+                identity.channel,
+                identity.transform,
+                int(identity.downsample),
+                index.row,
+                index.col,
+            )
+            pinned = await self.image_cache.get_image_by_tile(key)
+            if pinned is None:
+                continue
+            image_id, image_bytes, width, height, predictor, predictor_lock = pinned
+            pinned_ids.append(image_id)
+            _remember_tile_image(images, index.row, index.col, image_bytes)
+            if predictor is None:
+                continue
+            predictors[(index.row, index.col)] = (predictor, predictor_lock, height, width)
 
     async def SegmentImage(
         self,
@@ -909,6 +1097,17 @@ class SegmentationServicer(SegmentationServiceServicer):
             yield response
 
 
+def _tile_contains_foreground(tile: TileCoord, foreground: List[Tuple[int, int]]) -> bool:
+    """True when a mosaic foreground point lies in this cell.
+
+    SegmentTiles returns NOT_FOUND for that cell so the client re-uploads the seed.
+    A missing cell with no foreground point is left out of the uploaded set; growth
+    asks for it only when the mask reaches the shared border.
+    """
+    target = TileIndex(row=int(tile.row), col=int(tile.col))
+    return any(tile_of_point(int(x), int(y)) == target for x, y in foreground)
+
+
 def _tile_cache_key(coord: TileCoord) -> TileCacheKey:
     return (
         coord.volume,
@@ -940,14 +1139,14 @@ def _points_from_set(request: SegmentImageSetRequest) -> Tuple[List[Tuple[int, i
     return coordinates, labels
 
 
-def load_server_credentials(
+def resolve_tls_pem_paths(
     cert_path: Optional[str] = None,
     key_path: Optional[str] = None,
-):
-    """Load PEM server credentials from SSL_CERT_PATH and SSL_KEY_PATH.
+) -> Optional[Tuple[str, str]]:
+    """Return Let's Encrypt PEM paths when both files exist.
 
-    Returns None when the paths are unset or the files are not on disk yet so the
-    process can serve the legacy cleartext port while certbot finishes enrollment.
+    Unset paths or files that certbot has not written yet leave TLS unbound so the
+    process can still serve the legacy cleartext port.
     """
     if cert_path is None:
         cert_path = os.environ.get("SSL_CERT_PATH", "")
@@ -965,9 +1164,25 @@ def load_server_credentials(
             key_path,
         )
         return None
-    with open(key_path, "rb") as key_file:
+    return cert_path, key_path
+
+
+def load_server_credentials(
+    cert_path: Optional[str] = None,
+    key_path: Optional[str] = None,
+):
+    """Load PEM server credentials from SSL_CERT_PATH and SSL_KEY_PATH.
+
+    Returns None when the paths are unset or the files are not on disk yet so the
+    process can serve the legacy cleartext port while certbot finishes enrollment.
+    """
+    pem_paths = resolve_tls_pem_paths(cert_path, key_path)
+    if pem_paths is None:
+        return None
+    cert_file_path, key_file_path = pem_paths
+    with open(key_file_path, "rb") as key_file:
         private_key = key_file.read()
-    with open(cert_path, "rb") as cert_file:
+    with open(cert_file_path, "rb") as cert_file:
         certificate_chain = cert_file.read()
     return grpc.ssl_server_credentials(((private_key, certificate_chain),))
 
@@ -980,13 +1195,18 @@ async def serve(
     cache_max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES,
     cache_max_images: int = DEFAULT_MAX_ENTRIES,
     compile_image_encoder: bool = True,
+    demo_site: bool = False,
+    demo_port: int = 8443,
 ) -> None:
     """Listen on cleartext `[::]:port` and, when PEMs exist, TLS `[::]:443`.
 
     The cleartext port is legacy. It stays until every client uses TLS.
     inference_workers defaults to 1 because concurrent SAM2 predict() calls on one
     GPU typically contend for VRAM rather than increase throughput.
+    demo_site binds a separate HTTPS port only when certificate files exist.
     """
+    install_tile_work_logging()
+    install_sam2_log_filter()
     server_start_time = time.monotonic()
     inference_executor = futures.ThreadPoolExecutor(
         max_workers=inference_workers, thread_name_prefix="sam2-infer"
@@ -1002,18 +1222,16 @@ async def serve(
             ('grpc.max_receive_message_length', 64 * 1024 * 1024),
         ],
     )
-    add_SegmentationServiceServicer_to_server(
-        SegmentationServicer(
-            inference_executor=inference_executor,
-            server_start_time=server_start_time,
-            inference_workers=inference_workers,
-            cache_ttl_seconds=cache_ttl_seconds,
-            cache_max_memory_bytes=cache_max_memory_bytes,
-            cache_max_images=cache_max_images,
-            compile_image_encoder=compile_image_encoder,
-        ),
-        server,
+    servicer = SegmentationServicer(
+        inference_executor=inference_executor,
+        server_start_time=server_start_time,
+        inference_workers=inference_workers,
+        cache_ttl_seconds=cache_ttl_seconds,
+        cache_max_memory_bytes=cache_max_memory_bytes,
+        cache_max_images=cache_max_images,
+        compile_image_encoder=compile_image_encoder,
     )
+    add_SegmentationServiceServicer_to_server(servicer, server)
 
     insecure_address = f'[::]:{port}'
     server.add_insecure_port(insecure_address)
@@ -1024,7 +1242,8 @@ async def serve(
         _TLS_PORT,
     )
     bound = [insecure_address]
-    credentials = load_server_credentials()
+    pem_paths = resolve_tls_pem_paths()
+    credentials = load_server_credentials() if pem_paths is not None else None
     if credentials is not None:
         tls_address = f'[::]:{_TLS_PORT}'
         server.add_secure_port(tls_address, credentials)
@@ -1033,26 +1252,38 @@ async def serve(
     logger.info("Server started, listening on %s (inference_workers=%s)", ", ".join(bound), inference_workers)
 
     loop = asyncio.get_running_loop()
+    # Import here so demo_site can import resolve_tls_pem_paths without a cycle.
+    from segmentation_server.demo_site import start_demo_site
+
     grace_seconds = 5
+    demo_listener = None
 
     def _request_stop() -> None:
         asyncio.ensure_future(server.stop(grace_seconds))
 
     try:
-        loop.add_signal_handler(signal.SIGTERM, _request_stop)
-        loop.add_signal_handler(signal.SIGINT, _request_stop)
-    except NotImplementedError:
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            try:
-                signal.signal(sig, lambda s, f: loop.call_soon_threadsafe(_request_stop))
-            except (ValueError, OSError):
-                pass
-
-    try:
+        demo_listener = start_demo_site(
+            enabled=demo_site,
+            port=demo_port,
+            servicer=servicer,
+            loop=loop,
+            pem_paths=pem_paths,
+        )
+        try:
+            loop.add_signal_handler(signal.SIGTERM, _request_stop)
+            loop.add_signal_handler(signal.SIGINT, _request_stop)
+        except NotImplementedError:
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                try:
+                    signal.signal(sig, lambda s, f: loop.call_soon_threadsafe(_request_stop))
+                except (ValueError, OSError):
+                    pass
         await server.wait_for_termination()
     except asyncio.CancelledError:
         await server.stop(grace_seconds)
     finally:
+        if demo_listener is not None:
+            demo_listener.close()
         inference_executor.shutdown(wait=False, cancel_futures=True)
         grpc_executor.shutdown(wait=False, cancel_futures=True)
 

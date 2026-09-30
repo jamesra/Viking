@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
 import logging
 import os
 import threading
@@ -22,6 +24,7 @@ from segmentation_server.compile_config import (
     SAM2_IMAGE_SIZE,
     hydra_overrides_for_image_encoder,
 )
+from segmentation_server.embedding_store import EmbeddingStore, open_embedding_store
 from segmentation_server.cuda_errors import raise_if_cuda_lost
 from segmentation_server.mask_utils import (
     LabeledImage,
@@ -104,6 +107,11 @@ class SegmentationModel:
             hydra_overrides_extra=[],
         )
         self.predictor: SAM2ImagePredictor = SAM2ImagePredictor(self.sam2_model)
+        self._embedding_mode = "eager"
+        self._embedding_store: Optional[EmbeddingStore] = open_embedding_store(
+            sam2_checkpoint,
+            model_cfg,
+        )
 
         if hydra_overrides_for_image_encoder(compile_image_encoder, self.device.type):
             self.compile_status = COMPILE_WARMING
@@ -158,6 +166,8 @@ class SegmentationModel:
                 with self._swap_lock:
                     self.sam2_model = compiled
                     self.predictor = compiled_predictor
+                    # Compiled numerics are a different cache generation than eager set_image().
+                    self._embedding_mode = "compiled"
             with self._callback_lock:
                 self.compile_status = COMPILE_READY
                 callback = self._on_compiled_ready
@@ -208,8 +218,20 @@ class SegmentationModel:
         return SAM2ImagePredictor(model)
 
     def create_initialized_predictor(self, image_data: bytes) -> SAM2ImagePredictor:
-        """Create a predictor and run set_image() so later predict() calls skip embedding."""
-        predictor = self.create_predictor()
+        """Create a predictor whose image embedding is ready for predict().
+
+        Same PNG bytes reload the embedding from disk when the cache is enabled.
+        A miss runs set_image() and stores the feature maps for the next process.
+        The encoder generation (eager or compiled) is captured with the model so a
+        compile swap cannot file an eager embedding under the compiled namespace.
+        """
+        digest = hashlib.sha256(image_data).hexdigest()
+        with self._swap_lock:
+            model = self.sam2_model
+            mode = self._embedding_mode
+        predictor = SAM2ImagePredictor(model)
+        if self._try_load_disk_embedding(predictor, digest, mode):
+            return predictor
         image_np = prepare_image_for_sam2(image_data)
         try:
             with torch.inference_mode(), self._autocast():
@@ -217,7 +239,104 @@ class SegmentationModel:
         except Exception as e:
             raise_if_cuda_lost(e)
             raise
+        self._save_disk_embedding(predictor, digest, mode)
         return predictor
+
+    def note_disk_embedding_used(self, image_data: bytes) -> None:
+        """Bump the disk mtime when the GPU cache already held this PNG.
+
+        UploadTile skips ``set_image()`` on an in-memory hit, so without this
+        the file looks idle and the disk cap can drop a cell that is still live.
+        """
+        store = self._embedding_store
+        if store is None or not image_data:
+            return
+        digest = hashlib.sha256(image_data).hexdigest()
+        with self._swap_lock:
+            mode = self._embedding_mode
+        store.touch(digest, mode)
+
+    def _try_load_disk_embedding(
+        self,
+        predictor: SAM2ImagePredictor,
+        digest: str,
+        mode: str,
+    ) -> bool:
+        store = self._embedding_store
+        if store is None:
+            return False
+        blob = store.try_load(digest, mode)
+        if blob is None:
+            return False
+        try:
+            payload = torch.load(io.BytesIO(blob), map_location="cpu", weights_only=True)
+            self._install_disk_features(predictor, payload)
+        except Exception:
+            logger.warning("Embedding disk blob unreadable sha=%s mode=%s", digest[:12], mode)
+            store.discard(digest, mode)
+            return False
+        logger.info("Embedding disk hit sha=%s mode=%s bytes=%s", digest[:12], mode, len(blob))
+        return True
+
+    def _save_disk_embedding(self, predictor: SAM2ImagePredictor, digest: str, mode: str) -> None:
+        store = self._embedding_store
+        if store is None or predictor._features is None or not predictor._orig_hw:
+            return
+        try:
+            blob = self._export_disk_features(predictor)
+            store.save(digest, blob, mode)
+        except Exception:
+            logger.exception("Embedding disk write failed sha=%s mode=%s", digest[:12], mode)
+            return
+        logger.info("Embedding disk store sha=%s mode=%s bytes=%s", digest[:12], mode, len(blob))
+
+    @staticmethod
+    def _export_disk_features(predictor: SAM2ImagePredictor) -> bytes:
+        """CPU tensor dict. weights_only loads accept tensors, not Python lists."""
+        features = predictor._features
+        height, width = predictor._orig_hw[0]
+        high_res = list(features["high_res_feats"])
+        payload: dict[str, torch.Tensor] = {
+            "image_embed": features["image_embed"].detach().to("cpu").contiguous(),
+            "orig_hw": torch.tensor([int(height), int(width)], dtype=torch.int64),
+            "n_high": torch.tensor([len(high_res)], dtype=torch.int64),
+        }
+        for index, tensor in enumerate(high_res):
+            payload[f"high_res_{index}"] = tensor.detach().to("cpu").contiguous()
+        buffer = io.BytesIO()
+        torch.save(payload, buffer)
+        return buffer.getvalue()
+
+    @staticmethod
+    def _install_disk_features(predictor: SAM2ImagePredictor, payload: dict) -> None:
+        """Restore set_image() state from a disk blob onto ``predictor``'s device."""
+        device = predictor.device
+        n_high = int(payload["n_high"].item())
+        high_res = [payload[f"high_res_{index}"].to(device) for index in range(n_high)]
+        orig = payload["orig_hw"].tolist()
+        predictor._features = {
+            "image_embed": payload["image_embed"].to(device),
+            "high_res_feats": high_res,
+        }
+        predictor._orig_hw = [(int(orig[0]), int(orig[1]))]
+        predictor._is_image_set = True
+        predictor._is_batch = False
+
+    def gpu_memory_under_pressure(self) -> bool:
+        """True when free CUDA memory is below a reserve for the next tile embedding.
+
+        The reserve is the larger of 1 GiB and 10% of the device. CPU and MPS
+        have no embedding pile to trim, so they report no pressure.
+        """
+        if self.device.type != "cuda":
+            return False
+        try:
+            free_bytes, total_bytes = torch.cuda.mem_get_info()
+        except Exception:
+            logger.exception("CUDA memory query failed")
+            return False
+        reserve = max(1024 ** 3, int(total_bytes * 0.10))
+        return free_bytes < reserve
 
     def release_predictor(self, predictor: Any) -> None:
         """Drop per-image embeddings so GPU memory can be reclaimed."""
@@ -285,6 +404,51 @@ class SegmentationModel:
             if raw_logits.ndim >= 1 and raw_logits.shape[0] == masks_np.shape[0]:
                 logits_np = raw_logits[sorted_ind]
         return masks_np[sorted_ind].astype(np.bool_), scores_np[sorted_ind], logits_np
+
+    def predict_ephemeral(
+        self,
+        image_np: NDArray,
+        coordinates: Sequence[Point],
+        labels: Sequence[int],
+        multimask_output: bool,
+        empty_shape: Tuple[int, int],
+    ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
+        """set_image() and predict() on a throwaway predictor.
+
+        Half-tiles are not pinned beside the cell embeddings. The embedding is
+        filed under a hash of the stitched pixels, so the next call on the same
+        cut reloads it and skips the encoder even when the prompt point moved.
+        The predictor is released before return.
+        """
+        image = np.ascontiguousarray(image_np)
+        digest = _image_digest(image)
+        with self._swap_lock:
+            model = self.sam2_model
+            mode = self._embedding_mode
+        predictor = SAM2ImagePredictor(model)
+        try:
+            if not self._try_load_disk_embedding(predictor, digest, mode):
+                try:
+                    with torch.inference_mode(), self._autocast():
+                        predictor.set_image(image)
+                except Exception as e:
+                    raise_if_cuda_lost(e)
+                    raise
+                self._save_disk_embedding(predictor, digest, mode)
+            return self.predict_tile_union(
+                predictor,
+                coordinates,
+                labels,
+                multimask_output,
+                empty_shape,
+            )
+        finally:
+            reset = getattr(predictor, "reset_predictor", None)
+            if callable(reset):
+                try:
+                    reset()
+                except Exception:
+                    logger.exception("Failed to reset half-tile predictor")
 
     def predict_tile_union(
         self,
@@ -435,6 +599,15 @@ class SegmentationModel:
                 multimask_output,
                 (height, width),
             )
+
+
+def _image_digest(image: NDArray) -> str:
+    """Stable id for one stitched half-tile. Shape is part of the key."""
+    digest = hashlib.sha256()
+    digest.update(str(image.shape).encode("ascii"))
+    digest.update(str(image.dtype).encode("ascii"))
+    digest.update(np.ascontiguousarray(image).tobytes())
+    return digest.hexdigest()
 
 
 def _resolve_sam2_paths() -> Tuple[str, str]:

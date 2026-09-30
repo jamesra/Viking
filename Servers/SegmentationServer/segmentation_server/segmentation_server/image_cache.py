@@ -1,4 +1,9 @@
-"""In-memory image cache with LRU eviction, TTL expiration, and per-image predictors."""
+"""In-memory image cache with two retention modes.
+
+Arbitrary uploads (one client, one image id) use LRU, a short TTL, and an entry
+cap. Shared tiles are the same cell for every client, so they stay until the
+encoded-byte cap or a GPU-memory check says an embedding has to be dropped.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from segmentation_server.cuda_errors import UnrecoverableGpuError
+from segmentation_server.tile_work import tile_work
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +45,8 @@ class CachedImage:
     predictor_lock: threading.Lock = field(default_factory=threading.Lock)
     in_use: int = 0
     tile_key: Optional[TileCacheKey] = None
+    # Shared grid cell. Exempt from the arbitrary-upload entry cap and TTL.
+    shared_tile: bool = False
 
 
 class ImageCache:
@@ -46,7 +54,9 @@ class ImageCache:
 
     Cache mutations take an asyncio.Lock. Predictor inference uses a per-image
     threading.Lock because it runs in executor threads. Encoded image bytes count
-    toward max_memory_bytes; GPU embeddings are capped via max_entries instead.
+    toward max_memory_bytes for both modes. max_entries and the TTL apply only to
+    arbitrary uploads. Shared tiles are evicted when that byte cap is exceeded or
+    when gpu_under_pressure reports that the next embedding needs the GPU.
     """
 
     def __init__(
@@ -57,17 +67,21 @@ class ImageCache:
         create_predictor_func: Optional[Callable[[bytes], Any]] = None,
         release_predictor_func: Optional[Callable[[Any], None]] = None,
         time_fn: Callable[[], float] = time.time,
+        gpu_under_pressure: Optional[Callable[[], bool]] = None,
     ) -> None:
         """
         Args:
             max_memory_bytes: Cap on sum of cached image_data lengths.
-            ttl_seconds: Evict entries unused for this many seconds.
-            max_entries: Cap on cached images (VRAM proxy for GPU embeddings).
+            ttl_seconds: Evict arbitrary uploads unused for this many seconds.
+                Shared tiles are not expired by the TTL.
+            max_entries: Cap on arbitrary uploads. Shared tiles do not count.
             create_predictor_func: bytes -> initialized predictor. If None, images
                 are stored without predictors (tests / decode-only use).
             release_predictor_func: Called with a predictor before its entry is
                 dropped (delete, LRU, TTL). ImageCache stays torch-free.
             time_fn: Clock for TTL/LRU; inject a fake in tests.
+            gpu_under_pressure: Return True only when a shared-tile embedding
+                should be dropped to free GPU memory. None disables that check.
         """
         self._cache: Dict[int, CachedImage] = {}
         # Deleted/evicted while SegmentImage still holds a pin; predictor reset waits for check-in.
@@ -82,6 +96,7 @@ class ImageCache:
         self._create_predictor_func = create_predictor_func
         self._release_predictor_func = release_predictor_func
         self._time_fn = time_fn
+        self._gpu_under_pressure_fn = gpu_under_pressure
 
         logger.info(
             "ImageCache initialized with max_memory=%s bytes (%.2f GB), "
@@ -92,8 +107,24 @@ class ImageCache:
             ttl_seconds,
         )
 
-    def _create_predictor_in_executor(self, image_data: bytes, image_id: int) -> Any:
-        """Build the predictor off the event loop. Returns None on failure."""
+    def _create_predictor_in_executor(
+        self,
+        image_data: bytes,
+        image_id: int,
+        tile_key: Optional[TileCacheKey] = None,
+    ) -> Any:
+        """Build the predictor off the event loop. Returns None on failure.
+
+        tile_key is set for shared mosaic cells so embedding logs name that cell.
+        Arbitrary uploads leave it unset.
+        """
+        if tile_key is None:
+            return self._create_predictor_body(image_data, image_id)
+        volume, section, _channel, _transform, _downsample, row, col = tile_key
+        with tile_work(volume, section, col, row):
+            return self._create_predictor_body(image_data, image_id)
+
+    def _create_predictor_body(self, image_data: bytes, image_id: int) -> Any:
         if not self._create_predictor_func:
             logger.warning("Cannot create predictor for image ID=%s - function not set", image_id)
             return None
@@ -113,6 +144,8 @@ class ImageCache:
         width: int,
         height: int,
         executor: Optional[Any] = None,
+        shared_tile: bool = False,
+        tile_key: Optional[TileCacheKey] = None,
     ) -> int:
         """Store an image, initialize its predictor, and return a new ID.
 
@@ -124,8 +157,11 @@ class ImageCache:
         async with self._lock:
             await self._cleanup_expired()
             size_bytes = len(image_data)
-            while self._needs_eviction(size_bytes):
-                if not await self._evict_oldest():
+            while True:
+                reason = self._eviction_reason(size_bytes, shared_tile=shared_tile)
+                if reason is None:
+                    break
+                if not await self._evict_oldest(shared_tile=shared_tile, reason=reason):
                     break
 
             image_id = self._next_id
@@ -138,6 +174,7 @@ class ImageCache:
                 last_access_time=now,
                 upload_time=now,
                 size_bytes=size_bytes,
+                shared_tile=shared_tile,
             )
             self._current_memory_bytes += size_bytes
             logger.info(
@@ -156,6 +193,7 @@ class ImageCache:
                     self._create_predictor_in_executor,
                     image_data,
                     image_id,
+                    tile_key,
                 )
             except UnrecoverableGpuError:
                 async with self._lock:
@@ -191,10 +229,23 @@ class ImageCache:
         Identical bytes for an existing key refresh TTL and skip set_image().
         Different bytes replace the entry and encode again. The returned image_id is
         an internal predictor handle; callers that speak gRPC use TileCoord, not this id.
+        Logs on this call name the cell: volume, section (z), column (x), row (y).
 
         Returns:
             (image_id, already_cached). already_cached is True only for the identical-bytes hit.
         """
+        volume, section, _channel, _transform, _downsample, row, col = tile_key
+        with tile_work(volume, section, col, row):
+            return await self._upload_tile_body(tile_key, image_data, width, height, executor)
+
+    async def _upload_tile_body(
+        self,
+        tile_key: TileCacheKey,
+        image_data: bytes,
+        width: int,
+        height: int,
+        executor: Optional[Any],
+    ) -> Tuple[int, bool]:
         async with self._lock:
             await self._cleanup_expired()
             existing_id = self._coord_index.get(tile_key)
@@ -207,7 +258,14 @@ class ImageCache:
                 if cached is not None:
                     await self._delete_image_internal(existing_id)
 
-        image_id = await self.upload_image(image_data, width, height, executor=executor)
+        image_id = await self.upload_image(
+            image_data,
+            width,
+            height,
+            executor=executor,
+            shared_tile=True,
+            tile_key=tile_key,
+        )
         async with self._lock:
             cached = self._cache.get(image_id)
             if cached is None:
@@ -282,10 +340,37 @@ class ImageCache:
                 self._release_predictor(retiring.predictor, retiring.predictor_lock)
                 logger.info("Image retired after last user: ID=%s", image_id)
 
-    def _needs_eviction(self, incoming_size_bytes: int) -> bool:
-        over_bytes = self._current_memory_bytes + incoming_size_bytes > self._max_memory_bytes
-        over_entries = len(self._cache) >= self._max_entries
-        return over_bytes or over_entries
+    def _arbitrary_count(self) -> int:
+        return sum(1 for cached in self._cache.values() if not cached.shared_tile)
+
+    def _host_bytes_exceeded(self, incoming_size_bytes: int = 0) -> bool:
+        return self._current_memory_bytes + incoming_size_bytes > self._max_memory_bytes
+
+    def _gpu_under_pressure(self) -> bool:
+        """True only for a real boolean. A missing or failed check does not evict."""
+        if self._gpu_under_pressure_fn is None:
+            return False
+        try:
+            return self._gpu_under_pressure_fn() is True
+        except Exception:
+            logger.exception("GPU memory check failed")
+            return False
+
+    def _eviction_reason(self, incoming_size_bytes: int, *, shared_tile: bool) -> Optional[str]:
+        """Why the next insert must drop something, or None when it fits.
+
+        Arbitrary uploads still stop at max_entries. Shared tiles ignore that
+        count and the TTL; they yield only for the byte cap or GPU pressure.
+        """
+        if self._host_bytes_exceeded(incoming_size_bytes):
+            return "memory cap"
+        if shared_tile:
+            if self._gpu_under_pressure():
+                return "GPU memory"
+            return None
+        if self._arbitrary_count() >= self._max_entries:
+            return "entry cap"
+        return None
 
     def _release_predictor(self, predictor: Any, predictor_lock: threading.Lock) -> None:
         if predictor is None or self._release_predictor_func is None:
@@ -325,8 +410,26 @@ class ImageCache:
         return await self._retire_or_delete(image_id)
 
     async def delete_image(self, image_id: int) -> bool:
-        """Delete by ID. Returns False if the ID was not present."""
+        """Delete by ID. Returns False if the ID was not present.
+
+        A shared tile is kept when the client asks to drop it and the cache is
+        under both the byte cap and the GPU check. The cell is still in use by
+        other clients. The delete runs when one of those caps says memory is needed.
+        """
         async with self._lock:
+            cached = self._cache.get(image_id)
+            if (
+                cached is not None
+                and cached.shared_tile
+                and not self._host_bytes_exceeded()
+                and not self._gpu_under_pressure()
+            ):
+                logger.info(
+                    "Shared tile retained (client delete ignored): ID=%s key=%s",
+                    image_id,
+                    cached.tile_key,
+                )
+                return True
             if not await self._delete_image_internal(image_id):
                 logger.info("Image deletion failed (not found): ID=%s", image_id)
                 return False
@@ -351,15 +454,31 @@ class ImageCache:
                 len(self._retiring),
             )
 
-    async def _evict_oldest(self) -> bool:
-        """Drop the LRU idle entry. Caller must hold `_lock`. False if none idle."""
-        idle_ids = [image_id for image_id, cached in self._cache.items() if cached.in_use == 0]
-        if not idle_ids:
+    async def _evict_oldest(self, *, shared_tile: bool, reason: str) -> bool:
+        """Drop the LRU idle entry. Caller must hold `_lock`. False if none idle.
+
+        A shared-tile insert drops another shared tile first. An arbitrary-upload
+        entry-cap eviction does not take a shared tile.
+        """
+        idle = [
+            (image_id, cached)
+            for image_id, cached in self._cache.items()
+            if cached.in_use == 0
+        ]
+        if shared_tile:
+            tiles = [(image_id, cached) for image_id, cached in idle if cached.shared_tile]
+            pool = tiles or idle
+        elif reason == "entry cap":
+            pool = [(image_id, cached) for image_id, cached in idle if not cached.shared_tile]
+        else:
+            pool = idle
+        if not pool:
             return False
-        oldest_id = min(idle_ids, key=lambda k: self._cache[k].last_access_time)
+        oldest_id = min(pool, key=lambda item: item[1].last_access_time)[0]
         await self._delete_image_internal(oldest_id)
         logger.info(
-            "Image evicted (LRU): ID=%s, total_cache=%s bytes (%.2f MB), count=%s",
+            "Image evicted (%s): ID=%s, total_cache=%s bytes (%.2f MB), count=%s",
+            reason,
             oldest_id,
             self._current_memory_bytes,
             self._current_memory_bytes / (1024**2),
@@ -373,7 +492,8 @@ class ImageCache:
         expired_ids = [
             image_id
             for image_id, cached_image in self._cache.items()
-            if cached_image.in_use == 0
+            if not cached_image.shared_tile
+            and cached_image.in_use == 0
             and current_time - cached_image.last_access_time > self._ttl_seconds
         ]
         for image_id in expired_ids:
