@@ -684,8 +684,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// False when the camera is coarser than <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
-        /// Equality still runs. The preference cannot exceed DS 2, so DS 3 never starts.
-        /// A saved preference of 1 still blocks DS 2.
+        /// Equality still runs. The preference cannot exceed DS 4, so DS 5 never starts.
+        /// A lower saved preference (default 2) still blocks the coarser views.
         /// </summary>
         private bool IsWithinAutoSegmentDownsample()
         {

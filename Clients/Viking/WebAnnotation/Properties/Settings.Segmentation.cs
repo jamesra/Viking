@@ -80,7 +80,8 @@ namespace WebAnnotation.Properties
 
         /// <summary>
         /// Coarsest camera downsample at which auto-segment still runs. A coarser view is skipped.
-        /// Default 2, so downsample 2 runs and DS 3 does not. The getter clamps a saved value above 2.
+        /// Default 2, so downsample 2 runs and DS 3 does not. The preference allows 1 to 4;
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/> clamps a saved value above 4.
         /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
