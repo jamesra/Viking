@@ -305,9 +305,9 @@ namespace Viking
         {
             var names = new List<string>();
             if (!string.IsNullOrWhiteSpace(volumeUrl) && VikingDeepLinkParser.LooksLikeVolumeUrl(volumeUrl))
-                names.Add("VikingLegacy.Activation." + HashKey(VikingDeepLinkParser.NormalizeVolumeUrl(volumeUrl!)));
+                names.Add(VikingChannelIdentity.PipePrefix + HashKey(VikingDeepLinkParser.NormalizeVolumeUrl(volumeUrl!)));
             if (!string.IsNullOrWhiteSpace(volumeName))
-                names.Add("VikingLegacy.Activation.Name." + HashKey(volumeName!.Trim().ToLowerInvariant()));
+                names.Add(VikingChannelIdentity.PipeNamePrefix + HashKey(volumeName!.Trim().ToLowerInvariant()));
             return names;
         }
 

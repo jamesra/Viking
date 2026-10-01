@@ -43,6 +43,12 @@
 .PARAMETER ReleaseUrl
     HTTP base used by vpk download when .\releases has no older full package.
     Default: http://websvc.codepharm.net/Software/Viking
+    With -TestChannel, defaults to http://websvc.codepharm.net/Software/VikingTest
+
+.PARAMETER TestChannel
+    Build the unsigned "Viking Test" side-by-side channel (pack id VikingTest, Start menu
+    "Viking Test", viking-test://, feed Software/VikingTest). Skips Authenticode signing.
+    Output goes to .\releases-test. Does not touch the production Software/Viking feed.
 
 .EXAMPLE
     .\PublishVelopack.ps1 -Help
@@ -55,6 +61,11 @@
     Release build, version from Viking.csproj, default signing cert.
 
 .EXAMPLE
+    .\PublishVelopack.ps1 -TestChannel
+
+    Unsigned Viking Test pack for the Software/VikingTest feed (no YubiKey).
+
+.EXAMPLE
     .\PublishVelopack.ps1 -Configuration Release -Version "1.2.1"
 
     Pack as 1.2.1 instead of the csproj ApplicationVersion.
@@ -65,8 +76,9 @@
     Force previous-release download from that URL when local releases are empty.
 
 .NOTES
-    Output directory: Clients\Viking\Viking\releases
+    Output directory: Clients\Viking\Viking\releases (or releases-test with -TestChannel)
     Signing prompts for the YubiKey PIN; keep the key plugged in through Step 5 and Step 7.
+    -TestChannel skips signing entirely.
     Does not upload anything. Use DeployVelopack.ps1 next.
 
 .LINK
@@ -81,7 +93,8 @@ param(
     [string]$CertificateThumbprint = "41403cbc59209b576efe575775abe8f4a42da6ba",
     [string]$TimestampUrl = "http://timestamp.digicert.com",
     [string]$Version = "",
-    [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking"
+    [string]$ReleaseUrl = "",
+    [switch]$TestChannel
 )
 
 if ($Help) {
@@ -94,14 +107,40 @@ $ErrorActionPreference = "Stop"
 $projectPath = Join-Path $PSScriptRoot "Viking.csproj"
 $projectDir = $PSScriptRoot
 $publishDir = Join-Path $projectDir "bin\$Configuration\net48"
-$releaseDir = Join-Path $projectDir "releases"
+
+$PackId = if ($TestChannel) { "VikingTest" } else { "Viking" }
+$PackTitle = if ($TestChannel) { "Viking Test" } else { "Viking" }
+$releaseDir = Join-Path $projectDir $(if ($TestChannel) { "releases-test" } else { "releases" })
+$iconPath = Join-Path $projectDir $(if ($TestChannel) { "VikingTest.ico" } else { "Viking.ico" })
+# Velopack names Setup from pack id (VikingTest-win-Setup.exe). The public test feed
+# install link uses Viking-win-Setup.exe under Software/VikingTest (same as production filename, different folder).
+$setupExeName = "$PackId-win-Setup.exe"
+$publicSetupExeName = if ($TestChannel) { "Viking-win-Setup.exe" } else { $setupExeName }
+
+if ([string]::IsNullOrWhiteSpace($ReleaseUrl)) {
+    $ReleaseUrl = if ($TestChannel) {
+        "http://websvc.codepharm.net/Software/VikingTest"
+    } else {
+        "http://websvc.codepharm.net/Software/Viking"
+    }
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Viking Velopack Build and Sign" -ForegroundColor Cyan
+if ($TestChannel) {
+    Write-Host "Viking Test Velopack Build (unsigned)" -ForegroundColor Cyan
+} else {
+    Write-Host "Viking Velopack Build and Sign" -ForegroundColor Cyan
+}
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Configuration: $Configuration" -ForegroundColor Yellow
-Write-Host "Certificate Thumbprint: $CertificateThumbprint" -ForegroundColor Yellow
-Write-Host "Timestamp URL: $TimestampUrl" -ForegroundColor Yellow
+Write-Host "Pack id / title: $PackId / $PackTitle" -ForegroundColor Yellow
+Write-Host "Release URL: $ReleaseUrl" -ForegroundColor Yellow
+if (-not $TestChannel) {
+    Write-Host "Certificate Thumbprint: $CertificateThumbprint" -ForegroundColor Yellow
+    Write-Host "Timestamp URL: $TimestampUrl" -ForegroundColor Yellow
+} else {
+    Write-Host "Signing: skipped (test channel)" -ForegroundColor Yellow
+}
 Write-Host ""
 
 # Check if project file exists
@@ -125,8 +164,12 @@ if (-not $vpkInstalled) {
     Write-Host "Velopack CLI found" -ForegroundColor Gray
 }
 
-# Step 2: Find signtool.exe
+# Step 2: Find signtool.exe (production only)
 Write-Host ""
+if ($TestChannel) {
+    Write-Host "Step 2: Skipping signtool lookup (unsigned test channel)" -ForegroundColor Green
+    $signtoolPath = $null
+} else {
 Write-Host "Step 2: Finding signtool.exe..." -ForegroundColor Green
 
 $signtoolPath = $null
@@ -161,6 +204,7 @@ if (-not $signtoolPath) {
 }
 
 Write-Host "Found signtool: $signtoolPath" -ForegroundColor Gray
+}
 
 # Helper function to display progress in Velopack-style format
 function Write-VelopackProgress {
@@ -511,7 +555,13 @@ Write-Host ""
 Write-Host "Step 4: Building project..." -ForegroundColor Green
 Write-Host "This may take a few minutes..." -ForegroundColor Gray
 
-dotnet build $projectPath -c $Configuration
+$buildArgs = @("build", $projectPath, "-c", $Configuration)
+if ($TestChannel) {
+    $buildArgs += "/p:VikingTestChannel=true"
+    Write-Host "MSBuild: VikingTestChannel=true" -ForegroundColor Cyan
+}
+
+dotnet @buildArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
@@ -537,8 +587,12 @@ if (-not (Test-Path $mainExeCheck)) {
 
 Write-Host "Build output verified: Viking.exe found" -ForegroundColor Gray
 
-# Step 5: Pre-sign all files with HSM certificate
+# Step 5: Pre-sign all files with HSM certificate (production only)
 Write-Host ""
+if ($TestChannel) {
+    Write-Host "Step 5: Skipping Authenticode pre-sign (unsigned test channel)" -ForegroundColor Green
+    Write-Host "Windows will show the usual unsigned-publisher warning on install." -ForegroundColor Yellow
+} else {
 Write-Host "Step 5: Pre-signing all files with HSM certificate..." -ForegroundColor Green
 Write-Host "This will require PIN entry, but only once for all files." -ForegroundColor Gray
 
@@ -607,6 +661,7 @@ if ($filesToSign.Count -eq 0) {
         exit 1
     }
 }
+}
 
 # Step 6: Package with Velopack (skip signing since files are already signed)
 Write-Host ""
@@ -624,12 +679,12 @@ if (-not (Test-Path $releaseDir)) {
 
 # Check for previous release package (needed for delta generation)
 Write-Host "Checking for previous release package..." -ForegroundColor Gray
-$previousPackage = Get-PreviousReleasePackage -ReleaseDir $releaseDir -CurrentVersion $Version -PackId "Viking"
+$previousPackage = Get-PreviousReleasePackage -ReleaseDir $releaseDir -CurrentVersion $Version -PackId $PackId
 
 if ($null -eq $previousPackage) {
     Write-Host "Previous release package not found locally." -ForegroundColor Yellow
     Write-Host "Attempting to download from server..." -ForegroundColor Gray
-    $previousPackage = Download-PreviousRelease -ReleaseDir $releaseDir -ReleaseUrl $ReleaseUrl -PackId "Viking"
+    $previousPackage = Download-PreviousRelease -ReleaseDir $releaseDir -ReleaseUrl $ReleaseUrl -PackId $PackId
     
     if ($null -eq $previousPackage) {
         Write-Host "No previous release available. Delta packages will not be generated for this release." -ForegroundColor Yellow
@@ -688,17 +743,33 @@ if (-not (Test-Path $mainExePath)) {
     exit 1
 }
 
-# Don't provide any signing parameters - files are already pre-signed in Step 5
-Write-Host "Skipping signing during packaging (files already pre-signed in Step 5)" -ForegroundColor Gray
-Write-Host "Note: Velopack may warn about unsigned files - this is expected and safe to ignore." -ForegroundColor Gray
+# Don't provide any signing parameters - files are already pre-signed in Step 5 (production)
+# or intentionally unsigned for the test channel.
+if ($TestChannel) {
+    Write-Host "Packing unsigned Viking Test (no --signParams)" -ForegroundColor Gray
+} else {
+    Write-Host "Skipping signing during packaging (files already pre-signed in Step 5)" -ForegroundColor Gray
+    Write-Host "Note: Velopack may warn about unsigned files - this is expected and safe to ignore." -ForegroundColor Gray
+}
 
-vpk pack `
-    --packId "Viking" `
-    --packVersion $Version `
-    --packDir $publishDir `
-    --mainExe "Viking.exe" `
-    --outputDir $releaseDir `
-    --verbose
+$packArgs = @(
+    "pack",
+    "--packId", $PackId,
+    "--packTitle", $PackTitle,
+    "--packVersion", $Version,
+    "--packDir", $publishDir,
+    "--mainExe", "Viking.exe",
+    "--outputDir", $releaseDir,
+    "--verbose"
+)
+if (Test-Path $iconPath) {
+    $packArgs += @("--icon", $iconPath)
+    Write-Host "Icon: $iconPath" -ForegroundColor Gray
+} else {
+    Write-Host "Warning: icon not found at $iconPath; Velopack will use defaults" -ForegroundColor Yellow
+}
+
+vpk @packArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Velopack packaging failed with exit code $LASTEXITCODE" -ForegroundColor Red
@@ -708,19 +779,18 @@ if ($LASTEXITCODE -ne 0) {
 
 # Verify output was created
 # Velopack creates Setup.exe with pattern: {PackId}-win-Setup.exe
-$setupExe = Join-Path $releaseDir "Viking-win-Setup.exe"
+$setupExe = Join-Path $releaseDir $setupExeName
 $versionedDir = Join-Path $releaseDir $Version
-$setupExeInVersionedDir = Join-Path $versionedDir "Viking-win-Setup.exe"
+$setupExeInVersionedDir = Join-Path $versionedDir $setupExeName
 
 # Also check for generic Setup.exe (in case Velopack changes naming)
 $setupExeGeneric = Join-Path $releaseDir "Setup.exe"
 $setupExeGenericVersioned = Join-Path $versionedDir "Setup.exe"
 
 if (Test-Path $setupExe) {
-    Write-Host "Found Viking-win-Setup.exe in release directory" -ForegroundColor Gray
+    Write-Host "Found $setupExeName in release directory" -ForegroundColor Gray
 } elseif (Test-Path $setupExeInVersionedDir) {
-    Write-Host "Found Viking-win-Setup.exe in versioned subdirectory: $versionedDir" -ForegroundColor Gray
-    # Move to root for easier access
+    Write-Host "Found $setupExeName in versioned subdirectory: $versionedDir" -ForegroundColor Gray
     Move-Item $setupExeInVersionedDir $setupExe -Force
 } elseif (Test-Path $setupExeGeneric) {
     Write-Host "Found Setup.exe in release directory (using generic name)" -ForegroundColor Gray
@@ -744,41 +814,54 @@ if (Test-Path $setupExe) {
 
 Write-Host "Packaging completed successfully!" -ForegroundColor Green
 
-# Step 7: Sign Velopack-generated Setup.exe
-Write-Host ""
-Write-Host "Step 7: Signing Velopack-generated Setup.exe with ECC certificate..." -ForegroundColor Green
-Write-Host "Note: .nupkg files are ZIP archives and cannot be signed with signtool.exe" -ForegroundColor Gray
-
-# Sign Setup.exe (the main installer that needs signing)
-# Initialize success flag
-$script:signingSuccess = $false
-if ($setupExe -and (Test-Path $setupExe)) {
-    Write-Host "Found Setup.exe: $setupExe" -ForegroundColor Gray
-    Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
-    
-    & $signtoolPath sign `
-        /sha1 $CertificateThumbprint `
-        /t $TimestampUrl `
-        /fd SHA256 `
-        "$setupExe"
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Successfully signed Setup.exe!" -ForegroundColor Green
-        $script:signingSuccess = $true
-    } else {
-        Write-Host "Error: Failed to sign Setup.exe (exit code $LASTEXITCODE)" -ForegroundColor Red
-        Write-Host "Check your YubiKey is connected and PIN is correct." -ForegroundColor Yellow
-        exit $LASTEXITCODE
+if ($TestChannel -and $setupExe -and (Test-Path $setupExe)) {
+    $publicSetupExe = Join-Path $releaseDir $publicSetupExeName
+    if ((Split-Path -Leaf $setupExe) -ne $publicSetupExeName) {
+        Copy-Item -LiteralPath $setupExe -Destination $publicSetupExe -Force
+        Write-Host "Public test installer alias: $publicSetupExeName (install URL filename under Software/VikingTest)" -ForegroundColor Cyan
     }
+}
+
+# Step 7: Sign Velopack-generated Setup.exe (production only)
+Write-Host ""
+$script:signingSuccess = $false
+if ($TestChannel) {
+    Write-Host "Step 7: Skipping Setup.exe Authenticode sign (unsigned test channel)" -ForegroundColor Green
+    $script:signingSuccess = $true
 } else {
-    Write-Host "Error: Setup.exe not found" -ForegroundColor Red
-    exit 1
+    Write-Host "Step 7: Signing Velopack-generated Setup.exe with ECC certificate..." -ForegroundColor Green
+    Write-Host "Note: .nupkg files are ZIP archives and cannot be signed with signtool.exe" -ForegroundColor Gray
+
+    if ($setupExe -and (Test-Path $setupExe)) {
+        Write-Host "Found Setup.exe: $setupExe" -ForegroundColor Gray
+        Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
+
+        & $signtoolPath sign `
+            /sha1 $CertificateThumbprint `
+            /t $TimestampUrl `
+            /fd SHA256 `
+            "$setupExe"
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully signed Setup.exe!" -ForegroundColor Green
+            $script:signingSuccess = $true
+        } else {
+            Write-Host "Error: Failed to sign Setup.exe (exit code $LASTEXITCODE)" -ForegroundColor Red
+            Write-Host "Check your YubiKey is connected and PIN is correct." -ForegroundColor Yellow
+            exit $LASTEXITCODE
+        }
+    } else {
+        Write-Host "Error: Setup.exe not found" -ForegroundColor Red
+        exit 1
+    }
 }
 
 # Summary
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-if ($script:signingSuccess) {
+if ($TestChannel) {
+    Write-Host "Viking Test Build Complete (unsigned)!" -ForegroundColor Green
+} elseif ($script:signingSuccess) {
     Write-Host "Build and Sign Complete!" -ForegroundColor Green
 } else {
     Write-Host "Build Complete (Signing Failed)" -ForegroundColor Yellow
@@ -788,9 +871,14 @@ Write-Host "========================================" -ForegroundColor Cyan
 if ($script:signingSuccess) {
     Write-Host "Release directory: $releaseDir" -ForegroundColor Cyan
     Write-Host "Version: $Version" -ForegroundColor Cyan
+    Write-Host "Pack id: $PackId ($PackTitle)" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
     Write-Host "1. Review the files in: $releaseDir" -ForegroundColor White
-    Write-Host "2. Run DeployVelopack.ps1 to deploy to the server" -ForegroundColor White
+    if ($TestChannel) {
+        Write-Host "2. Run DeployVelopack.ps1 -TestChannel -ServerPath '\\server\share\Software\VikingTest'" -ForegroundColor White
+    } else {
+        Write-Host "2. Run DeployVelopack.ps1 to deploy to the server" -ForegroundColor White
+    }
     Write-Host ""
 }

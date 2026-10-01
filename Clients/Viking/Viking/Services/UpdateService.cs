@@ -15,8 +15,6 @@ namespace Viking.Services
     /// </summary>
     public static class UpdateService
     {
-        private const string UpdateUrl = "https://websvc.codepharm.net/Software/Viking";
-
         /// <summary>
         /// Shows a "Checking for updates" form and checks for updates at startup.
         /// This runs on the UI thread before the login dialog is shown.
@@ -27,7 +25,7 @@ namespace Viking.Services
             // Show "Checking for updates" form
             Form? checkingForm = null;
 
-            var mgr = new UpdateManager(UpdateUrl);
+            var mgr = new UpdateManager(Viking.VikingChannelIdentity.UpdateUrl);
             if (!mgr.IsInstalled)
             {
                 Trace.WriteLine("[Velopack] Update check skipped because Viking is not installed.");
