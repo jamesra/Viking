@@ -34,7 +34,11 @@ namespace Viking
             int start = -1;
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i]?.StartsWith("viking:", StringComparison.OrdinalIgnoreCase) == true)
+                string? arg = args[i];
+                if (arg is null)
+                    continue;
+                if (arg.StartsWith("viking:", StringComparison.OrdinalIgnoreCase)
+                    || arg.StartsWith("viking-test:", StringComparison.OrdinalIgnoreCase))
                 {
                     start = i;
                     break;
@@ -213,8 +217,14 @@ namespace Viking
                 CopyPlaceQuery(parts, link.Place, "DS", "ds");
             }
 
-            return parts.Count == 0 ? "viking://open" : "viking://open?" + string.Join("&", parts);
+            string openBase = ProtocolScheme + "://open";
+            return parts.Count == 0 ? openBase : openBase + "?" + string.Join("&", parts);
         }
+
+        /// <summary>
+        /// Scheme used when building activation URLs. Defaults to viking; test builds set viking-test at startup.
+        /// </summary>
+        public static string ProtocolScheme { get; set; } = "viking";
 
         /// <summary>
         /// True when the incoming link targets the volume already open (URL and/or Identity name).

@@ -117,7 +117,10 @@ namespace Viking
             // Upgrade settings from previous versions (preserves user settings across updates)
             SettingsManager.UpgradeSettingsIfNeeded();
 
-            // Register viking:// URL protocol so the OS launches Viking when the user clicks a viking:// link
+            // Channel identity (production vs Viking Test) drives protocol, pipes, and update URL.
+            VikingDeepLinkParser.ProtocolScheme = VikingChannelIdentity.ProtocolScheme;
+
+            // Register this channel's URL protocol (viking:// or viking-test://)
             VikingProtocolRegistration.RegisterIfNeeded();
 
             // Same-volume deep link with a full volume URL/name can be forwarded before UI setup.

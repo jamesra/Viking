@@ -24,6 +24,14 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <!-- Unsigned side-by-side "Viking Test" channel (pack id VikingTest, viking-test://, separate update feed). -->
+  <PropertyGroup Condition="'$(VikingTestChannel)' == 'true'">
+    <DefineConstants>$(DefineConstants);VIKING_TEST_CHANNEL</DefineConstants>
+    <ApplicationIcon>VikingTest.ico</ApplicationIcon>
+    <ProductName>Viking Test</ProductName>
+    <Title>Viking Test</Title>
+    <AssemblyTitle>Viking Test</AssemblyTitle>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="EntityFramework" Version="6.5.1" />
