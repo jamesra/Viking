@@ -95,7 +95,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// When set, OnActivate and pan/zoom fill avoid marks from other structures in view
-        /// (any type except this location and this structure). The numeric type id is only a
+        /// (any type except this location, this structure, and this structure's child structures
+        /// at any depth). The numeric type id is only a
         /// flag that auto-background is wanted; it is not used as a type filter.
         /// </summary>
         private readonly long? structureTypeIdForBackgroundPoints;

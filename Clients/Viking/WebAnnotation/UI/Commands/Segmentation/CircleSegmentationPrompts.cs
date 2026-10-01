@@ -49,36 +49,86 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// False for the location being segmented and for other locations of the same structure.
+        /// False for the location being segmented, for other locations of the same structure, and
+        /// for locations of any descendant (child, grandchild, ...) structure of that structure.
         /// True for every other annotation, including other types (AC on a GC).
         /// </summary>
+        /// <param name="structureParentLookup">
+        /// Maps a structure id to its parent structure id, or null when it has none or is not loaded.
+        /// Null means descendants are not recognised and only the same-structure rule applies.
+        /// </param>
         public static bool IsOtherStructure(
             long candidateId,
             long? candidateParentId,
             IReadOnlyCollection<long>? excludeLocationIds,
-            long? excludeStructureId)
+            long? excludeStructureId,
+            Func<long, long?>? structureParentLookup = null)
         {
             if (excludeLocationIds is not null && excludeLocationIds.Contains(candidateId))
                 return false;
             if (excludeStructureId.HasValue && candidateParentId == excludeStructureId)
                 return false;
+            if (excludeStructureId.HasValue && candidateParentId.HasValue && structureParentLookup is not null &&
+                IsDescendantStructure(candidateParentId.Value, excludeStructureId.Value, structureParentLookup))
+                return false;
             return true;
         }
 
         /// <summary>
-        /// Visible annotations that are not <paramref name="excludeLocationIds"/> and not
-        /// members of <paramref name="excludeStructureId"/>.
+        /// True when <paramref name="ancestorId"/> appears above <paramref name="structureId"/> in the
+        /// structure parent chain. A structure is not its own descendant.
         /// </summary>
+        /// <remarks>
+        /// The walk stops at a structure with no parent or one the lookup cannot resolve, so a child whose
+        /// ancestors are not loaded yet reads as unrelated until they arrive. The visited set guards a
+        /// corrupt parent cycle from looping forever.
+        /// </remarks>
+        public static bool IsDescendantStructure(
+            long structureId,
+            long ancestorId,
+            Func<long, long?> structureParentLookup)
+        {
+            if (structureParentLookup is null)
+                throw new ArgumentNullException(nameof(structureParentLookup));
+
+            HashSet<long> visited = [structureId];
+            long? current = structureParentLookup(structureId);
+            while (current.HasValue)
+            {
+                if (current.Value == ancestorId)
+                    return true;
+                if (!visited.Add(current.Value))
+                    return false;
+                current = structureParentLookup(current.Value);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Parent structure id from the local annotation store without a server fetch.
+        /// Null when the structure has no parent or is not cached.
+        /// </summary>
+        private static long? StoreStructureParent(long structureId) =>
+            Store.Structures.GetObjectByID(structureId, false)?.ParentID;
+
+        /// <summary>
+        /// Visible annotations that are not <paramref name="excludeLocationIds"/>, not members of
+        /// <paramref name="excludeStructureId"/>, and not members of one of its descendant structures.
+        /// </summary>
+        /// <param name="structureParentLookup">Defaults to the local annotation store.</param>
         public static IEnumerable<LocationObj> OtherStructureAnnotations(
             IEnumerable<LocationObj> annotations,
             IReadOnlyCollection<long>? excludeLocationIds,
-            long? excludeStructureId)
+            long? excludeStructureId,
+            Func<long, long?>? structureParentLookup = null)
         {
             if (annotations is null)
                 return [];
 
+            Func<long, long?> lookup = structureParentLookup ?? StoreStructureParent;
             return annotations.Where(loc => loc is not null &&
-                IsOtherStructure(loc.ID, loc.ParentID, excludeLocationIds, excludeStructureId));
+                IsOtherStructure(loc.ID, loc.ParentID, excludeLocationIds, excludeStructureId, lookup));
         }
 
         /// <summary>
@@ -95,8 +145,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Avoid marks for every visible annotation that is not the target location or the
-        /// same structure. Drops points that sit on a foreground click.
+        /// Avoid marks for every visible annotation that is not the target location, the
+        /// same structure, or a child structure of it. Child structures sit inside or on the
+        /// target, so a red mark there would carve them out of the mask. Drops points that sit on
+        /// a foreground click.
         /// </summary>
         public static IReadOnlyList<Vector2> CreateOtherStructureBackgroundVolumePoints(
             IEnumerable<LocationObj> visible,
@@ -104,11 +156,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Vector2> foreground,
             double minDistance,
             IReadOnlyCollection<long>? excludeLocationIds,
-            long? excludeStructureId)
+            long? excludeStructureId,
+            Func<long, long?>? structureParentLookup = null)
         {
             return ExceptNearForeground(
                 CreateBackgroundVolumePoints(
-                    OtherStructureAnnotations(visible, excludeLocationIds, excludeStructureId),
+                    OtherStructureAnnotations(visible, excludeLocationIds, excludeStructureId, structureParentLookup),
                     transform),
                 foreground,
                 minDistance);

@@ -287,6 +287,66 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(32227, null, excludeSelf, 100));
         }
 
+        /// <summary>Structure parent chain used by the child-structure tests: 100 -> 110 -> 111, 200 is a root.</summary>
+        private static readonly Dictionary<long, long?> StructureParents = new()
+        {
+            [100] = null,
+            [110] = 100,
+            [111] = 110,
+            [200] = null,
+            [300] = 301,
+            [301] = 300,
+        };
+
+        private static long? ParentOf(long structureId) =>
+            StructureParents.TryGetValue(structureId, out long? parent) ? parent : null;
+
+        [TestMethod]
+        public void LocationsOfChildStructuresAreNotBackground()
+        {
+            long[] excludeSelf = [1];
+
+            // Direct child (110) and grandchild (111) of the segmented structure (100).
+            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, 100, ParentOf));
+            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(51, 111, excludeSelf, 100, ParentOf));
+        }
+
+        [TestMethod]
+        public void LocationsOfUnrelatedAndAncestorStructuresStayBackground()
+        {
+            long[] excludeSelf = [1];
+
+            // Unrelated root structure.
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 200, excludeSelf, 100, ParentOf));
+            // Segmenting the child (110): its parent (100) is an ancestor, not a descendant, so it stays background.
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 100, excludeSelf, 110, ParentOf));
+            // A structure under a different root is unrelated to the segmented structure (200).
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 111, excludeSelf, 200, ParentOf));
+        }
+
+        [TestMethod]
+        public void ChildStructuresAreIgnoredWithoutALookupOrATargetStructure()
+        {
+            long[] excludeSelf = [1];
+
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, 100));
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, null, ParentOf));
+        }
+
+        [TestMethod]
+        public void StructureWithUnresolvedParentIsNotADescendant()
+        {
+            Assert.IsFalse(CircleSegmentationPrompts.IsDescendantStructure(999, 100, ParentOf));
+            Assert.IsFalse(CircleSegmentationPrompts.IsDescendantStructure(100, 100, ParentOf));
+        }
+
+        [TestMethod]
+        public void ParentCycleTerminatesAndIsNotADescendantOfAnOutsider()
+        {
+            Assert.IsFalse(CircleSegmentationPrompts.IsDescendantStructure(300, 100, ParentOf));
+            Assert.IsTrue(CircleSegmentationPrompts.IsDescendantStructure(300, 301, ParentOf));
+        }
+
         [TestMethod]
         public void ProposalLineWidthIsHalfResizeBandClampedToTwoAndSixTimesOriginal()
         {
