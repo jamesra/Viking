@@ -80,11 +80,11 @@ namespace WebAnnotation.Properties
 
         /// <summary>
         /// Coarsest camera downsample at which auto-segment still runs. A coarser view is skipped.
-        /// Default 4, so downsample 4 runs and coarser views do not.
+        /// Default 2, so downsample 2 runs and DS 3 does not. The getter clamps a saved value above 2.
         /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
         public double AutoPolygonizeMaxDownsample
         {
             get => (double)this[nameof(AutoPolygonizeMaxDownsample)];

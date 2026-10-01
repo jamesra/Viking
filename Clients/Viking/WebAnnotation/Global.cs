@@ -208,7 +208,7 @@ namespace WebAnnotation
             private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
             private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
             private const double MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 1.0;
-            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 256.0;
+            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 2.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -541,8 +541,9 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Coarsest camera downsample at which auto-segment still runs. Default 4.
-            /// A view coarser than this is not sent to the segmentation service.
+            /// Coarsest camera downsample at which auto-segment and tile submit still run. Default 2.
+            /// DS 2 still submits. DS 3 and coarser do not. A saved value above 2 is clamped to 2;
+            /// a saved value of 1 still wins.
             /// Changing it restarts the idle timer so a view that is now allowed can run without a camera nudge.
             /// </summary>
             public static double AutoPolygonizeMaxDownsample
@@ -691,7 +692,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = 8.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = 75.0;
-                Properties.Settings.Default.AutoPolygonizeMaxDownsample = 4.0;
+                Properties.Settings.Default.AutoPolygonizeMaxDownsample = 2.0;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;

@@ -51,12 +51,37 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Ceiling for submitted tile downsample from appSettings
         /// <c>SegmentationTileDownsample</c> (default 1). Camera zoom may submit a finer
         /// level down to 1; never coarser than this. A coarser camera still uploads at this
-        /// level until <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
+        /// level until <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>,
+        /// which cannot exceed 2. A camera coarser than DS 2 does not upload.
         /// </summary>
         public static int MaxTileDownsample { get; } =
             int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int ds) && ds >= 1
                 ? ds
                 : 1;
+
+        private static SegmentationModelProfile modelProfile = SegmentationModelProfile.Default;
+
+        /// <summary>
+        /// How the model in use wants its input: fixed grid tiles or the whole screen, and whether the
+        /// tile level follows zoom. Starts as <see cref="SegmentationModelProfile.Default"/> (fixed tiles,
+        /// single resolution) and is replaced by <see cref="AdoptModelCapabilities"/>.
+        /// Drives <see cref="SegmentationCameraPolicy"/>.
+        /// </summary>
+        public static SegmentationModelProfile ModelProfile => Volatile.Read(ref modelProfile);
+
+        /// <summary>
+        /// Adopts the capabilities the server advertised in GetServerStatus. The local ceiling can only
+        /// narrow the result. Throws if the server left a flag unspecified; the current profile is kept.
+        /// </summary>
+        // TODO: call this from the status check; nothing fetches GetServerStatus yet.
+        public static void AdoptModelCapabilities(Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities advertised)
+            => Volatile.Write(ref modelProfile, SegmentationModelProfile.FromAdvertised(advertised, MaxTileDownsample));
+
+        /// <summary>
+        /// Highest level the current model may be sent: <see cref="MaxTileDownsample"/> when its profile
+        /// lets the level change, otherwise 1.
+        /// </summary>
+        private static int EffectiveTileCeiling => ModelProfile.TileLevelCanChange ? MaxTileDownsample : 1;
 
         /// <summary>
         /// Legacy name for <see cref="MaxTileDownsample"/>. Prefer the max name.
@@ -66,7 +91,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// False when the live camera is coarser than
         /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
-        /// Equality still submits. Called by <see cref="UploadCurrentImageAsync"/> and
+        /// Equality still submits. The preference is capped at DS 2, so a camera at DS 3
+        /// does not upload. Called by <see cref="UploadCurrentImageAsync"/> and
         /// <see cref="SegmentAsync"/> before any tile is sent. Auto-segment checks the same
         /// cutoff earlier so an idle batch never starts.
         /// </summary>
@@ -97,7 +123,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (roundedUp < 1)
                 roundedUp = 1;
 
-            return Math.Min(MaxTileDownsample, roundedUp);
+            return Math.Min(EffectiveTileCeiling, roundedUp);
         }
 
         /// <summary>
@@ -124,7 +150,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public int UploadedImageHeight => uploadedImageHeight;
 
         /// <summary>Pyramid level used for the last tile upload/segment (resolved from camera, capped).</summary>
-        public int MosaicDownsample => mosaicDownsample > 0 ? mosaicDownsample : MaxTileDownsample;
+        public int MosaicDownsample => mosaicDownsample > 0 ? mosaicDownsample : EffectiveTileCeiling;
 
         /// <summary>True when this session has accepted at least one UploadTile for the current view identity.</summary>
         public bool HasUploadedTiles => uploadedTileKeys.Count > 0;
@@ -703,6 +729,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return Task.FromResult(GetCurrentViewportBounds());
 
             return dispatcher.InvokeAsync(GetCurrentViewportBounds).Task;
+        }
+
+        /// <summary>
+        /// Tile level the live camera would submit now, read on the UI dispatcher. Compare it with
+        /// <see cref="MosaicDownsample"/> to tell whether a finished response was computed at a level
+        /// that the camera has since left. Only needed when <see cref="SegmentationModelProfile.TileLevelCanChange"/>.
+        /// </summary>
+        public Task<int> GetLiveTileDownsampleAsync()
+        {
+            int Resolve() => ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null || dispatcher.CheckAccess())
+                return Task.FromResult(Resolve());
+
+            return dispatcher.InvokeAsync(Resolve).Task;
         }
 
         /// <summary>

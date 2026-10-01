@@ -206,8 +206,12 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Restarts settle when the view moved or the resolved tile pyramid level changed.
-        /// Cancels upload and the in-flight circle queue so the server stops growing the old view.
-        /// The next idle batch orders remaining circles from the new view center.
+        /// Tile results depend on the submitted level, not on the viewport rectangle, so the
+        /// in-flight SegmentTiles call, finished proposals and the completion cache are only
+        /// discarded when the model's profile says the move made them stale
+        /// (<see cref="SegmentationCameraPolicy"/>): any view move for a full-viewport model, a changed
+        /// level for multi-resolution tiles. For single-resolution tiles that never happens, so a pan or zoom only stops the queue
+        /// after the current circle; the next idle batch orders the rest from the new view center.
         /// </summary>
         public void OnCameraChanged()
         {
@@ -217,14 +221,20 @@ namespace WebAnnotation.UI.AutoPolygonize
             Rectangle current = GetCurrentViewportBounds();
             int resolvedTile = SegmentationViewportSession.ResolveTileDownsample(GetCurrentDownsample());
             bool boundsMoved = !SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, current);
-            bool tileLevelChanged = lastResolvedTileDownsample != 0 && resolvedTile != lastResolvedTileDownsample;
+            SegmentationModelProfile profile = SegmentationViewportSession.ModelProfile;
+            bool tileLevelChanged = SegmentationCameraPolicy.TileLevelChanged(
+                profile, lastResolvedTileDownsample, resolvedTile);
             if (!boundsMoved && !tileLevelChanged)
                 return;
 
+            SegmentationCameraPolicy.CameraMoveResponse response = SegmentationCameraPolicy.OnCameraMoved(
+                profile, boundsMoved, tileLevelChanged);
+
             lastViewBounds = current;
             lastCameraChangeUtc = DateTime.UtcNow;
-            Interlocked.Increment(ref cameraGeneration);
-            if (tileLevelChanged)
+            if (response.ReorderQueue)
+                Interlocked.Increment(ref cameraGeneration);
+            if (response.DropFinishedResults)
             {
                 DropProposalsForTileDownsampleChange();
                 cache.InvalidateCompletionsAtOtherTileDownsample(resolvedTile);
@@ -233,7 +243,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             lastResolvedTileDownsample = resolvedTile;
             viewportImageLease.ForgetIfViewMoved(current, GetCurrentDownsample());
             CancelUploadPhase();
-            CancelProcessPhase();
+            if (response.CancelInFlightSegmentation)
+                CancelProcessPhase();
             CancelConfirmTimer();
             RestartIdleTimer();
         }
@@ -673,7 +684,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// False when the camera is coarser than <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
-        /// Equality still runs, so downsample 8 is sent when the preference is 8.
+        /// Equality still runs. The preference cannot exceed DS 2, so DS 3 never starts.
+        /// A saved preference of 1 still blocks DS 2.
         /// </summary>
         private bool IsWithinAutoSegmentDownsample()
         {
@@ -938,8 +950,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Thread-pool polygonize/simplify. Drops the result without caching if the
-        /// live view no longer matches the captured bounds, so a hitch-pan can retry.
+        /// Thread-pool polygonize/simplify. Drops the result without caching if the section
+        /// changed, or (multi-resolution only) the camera now resolves to a different tile level,
+        /// so a level change can retry. A pan or zoom inside one level keeps the result.
         /// An empty union is a LastModified skip (no overlay) so the next idle batch
         /// does not SegmentImage the same circle again. GPU mask textures are created
         /// later on the UI thread in <see cref="PublishProposal"/>.
@@ -970,13 +983,19 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             if (requireMatchingLiveView)
             {
-                Rectangle liveBounds = session.GetLiveViewportBoundsAsync().GetAwaiter().GetResult();
+                SegmentationModelProfile profile = SegmentationViewportSession.ModelProfile;
+                int liveLevel = profile.TileLevelCanChange
+                    ? session.GetLiveTileDownsampleAsync().GetAwaiter().GetResult()
+                    : session.MosaicDownsample;
+                bool viewportUnchanged = !profile.ResultDependsOnViewport ||
+                    SegmentationViewportSession.ShouldUploadEncodedCapture(
+                        session.ViewportBounds, session.GetLiveViewportBoundsAsync().GetAwaiter().GetResult());
                 if (parent.Section is null ||
                     parent.Section.Number != sectionNumber ||
-                    !SegmentationViewportSession.ShouldUploadEncodedCapture(session.ViewportBounds, liveBounds))
+                    !SegmentationCameraPolicy.IsResultStillValid(profile, session.MosaicDownsample, liveLevel, viewportUnchanged))
                 {
                     Debug.WriteLine(
-                        $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} dropped: view moved before publish");
+                        $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} dropped: section, view or tile level changed before publish");
                     return;
                 }
             }

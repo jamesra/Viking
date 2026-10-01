@@ -78,6 +78,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private Geometry.Rectangle lastViewBounds;
         private System.Timers.Timer panZoomDebounceTimer;
 
+        /// <summary>
+        /// <see cref="SegmentationCameraPolicy.PromptSignature"/> of the prompts in the newest request, or null
+        /// when that request returned nothing. Lets a settled pan skip a resubmit whose answer cannot change.
+        /// </summary>
+        private string? lastSentPrompts;
+
         // Rendering
         private readonly Color maskColor = new(255, 128, 0, 128); // Orange with transparency
 
@@ -548,8 +554,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Pan/Zoom Handling
         /// <summary>
-        /// Drops this command's hold when the view moves more than 1%. The shared lease releases its own
-        /// hold so DeleteImage runs only when auto-polygonize is not still using the id.
+        /// Restarts the settle timer when the view moves more than 1%. When the model's profile says a
+        /// move can stale its result (a full-viewport model, or fixed tiles whose level follows zoom) the
+        /// request is also cancelled and this command's image hold dropped. For fixed tiles at a single
+        /// level the result does not depend on the camera, so the request in flight is left to finish
+        /// (<see cref="SegmentationCameraPolicy.ViewMoveInvalidatesRequest"/>). The shared lease
+        /// releases its own hold so DeleteImage runs only when auto-polygonize is not still using the id.
         /// </summary>
         private void CheckForViewportChange()
         {
@@ -559,12 +569,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 lastViewBounds = currentBounds;
                 viewportSession.ViewportBounds = currentBounds;
-                requestCoalescer.Invalidate();
-                CancelProcessSegmentationResponse();
-                CancelSegmentRequest();
-                viewportSession.CancelPendingWork();
-                AnnotationOverlay.CurrentOverlay?.SharedViewportImages?.ForgetIfViewMoved(currentBounds, Parent.Downsample);
-                ReleaseHeldImage();
+                if (SegmentationCameraPolicy.ViewMoveInvalidatesRequest(SegmentationViewportSession.ModelProfile))
+                {
+                    requestCoalescer.Invalidate();
+                    CancelProcessSegmentationResponse();
+                    CancelSegmentRequest();
+                    viewportSession.CancelPendingWork();
+                    AnnotationOverlay.CurrentOverlay?.SharedViewportImages?.ForgetIfViewMoved(currentBounds, Parent.Downsample);
+                    ReleaseHeldImage();
+                }
 
                 // Restart debounce timer
                 panZoomDebounceTimer?.Stop();
@@ -597,10 +610,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 foregroundPointsView.PointRadius = pointRadius;
                 Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
 
-                // Must invoke on UI thread
+                // Must invoke on UI thread. Queued after the background refresh above, so the
+                // prompt comparison sees the recomputed set.
                 Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                    // RequestSegmentation will handle uploading if needed
-                    RequestSegmentation()));
+                {
+                    string current = SegmentationCameraPolicy.PromptSignature(foregroundPoints, backgroundPoints);
+                    if (SegmentationCameraPolicy.SettleNeedsResubmit(
+                            SegmentationViewportSession.ModelProfile, lastSentPrompts, current))
+                    {
+                        // RequestSegmentation will handle uploading if needed
+                        RequestSegmentation();
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Viewport settled, prompts unchanged at the fixed tile level - keeping the result");
+                    }
+                }));
             }
             else
             {
@@ -843,7 +868,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (placementFinished || Deactivated)
                 return;
 
-            if (!SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, viewportSession.GetCurrentViewportBounds()))
+            if (SegmentationCameraPolicy.ViewMoveInvalidatesRequest(SegmentationViewportSession.ModelProfile) &&
+                !SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, viewportSession.GetCurrentViewportBounds()))
                 return;
 
             if (task.Status != TaskStatus.RanToCompletion || !task.Result)
@@ -977,6 +1003,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
+            string sentPrompts = SegmentationCameraPolicy.PromptSignature(foregroundPoints, backgroundPoints);
+            lastSentPrompts = sentPrompts;
+            bool delivered = false;
             try
             {
                 SegmentationDiag.Log(
@@ -990,6 +1019,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 var response = await viewportSession.SegmentAsync(foregroundPoints, backgroundPoints, segmentToken).ConfigureAwait(false);
                 SegmentationDiag.Log(
                     $"RequestSegmentation done responseNull={response is null} segments={response?.Segments.Count ?? -1}");
+                delivered = response is not null;
                 if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))
                     StartProcessSegmentationResponse(response, generation);
             }
@@ -1000,6 +1030,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             finally
             {
+                // A request that produced nothing (camera beyond the DS cutoff, cancelled, error) must not
+                // make the next settle think these prompts were already answered.
+                if (!delivered)
+                    Interlocked.CompareExchange(ref lastSentPrompts, null, sentPrompts);
+
                 if (requestCoalescer.OnFinishedShouldRetry())
                     ScheduleFollowUpSegmentation();
             }

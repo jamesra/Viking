@@ -379,8 +379,8 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>
-        /// Coarsest camera downsample at which auto-segment still runs. Default 8.
-        /// A coarser view is not sent to the segmentation service.
+        /// Coarsest camera downsample at which auto-segment still runs. Default 2.
+        /// DS 2 still runs. DS 3 and coarser are not sent to the segmentation service.
         /// </summary>
         private double _autoPolygonizeMaxDownsample;
         public double AutoPolygonizeMaxDownsample
@@ -388,7 +388,7 @@ namespace WebAnnotation.WPF.Forms
             get => _autoPolygonizeMaxDownsample;
             set
             {
-                double clamped = MathUtils.Clamp(value, 1.0, 256.0);
+                double clamped = MathUtils.Clamp(value, 1.0, 2.0);
                 if (Math.Abs(_autoPolygonizeMaxDownsample - clamped) > 0.001)
                 {
                     _autoPolygonizeMaxDownsample = clamped;
