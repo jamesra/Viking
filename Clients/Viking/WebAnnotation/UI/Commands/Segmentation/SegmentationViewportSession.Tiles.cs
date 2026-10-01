@@ -39,11 +39,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             public int Downsample { get; }
         }
 
-        private async Task<(int downsample, TileSignature signature, List<TileCell> visible, bool grayscale)> ReadViewTilesAsync()
+        /// <summary>
+        /// Reads the live view. <paramref name="fixedDownsample"/> pins the tile pyramid level so a
+        /// multi-round request keeps one level even if the camera zoom changes between rounds.
+        /// </summary>
+        private async Task<(int downsample, TileSignature signature, List<TileCell> visible, bool grayscale)> ReadViewTilesAsync(
+            int? fixedDownsample = null)
         {
             return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
             {
-                int downsample = CurrentPyramidDownsample();
+                int downsample = fixedDownsample ?? CurrentPyramidDownsample();
                 TileSignature signature = CurrentTileSignature(downsample);
                 Geometry.Rectangle bounds = GetCurrentViewportBounds();
                 ViewportBounds = bounds;

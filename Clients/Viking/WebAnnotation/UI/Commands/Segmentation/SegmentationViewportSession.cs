@@ -496,11 +496,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 List<TileCell> extras = [];
                 SegmentationResponse? lastResponse = null;
+                // Tile level is decided by round 0 and held for the whole request, so a zoom change
+                // while growth rounds run cannot change the tile signature or strand requested tiles.
+                int? requestDownsample = null;
                 for (int round = 0; round <= maxTileRounds; round++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
-                        await ReadViewTilesAsync().ConfigureAwait(false);
+                        await ReadViewTilesAsync(requestDownsample).ConfigureAwait(false);
+                    requestDownsample = downsample;
                     mosaicDownsample = downsample;
                     List<TileCell> needed = TilesForRound(foregroundPoints, downsample, extras);
                     SegmentationDiag.Log(
