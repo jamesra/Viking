@@ -626,6 +626,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Records live bounds/downsample, then starts the 1s confirm. If a camera
         /// event was processed after this method was queued, restarts idle instead.
+        /// When the camera is coarser than <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>,
+        /// stops settling until a camera move or <see cref="RequestIdlePass"/> (preference change) re-arms.
         /// </summary>
         private void ArmConfirmIfStillQuiet()
         {
@@ -633,7 +635,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             if (!IsWithinAutoSegmentDownsample())
+            {
+                SegmentationDiag.Log(
+                    $"ArmConfirm skip: downsample out of range ds={GetCurrentDownsample()} " +
+                    $"max={Global.AnnotationSettings.AutoPolygonizeMaxDownsample}");
                 return;
+            }
 
             armedBounds = GetCurrentViewportBounds();
             armedDownsample = GetCurrentDownsample();
@@ -694,13 +701,21 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Restarts the idle wait when auto-segment is on. Used after the max-downsample preference changes
-        /// so a view that is now allowed can run without a camera nudge.
+        /// so a view that is now allowed can run without a camera nudge. Safe to call repeatedly; a one-shot
+        /// idle that previously exited because the camera was too coarse is re-armed here.
         /// </summary>
         public void RequestIdlePass()
         {
             if (!enabled)
+            {
+                SegmentationDiag.Log("RequestIdlePass skip: auto-polygonize disabled");
                 return;
+            }
 
+            SegmentationDiag.Log(
+                $"RequestIdlePass ds={GetCurrentDownsample()} " +
+                $"max={Global.AnnotationSettings.AutoPolygonizeMaxDownsample} " +
+                $"inRange={IsWithinAutoSegmentDownsample()}");
             RestartIdleTimer();
         }
 

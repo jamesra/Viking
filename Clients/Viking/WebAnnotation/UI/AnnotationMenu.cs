@@ -169,10 +169,16 @@ namespace WebAnnotation
 
             viewModel.PropertyChanged += (_, e) =>
             {
+                bool refreshAll = string.IsNullOrEmpty(e.PropertyName);
+
+                // Apply max downsample as the slider moves so a view that is now allowed can
+                // start auto-segment without waiting for Apply/OK (Global setter restarts idle).
+                if (refreshAll || e.PropertyName == nameof(viewModel.AutoPolygonizeMaxDownsample))
+                    Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+
                 if (AnnotationOverlay.CurrentOverlay?.Parent?.CurrentCommand is not SegmentationCommand command)
                     return;
 
-                bool refreshAll = string.IsNullOrEmpty(e.PropertyName);
                 if (refreshAll ||
                     e.PropertyName == nameof(viewModel.SegmentationHoleDropFraction) ||
                     e.PropertyName == nameof(viewModel.SegmentationEdgeCleanupRadius))
@@ -262,6 +268,11 @@ namespace WebAnnotation
             // Wire up event handlers to save settings
             _preferencesDialog.ApplyClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
             _preferencesDialog.OkClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
+            // Live max-downsample writes Global before Cancel; restore the dialog's original value.
+            _preferencesDialog.CancelClicked += (s, args) =>
+            {
+                Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+            };
 
             _preferencesDialog.Show(); // Modeless dialog
         }
@@ -287,6 +298,10 @@ namespace WebAnnotation
             Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
             Global.AnnotationSettings.AutoPolygonizeOverlayPrompts = viewModel.AutoPolygonizeOverlayPrompts;
             Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings = viewModel.AutoPolygonizeHideSegmentationRings;
+            // Setter no-ops when the value is unchanged (e.g. already live-applied from the slider).
+            // Always re-arm idle so a view that is now in range starts without a camera nudge.
+            if (Global.AnnotationSettings.AutoPolygonizeCircles)
+                AnnotationOverlay.CurrentOverlay?.RequestAutoPolygonizeIdlePass();
             if (menuAutoPolygonizeCircles != null)
                 menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
