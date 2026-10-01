@@ -83,7 +83,20 @@ Does **not** upload. Does **not** touch `Software/Viking`.
 - Does **not** bump `Viking.csproj` version (production versioning stays separate).
 - Public HTTP base: `http://websvc.codepharm.net/Software/VikingTest` (HTTPS install link above).
 
-If the Software share is not mounted on this host, ask a human or `[Viking-Server]` for the UNC/IIS path beside production `Software\Viking`, create `Software\VikingTest` if missing, then deploy.
+### Feed share (this host)
+
+The root of the production and test client folders is `\\OPR-MARC-WEBSV2\Software\`:
+
+| Feed | UNC path | Agents may write? |
+|---|---|---|
+| Production | `\\OPR-MARC-WEBSV2\Software\Viking` | **No** |
+| Test | `\\OPR-MARC-WEBSV2\Software\VikingTest` | Yes, with `-TestChannel` only |
+
+```powershell
+.\DeployVelopack.ps1 -TestChannel -ServerPath "\\OPR-MARC-WEBSV2\Software\VikingTest"
+```
+
+Check the share is reachable before deploying (a dead UNC path can hang a plain `Get-ChildItem`; wrap it in a job with a timeout). If it is not reachable, ask a human or `[Viking-Server]` rather than guessing another path.
 
 ## Announce in #betatest (required after every successful deploy)
 
