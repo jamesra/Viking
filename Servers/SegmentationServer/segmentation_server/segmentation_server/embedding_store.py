@@ -14,6 +14,7 @@ import hashlib
 import logging
 import os
 import re
+import shutil
 import threading
 import time
 from dataclasses import dataclass
@@ -26,6 +27,19 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_BYTES = 64 * 1024**3
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 _MODE_RE = re.compile(r"^[a-z0-9_-]{1,32}$")
+_STAMP_RE = re.compile(r"^[0-9a-f]{16}$")
+
+
+def _directory_bytes(directory: Path) -> int:
+    """Total size of the files under ``directory``. Unreadable entries count as zero."""
+    total = 0
+    for dirpath, _dirnames, filenames in os.walk(directory):
+        for name in filenames:
+            try:
+                total += (Path(dirpath) / name).stat().st_size
+            except OSError:
+                continue
+    return total
 
 
 def checkpoint_stamp(checkpoint_path: str, model_cfg: str) -> str:
@@ -103,6 +117,7 @@ class EmbeddingStore:
         self._files: Dict[str, _FileRecord] = {}
         self._total_bytes = 0
         self._root.mkdir(parents=True, exist_ok=True)
+        self._purge_other_stamps()
         self._index_existing()
 
     @property
@@ -167,6 +182,37 @@ class EmbeddingStore:
         if not _DIGEST_RE.match(digest) or not _MODE_RE.match(mode):
             return None
         return self._root / self._stamp / mode / digest[:2] / f"{digest}.pt"
+
+    def _purge_other_stamps(self) -> None:
+        """Delete cache folders left by other checkpoints.
+
+        The stamp is part of every path, so once the weights file is replaced the old stamp's
+        files can never be read again, yet nothing else removes them and they would sit on disk
+        until the byte cap evicted them by age. Only direct children whose names look like a stamp
+        (see ``checkpoint_stamp``) are removed, so anything else sharing a mounted cache folder is
+        left alone. This assumes one server owns this cache root: a second server running another
+        checkpoint against the same folder would have its cache removed at this server's startup.
+        """
+        try:
+            children = list(self._root.iterdir())
+        except OSError:
+            logger.warning("Embedding disk cache could not list %s to purge old stamps", self._root)
+            return
+        for child in children:
+            if child.name == self._stamp or not _STAMP_RE.match(child.name) or not child.is_dir():
+                continue
+            freed = _directory_bytes(child)
+            try:
+                shutil.rmtree(child)
+            except OSError:
+                logger.warning("Embedding disk cache could not remove old stamp %s", child, exc_info=True)
+                continue
+            logger.info(
+                "Embedding disk cache removed old stamp %s (current %s) freed=%s bytes",
+                child.name,
+                self._stamp,
+                freed,
+            )
 
     def _index_existing(self) -> None:
         if not self._root.is_dir():
