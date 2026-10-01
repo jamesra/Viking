@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from segmentation_server.image_cache import ImageCache
+from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.server import SegmentationServicer
 
 
@@ -115,6 +116,7 @@ async def test_status_message_includes_compile_state() -> None:
     model = MagicMock()
     model.device = "cuda"
     model.compile_status = "warming"
+    model.capabilities = SAM2_CAPABILITIES
     servicer = _servicer_with_cache(cache, model)
 
     response = await servicer.GetServerStatus(MagicMock(), AsyncMock())

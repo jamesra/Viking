@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12segmentation.proto\x12\x0csegmentation\"G\n\x12UploadImageRequest\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\"\'\n\x13UploadImageResponse\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"~\n\tTileCoord\x12\x0e\n\x06volume\x18\x01 \x01(\t\x12\x0f\n\x07section\x18\x02 \x01(\x05\x12\x0f\n\x07\x63hannel\x18\x03 \x01(\t\x12\x11\n\ttransform\x18\x04 \x01(\t\x12\x12\n\ndownsample\x18\x05 \x01(\x05\x12\x0b\n\x03row\x18\x06 \x01(\x05\x12\x0b\n\x03\x63ol\x18\x07 \x01(\x05\"n\n\x11UploadTileRequest\x12&\n\x05\x63oord\x18\x01 \x01(\x0b\x32\x17.segmentation.TileCoord\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\",\n\x12UploadTileResponse\x12\x16\n\x0e\x61lready_cached\x18\x01 \x01(\x08\"\xc5\x01\n\x13SegmentTilesRequest\x12&\n\x05tiles\x18\x01 \x03(\x0b\x32\x17.segmentation.TileCoord\x12\'\n\nforeground\x18\x02 \x03(\x0b\x32\x13.segmentation.Point\x12\'\n\nbackground\x18\x03 \x03(\x0b\x32\x13.segmentation.Point\x12\x18\n\x10multimask_output\x18\x04 \x01(\x08\x12\x1a\n\x12omit_labeled_image\x18\x05 \x01(\x08\"&\n\x12\x44\x65leteImageRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"&\n\x13\x44\x65leteImageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\x15\n\x13ServerStatusRequest\"\xd5\x01\n\x14ServerStatusResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x16\n\x0euptime_seconds\x18\x02 \x01(\x01\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x1a\n\x12in_flight_requests\x18\x04 \x01(\r\x12\x15\n\rcached_images\x18\x05 \x01(\r\x12\x1a\n\x12\x63\x61\x63he_memory_bytes\x18\x06 \x01(\x04\x12\x19\n\x11recent_latency_ms\x18\x07 \x01(\x01\x12\x19\n\x11inference_workers\x18\x08 \x01(\r\"\xca\x01\n\x13SegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12(\n\x0b\x63oordinates\x18\x05 \x03(\x0b\x32\x13.segmentation.Point\x12\x0e\n\x06labels\x18\x06 \x03(\x05\x12\x18\n\x10multimask_output\x18\x07 \x01(\x08\x12\x1a\n\x12omit_labeled_image\x18\x08 \x01(\x08\"\x96\x01\n\x16SegmentImageSetRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\'\n\nforeground\x18\x02 \x03(\x0b\x32\x13.segmentation.Point\x12\'\n\nbackground\x18\x03 \x03(\x0b\x32\x13.segmentation.Point\x12\x18\n\x10multimask_output\x18\x04 \x01(\x08\"\xbc\x02\n\x18MultiSegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12W\n\x11\x66oreground_points\x18\x05 \x03(\x0b\x32<.segmentation.MultiSegmentationRequest.ForegroundPointsEntry\x12\x18\n\x10multimask_output\x18\x06 \x01(\x08\x12\x1a\n\x12omit_labeled_image\x18\x07 \x01(\x08\x1aL\n\x15\x46oregroundPointsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12\"\n\x05value\x18\x02 \x01(\x0b\x32\x13.segmentation.Point:\x02\x38\x01\"\x1d\n\x05Point\x12\t\n\x01x\x18\x01 \x01(\x05\x12\t\n\x01y\x18\x02 \x01(\x05\".\n\x07Polygon\x12#\n\x06points\x18\x01 \x03(\x0b\x32\x13.segmentation.Point\"\xd1\x01\n\x14SegmentationResponse\x12\x15\n\rlabeled_image\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\x12-\n\x08segments\x18\x04 \x03(\x0b\x32\x1b.segmentation.SegmentResult\x12\x10\n\x08origin_x\x18\x05 \x01(\x05\x12\x10\n\x08origin_y\x18\x06 \x01(\x05\x12\x30\n\x0frequested_tiles\x18\x07 \x03(\x0b\x32\x17.segmentation.TileCoord\"z\n\rSegmentResult\x12\r\n\x05index\x18\x01 \x01(\x05\x12\r\n\x05score\x18\x02 \x01(\x02\x12\x0c\n\x04mask\x18\x03 \x01(\x0c\x12\t\n\x01x\x18\x04 \x01(\x05\x12\t\n\x01y\x18\x05 \x01(\x05\x12\'\n\x08polygons\x18\x06 \x03(\x0b\x32\x15.segmentation.Polygon2\xe9\x05\n\x13SegmentationService\x12T\n\x0bUploadImage\x12 .segmentation.UploadImageRequest\x1a!.segmentation.UploadImageResponse\"\x00\x12Q\n\nUploadTile\x12\x1f.segmentation.UploadTileRequest\x1a .segmentation.UploadTileResponse\"\x00\x12W\n\x0cSegmentTiles\x12!.segmentation.SegmentTilesRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12W\n\x0cSegmentImage\x12!.segmentation.SegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12\x62\n\x10SegmentImageSets\x12$.segmentation.SegmentImageSetRequest\x1a\".segmentation.SegmentationResponse\"\x00(\x01\x30\x01\x12\x61\n\x11MultiSegmentImage\x12&.segmentation.MultiSegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12T\n\x0b\x44\x65leteImage\x12 .segmentation.DeleteImageRequest\x1a!.segmentation.DeleteImageResponse\"\x00\x12Z\n\x0fGetServerStatus\x12!.segmentation.ServerStatusRequest\x1a\".segmentation.ServerStatusResponse\"\x00\x42*\xaa\x02\'Viking.gRPC.SegmentationServiceTypes.V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12segmentation.proto\x12\x0csegmentation\"G\n\x12UploadImageRequest\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\"\'\n\x13UploadImageResponse\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"~\n\tTileCoord\x12\x0e\n\x06volume\x18\x01 \x01(\t\x12\x0f\n\x07section\x18\x02 \x01(\x05\x12\x0f\n\x07\x63hannel\x18\x03 \x01(\t\x12\x11\n\ttransform\x18\x04 \x01(\t\x12\x12\n\ndownsample\x18\x05 \x01(\x05\x12\x0b\n\x03row\x18\x06 \x01(\x05\x12\x0b\n\x03\x63ol\x18\x07 \x01(\x05\"n\n\x11UploadTileRequest\x12&\n\x05\x63oord\x18\x01 \x01(\x0b\x32\x17.segmentation.TileCoord\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\",\n\x12UploadTileResponse\x12\x16\n\x0e\x61lready_cached\x18\x01 \x01(\x08\"\xc5\x01\n\x13SegmentTilesRequest\x12&\n\x05tiles\x18\x01 \x03(\x0b\x32\x17.segmentation.TileCoord\x12\'\n\nforeground\x18\x02 \x03(\x0b\x32\x13.segmentation.Point\x12\'\n\nbackground\x18\x03 \x03(\x0b\x32\x13.segmentation.Point\x12\x18\n\x10multimask_output\x18\x04 \x01(\x08\x12\x1a\n\x12omit_labeled_image\x18\x05 \x01(\x08\"&\n\x12\x44\x65leteImageRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"&\n\x13\x44\x65leteImageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\x81\x01\n\x11ModelCapabilities\x12\x35\n\x0fsubmission_mode\x18\x01 \x01(\x0e\x32\x1c.segmentation.SubmissionMode\x12\x35\n\x0fresolution_mode\x18\x02 \x01(\x0e\x32\x1c.segmentation.ResolutionMode\"\x15\n\x13ServerStatusRequest\"\x8c\x02\n\x14ServerStatusResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x16\n\x0euptime_seconds\x18\x02 \x01(\x01\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x1a\n\x12in_flight_requests\x18\x04 \x01(\r\x12\x15\n\rcached_images\x18\x05 \x01(\r\x12\x1a\n\x12\x63\x61\x63he_memory_bytes\x18\x06 \x01(\x04\x12\x19\n\x11recent_latency_ms\x18\x07 \x01(\x01\x12\x19\n\x11inference_workers\x18\x08 \x01(\r\x12\x35\n\x0c\x63\x61pabilities\x18\t \x01(\x0b\x32\x1f.segmentation.ModelCapabilities\"\xca\x01\n\x13SegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12(\n\x0b\x63oordinates\x18\x05 \x03(\x0b\x32\x13.segmentation.Point\x12\x0e\n\x06labels\x18\x06 \x03(\x05\x12\x18\n\x10multimask_output\x18\x07 \x01(\x08\x12\x1a\n\x12omit_labeled_image\x18\x08 \x01(\x08\"\x96\x01\n\x16SegmentImageSetRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\'\n\nforeground\x18\x02 \x03(\x0b\x32\x13.segmentation.Point\x12\'\n\nbackground\x18\x03 \x03(\x0b\x32\x13.segmentation.Point\x12\x18\n\x10multimask_output\x18\x04 \x01(\x08\"\xbc\x02\n\x18MultiSegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12W\n\x11\x66oreground_points\x18\x05 \x03(\x0b\x32<.segmentation.MultiSegmentationRequest.ForegroundPointsEntry\x12\x18\n\x10multimask_output\x18\x06 \x01(\x08\x12\x1a\n\x12omit_labeled_image\x18\x07 \x01(\x08\x1aL\n\x15\x46oregroundPointsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12\"\n\x05value\x18\x02 \x01(\x0b\x32\x13.segmentation.Point:\x02\x38\x01\"\x1d\n\x05Point\x12\t\n\x01x\x18\x01 \x01(\x05\x12\t\n\x01y\x18\x02 \x01(\x05\".\n\x07Polygon\x12#\n\x06points\x18\x01 \x03(\x0b\x32\x13.segmentation.Point\"\xd1\x01\n\x14SegmentationResponse\x12\x15\n\rlabeled_image\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\x12-\n\x08segments\x18\x04 \x03(\x0b\x32\x1b.segmentation.SegmentResult\x12\x10\n\x08origin_x\x18\x05 \x01(\x05\x12\x10\n\x08origin_y\x18\x06 \x01(\x05\x12\x30\n\x0frequested_tiles\x18\x07 \x03(\x0b\x32\x17.segmentation.TileCoord\"z\n\rSegmentResult\x12\r\n\x05index\x18\x01 \x01(\x05\x12\r\n\x05score\x18\x02 \x01(\x02\x12\x0c\n\x04mask\x18\x03 \x01(\x0c\x12\t\n\x01x\x18\x04 \x01(\x05\x12\t\n\x01y\x18\x05 \x01(\x05\x12\'\n\x08polygons\x18\x06 \x03(\x0b\x32\x15.segmentation.Polygon*y\n\x0eSubmissionMode\x12\x1f\n\x1bSUBMISSION_MODE_UNSPECIFIED\x10\x00\x12#\n\x1fSUBMISSION_MODE_FIXED_TILE_GRID\x10\x01\x12!\n\x1dSUBMISSION_MODE_FULL_VIEWPORT\x10\x02*h\n\x0eResolutionMode\x12\x1f\n\x1bRESOLUTION_MODE_UNSPECIFIED\x10\x00\x12\x1a\n\x16RESOLUTION_MODE_SINGLE\x10\x01\x12\x19\n\x15RESOLUTION_MODE_MULTI\x10\x02\x32\xe9\x05\n\x13SegmentationService\x12T\n\x0bUploadImage\x12 .segmentation.UploadImageRequest\x1a!.segmentation.UploadImageResponse\"\x00\x12Q\n\nUploadTile\x12\x1f.segmentation.UploadTileRequest\x1a .segmentation.UploadTileResponse\"\x00\x12W\n\x0cSegmentTiles\x12!.segmentation.SegmentTilesRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12W\n\x0cSegmentImage\x12!.segmentation.SegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12\x62\n\x10SegmentImageSets\x12$.segmentation.SegmentImageSetRequest\x1a\".segmentation.SegmentationResponse\"\x00(\x01\x30\x01\x12\x61\n\x11MultiSegmentImage\x12&.segmentation.MultiSegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12T\n\x0b\x44\x65leteImage\x12 .segmentation.DeleteImageRequest\x1a!.segmentation.DeleteImageResponse\"\x00\x12Z\n\x0fGetServerStatus\x12!.segmentation.ServerStatusRequest\x1a\".segmentation.ServerStatusResponse\"\x00\x42*\xaa\x02\'Viking.gRPC.SegmentationServiceTypes.V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,6 +34,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'\252\002\'Viking.gRPC.SegmentationServiceTypes.V1'
   _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._loaded_options = None
   _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_options = b'8\001'
+  _globals['_SUBMISSIONMODE']._serialized_start=2234
+  _globals['_SUBMISSIONMODE']._serialized_end=2355
+  _globals['_RESOLUTIONMODE']._serialized_start=2357
+  _globals['_RESOLUTIONMODE']._serialized_end=2461
   _globals['_UPLOADIMAGEREQUEST']._serialized_start=36
   _globals['_UPLOADIMAGEREQUEST']._serialized_end=107
   _globals['_UPLOADIMAGERESPONSE']._serialized_start=109
@@ -50,26 +54,28 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DELETEIMAGEREQUEST']._serialized_end=674
   _globals['_DELETEIMAGERESPONSE']._serialized_start=676
   _globals['_DELETEIMAGERESPONSE']._serialized_end=714
-  _globals['_SERVERSTATUSREQUEST']._serialized_start=716
-  _globals['_SERVERSTATUSREQUEST']._serialized_end=737
-  _globals['_SERVERSTATUSRESPONSE']._serialized_start=740
-  _globals['_SERVERSTATUSRESPONSE']._serialized_end=953
-  _globals['_SEGMENTATIONREQUEST']._serialized_start=956
-  _globals['_SEGMENTATIONREQUEST']._serialized_end=1158
-  _globals['_SEGMENTIMAGESETREQUEST']._serialized_start=1161
-  _globals['_SEGMENTIMAGESETREQUEST']._serialized_end=1311
-  _globals['_MULTISEGMENTATIONREQUEST']._serialized_start=1314
-  _globals['_MULTISEGMENTATIONREQUEST']._serialized_end=1630
-  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_start=1554
-  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_end=1630
-  _globals['_POINT']._serialized_start=1632
-  _globals['_POINT']._serialized_end=1661
-  _globals['_POLYGON']._serialized_start=1663
-  _globals['_POLYGON']._serialized_end=1709
-  _globals['_SEGMENTATIONRESPONSE']._serialized_start=1712
-  _globals['_SEGMENTATIONRESPONSE']._serialized_end=1921
-  _globals['_SEGMENTRESULT']._serialized_start=1923
-  _globals['_SEGMENTRESULT']._serialized_end=2045
-  _globals['_SEGMENTATIONSERVICE']._serialized_start=2048
-  _globals['_SEGMENTATIONSERVICE']._serialized_end=2793
+  _globals['_MODELCAPABILITIES']._serialized_start=717
+  _globals['_MODELCAPABILITIES']._serialized_end=846
+  _globals['_SERVERSTATUSREQUEST']._serialized_start=848
+  _globals['_SERVERSTATUSREQUEST']._serialized_end=869
+  _globals['_SERVERSTATUSRESPONSE']._serialized_start=872
+  _globals['_SERVERSTATUSRESPONSE']._serialized_end=1140
+  _globals['_SEGMENTATIONREQUEST']._serialized_start=1143
+  _globals['_SEGMENTATIONREQUEST']._serialized_end=1345
+  _globals['_SEGMENTIMAGESETREQUEST']._serialized_start=1348
+  _globals['_SEGMENTIMAGESETREQUEST']._serialized_end=1498
+  _globals['_MULTISEGMENTATIONREQUEST']._serialized_start=1501
+  _globals['_MULTISEGMENTATIONREQUEST']._serialized_end=1817
+  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_start=1741
+  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_end=1817
+  _globals['_POINT']._serialized_start=1819
+  _globals['_POINT']._serialized_end=1848
+  _globals['_POLYGON']._serialized_start=1850
+  _globals['_POLYGON']._serialized_end=1896
+  _globals['_SEGMENTATIONRESPONSE']._serialized_start=1899
+  _globals['_SEGMENTATIONRESPONSE']._serialized_end=2108
+  _globals['_SEGMENTRESULT']._serialized_start=2110
+  _globals['_SEGMENTRESULT']._serialized_end=2232
+  _globals['_SEGMENTATIONSERVICE']._serialized_start=2464
+  _globals['_SEGMENTATIONSERVICE']._serialized_end=3209
 # @@protoc_insertion_point(module_scope)

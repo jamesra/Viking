@@ -26,6 +26,7 @@ from segmentation_server.compile_config import (
 )
 from segmentation_server.embedding_store import EmbeddingStore, open_embedding_store
 from segmentation_server.cuda_errors import raise_if_cuda_lost
+from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.mask_utils import (
     LabeledImage,
     Point,
@@ -59,6 +60,8 @@ class SegmentationModel:
     SAM2ImagePredictor wrapping these weights so set_image() state is not shared.
     Predictors are not thread-safe; callers must serialize access with a lock.
     """
+
+    capabilities = SAM2_CAPABILITIES
 
     cleanup_mask = staticmethod(cleanup_mask)
     fill_small_holes = staticmethod(fill_small_holes)

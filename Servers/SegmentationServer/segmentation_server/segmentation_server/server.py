@@ -649,6 +649,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             cache_memory_bytes=int(cache_stats["total_memory_bytes"]),
             recent_latency_ms=recent_latency_ms,
             inference_workers=self._inference_workers,
+            capabilities=self.model.capabilities,
         )
 
     async def UploadTile(
