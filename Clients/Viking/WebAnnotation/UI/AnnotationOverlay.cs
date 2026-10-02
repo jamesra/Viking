@@ -51,7 +51,7 @@ namespace WebAnnotation
     }
 
     [Viking.Common.SectionOverlay("Annotation")]
-    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
+    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, Viking.Common.IHandleOverlayMouseDoubleClick, ICanvasViewHitTesting
     {
         public static float LocationTextScaleFactor => Global.AnnotationSettings.LocationTextScaleFactor;
         public static float ReferenceLocationTextScaleFactor => Global.AnnotationSettings.ReferenceLocationTextScaleFactor;
@@ -460,7 +460,7 @@ namespace WebAnnotation
                 if (autoPolygonizeController?.IsEnabled == true)
                 {
                     helpstrings.Add("Double-click result polyline: Accept auto polygonalization");
-                    helpstrings.Add("Double right-click result polyline: Dismiss auto polygonalization");
+                    helpstrings.Add("Double right-click result polyline: Accept / Reject menu");
                 }
 
                 helpstrings.Add("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off");
@@ -521,33 +521,26 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Find the annotations intersecting the provided point on the section, using annotation locations on the screen, not anatomical positions
+        /// Nearest annotation at the point for hover, cursor, and single-click edit.
+        /// Auto-polygonize rings are returned only when no annotation is hit so hollow
+        /// proposals do not block translate/scale on the circle underneath. Double-click
+        /// accept/dismiss uses <see cref="IHandleOverlayMouseDoubleClick"/> instead.
         /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
         public object ObjectAtPosition(Geometry.Vector2 position, out double distance)
         {
             distance = double.MaxValue;
 
-            if (IsCommandDefault() &&
-                autoPolygonizeController != null &&
-                autoPolygonizeController.TryHit(position, out AutoPolygonizeProposal proposal, out double proposalDistance))
-            {
-                distance = proposalDistance;
-                return proposal;
-            }
-
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
             {
-                return null;
+                return TryProposalAtPosition(position, out distance);
             }
 
             ICanvasGeometryView bestObj = null;
 
             List<HitTestResult> listObjects = locView.GetAnnotations(position);
 
-            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber);
+            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber, preferCloserLocationLinks: true);
 
             //Use objects on our section, then other sections 
             if (bestHit != null)
@@ -567,7 +560,57 @@ namespace WebAnnotation
                 }
             }
 
-            return bestObj;
+            // PreferAnnotationForSingleClick: annotation wins for hover/cursor/edit;
+            // proposal only on a miss. Double-click accept/dismiss is preferential.
+            return AutoPolygonizeSelection.PreferAnnotationForSingleClick(
+                bestObj,
+                bestObj is null ? TryProposalAtPosition(position, out distance) : null);
+        }
+
+
+        /// <summary>
+        /// Proposal ring hit when idle auto-polygonize is showing overlays. Used after
+        /// annotation miss in <see cref="ObjectAtPosition"/> and by preferential double-click.
+        /// </summary>
+        private object TryProposalAtPosition(Geometry.Vector2 position, out double distance)
+        {
+            distance = double.MaxValue;
+            if (!IsCommandDefault() ||
+                autoPolygonizeController is null ||
+                !autoPolygonizeController.TryHit(position, out AutoPolygonizeProposal proposal, out double proposalDistance))
+            {
+                return null;
+            }
+
+            distance = proposalDistance;
+            return proposal;
+        }
+
+        /// <summary>
+        /// Accept on left double-click, or open the proposal Accept/Reject menu on right/middle,
+        /// even when an annotation owns the same point for single-click edit via
+        /// <see cref="ObjectAtPosition"/>.
+        /// </summary>
+        bool Viking.Common.IHandleOverlayMouseDoubleClick.TryHandleMouseDoubleClick(
+            MouseButtons button,
+            Geometry.Vector2 worldPosition)
+        {
+            if (!IsCommandDefault() ||
+                autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
+            {
+                return false;
+            }
+
+            if (button == MouseButtons.Left)
+                return proposal.HandleMouseDoubleClick(button, worldPosition);
+
+            if (button == MouseButtons.Right || button == MouseButtons.Middle)
+            {
+                proposal.ShowContextMenuAtCursor();
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -658,6 +701,8 @@ namespace WebAnnotation
             if (Global.AnnotationSettings.AutoPolygonizeCircles)
                 autoPolygonizeController.SetEnabled(true);
 
+            AnnotationStatusChips.Attach(_Parent);
+
             _Parent.Disposed += OnParentDisposed;
 
             _currentSectionNumber = _Parent.Section?.Number ?? 0;
@@ -687,7 +732,13 @@ namespace WebAnnotation
         {
             autoPolygonizeController ??= new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
             autoPolygonizeController.SetEnabled(enabled);
+            AnnotationStatusChips.Refresh();
         }
+
+        /// <summary>
+        /// True while idle auto-polygonize holds an in-flight batch. Status chips read this.
+        /// </summary>
+        internal bool IsAutoPolygonizeBusy => autoPolygonizeController?.IsBusy == true;
 
         /// <summary>
         /// Restarts the auto-segment idle wait when it is already on.
@@ -758,35 +809,34 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>
+        /// Sets the mouse cursor from the hit under the pointer via
+        /// <see cref="LocationActionDispatch"/> so unimplemented action methods cannot throw on hover.
+        /// </summary>
         protected void UpdateMouseCursor()
         {
-            // GetNearestLocation(WorldPosition, out distance);
-            if (LastMouseOverObject is IMouseActionSupport loc)
-            {
-                Geometry.Vector2 WorldPosition = LastMouseMoveVolumeCoords;
-                LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
-                _Parent.Cursor = action.GetCursor();
-            }
-            else
-            {
-                _Parent.Cursor = Cursors.Default;
-            }
+            LocationAction action = LocationActionDispatch.GetActionForCursor(
+                LastMouseOverObject,
+                LastMouseMoveVolumeCoords,
+                CurrentSectionNumber,
+                Control.ModifierKeys,
+                penContact: false);
+            _Parent.Cursor = action.GetCursor();
         }
 
-
+        /// <summary>
+        /// Sets the pen cursor from the hit under the stylus via
+        /// <see cref="LocationActionDispatch"/> so unimplemented action methods cannot throw on hover.
+        /// </summary>
         protected void UpdatePenCursor()
         {
-            // GetNearestLocation(WorldPosition, out distance);
-            if (LastMouseOverObject is IPenActionSupport loc)
-            {
-                Geometry.Vector2 WorldPosition = LastMouseMoveVolumeCoords;
-                LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
-                _Parent.Cursor = action.GetCursor();
-            }
-            else
-            {
-                _Parent.Cursor = Cursors.Default;
-            }
+            LocationAction action = LocationActionDispatch.GetActionForCursor(
+                LastMouseOverObject,
+                LastMouseMoveVolumeCoords,
+                CurrentSectionNumber,
+                Control.ModifierKeys,
+                penContact: true);
+            _Parent.Cursor = action.GetCursor();
         }
 
         protected bool IsCommandDefault()
@@ -913,11 +963,10 @@ namespace WebAnnotation
 
             //Left mouse button selects objects. In Pen Mode the mouse still emulates a pen
             //after location actions (fill-bucket, etc.) have had a chance to start.
+            // Proposal rings do not swallow this path; ObjectAtPosition prefers annotations
+            // so translate/scale still start under a ring. Double-click accept/dismiss is separate.
             if (e.Button == MouseButtons.Left)
             {
-                if (autoPolygonizeController?.TryHit(WorldPosition, out _, out _) == true)
-                    return;
-
                 if (TryStartLocationActionCommand(WorldPosition, penContact: false))
                     return;
 
@@ -1101,6 +1150,7 @@ namespace WebAnnotation
             }
 
             AddConvertCircleActions(sender_cmd, actions);
+            AddCutHoleActions(sender_cmd, actions);
 
             //Check if we should add actions to create new structures
             foreach (ulong favoriteStructureID in Global.UserFavoriteStructureTypes)
@@ -1187,6 +1237,35 @@ namespace WebAnnotation
                     continue;
 
                 actions.Add(new WebAnnotation.UI.Actions.ChangeToPolygonAction(location, loop));
+            }
+        }
+
+        /// <summary>
+        /// Adds a cut-hole (scissors) choice for each polygon on this section that wholly contains the closed pen loop
+        /// without touching one of its interior holes. The stroke log only includes annotations the path crossed,
+        /// so a loop drawn entirely inside a polygon would otherwise offer no cut-hole button.
+        /// Called from <see cref="OnPenPathCompleted"/> before the choice buttons are shown.
+        /// Skips a hole already offered from the stroke log.
+        /// </summary>
+        private void AddCutHoleActions(AnnotationOverlayPenFreeDrawCommandV2 sender, List<IAction> actions)
+        {
+            if (!sender.Path.HasSelfIntersection)
+                return;
+
+            Polygon loop = new(sender.Path.SimplifiedFirstLoop);
+            List<LocationPolygonView> polygons = AnnotationPenFreeDrawCommand.IntersectedPolygonsOnSection(CurrentSectionNumber, loop);
+            if (polygons is null)
+                return;
+
+            foreach (LocationPolygonView polygon in polygons)
+            {
+                foreach (WebAnnotation.UI.Actions.CutHoleAction cutHole in polygon.GetCutHoleActionsForLoop(sender.Path))
+                {
+                    if (actions.OfType<WebAnnotation.UI.Actions.CutHoleAction>().Any(existing => existing.Equals(cutHole)))
+                        continue;
+
+                    actions.Add(cutHole);
+                }
             }
         }
 
@@ -2762,10 +2841,6 @@ break;
                 (byte)(blue),
                 (byte)(alpha));
         }
-
-        public LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID) => throw new NotImplementedException();
-
-        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//If we didn't overlap an existing annotation then create a new structure/*if(interaction_log.All(e => e.Annotation == null))
 
         #endregion
 

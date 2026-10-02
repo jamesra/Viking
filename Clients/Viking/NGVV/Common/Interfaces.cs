@@ -57,4 +57,18 @@ namespace Viking.Common
     {
         bool HandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, Geometry.Vector2 worldPosition);
     }
+
+    /// <summary>
+    /// Overlay-level double-click that runs before <see cref="ISectionOverlayExtension.ObjectAtPosition"/>.
+    /// Used when a hollow hit target (auto-polygonize rings) must accept/dismiss on double-click
+    /// without winning single-click hover, cursor, or translate/scale against the annotation underneath.
+    /// </summary>
+    public interface IHandleOverlayMouseDoubleClick
+    {
+        /// <summary>
+        /// Called by <c>DefaultCommand</c> before nearest-object double-click dispatch.
+        /// </summary>
+        /// <returns>True when the overlay consumed the double-click.</returns>
+        bool TryHandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, Geometry.Vector2 worldPosition);
+    }
 }

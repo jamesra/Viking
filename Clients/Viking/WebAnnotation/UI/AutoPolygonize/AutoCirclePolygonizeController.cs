@@ -115,6 +115,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public bool IsEnabled => enabled;
 
         /// <summary>
+        /// True while an idle batch holds <c>batchRunning</c>. Status chips read this for AutoPoly Busy.
+        /// </summary>
+        internal bool IsBusy => Interlocked.CompareExchange(ref batchRunning, 0, 0) != 0;
+
+        /// <summary>
         /// True when no non-default command is running. Hidden during Segment and
         /// queued commands so proposal overlays do not fight those tools.
         /// </summary>
@@ -403,6 +408,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Nearest proposal ring within the downsample-scaled hit radius.
+        /// Hover and double-click call this directly. Single-click <c>ObjectAtPosition</c>
+        /// prefers annotations so the circle under a ring stays editable.
         /// </summary>
         /// <returns>False when overlays are hidden or nothing is in range.</returns>
         public bool TryHit(Vector2 worldPosition, out AutoPolygonizeProposal proposal, out double distance)
@@ -742,6 +749,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
+            global::WebAnnotation.UI.AnnotationStatusChips.Refresh();
             try
             {
                 await RunBatchBodyAsync().ConfigureAwait(false);
@@ -749,6 +757,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             finally
             {
                 Interlocked.Exchange(ref batchRunning, 0);
+                global::WebAnnotation.UI.AnnotationStatusChips.Refresh();
                 if (Interlocked.Exchange(ref rerunAfterBatch, 0) == 1 && enabled)
                     RestartIdleTimer();
             }
@@ -904,6 +913,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (foreground.Count == 0)
                         continue;
 
+                    List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                     IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                         visibleForPrompts,
                         transform,
@@ -911,9 +921,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                         Global.AnnotationSettings.SegmentationPointRadius * downsample,
                         [circle.ID],
                         circle.ParentID);
+                    SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                        "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
                     long promptMs = proposalTimer.ElapsedMilliseconds;
 
-                    List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                     Stopwatch segmentTimer = Stopwatch.StartNew();
                     var response = await localUploadSession.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
                     long segmentMs = segmentTimer.ElapsedMilliseconds;
@@ -921,8 +932,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                         continue;
 
                     try
-                    SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                        "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
                     {
                         Task responseTask = Task.Run(() => ProcessResponse(
                             processBatch.Session,
@@ -1036,7 +1045,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             AutoPolygonizeMaskOverlay? maskOverlay = AutoPolygonizeMaskOverlay.TryCreate(session, response);
-
             Stopwatch renderPreparationTimer = Stopwatch.StartNew();
             int verticesBeforeSimplify = polygon.TotalUniqueVertices;
             polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
@@ -1542,6 +1550,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (foreground.Count == 0)
                     return;
 
+                List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                     visibleForPrompts,
                     transform,
@@ -1549,9 +1558,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                     Global.AnnotationSettings.SegmentationPointRadius * downsample,
                     [circle.ID],
                     circle.ParentID);
+                SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                    "auto-circle", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
 
                 Stopwatch proposalTimer = Stopwatch.StartNew();
-                List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
                 if (response is null)
                     return;
@@ -1559,8 +1569,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                 downsample = GetCurrentDownsample();
                 AutoPolygonizeUploadContext? afterSegment = TryCreateUploadContext(session, downsample);
                 if (afterSegment is { ImageId: not 0 } next &&
-                SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                    "auto-circle", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
                     holdImageId is ulong held &&
                     held != next.ImageId)
                 {
@@ -2048,6 +2056,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     Rectangle viewBounds = GetCurrentViewportBounds();
                     HashSet<long> involved = [.. locationIds];
+                    List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                     IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                             visibleForPrompts,
                             parent.Section.ActiveSectionToVolumeTransform,
@@ -2055,9 +2064,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                             Global.AnnotationSettings.SegmentationPointRadius * downsample,
                             involved,
                             parentId);
+                    SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                        "auto-overlap-group", involved, parentId, visibleForPrompts, foreground, background));
 
                     var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
-                    List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                     if (response is null)
                         return;
 
@@ -2065,8 +2075,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                         return;
 
                     IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
-                    SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                        "auto-overlap-group", involved, parentId, visibleForPrompts, foreground, background));
                         response,
                         preserveHolesContainingWorldPoints: background);
                     Polygon polygon = polygons.FirstOrDefault();

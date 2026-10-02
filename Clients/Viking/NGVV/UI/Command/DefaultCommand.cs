@@ -123,6 +123,20 @@ namespace Viking.UI.Commands
             double distance = double.MaxValue;
             object context_obj = null;
 
+            // Preferential overlay double-click (e.g. auto-polygonize rings) before
+            // ObjectAtPosition so hollow hits do not steal single-click edit of annotations.
+            if (Parent.ShowOverlays && ExtensionManager.SectionOverlays != null)
+            {
+                foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
+                {
+                    if (overlay is IHandleOverlayMouseDoubleClick preferential &&
+                        preferential.TryHandleMouseDoubleClick(e.Button, WorldPosition))
+                    {
+                        return;
+                    }
+                }
+            }
+
             if (Parent.ShowOverlays)
             {
                 foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)

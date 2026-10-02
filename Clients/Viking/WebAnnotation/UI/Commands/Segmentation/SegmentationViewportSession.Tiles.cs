@@ -139,10 +139,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 };
                 CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
                 SegmentationDiag.Log(
-                    $"UploadTile row={cell.Row} col={cell.Col} ds={signature.Downsample} bytes={png.Length}");
+                    $"UploadTile send row={cell.Row} col={cell.Col} ds={signature.Downsample} " +
+                    $"declared={upload.Width}x{upload.Height} encodedBytes={png.Length}");
                 Debug.WriteLine(
                     $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
-                    $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} bytes={png.Length}");
+                    $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
+                    $"dimensions={upload.Width}x{upload.Height} bytes={png.Length}");
                 try
                 {
                     UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
@@ -211,8 +213,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
+
             CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(60), cancellationToken: token);
-            return await grpcClient.SegmentTilesAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
+            SegmentationResponse response =
+                await grpcClient.SegmentTilesAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
+            string submittedTiles = string.Join(
+                ";",
+                request.Tiles.Select(tile => $"{tile.Row},{tile.Col}"));
+            string requestedTiles = string.Join(
+                ";",
+                response.RequestedTiles.Select(tile => $"{tile.Row},{tile.Col}"));
+            string segmentSizes = string.Join(
+                ",",
+                response.Segments.Select(segment => $"{segment.X},{segment.Y}:{GetPngDimensions(segment.Mask.ToByteArray())}"));
+            SegmentationDiag.Log(
+                $"SegmentTiles response mosaic={response.Width}x{response.Height} " +
+                $"origin=({response.OriginX},{response.OriginY}) submittedTiles=[{submittedTiles}] " +
+                $"requestedTiles=[{requestedTiles}] " +
+                $"segments=[{segmentSizes}]");
+            return response;
         }
 
         private static bool TryParseMissingTile(string detail, out int row, out int col)
@@ -247,7 +266,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 VikingXNA.Scene tileScene = new(
                     new Viewport(0, 0, SegmentationTileGrid.TileSize, SegmentationTileGrid.TileSize),
                     camera);
-                SegmentationDiag.Log($"CaptureTile start row={cell.Row} col={cell.Col} center=({centerX},{centerY}) ds={downsample}");
+                Geometry.Rectangle worldBounds = tileScene.VisibleWorldBounds;
+                SegmentationDiag.Log(
+                    $"CaptureTile start row={cell.Row} col={cell.Col} center=({centerX},{centerY}) ds={downsample} " +
+                    $"viewport={tileScene.Viewport.Width}x{tileScene.Viewport.Height} " +
+                    $"world=({worldBounds.Left},{worldBounds.Bottom})-({worldBounds.Right},{worldBounds.Top}) " +
+                    $"worldSize={worldBounds.Width}x{worldBounds.Height}");
                 RenderTarget2D renderTarget = await parent.RenderSceneToTexture(
                     tileScene,
                     centerX,
@@ -263,6 +287,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 {
                     int width = SegmentationTileGrid.TileSize;
                     int height = SegmentationTileGrid.TileSize;
+                    SegmentationDiag.Log(
+                        $"CaptureTile target row={cell.Row} col={cell.Col} " +
+                        $"requested={width}x{height} actual={renderTarget.Width}x{renderTarget.Height}");
+                    if (renderTarget.Width != width || renderTarget.Height != height)
+                    {
+                        SegmentationDiag.Log(
+                            $"CaptureTile rejected row={cell.Row} col={cell.Col}: " +
+                            $"render target mismatch {renderTarget.Width}x{renderTarget.Height}");
+                        return (null, 0, 0);
+                    }
+
                     Color[] pixels = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
                     {
                         Color[] buffer = new Color[width * height];
@@ -272,6 +307,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     byte[] pngData = SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale);
                     SegmentationCaptureEncoder.SaveCaptureForReview(pngData, width, height);
                     var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
+                    SegmentationDiag.Log(
+                        $"CaptureTile encoded row={cell.Row} col={cell.Col} " +
+                        $"png={GetPngDimensions(pngData)} bytes={pngData.Length} valid={isValid}");
                     if (!isValid)
                     {
                         Debug.WriteLine($"Tile capture failed validation: {errorMessage}");
@@ -294,6 +332,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Debug.WriteLine($"Error capturing tile row={cell.Row} col={cell.Col}: {ex.Message}");
                 return (null, 0, 0);
             }
+        }
+
+        /// <summary>
+        /// Reads PNG IHDR dimensions for diagnostics without decoding pixel data.
+        /// </summary>
+        private static string GetPngDimensions(byte[] pngData)
+        {
+            if (pngData is null || pngData.Length < 24 ||
+                pngData[0] != 0x89 || pngData[1] != 0x50 ||
+                pngData[2] != 0x4E || pngData[3] != 0x47)
+            {
+                return "invalid";
+            }
+
+            int width =
+                (pngData[16] << 24) |
+                (pngData[17] << 16) |
+                (pngData[18] << 8) |
+                pngData[19];
+            int height =
+                (pngData[20] << 24) |
+                (pngData[21] << 16) |
+                (pngData[22] << 8) |
+                pngData[23];
+            return $"{width}x{height}";
         }
 
         /// <summary>

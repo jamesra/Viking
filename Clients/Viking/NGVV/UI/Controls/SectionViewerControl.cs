@@ -205,6 +205,8 @@ namespace Viking.UI.Controls
                     value = [new()];
                 }
 
+                bool itemsAddedOrRemoved = false;
+
                 //Update the channels we have
                 for (int i = 0; i < value.Length; i++)
                 {
@@ -224,6 +226,7 @@ namespace Viking.UI.Controls
                         tsChannelItem = new ToolStripLabel();
                         StatusBar.Items.Add(tsChannelItem);
                         _StatusChannels.Add(tsChannelItem);
+                        itemsAddedOrRemoved = true;
                     }
 
                     tsChannelItem.Text = channelName;
@@ -242,8 +245,13 @@ namespace Viking.UI.Controls
                     ToolStripItem tsChannelItem = _StatusChannels[i];
                     StatusBar.Items.Remove(tsChannelItem);
                     _StatusChannels.RemoveAt(i);
+                    itemsAddedOrRemoved = true;
                 }
 
+                // Draw assigns StatusChannels every frame. Re-arranging unconditionally
+                // removes/re-adds every status item each frame and starves the bar of repaints.
+                if (itemsAddedOrRemoved)
+                    ArrangeStatusBarTrailingItems();
             }
         }
 
@@ -484,7 +492,6 @@ namespace Viking.UI.Controls
             StatusBar.Items.Add(tsPosition);
             StatusBar.Items.Add(tsMagnification);
             StatusBar.Items.Add(tsChannels);
-
             ObjectSelectedHandler = new Viking.Common.ObjectSelectedEventHandler(this.OnSelectedItemChanged);
             InternalReferenceSectionChanged = new ReferenceSectionChangedEventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
@@ -702,6 +709,17 @@ namespace Viking.UI.Controls
             if (!DesignMode)
             {
                 this.menuStrip.Parent = this.Parent;
+                if (this.Parent is Form hostForm)
+                    hostForm.MainMenuStrip = this.menuStrip;
+
+                // Re-home a tool strip created before Parent existed (overlay attach race).
+                if (_viewerToolStrip is not null && this.Parent is not null &&
+                    _viewerToolStrip.Parent != this.Parent)
+                {
+                    _viewerToolStrip.Parent = this.Parent;
+                }
+
+                EnsureViewerChromeZOrder();
 
                 penEventManager = new PenEventManager(this);
                 gestureEventManager = new GestureEventManager(this);

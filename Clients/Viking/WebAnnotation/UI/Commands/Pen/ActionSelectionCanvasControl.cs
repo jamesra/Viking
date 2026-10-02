@@ -121,68 +121,71 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// Create a button for every action that requires it
+        /// Create a button for every action that requires it. When
+        /// <see cref="Global.ShowPenActionButtons"/> is false, action circles are omitted but
+        /// Cancel stays so the user is never stranded without an on-canvas out (Escape also cancels).
         /// </summary>
         private void GenerateActionButtons(Dictionary<IAction, IIconTexture> actionIcons)
         {
             BoundingBox = CalculateBoundingBox(ActionInteractables);
 
-            if (!Global.ShowPenActionButtons)
+            _Buttons = [];
+            _buttonLabels = [];
+            _labeledActions.Clear();
+
+            if (Global.ShowPenActionButtons)
             {
-                _Buttons = [];
-                _buttonLabels = [];
-                _labeledActions.Clear();
-                PublishChoiceHelp(actionIcons.Keys);
-                return;
-            }
+                List<CircularButton> buttons = new(actionIcons.Count);
 
-            List<CircularButton> buttons = new(actionIcons.Count);
-
-            foreach (KeyValuePair<IAction, IIconTexture> item in actionIcons)
-            {
-                IAction action = item.Key;
-                IIconTexture value = item.Value;
-
-                CircleView btnView = null;
-
-                Color color = value is not IColorView colorView ? Color.Green : colorView.Color;
-
-                Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
-                btnView = value.Icon != BuiltinTexture.None
-                    ? new TextureCircleView(value.Icon.GetTexture(), circle, color)
-                    : new CircleView(circle, color);
-
-                //TODO: Sort and Map visuals on the circlular buttons according to action types
-                CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
-                buttons.Add(circularButton);
-                _labeledActions.Add(action);
-
-                if (ActionInteractables.ContainsKey(action))
+                foreach (KeyValuePair<IAction, IIconTexture> item in actionIcons)
                 {
-                    ActionInteractables[action].Insert(0, circularButton);
-                }
-                else
-                {
-                    ActionInteractables.Add(action, [circularButton]);
-                }
-            }
+                    IAction action = item.Key;
+                    IIconTexture value = item.Value;
 
-            _Buttons = [.. buttons];
+                    CircleView btnView = null;
+
+                    Color color = value is not IColorView colorView ? Color.Green : colorView.Color;
+
+                    Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
+                    btnView = value.Icon != BuiltinTexture.None
+                        ? new TextureCircleView(value.Icon.GetTexture(), circle, color)
+                        : new CircleView(circle, color);
+
+                    //TODO: Sort and Map visuals on the circlular buttons according to action types
+                    CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
+                    buttons.Add(circularButton);
+                    _labeledActions.Add(action);
+
+                    if (ActionInteractables.ContainsKey(action))
+                    {
+                        ActionInteractables[action].Insert(0, circularButton);
+                    }
+                    else
+                    {
+                        ActionInteractables.Add(action, [circularButton]);
+                    }
+                }
+
+                _Buttons = [.. buttons];
+            }
 
             AppendCancelButton();
 
             LayoutButtons();
             CreateButtonLabels();
-            PublishChoiceHelp(_labeledActions);
+            PublishChoiceHelp(Global.ShowPenActionButtons ? _labeledActions : actionIcons.Keys);
         }
 
         /// <summary>
         /// Fills the F1 bar from the choice captions. Newlines in a button label become spaces so the combo stays one line per choice.
+        /// Always lists Cancel and Escape so hidden action buttons do not hide how to leave the command.
         /// </summary>
         private void PublishChoiceHelp(IEnumerable<IAction> actions)
         {
             _choiceHelp.Clear();
-            _choiceHelp.Add("Click a button to choose");
+            _choiceHelp.Add(Global.ShowPenActionButtons
+                ? "Click a button to choose"
+                : "Click a shape preview to choose");
             foreach (IAction action in actions)
             {
                 string line = LabelFor(action).Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
@@ -190,6 +193,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             _choiceHelp.Add("Cancel");
+            _choiceHelp.Add("Escape: Cancel");
         }
 
         /// <summary>

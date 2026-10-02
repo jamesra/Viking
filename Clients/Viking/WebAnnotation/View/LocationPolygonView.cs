@@ -670,6 +670,23 @@ namespace WebAnnotation.View
             }
         }
 
+        /// <summary>
+        /// The cut-hole choice for a closed pen loop drawn entirely inside this polygon's exterior ring
+        /// and clear of every existing interior hole. Returns an empty list otherwise, including when the
+        /// loop touches a hole (that case is a replace-hole choice, not a new hole).
+        /// Called by the overlay after a stroke because the stroke log only names annotations the path crossed,
+        /// and a loop wholly inside a polygon crosses nothing.
+        /// </summary>
+        public IReadOnlyList<CutHoleAction> GetCutHoleActionsForLoop(Path path)
+        {
+            if (Initialized == false || Z != AnnotationOverlay.CurrentOverlay.CurrentSectionNumber || !TypeCode.AllowsInteriorHoles())
+            {
+                return [];
+            }
+
+            return [.. Shared2DShapeActionsForPath.IdentifyPossibleInteriorActions(ID, VolumePolygon, SmoothedVolumePolygon, path).OfType<CutHoleAction>()];
+        }
+
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
             if (Initialized == false)

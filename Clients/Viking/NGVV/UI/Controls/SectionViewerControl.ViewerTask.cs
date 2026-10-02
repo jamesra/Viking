@@ -165,6 +165,11 @@ namespace Viking.UI.Controls
 
         private void MoveViewerTaskItemsToEnd()
         {
+            // Keep mode chips immediately before ViewerTask chrome.
+            ArrangeStatusBarTrailingItems();
+            if (_chipPenMode is not null)
+                return;
+
             if (_viewerTaskStatus is null || _viewerTaskProgress is null || _viewerTaskCancel is null)
                 return;
 

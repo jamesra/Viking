@@ -620,7 +620,7 @@ namespace WebAnnotation
         public static void OnPenMode(object sender, EventArgs e)
         {
             Global.PenMode = !Global.PenMode;
-            menuPenMode.Checked = Global.PenMode;
+            AnnotationStatusChips.Refresh();
         }
 
         /// <summary>
@@ -635,8 +635,19 @@ namespace WebAnnotation
         public static void OnAutoPolygonizeCircles(object sender, EventArgs e)
         {
             Global.AnnotationSettings.AutoPolygonizeCircles = !Global.AnnotationSettings.AutoPolygonizeCircles;
+            AnnotationStatusChips.Refresh();
+        }
+
+        /// <summary>
+        /// Keeps Annotation menu checkmarks aligned with toolbar buttons and status chips.
+        /// Called after toggles and from <see cref="UI.AnnotationModeToolbar.SyncFromSettings"/>.
+        /// </summary>
+        internal static void SyncModeMenuChecked(bool penMode, bool autoPolygonize)
+        {
+            if (menuPenMode != null)
+                menuPenMode.Checked = penMode;
             if (menuAutoPolygonizeCircles != null)
-                menuAutoPolygonizeCircles.Checked = Global.AnnotationSettings.AutoPolygonizeCircles;
+                menuAutoPolygonizeCircles.Checked = autoPolygonize;
         }
 
         /// <summary>

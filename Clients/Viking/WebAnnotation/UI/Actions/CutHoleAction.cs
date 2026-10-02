@@ -5,7 +5,7 @@ using SqlGeometryUtils;
 using System;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using WebAnnotationModel;
+using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -42,7 +42,7 @@ namespace WebAnnotation.UI.Actions
 
         public IRenderable? Active { get; set; } = null;
 
-        public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
+        public BuiltinTexture Icon { get; set; } = BuiltinTexture.Scissors;
 
         public CutHoleAction(LocationObj location, Polygon newVolumeInteriorPolygon, IVolumeToSectionTransform? transform = null)
         {

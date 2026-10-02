@@ -1,4 +1,4 @@
-using Geometry;
+﻿using Geometry;
 using Grpc.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -18,6 +18,7 @@ using Viking.UI;
 using Viking.UI.Controls;
 using Viking.VolumeModel;
 using VikingXNA;
+using WebAnnotation.UI;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 using Polygon = Geometry.Polygon;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -38,6 +39,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private int uploadedImageWidth;
         private int uploadedImageHeight;
         private int isUploadingImage;
+        /// <summary>
+        /// Kind and detail published together so a reader never pairs one attempt's kind with
+        /// another's detail when upload and segment finish on different threads.
+        /// </summary>
+        private sealed class SkipInfo(SegmentationSkipKind kind, string? detail)
+        {
+            public SegmentationSkipKind Kind { get; } = kind;
+
+            public string? Detail { get; } = detail;
+        }
+
+        private SkipInfo? lastSkip;
+
+        /// <summary>
+        /// Reads and clears the last user-visible skip from upload/segment. Interactive
+        /// Segment calls this after a null/false result so the status bar can explain why.
+        /// Returns <see cref="SegmentationSkipKind.None"/> when no reason was recorded.
+        /// </summary>
+        public SegmentationSkipKind ConsumeLastSkip(out string? detail)
+        {
+            SkipInfo? skip = Interlocked.Exchange(ref lastSkip, null);
+            detail = skip?.Detail;
+            return skip?.Kind ?? SegmentationSkipKind.None;
+        }
+
+        /// <summary>True when the live camera is within Max Auto-Segment Downsample.</summary>
+        public bool CanSubmitTilesAtCurrentZoom() => IsCameraWithinTileSubmission(recordSkip: false);
+
+        private void RecordSkip(SegmentationSkipKind kind, string? detail = null)
+        {
+            Volatile.Write(ref lastSkip, new SkipInfo(kind, detail));
+        }
+
+        private void ClearSkip()
+        {
+            Volatile.Write(ref lastSkip, null);
+        }
         private CancellationTokenSource renderCancellationTokenSource;
         private CancellationTokenSource linkedRenderCancellationTokenSource;
         private CancellationTokenSource uploadCancellationTokenSource;
@@ -96,7 +134,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <see cref="SegmentAsync"/> before any tile is sent. Auto-segment checks the same
         /// cutoff earlier so an idle batch never starts.
         /// </summary>
-        private bool IsCameraWithinTileSubmission()
+        private bool IsCameraWithinTileSubmission(bool recordSkip = true)
         {
             double cameraDownsample = parent.Camera?.Downsample ?? parent.Downsample;
             double maxCameraDownsample = WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample;
@@ -105,6 +143,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             SegmentationDiag.Log(
                 $"Tile submit skip: downsample out of range ds={cameraDownsample} max={maxCameraDownsample}");
+            if (recordSkip)
+                RecordSkip(SegmentationSkipKind.ZoomTooCoarse);
             return false;
         }
 
@@ -315,7 +355,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public async Task<bool> UploadCurrentImageAsync(CancellationToken cancellationToken)
         {
             if (grpcClient is null)
+            {
+                RecordSkip(SegmentationSkipKind.NoClient);
                 return false;
+            }
 
             if (!IsCameraWithinTileSubmission())
                 return false;
@@ -323,6 +366,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (Interlocked.CompareExchange(ref isUploadingImage, 1, 0) != 0)
                 return false;
 
+            AnnotationStatusChips.Refresh();
             try
             {
                 uploadCancellationTokenSource?.Cancel();
@@ -331,26 +375,33 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 (int downsample, _, _, _) = await ReadViewTilesAsync().ConfigureAwait(false);
                 if (uploadCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    RecordSkip(SegmentationSkipKind.Cancelled);
                     return false;
+                }
 
                 mosaicDownsample = downsample;
                 uploadedImageBounds = ViewportBounds;
                 uploadedImageWidth = SegmentationTileGrid.TileSize;
                 uploadedImageHeight = SegmentationTileGrid.TileSize;
                 currentImageId = null;
+                ClearSkip();
                 return true;
             }
             catch (OperationCanceledException)
             {
                 Debug.WriteLine("Tile upload cancelled due to view change");
+                RecordSkip(SegmentationSkipKind.Cancelled);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Tile upload error: {ex.Message}");
+                RecordSkip(SegmentationSkipKind.UploadFailed, ex.Message);
             }
             finally
             {
                 Interlocked.Exchange(ref isUploadingImage, 0);
+                AnnotationStatusChips.Refresh();
             }
 
             return false;
@@ -483,7 +534,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             CancellationToken cancellationToken)
         {
             if (grpcClient is null)
+            {
+                RecordSkip(SegmentationSkipKind.NoClient);
                 return null;
+            }
 
             if ((foregroundPoints is null || foregroundPoints.Count == 0) &&
                 (backgroundPoints is null || backgroundPoints.Count == 0))
@@ -514,6 +568,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     if (needed.Count == 0)
                     {
                         SegmentationDiag.Log("SegmentAsync: no tile cells for prompts");
+                        if (lastResponse is null)
+                            RecordSkip(SegmentationSkipKind.TilesUnavailable);
                         return lastResponse;
                     }
 
@@ -521,6 +577,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     {
                         SegmentationDiag.Log("SegmentAsync: UploadMissingTilesAsync returned false");
                         Debug.WriteLine("No segmentation tiles could be uploaded");
+                        if (lastResponse is null)
+                            RecordSkip(SegmentationSkipKind.UploadFailed);
                         return lastResponse;
                     }
 
@@ -532,7 +590,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         grayscale,
                         cancellationToken).ConfigureAwait(false);
                     if (response is null)
+                    {
+                        if (lastResponse is null)
+                            RecordSkip(SegmentationSkipKind.TilesUnavailable);
                         return lastResponse;
+                    }
 
                     lastResponse = response;
                     mosaicOriginX = response.OriginX;
@@ -560,17 +622,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         break;
                 }
 
+                if (lastResponse is not null)
+                    ClearSkip();
+                else
+                    RecordSkip(SegmentationSkipKind.EmptyMask);
+
                 return lastResponse;
             }
             catch (OperationCanceledException)
             {
                 SegmentationDiag.Log("SegmentAsync cancelled");
+                RecordSkip(SegmentationSkipKind.Cancelled);
                 return null;
             }
             catch (Exception ex)
             {
                 SegmentationDiag.Log($"SegmentAsync error: {ex.GetType().Name}: {ex.Message}");
                 Debug.WriteLine($"Segmentation error: {ex.Message}");
+                RecordSkip(SegmentationSkipKind.Error, ex.Message);
                 return null;
             }
         }
@@ -754,27 +823,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// World rectangle of a SAM2 segment on the fused mosaic.
         /// Mask Y is top-origin; MosaicPixelToWorld flips into Viking world-up.
+        /// The mosaic origin comes from <paramref name="response"/>, not session state: the session is shared by
+        /// concurrent requests and growth rounds, so its origin may already belong to a different response.
         /// </summary>
         public Geometry.Rectangle GetSegmentWorldBounds(
+            SegmentationResponse response,
             int segmentX,
             int segmentY,
             int maskWidth,
-            int maskHeight,
-            int responseWidth,
-            int responseHeight)
+            int maskHeight)
         {
-            int imageHeight = Math.Max(1, responseHeight > 0 ? responseHeight : uploadedImageHeight);
+            int imageHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight);
             int downsample = Math.Max(1, mosaicDownsample);
             Geometry.Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(
-                mosaicOriginX,
-                mosaicOriginY,
+                response.OriginX,
+                response.OriginY,
                 segmentX,
                 segmentY,
                 imageHeight,
                 downsample);
             Geometry.Vector2 bottomRight = SegmentationTileGrid.MosaicPixelToWorld(
-                mosaicOriginX,
-                mosaicOriginY,
+                response.OriginX,
+                response.OriginY,
                 segmentX + maskWidth,
                 segmentY + maskHeight,
                 imageHeight,

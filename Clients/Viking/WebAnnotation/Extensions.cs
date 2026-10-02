@@ -54,11 +54,18 @@ namespace WebAnnotation
         /// 2. Locations on adjacent section
         /// 3. Locations who have a distance greater than 1
         /// 3. Location Links
+        /// When <paramref name="preferCloserLocationLinks"/> is true, a location link the mouse is over (distance &lt;= 1)
+        /// beats the step 1 result if its normalized distance is strictly smaller, so a link arrow drawn under a larger
+        /// circle stays selectable. Only hover/select callers opt in; link-target pickers keep the circle-first order.
         /// </summary>
         /// <param name="listHitTestObjects"></param>
         /// <param name="SectionNumber"></param>
+        /// <param name="preferCloserLocationLinks">Opt in to the closer-location-link rule above.</param>
         /// <returns></returns>
-        public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(this ICollection<HitTestResult> listHitTestObjects, int SectionNumber)
+        public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(
+            this ICollection<HitTestResult> listHitTestObjects,
+            int SectionNumber,
+            bool preferCloserLocationLinks = false)
         {
             if (listHitTestObjects.Count == 0)
             {
@@ -76,7 +83,21 @@ namespace WebAnnotation
             if (listLocationsOnSectionContainingPointAndStructureLinks.Count > 0)
             {
                 listLocationsOnSectionContainingPointAndStructureLinks.Sort(new HitTest_Z_Depth_Distance_Sorter());
-                return listLocationsOnSectionContainingPointAndStructureLinks.First();
+                HitTestResult primary = listLocationsOnSectionContainingPointAndStructureLinks.First();
+
+                // Depth ordering alone hides a location link drawn under a current-section circle. Link distance is
+                // normalized by the link's own line radius, so a link that is genuinely closer to the mouse wins,
+                // and only if the mouse is over it (<= 1). Adjacent-section circles never take this path.
+                if (preferCloserLocationLinks)
+                {
+                    HitTestResult closerLink = NearestLocationLinkContainingPoint(listHitTestObjects);
+                    if (closerLink != null && closerLink.Distance < primary.Distance)
+                    {
+                        return closerLink;
+                    }
+                }
+
+                return primary;
             }
 
             List<HitTestResult> listObjectsOnAdjacentSection = [.. listLocations.Where(l => l.Z != SectionNumber)];
@@ -104,6 +125,23 @@ namespace WebAnnotation
             List<HitTestResult> remaining = [.. listHitTestObjects];
             remaining.Sort(new HitTest_Z_Distance_Sorter());
             return remaining.First();
+        }
+
+        /// <summary>
+        /// The closest location link that the mouse is actually over
+        /// (<see cref="HitTestResult.Distance"/> &lt;= 1, normalized by the link's own radius).
+        /// Returns null when none qualifies.
+        /// </summary>
+        internal static HitTestResult NearestLocationLinkContainingPoint(IEnumerable<HitTestResult> hits)
+        {
+            List<HitTestResult> links = [.. hits.Where(h => h.Distance <= 1.0 && h.obj is IViewLocationLink)];
+            if (links.Count == 0)
+            {
+                return null;
+            }
+
+            links.Sort(new HitTest_Distance_Sorter());
+            return links[0];
         }
 
         /// <summary>

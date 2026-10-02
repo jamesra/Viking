@@ -115,6 +115,20 @@ namespace VikingXNAWinForms
 
         #region Initialization
 
+        /// <summary>
+        /// Keep WinForms chrome (status bar, F1 help ElementHost, tool strips) from being
+        /// overwritten each frame when DirectX presents to this control's full client area.
+        /// </summary>
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                const int WS_CLIPCHILDREN = 0x02000000;
+                CreateParams cp = base.CreateParams;
+                cp.Style |= WS_CLIPCHILDREN;
+                return cp;
+            }
+        }
 
         /// <summary>
         /// Initializes the control.

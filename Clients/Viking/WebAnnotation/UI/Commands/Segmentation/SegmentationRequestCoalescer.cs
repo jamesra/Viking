@@ -12,8 +12,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private int requestGeneration;
         private int appliedGeneration;
 
-        /// <summary>True while a SegmentImage attempt owns the coalescer.</summary>
-        public bool IsBusy { get; private set; }
+        private volatile bool isBusy;
+
+        /// <summary>
+        /// True while a SegmentImage attempt owns the coalescer. Volatile because status chips
+        /// read it from the UI thread while the attempt finishes on a worker thread.
+        /// </summary>
+        public bool IsBusy
+        {
+            get => isBusy;
+            private set => isBusy = value;
+        }
 
         /// <summary>True when a later click should run after the current attempt finishes.</summary>
         public bool PendingRefresh { get; private set; }

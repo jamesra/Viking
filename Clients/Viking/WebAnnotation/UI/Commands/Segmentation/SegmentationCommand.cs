@@ -19,6 +19,7 @@ using VikingXNA;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation;
+using WebAnnotation.UI;
 using WebAnnotationModel;
 using WebAnnotation.ViewModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
@@ -53,6 +54,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         // Point collections
         private readonly List<Geometry.Vector2> foregroundPoints = [];
         private readonly List<Geometry.Vector2> backgroundPoints = [];
+
+        /// <summary>
+        /// Subset of <see cref="backgroundPoints"/> generated from other visible structures. Everything else
+        /// in <see cref="backgroundPoints"/> was placed by the user and must not be cleared by a view refresh.
+        /// </summary>
+        private readonly List<Geometry.Vector2> derivedBackgroundPoints = [];
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
@@ -180,6 +187,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #endregion
 
+        /// <summary>
+        /// True while upload or a coalesced SegmentImage attempt is in flight.
+        /// Status chips use this for Seg Busy.
+        /// </summary>
+        internal bool IsBusy => requestCoalescer.IsBusy || viewportSession.IsUploading;
+
         #region Constructor
         public SegmentationCommand(SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
@@ -239,23 +252,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (sectionAnnotations is null)
                 return;
 
-            IEnumerable<LocationObj> visible = sectionAnnotations.GetLocations(scene.VisibleWorldBounds)
+            List<LocationObj> visible = [.. sectionAnnotations.GetLocations(scene.VisibleWorldBounds)
                 .Where(loc => loc is not null && loc.IsVisible(scene))
                 .Select(loc => Store.Locations.GetObjectByID(loc.ID, false))
-                .OfType<LocationObj>();
+                .OfType<LocationObj>()];
 
             double minDistance = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
             IReadOnlyCollection<long> excludeIds = locationIdToExcludeFromBackgroundPoints is long id
                 ? [id]
                 : [];
-            backgroundPoints.AddRange(
-                CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                    visible,
-                    Parent.Section.ActiveSectionToVolumeTransform,
-                    foregroundPoints,
-                    minDistance,
-                    excludeIds,
-                    structureIdToExcludeFromBackgroundPoints));
+            List<Geometry.Vector2> derived = [.. CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                visible,
+                Parent.Section.ActiveSectionToVolumeTransform,
+                foregroundPoints,
+                minDistance,
+                excludeIds,
+                structureIdToExcludeFromBackgroundPoints)];
+            SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                "context-menu", excludeIds, structureIdToExcludeFromBackgroundPoints, visible, foregroundPoints, derived));
+            derivedBackgroundPoints.AddRange(derived);
+            backgroundPoints.AddRange(derived);
+        }
+
+        /// <summary>
+        /// Removes only the avoid marks this command derived from other structures, so red points the user
+        /// placed survive a pan or zoom. Callers then re-derive for the new view.
+        /// </summary>
+        private void RemoveDerivedBackgroundPoints()
+        {
+            if (derivedBackgroundPoints.Count == 0)
+                return;
+
+            // One removal per derived entry (not RemoveAll by value) so a user point that happens to
+            // equal a derived coordinate keeps its own entry.
+            foreach (Geometry.Vector2 point in derivedBackgroundPoints)
+                backgroundPoints.Remove(point);
+
+            derivedBackgroundPoints.Clear();
         }
         #endregion
 
@@ -597,7 +630,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
                 {
-                    backgroundPoints.Clear();
+                    RemoveDerivedBackgroundPoints();
                     AddBackgroundPointsFromOtherStructures(Parent.Scene);
                     UpdatePointViews();
                 }));
@@ -874,7 +907,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
 
             if (task.Status != TaskStatus.RanToCompletion || !task.Result)
+            {
+                if (!placementFinished && !Deactivated && task.Status == TaskStatus.RanToCompletion)
+                {
+                    SegmentationSkipKind kind = viewportSession.ConsumeLastSkip(out string? detail);
+                    // No recorded reason means a quiet deferral (another upload in flight, lease
+                    // joined or view moved) that a follow-up will resolve. Only the zoom cutoff
+                    // is worth reporting without a recorded reason.
+                    if (kind == SegmentationSkipKind.None && !viewportSession.CanSubmitTilesAtCurrentZoom())
+                        kind = SegmentationSkipKind.ZoomTooCoarse;
+                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail);
+                }
+
                 return;
+            }
 
             // Tile mode leaves CurrentImageId unset; only UploadImage ids need a cache hold.
             if (viewportSession.CurrentImageId is ulong imageId)
@@ -981,6 +1027,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!viewportSession.HasClient)
             {
                 SegmentationDiag.Log("RequestSegmentation skip: no gRPC client");
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.NoClient);
                 return;
             }
 
@@ -1004,6 +1051,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
+            AnnotationStatusChips.Refresh();
             string sentPrompts = SegmentationCameraPolicy.PromptSignature(foregroundPoints, backgroundPoints);
             lastSentPrompts = sentPrompts;
             bool delivered = false;
@@ -1011,6 +1059,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 SegmentationDiag.Log(
                     $"RequestSegmentation start gen={generation} fg={foregroundPoints.Count} bg={backgroundPoints.Count} " +
+                    $"(derived={derivedBackgroundPoints.Count} user={backgroundPoints.Count - derivedBackgroundPoints.Count}) " +
+                    $"fg0={(foregroundPoints.Count > 0 ? $"({foregroundPoints[0].X:F0},{foregroundPoints[0].Y:F0})" : "none")} " +
+                    $"loc={locationIdToExcludeFromBackgroundPoints?.ToString() ?? "-"} " +
+                    $"structure={structureIdToExcludeFromBackgroundPoints?.ToString() ?? "-"} " +
                     $"tilesReady={viewportSession.HasUploadedTiles}");
                 Debug.WriteLine(
                     $"Sending SegmentTiles request: tilesReady={viewportSession.HasUploadedTiles}, " +
@@ -1023,11 +1075,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 delivered = response is not null;
                 if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))
                     StartProcessSegmentationResponse(response, generation);
+                else if (response is null && !placementFinished && !Deactivated && !segmentToken.IsCancellationRequested)
+                {
+                    SegmentationSkipKind kind = viewportSession.ConsumeLastSkip(out string? detail);
+                    if (kind == SegmentationSkipKind.None)
+                        kind = SegmentationSkipKind.EmptyMask;
+                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail);
+                }
             }
             catch (Exception ex)
             {
                 SegmentationDiag.Log($"RequestSegmentation error: {ex.Message}");
                 Debug.WriteLine($"Segmentation error: {ex.Message}");
+                if (!placementFinished && !Deactivated)
+                {
+                    SegmentationSkipKind kind = viewportSession.ConsumeLastSkip(out string? detail);
+                    if (kind == SegmentationSkipKind.None || kind == SegmentationSkipKind.Cancelled)
+                        kind = SegmentationSkipKind.Error;
+                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail ?? ex.Message);
+                }
             }
             finally
             {
@@ -1036,7 +1102,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (!delivered)
                     Interlocked.CompareExchange(ref lastSentPrompts, null, sentPrompts);
 
-                if (requestCoalescer.OnFinishedShouldRetry())
+                bool retry = requestCoalescer.OnFinishedShouldRetry();
+                AnnotationStatusChips.Refresh();
+                if (retry)
                     ScheduleFollowUpSegmentation();
             }
         }
@@ -1087,6 +1155,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (response.Segments.Count == 0)
             {
                 Debug.WriteLine("No segments returned");
+                SegmentationUserFeedback.NotifyEmptyMask(Parent);
                 return;
             }
 
@@ -1108,12 +1177,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             catch (Exception ex)
             {
                 Debug.WriteLine($"Segmentation process generation={generation} failed: {ex}");
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.Error, ex.Message);
                 return;
             }
 
             if (polygons is null || polygons.Count == 0)
             {
                 Debug.WriteLine($"Segmentation process generation={generation} produced no polygons");
+                SegmentationUserFeedback.NotifyEmptyMask(Parent);
                 return;
             }
 
@@ -1281,12 +1352,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             Geometry.Rectangle segmentBounds = viewportSession.GetSegmentWorldBounds(
+                response,
                 bestSegment.X,
                 bestSegment.Y,
                 decodedWidth,
-                decodedHeight,
-                response.Width,
-                response.Height);
+                decodedHeight);
             maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
         }
 #endif
@@ -1571,6 +1641,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             CancelProcessSegmentationResponse();
             foregroundPoints.Clear();
             backgroundPoints.Clear();
+            derivedBackgroundPoints.Clear();
             // Clear point views but keep them initialized (never null)
             foregroundPointsView.Points = [];
             backgroundPointsView.Points = [];

@@ -80,22 +80,35 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
+            // KnownLinks is the source of truth for membership. This action runs under its write lock,
+            // so it must not Debug.Assert (a modal dialog here blocks every reader of the tracker and
+            // freezes the UI) and must not leave a half-added entry: KeyTracker rolls the key back when
+            // the action throws, but LocationLinks is ours to clean up. A leftover entry would otherwise
+            // make every later add of the same link fail.
             KnownLinks.TryAdd(key, () =>
             {
-                bool added = LocationLinks.TryAdd(key, lv);
-                Debug.Assert(added);
+                LocationLinks[key] = lv;
 
-                if (lv.LinksOverlap())
+                try
                 {
-                    OverlappedLinkKeys.TryAdd(key, () =>
+                    if (lv.LinksOverlap())
                     {
-                        OverlappedAdjacentLocationIDs.AddRef(key.A);
-                        OverlappedAdjacentLocationIDs.AddRef(key.B);
-                    });
+                        OverlappedLinkKeys.TryAdd(key, () =>
+                        {
+                            OverlappedAdjacentLocationIDs.AddRef(key.A);
+                            OverlappedAdjacentLocationIDs.AddRef(key.B);
+                        });
+                    }
+                    else
+                    {
+                        NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                    }
                 }
-                else
+                catch (System.Exception ex)
                 {
-                    NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                    LocationLinks.TryRemove(key, out _);
+                    Trace.WriteLine($"AddLocationLink {key.A}-{key.B} on section {Section.Number} failed and was rolled back: {ex}");
+                    throw;
                 }
             });
         }
@@ -104,9 +117,9 @@ namespace WebAnnotation.ViewModel
         {
             KnownLinks.TryRemove(key, () =>
             {
-                Debug.Assert(LocationLinks.ContainsKey(key));
-                bool removed = LocationLinks.TryRemove(key, out LocationLinkView lv);
-                Debug.Assert(removed);
+                // No Debug.Assert here: this runs under the tracker's write lock, and a stale or already-cleaned
+                // entry is harmless on removal.
+                LocationLinks.TryRemove(key, out _);
 
                 if (OverlappedLinkKeys.Contains(key))
                 {

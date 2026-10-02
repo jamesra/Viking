@@ -89,6 +89,32 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void PreferAnnotationForSingleClickKeepsCircleEditableUnderProposal()
+        {
+            object circle = new object();
+            object proposal = new object();
+
+            Assert.AreSame(circle, AutoPolygonizeSelection.PreferAnnotationForSingleClick(circle, proposal));
+            Assert.AreSame(proposal, AutoPolygonizeSelection.PreferAnnotationForSingleClick(null, proposal));
+            Assert.IsNull(AutoPolygonizeSelection.PreferAnnotationForSingleClick(null, null));
+        }
+
+        [TestMethod]
+        public void DistanceToAnyRingIsHollowNotFilled()
+        {
+            // Closed square: center is far from the ring so interior clicks miss the proposal band.
+            Polygon square = new(
+            [
+                new Vector2(0, 0), new Vector2(10, 0), new Vector2(10, 10), new Vector2(0, 10), new Vector2(0, 0)
+            ]);
+            double centerDistance = AutoPolygonizeSelection.DistanceToAnyRing(square, new Vector2(5, 5));
+            double edgeDistance = AutoPolygonizeSelection.DistanceToAnyRing(square, new Vector2(10, 5));
+
+            Assert.IsTrue(centerDistance > 4.9, $"Expected interior distance near 5, got {centerDistance}");
+            Assert.IsTrue(edgeDistance < 0.01, $"Expected on-edge distance near 0, got {edgeDistance}");
+        }
+
+        [TestMethod]
         public void ZeroNanometerMinRadiusAcceptsAnyPositiveRadius()
         {
             Assert.IsTrue(AutoPolygonizeSelection.MeetsMinRadiusNanometers(0.01, 1, 0));
@@ -256,17 +282,23 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void ForegroundPromptHasCenterAndTwoRingsOfEight()
+        public void ForegroundPromptHasCenterAndTwoRingsOfFourWithInnerRotated45()
         {
             Circle circle = new(new Vector2(10, 20), 8);
             var points = CircleSegmentationPrompts.CreateMosaicForegroundPoints(circle);
 
+            Assert.AreEqual(9, points.Count);
             Assert.AreEqual(1 + (2 * CircleSegmentationPrompts.ForegroundRingPointCount), points.Count);
             Assert.AreEqual(circle.Center, points[0]);
 
-            Vector2 innerEast = points[1];
-            Assert.AreEqual(14, innerEast.X, 1e-6);
-            Assert.AreEqual(20, innerEast.Y, 1e-6);
+            double diagonal = 4 * Math.Cos(Math.PI / 4.0);
+            Vector2 innerNorthEast = points[1];
+            Assert.AreEqual(10 + diagonal, innerNorthEast.X, 1e-6);
+            Assert.AreEqual(20 + diagonal, innerNorthEast.Y, 1e-6);
+            Assert.AreEqual(
+                circle.Radius * CircleSegmentationPrompts.InnerRingRadiusFraction,
+                Vector2.Distance(circle.Center, innerNorthEast),
+                1e-6);
 
             Vector2 outerEast = points[1 + CircleSegmentationPrompts.ForegroundRingPointCount];
             Assert.AreEqual(16.4, outerEast.X, 1e-6);
@@ -302,32 +334,6 @@ namespace WebAnnotationTests.Commands
             StructureParents.TryGetValue(structureId, out long? parent) ? parent : null;
 
         [TestMethod]
-        public void LocationsOfChildStructuresAreNotBackground()
-        {
-            long[] excludeSelf = [1];
-
-            // Direct child (110) and grandchild (111) of the segmented structure (100).
-            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, 100, ParentOf));
-            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(51, 111, excludeSelf, 100, ParentOf));
-        }
-
-        [TestMethod]
-        public void LocationsOfUnrelatedAndAncestorStructuresStayBackground()
-        {
-            long[] excludeSelf = [1];
-
-            // Unrelated root structure.
-            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 200, excludeSelf, 100, ParentOf));
-            // Segmenting the child (110): its parent (100) is an ancestor, not a descendant, so it stays background.
-            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 100, excludeSelf, 110, ParentOf));
-            // A structure under a different root is unrelated to the segmented structure (200).
-            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 111, excludeSelf, 200, ParentOf));
-        }
-
-        [TestMethod]
-        public void ChildStructuresAreIgnoredWithoutALookupOrATargetStructure()
-        {
-        [TestMethod]
         public void DescribePromptsReportsLocationStructureAndCounts()
         {
             Vector2[] foreground = [new Vector2(1234.4, 5678.6), new Vector2(1, 2)];
@@ -354,6 +360,32 @@ namespace WebAnnotationTests.Commands
                 line);
         }
 
+        [TestMethod]
+        public void LocationsOfChildStructuresAreNotBackground()
+        {
+            long[] excludeSelf = [1];
+
+            // Direct child (110) and grandchild (111) of the segmented structure (100).
+            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, 100, ParentOf));
+            Assert.IsFalse(CircleSegmentationPrompts.IsOtherStructure(51, 111, excludeSelf, 100, ParentOf));
+        }
+
+        [TestMethod]
+        public void LocationsOfUnrelatedAndAncestorStructuresStayBackground()
+        {
+            long[] excludeSelf = [1];
+
+            // Unrelated root structure.
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 200, excludeSelf, 100, ParentOf));
+            // Segmenting the child (110): its parent (100) is an ancestor, not a descendant, so it stays background.
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 100, excludeSelf, 110, ParentOf));
+            // A structure under a different root is unrelated to the segmented structure (200).
+            Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 111, excludeSelf, 200, ParentOf));
+        }
+
+        [TestMethod]
+        public void ChildStructuresAreIgnoredWithoutALookupOrATargetStructure()
+        {
             long[] excludeSelf = [1];
 
             Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, 100));

@@ -118,6 +118,7 @@ namespace WebAnnotation
         public static void InvalidateSegmentationServiceAvailability()
         {
             _isSegmentationServiceAvailable = null;
+            UI.AnnotationStatusChips.Refresh();
         }
 
         /// <summary>
@@ -773,8 +774,11 @@ namespace WebAnnotation
             get => WebAnnotation.Properties.Settings.Default.PenMode;
             set
             {
+                bool previous = WebAnnotation.Properties.Settings.Default.PenMode;
                 WebAnnotation.Properties.Settings.Default.PenMode = value;
                 WebAnnotation.Properties.Settings.Default.Save();
+                if (previous != value)
+                    UI.AnnotationStatusChips.Refresh();
             }
         }
 

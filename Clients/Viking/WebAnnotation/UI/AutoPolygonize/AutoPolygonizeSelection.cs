@@ -160,6 +160,15 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// Single-click / hover <c>ObjectAtPosition</c> result when both an annotation and a
+        /// proposal ring are candidates. The annotation wins so circles under rings stay
+        /// editable; a lone proposal remains selectable for help. Double-click accept/dismiss
+        /// does not use this — it goes through <c>IHandleOverlayMouseDoubleClick</c>.
+        /// </summary>
+        public static object? PreferAnnotationForSingleClick(object? annotationOrNull, object? proposalOrNull)
+            => annotationOrNull ?? proposalOrNull;
+
+        /// <summary>
         /// Screen pixels the preview outline may leave the contour. One pixel tracked
         /// mask noise; two drops that wiggle and still follows the membrane.
         /// </summary>

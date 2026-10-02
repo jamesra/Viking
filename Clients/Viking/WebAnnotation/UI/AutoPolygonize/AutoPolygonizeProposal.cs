@@ -63,24 +63,25 @@ namespace WebAnnotation.UI.AutoPolygonize
                 $"[SegmentationProfile] Mask overlay {decodedWidth}x{decodedHeight} pngBytes={bestSegment.Mask.Length} inside={inside}");
 
             Geometry.Rectangle worldBounds = session.GetSegmentWorldBounds(
+                response,
                 bestSegment.X,
                 bestSegment.Y,
                 decodedWidth,
-                decodedHeight,
-                response.Width,
-                response.Height);
+                decodedHeight);
             return new AutoPolygonizeMaskOverlay(decodedMaskData, decodedWidth, decodedHeight, worldBounds);
         }
     }
 
     /// <summary>
-    /// Hollow-line preview of a SAM2 polygon over a circle. Double-click accepts; right/middle dismisses.
+    /// Hollow-line preview of a SAM2 polygon over a circle. Left double-click accepts.
+    /// Right/middle double-click opens the ring context menu (Accept / Reject); that menu
+    /// is the intended extension point for multi-blob pick and prompt-density prefs later.
     /// When <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayMasks"/> is on, Draw shows
     /// the last SegmentImage mask. Rings stay visible unless that mask is showing and
     /// <see cref="Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings"/> is set.
     /// Prompt dots follow <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayPrompts"/>.
     /// </summary>
-    internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelpStrings
+    internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelpStrings, IContextMenu
     {
         private const float RingSaturation = 0.80f;
         private const float DefaultLightness = 0.70f;
@@ -202,8 +203,36 @@ namespace WebAnnotation.UI.AutoPolygonize
         public string[] HelpStrings =>
         [
             "Double-click: Accept polygonalization",
-            "Double right-click: Dismiss segmentation overlay"
+            "Double right-click: Proposal menu (Accept / Reject)"
         ];
+
+        /// <summary>
+        /// Accept / Reject for the ring. Extra items for multi-blob and prompt prefs can land here later.
+        /// </summary>
+        public ContextMenuStrip ContextMenu
+        {
+            get
+            {
+                ContextMenuStrip menu = new();
+                ToolStripMenuItem accept = new("Accept polygonalization");
+                accept.Click += (_, _) => controller.Accept(this);
+                menu.Items.Add(accept);
+
+                ToolStripMenuItem reject = new("Reject proposal");
+                reject.Click += (_, _) => controller.Dismiss(this);
+                menu.Items.Add(reject);
+                return menu;
+            }
+        }
+
+        /// <summary>
+        /// Shows <see cref="ContextMenu"/> at the cursor. Used when preferential overlay
+        /// double-click hits the ring (annotation still owns single-click under the ring).
+        /// </summary>
+        public void ShowContextMenuAtCursor()
+        {
+            ContextMenu.Show(Control.MousePosition);
+        }
 
         public bool HandleMouseDoubleClick(MouseButtons button, Geometry.Vector2 worldPosition)
         {
@@ -213,12 +242,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return true;
             }
 
-            if (button == MouseButtons.Right || button == MouseButtons.Middle)
-            {
-                controller.Dismiss(this);
-                return true;
-            }
-
+            // Right/middle: DefaultCommand opens IContextMenu when this is ObjectAtPosition.
+            // Preferential overlay hits call ShowContextMenuAtCursor instead.
             return false;
         }
 

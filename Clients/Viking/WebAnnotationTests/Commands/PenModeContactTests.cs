@@ -39,6 +39,22 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void GetActionForCursorSwallowsUnimplementedAndReturnsNone()
+        {
+            ThrowingHit hit = new();
+
+            Assert.AreEqual(
+                LocationAction.NONE,
+                LocationActionDispatch.GetActionForCursor(hit, Vector2.Zero, 1, Keys.None, penContact: true));
+            Assert.AreEqual(
+                LocationAction.NONE,
+                LocationActionDispatch.GetActionForCursor(hit, Vector2.Zero, 1, Keys.None, penContact: false));
+            Assert.AreEqual(
+                LocationAction.NONE,
+                LocationActionDispatch.GetActionForCursor(null, Vector2.Zero, 1, Keys.None, penContact: false));
+        }
+
+        [TestMethod]
         public void NoneActionLeavesFreeDrawAvailable()
         {
             bool started = LocationActionDispatch.TryGetAction(

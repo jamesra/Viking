@@ -26,7 +26,31 @@ namespace WebAnnotation
             out LocationAction action,
             out long locationId)
         {
-            action = LocationAction.NONE;
+            action = GetActionForCursor(hit, worldPosition, visibleSectionNumber, modifierKeys, penContact, out locationId);
+            return action != LocationAction.NONE;
+        }
+
+        /// <summary>
+        /// Action advertised for the cursor over <paramref name="hit"/>. Used by
+        /// <see cref="AnnotationOverlay"/> mouse and pen hover so unimplemented view methods
+        /// cannot crash the cursor path. Non-action hits and throws yield <see cref="LocationAction.NONE"/>.
+        /// </summary>
+        public static LocationAction GetActionForCursor(
+            object? hit,
+            Vector2 worldPosition,
+            int visibleSectionNumber,
+            Keys modifierKeys,
+            bool penContact)
+            => GetActionForCursor(hit, worldPosition, visibleSectionNumber, modifierKeys, penContact, out _);
+
+        private static LocationAction GetActionForCursor(
+            object? hit,
+            Vector2 worldPosition,
+            int visibleSectionNumber,
+            Keys modifierKeys,
+            bool penContact,
+            out long locationId)
+        {
             locationId = 0;
 
             try
@@ -34,26 +58,23 @@ namespace WebAnnotation
                 if (penContact)
                 {
                     if (hit is not IPenActionSupport pen)
-                        return false;
+                        return LocationAction.NONE;
 
-                    action = pen.GetPenContactActionForPositionOnAnnotation(
+                    return pen.GetPenContactActionForPositionOnAnnotation(
                         worldPosition, visibleSectionNumber, modifierKeys, out locationId);
-                    return action != LocationAction.NONE;
                 }
 
                 if (hit is not IMouseActionSupport mouse)
-                    return false;
+                    return LocationAction.NONE;
 
-                action = mouse.GetMouseClickActionForPositionOnAnnotation(
+                return mouse.GetMouseClickActionForPositionOnAnnotation(
                     worldPosition, visibleSectionNumber, modifierKeys, out locationId);
-                return action != LocationAction.NONE;
             }
             catch (NotImplementedException ex)
             {
                 Trace.WriteLine($"Location action is not implemented for {hit?.GetType().Name}: {ex.Message}");
-                action = LocationAction.NONE;
                 locationId = 0;
-                return false;
+                return LocationAction.NONE;
             }
         }
     }

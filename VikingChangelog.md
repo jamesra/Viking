@@ -1,11 +1,19 @@
 # Viking changelog
 
-Committed application version: **1.2.76.0**  
+Committed application version: **1.2.77.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
+
+## 1.2.77 — 2026-09-30
+
+* Auto-polygonize proposal rings no longer block translate/scale on the circle underneath. Hover and single-click prefer the annotation; double-click still accepts or dismisses the ring.
+* Status-bar chips show **Pen On/Off**, **AutoPoly On/Off/Busy**, and **Seg Ready/Off/Busy**. Click a chip to toggle the mode or open the segmentation service picker.
+* Viewer toolbar toggles for **Pen Mode** and **Auto Polygonize** (same actions as the Annotation menu; check state stays in sync with the menu and status chips).
+* Interactive Segment skips are no longer silent: zoom-too-coarse, upload/tile failure, empty mask, and service errors show a short status-bar message (no modal dialog).
+* Auto-polygonize proposal rings: double-right-click opens an **Accept / Reject** context menu (sibling absorb on accept stays automatic).
 
 ## 1.2.76 — 2026-09-29
 

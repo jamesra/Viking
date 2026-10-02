@@ -11,7 +11,7 @@ namespace WebAnnotation.UI.ActionViews
 
         public IRenderable Active { get; set; } = null!;
 
-        public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
+        public BuiltinTexture Icon { get; set; } = BuiltinTexture.Scissors;
 
         public readonly CutHoleAction model;
 

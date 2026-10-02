@@ -9,13 +9,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
     /// SAM2 prompt points for a circle. Context-menu Segment to Polygon and auto-polygonize
-    /// share this helper so both send the same seventeen foreground clicks and other-structure
+    /// share this helper so both send the same nine foreground clicks and other-structure
     /// avoid marks.
     /// </summary>
     internal static class CircleSegmentationPrompts
     {
-        /// <summary>Points on each concentric octagon.</summary>
-        public const int ForegroundRingPointCount = 8;
+        /// <summary>Points on each concentric ring.</summary>
+        public const int ForegroundRingPointCount = 4;
 
         /// <summary>Inner ring stays well inside the disk.</summary>
         public const double InnerRingRadiusFraction = 0.5;
@@ -24,13 +24,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public const double OuterRingRadiusFraction = 0.8;
 
         /// <summary>
-        /// Center plus two octagons (half-radius and 80% radius) in mosaic space. Seventeen points total.
+        /// Center plus two rings of four in mosaic space, nine points total. The outer ring (80% radius)
+        /// sits on the axes and the inner ring (half radius) is rotated 45 degrees, so no ring point
+        /// shares a ray from the center with another. Order is center, inner ring, outer ring.
         /// </summary>
         public static IReadOnlyList<Vector2> CreateMosaicForegroundPoints(Circle mosaicCircle)
         {
             List<Vector2> foregroundPoints = [mosaicCircle.Center];
-            AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * InnerRingRadiusFraction);
-            AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * OuterRingRadiusFraction);
+            AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * InnerRingRadiusFraction, Math.PI / 4.0);
+            AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * OuterRingRadiusFraction, 0.0);
             return foregroundPoints;
         }
 
@@ -296,11 +298,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 yield return ring[i];
         }
 
-        private static void AddRing(List<Vector2> points, Vector2 center, double radius)
+        private static void AddRing(List<Vector2> points, Vector2 center, double radius, double startAngle)
         {
             for (int i = 0; i < ForegroundRingPointCount; i++)
             {
-                double angle = (2.0 * Math.PI * i) / ForegroundRingPointCount;
+                double angle = startAngle + (2.0 * Math.PI * i) / ForegroundRingPointCount;
                 points.Add(new Vector2(
                     center.X + radius * Math.Cos(angle),
                     center.Y + radius * Math.Sin(angle)));

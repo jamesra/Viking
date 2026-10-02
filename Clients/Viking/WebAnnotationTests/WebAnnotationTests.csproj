@@ -37,6 +37,9 @@
     <Compile Include="Commands\SegmentationCameraPolicyTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
+    <Compile Include="Commands\AnnotationStatusChipsTests.cs" />
+    <Compile Include="Commands\HitTestLocationLinkPreferenceTests.cs" />
+    <Compile Include="Commands\SegmentationUserFeedbackTests.cs" />
     <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />
