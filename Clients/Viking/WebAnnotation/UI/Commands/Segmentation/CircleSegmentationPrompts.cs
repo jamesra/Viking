@@ -168,6 +168,70 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// One diagnostic line for a segmentation request: which location and structure it is for, the
+        /// foreground and background counts, the foreground center in volume space, and which visible
+        /// annotations supplied or were withheld from the background.
+        /// </summary>
+        /// <remarks>
+        /// Exists so a report that one spot segmented badly can be matched to a server session by the
+        /// <c>fg0</c> volume coordinate and to the location by id. <c>bgFrom</c> lists id/structure of
+        /// annotations that were eligible; <c>sameStructure</c> and <c>childStructure</c> list the ones
+        /// the structure rules removed. An eligible annotation that yields no background point was
+        /// dropped for sitting on a foreground click or failing to map to volume space, so
+        /// <c>otherAnnotations</c> can exceed <c>bg</c>. Each id list is capped so the line stays one line.
+        /// </remarks>
+        /// <param name="source">Short name of the caller, such as auto-circle or context-menu.</param>
+        public static string DescribePrompts(
+            string source,
+            IReadOnlyCollection<long>? locationIds,
+            long? structureId,
+            IEnumerable<LocationObj> visible,
+            IReadOnlyList<Vector2> foreground,
+            IReadOnlyList<Vector2> background,
+            Func<long, long?>? structureParentLookup = null,
+            int maxIds = 10)
+        {
+            Func<long, long?> lookup = structureParentLookup ?? StoreStructureParent;
+            List<string> eligible = [];
+            List<string> sameStructure = [];
+            List<string> childStructure = [];
+            int visibleCount = 0;
+
+            foreach (LocationObj loc in visible ?? [])
+            {
+                if (loc is null)
+                    continue;
+                visibleCount++;
+
+                if (locationIds is not null && locationIds.Contains(loc.ID))
+                    continue;
+
+                string label = $"{loc.ID}/{loc.ParentID?.ToString() ?? "-"}";
+                if (IsOtherStructure(loc.ID, loc.ParentID, locationIds, structureId, lookup))
+                    eligible.Add(label);
+                else if (structureId.HasValue && loc.ParentID == structureId)
+                    sameStructure.Add(label);
+                else
+                    childStructure.Add(label);
+            }
+
+            string fg0 = foreground is { Count: > 0 }
+                ? $"({foreground[0].X:F0},{foreground[0].Y:F0})"
+                : "none";
+            string ids = locationIds is { Count: > 0 } ? string.Join(",", locationIds) : "-";
+
+            return $"Prompts source={source} loc=[{ids}] structure={structureId?.ToString() ?? "-"} " +
+                   $"fg={foreground?.Count ?? 0} fg0={fg0} bg={background?.Count ?? 0} visible={visibleCount} " +
+                   $"otherAnnotations={eligible.Count} bgFrom=[{CapIds(eligible, maxIds)}] " +
+                   $"sameStructure=[{CapIds(sameStructure, maxIds)}] childStructure=[{CapIds(childStructure, maxIds)}]";
+        }
+
+        private static string CapIds(List<string> ids, int max) =>
+            ids.Count <= max
+                ? string.Join(",", ids)
+                : string.Join(",", ids.Take(max)) + $"+{ids.Count - max}";
+
+        /// <summary>
         /// Volume-space SAM2 clicks from overlapping proposal polygons: each centroid (when
         /// inside) plus a subsampled exterior so one SegmentImage can cover the group.
         /// Degenerate or empty rings are skipped.

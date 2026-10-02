@@ -327,6 +327,33 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void ChildStructuresAreIgnoredWithoutALookupOrATargetStructure()
         {
+        [TestMethod]
+        public void DescribePromptsReportsLocationStructureAndCounts()
+        {
+            Vector2[] foreground = [new Vector2(1234.4, 5678.6), new Vector2(1, 2)];
+            Vector2[] background = [new Vector2(9, 9)];
+
+            string line = CircleSegmentationPrompts.DescribePrompts(
+                "auto-circle", [15320L], 100, [], foreground, background, ParentOf);
+
+            Assert.AreEqual(
+                "Prompts source=auto-circle loc=[15320] structure=100 fg=2 fg0=(1234,5679) bg=1 visible=0 " +
+                "otherAnnotations=0 bgFrom=[] sameStructure=[] childStructure=[]",
+                line);
+        }
+
+        [TestMethod]
+        public void DescribePromptsHandlesMissingLocationStructureAndForeground()
+        {
+            string line = CircleSegmentationPrompts.DescribePrompts(
+                "context-menu", null, null, [], [], []);
+
+            Assert.AreEqual(
+                "Prompts source=context-menu loc=[-] structure=- fg=0 fg0=none bg=0 visible=0 " +
+                "otherAnnotations=0 bgFrom=[] sameStructure=[] childStructure=[]",
+                line);
+        }
+
             long[] excludeSelf = [1];
 
             Assert.IsTrue(CircleSegmentationPrompts.IsOtherStructure(50, 110, excludeSelf, 100));
