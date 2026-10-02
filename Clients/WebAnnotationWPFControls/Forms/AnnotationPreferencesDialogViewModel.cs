@@ -30,6 +30,8 @@ namespace WebAnnotation.WPF.Forms
         private double _originalSegmentationPointRadius;
         private double _originalSegmentationHoleDropFraction;
         private int _originalSegmentationEdgeCleanupRadius;
+        private double _originalSegmentationMaskThreshold;
+        private bool _originalSegmentationUseMaskInput;
         private bool _originalAutoPolygonizeCircles;
         private double _originalAutoPolygonizeMinRadiusNanometers;
         private bool _originalAutoPolygonizeOverlayMasks;
@@ -293,6 +295,55 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        /// <summary>Starting <see cref="SegmentationMaskThreshold"/>; matches WebAnnotation's stored default.</summary>
+        public const double DefaultSegmentationMaskThreshold = 0.5;
+
+        /// <summary>Smallest allowed <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
+        public const double MinSegmentationMaskThreshold = -5.0;
+
+        /// <summary>Largest allowed <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
+        public const double MaxSegmentationMaskThreshold = 5.0;
+
+        private double _segmentationMaskThreshold;
+
+        /// <summary>
+        /// Logit a pixel must exceed for SAM2 to call it object. 0 is SAM2's own default; higher
+        /// values shrink every returned mask and lower values grow it. Changing it re-segments.
+        /// Also on the viewer toolbar.
+        /// </summary>
+        public double SegmentationMaskThreshold
+        {
+            get => _segmentationMaskThreshold;
+            set
+            {
+                double clampedValue = MathUtils.Clamp(value, MinSegmentationMaskThreshold, MaxSegmentationMaskThreshold);
+                if (Math.Abs(_segmentationMaskThreshold - clampedValue) > 0.0001)
+                {
+                    _segmentationMaskThreshold = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _segmentationUseMaskInput;
+
+        /// <summary>
+        /// When true the server predicts twice per cell, feeding the first pass's low-resolution
+        /// logits back to SAM2 as mask_input. Off by default. Changing it re-segments.
+        /// </summary>
+        public bool SegmentationUseMaskInput
+        {
+            get => _segmentationUseMaskInput;
+            set
+            {
+                if (_segmentationUseMaskInput != value)
+                {
+                    _segmentationUseMaskInput = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private bool _autoPolygonizeCircles;
         public bool AutoPolygonizeCircles
         {
@@ -494,7 +545,9 @@ namespace WebAnnotation.WPF.Forms
             double autoPolygonizeMaxDownsample,
             bool autoPolygonizeOverlayMasks = false,
             bool autoPolygonizeOverlayPrompts = false,
-            bool autoPolygonizeHideSegmentationRings = false)
+            bool autoPolygonizeHideSegmentationRings = false,
+            double segmentationMaskThreshold = DefaultSegmentationMaskThreshold,
+            bool segmentationUseMaskInput = false)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -510,6 +563,8 @@ namespace WebAnnotation.WPF.Forms
             _segmentationPointRadius = segmentationPointRadius;
             _segmentationHoleDropFraction = segmentationHoleDropFraction;
             _segmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
+            _segmentationMaskThreshold = segmentationMaskThreshold;
+            _segmentationUseMaskInput = segmentationUseMaskInput;
             _polygonPointRadius = polygonPointRadius;
             _smallestRenderedSize = smallestRenderedSize;
             _autoPolygonizeCircles = autoPolygonizeCircles;
@@ -537,6 +592,8 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationPointRadius = segmentationPointRadius;
             _originalSegmentationHoleDropFraction = segmentationHoleDropFraction;
             _originalSegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
+            _originalSegmentationMaskThreshold = segmentationMaskThreshold;
+            _originalSegmentationUseMaskInput = segmentationUseMaskInput;
             _originalAutoPolygonizeCircles = autoPolygonizeCircles;
             _originalAutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             _originalAutoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
@@ -563,6 +620,8 @@ namespace WebAnnotation.WPF.Forms
             SegmentationPointRadius = segmentationPointRadius;
             SegmentationHoleDropFraction = segmentationHoleDropFraction;
             SegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
+            SegmentationMaskThreshold = segmentationMaskThreshold;
+            SegmentationUseMaskInput = segmentationUseMaskInput;
             AutoPolygonizeCircles = autoPolygonizeCircles;
             AutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             AutoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
@@ -596,6 +655,8 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationPointRadius = _segmentationPointRadius;
             _originalSegmentationHoleDropFraction = _segmentationHoleDropFraction;
             _originalSegmentationEdgeCleanupRadius = _segmentationEdgeCleanupRadius;
+            _originalSegmentationMaskThreshold = _segmentationMaskThreshold;
+            _originalSegmentationUseMaskInput = _segmentationUseMaskInput;
             _originalAutoPolygonizeCircles = _autoPolygonizeCircles;
             _originalAutoPolygonizeMinRadiusNanometers = _autoPolygonizeMinRadiusNanometers;
             _originalAutoPolygonizeMaxDownsample = _autoPolygonizeMaxDownsample;
@@ -625,6 +686,8 @@ namespace WebAnnotation.WPF.Forms
             _segmentationPointRadius = _originalSegmentationPointRadius;
             _segmentationHoleDropFraction = _originalSegmentationHoleDropFraction;
             _segmentationEdgeCleanupRadius = _originalSegmentationEdgeCleanupRadius;
+            _segmentationMaskThreshold = _originalSegmentationMaskThreshold;
+            _segmentationUseMaskInput = _originalSegmentationUseMaskInput;
             _autoPolygonizeCircles = _originalAutoPolygonizeCircles;
             _autoPolygonizeMinRadiusNanometers = _originalAutoPolygonizeMinRadiusNanometers;
             _autoPolygonizeMaxDownsample = _originalAutoPolygonizeMaxDownsample;
@@ -656,6 +719,8 @@ namespace WebAnnotation.WPF.Forms
             _segmentationPointRadius = 5.0;
             _segmentationHoleDropFraction = 0.03;
             _segmentationEdgeCleanupRadius = 2;
+            _segmentationMaskThreshold = DefaultSegmentationMaskThreshold;
+            _segmentationUseMaskInput = false;
             _autoPolygonizeCircles = false;
             _autoPolygonizeMinRadiusNanometers = 75.0;
             _autoPolygonizeMaxDownsample = 8.0;

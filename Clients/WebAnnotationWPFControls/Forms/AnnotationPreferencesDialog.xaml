@@ -540,6 +540,51 @@
                                      Text="Screen-pixel radius for opening then closing the mask before tracing. Removes thin wisps and notches. Set to 0 to disable."/>
                         </Grid>
 
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="SAM2 Mask Threshold:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationMaskThreshold, Mode=TwoWay}"
+                                    Minimum="-5"
+                                    Maximum="5"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationMaskThreshold, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Logit a pixel must exceed for SAM2 to call it object. 0 is SAM2's default. Raise it to shrink every returned mask, lower it to grow them. Changing it re-segments the current view."/>
+                        </Grid>
+
+                        <CheckBox Margin="10,0,0,0"
+                                  IsChecked="{Binding SegmentationUseMaskInput, Mode=TwoWay}"
+                                  Content="Refine with mask_input (second SAM2 pass)"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="20,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Feeds each cell's first prediction back to SAM2 as mask_input and predicts again with the same prompts. Off by default. Changing it re-segments the current view."/>
+
                         <controls:CircleSizePreviewSlider
                             Header="Auto Polygonize Min Size:"
                             Description="Circles smaller than this radius are not auto-segmented. The value is in nanometers. The preview is that size on the current Viking view. 0 submits every eligible circle."

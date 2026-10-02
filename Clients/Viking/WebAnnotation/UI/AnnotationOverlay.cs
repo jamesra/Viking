@@ -759,6 +759,14 @@ namespace WebAnnotation
         }
 
         /// <summary>
+        /// Re-segments the current view after a SAM2 request setting (mask threshold, mask_input) changes.
+        /// </summary>
+        public void OnSegmentationRequestSettingsChanged()
+        {
+            autoPolygonizeController?.OnSegmentationRequestSettingsChanged();
+        }
+
+        /// <summary>
         /// Forwards the debug mask-overlay preference so existing proposals attach or dispose GPU textures.
         /// </summary>
         public void SetAutoPolygonizeOverlayMasksEnabled(bool enabled)

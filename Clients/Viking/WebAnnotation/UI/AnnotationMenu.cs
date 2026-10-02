@@ -156,7 +156,9 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeMaxDownsample,
                 Global.AnnotationSettings.AutoPolygonizeOverlayMasks,
                 Global.AnnotationSettings.AutoPolygonizeOverlayPrompts,
-                Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings
+                Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings,
+                Global.AnnotationSettings.SegmentationMaskThreshold,
+                Global.AnnotationSettings.SegmentationUseMaskInput
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -175,6 +177,13 @@ namespace WebAnnotation
                 // start auto-segment without waiting for Apply/OK (Global setter restarts idle).
                 if (refreshAll || e.PropertyName == nameof(viewModel.AutoPolygonizeMaxDownsample))
                     Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+
+                // Live-apply the SAM2 request settings. The Global setters debounce and re-segment the
+                // active command and the auto-polygonize view, so a slider drag sends one request.
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationMaskThreshold))
+                    Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationUseMaskInput))
+                    Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
 
                 if (AnnotationOverlay.CurrentOverlay?.Parent?.CurrentCommand is not SegmentationCommand command)
                     return;
@@ -272,6 +281,8 @@ namespace WebAnnotation
             _preferencesDialog.CancelClicked += (s, args) =>
             {
                 Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+                Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+                Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
             };
 
             _preferencesDialog.Show(); // Modeless dialog
@@ -292,6 +303,8 @@ namespace WebAnnotation
             Global.AnnotationSettings.SegmentationPointRadius = viewModel.SegmentationPointRadius;
             Global.AnnotationSettings.SegmentationHoleDropFraction = viewModel.SegmentationHoleDropFraction;
             Global.AnnotationSettings.SegmentationEdgeCleanupRadius = viewModel.SegmentationEdgeCleanupRadius;
+            Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+            Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
             Global.AnnotationSettings.AutoPolygonizeCircles = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers = viewModel.AutoPolygonizeMinRadiusNanometers;
             Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;

@@ -27,6 +27,32 @@ namespace WebAnnotation.Properties
             set => this[nameof(SegmentationEdgeCleanupRadius)] = value;
         }
 
+        /// <summary>
+        /// SAM2 logit a pixel must exceed to be object; sent as SegmentTilesRequest.MaskThreshold.
+        /// SAM2's own default is 0; Viking starts at 0.5 to trim the slight over-segmentation.
+        /// Keep in step with <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_SEGMENTATION_MASK_THRESHOLD"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double SegmentationMaskThreshold
+        {
+            get => (double)this[nameof(SegmentationMaskThreshold)];
+            set => this[nameof(SegmentationMaskThreshold)] = value;
+        }
+
+        /// <summary>
+        /// Sent as SegmentTilesRequest.UseMaskInput: the server runs a second SAM2 pass seeded with the first pass's logits.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SegmentationUseMaskInput
+        {
+            get => (bool)this[nameof(SegmentationUseMaskInput)];
+            set => this[nameof(SegmentationUseMaskInput)] = value;
+        }
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]

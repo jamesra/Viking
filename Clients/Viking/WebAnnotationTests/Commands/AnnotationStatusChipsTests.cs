@@ -31,6 +31,8 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(AnnotationStatusChips.DescribeSegmentation(false, busy: false).EmphasizeUnavailable);
             Assert.AreEqual("Seg Busy", AnnotationStatusChips.DescribeSegmentation(true, busy: true).Text);
             Assert.AreEqual("Seg Ready", AnnotationStatusChips.DescribeSegmentation(true, busy: false).Text);
+            Assert.AreEqual("Seg Processing", AnnotationStatusChips.DescribeSegmentation(true, busy: false, processing: true).Text);
+            Assert.AreEqual("Seg Busy", AnnotationStatusChips.DescribeSegmentation(true, busy: true, processing: true).Text);
         }
     }
 }

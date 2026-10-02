@@ -193,6 +193,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         internal bool IsBusy => requestCoalescer.IsBusy || viewportSession.IsUploading;
 
+        /// <summary>
+        /// Count of server responses being decoded and polygonized. Separate from <see cref="IsBusy"/>
+        /// because the coalescer is released as soon as the RPC returns, while polygonizing a large mask
+        /// can take seconds more; without this the status chip reads ready before any outline exists.
+        /// </summary>
+        private int processingResponses;
+
+        /// <summary>
+        /// True while a segmentation response is being converted into outlines. Status chips show Seg Processing.
+        /// </summary>
+        internal bool IsProcessingResults => Volatile.Read(ref processingResponses) > 0;
+
         #region Constructor
         public SegmentationCommand(SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
@@ -1145,9 +1157,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Polygonizes off the UI thread. Applies views only if this generation still owns the overlay.
+        /// Runs <see cref="ProcessSegmentationResponseCoreAsync"/> while keeping the processing count, and the
+        /// status chip, accurate on every exit path including cancellation and failure.
         /// </summary>
         private async Task ProcessSegmentationResponseAsync(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int generation,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref processingResponses);
+            AnnotationStatusChips.Refresh();
+            try
+            {
+                await ProcessSegmentationResponseCoreAsync(response, generation, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref processingResponses);
+                AnnotationStatusChips.Refresh();
+            }
+        }
+
+        /// <summary>
+        /// Polygonizes off the UI thread. Applies views only if this generation still owns the overlay.
+        /// </summary>
+        private async Task ProcessSegmentationResponseCoreAsync(
             SegmentationServiceTypes.SegmentationResponse response,
             int generation,
             CancellationToken cancellationToken)
@@ -1221,6 +1255,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             ConvertSegmentsToPolygonViews(lastSegmentationResponse, holeDropFraction, edgeCleanupRadius);
             Parent.Invalidate();
+        }
+
+        /// <summary>
+        /// Asks the server again for the prompts already placed after a SAM2 request setting
+        /// (mask threshold, mask_input) changed. Does nothing before the first click. UI thread only,
+        /// because it reads the prompt lists.
+        /// </summary>
+        public void ResegmentAfterRequestSettingsChange()
+        {
+            if (placementFinished || Deactivated || foregroundPoints.Count == 0)
+                return;
+
+            Interlocked.Exchange(ref lastSentPrompts, null);
+            _ = RequestSegmentation();
         }
 
         public void RefreshPromptPointViews(double? pointRadiusPixels = null)

@@ -454,6 +454,101 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Smallest accepted <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
+            public const double MIN_SEGMENTATION_MASK_THRESHOLD = -5.0;
+
+            /// <summary>Largest accepted <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
+            public const double MAX_SEGMENTATION_MASK_THRESHOLD = 5.0;
+
+            /// <summary>Starting <see cref="SegmentationMaskThreshold"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const double DEFAULT_SEGMENTATION_MASK_THRESHOLD = 0.5;
+
+            private const int SEGMENTATION_REQUEST_SETTINGS_DEBOUNCE_MS = 400;
+
+            private static System.Threading.Timer? _segmentationRequestSettingsTimer;
+
+            /// <summary>
+            /// Logit a pixel must exceed for SAM2 to call it object, sent with every SegmentTiles request.
+            /// 0 is SAM2's own default; higher values shrink the mask. A change re-segments the active
+            /// segmentation command and the auto-polygonize view once the value has stopped moving.
+            /// </summary>
+            public static double SegmentationMaskThreshold
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.SegmentationMaskThreshold,
+                    MIN_SEGMENTATION_MASK_THRESHOLD,
+                    MAX_SEGMENTATION_MASK_THRESHOLD);
+                set
+                {
+                    double clamped = MathUtils.Clamp(
+                        value,
+                        MIN_SEGMENTATION_MASK_THRESHOLD,
+                        MAX_SEGMENTATION_MASK_THRESHOLD);
+                    if (Math.Abs(Properties.Settings.Default.SegmentationMaskThreshold - clamped) < 0.0001)
+                        return;
+
+                    Properties.Settings.Default.SegmentationMaskThreshold = clamped;
+                    Properties.Settings.Default.Save();
+                    UI.AnnotationModeToolbar.SyncMaskThreshold();
+                    ScheduleSegmentationRequestSettingsRefresh();
+                }
+            }
+
+            /// <summary>
+            /// When true the server predicts twice per cell, feeding the first pass's logits back to SAM2
+            /// as mask_input. Off by default. A change re-segments like <see cref="SegmentationMaskThreshold"/>.
+            /// </summary>
+            public static bool SegmentationUseMaskInput
+            {
+                get => Properties.Settings.Default.SegmentationUseMaskInput;
+                set
+                {
+                    if (Properties.Settings.Default.SegmentationUseMaskInput == value)
+                        return;
+
+                    Properties.Settings.Default.SegmentationUseMaskInput = value;
+                    Properties.Settings.Default.Save();
+                    ScheduleSegmentationRequestSettingsRefresh();
+                }
+            }
+
+            /// <summary>
+            /// Waits for the mask-threshold slider to stop moving, then re-requests on the UI thread.
+            /// Each change restarts the wait so a drag sends one request, not one per tick.
+            /// </summary>
+            private static void ScheduleSegmentationRequestSettingsRefresh()
+            {
+                _segmentationRequestSettingsTimer?.Dispose();
+                _segmentationRequestSettingsTimer = new System.Threading.Timer(
+                    _ => RefreshAfterSegmentationRequestSettingsChange(),
+                    null,
+                    SEGMENTATION_REQUEST_SETTINGS_DEBOUNCE_MS,
+                    System.Threading.Timeout.Infinite);
+            }
+
+            private static void RefreshAfterSegmentationRequestSettingsChange()
+            {
+                var overlay = AnnotationOverlay.CurrentOverlay;
+                if (overlay is null)
+                    return;
+
+                var parent = overlay.Parent;
+                if (parent is null || parent.IsDisposed)
+                    return;
+
+                void Refresh()
+                {
+                    overlay.OnSegmentationRequestSettingsChanged();
+                    if (parent.CurrentCommand is SegmentationCommand command)
+                        command.ResegmentAfterRequestSettingsChange();
+                }
+
+                if (parent.InvokeRequired)
+                    parent.BeginInvoke(new System.Action(Refresh));
+                else
+                    Refresh();
+            }
+
             /// <summary>
             /// Enables idle-driven SAM2 proposals on circles. Until the user toggles this,
             /// review/admin sessions default on and annotate sessions default off. After a
@@ -671,6 +766,9 @@ namespace WebAnnotation
 
             public static void ResetToDefaults()
             {
+                bool segmentationRequestSettingsChanged =
+                    Math.Abs(Properties.Settings.Default.SegmentationMaskThreshold - DEFAULT_SEGMENTATION_MASK_THRESHOLD) > 0.0001 ||
+                    Properties.Settings.Default.SegmentationUseMaskInput;
                 Properties.Settings.Default.NumSectionsInMemory = 10;
                 Properties.Settings.Default.NumSectionsLoading = 5;
                 Properties.Settings.Default.LocationTextScaleFactor = 5;
@@ -688,6 +786,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.SegmentationPointRadius = 5.0;
                 Properties.Settings.Default.SegmentationHoleDropFraction = 0.03;
                 Properties.Settings.Default.SegmentationEdgeCleanupRadius = 2;
+                Properties.Settings.Default.SegmentationMaskThreshold = DEFAULT_SEGMENTATION_MASK_THRESHOLD;
+                Properties.Settings.Default.SegmentationUseMaskInput = false;
                 Properties.Settings.Default.AutoPolygonizeCircles = false;
                 Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
@@ -703,6 +803,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.SmallestRenderedSize = 0.5;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();
+                if (segmentationRequestSettingsChanged)
+                    ScheduleSegmentationRequestSettingsRefresh();
             }
 
             private static void OnSettingsChanged()

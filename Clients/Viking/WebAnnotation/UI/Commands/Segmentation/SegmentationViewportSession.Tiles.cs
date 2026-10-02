@@ -182,7 +182,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             SegmentTilesRequest request = new()
             {
                 MultimaskOutput = false,
-                OmitLabeledImage = true
+                OmitLabeledImage = true,
+                MaskThreshold = (float)WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
+                UseMaskInput = WebAnnotation.Global.AnnotationSettings.SegmentationUseMaskInput
             };
             foreach (TileCell cell in cells)
             {

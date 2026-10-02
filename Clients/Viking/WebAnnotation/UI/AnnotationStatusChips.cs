@@ -104,12 +104,16 @@ namespace WebAnnotation.UI
 
             bool segAvailable = Global.IsSegmentationServiceAvailable;
             bool segBusy = IsSegmentationBusy(viewer);
-            var seg = DescribeSegmentation(segAvailable, segBusy);
+            bool segProcessing = viewer.CurrentCommand is SegmentationCommand processingCommand &&
+                processingCommand.IsProcessingResults;
+            var seg = DescribeSegmentation(segAvailable, segBusy, segProcessing);
             string segTip = !segAvailable
                 ? "No segmentation service selected. Click to choose one."
                 : segBusy
                     ? "Segmentation upload or request in progress."
-                    : "Segmentation service is available. Click to change or clear.";
+                    : segProcessing
+                        ? "Segmentation answered; converting the mask into an outline."
+                        : "Segmentation service is available. Click to change or clear.";
             viewer.SetViewerStatusChip(
                 ViewerStatusChipSlot.Segmentation,
                 seg.Text,
@@ -157,16 +161,20 @@ namespace WebAnnotation.UI
         }
 
         /// <summary>
-        /// Pure Seg chip label. Unavailable wins; then busy; else ready.
+        /// Pure Seg chip label. Unavailable wins; then busy; then processing (server answered, outlines
+        /// still being built); else ready.
         /// </summary>
         internal static (string Text, bool EmphasizeOn, bool EmphasizeBusy, bool EmphasizeUnavailable) DescribeSegmentation(
             bool available,
-            bool busy)
+            bool busy,
+            bool processing = false)
         {
             if (!available)
                 return ("Seg Off", false, false, true);
             if (busy)
                 return ("Seg Busy", false, true, false);
+            if (processing)
+                return ("Seg Processing", false, true, false);
             return ("Seg Ready", true, false, false);
         }
 

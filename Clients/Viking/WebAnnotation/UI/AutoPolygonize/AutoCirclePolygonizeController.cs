@@ -302,6 +302,24 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// A SAM2 request setting (mask threshold, mask_input) changed, so every cached answer was
+        /// made with the old value. Cancels in-flight work, forgets which circles were already
+        /// segmented, and restarts the idle settle so the current view is requested again.
+        /// Existing outlines stay up until the new batch replaces them, and the uploaded images
+        /// stay valid, so nothing is re-uploaded.
+        /// </summary>
+        public void OnSegmentationRequestSettingsChanged()
+        {
+            CancelProcessPhase();
+            CancelUploadPhase();
+            cache.Clear();
+            if (enabled)
+                RestartIdleTimer();
+            else
+                StopSettleTimers();
+        }
+
+        /// <summary>
         /// Drops upload and process work. Proposals stay in the dictionary; Draw
         /// filters them by the new section number.
         /// </summary>
