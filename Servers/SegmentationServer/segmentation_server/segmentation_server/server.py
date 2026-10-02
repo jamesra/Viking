@@ -48,6 +48,7 @@ from segmentation_server.image_cache import (
     ImageCache,
     TileCacheKey,
 )
+from segmentation_server.prompt_log import describe_prompts
 from segmentation_server.mask_utils import (
     SegmentInfo,
     combined_mask_to_segments,
@@ -945,7 +946,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 )
             logger.info(
                 "SegmentTiles ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "
-                "tiles=%s fg=%s segments=%s requested=%s reused=%s predicted=%s in %.3fs session=%s",
+                "tiles=%s fg=%s segments=%s requested=%s reused=%s predicted=%s in %.3fs session=%s "
+                "mask=%sx%s origin=(%s,%s) requested_tiles=%s %s",
                 identity.volume,
                 identity.section,
                 identity.channel,
@@ -959,6 +961,12 @@ class SegmentationServicer(SegmentationServiceServicer):
                 outcome.predicted,
                 time.perf_counter() - start_time,
                 hashlib.blake2s(repr(session).encode(), digest_size=4).hexdigest(),
+                width,
+                height,
+                result.origin_x,
+                result.origin_y,
+                [(tile.row, tile.col) for tile in result.requested],
+                describe_prompts(foreground, background),
             )
             return response
         finally:
