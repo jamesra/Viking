@@ -334,10 +334,18 @@ function Download-PreviousRelease {
     
     # Use vpk download to fetch the latest release
     # This will download the full package needed for delta generation
-    vpk download `
-        --url $ReleaseUrl `
-        --outputDir $ReleaseDir `
-        --packId $PackId
+    # vpk 1.x requires a source subcommand (http) and has no --packId; a missing feed must not abort the
+    # pack, so stderr from a failed download is tolerated and judged by exit code below.
+    $oldDownloadErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        vpk download http `
+            --url $ReleaseUrl `
+            --outputDir $ReleaseDir 2>&1 | Out-Host
+    }
+    finally {
+        $ErrorActionPreference = $oldDownloadErrorAction
+    }
     
     if ($LASTEXITCODE -eq 0) {
         # Check if we got a full package
