@@ -418,9 +418,9 @@ class SegmentationModel:
     ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
         """set_image() and predict() on a throwaway predictor.
 
-        Half-tiles are not pinned beside the cell embeddings. The embedding is
-        filed under a hash of the stitched pixels, so the next call on the same
-        cut reloads it and skips the encoder even when the prompt point moved.
+        Offset cell windows are not pinned beside the aligned tile embeddings. The embedding is
+        filed under a hash of the window pixels, so the next call on the same
+        window reloads it and skips the encoder even when the prompt point moved.
         The predictor is released before return.
         """
         image = np.ascontiguousarray(image_np)
@@ -451,7 +451,7 @@ class SegmentationModel:
                 try:
                     reset()
                 except Exception:
-                    logger.exception("Failed to reset half-tile predictor")
+                    logger.exception("Failed to reset ephemeral cell predictor")
 
     def predict_tile_union(
         self,
@@ -605,7 +605,7 @@ class SegmentationModel:
 
 
 def _image_digest(image: NDArray) -> str:
-    """Stable id for one stitched half-tile. Shape is part of the key."""
+    """Stable id for one cropped cell window. Shape is part of the key."""
     digest = hashlib.sha256()
     digest.update(str(image.shape).encode("ascii"))
     digest.update(str(image.dtype).encode("ascii"))

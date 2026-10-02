@@ -21,7 +21,17 @@ CF_DNS_API_CREDENTIALS_HOST_PATH=D:/Docker/Builds/cloudflare.ini
 SEGMENTATION_SSL_CERT_CONTAINER_PATH=/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem
 SEGMENTATION_SSL_KEY_CONTAINER_PATH=/etc/letsencrypt/live/segmentation.codepharm.net/privkey.pem
 
+# Optional HTTPS point-prompt page on container port 8443 (host 40444).
+# Uses the PEM paths above. Leave unset or 0 to keep the listener down.
+#SEGMENTATION_DEMO_SITE=1
+
 # Fine-tuned SAM2 weights. Host folder is mounted read-only at /models.
 # best_TEM_model.pt must be Meta {"model": state_dict} (sam2-em-export-serve).
 #SEGMENTATION_MODEL_HOST=D:/Docker/Run/segmentation-server
 #SAM2_CHECKPOINT=/models/best_TEM_model.pt
+
+# Host folder for tile image embeddings (not the network weights). Compose mounts
+# this at /var/cache/segmentation-embeddings. Same PNG bytes skip set_image()
+# after a restart. 0 on MAX_BYTES disables the cap. Server default is 32 GiB.
+#SEGMENTATION_EMBEDDING_CACHE_HOST=D:/Docker/cache/segmentation-embeddings
+#SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES=34359738368

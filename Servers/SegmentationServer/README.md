@@ -7,7 +7,7 @@ Segment Anything 2 in Docker. A simple, easy to use Docker image for Meta's SAM2
 
 📰 New: The project has been restructured into three separate components:
 1. **segmentation_grpc**: Contains the gRPC interface definition and code generation
-2. **SegmentationClient**: Contains the client implementation for interacting with the segmentation service
+2. **Example**: Sample Python client for `UploadImage` / `SegmentImage`. See [Example](Example/README.md).
 3. **segmentation_server**: Contains the server implementation that runs in the Docker container
 
 📰 We also have a ROS Noetic supported image in the [ROS Noetic branch](https://github.com/peasant98/SAM2-Docker/tree/ros-noetic)!
@@ -99,9 +99,53 @@ appear in server logs for predictor bookkeeping; clients must not treat it as th
 
 1. `UploadTile` for each visible (and growth-requested) cell.
 2. `SegmentTiles` with those `TileCoord`s and mosaic-space prompts.
-3. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim cells.
+3. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim GPU slots.
 
-Cache defaults: 5 minute idle TTL, 1 GiB of encoded image bytes, and 8 images (VRAM proxy for embeddings). Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`; missing tiles return `TILE_NOT_FOUND` with row/col so the client can re-upload.
+#### How `SegmentTiles` grows a mask
+
+The server never sees a tile as the unit of work. It walks a grid of overlapping **cells**:
+each cell is a 1024×1024 window, cells start every 512 px (50% overlap), and each cell owns
+only its central 512×512 **core**. Cores partition the mosaic. A cell whose origin falls on a
+tile corner (even row, even column) *is* an uploaded tile and reuses its pinned embedding; any
+other cell is cropped from two or four uploaded tiles and predicted on a throwaway predictor
+(its embedding is still cached on disk by image digest).
+
+1. Predict the cell that owns the first foreground click, with every foreground click and
+   background click that falls in its window.
+2. Drop any piece of the answer that holds no positive click, then OR the core into the result.
+   Pixels in the outer 256 px margin are ORed in only where SAM2's logit is at least
+   `SEGMENT_MARGIN_LOGIT` (default 1.5; a pixel is object above 0), so the margin counts only
+   where the model is clearly sure. A prediction that returns no logits contributes its core
+   only. Each pixel is stored in the core of the cell that owns it, so a neighbor that sees more
+   of the object can add to the cell centered on it. The owner has the last word: once a cell
+   has predicted, core pixels where its own logit is below `SEGMENT_OWNER_VETO_LOGIT` (default
+   -1.0) are removed if a neighbor's margin put them there, and later neighbors cannot add
+   them. This stops a neighbor's window border (where SAM2 tends to run a mask to the image
+   edge) from leaving a straight cut. Pixels the owner accepted itself are never removed. The
+   logits are SAM2's low-resolution map for its best mask, upsampled to the window.
+3. If the result inside a core touches the core edge, or a prediction's margin put pixels in a
+   core, predict that cell. Its positive clicks are the foreground clicks in its window plus
+   1 to 3 seeds at the center (deepest point) of each separate piece of the result in its outer
+   256 px margin, so SAM2 continues the same object. A piece that lies wholly inside the window
+   center gets its own seed too.
+4. A cell is predicted again (at most 4 times) when the result in its window has grown beyond
+   what it last predicted, which is how a C or hairpin that returns through cores already
+   visited is completed. Total work is bounded by a 48 cell and 96 prediction budget.
+5. Aligned tiles a cell needs but the server lacks are listed in `requested_tiles`; the client
+   uploads them and calls again. The cell cores found for the same clicks are remembered and
+   start the next call, so the mask never shrinks between calls and any core edge left open
+   (for example by a missing tile) is followed. Identical SAM2 prompts are replayed from memory.
+
+The response mask is the fused cores with `origin_x`/`origin_y` at the mosaic pixel of its
+lower-left corner, always a multiple of 512 wide and tall.
+
+Set `SEGMENTATION_DEBUG_DUMP=1` to write one `.npz` per call (fused mask, every cell core, each
+cell's raw answer, kept pieces and SAM2 logits, and the prompts) under the embedding cache mount
+for offline inspection.
+
+Cache defaults: 5 minute idle TTL, 1 GiB of encoded image bytes, and 32 GPU embeddings. Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`; missing tiles return `TILE_NOT_FOUND` with row/col so the client can re-upload.
+
+The GPU cap is the hot set. Feature maps for each cell are also written under `SEGMENTATION_EMBEDDING_CACHE` (inside the container, `/var/cache/segmentation-embeddings`). Compose mounts `${SEGMENTATION_EMBEDDING_CACHE_HOST:-D:/Docker/cache/segmentation-embeddings}` there. A later upload of the same PNG bytes reloads that file and skips `set_image()`. The directory is split by checkpoint identity and by encoder generation (`eager` while compile is warming, `compiled` after the swap), so a new checkpoint or the compiled encoder does not reuse the other generation. Default disk cap is 32 GiB (`SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES`, `0` for no cap). The client still sends the PNG; the disk hit skips the encoder only.
 
 ## GPU / CUDA
 
@@ -129,14 +173,12 @@ To generate the gRPC code:
 python -m segmentation_grpc
 ```
 
-### SegmentationClient
+### Example
 
-This project contains the client implementation for interacting with the segmentation service.
-
-To segment an image:
+[Example](Example/README.md) is a command-line sample. It uploads an image, sends foreground and background points, and plots the mask.
 
 ```bash
-python -m SegmentationClient --image path/to/image.png --coordinates 100,200 300,400
+python Example/client_example.py --server localhost:40080 --image path/to/image.png --coordinates 100,200 300,400 --labels 1,0
 ```
 
 Default path: `UploadImage` → `SegmentImage(image_id)` → `DeleteImage`. Pass `--inline` to send image bytes on the segment request (re-encodes every call).
@@ -148,11 +190,11 @@ Optional arguments:
 - `--inline`: Skip the cache and send image bytes with the segment request
 - `--tls`: Use TLS. Also selected automatically when `--server` uses port 443
 
-To test the service:
+### Demo page
 
-```bash
-python -m SegmentationClient.test_service
-```
+The server can serve a browser page on HTTPS port **8443** (Compose publishes host **40444**). It is off unless `--demo-site` is passed or `SEGMENTATION_DEMO_SITE=1`. The page uses the same Let's Encrypt files as gRPC TLS (`SSL_CERT_PATH` and `SSL_KEY_PATH`). If those files are missing, gRPC cleartext still starts and the page does not bind. `segmentation-certbot-renewer` (Compose profile `letsencrypt`) obtains the certificate for `segmentation.codepharm.net` and restarts this process on renewal.
+
+With the site enabled and the certificate present, open `https://segmentation.codepharm.net:40444`. Left-click is foreground, right-click is background. The page calls `UploadImage` once, then `SegmentImage` on that id. There is no login; leave the flag off on a host you do not want to expose.
 
 ### segmentation_server
 
@@ -164,7 +206,7 @@ To run the server:
 python -m segmentation_server
 ```
 
-Docker publishes cleartext gRPC as **40080:80** and TLS as **40443:443**. Host ports 80 and 443 belong to the reverse proxy. The router forwards `segmentation.codepharm.net:443` to host port 40443. TLS binds only when `SSL_CERT_PATH` and `SSL_KEY_PATH` point at certificate files. See [config-template/README.md](config-template/README.md) for Let's Encrypt enrollment.
+Docker publishes cleartext gRPC as **40080:80**, gRPC TLS as **40443:443**, and the optional demo page as **40444:8443**. Host ports 80 and 443 belong to the reverse proxy. The router forwards `segmentation.codepharm.net:443` to host port 40443. TLS binds only when `SSL_CERT_PATH` and `SSL_KEY_PATH` point at certificate files. See [config-template/README.md](config-template/README.md) for Let's Encrypt enrollment. The demo page uses those same files and stays down until `SEGMENTATION_DEMO_SITE=1`.
 
 Fine-tuned weights: put a Meta-format checkpoint at `D:\Docker\Run\segmentation-server\best_TEM_model.pt`. Compose mounts that folder at `/models` and sets `SAM2_CHECKPOINT=/models/best_TEM_model.pt` (override with `SEGMENTATION_MODEL_HOST` or `SAM2_CHECKPOINT`). Trainer `best_model.pt` is a raw state dict; convert it with `sam2-em-export-serve` before copying it here. Recreate the container after replacing the file. Eager and compiled encoders both load this checkpoint.
 
@@ -178,4 +220,6 @@ Optional arguments:
 - `--cache-max-memory-bytes`: Cap on cached encoded image bytes (default: 1 GiB)
 - `--cache-max-images`: Max cached images / GPU embeddings (default: 8)
 - `--no-compile-image-encoder`: Skip Hiera `torch.compile` (default is on for CUDA)
+- `--demo-site` / `--no-demo-site`: HTTPS point-prompt page (default off; `SEGMENTATION_DEMO_SITE=1` turns it on)
+- `--demo-port`: Demo HTTPS port (default: 8443)
 - `--generate-grpc`: Generate gRPC code before starting the server

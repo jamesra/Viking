@@ -16,6 +16,8 @@ PEM paths inside the container are `/etc/letsencrypt/live/<domain>/fullchain.pem
 
 Docker publishes **40080:80** for cleartext gRPC and **40443:443** for TLS. Host ports 80 and 443 belong to the reverse proxy. Point the router’s `segmentation.codepharm.net:443` forward at host port 40443.
 
+The optional point-prompt page listens on container port **8443** (host **40444**) only when `SEGMENTATION_DEMO_SITE=1`. It uses the same PEM files as gRPC TLS. While the flag is off, or before certbot has written those files, nothing accepts connections on 8443. Forward `segmentation.codepharm.net:40444` only if that page should be reachable. `segmentation-certbot-renewer` (profile `letsencrypt`) enrolls the certificate and restarts `segmentation-server` when it renews.
+
 Enrollment:
 
 ```bash

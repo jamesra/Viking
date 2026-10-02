@@ -3,9 +3,9 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "SegmentationClient"
+name = "segmentation-example"
 version = "0.1.0"
-description = "Client for the segmentation service"
+description = "Example client for the segmentation service"
 authors = [
     {name = "James Anderson"}
 ]
@@ -21,9 +21,5 @@ dependencies = [
     "segmentation_grpc",
 ]
 
-[project.scripts]
-segmentation-client = "SegmentationClient.client_example:main"
-test-segmentation-service = "SegmentationClient.test_service:test_service"
-
 [tool.setuptools]
-packages = ["SegmentationClient"]
+py-modules = ["client_example"]

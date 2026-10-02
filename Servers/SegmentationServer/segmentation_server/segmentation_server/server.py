@@ -48,6 +48,7 @@ from segmentation_server.image_cache import (
     ImageCache,
     TileCacheKey,
 )
+from segmentation_server.debug_dump import dump_enabled, dump_growth
 from segmentation_server.prompt_log import describe_prompts
 from segmentation_server.mask_utils import (
     SegmentInfo,
@@ -60,14 +61,21 @@ from segmentation_server.tile_work import (
     install_tile_work_logging,
     tile_work,
 )
-from segmentation_server.tile_growth import (
+from segmentation_server.cell_grid import (
     TILE_SIZE,
+    Cell,
+    TileIndex,
+    crop_window,
+    is_aligned,
+    tile_of_point,
+    tiles_for_cell,
+)
+from segmentation_server.tile_growth import (
     GrowthCancelled,
     PredictUnavailable,
-    TileIndex,
+    margin_logit_min_from_env,
+    owner_veto_logit_from_env,
     max_requested_tiles_from_env,
-    stitch_half_tile,
-    tile_of_point,
 )
 
 if TYPE_CHECKING:
@@ -88,17 +96,17 @@ def _remember_tile_image(
     col: int,
     image_bytes: bytes,
 ) -> None:
-    """Decode a pinned tile so a seam can be stitched without another upload.
+    """Decode a pinned tile so an offset cell window can be cropped without another upload.
 
-    A decode failure leaves the cell out of the map. Growth then asks for the
-    cell again instead of prompting on the tile cut.
+    A decode failure leaves the tile out of the map. Growth then asks for the
+    tile again instead of predicting on a partial window.
     """
     if not image_bytes or (row, col) in images:
         return
     try:
         images[(row, col)] = prepare_image_for_sam2(image_bytes)
     except (OSError, ValueError):
-        logger.exception("Could not decode tile row=%s col=%s for a half-tile", row, col)
+        logger.exception("Could not decode tile row=%s col=%s for a cell window", row, col)
 
 
 class RequestLoadTracker:
@@ -827,58 +835,41 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             await self._pin_remembered_tiles(identity, session, predictors, pinned_ids, images)
 
-            def predict(
+            def predict_cell(
                 row: int,
                 col: int,
                 points: List[Tuple[int, int]],
                 labels: List[int],
             ):
-                found = predictors.get((row, col))
-                if found is None:
-                    raise PredictUnavailable(f"row={row} col={col}")
-                predictor, predictor_lock, height, width = found
-                with predictor_lock:
-                    with tile_work(identity.volume, int(identity.section), col, row):
-                        return self.model.predict_tile_union(
-                            predictor,
-                            points,
-                            labels,
-                            multimask_output,
-                            (height, width),
-                        )
+                """One 1024 window. An aligned cell reuses its pinned tile embedding."""
+                cell = Cell(row=row, col=col)
+                if is_aligned(cell):
+                    found = predictors.get((tiles_for_cell(cell)[0].row, tiles_for_cell(cell)[0].col))
+                    if found is not None:
+                        predictor, predictor_lock, height, width = found
+                        with predictor_lock:
+                            with tile_work(identity.volume, int(identity.section), col, row):
+                                return self.model.predict_tile_union(
+                                    predictor,
+                                    points,
+                                    labels,
+                                    multimask_output,
+                                    (height, width),
+                                )
 
-            def seam_predict(
-                src_row: int,
-                src_col: int,
-                dst_row: int,
-                dst_col: int,
-                side: str,
-                points: List[Tuple[int, int]],
-                labels: List[int],
-            ):
-                source = images.get((src_row, src_col))
-                neighbor = images.get((dst_row, dst_col))
-                if source is None or neighbor is None or source.shape[:2] != neighbor.shape[:2]:
-                    raise PredictUnavailable(
-                        f"seam row={src_row} col={src_col} side={side}"
-                    )
-                stitched = stitch_half_tile(source, neighbor, side)
-                height, width = int(stitched.shape[0]), int(stitched.shape[1])
-                logger.info(
-                    "seam half-tile side=%s from row=%s col=%s to row=%s col=%s",
-                    side,
-                    src_row,
-                    src_col,
-                    dst_row,
-                    dst_col,
-                )
-                with tile_work(identity.volume, int(identity.section), src_col, src_row):
+                window = crop_window(cell, images)
+                if window is None:
+                    missing = [
+                        tile for tile in tiles_for_cell(cell) if (tile.row, tile.col) not in images
+                    ]
+                    raise PredictUnavailable(f"cell row={row} col={col}", tiles=missing)
+                with tile_work(identity.volume, int(identity.section), col, row):
                     return self.model.predict_ephemeral(
-                        stitched,
+                        window,
                         points,
                         labels,
                         multimask_output,
-                        (height, width),
+                        (int(window.shape[0]), int(window.shape[1])),
                     )
 
             stop_growth = threading.Event()
@@ -889,16 +880,17 @@ class SegmentationServicer(SegmentationServiceServicer):
                     lambda: grow_remembering(
                         self._growth_memory,
                         session,
-                        uploaded,
                         foreground,
                         background,
-                        predict,
+                        predict_cell,
                         should_stop=stop_growth.is_set,
                         max_requested=self._max_requested_tiles,
-                        seam_predict=seam_predict,
                     ),
                 )
                 result = outcome.result
+                self._growth_memory.remember_held(
+                    session, [TileIndex(row=row, col=col) for row, col in images]
+                )
             except GrowthCancelled:
                 logger.info("SegmentTiles stopped because the client cancelled the call")
                 return SegmentationResponse()
@@ -943,6 +935,20 @@ class SegmentationServicer(SegmentationServiceServicer):
                         row=tile.row,
                         col=tile.col,
                     )
+                )
+            if dump_enabled():
+                dump_growth(
+                    hashlib.blake2s(repr(session).encode(), digest_size=4).hexdigest(),
+                    fused_mask=result.mask,
+                    origin=(result.origin_x, result.origin_y),
+                    cells=result.cells,
+                    uploaded=uploaded,
+                    requested=result.requested,
+                    foreground=foreground,
+                    background=background,
+                    score=result.score,
+                    margin_logit_min=margin_logit_min_from_env(),
+                    owner_veto_logit=owner_veto_logit_from_env(),
                 )
             logger.info(
                 "SegmentTiles ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "

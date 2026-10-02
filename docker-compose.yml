@@ -51,6 +51,7 @@ services:
     build:
       context: .
       dockerfile: Servers/GrpcSectionCorrectionService/Dockerfile
+    restart: unless-stopped
     env_file:
       - ${SECTION_CORRECTION_BUILD_ENV_PATH:-D:/Docker/Builds/SectionCorrectionService}/.env.Docker
     ports:
@@ -123,6 +124,9 @@ services:
       - "40080:80"
       # Router forwards segmentation.codepharm.net:443 to this host port.
       - "40443:443"
+      # Optional demo page (SEGMENTATION_DEMO_SITE=1). Same certificate as gRPC TLS.
+      # Router may forward segmentation.codepharm.net:40444 here. Refused while the site is off.
+      - "40444:8443"
     cap_add:
       - NET_BIND_SERVICE
     gpus: all
@@ -134,9 +138,17 @@ services:
       SSL_CERT_PATH: ${SEGMENTATION_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem}
       SSL_KEY_PATH: ${SEGMENTATION_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/privkey.pem}
       SAM2_CHECKPOINT: ${SAM2_CHECKPOINT:-/models/best_TEM_model.pt}
+      # Tile embeddings (not weights). Survives eviction and container restart.
+      SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
+      # Set SEGMENTATION_DEBUG_DUMP=1 to write the newest 40 growth results (fused and per-tile masks) to
+      # <embedding cache>/debug-dumps for offline inspection of tile-edge artifacts.
+      SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
+      # Off unless the operator sets SEGMENTATION_DEMO_SITE=1. HTTPS uses SSL_CERT_PATH.
+      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_DEMO_SITE:-0}
     volumes:
       - ${SEGMENTATION_MODEL_HOST:-D:/Docker/Run/segmentation-server}:/models:ro
       - ${SEGMENTATION_INDUCTOR_CACHE:-D:/Docker/cache/segmentation-inductor}:/home/user/.cache/torch_inductor
+      - ${SEGMENTATION_EMBEDDING_CACHE_HOST:-D:/Docker/cache/segmentation-embeddings}:/var/cache/segmentation-embeddings
       - segmentation-letsencrypt:/etc/letsencrypt:ro
     deploy:
       resources:

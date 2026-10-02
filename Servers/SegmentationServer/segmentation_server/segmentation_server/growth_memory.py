@@ -1,33 +1,27 @@
-"""Remember tile masks for one prompt set and reuse them on the next SegmentTiles call.
+"""Remember SAM2 cell results for one prompt set and reuse them on the next SegmentTiles call.
 
-Viking draws only the last response, and that response used to contain only the
-cells named in that call. A later call that omits a cell therefore cut the mask
-at the tile edge. This store puts those cells back into the composite and skips
-SAM2 when the same cell is asked the same points and labels again.
+Growth is deterministic: the same clicks and the same predictions give the same walk. A
+later call for the same clicks, for example after the client uploads a tile the walk asked
+for, therefore replays the earlier cells from this cache and only calls SAM2 for cells it
+has not seen. The cache also remembers which cells a session visited so the server can
+pin the aligned tiles those cells need, even when the client omits them from the call.
 
-Host RAM for remembered masks and cached SAM2 results together is capped. When
-a store would pass the cap, the least-recently-used prompt session is dropped
-until it fits. Evicting a GPU embedding does not drop a mask; a later walk that
-needs a new SAM2 call on a cell whose embedding is gone asks for that cell again.
+Host RAM for cached results is capped. When a store would pass the cap, the
+least-recently-used prompt session is dropped until it fits. Evicting a GPU embedding does
+not drop a result; a walk that needs a new SAM2 call on a cell whose tiles are gone asks
+the client for them again.
 """
 
 from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Set, Tuple
 
 import numpy as np
 
-from segmentation_server.tile_growth import (
-    GrowthCancelled,
-    GrowthResult,
-    SeamGraph,
-    TileIndex,
-    TilePredict,
-    TilePrediction,
-    grow_segmentation,
-)
+from segmentation_server.cell_grid import Cell, TileIndex, tiles_for_cell
+from segmentation_server.tile_growth import CellPredict, GrowthResult, grow_segmentation
 
 MASK_MEMORY_CAP_BYTES = 2 * 1024 * 1024 * 1024
 
@@ -35,7 +29,6 @@ Point = Tuple[int, int]
 # volume, section, channel, transform, downsample, multimask, foreground, background
 SessionKey = Tuple[str, int, str, str, int, bool, Tuple[Point, ...], Tuple[Point, ...]]
 _PredictKey = Tuple[int, int, Tuple[Point, ...], Tuple[int, ...]]
-_SeamKey = Tuple[int, int, int, int, str, Tuple[Point, ...], Tuple[int, ...]]
 _StoredPredict = Tuple[np.ndarray, Optional[np.ndarray], float]
 
 
@@ -73,20 +66,19 @@ class RememberedGrowth:
 
 @dataclass
 class _Session:
-    tiles: dict[TileIndex, TilePrediction] = field(default_factory=dict)
     predicts: dict[_PredictKey, _StoredPredict] = field(default_factory=dict)
-    seams: dict[_SeamKey, _StoredPredict] = field(default_factory=dict)
-    graph: SeamGraph = field(default_factory=SeamGraph)
+    cores: dict[Cell, np.ndarray] = field(default_factory=dict)
+    held: Set[TileIndex] = field(default_factory=set)
     nbytes: int = 0
     last_used: int = 0
 
 
 class GrowthMemory:
-    """LRU prompt sessions of tile masks and SAM2 results, capped in host RAM.
+    """LRU prompt sessions of SAM2 cell results, capped in host RAM.
 
-    Arrays are copied on the way in and the way out so an in-walk reseed cannot
-    alias a cached mask. ``invalidate_tile`` drops every session's memory of a
-    cell whose bytes were replaced.
+    Arrays are copied on the way in and the way out so a caller cannot alias a cached
+    mask. ``invalidate_tile`` drops every session's results for cells built from a tile
+    whose bytes were replaced.
     """
 
     def __init__(self, max_bytes: int = MASK_MEMORY_CAP_BYTES) -> None:
@@ -96,22 +88,30 @@ class GrowthMemory:
         self._lock = threading.Lock()
 
     def tile_indexes(self, key: SessionKey) -> list[TileIndex]:
-        """Cells remembered for this prompt set. Empty when the session is new."""
+        """Aligned tiles this prompt set used: those held in earlier calls and those its cells need.
+
+        The client sends only the tiles for the new round, so a cell deferred for one missing
+        tile would otherwise lose the tiles it already had. Empty for a new session.
+        """
         with self._lock:
             session = self._sessions.get(key)
             if session is None:
                 return []
             self._touch(session)
-            return list(session.tiles.keys())
+            needed: dict[TileIndex, None] = {}
+            for tile in sorted(session.held, key=lambda t: (t.row, t.col)):
+                needed[tile] = None
+            for cell in sorted(session.cores, key=lambda c: (c.row, c.col)):
+                for tile in tiles_for_cell(cell):
+                    needed[tile] = None
+            return list(needed)
 
-    def tiles(self, key: SessionKey) -> dict[TileIndex, TilePrediction]:
-        """Copies of the remembered masks. The caller may mutate the copies."""
+    def remember_held(self, key: SessionKey, tiles: Iterable[TileIndex]) -> None:
+        """Add aligned tiles that were pinned for this prompt set. Tiles are indexes, not bytes."""
         with self._lock:
-            session = self._sessions.get(key)
-            if session is None:
-                return {}
+            session = self._session(key)
+            session.held.update(tiles)
             self._touch(session)
-            return {tile: _clone_prediction(pred) for tile, pred in session.tiles.items()}
 
     def lookup(
         self,
@@ -156,101 +156,33 @@ class GrowthMemory:
             self._recount(session)
             self._touch(session)
             self._evict(protect=key)
+            if self._total_bytes() > self._max_bytes and key in self._sessions:
+                self._drop(key)
 
-    def lookup_seam(
-        self,
-        key: SessionKey,
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ) -> Optional[_StoredPredict]:
-        """Cached half-tile result for this cut, or None. Arrays are copies."""
-        seam_key = _seam_key(src_row, src_col, dst_row, dst_col, side, points, labels)
+    def cores(self, key: SessionKey) -> dict[Cell, np.ndarray]:
+        """Copies of the core masks (Y-down, 512x512) the last call for these clicks produced."""
         with self._lock:
             session = self._sessions.get(key)
             if session is None:
-                return None
-            stored = session.seams.get(seam_key)
-            if stored is None:
-                return None
+                return {}
             self._touch(session)
-            mask, logits, score = stored
-            logits_copy = None if logits is None else np.array(logits, copy=True)
-            return np.array(mask, copy=True), logits_copy, score
+            return {cell: np.array(core, copy=True) for cell, core in session.cores.items()}
 
-    def store_seam(
-        self,
-        key: SessionKey,
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-        mask: np.ndarray,
-        logits: Optional[np.ndarray],
-        score: float,
-    ) -> None:
-        """Remember one half-tile result. Other sessions are evicted if the cap is passed."""
-        seam_key = _seam_key(src_row, src_col, dst_row, dst_col, side, points, labels)
-        logits_copy = None if logits is None else np.array(logits, copy=True)
-        stored = (np.array(mask, copy=True), logits_copy, float(score))
-        with self._lock:
-            session = self._session(key)
-            session.seams[seam_key] = stored
-            self._recount(session)
-            self._touch(session)
-            self._evict(protect=key)
+    def remember_cores(self, key: SessionKey, cores: Mapping[Cell, np.ndarray]) -> None:
+        """Replace this session's core masks with copies of ``cores``.
 
-    def remember_tiles(self, key: SessionKey, tiles: dict[TileIndex, TilePrediction]) -> None:
-        """Replace this session's tile masks with copies of ``tiles``.
-
-        The predict cache is kept. After the replacement, least-recently-used
-        sessions are dropped until the store fits. A session that is over the
-        cap by itself is dropped so the store does not stay above the cap.
+        A later call for the same clicks starts from them, so the mask never shrinks between
+        calls. A session that is over the cap by itself is dropped.
         """
-        copied = {tile: _clone_prediction(pred) for tile, pred in tiles.items()}
+        copied = {cell: np.array(core, dtype=np.bool_, copy=True) for cell, core in cores.items()}
         with self._lock:
             session = self._session(key)
-            session.tiles = copied
+            session.cores = copied
             self._recount(session)
             self._touch(session)
             self._evict(protect=key)
             if self._total_bytes() > self._max_bytes and key in self._sessions:
                 self._drop(key)
-
-    def seam_graph(self, key: SessionKey) -> SeamGraph:
-        """A copy of the crossed borders for this click set. Empty when the session is new.
-
-        The caller mutates the copy during a walk and writes it back with
-        ``remember_seam_graph``. The stored graph is left unchanged until then.
-        """
-        with self._lock:
-            session = self._sessions.get(key)
-            if session is None:
-                return SeamGraph()
-            self._touch(session)
-            return session.graph.copy()
-
-    def remember_seam_graph(self, key: SessionKey, graph: SeamGraph) -> None:
-        """Replace this session's crossed borders with a copy of ``graph``.
-
-        Called by ``grow_remembering`` after a walk so the next SegmentTiles for
-        the same clicks skips ranges already resolved. Intervals are not counted
-        toward the mask byte cap. If the session was just evicted, the graph is
-        not written back on its own.
-        """
-        with self._lock:
-            session = self._sessions.get(key)
-            if session is None:
-                return
-            session.graph = graph.copy()
-            self._touch(session)
 
     def invalidate_tile(
         self,
@@ -262,28 +194,29 @@ class GrowthMemory:
         row: int,
         col: int,
     ) -> None:
-        """Drop remembered masks, cached predicts, and borders that touch one cell."""
+        """Drop cached results and visited cells that were built from one replaced tile."""
         identity = (volume, int(section), channel, transform, int(downsample))
-        cell = (int(row), int(col))
+        tile = TileIndex(row=int(row), col=int(col))
         with self._lock:
             empty: list[SessionKey] = []
             for key, session in self._sessions.items():
                 if key[:5] != identity:
                     continue
-                session.tiles.pop(TileIndex(row=cell[0], col=cell[1]), None)
-                stale = [item for item in session.predicts if item[0] == cell[0] and item[1] == cell[1]]
+                stale = [
+                    item
+                    for item in session.predicts
+                    if tile in tiles_for_cell(Cell(row=item[0], col=item[1]))
+                ]
                 for item in stale:
                     del session.predicts[item]
-                stale_seams = [
-                    item
-                    for item in session.seams
-                    if (item[0], item[1]) == cell or (item[2], item[3]) == cell
-                ]
-                for item in stale_seams:
-                    del session.seams[item]
-                session.graph.drop_tile(cell[0], cell[1])
+                session.cores = {
+                    cell: core
+                    for cell, core in session.cores.items()
+                    if tile not in tiles_for_cell(cell)
+                }
+                session.held.discard(tile)
                 self._recount(session)
-                if not session.tiles and not session.predicts and not session.seams and not session.graph.edges:
+                if not session.predicts and not session.cores and not session.held:
                     empty.append(key)
             for key in empty:
                 self._drop(key)
@@ -304,12 +237,10 @@ class GrowthMemory:
 
     def _recount(self, session: _Session) -> None:
         total = 0
-        for pred in session.tiles.values():
-            total += _nbytes(pred.mask) + _nbytes(pred.logits)
         for mask, logits, _score in session.predicts.values():
             total += _nbytes(mask) + _nbytes(logits)
-        for mask, logits, _score in session.seams.values():
-            total += _nbytes(mask) + _nbytes(logits)
+        for core in session.cores.values():
+            total += _nbytes(core)
         session.nbytes = total
 
     def _least_recent(self, protect: Optional[SessionKey]) -> Optional[SessionKey]:
@@ -337,41 +268,23 @@ class GrowthMemory:
 def grow_remembering(
     memory: GrowthMemory,
     session: SessionKey,
-    uploaded: Sequence[TileIndex],
     foreground: Sequence[Point],
     background: Sequence[Point],
-    predict: TilePredict,
+    predict: CellPredict,
     should_stop: Optional[Callable[[], bool]] = None,
     **kwargs: object,
 ) -> RememberedGrowth:
-    """Walk with remembered tiles filled in, and serve unchanged prompts from the cache.
+    """Walk, serving a cell from the cache when its points and labels were already predicted.
 
-    Remembered cells are added to the uploaded set, so a call that omits one still
-    fuses it. ``predict`` runs only when the points and labels are not already
-    stored. ``reused`` counts those cache hits. ``predicted`` counts new SAM2 calls.
-    ``should_stop`` returning true raises ``GrowthCancelled`` before the next SAM2 call.
-    A ``seam_predict`` argument is cached the same way, keyed by the two cells and the cut.
-    The session's seam graph is copied in, updated with the borders this walk resolves,
-    and written back so the next call skips an overlapping stretch.
+    ``predict`` runs only for prompts that are not stored. ``reused`` counts cache hits,
+    ``predicted`` counts new SAM2 calls. ``should_stop`` returning true raises
+    ``GrowthCancelled`` before the next SAM2 call. Extra keyword arguments go to
+    ``grow_segmentation``.
     """
-    remembered = memory.tiles(session)
-    graph = memory.seam_graph(session)
-    uploaded_set = list(uploaded)
-    seen = set(uploaded_set)
-    for tile in remembered:
-        if tile not in seen:
-            uploaded_set.append(tile)
-            seen.add(tile)
     reused = 0
     fresh = 0
-    raw_seam = kwargs.pop("seam_predict", None)
 
-    def caching_predict(
-        row: int,
-        col: int,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
+    def caching_predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
         nonlocal reused, fresh
         hit = memory.lookup(session, row, col, points, labels)
         if hit is not None:
@@ -382,77 +295,16 @@ def grow_remembering(
         fresh += 1
         return mask, logits, score
 
-    def caching_seam(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        nonlocal reused, fresh
-        hit = memory.lookup_seam(
-            session, src_row, src_col, dst_row, dst_col, side, points, labels
-        )
-        if hit is not None:
-            reused += 1
-            return hit
-        if should_stop is not None and should_stop():
-            raise GrowthCancelled()
-        mask, logits, score = raw_seam(src_row, src_col, dst_row, dst_col, side, points, labels)
-        memory.store_seam(
-            session,
-            src_row,
-            src_col,
-            dst_row,
-            dst_col,
-            side,
-            points,
-            labels,
-            mask,
-            logits,
-            score,
-        )
-        fresh += 1
-        return mask, logits, score
-
-    if raw_seam is not None:
-        kwargs["seam_predict"] = caching_seam
-
     result = grow_segmentation(
-        uploaded_set,
         foreground,
         background,
         caching_predict,
-        remembered=remembered or None,
         should_stop=should_stop,
-        seam_graph=graph,
+        remembered=memory.cores(session) or None,
         **kwargs,
     )
-    memory.remember_tiles(session, result.tiles)
-    memory.remember_seam_graph(session, graph)
+    memory.remember_cores(session, {cell: pred.core for cell, pred in result.cells.items()})
     return RememberedGrowth(result=result, reused=reused, predicted=fresh)
-
-
-def _seam_key(
-    src_row: int,
-    src_col: int,
-    dst_row: int,
-    dst_col: int,
-    side: str,
-    points: Sequence[Point],
-    labels: Sequence[int],
-) -> _SeamKey:
-    return (
-        int(src_row),
-        int(src_col),
-        int(dst_row),
-        int(dst_col),
-        side,
-        tuple((int(x), int(y)) for x, y in points),
-        tuple(int(label) for label in labels),
-    )
 
 
 def _predict_key(
@@ -466,17 +318,6 @@ def _predict_key(
         int(col),
         tuple((int(x), int(y)) for x, y in points),
         tuple(int(label) for label in labels),
-    )
-
-
-def _clone_prediction(pred: TilePrediction) -> TilePrediction:
-    logits = None if pred.logits is None else np.array(pred.logits, copy=True)
-    return TilePrediction(
-        row=int(pred.row),
-        col=int(pred.col),
-        mask=np.array(pred.mask, copy=True),
-        logits=logits,
-        score=float(pred.score),
     )
 
 

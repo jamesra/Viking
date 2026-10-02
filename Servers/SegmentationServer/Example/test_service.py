@@ -21,8 +21,7 @@ from pathlib import Path
 # Import the generate_grpc_code function from the segmentation_grpc package
 from segmentation_grpc import generate_grpc_code
 
-# Import the client functions from the SegmentationClient package
-from SegmentationClient.client_example import segment_image, show_labeled_image
+from client_example import segment_image, show_labeled_image
 
 
 async def test_service():
@@ -48,8 +47,10 @@ async def test_service():
         time.sleep(5)  # Give the service some time to start
 
         # Find a sample image
-        example_folder = os.path.join(Path.home(), 'SAM2-Docker/examples')
-        sample_image = os.path.join(example_folder, 'images/RodBC3578GJ_Aii2_Z311_X19750_Y33227_W1531_H1124_DS1.png')
+        script_dir = Path(__file__).resolve().parent
+        local_image = script_dir / "images" / "RodBC3578GJ_Aii2_Z311_X19750_Y33227_W1531_H1124_DS1.png"
+        example_folder = os.path.join(Path.home(), "SAM2-Docker/examples")
+        sample_image = str(local_image if local_image.is_file() else Path(example_folder) / "images" / local_image.name)
 
         if not os.path.exists(sample_image):
             print(f"Sample image not found at {sample_image}")

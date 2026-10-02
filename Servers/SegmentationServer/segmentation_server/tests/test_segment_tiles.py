@@ -25,6 +25,13 @@ def _servicer(cache: ImageCache) -> SegmentationServicer:
     return SegmentationServicer(model=model, image_cache=cache, server_start_time=0.0)
 
 
+def _context() -> AsyncMock:
+    """A gRPC context whose cancelled() is a plain bool, as in grpc.aio, not a coroutine."""
+    context = AsyncMock()
+    context.cancelled = MagicMock(return_value=False)
+    return context
+
+
 def _tile(row: int, col: int) -> TileCoord:
     return TileCoord(
         volume="RC2",
@@ -50,9 +57,9 @@ async def test_missing_tile_without_foreground_does_not_abort() -> None:
     servicer = _servicer(cache)
     request = SegmentTilesRequest(
         tiles=[_tile(0, 0), _tile(0, 1)],
-        foreground=[Point(x=10, y=10)],
+        foreground=[Point(x=300, y=723)],
     )
-    context = AsyncMock()
+    context = _context()
 
     response = await servicer.SegmentTiles(request, context)
 
@@ -61,6 +68,29 @@ async def test_missing_tile_without_foreground_does_not_abort() -> None:
     assert response.segments
     assert cache._cache
     assert all(entry.in_use == 0 for entry in cache._cache.values())
+
+
+@pytest.mark.asyncio
+async def test_click_near_a_tile_corner_requests_the_neighbor_tiles_instead_of_aborting() -> None:
+    """A click at (10, 10) is owned by an offset cell that needs tiles (-1,-1), (-1,0), (0,-1) and (0,0)."""
+    cache = ImageCache(
+        max_memory_bytes=10_000_000,
+        ttl_seconds=60,
+        max_entries=8,
+        create_predictor_func=lambda _data: object(),
+    )
+    await cache.upload_tile(("RC2", 1305, "TEM", "SliceToVolume1|", 1, 0, 0), b"seed", 1024, 1024)
+    servicer = _servicer(cache)
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    context = _context()
+
+    response = await servicer.SegmentTiles(request, context)
+
+    context.abort.assert_not_awaited()
+    servicer.model.predict_tile_union.assert_not_called()
+    servicer.model.predict_ephemeral.assert_not_called()
+    requested = {(tile.row, tile.col) for tile in response.requested_tiles}
+    assert {(-1, -1), (-1, 0), (0, -1)} <= requested
 
 
 @pytest.mark.asyncio
@@ -78,7 +108,7 @@ async def test_missing_foreground_tile_is_not_found() -> None:
         tiles=[_tile(0, 0), _tile(0, 1)],
         foreground=[Point(x=1034, y=10)],
     )
-    context = AsyncMock()
+    context = _context()
 
     await servicer.SegmentTiles(request, context)
 
