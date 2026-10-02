@@ -23,8 +23,8 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-# About 40–85 MiB per 1024 cell. 64 GiB covers a tracing working set, not a whole volume.
-DEFAULT_MAX_BYTES = 64 * 1024**3
+# About 40–85 MiB per 1024 cell. 32 GiB covers a tracing working set, not a whole volume.
+DEFAULT_MAX_BYTES = 32 * 1024**3
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 _MODE_RE = re.compile(r"^[a-z0-9_-]{1,32}$")
 _STAMP_RE = re.compile(r"^[0-9a-f]{16}$")
