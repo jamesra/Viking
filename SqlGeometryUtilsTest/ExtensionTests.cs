@@ -154,5 +154,27 @@ namespace SqlGeometryUtilsTest
                 AssertPosition(movedRing.Centroid() - originalRing.Centroid(), move_offset);
             }
         }
+
+        /// <summary>
+        /// A bowtie passes <see cref="Polygon"/> construction and fails SQL Server.
+        /// Saving a pen cut must return a valid polygon instead of throwing.
+        /// </summary>
+        [TestMethod]
+        public void ToSqlGeometry_SelfIntersectingRing_ReturnsValidPolygon()
+        {
+            Polygon bowtie = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(2, 2),
+                new Vector2(2, 0),
+                new Vector2(0, 2),
+                new Vector2(0, 0)
+            ]);
+
+            SqlGeometry geom = bowtie.ToSqlGeometry();
+            Assert.IsTrue(geom.STIsValid().IsTrue);
+            Assert.AreEqual("Polygon", geom.STGeometryType().Value);
+            Assert.IsTrue(geom.STArea().Value > 0);
+        }
     }
 }

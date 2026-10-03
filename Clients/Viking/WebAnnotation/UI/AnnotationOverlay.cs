@@ -1015,6 +1015,7 @@ break;
             return new string[]
             {
                 "F3 or Enter Key: Create new annotation linked to the last placed annotation",
+                "Tab: Place a new structure with segmentation",
                 "F5 Key: Reload section annotations",
                 "Back Key: Return to last edited location",
                 "F12: Open goto location ID dialog",
@@ -1179,8 +1180,9 @@ break;
         {
             switch (e.KeyCode)
             {
-                //Refresh the annotations on F5
-                case Keys.CapsLock:
+                case Keys.Tab:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
 
                     if (_Parent.CurrentCommand is null || _Parent.CurrentCommand is DefaultCommand)
                     {
