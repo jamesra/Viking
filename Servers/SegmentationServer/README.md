@@ -89,19 +89,26 @@ SAM2 `set_image()` (the Hiera encoder) is expensive. `predict()` from stored emb
 
 `image_id == 0` plus inline `image_data` is the slow fallback: the encoder runs on every request. Keep it for one-shot tools; do not use it for interactive tracing.
 
-### Tile path (`UploadTile` / `SegmentTiles`)
+### Tile path (`UploadTile` / `SegmentTilesStream`)
 
 Interactive Viking uses 1024×1024 mosaic cells. The reusable identity is **`TileCoord`**
 (`volume`, `section`, `channel`, `transform`, `downsample`, `row`, `col`) — not a sequential
 `image_id`. Any client that uploads the same coord with identical bytes gets `already_cached=true`
-and skips `set_image()`. `SegmentTiles` looks up cells by those coords. An internal cache id may
+and skips `set_image()`. `SegmentTilesStream` looks up cells by those coords. An internal cache id may
 appear in server logs for predictor bookkeeping; clients must not treat it as the tile identity.
 
-1. `UploadTile` for each visible (and growth-requested) cell.
-2. `SegmentTiles` with those `TileCoord`s and mosaic-space prompts.
-3. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim GPU slots.
+1. `UploadTile` for each cell that holds a foreground click.
+2. Open `SegmentTilesStream` and send one `start` (`SegmentTilesRequest`: those `TileCoord`s and
+   mosaic-space prompts).
+3. For each `TilesNeeded` the server sends, `UploadTile` those cells and reply with a
+   `TilesAnswer`. The stream ends with `result` (the finished mask) or an error.
+4. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim GPU slots.
 
-#### How `SegmentTiles` grows a mask
+The server pins every tile it uses for the whole call, so cache eviction cannot remove a tile
+mid-request. A client that cancels or ends its half of the stream while tiles are awaited
+abandons the request; no result is sent.
+
+#### How `SegmentTilesStream` grows a mask
 
 The server never sees a tile as the unit of work. It walks a grid of overlapping **cells**:
 each cell is a 1024×1024 window, cells start every 512 px (50% overlap), and each cell owns
@@ -131,10 +138,15 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
 4. A cell is predicted again (at most 4 times) when the result in its window has grown beyond
    what it last predicted, which is how a C or hairpin that returns through cores already
    visited is completed. Total work is bounded by a 48 cell and 96 prediction budget.
-5. Aligned tiles a cell needs but the server lacks are listed in `requested_tiles`; the client
-   uploads them and calls again. The cell cores found for the same clicks are remembered and
-   start the next call, so the mask never shrinks between calls and any core edge left open
-   (for example by a missing tile) is followed. Identical SAM2 prompts are replayed from memory.
+5. Aligned tiles a cell needs but the server lacks are set aside and the walk carries on with
+   the other cells. When the walk runs dry, the server sends `TilesNeeded` on the stream and
+   waits. The client uploads those tiles and answers with `TilesAnswer` (`ready` or
+   `unavailable` per tile); the server then resumes the **same walk**, re-queueing only the
+   cells that were waiting. Nothing is predicted twice and nothing is restored from an earlier
+   call, so the mask only gains pixels. A tile reported `unavailable` (or reported ready but no
+   longer cached) is never asked for again and the cells that need it stay out of the mask.
+   When no cell is waiting any more the server sends the finished `SegmentationResponse` and
+   ends the call.
 
 The response mask is the fused cores with `origin_x`/`origin_y` at the mosaic pixel of its
 lower-left corner, always a multiple of 512 wide and tall.

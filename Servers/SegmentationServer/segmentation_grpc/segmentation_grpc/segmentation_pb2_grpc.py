@@ -45,10 +45,10 @@ class SegmentationServiceStub:
                 request_serializer=segmentation__pb2.UploadTileRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.UploadTileResponse.FromString,
                 _registered_method=True)
-        self.SegmentTiles = channel.unary_unary(
-                '/segmentation.SegmentationService/SegmentTiles',
-                request_serializer=segmentation__pb2.SegmentTilesRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
+        self.SegmentTilesStream = channel.stream_stream(
+                '/segmentation.SegmentationService/SegmentTilesStream',
+                request_serializer=segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.SegmentTilesStreamResponse.FromString,
                 _registered_method=True)
         self.SegmentImage = channel.unary_unary(
                 '/segmentation.SegmentationService/SegmentImage',
@@ -96,9 +96,12 @@ class SegmentationServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SegmentTiles(self, request, context):
-        """Segment using uploaded grid cells. Polygons are in the fused mosaic. requested_tiles
-        is non-empty when the mask hit a border the server does not have a cell for.
+    def SegmentTilesStream(self, request_iterator, context):
+        """Segment using uploaded grid cells. The server owns the request: it grows the mask over the
+        cells it has, then streams TilesNeeded for the cells the mask reached that it does not have,
+        waits for the client's TilesAnswer, and continues the same growth with them. When nothing more
+        is needed it streams the finished SegmentationResponse and ends the call.
+        The client sends exactly one `start`, then one `answer` per TilesNeeded.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -154,10 +157,10 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     request_deserializer=segmentation__pb2.UploadTileRequest.FromString,
                     response_serializer=segmentation__pb2.UploadTileResponse.SerializeToString,
             ),
-            'SegmentTiles': grpc.unary_unary_rpc_method_handler(
-                    servicer.SegmentTiles,
-                    request_deserializer=segmentation__pb2.SegmentTilesRequest.FromString,
-                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
+            'SegmentTilesStream': grpc.stream_stream_rpc_method_handler(
+                    servicer.SegmentTilesStream,
+                    request_deserializer=segmentation__pb2.SegmentTilesStreamRequest.FromString,
+                    response_serializer=segmentation__pb2.SegmentTilesStreamResponse.SerializeToString,
             ),
             'SegmentImage': grpc.unary_unary_rpc_method_handler(
                     servicer.SegmentImage,
@@ -251,7 +254,7 @@ class SegmentationService:
             _registered_method=True)
 
     @staticmethod
-    def SegmentTiles(request,
+    def SegmentTilesStream(request_iterator,
             target,
             options=(),
             channel_credentials=None,
@@ -261,12 +264,12 @@ class SegmentationService:
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
+        return grpc.experimental.stream_stream(
+            request_iterator,
             target,
-            '/segmentation.SegmentationService/SegmentTiles',
-            segmentation__pb2.SegmentTilesRequest.SerializeToString,
-            segmentation__pb2.SegmentationResponse.FromString,
+            '/segmentation.SegmentationService/SegmentTilesStream',
+            segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
+            segmentation__pb2.SegmentTilesStreamResponse.FromString,
             options,
             channel_credentials,
             insecure,

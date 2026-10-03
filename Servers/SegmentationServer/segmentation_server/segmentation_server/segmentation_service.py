@@ -28,6 +28,7 @@ from segmentation_server.embedding_store import EmbeddingStore, open_embedding_s
 from segmentation_server.cuda_errors import raise_if_cuda_lost
 from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.mask_utils import (
+    DEFAULT_MASK_THRESHOLD,
     LabeledImage,
     Point,
     SegmentInfo,
@@ -36,6 +37,7 @@ from segmentation_server.mask_utils import (
     combined_mask_to_segments,
     fill_small_holes,
     get_mask_bounds,
+    mask_covers_any_positive,
     mask_to_polygons,
     prepare_image_for_sam2,
     process_masks,
@@ -360,22 +362,52 @@ class SegmentationModel:
         coordinates: Sequence[Point],
         labels: Sequence[int],
         multimask_output: bool,
+        box: Optional[Sequence[int]] = None,
+        mask_threshold: float = DEFAULT_MASK_THRESHOLD,
+        use_mask_input: bool = False,
     ) -> Tuple[NDArray[np.bool_], NDArray[np.float32], Optional[NDArray]]:
-        """Run predict() and keep logits, highest score first."""
+        """Run predict() and keep logits, highest score first.
+
+        ``box`` is one ``(x0, y0, x1, y1)`` prompt in image pixels, Y-down; SAM2 accepts a
+        single box per predict() alongside the points.
+
+        ``mask_threshold`` is the logit a pixel must exceed to be object. predict() is asked
+        for logits and thresholded here, rather than setting ``predictor.mask_threshold``,
+        because a pinned tile predictor is shared between requests. The default 0.0 is
+        SAM2's own.
+
+        ``use_mask_input`` runs predict() a second time with the first pass's best
+        low-resolution logits as SAM2's ``mask_input`` and the same prompts. Single-mask
+        output only: with ``multimask_output`` the flag is ignored, because mask_input is one mask.
+        """
         point_coords: NDArray[np.int_] = np.array(coordinates)
         point_labels: NDArray[np.int_] = np.array(labels)
+        box_xyxy = None if box is None else np.array(box, dtype=np.float32)
 
         try:
             with torch.inference_mode(), self._autocast():
                 masks, scores, logits = predictor.predict(
                     point_coords=point_coords,
                     point_labels=point_labels,
+                    box=box_xyxy,
                     multimask_output=multimask_output,
+                    return_logits=True,
                 )
+                if use_mask_input and not multimask_output:
+                    best = int(np.argmax(np.asarray(scores).reshape(-1)))
+                    masks, scores, logits = predictor.predict(
+                        point_coords=point_coords,
+                        point_labels=point_labels,
+                        box=box_xyxy,
+                        mask_input=np.asarray(logits)[best:best + 1],
+                        multimask_output=False,
+                        return_logits=True,
+                    )
         except Exception as e:
             raise_if_cuda_lost(e)
             raise
-        return self._sort_predict_outputs(masks, scores, logits)
+        thresholded = np.asarray(masks) > float(mask_threshold)
+        return self._sort_predict_outputs(thresholded, scores, logits)
 
     def _predict_raw(
         self,
@@ -415,6 +447,9 @@ class SegmentationModel:
         labels: Sequence[int],
         multimask_output: bool,
         empty_shape: Tuple[int, int],
+        box: Optional[Sequence[int]] = None,
+        mask_threshold: float = DEFAULT_MASK_THRESHOLD,
+        use_mask_input: bool = False,
     ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
         """set_image() and predict() on a throwaway predictor.
 
@@ -444,6 +479,9 @@ class SegmentationModel:
                 labels,
                 multimask_output,
                 empty_shape,
+                box,
+                mask_threshold,
+                use_mask_input,
             )
         finally:
             reset = getattr(predictor, "reset_predictor", None)
@@ -460,29 +498,34 @@ class SegmentationModel:
         labels: Sequence[int],
         multimask_output: bool,
         empty_shape: Tuple[int, int],
+        box: Optional[Sequence[int]] = None,
+        mask_threshold: float = DEFAULT_MASK_THRESHOLD,
+        use_mask_input: bool = False,
     ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
-        """One tile predict: union of masks that cover a foreground click, plus best logits.
+        """One tile predict: the highest-scoring mask of one predict(), plus its logits.
 
-        Logits are the highest-scoring mask from the first predict (often 256x256).
-        Callers resize them. The returned score is that union's best mask score;
-        cross-tile fusion takes the minimum of these.
+        ``box``, ``mask_threshold`` and ``use_mask_input`` are described on
+        ``_predict_with_logits``. The union of masks that cover a click (and the extra
+        single-click predicts for uncovered positives) is switched off for now, so the
+        answer is the one best mask; the growth walk still drops pieces that hold no click.
+
+        Logits are that mask's (often 256x256). Callers resize them. The returned score is
+        its score; cross-tile fusion takes the minimum of these.
         """
         if not coordinates:
             height, width = empty_shape
             return np.zeros((height, width), dtype=np.bool_), None, 0.0
 
         masks, scores, logits = self._predict_with_logits(
-            predictor, coordinates, labels, multimask_output
+            predictor,
+            coordinates,
+            labels,
+            multimask_output,
+            box,
+            mask_threshold,
+            use_mask_input,
         )
         best_logits = None if logits is None or len(logits) == 0 else logits[0]
-
-        def extra_predict(
-            extra_coords: Sequence[Point], extra_labels: Sequence[int]
-        ) -> Tuple[NDArray[np.bool_], NDArray[np.float32]]:
-            extra_masks, extra_scores, _extra_logits = self._predict_with_logits(
-                predictor, extra_coords, extra_labels, multimask_output=False
-            )
-            return extra_masks, extra_scores
 
         if not any(int(label) == 1 for label in labels):
             labeled, segments = process_masks(masks, scores, empty_shape=empty_shape)
@@ -491,16 +534,92 @@ class SegmentationModel:
                 return np.zeros((height, width), dtype=np.bool_), best_logits, 0.0
             return segments[0]["mask"], best_logits, float(segments[0]["score"])
 
-        union, stats = union_masks_covering_positives(
-            masks,
-            scores,
-            coordinates,
-            labels,
-            extra_predict=extra_predict,
-            empty_shape=empty_shape,
+        # TODO: union_masks_covering_positives is commented out on request while mask size is
+        # tuned. It ORed every mask that covers a positive click and ran an extra predict for
+        # each uncovered click, which only ever adds territory. Restore this block (and the
+        # extra_predict helper) to bring it back.
+        #
+        # def extra_predict(
+        #     extra_coords: Sequence[Point], extra_labels: Sequence[int]
+        # ) -> Tuple[NDArray[np.bool_], NDArray[np.float32]]:
+        #     extra_masks, extra_scores, _extra_logits = self._predict_with_logits(
+        #         predictor, extra_coords, extra_labels, multimask_output=False
+        #     )
+        #     return extra_masks, extra_scores
+        #
+        # union, stats = union_masks_covering_positives(
+        #     masks,
+        #     scores,
+        #     coordinates,
+        #     labels,
+        #     extra_predict=extra_predict,
+        #     empty_shape=empty_shape,
+        # )
+        # self._log_union_stats(stats, empty_shape)
+        # return union, best_logits, float(stats.score)
+        mask, score = masks[0], float(scores[0])
+        positives = [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
+        if mask_covers_any_positive(mask, positives):
+            return mask, best_logits, score
+
+        # SAM2 can answer a box or negative clicks with a confident mask that leaves the positive
+        # click itself outside (RC2 z=645 circle at 32758,54871: logit -3.9 at the click with the box,
+        # -3.6 with the neighbours' negatives, +1.9 from the click alone). The walk drops a mask that
+        # holds no click, so the cell would come back empty. Loosen the prompt a rung at a time and
+        # take the first mask that does hold a click.
+        for dropped, rung_coords, rung_labels, rung_box in self._looser_prompts(
+            coordinates, labels, positives, box
+        ):
+            rung_masks, rung_scores, rung_logits = self._predict_with_logits(
+                predictor,
+                rung_coords,
+                rung_labels,
+                multimask_output,
+                rung_box,
+                mask_threshold,
+                use_mask_input,
+            )
+            if len(rung_masks) and mask_covers_any_positive(rung_masks[0], positives):
+                logger.warning(
+                    "Prompt fallback: best mask left every positive click out, dropped %s and it now holds one "
+                    "(fg=%d bg=%d box=%s)",
+                    dropped,
+                    len(positives),
+                    len(coordinates) - len(positives),
+                    box is not None,
+                )
+                rung_best_logits = (
+                    None if rung_logits is None or len(rung_logits) == 0 else rung_logits[0]
+                )
+                return rung_masks[0], rung_best_logits, float(rung_scores[0])
+
+        logger.warning(
+            "Prompt fallback exhausted: no mask holds any of %d positive click(s) (box=%s)",
+            len(positives),
+            box is not None,
         )
-        self._log_union_stats(stats, empty_shape)
-        return union, best_logits, float(stats.score)
+        return mask, best_logits, score
+
+    @staticmethod
+    def _looser_prompts(
+        coordinates: Sequence[Point],
+        labels: Sequence[int],
+        positives: Sequence[Point],
+        box: Optional[Sequence[int]],
+    ) -> List[Tuple[str, Sequence[Point], Sequence[int], Optional[Sequence[int]]]]:
+        """Prompt variants to try, in order, when the best mask misses every positive click.
+
+        First the same clicks without the box, then the positives alone with neither box nor
+        negatives. Each rung is only listed when it differs from the one before it.
+        """
+        rungs: List[Tuple[str, Sequence[Point], Sequence[int], Optional[Sequence[int]]]] = []
+        has_negatives = len(positives) < len(coordinates)
+        if box is not None:
+            rungs.append(("the box", coordinates, labels, None))
+        if has_negatives:
+            rungs.append(("the box and negatives" if box is not None else "the negatives",
+                          list(positives), [1] * len(positives), None))
+        return rungs
 
     def _log_union_stats(self, stats: UnionMaskStats, empty_shape: Tuple[int, int]) -> None:
         height, width = empty_shape

@@ -20,6 +20,7 @@ from segmentation_server.cell_grid import (
 from segmentation_server.tile_growth import (
     MAX_PREDICTIONS_PER_CELL,
     GrowthCancelled,
+    GrowthWalk,
     _gate_margin,
     grow_segmentation,
 )
@@ -341,6 +342,81 @@ def test_missing_tiles_are_requested_then_the_walk_completes_after_upload() -> N
 
     assert iou(second.to_truth_frame(complete), truth) >= 0.985
     assert complete.requested == []
+
+
+def _staged_walk(world: World, clicks, give):
+    """Run one GrowthWalk, giving it the tiles it asks for between ``advance`` calls.
+
+    ``give`` maps a requested tile to True (supplied) or False (unavailable). Returns the
+    walk and the truth-frame mask after each ``advance``.
+    """
+    walk = GrowthWalk(clicks, [], world.predict)
+    frames = []
+    asked = []
+    while True:
+        walk.advance()
+        frames.append(world.to_truth_frame(walk.result()))
+        needed = walk.take_requested()
+        if not needed:
+            return walk, frames, asked
+        asked.extend(needed)
+        unavailable = []
+        for tile in needed:
+            if give(tile):
+                world.available.add((tile.row, tile.col))
+            else:
+                unavailable.append(tile)
+        walk.resume(unavailable)
+
+
+def test_a_walk_continues_after_each_batch_of_tiles_and_never_loses_pixels() -> None:
+    truth = ellipse(2048, 2048, 500, 400, 0.4)
+    clicks = circle_clicks(2048, 2048, 90)
+    world = World(truth, available=set())
+
+    walk, frames, asked = _staged_walk(world, clicks, lambda _tile: True)
+
+    assert len(frames) > 1
+    for before, after in zip(frames, frames[1:]):
+        assert not (before & ~after).any()
+    assert iou(frames[-1], truth) >= 0.985
+    assert len(asked) == len(set(asked))
+
+
+def test_a_walk_in_stages_matches_a_walk_that_had_every_tile() -> None:
+    truth = ellipse(2048, 2048, 500, 400, 0.4)
+    clicks = circle_clicks(2048, 2048, 90)
+    everything = {(r, c) for r in range(-1, 6) for c in range(-1, 6)}
+    full_world = World(truth, available=everything)
+    full = _grow(full_world, clicks)
+
+    _walk, frames, _asked = _staged_walk(World(truth, available=set()), clicks, lambda _tile: True)
+
+    assert iou(frames[-1], full_world.to_truth_frame(full)) >= 0.99
+
+
+def test_a_tile_the_client_cannot_supply_is_not_asked_for_again() -> None:
+    truth = ellipse(2560, 2560, 600, 400, 0.0)
+    everything = {(r, c) for r in range(5) for c in range(5)}
+    world = World(truth, available=everything - {(2, 3)})
+
+    _walk, _frames, asked = _staged_walk(world, circle_clicks(2560, 2560, 90), lambda _tile: False)
+
+    assert len(asked) == len(set(asked))
+    assert (2, 3) in {(tile.row, tile.col) for tile in asked}
+
+
+def test_resume_without_waiting_cells_changes_nothing() -> None:
+    world = World(ellipse(2048, 2048, 150, 120, 0.3))
+    walk = GrowthWalk(circle_clicks(2048, 2048, 80), [], world.predict)
+    walk.advance()
+    calls = len(world.calls)
+
+    walk.resume()
+    walk.advance()
+
+    assert len(world.calls) == calls
+    assert walk.take_requested() == []
 
 
 def test_requested_tiles_are_capped() -> None:

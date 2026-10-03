@@ -30,9 +30,12 @@ from segmentation_grpc import (
     SegmentImageSetRequest,
     SegmentResult,
     SegmentTilesRequest,
+    SegmentTilesStreamRequest,
+    SegmentTilesStreamResponse,
     ServerStatusRequest,
     ServerStatusResponse,
     TileCoord,
+    TilesNeeded,
     UploadImageRequest,
     UploadImageResponse,
     UploadTileRequest,
@@ -40,7 +43,6 @@ from segmentation_grpc import (
     add_SegmentationServiceServicer_to_server,
 )
 from segmentation_server.cuda_errors import UnrecoverableGpuError
-from segmentation_server.growth_memory import GrowthMemory, grow_remembering, prompt_key
 from segmentation_server.image_cache import (
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_MEMORY_BYTES,
@@ -49,8 +51,10 @@ from segmentation_server.image_cache import (
     TileCacheKey,
 )
 from segmentation_server.debug_dump import dump_enabled, dump_growth
+from segmentation_server.circle_boxes import find_circles, outer_ring_box_enabled
 from segmentation_server.prompt_log import describe_prompts
 from segmentation_server.mask_utils import (
+    DEFAULT_MASK_THRESHOLD,
     SegmentInfo,
     combined_mask_to_segments,
     encode_png,
@@ -72,6 +76,7 @@ from segmentation_server.cell_grid import (
 )
 from segmentation_server.tile_growth import (
     GrowthCancelled,
+    GrowthWalk,
     PredictUnavailable,
     margin_logit_min_from_env,
     owner_veto_logit_from_env,
@@ -88,6 +93,31 @@ _TLS_PORT = 443
 _MISSING_IMAGE_ID_MESSAGE = "image_id is required on the first SegmentImageSets message."
 _MIXED_IMAGE_ID_MESSAGE = "SegmentImageSets messages must use one image_id for the whole stream."
 _EMPTY_FOREGROUND_POINTS_MESSAGE = "No foreground_points provided. At least one point is required."
+
+
+class _ProtocolError(Exception):
+    """The client sent a SegmentTilesStream message that the conversation does not allow."""
+
+
+async def _next_message(request_iterator) -> Optional[SegmentTilesStreamRequest]:
+    """The next client message, or None once the client has ended its half of the stream."""
+    try:
+        return await request_iterator.__anext__()
+    except StopAsyncIteration:
+        return None
+
+
+def _coord_for(identity: TileCoord, tile: TileIndex) -> TileCoord:
+    """The TileCoord of ``tile`` in the same volume, section, channel, transform and downsample as ``identity``."""
+    return TileCoord(
+        volume=identity.volume,
+        section=identity.section,
+        channel=identity.channel,
+        transform=identity.transform,
+        downsample=identity.downsample,
+        row=tile.row,
+        col=tile.col,
+    )
 
 
 def _remember_tile_image(
@@ -190,7 +220,6 @@ class SegmentationServicer(SegmentationServiceServicer):
             gpu_under_pressure=self._gpu_under_pressure,
         )
         self._max_requested_tiles = max_requested_tiles_from_env()
-        self._growth_memory = GrowthMemory()
         try:
             self._loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
         except RuntimeError:
@@ -741,33 +770,35 @@ class SegmentationServicer(SegmentationServiceServicer):
             already_cached,
             time.perf_counter() - start_time,
         )
-        if not already_cached:
-            self._growth_memory.invalidate_tile(
-                coord.volume,
-                int(coord.section),
-                coord.channel,
-                coord.transform,
-                int(coord.downsample),
-                int(coord.row),
-                int(coord.col),
-            )
         return UploadTileResponse(already_cached=already_cached)
 
-    async def SegmentTiles(
-        self,
-        request: SegmentTilesRequest,
-        context: ServicerContext,
-    ) -> SegmentationResponse:
-        """Segment uploaded cells that contain foreground points and grow across borders."""
+    async def SegmentTilesStream(self, request_iterator, context: ServicerContext):
+        """Segment from uploaded cells; the server owns the growth and asks for tiles as it needs them.
+
+        The client sends one ``start`` (the old unary request). The walk grows over the cells the
+        server holds. When the mask reaches a cell whose tiles are missing, the server yields
+        ``needed`` and waits for an ``answer``; it then resumes the same walk, so cells that were
+        already predicted are not predicted again and the mask never loses pixels between rounds.
+        When no tile is needed any more it yields ``result`` and returns. If the client ends the
+        call or drops while a tile is awaited, the walk is abandoned and no result is sent.
+        """
+        first = await _next_message(request_iterator)
+        if first is None or first.WhichOneof("body") != "start":
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "SegmentTilesStream must begin with a start message.",
+            )
+            return
+        request: SegmentTilesRequest = first.start
         if len(request.tiles) == 0:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentTiles requires at least one tile.")
-            return SegmentationResponse()
+            return
         if len(request.foreground) == 0:
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
                 "SegmentTiles requires at least one foreground point.",
             )
-            return SegmentationResponse()
+            return
 
         identity = request.tiles[0]
         for tile in request.tiles:
@@ -776,7 +807,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                     grpc.StatusCode.INVALID_ARGUMENT,
                     "SegmentTiles tiles must share volume, section, channel, transform, and downsample.",
                 )
-                return SegmentationResponse()
+                return
 
         self._load.begin()
         start_time = time.perf_counter()
@@ -801,7 +832,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                             grpc.StatusCode.NOT_FOUND,
                             f"TILE_NOT_FOUND row={tile.row} col={tile.col} downsample={tile.downsample}",
                         )
-                        return SegmentationResponse()
+                        return
                     logger.info(
                         "SegmentTiles skip uncached tile row=%s col=%s ds=%s (no foreground)",
                         tile.row,
@@ -818,28 +849,57 @@ class SegmentationServicer(SegmentationServiceServicer):
                             grpc.StatusCode.UNAVAILABLE,
                             f"Predictor for tile row={tile.row} col={tile.col} is not ready.",
                         )
-                        return SegmentationResponse()
+                        return
                     continue
                 predictors[(tile.row, tile.col)] = (predictor, predictor_lock, height, width)
                 uploaded.append(TileIndex(row=int(tile.row), col=int(tile.col)))
             multimask_output = request.multimask_output
-            session = prompt_key(
-                identity.volume,
-                int(identity.section),
-                identity.channel,
-                identity.transform,
-                int(identity.downsample),
-                multimask_output,
-                foreground,
-                background,
+            mask_threshold = (
+                float(request.mask_threshold)
+                if request.HasField("mask_threshold")
+                else DEFAULT_MASK_THRESHOLD
             )
-            await self._pin_remembered_tiles(identity, session, predictors, pinned_ids, images)
+            use_mask_input = bool(request.use_mask_input)
+            client_boxes = _client_boxes(request.foreground_boxes)
+            session = hashlib.blake2s(
+                repr((
+                    identity.volume,
+                    int(identity.section),
+                    identity.channel,
+                    identity.transform,
+                    int(identity.downsample),
+                    sorted(foreground),
+                    sorted(background),
+                )).encode(),
+                digest_size=4,
+            ).hexdigest()
+            logger.info(
+                "SegmentTiles mask_threshold=%.3f use_mask_input=%s", mask_threshold, use_mask_input
+            )
+
+            if client_boxes:
+                # The client chose the box and the clicks that go with it, so nothing is
+                # inferred and no click is left out of the prompt.
+                boxes = client_boxes
+                omit_with_box: List[Tuple[int, int]] = []
+            else:
+                circles = find_circles(foreground) if outer_ring_box_enabled() else []
+                boxes = [circle.box for circle in circles]
+                omit_with_box = [click for circle in circles for click in circle.ring_clicks]
+            if boxes:
+                logger.info(
+                    "SegmentTiles circle boxes (x0,y0,x1,y1 mosaic, Y up): %s; "
+                    "ring clicks left out of boxed prompts (box + center only): %d",
+                    boxes,
+                    len(omit_with_box),
+                )
 
             def predict_cell(
                 row: int,
                 col: int,
                 points: List[Tuple[int, int]],
                 labels: List[int],
+                box: Optional[Tuple[int, int, int, int]] = None,
             ):
                 """One 1024 window. An aligned cell reuses its pinned tile embedding."""
                 cell = Cell(row=row, col=col)
@@ -855,6 +915,9 @@ class SegmentationServicer(SegmentationServiceServicer):
                                     labels,
                                     multimask_output,
                                     (height, width),
+                                    box,
+                                    mask_threshold,
+                                    use_mask_input,
                                 )
 
                 window = crop_window(cell, images)
@@ -870,37 +933,59 @@ class SegmentationServicer(SegmentationServiceServicer):
                         labels,
                         multimask_output,
                         (int(window.shape[0]), int(window.shape[1])),
+                        box,
+                        mask_threshold,
+                        use_mask_input,
                     )
 
             stop_growth = threading.Event()
+            walk = GrowthWalk(
+                foreground,
+                background,
+                predict_cell,
+                max_requested=self._max_requested_tiles,
+                should_stop=stop_growth.is_set,
+                boxes=boxes,
+                omit_with_box=omit_with_box,
+            )
+            loop = asyncio.get_running_loop()
             cancel_watch = asyncio.create_task(self._watch_rpc_cancel(context, stop_growth))
+            rounds = 0
             try:
-                outcome = await asyncio.get_running_loop().run_in_executor(
-                    self.inference_executor,
-                    lambda: grow_remembering(
-                        self._growth_memory,
-                        session,
-                        foreground,
-                        background,
-                        predict_cell,
-                        should_stop=stop_growth.is_set,
-                        max_requested=self._max_requested_tiles,
-                    ),
-                )
-                result = outcome.result
-                self._growth_memory.remember_held(
-                    session, [TileIndex(row=row, col=col) for row, col in images]
-                )
+                while True:
+                    await loop.run_in_executor(self.inference_executor, walk.advance)
+                    needed = walk.take_requested()
+                    if not needed:
+                        break
+                    rounds += 1
+                    yield SegmentTilesStreamResponse(
+                        needed=TilesNeeded(tiles=[_coord_for(identity, tile) for tile in needed])
+                    )
+                    unavailable = await self._receive_tiles(
+                        request_iterator, identity, needed, predictors, images, pinned_ids
+                    )
+                    if unavailable is None:
+                        logger.info(
+                            "SegmentTiles req=%s abandoned: the client ended the stream while %d tiles were awaited",
+                            request.request_id,
+                            len(needed),
+                        )
+                        return
+                    walk.resume(unavailable)
+                result = walk.result()
             except GrowthCancelled:
                 logger.info("SegmentTiles stopped because the client cancelled the call")
-                return SegmentationResponse()
+                return
+            except _ProtocolError as e:
+                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+                return
             except UnrecoverableGpuError as e:
                 await self._abort_unrecoverable_gpu(e, context)
-                return SegmentationResponse()
+                return
             except Exception as e:
                 logger.exception("Tile segmentation failed")
                 await context.abort(grpc.StatusCode.INTERNAL, f"Error processing segmentation request: {e}")
-                return SegmentationResponse()
+                return
             finally:
                 stop_growth.set()
                 cancel_watch.cancel()
@@ -924,21 +1009,10 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             response.origin_x = result.origin_x
             response.origin_y = result.origin_y
-            for tile in result.requested:
-                response.requested_tiles.append(
-                    TileCoord(
-                        volume=identity.volume,
-                        section=identity.section,
-                        channel=identity.channel,
-                        transform=identity.transform,
-                        downsample=identity.downsample,
-                        row=tile.row,
-                        col=tile.col,
-                    )
-                )
+            response.request_id = request.request_id
             if dump_enabled():
                 dump_growth(
-                    hashlib.blake2s(repr(session).encode(), digest_size=4).hexdigest(),
+                    session,
                     fused_mask=result.mask,
                     origin=(result.origin_x, result.origin_y),
                     cells=result.cells,
@@ -949,11 +1023,13 @@ class SegmentationServicer(SegmentationServiceServicer):
                     score=result.score,
                     margin_logit_min=margin_logit_min_from_env(),
                     owner_veto_logit=owner_veto_logit_from_env(),
+                    request_id=request.request_id,
                 )
             logger.info(
-                "SegmentTiles ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "
-                "tiles=%s fg=%s segments=%s requested=%s reused=%s predicted=%s in %.3fs session=%s "
+                "SegmentTiles ok req=%s key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "
+                "tiles=%s fg=%s segments=%s requested=%s rounds=%s predicted=%s in %.3fs session=%s "
                 "mask=%sx%s origin=(%s,%s) requested_tiles=%s %s",
+                request.request_id,
                 identity.volume,
                 identity.section,
                 identity.channel,
@@ -963,10 +1039,10 @@ class SegmentationServicer(SegmentationServiceServicer):
                 len(foreground),
                 len(segments),
                 len(result.requested),
-                outcome.reused,
-                outcome.predicted,
+                rounds,
+                walk.predictions,
                 time.perf_counter() - start_time,
-                hashlib.blake2s(repr(session).encode(), digest_size=4).hexdigest(),
+                session,
                 width,
                 height,
                 result.origin_x,
@@ -974,7 +1050,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 [(tile.row, tile.col) for tile in result.requested],
                 describe_prompts(foreground, background),
             )
-            return response
+            yield SegmentTilesStreamResponse(result=response)
         finally:
             for image_id in pinned_ids:
                 await self.image_cache.release_image(image_id)
@@ -991,41 +1067,68 @@ class SegmentationServicer(SegmentationServiceServicer):
         except asyncio.CancelledError:
             return
 
-    async def _pin_remembered_tiles(
+    async def _receive_tiles(
+        self,
+        request_iterator,
+        identity: TileCoord,
+        needed: List[TileIndex],
+        predictors: dict,
+        images: dict,
+        pinned_ids: List[int],
+    ) -> Optional[List[TileIndex]]:
+        """Wait until the client has answered for every tile in ``needed``, pinning those it uploaded.
+
+        Returns the tiles that cannot be used: the ones the client reported unavailable and the
+        ones it reported ready but the cache no longer holds. Returns None when the client ends
+        its half of the stream first. The walk is paused while this runs, so ``predictors`` and
+        ``images`` are not read by the inference thread.
+
+        Raises:
+            _ProtocolError: A message other than an ``answer`` arrived.
+        """
+        outstanding = {(tile.row, tile.col) for tile in needed}
+        unavailable: List[TileIndex] = []
+        while outstanding:
+            message = await _next_message(request_iterator)
+            if message is None:
+                return None
+            if message.WhichOneof("body") != "answer":
+                raise _ProtocolError("SegmentTilesStream expected an answer while tiles were requested.")
+            for coord in message.answer.unavailable:
+                index = TileIndex(row=int(coord.row), col=int(coord.col))
+                if (index.row, index.col) in outstanding:
+                    outstanding.discard((index.row, index.col))
+                    unavailable.append(index)
+            for coord in message.answer.ready:
+                index = TileIndex(row=int(coord.row), col=int(coord.col))
+                if (index.row, index.col) not in outstanding:
+                    continue
+                outstanding.discard((index.row, index.col))
+                if not await self._pin_arrived_tile(identity, index, predictors, images, pinned_ids):
+                    logger.info("SegmentTiles tile row=%s col=%s was reported ready but is not cached", index.row, index.col)
+                    unavailable.append(index)
+        return unavailable
+
+    async def _pin_arrived_tile(
         self,
         identity: TileCoord,
-        session: tuple,
+        index: TileIndex,
         predictors: dict,
-        pinned_ids: List[int],
         images: dict,
-    ) -> None:
-        """Pin embeddings still cached for cells this prompt set already segmented.
-
-        A remembered mask does not need the predictor. Pinning one lets a cache
-        miss run SAM2. If the embedding is gone, the walk asks for the cell again
-        and the stored mask stays in the composite.
-        """
-        for index in self._growth_memory.tile_indexes(session):
-            if (index.row, index.col) in predictors:
-                continue
-            key = (
-                identity.volume,
-                int(identity.section),
-                identity.channel,
-                identity.transform,
-                int(identity.downsample),
-                index.row,
-                index.col,
-            )
-            pinned = await self.image_cache.get_image_by_tile(key)
-            if pinned is None:
-                continue
-            image_id, image_bytes, width, height, predictor, predictor_lock = pinned
-            pinned_ids.append(image_id)
-            _remember_tile_image(images, index.row, index.col, image_bytes)
-            if predictor is None:
-                continue
+        pinned_ids: List[int],
+    ) -> bool:
+        """Pin one uploaded tile for the rest of the request. False when it cannot be used."""
+        pinned = await self.image_cache.get_image_by_tile(_tile_cache_key(_coord_for(identity, index)))
+        if pinned is None:
+            return False
+        image_id, image_bytes, width, height, predictor, predictor_lock = pinned
+        pinned_ids.append(image_id)
+        _remember_tile_image(images, index.row, index.col, image_bytes)
+        if (index.row, index.col) not in images:
+            return False
+        if predictor is not None:
             predictors[(index.row, index.col)] = (predictor, predictor_lock, height, width)
+        return True
 
     async def SegmentImage(
         self,
@@ -1110,6 +1213,21 @@ class SegmentationServicer(SegmentationServiceServicer):
             finally:
                 self._load.end(time.perf_counter() - start)
             yield response
+
+
+def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:
+    """Box prompts the client sent as ``(x_min, y_min, x_max, y_max)``, corners ordered.
+
+    A box with no width or height is dropped. Sorted so the same boxes in another order
+    share a growth-memory session.
+    """
+    result: List[Tuple[int, int, int, int]] = []
+    for box in boxes:
+        x0, x1 = sorted((int(box.x_min), int(box.x_max)))
+        y0, y1 = sorted((int(box.y_min), int(box.y_max)))
+        if x1 > x0 and y1 > y0:
+            result.append((x0, y0, x1, y1))
+    return sorted(result)
 
 
 def _tile_contains_foreground(tile: TileCoord, foreground: List[Tuple[int, int]]) -> bool:

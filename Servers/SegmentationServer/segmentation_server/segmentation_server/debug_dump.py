@@ -58,6 +58,7 @@ def dump_growth(
     directory: Optional[Path] = None,
     margin_logit_min: Optional[float] = None,
     owner_veto_logit: Optional[float] = None,
+    request_id: int = 0,
 ) -> Optional[Path]:
     """Write one growth result. Returns the file path, or None when disabled or on failure.
 
@@ -88,6 +89,7 @@ def dump_growth(
                 arrays[f"logits_r{int(cell.row)}_c{int(cell.col)}"] = np.asarray(logits, dtype=np.float16)
         meta = {
             "session": session,
+            "request_id": int(request_id),
             "origin": [int(origin[0]), int(origin[1])],
             "score": float(score),
             "uploaded": [[int(t.row), int(t.col)] for t in uploaded],

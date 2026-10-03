@@ -25,8 +25,10 @@ The walk:
 5. Repeat until nothing is queued, then start from any foreground click still outside
    ``G``.
 
-Aligned tiles the server does not hold are reported in ``GrowthResult.requested`` and the
-walk continues without that cell, so the client can upload them and ask again.
+Aligned tiles the server does not hold are collected by ``GrowthWalk.take_requested`` and the
+walk continues without that cell. The walk object stays alive while the caller fetches the
+tiles; ``GrowthWalk.resume`` then re-queues only the cells that were waiting, so nothing that
+was already predicted is predicted again and ``G`` only ever gains pixels.
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ from __future__ import annotations
 import os
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Callable, Deque, Dict, List, Mapping, Optional, Sequence, Set, Tuple
+from typing import Callable, Deque, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 import cv2
 import numpy as np
@@ -58,6 +60,7 @@ from segmentation_server.cell_grid import (
     neighbor_cells,
     sample_ring_seeds,
     tile_of_point,
+    tiles_for_cell,
     window_origin,
 )
 
@@ -68,11 +71,13 @@ __all__ = [
     "CellPredict",
     "GrowthCancelled",
     "GrowthResult",
+    "GrowthWalk",
     "PredictUnavailable",
     "TileIndex",
     "grow_segmentation",
     "max_requested_tiles_from_env",
     "tile_of_point",
+    "window_box",
 ]
 
 DEFAULT_MAX_REQUESTED_TILES = 8
@@ -94,6 +99,8 @@ DEFAULT_MARGIN_LOGIT_MIN = 1.5
 # holds the pixel sees it centered; when that cell has predicted and its logit is below this
 # value the pixel is vetoed. Override with SEGMENT_OWNER_VETO_LOGIT.
 DEFAULT_OWNER_VETO_LOGIT = -1.0
+# A box prompt clipped to less than this on a side says nothing useful about the object.
+MIN_BOX_SIDE = 16
 
 # (cell row, cell col, window points y-down, labels) -> mask of the window, logits or None, score
 CellPredict = Callable[
@@ -124,8 +131,8 @@ class CellPrediction:
 
     ``raw`` is the whole-window SAM2 answer and ``kept`` is the part of it that held a
     positive click (both Y-down, 1024x1024), from this cell's latest prediction in the
-    walk. They are None for a cell that came only from remembered cores. The debug dump
-    uses them to tell a model stop from a filtered-out piece.
+    walk. They are None for a cell that owns pixels but never predicted (its pixels came from
+    a neighbor's margin). The debug dump uses them to tell a model stop from a filtered-out piece.
     """
 
     row: int
@@ -201,59 +208,86 @@ def grow_segmentation(
     max_cells: int = DEFAULT_MAX_CELLS,
     should_stop: Optional[Callable[[], bool]] = None,
     max_predictions: int = DEFAULT_MAX_PREDICTIONS,
-    remembered: Optional[Mapping[Cell, MaskArray]] = None,
     margin_logit_min: Optional[float] = None,
     owner_veto_logit: Optional[float] = None,
+    boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+    omit_with_box: Optional[Sequence[Point]] = None,
 ) -> GrowthResult:
-    """Walk outward from the foreground clicks until ``G`` stops growing.
+    """One pass of ``GrowthWalk``: walk outward from the clicks with the tiles ``predict`` has.
+
+    Cells that need a tile ``predict`` does not hold are skipped and their tiles are listed in
+    ``GrowthResult.requested``. Callers that can fetch tiles use ``GrowthWalk`` directly so
+    the walk can continue instead of starting over. See ``GrowthWalk`` for the arguments.
+    """
+    walk = GrowthWalk(
+        foreground,
+        background,
+        predict,
+        max_requested=max_requested,
+        max_cells=max_cells,
+        should_stop=should_stop,
+        max_predictions=max_predictions,
+        margin_logit_min=margin_logit_min,
+        owner_veto_logit=owner_veto_logit,
+        boxes=boxes,
+        omit_with_box=omit_with_box,
+    )
+    walk.advance()
+    return walk.result()
+
+
+class GrowthWalk:
+    """One growth walk that can pause for missing tiles and carry on.
+
+    ``advance`` walks outward from the foreground clicks until ``G`` stops growing with the
+    tiles ``predict`` has. A cell whose tiles are missing is set aside and its tiles are
+    queued for ``take_requested``. Once the caller has fetched them, ``resume`` re-queues the
+    cells that were waiting and ``advance`` continues from where the walk stopped. A walk
+    that is done has no new requested tiles after ``advance``.
 
     ``foreground`` and ``background`` are mosaic points. ``predict`` receives window-local
     Y-down points and may raise ``PredictUnavailable``. ``should_stop`` returning true
-    raises ``GrowthCancelled`` before the next SAM2 call. ``remembered`` holds the Y-down
-    core masks an earlier call for the same clicks produced. They start ``G``, so the result
-    never shrinks between calls, and any of their core edges that was left open (for example
-    because a tile was missing) is followed now. ``margin_logit_min`` is the logit a margin
-    pixel must reach to be accepted (default: ``SEGMENT_MARGIN_LOGIT`` or 1.5); a prediction
-    that returns no logits contributes its core only. ``owner_veto_logit`` (default:
-    ``SEGMENT_OWNER_VETO_LOGIT`` or -1.0) is the logit below which a predicted cell vetoes a
-    neighbor's margin pixel inside its own core; a prediction with no logits vetoes nothing.
+    raises ``GrowthCancelled`` before the next SAM2 call. ``margin_logit_min`` is the logit
+    a margin pixel must reach to be accepted (default: ``SEGMENT_MARGIN_LOGIT`` or 1.5); a
+    prediction that returns no logits contributes its core only. ``owner_veto_logit``
+    (default: ``SEGMENT_OWNER_VETO_LOGIT`` or -1.0) is the logit below which a predicted
+    cell vetoes a neighbor's margin pixel inside its own core; a prediction with no logits
+    vetoes nothing. ``max_requested`` caps how many tiles one ``advance`` asks for.
+    ``boxes`` are mosaic ``(x_min, y_min, x_max, y_max)`` SAM2 box prompts, Y up. A cell
+    whose window overlaps one passes the largest clipped box to ``predict`` as the keyword
+    ``box`` (window-local, Y-down, XYXY); with no boxes ``predict`` is called without it.
+    ``omit_with_box`` lists foreground mosaic points that are left out of the SAM2 prompt in
+    a cell that is sent a box (they still count as positives when filtering the answer).
     """
-    walk = _Walk(
-        [(int(x), int(y)) for x, y in foreground],
-        [(int(x), int(y)) for x, y in background],
-        predict,
-        max_requested,
-        max_cells,
-        should_stop,
-        max_predictions,
-        remembered or {},
-        margin_logit_min_from_env() if margin_logit_min is None else float(margin_logit_min),
-        owner_veto_logit_from_env() if owner_veto_logit is None else float(owner_veto_logit),
-    )
-    return walk.run()
-
-
-class _Walk:
-    """State of one growth walk. Kept as a class so each rule is a small named method."""
 
     def __init__(
         self,
-        foreground: List[Point],
-        background: List[Point],
+        foreground: Sequence[Point],
+        background: Sequence[Point],
         predict: CellPredict,
-        max_requested: int,
-        max_cells: int,
-        should_stop: Optional[Callable[[], bool]],
-        max_predictions: int,
-        remembered: Mapping[Cell, MaskArray],
-        margin_logit_min: float,
-        owner_veto_logit: float,
+        max_requested: int = DEFAULT_MAX_REQUESTED_TILES,
+        max_cells: int = DEFAULT_MAX_CELLS,
+        should_stop: Optional[Callable[[], bool]] = None,
+        max_predictions: int = DEFAULT_MAX_PREDICTIONS,
+        margin_logit_min: Optional[float] = None,
+        owner_veto_logit: Optional[float] = None,
+        boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+        omit_with_box: Optional[Sequence[Point]] = None,
     ) -> None:
-        self._remembered = remembered
-        self._margin_logit_min = margin_logit_min
-        self._owner_veto_logit = owner_veto_logit
-        self._fg = foreground
-        self._bg = background
+        self._started = False
+        self._pending: List[TileIndex] = []
+        self._asked: Set[TileIndex] = set()
+        self._unavailable: Set[TileIndex] = set()
+        self._boxes = [(int(a), int(b), int(c), int(d)) for a, b, c, d in boxes or ()]
+        self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
+        self._margin_logit_min = (
+            margin_logit_min_from_env() if margin_logit_min is None else float(margin_logit_min)
+        )
+        self._owner_veto_logit = (
+            owner_veto_logit_from_env() if owner_veto_logit is None else float(owner_veto_logit)
+        )
+        self._fg = [(int(x), int(y)) for x, y in foreground]
+        self._bg = [(int(x), int(y)) for x, y in background]
         self._predict = predict
         self._max_requested = max_requested
         self._max_cells = max_cells
@@ -267,15 +301,13 @@ class _Walk:
         self._queue: Deque[Cell] = deque()
         self._queued: Set[Cell] = set()
 
-    def run(self) -> GrowthResult:
-        if not self._fg:
-            return self._finish()
-
-        self._enqueue(cell_of_point(*self._fg[0]))
-        for cell, core_down in self._remembered.items():
-            self._canvas.or_core(cell, np.flipud(np.asarray(core_down, dtype=np.bool_)))
-        for cell in self._remembered:
-            self._follow_contacts(cell)
+    def advance(self) -> None:
+        """Walk until nothing is queued. Call again after ``resume``."""
+        if not self._started:
+            self._started = True
+            if not self._fg:
+                return
+            self._enqueue(cell_of_point(*self._fg[0]))
         while True:
             while self._queue:
                 self._step(self._queue.popleft())
@@ -285,6 +317,38 @@ class _Walk:
                 break
             for cell in pending:
                 self._enqueue(cell)
+
+    @property
+    def predictions(self) -> int:
+        """SAM2 calls made so far."""
+        return self._predictions
+
+    def take_requested(self) -> List[TileIndex]:
+        """Tiles the walk asked for since the last call, in the order they were needed."""
+        taken = self._pending
+        self._pending = []
+        return taken
+
+    def resume(self, unavailable: Iterable[TileIndex] = ()) -> None:
+        """Re-queue the cells that were waiting for tiles.
+
+        ``unavailable`` names tiles the caller could not supply. A cell that needs one of them
+        (now or from an earlier call) is not tried again, so the walk cannot ask for the same
+        tile forever. Tiles that were supplied need no mention: the cell's next ``predict``
+        finds them.
+        """
+        self._unavailable.update(unavailable)
+        waiting = [
+            cell for cell in self._deferred
+            if not any(tile in self._unavailable for tile in tiles_for_cell(cell))
+        ]
+        for cell in waiting:
+            self._deferred.discard(cell)
+        for cell in waiting:
+            self._enqueue(cell)
+
+    def result(self) -> GrowthResult:
+        """The fused mosaic of ``G`` so far, and every tile that was asked for."""
         return self._finish()
 
     def _unreached_foreground_owners(self) -> List[Cell]:
@@ -305,8 +369,10 @@ class _Walk:
         self._queue.append(cell)
 
     def _request(self, tile: TileIndex) -> None:
-        if tile in self._requested or len(self._requested) >= self._max_requested:
+        if tile in self._asked or len(self._pending) >= self._max_requested:
             return
+        self._asked.add(tile)
+        self._pending.append(tile)
         self._requested.append(tile)
 
     def _step(self, cell: Cell) -> None:
@@ -324,11 +390,12 @@ class _Walk:
         if state is not None and not _has_new_seed(state, seeds, x0, y0):
             return
 
-        points, labels, positives = self._prompts(cell, seeds)
+        box = window_box(cell, self._boxes)
+        points, labels, positives = self._prompts(cell, seeds, boxed=box is not None)
         if not positives:
             return
 
-        mask_down = self._call_predict(cell, points, labels)
+        mask_down = self._call_predict(cell, points, labels, box)
         if mask_down is None:
             return
         score, raw_down, logits = mask_down
@@ -353,8 +420,24 @@ class _Walk:
         self._spread(cell, added)
 
     def _prompts(
-        self, cell: Cell, seeds: Sequence[Point]
+        self, cell: Cell, seeds: Sequence[Point], boxed: bool = False
     ) -> Tuple[List[Point], List[int], List[Point]]:
+        omit = self._omit_with_box if boxed else set()
+        points, labels, positives = self._build_prompts(cell, seeds, omit)
+        # A box with no positive click would reach SAM2 as an empty point array. That only
+        # happens when the window holds nothing but the omitted clicks, so send them then.
+        if omit and not any(label == 1 for label in labels) and positives:
+            points, labels, positives = self._build_prompts(cell, seeds, set())
+        return points, labels, positives
+
+    def _build_prompts(
+        self, cell: Cell, seeds: Sequence[Point], omit: Set[Point]
+    ) -> Tuple[List[Point], List[int], List[Point]]:
+        """Window-local prompt points and labels, and every positive click in the window.
+
+        Clicks in ``omit`` are left out of ``points`` and ``labels`` but still returned in
+        ``positives``, which is what filters the answer to the pieces the user clicked.
+        """
         points: List[Point] = []
         labels: List[int] = []
         positives: List[Point] = []
@@ -365,10 +448,12 @@ class _Walk:
             if not in_window(local) or (local[0], local[1], label) in seen:
                 return
             seen.add((local[0], local[1], label))
-            points.append(local)
-            labels.append(label)
             if label == 1:
                 positives.append(local)
+            if label == 1 and (int(mosaic[0]), int(mosaic[1])) in omit:
+                return
+            points.append(local)
+            labels.append(label)
 
         for point in self._fg:
             _add(point, 1)
@@ -379,12 +464,19 @@ class _Walk:
         return points, labels, positives
 
     def _call_predict(
-        self, cell: Cell, points: Sequence[Point], labels: Sequence[int]
+        self,
+        cell: Cell,
+        points: Sequence[Point],
+        labels: Sequence[int],
+        box: Optional[Tuple[int, int, int, int]] = None,
     ) -> Optional[Tuple[float, MaskArray, Optional[NDArray]]]:
         if self._should_stop is not None and self._should_stop():
             raise GrowthCancelled()
         try:
-            mask, logits, score = self._predict(cell.row, cell.col, points, labels)
+            if box is None:
+                mask, logits, score = self._predict(cell.row, cell.col, points, labels)
+            else:
+                mask, logits, score = self._predict(cell.row, cell.col, points, labels, box=box)
         except PredictUnavailable as unavailable:
             self._deferred.add(cell)
             for tile in unavailable.tiles:
@@ -470,6 +562,30 @@ class _Walk:
             requested=list(self._requested),
             cells=cells,
         )
+
+
+def window_box(
+    cell: Cell, boxes: Sequence[Tuple[int, int, int, int]]
+) -> Optional[Tuple[int, int, int, int]]:
+    """The box prompt for one cell: the largest mosaic box clipped to its window.
+
+    Returned as window-local Y-down ``(x0, y0, x1, y1)``. SAM2 takes one box per prompt, so
+    when several circles overlap the window the one with the most area inside it wins. A
+    box clipped below ``MIN_BOX_SIDE`` px on either side is ignored.
+    """
+    best: Optional[Tuple[int, int, int, int]] = None
+    best_area = 0
+    for x_min, y_min, x_max, y_max in boxes:
+        left, top = mosaic_to_window(cell, x_min, y_max)
+        right, bottom = mosaic_to_window(cell, x_max, y_min)
+        left, top = max(left, 0), max(top, 0)
+        right, bottom = min(right, CELL_SIZE - 1), min(bottom, CELL_SIZE - 1)
+        if right - left < MIN_BOX_SIDE or bottom - top < MIN_BOX_SIDE:
+            continue
+        area = (right - left) * (bottom - top)
+        if area > best_area:
+            best, best_area = (left, top, right, bottom), area
+    return best
 
 
 def _window_logits(logits: Optional[NDArray]) -> Optional[NDArray]:
