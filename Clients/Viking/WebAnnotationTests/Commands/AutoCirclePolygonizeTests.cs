@@ -1190,6 +1190,67 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void GroupPromptBoxesTheLargestPolygonAndClicksEachPolygonOnce()
+        {
+            Polygon small = Square(100, 100, 10);
+            Polygon large = Square(0, 0, 40);
+            Polygon medium = Square(200, 0, 20);
+
+            CircleSegmentationPrompts.GroupPrompt prompt =
+                CircleSegmentationPrompts.CreateGroupPromptFromPolygons([small, large, medium]);
+
+            Assert.AreEqual(3, prompt.Foreground.Count);
+            Assert.AreEqual(large.BoundingBox, prompt.Box);
+            Assert.IsTrue(large.Contains(prompt.Foreground[1]));
+            Assert.IsTrue(small.Contains(prompt.Foreground[0]));
+            Assert.IsTrue(medium.Contains(prompt.Foreground[2]));
+        }
+
+        [TestMethod]
+        public void GroupPromptRejectsEmptyInput()
+        {
+            Assert.AreEqual(0, CircleSegmentationPrompts.CreateGroupPromptFromPolygons(null).Foreground.Count);
+            Assert.IsNull(CircleSegmentationPrompts.CreateGroupPromptFromPolygons([]).Box);
+        }
+
+        private static (long Ticket, IReadOnlyCollection<long> LocationIds) Published(long ticket, params long[] ids) =>
+            (ticket, ids);
+
+        [TestMethod]
+        public void OlderRequestIsSupersededByNewerPublishedOneSharingALocation()
+        {
+            Assert.IsTrue(RequestSupersession.IsSuperseded(5, new long[] { 1, 2 }, [Published(9, 2, 3)]));
+        }
+
+        [TestMethod]
+        public void SupersessionDoesNotDependOnHowManyLocationsEachRequestCovers()
+        {
+            Assert.IsTrue(RequestSupersession.IsSuperseded(5, new long[] { 1, 2, 3, 4 }, [Published(9, 1)]));
+            Assert.IsFalse(RequestSupersession.IsSuperseded(9, new long[] { 1 }, [Published(5, 1, 2, 3, 4)]));
+        }
+
+        [TestMethod]
+        public void NewerRequestIsNeverSupersededByOlderPublishedOne()
+        {
+            Assert.IsFalse(RequestSupersession.IsSuperseded(9, new long[] { 1, 2 }, [Published(5, 1, 2)]));
+        }
+
+        [TestMethod]
+        public void RequestsOverNoSharedLocationDoNotSupersedeEachOther()
+        {
+            Assert.IsFalse(RequestSupersession.IsSuperseded(5, new long[] { 1, 2 }, [Published(9, 3, 4)]));
+        }
+
+        [TestMethod]
+        public void UntrackedProposalsAreNeverSupersededAndNeverSupersede()
+        {
+            Assert.IsFalse(RequestSupersession.IsSuperseded(
+                RequestSupersession.Untracked, new long[] { 1 }, [Published(9, 1)]));
+            Assert.IsFalse(RequestSupersession.IsSuperseded(
+                5, new long[] { 1 }, [Published(RequestSupersession.Untracked, 1)]));
+        }
+
+        [TestMethod]
         public void PolygonForegroundPointsRejectEmptyAndDegenerate()
         {
             Assert.AreEqual(0, CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(null).Count);

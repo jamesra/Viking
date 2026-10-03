@@ -165,13 +165,81 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(polygon.Area > 0);
         }
 
+        [TestMethod]
+        public void ClickedPieceWinsOverLargerUnclickedPiece()
+        {
+            byte[] mask = FilledRectangleMask(60, 40, 2, 2, 20, 20);
+            FillRectangle(mask, 60, 40, 10, 46, 16);
+
+            Polygon largest = CreatePolygon(mask, 60, 40, 0.03);
+            Polygon clicked = CreatePolygon(mask, 60, 40, 0.03, keepComponentsContainingWorldPoints: [new Vector2(43, 40 - 13)]);
+
+            Assert.IsTrue(largest.Contains(new Vector2(10, 40 - 10)));
+            Assert.IsFalse(clicked.Contains(new Vector2(10, 40 - 10)));
+            Assert.IsTrue(clicked.Contains(new Vector2(43, 40 - 13)));
+        }
+
+        [TestMethod]
+        public void HitTestLeavesTheClickedPiecesContourUnchanged()
+        {
+            byte[] mask = FilledRectangleMask(80, 60, 20, 15, 50, 40);
+            for (int y = 15; y <= 40; y++)
+                mask[(y * 80) + 51] = 180;
+            mask[(30 * 80) + 70] = 255;
+
+            Polygon plain = CreatePolygon(mask, 80, 60, 0.03, edgeCleanupRadius: 2);
+            Polygon hitTested = CreatePolygon(
+                mask, 80, 60, 0.03, edgeCleanupRadius: 2, keepComponentsContainingWorldPoints: [new Vector2(35, 60 - 28)]);
+
+            Assert.AreEqual(plain.Area, hitTested.Area, 1e-6);
+            Assert.AreEqual(plain.TotalUniqueVertices, hitTested.TotalUniqueVertices);
+            Assert.AreEqual(plain.ExteriorRing.Max(p => p.X), hitTested.ExteriorRing.Max(p => p.X), 1e-6);
+        }
+
+        [TestMethod]
+        public void ClicksOffTheMaskFallBackToTheLargestPiece()
+        {
+            byte[] mask = FilledRectangleMask(60, 40, 2, 2, 20, 20);
+            FillRectangle(mask, 60, 40, 10, 46, 16);
+
+            Polygon polygon = CreatePolygon(mask, 60, 40, 0.03, keepComponentsContainingWorldPoints: [new Vector2(30, 5)]);
+
+            Assert.IsTrue(polygon.Contains(new Vector2(10, 40 - 10)));
+        }
+
+        [TestMethod]
+        public void HitTestMapsThroughTheMaskOffset()
+        {
+            byte[] mask = FilledRectangleMask(30, 30, 2, 2, 12, 12);
+            FillRectangle(mask, 30, 18, 18, 22, 22);
+            var polygons = SegmentationMaskPolygonizer.CreatePolygons(
+                mask, 30, 30, 100, 200, 400, 400,
+                new Rectangle(new Vector2(0, 0), new Vector2(400, 400)),
+                0.03, null, 0, out _,
+                keepComponentsContainingWorldPoints: [new Vector2(120, 400 - 220)]);
+
+            Assert.AreEqual(1, polygons.Count);
+            Assert.IsTrue(polygons[0].Contains(new Vector2(120, 400 - 220)));
+            Assert.IsFalse(polygons[0].Contains(new Vector2(105, 400 - 205)));
+        }
+
+        private static void FillRectangle(byte[] mask, int width, int left, int top, int right, int bottom)
+        {
+            for (int y = top; y <= bottom; y++)
+            {
+                for (int x = left; x <= right; x++)
+                    mask[(y * width) + x] = 255;
+            }
+        }
+
         private static Polygon CreatePolygon(
             byte[] mask,
             int width,
             int height,
             double holeDropFraction,
             IReadOnlyList<Vector2> preserveHolesContainingWorldPoints = null,
-            int edgeCleanupRadius = 0)
+            int edgeCleanupRadius = 0,
+            IReadOnlyList<Vector2> keepComponentsContainingWorldPoints = null)
         {
             var polygons = SegmentationMaskPolygonizer.CreatePolygons(
                 mask,
@@ -184,7 +252,9 @@ namespace WebAnnotationTests.Commands
                 new Rectangle(new Vector2(0, 0), new Vector2(width, height)),
                 holeDropFraction,
                 preserveHolesContainingWorldPoints,
-                edgeCleanupRadius);
+                edgeCleanupRadius,
+                out _,
+                keepComponentsContainingWorldPoints);
 
             Assert.AreEqual(1, polygons.Count);
             return polygons[0];

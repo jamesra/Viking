@@ -83,7 +83,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private int mosaicDownsample = 1;
         private int mosaicOriginX;
         private int mosaicOriginY;
-        private readonly int maxTileRounds;
 
         /// <summary>
         /// Ceiling for submitted tile downsample from appSettings
@@ -173,9 +172,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             ViewportBounds = GetCurrentViewportBounds();
-            maxTileRounds = int.TryParse(ConfigurationManager.AppSettings["SegmentationMaxTileRounds"], out var rounds) && rounds >= 0
-                ? rounds
-                : 4;
             mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
         }
 
@@ -408,30 +404,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Foreground cells plus growth neighbors, without duplicates.
-        /// Background points are not used to choose cells: they can cover the whole view,
-        /// and the server applies a background click only on a tile it actually predicts.
-        /// </summary>
-        private static List<TileCell> TilesForRound(
-            IReadOnlyList<Geometry.Vector2> foregroundPoints,
-            int downsample,
-            IReadOnlyList<TileCell> extras)
-        {
-            List<TileCell> cells = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
-            if (extras is null || extras.Count == 0)
-                return cells;
-
-            HashSet<(int Row, int Col)> seen = new(cells.Select(cell => (cell.Row, cell.Col)));
-            foreach (TileCell extra in extras)
-            {
-                if (seen.Add((extra.Row, extra.Col)))
-                    cells.Add(extra);
-            }
-
-            return cells;
-        }
-
-        /// <summary>
         /// Calls SegmentTiles. On TILE_NOT_FOUND, drops that cell and uploads it again.
         /// One retry is not enough: the cache evicts several prompt cells, and the second
         /// missing cell used to abort the whole request.
@@ -443,7 +415,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> foregroundPoints,
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             bool grayscale,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            ulong requestId = 0)
         {
             const int maxNotFoundRetries = 16;
             string? lastMissingKey = null;
@@ -452,12 +426,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 try
                 {
-                    return await SegmentUploadedTilesAsync(
+                    return await SegmentTilesStreamAsync(
                         signature,
                         needed,
                         foregroundPoints,
                         backgroundPoints,
-                        cancellationToken).ConfigureAwait(false);
+                        grayscale,
+                        cancellationToken,
+                        foregroundBoxes,
+                        requestId).ConfigureAwait(false);
                 }
                 catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
                     TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
@@ -524,14 +501,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads cells that contain foreground points (and server-requested neighbors),
-        /// then SegmentTiles with growth rounds. Does not name every viewport cell.
-        /// Returns the last response, including a partial mask when growth still needs cells.
+        /// Uploads the cells that contain foreground points, then runs one SegmentTilesStream call.
+        /// The server grows the mask and asks for further cells as the mask reaches them; the client
+        /// uploads those and the call returns the finished mask. Does not name every viewport cell.
+        /// Returns null when no mask could be produced.
+        /// <paramref name="requestId"/> is sent with the request and echoed by the server; it only
+        /// correlates log lines. Deciding whether a result is still wanted stays with the caller.
         /// </summary>
         public async Task<SegmentationResponse?> SegmentAsync(
             IReadOnlyList<Geometry.Vector2> foregroundPoints,
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            ulong requestId = 0)
         {
             if (grpcClient is null)
             {
@@ -548,86 +530,51 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
-                List<TileCell> extras = [];
-                SegmentationResponse? lastResponse = null;
-                // Tile level is decided by round 0 and held for the whole request, so a zoom change
-                // while growth rounds run cannot change the tile signature or strand requested tiles.
-                int? requestDownsample = null;
-                for (int round = 0; round <= maxTileRounds; round++)
+                cancellationToken.ThrowIfCancellationRequested();
+                (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
+                    await ReadViewTilesAsync().ConfigureAwait(false);
+                mosaicDownsample = downsample;
+                List<TileCell> needed = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
+                SegmentationDiag.Log(
+                    $"SegmentAsync ds={downsample} visible={visible.Count} promptTiles={needed.Count} " +
+                    $"vol={signature.Volume} sec={signature.Section}");
+                if (needed.Count == 0)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
-                        await ReadViewTilesAsync(requestDownsample).ConfigureAwait(false);
-                    requestDownsample = downsample;
-                    mosaicDownsample = downsample;
-                    List<TileCell> needed = TilesForRound(foregroundPoints, downsample, extras);
-                    SegmentationDiag.Log(
-                        $"SegmentAsync round={round} ds={downsample} visible={visible.Count} " +
-                        $"promptTiles={needed.Count} extras={extras.Count} " +
-                        $"vol={signature.Volume} sec={signature.Section}");
-                    if (needed.Count == 0)
-                    {
-                        SegmentationDiag.Log("SegmentAsync: no tile cells for prompts");
-                        if (lastResponse is null)
-                            RecordSkip(SegmentationSkipKind.TilesUnavailable);
-                        return lastResponse;
-                    }
-
-                    if (!await UploadMissingTilesAsync(signature, needed, grayscale, cancellationToken).ConfigureAwait(false))
-                    {
-                        SegmentationDiag.Log("SegmentAsync: UploadMissingTilesAsync returned false");
-                        Debug.WriteLine("No segmentation tiles could be uploaded");
-                        if (lastResponse is null)
-                            RecordSkip(SegmentationSkipKind.UploadFailed);
-                        return lastResponse;
-                    }
-
-                    SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
-                        signature,
-                        needed,
-                        foregroundPoints,
-                        backgroundPoints,
-                        grayscale,
-                        cancellationToken).ConfigureAwait(false);
-                    if (response is null)
-                    {
-                        if (lastResponse is null)
-                            RecordSkip(SegmentationSkipKind.TilesUnavailable);
-                        return lastResponse;
-                    }
-
-                    lastResponse = response;
-                    mosaicOriginX = response.OriginX;
-                    mosaicOriginY = response.OriginY;
-                    uploadedImageBounds = MosaicWorldBounds(response);
-                    uploadedImageWidth = Math.Max(1, response.Width);
-                    uploadedImageHeight = Math.Max(1, response.Height);
-
-                    if (response.RequestedTiles.Count == 0 || round == maxTileRounds)
-                        break;
-
-                    extras.Clear();
-                    foreach (TileCoord tile in response.RequestedTiles)
-                    {
-                        if (tile.Downsample != downsample)
-                            continue;
-
-                        // The server asks only for cells it does not have. A key left from an
-                        // earlier upload would skip the re-upload and growth would stall.
-                        uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
-                        extras.Add(new TileCell(tile.Row, tile.Col));
-                    }
-
-                    if (extras.Count == 0)
-                        break;
+                    SegmentationDiag.Log("SegmentAsync: no tile cells for prompts");
+                    RecordSkip(SegmentationSkipKind.TilesUnavailable);
+                    return null;
                 }
 
-                if (lastResponse is not null)
-                    ClearSkip();
-                else
-                    RecordSkip(SegmentationSkipKind.EmptyMask);
+                if (!await UploadMissingTilesAsync(signature, needed, grayscale, cancellationToken).ConfigureAwait(false))
+                {
+                    SegmentationDiag.Log("SegmentAsync: UploadMissingTilesAsync returned false");
+                    Debug.WriteLine("No segmentation tiles could be uploaded");
+                    RecordSkip(SegmentationSkipKind.UploadFailed);
+                    return null;
+                }
 
-                return lastResponse;
+                SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
+                    signature,
+                    needed,
+                    foregroundPoints,
+                    backgroundPoints,
+                    grayscale,
+                    cancellationToken,
+                    foregroundBoxes,
+                    requestId).ConfigureAwait(false);
+                if (response is null)
+                {
+                    RecordSkip(SegmentationSkipKind.TilesUnavailable);
+                    return null;
+                }
+
+                mosaicOriginX = response.OriginX;
+                mosaicOriginY = response.OriginY;
+                uploadedImageBounds = MosaicWorldBounds(response);
+                uploadedImageWidth = Math.Max(1, response.Width);
+                uploadedImageHeight = Math.Max(1, response.Height);
+                ClearSkip();
+                return response;
             }
             catch (OperationCanceledException)
             {
@@ -648,13 +595,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Decodes each segment mask and polygonizes in score order. Near-full-frame masks are skipped.
         /// Cleanup and marching squares run at mask resolution. Callers apply pen-threshold simplification.
         /// <paramref name="cancellationToken"/> is checked between segments so a newer click can abort.
+        /// <paramref name="keepComponentsContainingWorldPoints"/>, when given, hit-tests the mask at those
+        /// world points and polygonizes only the connected pieces they land on.
         /// </summary>
         public IReadOnlyList<Polygon> CreatePolygonsFromResponse(
             SegmentationResponse response,
             double? holeDropFraction = null,
             IReadOnlyList<Geometry.Vector2> preserveHolesContainingWorldPoints = null,
             int? edgeCleanupRadius = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<Geometry.Vector2> keepComponentsContainingWorldPoints = null)
         {
             if (response is null || response.Segments.Count == 0)
                 return [];
@@ -697,7 +647,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     dropFraction,
                     preserveHolesContainingWorldPoints,
                     cleanupRadius,
-                    out SegmentationMaskPolygonizer.CleanupStats cleanupStats));
+                    out SegmentationMaskPolygonizer.CleanupStats cleanupStats,
+                    keepComponentsContainingWorldPoints));
                 cleanupMs += cleanupStats.ElapsedMilliseconds;
                 polygonizeMs += Math.Max(0, polygonizeTimer.ElapsedMilliseconds - cleanupStats.ElapsedMilliseconds);
                 foregroundBefore += cleanupStats.ForegroundPixelsBefore;

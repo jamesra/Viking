@@ -86,11 +86,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double holeDropFraction,
             IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
             int edgeCleanupRadius,
-            out CleanupStats cleanupStats)
+            out CleanupStats cleanupStats,
+            IReadOnlyList<Vector2> keepComponentsContainingWorldPoints = null)
         {
             cleanupStats = new CleanupStats(0, 0, 0);
             if (maskData is null || maskData.Length != maskWidth * maskHeight)
                 return [];
+
+            if (keepComponentsContainingWorldPoints is { Count: > 0 })
+            {
+                Vector2[] clickPixels = ToPixelPoints(
+                    keepComponentsContainingWorldPoints,
+                    imageWidth,
+                    imageHeight,
+                    viewportBounds);
+                (maskData, maskWidth, maskHeight, offsetX, offsetY) = RestrictToClickedComponents(
+                    maskData,
+                    maskWidth,
+                    maskHeight,
+                    offsetX,
+                    offsetY,
+                    clickPixels,
+                    Math.Max(0, edgeCleanupRadius) + 2);
+            }
 
             int foregroundBefore = CountForeground(maskData);
 
@@ -139,6 +157,108 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             return cleanedPolygons;
+        }
+
+        /// <summary>
+        /// Hit-tests the mask at the clicked pixels and keeps only the connected pieces (8-connected,
+        /// foreground at <see cref="SoftMaskForeground"/>) that a click lands on, cropped to their bounding
+        /// box plus <paramref name="pad"/>. The polygonizer otherwise keeps the largest contour, which is not
+        /// always the clicked piece, and it scans every pixel of the mosaic for a mask that is often a small
+        /// blob. Pixels touching a kept piece keep their soft values so the contour still interpolates the
+        /// same edge; everything else becomes 0. Returns the input unchanged when no click lands on foreground,
+        /// because the old largest-contour choice is a better guess than an empty mask.
+        /// </summary>
+        /// <param name="clickPixels">Clicks in capture-image pixels (top-origin), the frame <paramref name="offsetX"/> is in.</param>
+        internal static (byte[] Mask, int Width, int Height, int OffsetX, int OffsetY) RestrictToClickedComponents(
+            byte[] mask,
+            int width,
+            int height,
+            int offsetX,
+            int offsetY,
+            IReadOnlyList<Vector2> clickPixels,
+            int pad)
+        {
+            (byte[], int, int, int, int) unchanged = (mask, width, height, offsetX, offsetY);
+            if (mask is null || clickPixels is null || clickPixels.Count == 0 || width <= 0 || height <= 0)
+                return unchanged;
+
+            bool[] keep = new bool[mask.Length];
+            Stack<int> pending = new();
+            foreach (Vector2 click in clickPixels)
+            {
+                int x = (int)Math.Floor(click.X) - offsetX;
+                int y = (int)Math.Floor(click.Y) - offsetY;
+                if (x < 0 || y < 0 || x >= width || y >= height)
+                    continue;
+
+                int seed = (y * width) + x;
+                if (mask[seed] >= SoftMaskForeground && !keep[seed])
+                {
+                    keep[seed] = true;
+                    pending.Push(seed);
+                }
+            }
+
+            if (pending.Count == 0)
+                return unchanged;
+
+            int minX = width, minY = height, maxX = -1, maxY = -1;
+            while (pending.Count > 0)
+            {
+                int index = pending.Pop();
+                int px = index % width;
+                int py = index / width;
+                minX = Math.Min(minX, px);
+                maxX = Math.Max(maxX, px);
+                minY = Math.Min(minY, py);
+                maxY = Math.Max(maxY, py);
+                for (int ny = Math.Max(0, py - 1); ny <= Math.Min(height - 1, py + 1); ny++)
+                {
+                    for (int nx = Math.Max(0, px - 1); nx <= Math.Min(width - 1, px + 1); nx++)
+                    {
+                        int neighbor = (ny * width) + nx;
+                        if (!keep[neighbor] && mask[neighbor] >= SoftMaskForeground)
+                        {
+                            keep[neighbor] = true;
+                            pending.Push(neighbor);
+                        }
+                    }
+                }
+            }
+
+            int cropLeft = Math.Max(0, minX - pad);
+            int cropTop = Math.Max(0, minY - pad);
+            int cropRight = Math.Min(width - 1, maxX + pad);
+            int cropBottom = Math.Min(height - 1, maxY + pad);
+            int cropWidth = cropRight - cropLeft + 1;
+            int cropHeight = cropBottom - cropTop + 1;
+            byte[] cropped = new byte[cropWidth * cropHeight];
+            for (int y = cropTop; y <= cropBottom; y++)
+            {
+                for (int x = cropLeft; x <= cropRight; x++)
+                {
+                    if (!TouchesKept(keep, width, height, x, y))
+                        continue;
+
+                    cropped[((y - cropTop) * cropWidth) + (x - cropLeft)] = mask[(y * width) + x];
+                }
+            }
+
+            return (cropped, cropWidth, cropHeight, offsetX + cropLeft, offsetY + cropTop);
+        }
+
+        private static bool TouchesKept(bool[] keep, int width, int height, int x, int y)
+        {
+            for (int ny = Math.Max(0, y - 1); ny <= Math.Min(height - 1, y + 1); ny++)
+            {
+                for (int nx = Math.Max(0, x - 1); nx <= Math.Min(width - 1, x + 1); nx++)
+                {
+                    if (keep[(ny * width) + nx])
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

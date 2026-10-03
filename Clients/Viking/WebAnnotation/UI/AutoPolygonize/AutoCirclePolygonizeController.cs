@@ -78,7 +78,29 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private int lastResolvedTileDownsample;
         private AutoPolygonizeProposal? hoveredProposal;
-        private readonly HashSet<string> overlapResubmitsInFlight = [];
+        private readonly Dictionary<string, OverlapGroupJob> overlapResubmitsInFlight = [];
+        private long requestTicketCounter;
+
+        /// <summary>
+        /// Next request ticket. Taken when a segmentation request starts, so a larger ticket always
+        /// means a request the user asked for later, whatever order the answers arrive in.
+        /// </summary>
+        private long NextRequestTicket() => Interlocked.Increment(ref requestTicketCounter);
+
+        /// <summary>
+        /// One grouped overlap resubmit that is running. Starting a group that contains this job's
+        /// locations cancels it so a smaller, older answer cannot arrive after the larger one.
+        /// Owns <see cref="Cancellation"/> until <see cref="ResubmitOverlapGroupAsync"/> disposes it.
+        /// </summary>
+        private sealed class OverlapGroupJob(HashSet<long> locationIds, long ticket)
+        {
+            public HashSet<long> LocationIds { get; } = locationIds;
+
+            /// <summary>Request ticket taken when the group was started; see <see cref="RequestSupersession"/>.</summary>
+            public long Ticket { get; } = ticket;
+
+            public CancellationTokenSource Cancellation { get; } = new();
+        }
 
         /// <summary>
         /// One uploaded viewport plus the per-response polygonize tasks that still
@@ -943,8 +965,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                         "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
                     long promptMs = proposalTimer.ElapsedMilliseconds;
 
+                    long requestTicket = NextRequestTicket();
                     Stopwatch segmentTimer = Stopwatch.StartNew();
-                    var response = await localUploadSession.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
+                    var response = await localUploadSession.SegmentAsync(
+                        foreground,
+                        background,
+                        processToken,
+                        requestId: (ulong)requestTicket).ConfigureAwait(false);
                     long segmentMs = segmentTimer.ElapsedMilliseconds;
                     if (response is null)
                         continue;
@@ -967,7 +994,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                             batchId,
                             generation,
                             requireMatchingLiveView: true,
-                            processToken), processToken);
+                            processToken,
+                            requestTicket), processToken);
                         processBatch.ResponseTasks.Add(responseTask);
                     }
                     catch (OperationCanceledException)
@@ -1018,7 +1046,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             long batchId,
             int generation,
             bool requireMatchingLiveView,
-            CancellationToken processToken)
+            CancellationToken processToken,
+            long requestTicket)
         {
             if (processToken.IsCancellationRequested || !enabled)
                 return;
@@ -1052,7 +1081,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             Stopwatch polygonTimer = Stopwatch.StartNew();
             IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
                 response,
-                preserveHolesContainingWorldPoints: background);
+                preserveHolesContainingWorldPoints: background,
+                keepComponentsContainingWorldPoints: foreground);
             Polygon polygon = polygons.FirstOrDefault();
             long polygonMs = polygonTimer.ElapsedMilliseconds;
             if (polygon is null)
@@ -1090,7 +1120,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 locationIds: [circle.ID],
                 parentId: circle.ParentID,
                 foregroundPrompts: foreground,
-                backgroundPrompts: background);
+                backgroundPrompts: background)
+            {
+                RequestTicket = requestTicket
+            };
             long renderPreparationMs = renderPreparationTimer.ElapsedMilliseconds;
 
             if (!IsStillCircle(circle.ID) || !cache.IsGenerationCurrent(circle.ID, generation))
@@ -1136,6 +1169,21 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 lock (proposalLock)
                 {
+                    // Requests are fire-and-forget, so completion order is not start order. An answer to an
+                    // older request must not replace a published answer to a newer one for the same locations.
+                    if (RequestSupersession.IsSuperseded(
+                        proposal.RequestTicket,
+                        proposal.LocationIds.ToArray(),
+                        DistinctProposalsUnlocked().Select(item =>
+                            (item.RequestTicket, (IReadOnlyCollection<long>)item.LocationIds))))
+                    {
+                        SegmentationDiag.Log(
+                            $"publish dropped: ticket={proposal.RequestTicket} ids=[{string.Join(",", proposal.LocationIds)}] " +
+                            "already superseded by a newer request");
+                        proposal.DisposeMaskOverlay();
+                        return;
+                    }
+
                     HashSet<AutoPolygonizeProposal> replaced = [];
                     foreach (long id in proposal.LocationIds)
                     {
@@ -1580,7 +1628,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                     "auto-circle", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
 
                 Stopwatch proposalTimer = Stopwatch.StartNew();
-                var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
+                long requestTicket = NextRequestTicket();
+                var response = await session.SegmentAsync(
+                    foreground,
+                    background,
+                    processToken,
+                    requestId: (ulong)requestTicket).ConfigureAwait(false);
                 if (response is null)
                     return;
 
@@ -1612,7 +1665,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     0,
                     liveGeneration,
                     requireMatchingLiveView: false,
-                    processToken);
+                    processToken,
+                    requestTicket);
             }
             catch (OperationCanceledException)
             {
@@ -1830,13 +1884,33 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             string key = string.Join(",", locationIds);
+            OverlapGroupJob job = new([.. locationIds], NextRequestTicket());
             lock (overlapResubmitsInFlight)
             {
-                if (!overlapResubmitsInFlight.Add(key))
+                if (overlapResubmitsInFlight.ContainsKey(key))
+                {
+                    job.Cancellation.Dispose();
                     return;
+                }
+
+                foreach (OverlapGroupJob older in overlapResubmitsInFlight.Values)
+                {
+                    if (older.LocationIds.Count < job.LocationIds.Count && older.LocationIds.IsSubsetOf(job.LocationIds))
+                    {
+                        try
+                        {
+                            older.Cancellation.Cancel();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                    }
+                }
+
+                overlapResubmitsInFlight[key] = job;
             }
 
-            _ = ResubmitOverlapGroupAsync(members, locationIds, currentRound + 1, key);
+            _ = ResubmitOverlapGroupAsync(members, locationIds, currentRound + 1, key, job);
         }
 
         /// <summary>
@@ -1988,8 +2062,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             List<AutoPolygonizeProposal> members,
             long[] locationIds,
             int overlapRound,
-            string inFlightKey)
+            string inFlightKey,
+            OverlapGroupJob job)
         {
+            CancellationTokenSource? linkedCancellation = null;
             try
             {
                 if (!enabled || parent.Section is null || parent.Scene is null)
@@ -1998,12 +2074,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (!IsWithinAutoSegmentDownsample())
                     return;
 
-                CancellationToken processToken;
+                CancellationToken lifecycleToken;
                 lock (lifecycleLock)
                 {
-                    processToken = processCts.Token;
+                    lifecycleToken = processCts.Token;
                 }
 
+                linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifecycleToken, job.Cancellation.Token);
+                CancellationToken processToken = linkedCancellation.Token;
                 if (processToken.IsCancellationRequested)
                     return;
 
@@ -2054,8 +2132,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                     }
 
                     IReadOnlyList<Polygon> promptPolygons = CollectOverlapPromptPolygons(members, locationIds);
-                    IReadOnlyList<Vector2> foreground = CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(
-                        promptPolygons);
+                    CircleSegmentationPrompts.GroupPrompt groupPrompt =
+                        CircleSegmentationPrompts.CreateGroupPromptFromPolygons(promptPolygons);
+                    IReadOnlyList<Vector2> foreground = groupPrompt.Foreground;
+                    IReadOnlyList<Rectangle> foregroundBoxes = groupPrompt.Box is Rectangle groupBox ? [groupBox] : [];
                     if (foreground.Count == 0)
                         return;
 
@@ -2084,8 +2164,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                             parentId);
                     SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
                         "auto-overlap-group", involved, parentId, visibleForPrompts, foreground, background));
+                    SegmentationDiag.Log($"auto-overlap-group boxes={foregroundBoxes.Count} clicks={foreground.Count}");
 
-                    var response = await session.SegmentAsync(foreground, background, processToken).ConfigureAwait(false);
+                    var response = await session.SegmentAsync(
+                        foreground,
+                        background,
+                        processToken,
+                        foregroundBoxes,
+                        (ulong)job.Ticket).ConfigureAwait(false);
                     if (response is null)
                         return;
 
@@ -2094,7 +2180,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
                         response,
-                        preserveHolesContainingWorldPoints: background);
+                        preserveHolesContainingWorldPoints: background,
+                        keepComponentsContainingWorldPoints: foreground);
                     Polygon polygon = polygons.FirstOrDefault();
                     if (polygon is null)
                     {
@@ -2159,7 +2246,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                         parentId,
                         overlapRound,
                         foreground,
-                        background);
+                        background)
+                    {
+                        RequestTicket = job.Ticket
+                    };
                     PublishProposal(group);
                 }
                 finally
@@ -2179,6 +2269,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             {
                 lock (overlapResubmitsInFlight)
                     overlapResubmitsInFlight.Remove(inFlightKey);
+                linkedCancellation?.Dispose();
+                job.Cancellation.Dispose();
             }
         }
 

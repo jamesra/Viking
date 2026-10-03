@@ -157,6 +157,12 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         public int SectionNumber { get; }
 
+        /// <summary>
+        /// Ticket of the segmentation request that produced this proposal, assigned before it is published.
+        /// See <see cref="RequestSupersession"/>. <see cref="RequestSupersession.Untracked"/> when unset.
+        /// </summary>
+        public long RequestTicket { get; set; } = RequestSupersession.Untracked;
+
         public DateTime LastModified { get; }
 
         public double CircleRadius { get; }

@@ -263,6 +263,67 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// Prompt for several overlapping polygons of one structure: SAM2 takes one box per call.
+        /// <paramref name="Box"/> is the bounding box of the largest polygon, or null when none qualifies.
+        /// <paramref name="Foreground"/> holds one interior click per polygon, the largest included.
+        /// </summary>
+        public readonly record struct GroupPrompt(IReadOnlyList<Vector2> Foreground, Rectangle? Box);
+
+        /// <summary>
+        /// One SAM2 box and one click per polygon. The largest polygon (by area) supplies the box;
+        /// every polygon, the largest included, supplies a single click inside it. Many boundary clicks
+        /// in one prompt (the old 17 per polygon) made SAM2 return a smaller mask than fewer clicks did.
+        /// Polygons with no interior point, or degenerate rings, are skipped.
+        /// </summary>
+        public static GroupPrompt CreateGroupPromptFromPolygons(IEnumerable<Polygon> polygons)
+        {
+            if (polygons is null)
+                return new GroupPrompt([], null);
+
+            List<Vector2> clicks = [];
+            Rectangle? box = null;
+            double largestArea = double.NegativeInfinity;
+            foreach (Polygon polygon in polygons)
+            {
+                if (polygon?.ExteriorRing is null || polygon.ExteriorRing.Length < 4)
+                    continue;
+
+                Vector2? click = InteriorPoint(polygon);
+                if (click is null)
+                    continue;
+
+                clicks.Add(click.Value);
+                if (polygon.Area > largestArea)
+                {
+                    largestArea = polygon.Area;
+                    box = polygon.BoundingBox;
+                }
+            }
+
+            return new GroupPrompt(clicks, box);
+        }
+
+        /// <summary>
+        /// The centroid when it lies inside the polygon. A concave ring can put it outside, so then the
+        /// midpoint between the centroid and an exterior vertex is tried until one is inside.
+        /// </summary>
+        private static Vector2? InteriorPoint(Polygon polygon)
+        {
+            Vector2 centroid = polygon.Centroid;
+            if (polygon.Contains(centroid))
+                return centroid;
+
+            foreach (Vector2 vertex in SubsampleClosedRing(polygon.ExteriorRing, 16))
+            {
+                Vector2 midpoint = (centroid + vertex) * 0.5f;
+                if (polygon.Contains(midpoint))
+                    return midpoint;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Drops avoid prompts that sit on a foreground point. Adjacent-section siblings of the
         /// same structure share XY with the selected circle; a red mark there cancels the center click.
         /// </summary>
