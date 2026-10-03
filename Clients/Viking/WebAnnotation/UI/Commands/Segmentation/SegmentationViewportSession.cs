@@ -582,6 +582,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 RecordSkip(SegmentationSkipKind.Cancelled);
                 return null;
             }
+            catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.FailedPrecondition &&
+                rpcEx.Status.Detail.StartsWith("NO_MATCHING_MASK", StringComparison.Ordinal))
+            {
+                // The server found no candidate mask that fits the prompt (the starting rectangle, or the
+                // clicks) and does not guess. There is nothing to retry; log what the server said.
+                SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.Status.Detail}");
+                Debug.WriteLine($"Segmentation found no matching mask: {rpcEx.Status.Detail}");
+                RecordSkip(SegmentationSkipKind.Error, rpcEx.Status.Detail);
+                return null;
+            }
             catch (Exception ex)
             {
                 SegmentationDiag.Log($"SegmentAsync error: {ex.GetType().Name}: {ex.Message}");
