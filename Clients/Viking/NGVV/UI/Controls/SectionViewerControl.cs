@@ -1388,11 +1388,17 @@ namespace Viking.UI.Controls
 
             // Use TaskCompletionSource to handle the asynchronous operation
             TaskCompletionSource<bool> taskCompletionSource = new();
+            // Every exit path must complete the source. Returning early on cancel used to leave the await below
+            // pending forever, which kept the auto-segment batch gate closed until Viking restarted.
+            using CancellationTokenRegistration cancelRegistration = token.Register(() => taskCompletionSource.TrySetCanceled());
             var result = this.BeginInvoke(new Action(() =>
             {
 
                 if (token.IsCancellationRequested)
+                {
+                    taskCompletionSource.TrySetCanceled();
                     return;
+                }
 
                 var originalScene = this.Scene;
                 try
@@ -1417,7 +1423,16 @@ namespace Viking.UI.Controls
                 }
             }));
 
-            await taskCompletionSource.Task;
+            try
+            {
+                await taskCompletionSource.Task;
+            }
+            catch (OperationCanceledException)
+            {
+                // GL resources are released on the UI thread.
+                this.BeginInvoke(new Action(renderTargetTile.Dispose));
+                return null;
+            }
 
             if (token.IsCancellationRequested)
                 return null;
@@ -1941,8 +1956,12 @@ namespace Viking.UI.Controls
             return listGetTextureTasks;
         }
 
+        /// <summary>Longest <see cref="PreloadSceneTexturesAsync"/> waits for texture loads before drawing with what it has.</summary>
+        private const int PreloadTextureTimeoutMs = 20000;
+
         /// <summary>
         /// Preloads texture for the visible tiles in the given section, awaiting completion.
+        /// Gives up after <see cref="PreloadTextureTimeoutMs"/> or when <paramref name="token"/> is cancelled.
         /// </summary>
         /// <param name="scene"></param>
         /// <param name="Z"></param>
@@ -1952,9 +1971,32 @@ namespace Viking.UI.Controls
         protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool HighestResolutionOnly, CancellationToken token)
         {
             var listGetTextureTasks = await QueueTextureLoadsForSectionAsync(scene, Z, HighestResolutionOnly, token);
+            if (listGetTextureTasks.Count == 0)
+                return;
+
+            // A texture load that never completes (cancelled section token, stalled request) must not wedge the
+            // caller. Auto-segment capture awaits this, and its batch gate then rejects every later batch.
+            using CancellationTokenSource stopWaiting = CancellationTokenSource.CreateLinkedTokenSource(token);
+            stopWaiting.CancelAfter(PreloadTextureTimeoutMs);
+            Task stopWaitingTask = Task.Delay(Timeout.Infinite, stopWaiting.Token);
+
             while (listGetTextureTasks.Count > 0)
             {
-                var completedTask = await Task.WhenAny(listGetTextureTasks).ConfigureAwait(false);
+                var waitList = new List<Task>(listGetTextureTasks.Count + 1);
+                foreach (Task<Texture2D> pending in listGetTextureTasks)
+                    waitList.Add(pending);
+                waitList.Add(stopWaitingTask);
+
+                Task finished = await Task.WhenAny(waitList).ConfigureAwait(false);
+                if (ReferenceEquals(finished, stopWaitingTask))
+                {
+                    Trace.WriteLine(
+                        $"PreloadSceneTextures gave up on {listGetTextureTasks.Count} texture load(s) " +
+                        $"(cancelled={token.IsCancellationRequested})");
+                    return;
+                }
+
+                var completedTask = (Task<Texture2D>)finished;
                 listGetTextureTasks.Remove(completedTask);
                 if (completedTask.IsFaulted && completedTask.Exception is AggregateException ex)
                 {
