@@ -44,11 +44,13 @@ class Segment(NamedTuple):
         score: The score of the segment
         mask: The mask of the segment as a PIL Image
         polygons: List of polygons representing the contours of the segment
+        holes: For each polygon, the rings of the holes inside it (empty for a solid piece)
     """
     index: int
     score: float
     mask: NDArray[bool]
     polygons: list[list[tuple[int, int]]] = []
+    holes: list[list[list[tuple[int, int]]]] = []
 
 
 def colorize_labels(labeled_image: NDArray) -> NDArray:
@@ -133,6 +135,12 @@ def show_labeled_image(original_image, labeled_image, segments, coordinates=None
                 random_color = np.random.rand(3,)  # RGB values between 0 and 1
                 # Draw the polygon with the random color
                 axes[0].plot(polygon_array[:, 0], polygon_array[:, 1], color=random_color, linewidth=2)
+        # Interior rings, dashed, so a mask with a hole in it is visibly not solid.
+        for polygon_holes in getattr(best_segment, 'holes', []):
+            for hole in polygon_holes:
+                hole_array = np.array(hole)
+                if len(hole_array) > 0:
+                    axes[0].plot(hole_array[:, 0], hole_array[:, 1], color='white', linewidth=1.5, linestyle='--')
 
     # Draw the input points on the overlay image
     if coordinates is not None and labels is not None:
@@ -197,7 +205,7 @@ async def segment_image(
     labels: Sequence[bool],
     multimask_output: bool = True,
     use_cache: bool = True,
-    tls: bool = False,
+    ca_cert: str | None = None,
 ) -> tuple[NDArray, Sequence[Segment]]:
     """
     Segment an image using the segmentation service.
@@ -210,7 +218,8 @@ async def segment_image(
         multimask_output: Whether to output multiple masks per point
         use_cache: If True (default), UploadImage then SegmentImage by image_id.
             If False, send image bytes on the segment request (re-encodes).
-        tls: Use TLS. Port 443 also selects TLS when this is false.
+        ca_cert: PEM file to trust as the server's root. Needed only for a self-signed
+            development certificate; leave None to use the system roots.
 
     Returns:
         A tuple containing:
@@ -237,7 +246,7 @@ async def segment_image(
     for label in labels:
         request.labels.append(label)
 
-    channel_factory = _channel_for(server_address, tls=tls)
+    channel_factory = _channel_for(server_address, ca_cert=ca_cert)
     async with channel_factory as channel:
         stub = SegmentationServiceStub(channel)
         image_id = 0
@@ -264,15 +273,18 @@ async def segment_image(
             segments = []
             for segment in response.segments:
                 polygons = []
+                holes = []
                 for polygon in segment.polygons:
                     points = [(point.x, point.y) for point in polygon.points]
                     polygons.append(points)
+                    holes.append([[(point.x, point.y) for point in hole.points] for hole in polygon.holes])
 
                 segments.append(Segment(
                     segment.index,
                     segment.score,
                     np.array(Image.open(io.BytesIO(segment.mask)), dtype=np.uint8) if segment.mask else None,
-                    polygons
+                    polygons,
+                    holes,
                 ))
 
             return labeled_image, segments
@@ -287,13 +299,18 @@ async def segment_image(
                 except grpc.RpcError:
                     pass
 
-def _channel_for(server_address: str, tls: bool):
-    """Open a TLS channel for --tls or port 443. Otherwise use cleartext."""
-    _host, separator, port = server_address.rpartition(":")
-    use_tls = tls or (separator == ":" and port == "443")
-    if use_tls:
-        return grpc.aio.secure_channel(server_address, grpc.ssl_channel_credentials())
-    return grpc.aio.insecure_channel(server_address)
+def _channel_for(server_address: str, ca_cert: str | None = None):
+    """Open a TLS channel. The server has no cleartext listener.
+
+    ``ca_cert`` is a PEM file to trust as the root, for a self-signed development server.
+    """
+    root_certificates = None
+    if ca_cert:
+        with open(ca_cert, "rb") as certificate_file:
+            root_certificates = certificate_file.read()
+    return grpc.aio.secure_channel(
+        server_address, grpc.ssl_channel_credentials(root_certificates=root_certificates)
+    )
 
 
 def pair_of_numbers(value: str):
@@ -309,8 +326,9 @@ async def main():
     """Main entry point for the client example."""
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Segment an image using the segmentation service.')
-    parser.add_argument('--server', type=str, default='localhost:40080',
-                        help='The address of the segmentation service (default: localhost:40080)')
+    parser.add_argument('--server', type=str, default='localhost:40443',
+                        help='The address of the segmentation service (default: localhost:40443). '
+                             'The connection is always TLS.')
     parser.add_argument('--image', type=str, required=True,
                         help='Path to the image file')
     parser.add_argument('--coordinates', type=pair_of_numbers, nargs='+', required=True,
@@ -321,8 +339,9 @@ async def main():
                         help='Output multiple masks per point')
     parser.add_argument('--inline', action='store_true',
                         help='Send image bytes on the segment request instead of UploadImage (slow path)')
-    parser.add_argument('--tls', action='store_true',
-                        help='Use TLS. Also implied when --server uses port 443')
+    parser.add_argument('--ca-cert', type=str, default=None,
+                        help='PEM file to trust as the server root, for a self-signed development '
+                             'certificate (python -m segmentation_server.dev_cert)')
     args = parser.parse_args()
 
     # Parse coordinates
@@ -331,7 +350,7 @@ async def main():
 
     # Parse labels
     if args.labels is None:
-        labels = [1] * len(coordinates) + 1
+        labels = [1] * len(coordinates)
     else:
         labels = list(map(int, args.labels.split(',')))
 
@@ -352,7 +371,7 @@ async def main():
         labels,
         args.multimask,
         use_cache=not args.inline,
-        tls=args.tls,
+        ca_cert=args.ca_cert,
     )
 
     if labeled_image is not None and segments is not None:
@@ -360,7 +379,7 @@ async def main():
         image = Image.open(args.image)
         image = image.convert('RGB')
         image_array = np.array(image)
-        show_labeled_image(image_array, segments[0].mask, segments, coordinates, labels)
+        show_labeled_image(image_array, labeled_image, segments, coordinates, labels)
 
 
 if __name__ == '__main__':

@@ -7,8 +7,8 @@ a GPU or the model weights.
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence, Tuple, TypedDict
+import os
+from typing import List, NamedTuple, Optional, Sequence, Tuple, TypedDict
 
 import cv2
 import numpy as np
@@ -24,12 +24,6 @@ Point = Tuple[int, int]
 # is 0; 1.0 trims the over-segmentation seen on RC2 (0.5 still ran large). Clients that do send a
 # value, including an explicit 0, override it.
 DEFAULT_MASK_THRESHOLD = 1.0
-ExtraPredict = Callable[
-    [Sequence[Point], Sequence[int]],
-    Tuple[NDArray[np.bool_], NDArray[np.float32]],
-]
-
-
 class SegmentInfo(TypedDict):
     index: int
     score: float
@@ -40,34 +34,37 @@ class SegmentInfo(TypedDict):
     height: int
 
 
-@dataclass(frozen=True)
-class UnionMaskStats:
-    """Cheap counters from a union pass; all O(n_masks + n_clicks) plus one count_nonzero."""
+DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
+_MAX_IMAGE_PIXELS_ENV = "SEGMENTATION_MAX_IMAGE_PIXELS"
 
-    n_initial_masks: int = 0
-    n_kept_initial: int = 0
-    n_extra_predicts: int = 0
-    n_extra_kept: int = 0
-    n_positives: int = 0
-    n_negatives: int = 0
-    n_positives_oob: int = 0
-    n_uncovered: int = 0
-    area: int = 0
-    score: float = 0.0
 
-    @property
-    def n_merged(self) -> int:
-        return self.n_kept_initial + self.n_extra_kept
+def max_image_pixels() -> int:
+    """Most pixels one decoded image may hold (SEGMENTATION_MAX_IMAGE_PIXELS, default 100 million).
 
-    def log_line(self, width: int, height: int) -> str:
-        return (
-            f"segment {width}x{height} "
-            f"fg={self.n_positives} bg={self.n_negatives} "
-            f"initial={self.n_initial_masks} kept={self.n_kept_initial} "
-            f"extra={self.n_extra_predicts} extra_kept={self.n_extra_kept} "
-            f"merged={self.n_merged} area={self.area} "
-            f"uncovered={self.n_uncovered}/{self.n_positives} "
-            f"oob={self.n_positives_oob} score={self.score:.3f}"
+    A few kilobytes of PNG can declare a canvas of billions of pixels. The size is read from the
+    header, before the decoder allocates anything, so an upload cannot make the process allocate
+    gigabytes. The largest image the server expects is a screen-sized viewport.
+    """
+    raw = os.environ.get(_MAX_IMAGE_PIXELS_ENV, "").strip()
+    if not raw:
+        return DEFAULT_MAX_IMAGE_PIXELS
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return DEFAULT_MAX_IMAGE_PIXELS
+
+
+def ensure_image_within_limit(image: Image.Image) -> None:
+    """Refuse an opened image whose declared size is over :func:`max_image_pixels`.
+
+    Raises:
+        ValueError: The width times height exceeds the limit. Nothing has been decoded yet.
+    """
+    width, height = image.size
+    limit = max_image_pixels()
+    if width * height > limit:
+        raise ValueError(
+            f"Image is {width}x{height} ({width * height} pixels); the limit is {limit} pixels."
         )
 
 
@@ -82,7 +79,8 @@ def prepare_image_for_sam2(image_data: bytes) -> NDArray[np.uint8]:
 
     Raises:
         OSError: If the bytes are not a readable image.
-        ValueError: If the decoded image cannot be converted to 3-channel RGB.
+        ValueError: If the image is over the pixel limit, or the decoded image cannot be
+            converted to 3-channel RGB.
     """
     try:
         image = Image.open(io.BytesIO(image_data))
@@ -91,20 +89,13 @@ def prepare_image_for_sam2(image_data: bytes) -> NDArray[np.uint8]:
         if any(keyword in error_msg for keyword in ['truncated', 'corrupted', 'invalid', 'cannot identify image file']):
             raise OSError(f"Image data is corrupted or truncated: {e}") from e
         raise
+    ensure_image_within_limit(image)
 
     if image.mode != 'RGB':
         image = image.convert('RGB')
 
     image_np: NDArray[np.uint8] = np.array(image)
-
-    if len(image_np.shape) == 3 and image_np.shape[2] == 4:
-        image_np = image_np[:, :, :3]
-    elif len(image_np.shape) == 3 and image_np.shape[2] == 1:
-        image_np = np.repeat(image_np, 3, axis=2)
-    elif len(image_np.shape) == 2:
-        image_np = np.repeat(image_np[:, :, np.newaxis], 3, axis=2)
-
-    if len(image_np.shape) != 3 or image_np.shape[2] != 3:
+    if image_np.ndim != 3 or image_np.shape[2] != 3:
         raise ValueError(f"Expected RGB image with 3 channels, got shape: {image_np.shape}")
 
     return image_np
@@ -122,20 +113,58 @@ def encode_png(array: NDArray) -> bytes:
     return encoded.tobytes()
 
 
-def mask_to_polygons(mask: MaskArray) -> List[PolygonArray]:
-    """Convert a boolean mask to simplified external-contour polygons."""
+class PolygonShape(NamedTuple):
+    """One connected piece of a mask: its outer ring and the rings of the holes inside it.
+
+    Rings are ``(N, 2)`` int32 arrays of ``(x, y)`` pixel coordinates in mask order (Y down).
+    ``holes`` is empty for a solid piece.
+    """
+
+    outer: PolygonArray
+    holes: List[PolygonArray]
+
+
+def _simplify_ring(contour: NDArray) -> Optional[PolygonArray]:
+    """Douglas-Peucker simplify one contour at 0.5% of its length; None when under 3 points remain."""
+    epsilon = 0.005 * cv2.arcLength(contour, True)
+    approx = cv2.approxPolyDP(contour, epsilon, True)
+    ring = approx.reshape(-1, 2)
+    return ring if len(ring) >= 3 else None
+
+
+def mask_to_polygons(mask: MaskArray) -> List[PolygonShape]:
+    """Convert a boolean mask to simplified polygons, each with its interior (hole) rings.
+
+    Uses the contour hierarchy: a boundary with no parent is an outer ring, and the boundaries
+    nested directly inside it are its holes. An island inside a hole is a new outer ring of its
+    own. A ring that simplifies to fewer than 3 points is dropped, and so are the holes of a
+    dropped outer ring.
+    """
     mask_uint8 = mask.astype(np.uint8) * 255
-    contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(mask_uint8, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if hierarchy is None:
+        return []
 
-    polygons: List[PolygonArray] = []
-    for contour in contours:
-        epsilon = 0.005 * cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon, True)
-        polygon = approx.reshape(-1, 2)
-        if len(polygon) >= 3:
-            polygons.append(polygon)
+    shapes: List[PolygonShape] = []
+    outer_slot: dict[int, int] = {}
+    for index, contour in enumerate(contours):
+        if int(hierarchy[0][index][3]) >= 0:
+            continue
+        ring = _simplify_ring(contour)
+        if ring is None:
+            continue
+        outer_slot[index] = len(shapes)
+        shapes.append(PolygonShape(ring, []))
 
-    return polygons
+    for index, contour in enumerate(contours):
+        parent = int(hierarchy[0][index][3])
+        if parent < 0 or parent not in outer_slot:
+            continue
+        ring = _simplify_ring(contour)
+        if ring is not None:
+            shapes[outer_slot[parent]].holes.append(ring)
+
+    return shapes
 
 
 def get_mask_bounds(mask: MaskArray) -> Tuple[int, int, int, int]:
@@ -150,47 +179,31 @@ def get_mask_bounds(mask: MaskArray) -> Tuple[int, int, int, int]:
 
 
 def fill_small_holes(mask: MaskArray, hole_threshold: float = 0.03) -> MaskArray:
-    """Fill interior holes smaller than hole_threshold of the True area.
+    """Fill interior holes smaller than ``hole_threshold`` of the True area, in pixels.
 
-    Does not drop disconnected components. Background between blobs is connected
-    to the image border, so it is not treated as a hole.
+    A hole is a piece of background that does not touch the image border, so the background
+    between blobs is never one. Disconnected components are kept. Background is joined with
+    4-connectivity, the dual of the 8-connected foreground the polygon extraction traces.
     """
     if not np.any(mask):
         return mask
 
-    mask_uint8 = mask.astype(np.uint8) * 255
-    holes_contours, holes_hierarchy = cv2.findContours(
-        ~mask_uint8,
-        cv2.RETR_CCOMP,
-        cv2.CHAIN_APPROX_SIMPLE,
-    )
-    if holes_hierarchy is None:
+    background = np.logical_not(mask).astype(np.uint8)
+    count, labels, stats, _centroids = cv2.connectedComponentsWithStats(background, connectivity=4)
+    if count <= 1:
         return mask
 
-    filled = mask_uint8.copy()
-    total_mask_area = float(np.sum(mask))
-    for i, contour in enumerate(holes_contours):
-        if holes_hierarchy[0][i][3] >= 0:
-            hole_area = cv2.contourArea(contour)
-            if hole_area < (total_mask_area * hole_threshold):
-                cv2.fillPoly(filled, [contour], 255)
-    return (filled > 0).astype(np.bool_)
-
-
-def cleanup_mask(mask: MaskArray, hole_threshold: float = 0.03) -> MaskArray:
-    """Keep the largest connected component, then fill small holes.
-
-    Do not use this after a positive-covering union; it would throw away extra blobs.
-    """
-    mask_uint8 = mask.astype(np.uint8) * 255
-    num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask_uint8, connectivity=8)
-
-    if num_labels <= 1:
+    on_border = np.unique(np.concatenate((labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1])))
+    limit = float(np.count_nonzero(mask)) * hole_threshold
+    fill = np.zeros(count, dtype=np.bool_)
+    for label in range(1, count):
+        if label in on_border:
+            continue
+        if stats[label, cv2.CC_STAT_AREA] < limit:
+            fill[label] = True
+    if not fill.any():
         return mask
-
-    largest_component_idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    largest = (labels == largest_component_idx).astype(np.bool_)
-    return fill_small_holes(largest, hole_threshold=hole_threshold)
+    return np.logical_or(mask, fill[labels])
 
 
 def as_bool_mask_batch(masks: NDArray) -> NDArray[np.bool_]:
@@ -211,103 +224,76 @@ def mask_contains_xy(mask: MaskArray, x: int, y: int) -> bool:
     return bool(mask[y, x])
 
 
-def _labeled_points(
-    coordinates: Sequence[Point],
-    labels: Sequence[int],
-    want_positive: bool,
-) -> List[Point]:
-    if want_positive:
-        return [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
-    return [coord for coord, label in zip(coordinates, labels) if int(label) != 1]
+class NoMatchingMask(Exception):
+    """No candidate mask fits the prompt, so there is no honest answer to return.
 
-
-def mask_covers_any_positive(mask: MaskArray, positives: Sequence[Point]) -> bool:
-    return any(mask_contains_xy(mask, x, y) for x, y in positives)
-
-
-def union_masks_covering_positives(
-    initial_masks: NDArray,
-    initial_scores: NDArray,
-    coordinates: Sequence[Point],
-    labels: Sequence[int],
-    extra_predict: Optional[ExtraPredict] = None,
-    empty_shape: Tuple[int, int] = (0, 0),
-) -> Tuple[MaskArray, UnionMaskStats]:
-    """OR full-frame masks that contain at least one positive click.
-
-    Starts from the all-points predict. For each positive still uncovered,
-    extra_predict is called with that click plus the shared negatives.
-    Extra masks are kept only when they contain a positive pixel.
+    The server reports it as ``FAILED_PRECONDITION`` with a ``NO_MATCHING_MASK`` prefix and logs
+    it. It is never papered over with an empty or best-effort mask.
     """
-    masks = as_bool_mask_batch(initial_masks)
-    scores = np.asarray(initial_scores, dtype=np.float32).reshape(-1)
-    positives = _labeled_points(coordinates, labels, want_positive=True)
-    negatives = _labeled_points(coordinates, labels, want_positive=False)
 
-    if masks.size == 0 or masks.ndim < 3 or masks.shape[0] == 0:
-        height, width = empty_shape
-        n_oob = sum(1 for x, y in positives if x < 0 or y < 0 or x >= width or y >= height)
-        stats = UnionMaskStats(
-            n_initial_masks=0,
-            n_positives=len(positives),
-            n_negatives=len(negatives),
-            n_positives_oob=n_oob,
-            n_uncovered=max(0, len(positives) - n_oob),
+
+def mask_covers_box(mask: MaskArray, box: Sequence[int]) -> bool:
+    """True when every pixel of the inclusive ``(x0, y0, x1, y1)`` box is set in ``mask``.
+
+    The box is in the mask's own pixel frame (Y down). A box that reaches outside the mask can
+    never be covered, because the pixels outside it are not set.
+    """
+    x0, y0, x1, y1 = (int(value) for value in box)
+    if x1 < x0 or y1 < y0:
+        return False
+    height, width = mask.shape[-2], mask.shape[-1]
+    if x0 < 0 or y0 < 0 or x1 >= width or y1 >= height:
+        return False
+    return bool(mask[y0:y1 + 1, x0:x1 + 1].all())
+
+
+def count_covered_points(mask: MaskArray, points: Sequence[Point]) -> int:
+    """How many of ``points`` fall on a set pixel of ``mask``."""
+    return sum(1 for x, y in points if mask_contains_xy(mask, x, y))
+
+
+def select_mask(
+    masks: NDArray,
+    scores: NDArray,
+    box: Optional[Sequence[int]] = None,
+    positives: Sequence[Point] = (),
+) -> int:
+    """Index of the one candidate mask that answers the prompt. The same rule for every RPC.
+
+    With a ``box`` (the starting rectangle): of the masks that cover every pixel of it, the one
+    with the highest score. Auto-segmentation masks grow past their rectangle, so a mask that
+    does not cover it is not an answer to it.
+
+    Without a box: the mask that covers the most ``positives`` (foreground points), ties broken by
+    score. A mask must cover at least one.
+
+    Nothing is combined: the chosen mask is returned as SAM2 made it, and nothing is searched for
+    when no candidate qualifies.
+
+    Raises:
+        NoMatchingMask: No candidate satisfies the rule.
+    """
+    batch = as_bool_mask_batch(masks)
+    score_vec = np.asarray(scores, dtype=np.float32).reshape(-1)
+    count = min(int(batch.shape[0]) if batch.ndim == 3 else 0, int(score_vec.shape[0]))
+    if count == 0:
+        raise NoMatchingMask("SAM2 returned no candidate masks.")
+
+    if box is not None:
+        eligible = [i for i in range(count) if mask_covers_box(batch[i], box)]
+        if not eligible:
+            raise NoMatchingMask(
+                f"None of the {count} candidate mask(s) covers the whole starting rectangle {tuple(int(v) for v in box)}."
+            )
+        return max(eligible, key=lambda i: (float(score_vec[i]), -i))
+
+    covered = [count_covered_points(batch[i], positives) for i in range(count)]
+    best = max(covered)
+    if best == 0:
+        raise NoMatchingMask(
+            f"None of the {count} candidate mask(s) covers any of the {len(positives)} foreground point(s)."
         )
-        return np.zeros(empty_shape, dtype=np.bool_), stats
-
-    shape = (int(masks.shape[1]), int(masks.shape[2]))
-    height, width = shape
-    n_oob = sum(1 for x, y in positives if x < 0 or y < 0 or x >= width or y >= height)
-
-    union = np.zeros(shape, dtype=np.bool_)
-    best_score = 0.0
-    n_kept_initial = 0
-    for mask, score in zip(masks, scores):
-        if positives and not mask_covers_any_positive(mask, positives):
-            continue
-        if not positives and not np.any(mask):
-            continue
-        union |= mask
-        best_score = max(best_score, float(score))
-        n_kept_initial += 1
-
-    n_extra_predicts = 0
-    n_extra_kept = 0
-    if extra_predict is not None and positives:
-        for click in positives:
-            if mask_contains_xy(union, click[0], click[1]):
-                continue
-            n_extra_predicts += 1
-            extra_coords: List[Point] = [click, *negatives]
-            extra_labels: List[int] = [1, *[0] * len(negatives)]
-            extra_masks, extra_scores = extra_predict(extra_coords, extra_labels)
-            extra_batch = as_bool_mask_batch(extra_masks)
-            extra_score_vec = np.asarray(extra_scores, dtype=np.float32).reshape(-1)
-            for extra_mask, extra_score in zip(extra_batch, extra_score_vec):
-                if not mask_covers_any_positive(extra_mask, positives):
-                    continue
-                union |= extra_mask
-                best_score = max(best_score, float(extra_score))
-                n_extra_kept += 1
-
-    n_uncovered = sum(
-        1 for x, y in positives
-        if 0 <= x < width and 0 <= y < height and not mask_contains_xy(union, x, y)
-    )
-    stats = UnionMaskStats(
-        n_initial_masks=int(masks.shape[0]),
-        n_kept_initial=n_kept_initial,
-        n_extra_predicts=n_extra_predicts,
-        n_extra_kept=n_extra_kept,
-        n_positives=len(positives),
-        n_negatives=len(negatives),
-        n_positives_oob=n_oob,
-        n_uncovered=n_uncovered,
-        area=int(np.count_nonzero(union)),
-        score=best_score,
-    )
-    return union, stats
+    return max((i for i in range(count) if covered[i] == best), key=lambda i: (float(score_vec[i]), -i))
 
 
 def combined_mask_to_segments(
@@ -334,7 +320,11 @@ def process_masks(
     scores: NDArray[np.float32],
     empty_shape: Tuple[int, int] = (0, 0)
 ) -> Tuple[LabeledImage, List[SegmentInfo]]:
-    """Paint non-overlapping labels (1..N) from masks sorted by caller, skipping empty masks."""
+    """Paint non-overlapping labels (1..N) from masks sorted by caller, skipping empty masks.
+
+    Labels are dense: the k-th non-empty mask is label k + 1 and segment ``index`` k, however many
+    empty masks came before it, so ``index + 1`` is always the pixel value in the labeled image.
+    """
     if masks.size == 0 or len(masks.shape) < 3:
         empty_image: LabeledImage = np.zeros(empty_shape, dtype=np.uint16)
         return empty_image, []
@@ -347,13 +337,14 @@ def process_masks(
         if not np.any(mask):
             continue
 
-        label_id = i + 1
+        slot = len(segments)
+        label_id = slot + 1
         unlabeled_pixels = np.logical_and(mask, labeled_image == 0)
         labeled_image[unlabeled_pixels] = label_id
 
         x, y, width, height = get_mask_bounds(mask)
         segments.append({
-            'index': i,
+            'index': slot,
             'score': float(scores[i]),
             'mask': mask,
             'x': x,

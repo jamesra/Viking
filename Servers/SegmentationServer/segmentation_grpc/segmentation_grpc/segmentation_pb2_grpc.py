@@ -102,6 +102,14 @@ class SegmentationServiceServicer:
         waits for the client's TilesAnswer, and continues the same growth with them. When nothing more
         is needed it streams the finished SegmentationResponse and ends the call.
         The client sends exactly one `start`, then one `answer` per TilesNeeded.
+
+        Ending: after `result` the call ends OK. A client that cancels gets no result (the call is gone).
+        A client that leaves TilesNeeded unanswered for the server's idle limit (default 60 s) gets
+        DEADLINE_EXCEEDED. Other statuses: INVALID_ARGUMENT for a malformed conversation or request,
+        NOT_FOUND ("TILE_NOT_FOUND row=.. col=..") when a tile holding a foreground point is not cached,
+        FAILED_PRECONDITION ("NO_MATCHING_MASK ...") when the starting cell yields no mask that fits the
+        prompt, RESOURCE_EXHAUSTED when the request is over the server's size limits, UNAVAILABLE when the
+        GPU is lost. This RPC replaced the unary SegmentTiles, which no longer exists.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

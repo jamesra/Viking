@@ -10,12 +10,13 @@ from dataclasses import dataclass
 from segmentation_grpc.generate_grpc import generate_grpc_code
 from segmentation_server.compile_config import env_compile_image_encoder_enabled
 from segmentation_server.demo_site import DEFAULT_DEMO_PORT, demo_enabled
+from segmentation_server.healthcheck import tls_port
 from segmentation_server.image_cache import (
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_MEMORY_BYTES,
     DEFAULT_TTL_SECONDS,
 )
-from segmentation_server.server import serve
+from segmentation_server.server import DEFAULT_TLS_PORT, TlsConfigurationError, serve
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +33,16 @@ class CLIArgs:
     compile_image_encoder: bool
     demo_site: bool
     demo_port: int
+    demo_bind: str | None = None
 
 
 async def main() -> None:
     """Parse CLI flags and start the gRPC server."""
     parser = argparse.ArgumentParser(description='Start the segmentation service.')
-    parser.add_argument('--port', type=int, default=50051,
-                        help='The port to listen on (default: 50051)')
+    parser.add_argument('--tls-port', type=int, default=tls_port(),
+                        help=f'The TLS gRPC port to listen on (default: SEGMENTATION_TLS_PORT, else {DEFAULT_TLS_PORT}). '
+                             'The container health check dials this port.')
+    parser.add_argument('--port', type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument('--workers', type=int, default=10,
                         help='gRPC callback thread pool size (default: 10)')
     parser.add_argument(
@@ -94,7 +98,21 @@ async def main() -> None:
         default=DEFAULT_DEMO_PORT,
         help=f'HTTPS port for the demo page (default: {DEFAULT_DEMO_PORT})',
     )
+    parser.add_argument(
+        '--demo-bind',
+        type=str,
+        default=None,
+        help=(
+            'Address the demo page listens on (default: SEGMENTATION_DEMO_BIND, else 127.0.0.1). '
+            'A container that publishes the port needs 0.0.0.0; set SEGMENTATION_DEMO_TOKEN when it does.'
+        ),
+    )
     args = parser.parse_args()
+    if args.port is not None:
+        parser.error(
+            "--port named the cleartext gRPC listener, which no longer exists. "
+            "Use --tls-port for the TLS listener (default 443) and drop the cleartext port mapping."
+        )
 
     compile_image_encoder = (
         args.compile_image_encoder
@@ -102,7 +120,7 @@ async def main() -> None:
         else env_compile_image_encoder_enabled()
     )
     cli_args = CLIArgs(
-        port=args.port,
+        port=args.tls_port,
         workers=args.workers,
         inference_workers=args.inference_workers,
         generate_grpc=args.generate_grpc,
@@ -112,6 +130,7 @@ async def main() -> None:
         compile_image_encoder=compile_image_encoder,
         demo_site=demo_enabled(args.demo_site),
         demo_port=args.demo_port,
+        demo_bind=args.demo_bind,
     )
 
     if cli_args.generate_grpc:
@@ -123,7 +142,7 @@ async def main() -> None:
         logger.info("Using committed gRPC stubs (pass --generate-grpc to regenerate)")
 
     logger.info(
-        "Starting segmentation service on port %s with %s gRPC workers and %s inference workers "
+        "Starting segmentation service (TLS gRPC) on port %s with %s gRPC workers and %s inference workers "
         "(cache ttl=%ss, max_memory=%s bytes, max_images=%s, compile_image_encoder=%s, "
         "demo_site=%s, demo_port=%s)",
         cli_args.port,
@@ -146,6 +165,7 @@ async def main() -> None:
         compile_image_encoder=cli_args.compile_image_encoder,
         demo_site=cli_args.demo_site,
         demo_port=cli_args.demo_port,
+        demo_bind=cli_args.demo_bind,
     )
 
 
@@ -155,7 +175,11 @@ def run() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except TlsConfigurationError as error:
+        logger.critical("Cannot start: %s", error)
+        raise SystemExit(2) from error
 
 
 if __name__ == '__main__':

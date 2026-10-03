@@ -17,6 +17,7 @@ from segmentation_server.cell_grid import (
     tile_of_point,
     tiles_for_cell,
 )
+from segmentation_server.mask_utils import NoMatchingMask
 from segmentation_server.tile_growth import (
     MAX_PREDICTIONS_PER_CELL,
     GrowthCancelled,
@@ -99,8 +100,8 @@ class _StingyOwner(World):
         self._stingy = stingy
         self._shrink = shrink
 
-    def predict(self, row, col, points, labels):
-        mask, logits, score = super().predict(row, col, points, labels)
+    def predict(self, row, col, points, labels, box=None):
+        mask, logits, score = super().predict(row, col, points, labels, box=box)
         if Cell(row, col) == self._stingy:
             size = 2 * self._shrink + 1
             full = mask
@@ -128,8 +129,8 @@ def test_margin_pixels_from_a_neighbor_fill_in_what_the_owner_cell_left_out() ->
 class _UnsureMargin(_StingyOwner):
     """Like ``_StingyOwner``, but every window's outer 256 px margin has only weak logits."""
 
-    def predict(self, row, col, points, labels):
-        mask, logits, score = super().predict(row, col, points, labels)
+    def predict(self, row, col, points, labels, box=None):
+        mask, logits, score = super().predict(row, col, points, labels, box=box)
         weak = np.full(logits.shape, True)
         weak[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE] = False
         logits = np.where(weak & mask, np.float32(0.5), logits)
@@ -157,8 +158,8 @@ def test_margin_pixels_below_the_logit_gate_are_left_to_the_cell_that_owns_them(
 
 def test_a_prediction_without_logits_contributes_only_its_core() -> None:
     class NoLogits(_StingyOwner):
-        def predict(self, row, col, points, labels):
-            mask, _logits, score = super().predict(row, col, points, labels)
+        def predict(self, row, col, points, labels, box=None):
+            mask, _logits, score = super().predict(row, col, points, labels, box=box)
             return mask, None, score
 
     truth, world = _bar_world(NoLogits)
@@ -181,8 +182,8 @@ class _LeakyNeighbors(World):
         super().__init__(truth)
         self._owner = owner
 
-    def predict(self, row, col, points, labels):
-        mask, logits, score = super().predict(row, col, points, labels)
+    def predict(self, row, col, points, labels, box=None):
+        mask, logits, score = super().predict(row, col, points, labels, box=box)
         if Cell(row, col) != self._owner and mask.any():
             x0, y0 = col * 512, row * 512
             top = 1023 - (2759 - y0)
@@ -276,6 +277,54 @@ def test_the_prediction_budget_bounds_the_walk() -> None:
     _grow(world, circle_clicks(2048, 2048, 100), max_predictions=5)
 
     assert len(world.calls) <= 5
+
+
+def _grow_with_deadline(world: World, clicks, seconds: float = 20.0, **kwargs):
+    """Run a growth on a thread so a walk that never ends fails the test instead of hanging it."""
+    import threading
+
+    box: dict = {}
+
+    def run() -> None:
+        try:
+            box["result"] = _grow(world, clicks, **kwargs)
+        except BaseException as error:  # noqa: BLE001 - reported to the test below
+            box["error"] = error
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(seconds)
+    assert not worker.is_alive(), "the growth walk did not terminate"
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
+
+
+@pytest.mark.parametrize("budget", [{"max_cells": 1}, {"max_predictions": 1}])
+def test_a_foreground_click_the_budget_never_reaches_does_not_hang_the_walk(budget) -> None:
+    near = ellipse(1500, 1500, 150, 150, 0.0)
+    far = ellipse(3000, 3000, 150, 150, 0.0)
+    world = World(near | far)
+    clicks = circle_clicks(1500, 1500, 60) + circle_clicks(3000, 3000, 60)
+
+    result = _grow_with_deadline(world, clicks, **budget)
+
+    mask = world.to_truth_frame(result)
+    assert iou(mask & near, near) >= 0.99
+    assert not (mask & far).any()
+    assert len(world.calls) == 1
+
+
+def test_a_walk_that_can_make_no_more_predictions_still_honors_a_cancel() -> None:
+    near = ellipse(1500, 1500, 150, 150, 0.0)
+    far = ellipse(3000, 3000, 150, 150, 0.0)
+    world = World(near | far)
+    clicks = circle_clicks(1500, 1500, 60) + circle_clicks(3000, 3000, 60)
+
+    with pytest.raises(GrowthCancelled):
+        _grow_with_deadline(
+            world, clicks, max_cells=1, should_stop=lambda: len(world.calls) >= 1
+        )
 
 
 def test_a_hairpin_whose_second_arm_returns_through_visited_cores_is_found() -> None:
@@ -471,3 +520,54 @@ def test_the_fused_mosaic_origin_and_size_follow_the_cores() -> None:
     )
     assert set(result.cells) == {owner}
     assert result.cells[owner].core.shape == (CORE_SIZE, CORE_SIZE)
+
+class _RejectingWorld(World):
+    """Answers like World, but raises NoMatchingMask for the cells in ``reject``."""
+
+    def __init__(self, truth_up, reject, **kwargs) -> None:
+        super().__init__(truth_up, **kwargs)
+        self.reject = set(reject)
+
+    def predict(self, row: int, col: int, points, labels, box=None):
+        if Cell(row, col) in self.reject:
+            self.calls.append((Cell(row, col), list(points), list(labels)))
+            raise NoMatchingMask(f"nothing fits cell {row},{col}")
+        return super().predict(row, col, points, labels, box=box)
+
+
+def test_a_no_match_for_the_starting_cell_fails_the_walk() -> None:
+    start = cell_of_point(2048, 2048)
+    world = _RejectingWorld(ellipse(2048, 2048, 600, 400, 0.0), reject={start})
+
+    with pytest.raises(NoMatchingMask):
+        _grow(world, circle_clicks(2048, 2048, 90))
+
+    assert [cell for cell, _p, _l in world.calls] == [start]
+
+
+def test_a_no_match_for_a_continuation_cell_skips_that_cell_and_the_walk_carries_on(caplog) -> None:
+    truth = ellipse(2048, 2048, 700, 300, 0.0)
+    start = cell_of_point(2048, 2048)
+    skipped = Cell(start.row, start.col + 1)
+    world = _RejectingWorld(truth, reject={skipped})
+
+    with caplog.at_level("WARNING"):
+        result = _grow_with_deadline(world, circle_clicks(2048, 2048, 90))
+
+    assert result.mask.any()
+    assert any(f"row={skipped.row} col={skipped.col} skipped" in r.getMessage() for r in caplog.records)
+    rejected = [seam for seam in result.seams if seam.outcome == "rejected"]
+    assert rejected and all(seam.cell == skipped for seam in rejected)
+    # Each edge into the skipped cell is tried once; a rejected range is claimed, not retried.
+    assert len({(seam.parent, seam.side) for seam in rejected}) == len(rejected)
+    assert len(rejected) <= 4
+
+
+def test_rejected_predictions_count_against_the_prediction_budget() -> None:
+    truth = ellipse(2048, 2048, 900, 900, 0.0)
+    start = cell_of_point(2048, 2048)
+    world = _RejectingWorld(truth, reject={Cell(start.row + dr, start.col + dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1)} - {start})
+
+    _grow_with_deadline(world, circle_clicks(2048, 2048, 100), max_predictions=3)
+
+    assert len(world.calls) <= 3

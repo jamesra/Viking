@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Grpc.Core;
 using Viking.DependencyInjection;
 
@@ -12,6 +13,12 @@ namespace Viking.Services.Grpc
     {
         /// <summary>Max message size (64 MB) to match the segmentation server configuration.</summary>
         private const int MaxMessageSizeBytes = 64 * 1024 * 1024;
+
+        /// <summary>The port the segmentation server published for its cleartext listener before it was removed.</summary>
+        internal const int LegacyCleartextPort = 40080;
+
+        /// <summary>The port the segmentation server publishes for gRPC over TLS.</summary>
+        internal const int TlsPort = 40443;
 
         private static readonly ChannelOption[] SegmentationChannelOptions =
         {
@@ -38,23 +45,31 @@ namespace Viking.Services.Grpc
 
             string channelKey = (useTls ? "https://" : "http://") + serviceUrl;
 
-            lock (_lock)
+            Channel? stale = null;
+            try
             {
-                if (_channel is null ||
-                    _currentServiceUrl != channelKey ||
-                    _channel.State == ChannelState.Shutdown ||
-                    _channel.State == ChannelState.TransientFailure)
+                lock (_lock)
                 {
-                    ShutdownChannelInternal();
+                    if (_channel is null ||
+                        _currentServiceUrl != channelKey ||
+                        _channel.State == ChannelState.Shutdown ||
+                        _channel.State == ChannelState.TransientFailure)
+                    {
+                        stale = DetachChannelUnlocked();
 
-                    ChannelCredentials credentials = useTls ? new SslCredentials() : ChannelCredentials.Insecure;
-                    _channel = new Channel(serviceUrl, credentials, SegmentationChannelOptions);
-                    _currentServiceUrl = channelKey;
+                        ChannelCredentials credentials = useTls ? new SslCredentials() : ChannelCredentials.Insecure;
+                        _channel = new Channel(serviceUrl, credentials, SegmentationChannelOptions);
+                        _currentServiceUrl = channelKey;
 
-                    Trace.WriteLine($"Created new shared gRPC channel to {serviceUrl} (tls={useTls})");
+                        Trace.WriteLine($"Created new shared gRPC channel to {serviceUrl} (tls={useTls})");
+                    }
+
+                    return _channel;
                 }
-
-                return _channel;
+            }
+            finally
+            {
+                ShutdownDetached(stale, wait: false);
             }
         }
 
@@ -68,12 +83,9 @@ namespace Viking.Services.Grpc
                 return false;
             }
 
-            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            return parsedUri.Port == 443;
+            // The segmentation server no longer has a cleartext listener, so every endpoint that
+            // parses is dialed with TLS, whatever scheme it was saved with.
+            return true;
         }
 
         /// <inheritdoc />
@@ -90,21 +102,29 @@ namespace Viking.Services.Grpc
         /// <inheritdoc />
         public void ResetChannel()
         {
+            Channel? stale;
             lock (_lock)
             {
-                ShutdownChannelInternal();
+                stale = DetachChannelUnlocked();
                 _currentServiceUrl = null;
             }
+
+            // Detached under the lock, shut down after it: a caller on the UI thread is not held for the
+            // shutdown and other threads can create the new channel at once.
+            ShutdownDetached(stale, wait: false);
         }
 
         /// <inheritdoc />
         public void Shutdown()
         {
+            Channel? stale;
             lock (_lock)
             {
-                ShutdownChannelInternal();
+                stale = DetachChannelUnlocked();
                 _currentServiceUrl = null;
             }
+
+            ShutdownDetached(stale, wait: true);
         }
 
         /// <summary>
@@ -125,6 +145,14 @@ namespace Viking.Services.Grpc
             }
 
             string authority = parsedUri.Authority;
+            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+                parsedUri.Port == LegacyCleartextPort)
+            {
+                // A saved endpoint for the old cleartext port moves to the TLS port.
+                string host = parsedUri.HostNameType == UriHostNameType.IPv6 ? $"[{parsedUri.Host}]" : parsedUri.Host;
+                authority = $"{host}:{TlsPort}";
+            }
+
             string absolutePath = parsedUri.AbsolutePath;
 
             if (string.Equals(absolutePath, "/", StringComparison.Ordinal))
@@ -154,25 +182,44 @@ namespace Viking.Services.Grpc
             return Uri.TryCreate(endpointToParse, UriKind.Absolute, out parsedUri) && parsedUri is not null;
         }
 
-        private void ShutdownChannelInternal()
+        /// <summary>Takes the current channel out of service. Caller holds <c>_lock</c> and shuts the result down after releasing it.</summary>
+        private Channel? DetachChannelUnlocked()
         {
-            if (_channel is null || _channel.State == ChannelState.Shutdown)
+            Channel? channel = _channel;
+            _channel = null;
+            return channel;
+        }
+
+        /// <summary>
+        /// Shuts down a channel that is no longer reachable through the manager. Never call while holding
+        /// <c>_lock</c>. With <paramref name="wait"/> false the shutdown runs in the background and a failure is logged.
+        /// </summary>
+        private static void ShutdownDetached(Channel? channel, bool wait)
+        {
+            if (channel is null || channel.State == ChannelState.Shutdown)
             {
                 return;
             }
 
             try
             {
-                _channel.ShutdownAsync().Wait(TimeSpan.FromSeconds(5));
-                Trace.WriteLine("Shared gRPC channel shut down successfully");
+                Task shutdown = channel.ShutdownAsync();
+                if (wait)
+                {
+                    shutdown.Wait(TimeSpan.FromSeconds(5));
+                    Trace.WriteLine("Shared gRPC channel shut down successfully");
+                    return;
+                }
+
+                _ = shutdown.ContinueWith(
+                    task => Trace.WriteLine(task.IsFaulted
+                        ? $"Error shutting down shared gRPC channel: {task.Exception?.GetBaseException().Message}"
+                        : "Shared gRPC channel shut down successfully"),
+                    TaskScheduler.Default);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"Error shutting down shared gRPC channel: {ex.Message}");
-            }
-            finally
-            {
-                _channel = null;
             }
         }
     }

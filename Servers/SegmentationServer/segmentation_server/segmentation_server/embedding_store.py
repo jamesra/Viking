@@ -27,7 +27,15 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_BYTES = 32 * 1024**3
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 _MODE_RE = re.compile(r"^[a-z0-9_-]{1,32}$")
-_STAMP_RE = re.compile(r"^[0-9a-f]{16}$")
+# Current stamps are 32 hex characters. Shorter ones from older releases still match so that
+# their folders are purged once instead of lingering.
+_STAMP_RE = re.compile(r"^[0-9a-f]{16,64}$")
+# How an embedding is keyed inside a stamp's folder. It is part of the stamp, so changing it
+# makes every older folder look like another checkpoint's and the next start purges it. Version 2
+# keys on a hash of the decoded pixels; version 1 hashed the encoded PNG bytes.
+KEY_SCHEME = "pixels-v2"
+# No real embedding is near this. A bigger file is not read into memory.
+MAX_BLOB_BYTES = 1024**3
 
 
 def _directory_bytes(directory: Path) -> int:
@@ -46,10 +54,10 @@ def checkpoint_stamp(checkpoint_path: str, model_cfg: str) -> str:
     """Stable id for one weights file. A replaced checkpoint gets a new stamp."""
     try:
         stat = os.stat(checkpoint_path)
-        raw = f"{model_cfg}|{stat.st_size}|{stat.st_mtime_ns}"
+        raw = f"{KEY_SCHEME}|{model_cfg}|{stat.st_size}|{stat.st_mtime_ns}"
     except OSError:
-        raw = f"{model_cfg}|missing|{checkpoint_path}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+        raw = f"{KEY_SCHEME}|{model_cfg}|missing|{checkpoint_path}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
 def open_embedding_store(checkpoint_path: str, model_cfg: str) -> Optional["EmbeddingStore"]:
@@ -125,38 +133,76 @@ class EmbeddingStore:
         return self._total_bytes
 
     def touch(self, digest: str, mode: str) -> None:
-        """Refresh mtime so a GPU-hot cell is not the first disk eviction."""
+        """Refresh mtime so a GPU-hot cell is not the first disk eviction.
+
+        Runs under the store lock, the same lock eviction holds, so a file cannot be evicted
+        between being found and being refreshed. A file that is indexed but gone from disk is
+        dropped from the index.
+        """
         path = self._path(digest, mode)
-        if path is None or not path.is_file():
-            return
-        now = time.time()
-        try:
-            os.utime(path, (now, now))
-        except OSError:
+        if path is None:
             return
         with self._lock:
+            if not path.is_file():
+                self._delete(str(path))
+                return
+            now = time.time()
+            try:
+                os.utime(path, (now, now))
+            except OSError:
+                self._delete(str(path))
+                return
             record = self._files.get(str(path))
             if record is not None:
                 record.mtime = now
 
     def try_load(self, digest: str, mode: str) -> Optional[bytes]:
-        """Return the blob for this image hash, or None on miss or a bad file."""
+        """Return the blob for this image hash, or None on miss, a bad file, or an absurd size.
+
+        A file that cannot be read, or is indexed but missing, leaves the index so its size no
+        longer counts toward the cap.
+        """
         path = self._path(digest, mode)
-        if path is None or not path.is_file():
+        if path is None:
+            return None
+        try:
+            size = path.stat().st_size
+        except OSError:
+            with self._lock:
+                self._delete(str(path))
+            return None
+        if size > MAX_BLOB_BYTES:
+            logger.warning("Embedding disk file too large to load path=%s bytes=%s", path, size)
+            with self._lock:
+                self._delete(str(path))
             return None
         try:
             data = path.read_bytes()
         except OSError:
             logger.warning("Embedding disk read failed path=%s", path)
+            with self._lock:
+                self._delete(str(path))
             return None
         self.touch(digest, mode)
         return data
 
-    def save(self, digest: str, blob: bytes, mode: str) -> None:
-        """Write ``blob`` atomically, then evict oldest files until under the cap."""
+    def save(self, digest: str, blob: bytes, mode: str) -> bool:
+        """Write ``blob`` atomically, then evict oldest files until under the cap.
+
+        A blob bigger than the whole cap is not written: it could never fit, and writing it
+        would leave the store permanently over the cap. Returns True when the blob was stored.
+        """
         path = self._path(digest, mode)
         if path is None:
             raise ValueError(f"invalid embedding key digest={digest!r} mode={mode!r}")
+        if self._max_bytes is not None and len(blob) > self._max_bytes:
+            logger.warning(
+                "Embedding disk blob not stored: %s bytes is larger than the %s byte cap (path=%s)",
+                len(blob),
+                self._max_bytes,
+                path,
+            )
+            return False
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".tmp")
         temporary.write_bytes(blob)
@@ -169,6 +215,7 @@ class EmbeddingStore:
             self._files[str(path)] = _FileRecord(path=path, size=stat.st_size, mtime=stat.st_mtime)
             self._total_bytes += stat.st_size
             self._evict_oldest(protected=str(path))
+        return True
 
     def discard(self, digest: str, mode: str) -> None:
         """Remove one blob. Used when a file cannot be decoded."""

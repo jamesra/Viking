@@ -24,6 +24,10 @@ SEGMENTATION_SSL_KEY_CONTAINER_PATH=/etc/letsencrypt/live/segmentation.codepharm
 # Optional HTTPS point-prompt page on container port 8443 (host 40444).
 # Uses the PEM paths above. Leave unset or 0 to keep the listener down.
 #SEGMENTATION_DEMO_SITE=1
+# The page listens on loopback inside the container unless this says otherwise, so the published
+# port cannot reach it. To expose it, bind all addresses AND set a token (the page has no login).
+#SEGMENTATION_DEMO_BIND=0.0.0.0
+#SEGMENTATION_DEMO_TOKEN=
 
 # Fine-tuned SAM2 weights. Host folder is mounted read-only at /models.
 # best_TEM_model.pt must be Meta {"model": state_dict} (sam2-em-export-serve).

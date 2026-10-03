@@ -14,14 +14,12 @@ from segmentation_server.cell_grid import (
     Cell,
     TileIndex,
     cell_of_point,
-    core_contacts,
     core_origin,
     crop_window,
     in_window,
     is_aligned,
     mosaic_to_window,
     neighbor_cells,
-    sample_ring_seeds,
     tile_of_point,
     tiles_for_cell,
     window_origin,
@@ -142,22 +140,6 @@ def test_canvas_read_assembles_blocks_across_cores() -> None:
     assert not canvas.read(lx - 10, ly, 5, 5).any()
 
 
-def test_core_contacts_name_every_touched_edge_and_corner() -> None:
-    core = np.zeros((CORE_SIZE, CORE_SIZE), dtype=bool)
-    assert core_contacts(core) == []
-
-    core[100:200, 100:200] = True
-    assert core_contacts(core) == []
-
-    core[-1, 300] = True
-    core[300, 0] = True
-    assert core_contacts(core) == [(1, 0), (0, -1)]
-
-    corner = np.zeros_like(core)
-    corner[0, -1] = True
-    assert core_contacts(corner) == [(-1, 0), (0, 1), (-1, 1)]
-
-
 def test_or_window_splits_a_window_across_the_cores_it_overlaps_and_never_clears() -> None:
     canvas = Canvas()
     cell = Cell(2, 2)
@@ -236,85 +218,3 @@ def test_a_vetoed_pixel_cannot_be_added_by_a_neighbor_later_and_none_clears_the_
 def _blob(window: np.ndarray, cx: int, cy: int, radius: int) -> None:
     ys, xs = np.ogrid[:CELL_SIZE, :CELL_SIZE]
     window |= (xs - cx) ** 2 + (ys - cy) ** 2 <= radius ** 2
-
-
-def test_ring_seeds_pick_the_center_of_each_separate_piece_in_the_margin() -> None:
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    _blob(window, 100, 500, 90)
-    _blob(window, 900, 150, 60)
-    x0, y0 = 4096, 8192
-
-    seeds = sample_ring_seeds(window, x0, y0)
-
-    local = [(x - x0, y - y0) for x, y in seeds]
-    assert 2 <= len(seeds) <= 6
-    assert all(window[y, x] for x, y in local)
-    first = [p for p in local if abs(p[0] - 100) < 100 and abs(p[1] - 500) < 100]
-    second = [p for p in local if abs(p[0] - 900) < 100 and abs(p[1] - 150) < 100]
-    assert 1 <= len(first) <= 3 and 1 <= len(second) <= 3
-    assert abs(first[0][0] - 100) <= 5 and abs(first[0][1] - 500) <= 5
-    assert abs(second[0][0] - 900) <= 5 and abs(second[0][1] - 150) <= 5
-    assert seeds == sample_ring_seeds(window, x0, y0)
-
-
-def test_ring_seeds_use_the_margin_part_of_a_piece_that_continues_into_the_core() -> None:
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    window[480:540, 0:700] = True
-
-    seeds = sample_ring_seeds(window, 0, 0)
-
-    assert seeds
-    for x, _y in seeds:
-        assert x < CORE_MARGIN or x >= CELL_SIZE - CORE_MARGIN
-
-
-def test_ring_seeds_keep_a_piece_that_lies_wholly_in_the_core() -> None:
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    _blob(window, 512, 512, 60)
-
-    seeds = sample_ring_seeds(window, 0, 0)
-
-    assert len(seeds) >= 1
-    assert abs(seeds[0][0] - 512) <= 5 and abs(seeds[0][1] - 512) <= 5
-
-
-def test_ring_seeds_give_a_long_piece_up_to_three_spread_seeds() -> None:
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    window[20:120, 20:1000] = True
-
-    seeds = sample_ring_seeds(window, 0, 0)
-
-    assert 1 <= len(seeds) <= 3
-    assert len({x // 128 for x, _y in seeds}) == len(seeds)
-
-
-def test_ring_seeds_ignore_specks_and_cap_the_count() -> None:
-    specks = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    specks[5:8, 5:8] = True
-    assert sample_ring_seeds(specks, 0, 0) == []
-    assert sample_ring_seeds(np.zeros_like(specks), 0, 0) == []
-
-    many = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    for cx in range(40, 1000, 80):
-        _blob(many, cx, 60, 20)
-    assert len(sample_ring_seeds(many, 0, 0, max_seeds=5)) == 5
-
-
-@settings(max_examples=20, deadline=None)
-@given(
-    blobs=st.lists(
-        st.tuples(st.integers(30, 990), st.integers(30, 990), st.integers(10, 80)),
-        min_size=1,
-        max_size=6,
-    )
-)
-def test_ring_seeds_always_lie_on_the_mask(blobs) -> None:
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    for cx, cy, radius in blobs:
-        _blob(window, cx, cy, radius)
-
-    seeds = sample_ring_seeds(window, 1024, 2048)
-
-    assert len(seeds) <= 24
-    for x, y in seeds:
-        assert window[y - 2048, x - 1024]

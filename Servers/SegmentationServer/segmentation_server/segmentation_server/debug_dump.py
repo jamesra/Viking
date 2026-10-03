@@ -14,6 +14,13 @@ where SAM2 itself stopped. ``logits_r{row}_c{col}`` is SAM2's logit map for that
 (float16, usually 256x256, Y-down over the same 1024 window; upsample to compare with ``raw``).
 A margin pixel was accepted only where its logit reached ``meta["margin_logit_min"]``. A neighbor's margin pixel was removed from a core where
 the owning cell's own logit was below ``meta["owner_veto_logit"]``.
+
+``meta["seams"]`` lists every prediction in the order it ran: ``kind`` (``user`` or ``edge``), the
+``cell``, and for an edge the ``parent`` cell, its ``side`` facing the cell, the ``runs`` crossed
+(inclusive mosaic coordinates along the shared edge), the mosaic ``box`` sent (x_min, y_min, x_max,
+y_max, Y up) and extra ``clicks``, and the ``outcome`` (``accepted`` or ``rejected``, meaning no mask
+fit the prompt). ``meta["edges"]`` is the seam graph at the end: for each pair of neighboring cells,
+the merged ranges already crossed.
 """
 
 import json
@@ -59,6 +66,8 @@ def dump_growth(
     margin_logit_min: Optional[float] = None,
     owner_veto_logit: Optional[float] = None,
     request_id: int = 0,
+    seams: Sequence[Any] = (),
+    edges: Optional[Mapping[Any, Any]] = None,
 ) -> Optional[Path]:
     """Write one growth result. Returns the file path, or None when disabled or on failure.
 
@@ -99,6 +108,11 @@ def dump_growth(
             "cell_scores": cell_scores,
             "margin_logit_min": None if margin_logit_min is None else float(margin_logit_min),
             "owner_veto_logit": None if owner_veto_logit is None else float(owner_veto_logit),
+            "seams": [_seam_json(seam) for seam in seams],
+            "edges": [
+                {"cells": [int(a), int(b), int(c), int(d)], "runs": [[int(lo), int(hi)] for lo, hi in runs]}
+                for (a, b, c, d), runs in (edges or {}).items()
+            ],
         }
         arrays["meta"] = np.array(json.dumps(meta))
         np.savez_compressed(path, **arrays)
@@ -107,6 +121,23 @@ def dump_growth(
     except Exception:
         logger.exception("Debug dump failed")
         return None
+
+
+def _seam_json(seam: Any) -> dict:
+    """One SeamRecord as plain JSON values."""
+    parent = getattr(seam, "parent", None)
+    side = getattr(seam, "side", None)
+    box = getattr(seam, "box", None)
+    return {
+        "kind": str(seam.kind),
+        "cell": [int(seam.cell.row), int(seam.cell.col)],
+        "parent": None if parent is None else [int(parent.row), int(parent.col)],
+        "side": None if side is None else side.name,
+        "runs": [[int(lo), int(hi)] for lo, hi in seam.runs],
+        "box": None if box is None else [int(v) for v in box],
+        "clicks": [[int(x), int(y)] for x, y in seam.clicks],
+        "outcome": str(seam.outcome),
+    }
 
 
 def _prune(directory: Path, keep: int = MAX_DUMPS) -> None:

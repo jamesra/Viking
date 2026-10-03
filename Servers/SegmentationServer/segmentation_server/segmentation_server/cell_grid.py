@@ -10,15 +10,15 @@ overlap 50%. Each cell owns its central 512x512 **core**. Cores partition the pl
 every pixel has exactly one owner cell. A prediction's whole window, outer 256 px
 margin included, is ORed into the owning cores. Only an owner's own veto removes a
 neighbor's margin pixel (``Canvas.set_veto``). The
-margin is also where the next cell's seed clicks come from (``sample_ring_seeds``).
+last 256 px of a core is also the outer margin band of the cell across the edge, which is where
+the next cell's box prompt comes from (see ``seams``).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Mapping, Optional, Sequence, Tuple
+from typing import List, Mapping, Optional, Tuple
 
-import cv2
 import numpy as np
 from numpy.typing import NDArray
 
@@ -27,11 +27,6 @@ CELL_SIZE = 1024
 CELL_STRIDE = 512
 CORE_SIZE = 512
 CORE_MARGIN = (CELL_SIZE - CORE_SIZE) // 2
-
-RING_SEEDS_PER_COMPONENT = 3
-RING_SEED_MIN_AREA = 200
-RING_SEED_SPACING_PX = 128
-MAX_SEEDS = 24
 
 Point = Tuple[int, int]
 MaskArray = NDArray[np.bool_]
@@ -289,116 +284,3 @@ class Canvas:
                     continue
                 out[ya - y0:yb - y0, xa - x0:xb - x0] |= block[ya - by:yb - by, xa - bx:xb - bx]
         return out
-
-
-def core_contacts(core_up: MaskArray) -> List[Tuple[int, int]]:
-    """``(drow, dcol)`` of every neighbor core this core's mask touches.
-
-    A set pixel on the outermost row or column means the object may continue into the
-    neighbor on that side. A set corner pixel adds the diagonal neighbor. The band is one
-    pixel on purpose: a wider band treats a mask that stopped short of the edge as a crossing.
-    """
-    contacts: List[Tuple[int, int]] = []
-    if core_up.size == 0:
-        return contacts
-
-    def _add(offset: Tuple[int, int]) -> None:
-        if offset not in contacts:
-            contacts.append(offset)
-
-    if core_up[-1, :].any():
-        _add((1, 0))
-    if core_up[0, :].any():
-        _add((-1, 0))
-    if core_up[:, -1].any():
-        _add((0, 1))
-    if core_up[:, 0].any():
-        _add((0, -1))
-    if core_up[-1, -1]:
-        _add((1, 1))
-    if core_up[-1, 0]:
-        _add((1, -1))
-    if core_up[0, -1]:
-        _add((-1, 1))
-    if core_up[0, 0]:
-        _add((-1, -1))
-    return contacts
-
-
-def sample_ring_seeds(
-    window_up: MaskArray,
-    x0: int,
-    y0: int,
-    per_component: int = RING_SEEDS_PER_COMPONENT,
-    min_area: int = RING_SEED_MIN_AREA,
-    spacing: int = RING_SEED_SPACING_PX,
-    max_seeds: int = MAX_SEEDS,
-) -> List[Point]:
-    """Mosaic points to use as SAM2 positive clicks, from the mask inside a cell window.
-
-    ``window_up`` is the result mask inside the window, Y-up, with its low corner at
-    ``(x0, y0)``. The outer ``CORE_MARGIN`` band is where an object arrives from the
-    neighbor that was predicted first, so seeds come from there: each discontinuous piece
-    of mask in the band gets one seed at the deepest point of the mask (the center of the
-    piece), plus up to ``per_component - 1`` more for a long piece, at least ``spacing``
-    px apart. A piece of mask that lies wholly inside the band-free center of the window
-    (for example the return arm of a hairpin) is treated the same way, so it is not lost.
-
-    Depth is measured to the nearest pixel that is not mask, with the window border
-    counted as not mask so a seed is never placed against the edge SAM2 cannot see past.
-    The result is a pure function of the mask, which lets the predict cache recognize a
-    repeat, and the largest pieces come first when ``max_seeds`` cuts the list.
-    """
-    if window_up.shape != (CELL_SIZE, CELL_SIZE) or not window_up.any():
-        return []
-
-    mask = window_up.astype(np.uint8)
-    depth = cv2.distanceTransform(np.pad(mask, 1), cv2.DIST_L2, 5)[1:-1, 1:-1]
-
-    band = np.ones((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
-    band[CORE_MARGIN:CELL_SIZE - CORE_MARGIN, CORE_MARGIN:CELL_SIZE - CORE_MARGIN] = False
-    in_band = window_up & band
-
-    regions: List[MaskArray] = []
-    count, labels = cv2.connectedComponents(in_band.astype(np.uint8), connectivity=8)
-    regions.extend(labels == label for label in range(1, count))
-
-    count, labels = cv2.connectedComponents(mask, connectivity=8)
-    for label in range(1, count):
-        piece = labels == label
-        if not (piece & band).any():
-            regions.append(piece)
-
-    sized = [(int(np.count_nonzero(region)), region) for region in regions]
-    sized = [item for item in sized if item[0] >= min_area]
-    sized.sort(key=lambda item: -item[0])
-
-    seeds: List[Point] = []
-    for _area, region in sized:
-        for sx, sy in _deep_points(region, depth, per_component, spacing):
-            seeds.append((x0 + sx, y0 + sy))
-            if len(seeds) >= max_seeds:
-                return seeds
-    return seeds
-
-
-def _deep_points(
-    region: MaskArray, depth: NDArray, limit: int, spacing: int
-) -> List[Tuple[int, int]]:
-    """Up to ``limit`` window pixels of a region, deepest first and ``spacing`` apart."""
-    scores = np.where(region, depth, 0.0)
-    peak = float(scores.max())
-    if peak <= 0.0:
-        return []
-
-    floor = max(1.0, 0.5 * peak)
-    points: List[Tuple[int, int]] = []
-    for _ in range(limit):
-        row, col = np.unravel_index(int(np.argmax(scores)), scores.shape)
-        if scores[row, col] < (peak if not points else floor):
-            break
-        points.append((int(col), int(row)))
-        y_lo, y_hi = max(0, row - spacing), min(scores.shape[0], row + spacing + 1)
-        x_lo, x_hi = max(0, col - spacing), min(scores.shape[1], col + spacing + 1)
-        scores[y_lo:y_hi, x_lo:x_hi] = 0.0
-    return points

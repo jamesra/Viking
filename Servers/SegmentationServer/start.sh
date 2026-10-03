@@ -8,6 +8,11 @@ if [ -n "${TORCHINDUCTOR_CACHE_DIR:-}" ]; then
         || true
 fi
 
+if { [ "$VS_CODE_DEBUG" = "true" ] || [ "$PYCHARM_DEBUG" = "true" ]; } && ! python3 -c "import debugpy" 2>/dev/null && ! python3 -c "import pydevd_pycharm" 2>/dev/null; then
+    echo "VS_CODE_DEBUG/PYCHARM_DEBUG is set but this image has no debugger installed." >&2
+    echo "Rebuild with: docker build --build-arg INSTALL_DEBUG_TOOLS=true ..." >&2
+    exit 1
+fi
 if [ "$VS_CODE_DEBUG" = "true" ] && [ "$PYCHARM_DEBUG" = "true" ]; then
     echo "Starting with both VS Code (debugpy) and PyCharm debugging..."
     python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server "$@"

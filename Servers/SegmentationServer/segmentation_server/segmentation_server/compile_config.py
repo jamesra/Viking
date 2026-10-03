@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 COMPILE_IMAGE_ENCODER_ENV = "SAM2_COMPILE_IMAGE_ENCODER"
 COMPILE_IMAGE_ENCODER_HYDRA = "++model.compile_image_encoder=True"
@@ -13,7 +16,12 @@ _FALSY = frozenset({"0", "false", "no", "off", ""})
 
 
 def env_flag_enabled(name: str, default: bool = True) -> bool:
-    """True when *name* is unset or truthy; false for 0/false/no/off."""
+    """True when *name* is truthy, ``default`` when it is unset, false for 0/false/no/off or blank.
+
+    A value that is none of those (a typo such as ``ture``) is logged and treated as **false**,
+    not as the default: a flag that silently turned a feature on because it was misspelled would
+    be worse than one that visibly turned it off.
+    """
     raw = os.environ.get(name)
     if raw is None:
         return default
@@ -22,7 +30,12 @@ def env_flag_enabled(name: str, default: bool = True) -> bool:
         return False
     if stripped in _TRUTHY:
         return True
-    return default
+    logger.warning(
+        "%s=%r is not a recognised on/off value (use 1/true/yes/on or 0/false/no/off); treating it as off",
+        name,
+        raw,
+    )
+    return False
 
 
 def env_compile_image_encoder_enabled() -> bool:

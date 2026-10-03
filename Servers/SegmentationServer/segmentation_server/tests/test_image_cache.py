@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from segmentation_server.cuda_errors import UnrecoverableGpuError
-from segmentation_server.image_cache import ImageCache, PredictorCreationError
+from segmentation_server.image_cache import CacheFullError, ImageCache, PredictorCreationError
 
 
 class FakeClock:
@@ -423,3 +423,218 @@ async def test_shared_tiles_evict_when_byte_cap_or_gpu_is_hit() -> None:
     pressure["on"] = True
     _new, _hit = await gpu_cache.upload_tile(_tile_key(1), b"b", 1, 1)
     assert await gpu_cache.get_image(kept) is None
+
+class _Gen:
+    """A stand-in predictor that carries an encoder generation."""
+
+    def __init__(self, generation):
+        self.generation = generation
+        self.reset = False
+
+
+def _generation_cache(state, **kwargs):
+    released: list[_Gen] = []
+
+    def create(_data: bytes):
+        return _Gen(state["generation"])
+
+    cache = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        create_predictor_func=create,
+        release_predictor_func=released.append,
+        predictor_generation=lambda predictor: predictor.generation,
+        current_generation=lambda: state["generation"],
+        **kwargs,
+    )
+    return cache, released
+
+
+@pytest.mark.asyncio
+async def test_flush_stale_drops_only_entries_made_with_the_replaced_encoder() -> None:
+    state = {"generation": "eager"}
+    cache, released = _generation_cache(state)
+    old_a = await cache.upload_image(b"a", 1, 1)
+    old_b = await cache.upload_image(b"b", 1, 1)
+    state["generation"] = "compiled"
+    fresh = await cache.upload_image(b"c", 1, 1)
+
+    dropped = await cache.flush_stale()
+
+    assert dropped == 2
+    assert await cache.get_image(old_a) is None
+    assert await cache.get_image(old_b) is None
+    kept = await cache.get_image(fresh)
+    assert kept is not None and kept[3].generation == "compiled"
+    assert [p.generation for p in released] == ["eager", "eager"]
+
+
+@pytest.mark.asyncio
+async def test_flush_stale_retires_a_pinned_stale_entry_after_its_last_release() -> None:
+    state = {"generation": "eager"}
+    cache, released = _generation_cache(state)
+    image_id = await cache.upload_image(b"a", 1, 1)
+    pinned = await cache.get_image(image_id)
+    state["generation"] = "compiled"
+
+    await cache.flush_stale()
+
+    assert released == []
+    assert pinned[3].generation == "eager"
+    await cache.release_image(image_id)
+    assert [p.generation for p in released] == ["eager"]
+
+
+@pytest.mark.asyncio
+async def test_flush_stale_keeps_entries_that_report_no_generation_or_have_no_predictor() -> None:
+    state = {"generation": "eager"}
+    cache, _released = _generation_cache(state)
+    unknown = await cache.upload_image(b"a", 1, 1)
+    cached = cache._cache[unknown]
+    cached.predictor.generation = None
+    state["generation"] = "compiled"
+
+    assert await cache.flush_stale() == 0
+    assert await cache.get_image(unknown) is not None
+
+
+@pytest.mark.asyncio
+async def test_flush_stale_is_a_noop_without_generation_functions() -> None:
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60)
+    await cache.upload_image(b"a", 1, 1)
+    assert await cache.flush_stale() == 0
+
+
+@pytest.mark.asyncio
+async def test_a_predictor_built_across_a_swap_is_built_again_on_the_new_encoder() -> None:
+    state = {"generation": "eager"}
+    builds: list[str] = []
+    released: list[_Gen] = []
+
+    def create(_data: bytes):
+        builds.append(state["generation"])
+        predictor = _Gen(state["generation"])
+        if len(builds) == 1:
+            state["generation"] = "compiled"
+        return predictor
+
+    cache = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        create_predictor_func=create,
+        release_predictor_func=released.append,
+        predictor_generation=lambda predictor: predictor.generation,
+        current_generation=lambda: state["generation"],
+    )
+
+    image_id = await cache.upload_image(b"a", 1, 1)
+
+    assert builds == ["eager", "compiled"]
+    assert [p.generation for p in released] == ["eager"]
+    pinned = await cache.get_image(image_id)
+    assert pinned[3].generation == "compiled"
+
+@pytest.mark.asyncio
+async def test_bytes_of_a_retiring_entry_still_count_toward_the_cap() -> None:
+    cache = ImageCache(max_memory_bytes=10, ttl_seconds=60, create_predictor_func=lambda d: d)
+    held = await cache.upload_image(b"12345678", 1, 1)
+    assert await cache.get_image(held) is not None  # a request pins it
+    assert await cache.delete_image(held) is True  # deleted while pinned: retiring
+
+    stats = await cache.get_stats()
+    assert stats["total_images"] == 0
+    assert stats["retiring_images"] == 1
+    assert stats["retiring_bytes"] == 8
+    assert stats["total_memory_bytes"] == 8  # the bytes are still in memory
+
+    with pytest.raises(CacheFullError):
+        await cache.upload_image(b"abcd", 1, 1)  # 8 + 4 > 10, and nothing idle can be evicted
+
+    await cache.release_image(held)
+    stats = await cache.get_stats()
+    assert stats["retiring_images"] == 0 and stats["total_memory_bytes"] == 0
+    assert await cache.upload_image(b"abcd", 1, 1) > 0
+
+
+@pytest.mark.asyncio
+async def test_an_upload_that_cannot_fit_because_everything_is_pinned_is_refused() -> None:
+    cache = ImageCache(max_memory_bytes=10, ttl_seconds=60, create_predictor_func=lambda d: d)
+    first = await cache.upload_image(b"123456", 1, 1)
+    assert await cache.get_image(first) is not None
+
+    with pytest.raises(CacheFullError, match="byte cap"):
+        await cache.upload_image(b"abcdef", 1, 1)
+
+    assert list(cache._cache) == [first]
+    await cache.release_image(first)
+    second = await cache.upload_image(b"abcdef", 1, 1)  # now the idle one can be evicted
+    assert first not in cache._cache and second in cache._cache
+
+
+@pytest.mark.asyncio
+async def test_an_image_bigger_than_the_whole_cap_is_refused() -> None:
+    cache = ImageCache(max_memory_bytes=4, ttl_seconds=60)
+    with pytest.raises(CacheFullError):
+        await cache.upload_image(b"too big", 1, 1)
+    assert (await cache.get_stats())["total_images"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_refused_upload_does_not_count_its_bytes() -> None:
+    cache = ImageCache(max_memory_bytes=10, ttl_seconds=60)
+    kept = await cache.upload_image(b"12345", 1, 1)
+    assert await cache.get_image(kept) is not None
+    with pytest.raises(CacheFullError):
+        await cache.upload_image(b"123456", 1, 1)
+    assert (await cache.get_stats())["total_memory_bytes"] == 5
+
+
+@pytest.mark.asyncio
+async def test_concurrent_uploads_never_hold_more_than_the_cap() -> None:
+    import asyncio
+
+    cache = ImageCache(max_memory_bytes=40, ttl_seconds=60, create_predictor_func=lambda d: d)
+
+    async def upload(n: int) -> None:
+        try:
+            await cache.upload_image(bytes([n]) * 10, 1, 1)
+        except (CacheFullError, PredictorCreationError):
+            pass  # refused, or evicted by a later upload before its predictor was built
+
+    await asyncio.gather(*(upload(n) for n in range(30)))
+
+    stats = await cache.get_stats()
+    assert stats["total_memory_bytes"] <= 40
+    assert stats["total_memory_bytes"] == sum(c.size_bytes for c in cache._cache.values())
+
+@pytest.mark.asyncio
+async def test_a_decoded_image_goes_to_the_predictor_factory_and_is_not_kept() -> None:
+    seen: list[tuple] = []
+    decoded = object()
+
+    def factory(*args):
+        seen.append(args)
+        return "predictor"
+
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60, create_predictor_func=factory)
+    image_id = await cache.upload_image(b"png", 2, 2, decoded=decoded)
+    await cache.upload_image(b"png2", 2, 2)
+
+    assert seen[0] == (b"png", decoded)
+    assert seen[1] == (b"png2",)
+    cached = cache._cache[image_id]
+    assert decoded not in vars(cached).values()
+
+
+@pytest.mark.asyncio
+async def test_a_decoded_tile_reaches_the_predictor_factory() -> None:
+    seen: list[tuple] = []
+    decoded = object()
+    cache = ImageCache(
+        max_memory_bytes=1024, ttl_seconds=60,
+        create_predictor_func=lambda *args: seen.append(args) or "predictor",
+    )
+
+    await cache.upload_tile(_TILE_KEY, b"tile", 1024, 1024, decoded=decoded)
+
+    assert seen == [(b"tile", decoded)]

@@ -1,119 +1,126 @@
 """
 Test Segmentation Service
 
-This script tests the segmentation service by:
-1. Generating the gRPC code
-2. Starting the service in the background
-3. Running the client example with a sample image
-4. Shutting down the service
+Smoke test against a real server process. It:
+1. Writes a self-signed development certificate (the server only speaks TLS)
+2. Starts `python -m segmentation_server` with that certificate
+3. Waits until GetServerStatus answers over TLS
+4. Runs the client example on a sample image, trusting the certificate
+5. Shuts the server down
+
+Needs a GPU machine with torch and SAM2 installed, like the server itself.
 """
 
-import os
-import sys
 import asyncio
+import os
+import socket
 import subprocess
-import signal
+import sys
+import tempfile
 import time
-import numpy as np
-from PIL import Image
 from pathlib import Path
 
-# Import the generate_grpc_code function from the segmentation_grpc package
-from segmentation_grpc import generate_grpc_code
+import grpc
+import numpy as np
+from PIL import Image
 
-from client_example import segment_image, show_labeled_image
+from client_example import _channel_for, segment_image, show_labeled_image
+from segmentation_grpc import ServerStatusRequest, SegmentationServiceStub
+from segmentation_server.dev_cert import generate_self_signed
+
+STARTUP_TIMEOUT_SECONDS = 300
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as probe:
+        probe.bind(("::", 0))
+        return probe.getsockname()[1]
+
+
+async def _wait_until_serving(address: str, ca_cert: str, process: subprocess.Popen) -> bool:
+    """Poll GetServerStatus until it answers, the process exits, or the timeout passes."""
+    deadline = time.monotonic() + STARTUP_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            return False
+        try:
+            async with _channel_for(address, ca_cert=ca_cert) as channel:
+                await SegmentationServiceStub(channel).GetServerStatus(
+                    ServerStatusRequest(), timeout=5
+                )
+            return True
+        except grpc.RpcError:
+            await asyncio.sleep(2)
+    return False
+
+
+def _find_sample_image() -> str:
+    script_dir = Path(__file__).resolve().parent
+    local_image = script_dir / "images" / "RodBC3578GJ_Aii2_Z311_X19750_Y33227_W1531_H1124_DS1.png"
+    if local_image.is_file():
+        return str(local_image)
+    example_folder = Path.home() / "SAM2-Docker" / "examples"
+    for root, _, files in os.walk(example_folder):
+        for file in files:
+            if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                return os.path.join(root, file)
+    return input("Image path: ")
 
 
 async def test_service():
-    """Test the segmentation service."""
-    # Generate the gRPC code
-    print("Generating gRPC code...")
-    if not generate_grpc_code():
-        print("Failed to generate gRPC code. Exiting.")
-        return
+    """Start the service over TLS, segment one image, and shut it down."""
+    port = _free_port()
+    with tempfile.TemporaryDirectory() as folder:
+        cert, key = generate_self_signed(Path(folder) / "cert.pem", Path(folder) / "key.pem")
+        environment = dict(os.environ, SSL_CERT_PATH=str(cert), SSL_KEY_PATH=str(key))
 
-    # Start the service in the background
-    print("Starting the service...")
-    service_process = subprocess.Popen(
-        [sys.executable, '-m', 'SegmentationServer', '--port', '50051', '--workers', '4'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-
-    try:
-        # Wait for the service to start
-        print("Waiting for the service to start...")
-        time.sleep(5)  # Give the service some time to start
-
-        # Find a sample image
-        script_dir = Path(__file__).resolve().parent
-        local_image = script_dir / "images" / "RodBC3578GJ_Aii2_Z311_X19750_Y33227_W1531_H1124_DS1.png"
-        example_folder = os.path.join(Path.home(), "SAM2-Docker/examples")
-        sample_image = str(local_image if local_image.is_file() else Path(example_folder) / "images" / local_image.name)
-
-        if not os.path.exists(sample_image):
-            print(f"Sample image not found at {sample_image}")
-            print("Looking for any image file in the examples directory...")
-
-            # Look for any image file in the examples directory
-            for root, _, files in os.walk(example_folder):
-                for file in files:
-                    if file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        sample_image = os.path.join(root, file)
-                        print(f"Found image: {sample_image}")
-                        break
-                if os.path.exists(sample_image):
-                    break
-
-        if not os.path.exists(sample_image):
-            print("No sample image found. Please provide an image path.")
-            sample_image = input("Image path: ")
-
-        # Define coordinates and labels
-        coordinates = [(500, 375)]  # Example coordinates
-        labels = [1]  # Example labels (1 for foreground)
-
-        # Run the client example
-        print(f"Running the client example with image: {sample_image}")
-        labeled_image, segments = await segment_image(
-            'localhost:50051',
-            sample_image,
-            coordinates,
-            labels,
-            multimask_output=True
+        print("Starting the service...")
+        service_process = subprocess.Popen(
+            [sys.executable, '-m', 'segmentation_server',
+             '--tls-port', str(port), '--workers', '4', '--no-compile-image-encoder'],
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
         )
 
-        if labeled_image is not None and segments is not None:
-            print("Segmentation successful!")
-            print(f"Found {len(segments)} segments.")
+        try:
+            address = f'localhost:{port}'
+            print("Waiting for the service to answer over TLS...")
+            if not await _wait_until_serving(address, str(cert), service_process):
+                print("The service did not start.")
+                return
 
-            # Show the results
-            image = Image.open(sample_image)
-            image = image.convert('RGB')
-            image_array = np.array(image)
-            show_labeled_image(image_array, labeled_image, segments)
-        else:
-            print("Segmentation failed.")
+            sample_image = _find_sample_image()
+            print(f"Running the client example with image: {sample_image}")
+            labeled_image, segments = await segment_image(
+                address,
+                sample_image,
+                [(500, 375)],
+                [1],
+                multimask_output=True,
+                ca_cert=str(cert),
+            )
 
-    finally:
-        # Shut down the service
-        print("Shutting down the service...")
-        service_process.send_signal(signal.SIGINT)
-
-        # Wait for the service to shut down
-        stdout, stderr = service_process.communicate(timeout=10)
-
-        # Print any output from the service
-        if stdout:
-            print("Service stdout:")
-            print(stdout)
-
-        if stderr:
-            print("Service stderr:")
-            print(stderr)
+            if labeled_image is not None and segments is not None:
+                print("Segmentation successful!")
+                print(f"Found {len(segments)} segments.")
+                image_array = np.array(Image.open(sample_image).convert('RGB'))
+                show_labeled_image(image_array, labeled_image, segments)
+            else:
+                print("Segmentation failed.")
+        finally:
+            print("Shutting down the service...")
+            service_process.terminate()
+            try:
+                output, _ = service_process.communicate(timeout=60)
+            except subprocess.TimeoutExpired:
+                service_process.kill()
+                output, _ = service_process.communicate()
+            if output:
+                print("Service output:")
+                print(output)
 
 
 if __name__ == '__main__':
-    # Run the test
     asyncio.run(test_service())

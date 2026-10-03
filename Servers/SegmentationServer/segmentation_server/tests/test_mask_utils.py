@@ -8,17 +8,22 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from hypothesis import given, settings, strategies as st
+
 from segmentation_server.mask_utils import (
-    cleanup_mask,
-    combined_mask_to_segments,
+    NoMatchingMask,
+    count_covered_points,
     encode_png,
+    ensure_image_within_limit,
     fill_small_holes,
     get_mask_bounds,
     mask_contains_xy,
+    mask_covers_box,
     mask_to_polygons,
+    max_image_pixels,
     prepare_image_for_sam2,
     process_masks,
-    union_masks_covering_positives,
+    select_mask,
 )
 
 
@@ -33,22 +38,14 @@ def test_get_mask_bounds_region() -> None:
     assert get_mask_bounds(mask) == (3, 2, 4, 3)
 
 
-def test_cleanup_mask_keeps_largest_component() -> None:
-    mask = np.zeros((20, 20), dtype=np.bool_)
-    mask[1:3, 1:3] = True
-    mask[8:18, 8:18] = True
-    cleaned = cleanup_mask(mask)
-    assert int(np.sum(cleaned)) == 100
-    assert not cleaned[1, 1]
-
-
 def test_mask_to_polygons_returns_closed_shape() -> None:
     mask = np.zeros((32, 32), dtype=np.bool_)
     mask[8:24, 8:24] = True
     polygons = mask_to_polygons(mask)
     assert len(polygons) >= 1
-    assert polygons[0].shape[1] == 2
-    assert len(polygons[0]) >= 3
+    assert polygons[0].outer.shape[1] == 2
+    assert len(polygons[0].outer) >= 3
+    assert polygons[0].holes == []
 
 
 def test_process_masks_empty_uses_provided_shape() -> None:
@@ -59,16 +56,27 @@ def test_process_masks_empty_uses_provided_shape() -> None:
     assert segments == []
 
 
-def test_process_masks_skips_empty_and_labels_from_one() -> None:
+def test_process_masks_skips_empty_and_labels_are_dense_from_one() -> None:
     masks = np.zeros((2, 4, 4), dtype=np.bool_)
     masks[1, 1:3, 1:3] = True
     scores = np.array([0.1, 0.9], dtype=np.float32)
     labeled, segments = process_masks(masks, scores)
     assert labeled.dtype == np.uint16
-    assert int(labeled.max()) == 2
+    assert int(labeled.max()) == 1
     assert len(segments) == 1
-    assert segments[0]["index"] == 1
+    assert segments[0]["index"] == 0
     assert segments[0]["score"] == pytest.approx(0.9)
+    assert int(labeled[1, 1]) == segments[0]["index"] + 1
+
+
+def test_process_masks_labels_stay_dense_across_empty_masks_in_the_middle() -> None:
+    masks = np.zeros((4, 8, 8), dtype=np.bool_)
+    masks[0, 0:2, 0:2] = True
+    masks[2, 4:6, 4:6] = True
+    masks[3, 6:8, 0:2] = True
+    labeled, segments = process_masks(masks, np.array([0.9, 0.8, 0.7, 0.6], dtype=np.float32))
+    assert [segment["index"] for segment in segments] == [0, 1, 2]
+    assert sorted(int(v) for v in np.unique(labeled) if v) == [1, 2, 3]
 
 
 def test_encode_png_roundtrip_uint8() -> None:
@@ -118,144 +126,151 @@ def test_mask_contains_xy_bounds_and_value() -> None:
     assert not mask_contains_xy(mask, 0, 4)
 
 
-def test_union_or_keeps_covering_masks_and_drops_misses() -> None:
-    masks = np.zeros((3, 10, 10), dtype=np.bool_)
-    masks[0, 1:4, 1:4] = True
-    masks[1, 6:9, 6:9] = True
-    masks[2, 0:2, 8:10] = True
-    scores = np.array([0.9, 0.8, 0.1], dtype=np.float32)
-    union, stats = union_masks_covering_positives(
-        masks,
-        scores,
-        coordinates=[(2, 2), (7, 7)],
-        labels=[1, 1],
+def _ring(size: int, outer: int, inner: int) -> np.ndarray:
+    mask = np.zeros((size, size), dtype=np.bool_)
+    mask[outer:size - outer, outer:size - outer] = True
+    mask[inner:size - inner, inner:size - inner] = False
+    return mask
+
+
+def test_fill_small_holes_counts_the_hole_in_pixels_not_by_contour_area() -> None:
+    mask = np.zeros((40, 40), dtype=np.bool_)
+    mask[5:35, 5:35] = True
+    mask[15:25, 15:25] = False  # 100 hole pixels in 800 mask pixels = 12.5%
+    assert not fill_small_holes(mask, hole_threshold=0.10)[20, 20]
+    assert fill_small_holes(mask, hole_threshold=0.15)[20, 20]
+    assert int(fill_small_holes(mask, hole_threshold=0.15).sum()) == 900
+
+
+def test_fill_small_holes_never_fills_background_that_touches_the_border() -> None:
+    mask = np.zeros((20, 20), dtype=np.bool_)
+    mask[0:10, 0:20] = True
+    mask[0:4, 8:12] = False  # a notch open to the border, not a hole
+    assert np.array_equal(fill_small_holes(mask, hole_threshold=0.9), mask)
+
+
+def test_a_donut_polygon_carries_its_hole() -> None:
+    shapes = mask_to_polygons(_ring(64, 8, 24))
+    assert len(shapes) == 1
+    assert len(shapes[0].holes) == 1
+    outer_x = shapes[0].outer[:, 0]
+    hole_x = shapes[0].holes[0][:, 0]
+    assert outer_x.min() < hole_x.min() and hole_x.max() < outer_x.max()
+    assert len(shapes[0].holes[0]) >= 3
+
+
+def test_each_piece_keeps_only_its_own_holes() -> None:
+    mask = np.zeros((80, 80), dtype=np.bool_)
+    mask[4:36, 4:36] = True
+    mask[14:26, 14:26] = False  # hole in piece A
+    mask[44:76, 44:76] = True  # solid piece B
+    shapes = mask_to_polygons(mask)
+    assert sorted(len(shape.holes) for shape in shapes) == [0, 1]
+    with_hole = next(shape for shape in shapes if shape.holes)
+    assert with_hole.outer[:, 0].max() < 40
+
+
+def test_an_island_inside_a_hole_is_its_own_outer_ring() -> None:
+    mask = _ring(80, 4, 20)  # a ring whose hole spans 20..59
+    mask[36:44, 36:44] = True  # island in the middle of the hole
+    shapes = mask_to_polygons(mask)
+    assert sorted(len(shape.holes) for shape in shapes) == [0, 1]
+
+
+def test_an_empty_mask_has_no_polygons() -> None:
+    assert mask_to_polygons(np.zeros((8, 8), dtype=np.bool_)) == []
+
+
+def _candidates(*boxes: tuple[int, int, int, int], size: int = 20) -> np.ndarray:
+    masks = np.zeros((len(boxes), size, size), dtype=np.bool_)
+    for i, (x0, y0, x1, y1) in enumerate(boxes):
+        masks[i, y0:y1 + 1, x0:x1 + 1] = True
+    return masks
+
+
+def test_mask_covers_box_needs_every_pixel_and_a_box_inside_the_mask() -> None:
+    mask = _candidates((2, 2, 10, 10))[0]
+    assert mask_covers_box(mask, (3, 3, 9, 9))
+    assert mask_covers_box(mask, (2, 2, 10, 10))
+    assert not mask_covers_box(mask, (1, 3, 9, 9))
+    assert not mask_covers_box(mask, (3, 3, 11, 9))
+    assert not mask_covers_box(mask, (5, 5, 25, 25))
+    assert not mask_covers_box(mask, (-1, 3, 9, 9))
+    assert not mask_covers_box(mask, (9, 9, 3, 3))
+
+
+def test_with_a_box_the_highest_scoring_mask_that_covers_all_of_it_wins() -> None:
+    masks = _candidates((0, 0, 19, 19), (2, 2, 14, 14), (5, 5, 8, 8))
+    scores = np.array([0.5, 0.9, 0.99], dtype=np.float32)
+    assert select_mask(masks, scores, box=(4, 4, 10, 10)) == 1  # the 0.99 mask is smaller than the box
+    assert select_mask(masks, scores, box=(6, 6, 7, 7)) == 2
+
+
+def test_with_a_box_no_covering_mask_is_no_match_even_if_a_point_is_covered() -> None:
+    masks = _candidates((5, 5, 8, 8))
+    with pytest.raises(NoMatchingMask, match="starting rectangle"):
+        select_mask(masks, np.array([0.9], dtype=np.float32), box=(0, 0, 10, 10), positives=[(6, 6)])
+
+
+def test_without_a_box_the_mask_covering_the_most_points_wins_then_score() -> None:
+    masks = _candidates((0, 0, 9, 9), (0, 0, 19, 19), (0, 0, 19, 19))
+    scores = np.array([0.99, 0.5, 0.7], dtype=np.float32)
+    points = [(2, 2), (15, 15), (16, 3)]
+    assert select_mask(masks, scores, positives=points) == 2  # covers 3; ties go to the higher score
+    assert select_mask(masks, scores, positives=[(2, 2)]) == 0  # all three cover one point; best score
+    assert count_covered_points(masks[0], points) == 1
+
+
+def test_without_a_box_a_mask_must_cover_at_least_one_point() -> None:
+    masks = _candidates((0, 0, 4, 4))
+    with pytest.raises(NoMatchingMask, match="foreground point"):
+        select_mask(masks, np.array([0.9], dtype=np.float32), positives=[(15, 15)])
+    with pytest.raises(NoMatchingMask):
+        select_mask(masks, np.array([0.9], dtype=np.float32), positives=[])
+
+
+def test_no_candidates_is_no_match() -> None:
+    with pytest.raises(NoMatchingMask, match="no candidate"):
+        select_mask(np.zeros((0, 4, 4), dtype=np.bool_), np.array([], dtype=np.float32), positives=[(1, 1)])
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    st.lists(st.tuples(st.integers(0, 12), st.integers(0, 12), st.integers(0, 7), st.integers(0, 7)), min_size=1, max_size=5),
+    st.lists(st.floats(0.0, 1.0, width=32), min_size=5, max_size=5),
+    st.lists(st.tuples(st.integers(0, 19), st.integers(0, 19)), min_size=1, max_size=4),
+)
+def test_the_chosen_mask_always_satisfies_the_rule_and_is_never_beaten(rects, raw_scores, points) -> None:
+    masks = _candidates(*[(x, y, x + w, y + h) for x, y, w, h in rects])
+    scores = np.array(raw_scores[: len(rects)], dtype=np.float32)
+    try:
+        chosen = select_mask(masks, scores, positives=points)
+    except NoMatchingMask:
+        assert all(count_covered_points(mask, points) == 0 for mask in masks)
+        return
+    best = max(count_covered_points(mask, points) for mask in masks)
+    assert count_covered_points(masks[chosen], points) == best >= 1
+    assert all(
+        scores[chosen] >= scores[i]
+        for i in range(len(masks))
+        if count_covered_points(masks[i], points) == best
     )
-    assert union[2, 2]
-    assert union[7, 7]
-    assert not union[0, 9]
-    assert stats.score == pytest.approx(0.9)
-    assert stats.n_initial_masks == 3
-    assert stats.n_kept_initial == 2
-    assert stats.n_merged == 2
-    assert stats.n_uncovered == 0
-    labeled, segments = combined_mask_to_segments(union, stats.score, empty_shape=(10, 10))
-    assert len(segments) == 1
-    assert int(labeled.max()) == 1
-    assert segments[0]["width"] == 8
-    assert segments[0]["height"] == 8
 
 
-def test_union_skips_extra_predict_when_positives_already_covered() -> None:
-    masks = np.zeros((1, 8, 8), dtype=np.bool_)
-    masks[0, 1:6, 1:6] = True
-    calls: list[tuple] = []
-
-    def extra_predict(coords, labels):
-        calls.append((list(coords), list(labels)))
-        raise AssertionError("extra_predict should not run")
-
-    union, _stats = union_masks_covering_positives(
-        masks,
-        np.array([0.7], dtype=np.float32),
-        coordinates=[(2, 2), (4, 4), (0, 0)],
-        labels=[1, 1, 0],
-        extra_predict=extra_predict,
-    )
-    assert union[2, 2] and union[4, 4]
-    assert calls == []
+def test_the_declared_size_is_checked_before_pixels_are_decoded(monkeypatch) -> None:
+    monkeypatch.setenv("SEGMENTATION_MAX_IMAGE_PIXELS", "50")
+    buf = io.BytesIO()
+    Image.new("RGB", (10, 10)).save(buf, format="PNG")
+    with pytest.raises(ValueError, match="limit"):
+        prepare_image_for_sam2(buf.getvalue())
+    with pytest.raises(ValueError):
+        ensure_image_within_limit(Image.open(io.BytesIO(buf.getvalue())))
+    monkeypatch.setenv("SEGMENTATION_MAX_IMAGE_PIXELS", "100")
+    assert prepare_image_for_sam2(buf.getvalue()).shape == (10, 10, 3)
 
 
-def test_union_extra_predict_uses_uncovered_click_and_shared_negatives() -> None:
-    masks = np.zeros((1, 12, 12), dtype=np.bool_)
-    masks[0, 1:4, 1:4] = True
-    extra_mask = np.zeros((12, 12), dtype=np.bool_)
-    extra_mask[8:11, 8:11] = True
-    calls: list[tuple] = []
-
-    def extra_predict(coords, labels):
-        calls.append((list(coords), list(labels)))
-        return extra_mask[np.newaxis, ...], np.array([0.55], dtype=np.float32)
-
-    union, stats = union_masks_covering_positives(
-        masks,
-        np.array([0.4], dtype=np.float32),
-        coordinates=[(2, 2), (9, 9), (0, 0)],
-        labels=[1, 1, 0],
-        extra_predict=extra_predict,
-    )
-    assert calls == [([(9, 9), (0, 0)], [1, 0])]
-    assert union[2, 2] and union[9, 9]
-    assert stats.score == pytest.approx(0.55)
-    assert stats.n_kept_initial == 1
-    assert stats.n_extra_predicts == 1
-    assert stats.n_extra_kept == 1
-    assert stats.n_merged == 2
-    assert stats.n_uncovered == 0
-    assert stats.area == 18
-
-
-def test_union_drops_extra_mask_that_misses_positives() -> None:
-    masks = np.zeros((1, 8, 8), dtype=np.bool_)
-    extra_mask = np.zeros((1, 8, 8), dtype=np.bool_)
-    extra_mask[0, 6:8, 6:8] = True
-
-    def extra_predict(_coords, _labels):
-        return extra_mask, np.array([0.99], dtype=np.float32)
-
-    union, stats = union_masks_covering_positives(
-        masks,
-        np.array([0.2], dtype=np.float32),
-        coordinates=[(1, 1)],
-        labels=[1],
-        extra_predict=extra_predict,
-    )
-    assert not np.any(union)
-    assert stats.score == pytest.approx(0.0)
-    assert stats.n_kept_initial == 0
-    assert stats.n_extra_predicts == 1
-    assert stats.n_extra_kept == 0
-    assert stats.n_uncovered == 1
-    assert stats.area == 0
-
-
-def test_union_second_uncovered_click_skipped_if_first_extra_covers_it() -> None:
-    masks = np.zeros((1, 16, 16), dtype=np.bool_)
-    extra_mask = np.zeros((16, 16), dtype=np.bool_)
-    extra_mask[4:12, 4:12] = True
-    calls: list[tuple] = []
-
-    def extra_predict(coords, labels):
-        calls.append((list(coords), list(labels)))
-        return extra_mask[np.newaxis, ...], np.array([0.6], dtype=np.float32)
-
-    union, stats = union_masks_covering_positives(
-        masks,
-        np.array([0.1], dtype=np.float32),
-        coordinates=[(5, 5), (10, 10), (0, 1)],
-        labels=[1, 1, 0],
-        extra_predict=extra_predict,
-    )
-    assert len(calls) == 1
-    assert calls[0][0][0] == (5, 5)
-    assert union[5, 5] and union[10, 10]
-    assert stats.n_extra_predicts == 1
-    assert stats.n_uncovered == 0
-
-
-def test_union_stats_count_out_of_bounds_positives() -> None:
-    masks = np.zeros((1, 4, 4), dtype=np.bool_)
-    masks[0, 1:3, 1:3] = True
-    union, stats = union_masks_covering_positives(
-        masks,
-        np.array([0.5], dtype=np.float32),
-        coordinates=[(1, 1), (9, 9)],
-        labels=[1, 1],
-    )
-    assert union[1, 1]
-    assert stats.n_positives == 2
-    assert stats.n_positives_oob == 1
-    assert stats.n_uncovered == 0
-    line = stats.log_line(4, 4)
-    assert "oob=1" in line
-    assert "merged=1" in line
-    assert "area=4" in line
+def test_the_pixel_limit_default_and_bad_values(monkeypatch) -> None:
+    monkeypatch.delenv("SEGMENTATION_MAX_IMAGE_PIXELS", raising=False)
+    assert max_image_pixels() == 100_000_000
+    monkeypatch.setenv("SEGMENTATION_MAX_IMAGE_PIXELS", "lots")
+    assert max_image_pixels() == 100_000_000

@@ -108,11 +108,20 @@ namespace Viking.UI.WPF.Services
                 absolutePath = string.Empty;
             }
 
-            return parsedUri.Authority + absolutePath + parsedUri.Query;
+            string authority = parsedUri.Authority;
+            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+                parsedUri.Port == 40080)
+            {
+                // The old cleartext port moved to the TLS port when that listener was removed.
+                string host = parsedUri.HostNameType == UriHostNameType.IPv6 ? "[" + parsedUri.Host + "]" : parsedUri.Host;
+                authority = host + ":40443";
+            }
+
+            return authority + absolutePath + parsedUri.Query;
         }
 
         /// <summary>
-        /// Public HTTPS endpoints and port 443 use the system trust store. Other targets stay cleartext.
+        /// The segmentation server only speaks TLS, so every endpoint that parses uses the system trust store.
         /// </summary>
         internal static bool EndpointRequiresTls(string rawEndpoint)
         {
@@ -129,12 +138,7 @@ namespace Viking.UI.WPF.Services
                 return false;
             }
 
-            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            return parsedUri.Port == 443;
+            return true;
         }
     }
 }

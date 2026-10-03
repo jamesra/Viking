@@ -1,0 +1,4 @@
+﻿# Debugger clients for a development image only. The production image does not install these:
+# build with --build-arg INSTALL_DEBUG_TOOLS=true to add them. They open listening debug ports.
+debugpy
+pydevd-pycharm>=252.27397.106

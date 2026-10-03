@@ -126,7 +126,7 @@ class _BoxWorld(World):
 
     def predict(self, row, col, points, labels, box=None):
         self.boxes.append((Cell(row, col), box))
-        return super().predict(row, col, points, labels)
+        return super().predict(row, col, points, labels, box=box)
 
 
 def test_growth_hands_the_cell_its_box_only_when_boxes_are_given() -> None:
@@ -195,3 +195,41 @@ def test_without_a_box_every_click_is_sent() -> None:
 
     assert len(world.calls[0][1]) == 9
 
+def test_window_box_counts_inclusive_pixels_against_the_minimum_side() -> None:
+    from segmentation_server.tile_growth import MIN_BOX_SIDE
+
+    cell = Cell(3, 3)  # window origin (1536, 1536)
+    exactly_min = (1700, 1700, 1700 + MIN_BOX_SIDE - 1, 1700 + MIN_BOX_SIDE - 1)  # MIN_BOX_SIDE pixels
+    one_short = (1700, 1700, 1700 + MIN_BOX_SIDE - 2, 1700 + MIN_BOX_SIDE - 1)
+
+    assert window_box(cell, [exactly_min]) is not None
+    assert window_box(cell, [one_short]) is None
+
+
+@given(st.integers(200, 3800), st.integers(200, 3800), st.integers(40, 300), st.integers(0, 3), st.integers(-2, 2))
+@settings(max_examples=60, deadline=None)
+def test_any_one_noisy_outer_click_still_finds_the_circle(cx: int, cy: int, radius: int, which: int, nudge: int) -> None:
+    clicks = circle_clicks(cx, cy, radius)
+    outer = clicks[5:9]
+    x, y = outer[which]
+    outer[which] = (x + nudge, y)  # nudged, still within tolerance
+    clicks[5:9] = outer
+
+    boxes = outer_ring_boxes(clicks)
+
+    assert len(boxes) == 1
+    assert _close(boxes[0], _expected(cx, cy, radius), slack=2)
+
+
+def test_the_circle_is_found_when_the_click_list_starts_with_a_west_or_south_outer_click() -> None:
+    clicks = circle_clicks(2048, 2048, 100)
+    reordered = [clicks[0], clicks[7], clicks[8], clicks[5], clicks[6], *clicks[1:5]]
+
+    assert outer_ring_boxes(reordered) == outer_ring_boxes(clicks)
+
+
+def test_a_wildly_wrong_outer_click_is_not_a_circle() -> None:
+    clicks = circle_clicks(2048, 2048, 100)
+    clicks[5] = (clicks[5][0] + 40, clicks[5][1])
+
+    assert outer_ring_boxes(clicks) == []

@@ -1,4 +1,4 @@
-"""mask_threshold, mask_input and the switched-off union in SegmentationModel.
+"""mask_threshold, mask_input and the single-mask selection rule in SegmentationModel.
 
 Needs torch and sam2 (the server image has both), so it is skipped elsewhere. A fake predictor
 stands in for SAM2ImagePredictor and records what predict() was asked.
@@ -6,6 +6,7 @@ stands in for SAM2ImagePredictor and records what predict() was asked.
 
 from __future__ import annotations
 
+import threading
 from contextlib import nullcontext
 from typing import Any, List
 
@@ -17,7 +18,7 @@ pytest.importorskip("sam2")
 
 from hypothesis import given, settings, strategies as st  # noqa: E402
 
-from segmentation_server.mask_utils import DEFAULT_MASK_THRESHOLD  # noqa: E402
+from segmentation_server.mask_utils import DEFAULT_MASK_THRESHOLD, NoMatchingMask  # noqa: E402
 from segmentation_server.segmentation_service import SegmentationModel  # noqa: E402
 
 SIDE = 32
@@ -42,6 +43,7 @@ class FakePredictor:
 def _model() -> SegmentationModel:
     model = object.__new__(SegmentationModel)
     model._autocast = lambda: nullcontext()  # type: ignore[method-assign]
+    model._gpu_lock = threading.RLock()
     return model
 
 
@@ -110,24 +112,139 @@ def test_mask_input_is_ignored_for_multimask_output():
     assert len(predictor.calls) == 1
 
 
-def test_tile_predict_returns_the_best_mask_without_a_union():
-    """A second positive the best mask misses is no longer chased with an extra predict."""
+class CandidatePredictor:
+    """Returns several candidate logit fields at once, the way multimask_output does."""
+
+    def __init__(self, fields: List[np.ndarray], scores: List[float]) -> None:
+        self._fields = np.stack([f.astype(np.float32) for f in fields])
+        self._scores = np.array(scores, dtype=np.float32)
+        self.calls: List[dict[str, Any]] = []
+
+    def predict(self, **kwargs: Any):
+        self.calls.append(kwargs)
+        low_res = np.zeros((len(self._scores), 256, 256), dtype=np.float32)
+        return self._fields, self._scores, low_res
+
+
+def _block(x0: int, y0: int, x1: int, y1: int) -> np.ndarray:
+    """Logits that are confidently object inside the inclusive rectangle and confidently not outside."""
+    field = np.full((SIDE, SIDE), -4.0, dtype=np.float32)
+    field[y0:y1 + 1, x0:x1 + 1] = 4.0
+    return field
+
+
+def test_tile_predict_returns_the_one_selected_mask_with_its_logits_and_score():
     predictor = FakePredictor(_ramp())
-    mask, logits, score = _model().predict_tile_union(
-        predictor, [(SIDE - 2, 5), (1, 5)], [1, 1], False, (SIDE, SIDE)
+    mask, logits, score = _model().predict_tile(
+        predictor, [(SIDE - 2, 5)], [1], False, (SIDE, SIDE)
     )
     assert len(predictor.calls) == 1
     assert np.array_equal(mask, _ramp() > DEFAULT_MASK_THRESHOLD)
-    assert not mask[5, 1]
     assert logits is not None
     assert score == pytest.approx(0.9)
 
 
 def test_tile_predict_threshold_reaches_the_mask():
-    mask, _logits, _score = _model().predict_tile_union(
+    mask, _logits, _score = _model().predict_tile(
         FakePredictor(_ramp()), [(SIDE - 2, 5)], [1], False, (SIDE, SIDE), None, 1.5
     )
     assert np.array_equal(mask, _ramp() > 1.5)
+
+
+def test_without_a_box_the_candidate_covering_the_most_clicks_wins_over_a_higher_scoring_one():
+    wide = _block(0, 0, SIDE - 1, SIDE - 1)
+    narrow = _block(2, 2, 8, 8)
+    predictor = CandidatePredictor([narrow, wide], [0.99, 0.60])
+    mask, logits, score = _model().predict_tile(
+        predictor, [(4, 4), (20, 20), (25, 3)], [1, 1, 1], True, (SIDE, SIDE)
+    )
+    assert len(predictor.calls) == 1
+    assert score == pytest.approx(0.60)
+    assert mask[20, 20] and mask[3, 25]
+
+
+def test_with_a_box_the_highest_scoring_candidate_that_covers_the_whole_box_wins():
+    small = _block(10, 10, 14, 14)
+    medium = _block(6, 6, 22, 22)
+    large = _block(0, 0, SIDE - 1, SIDE - 1)
+    predictor = CandidatePredictor([small, medium, large], [0.99, 0.80, 0.50])
+    mask, _logits, score = _model().predict_tile(
+        predictor, [(12, 12)], [1], True, (SIDE, SIDE), box=(8, 8, 20, 20)
+    )
+    assert score == pytest.approx(0.80)
+    assert mask[7, 7] and not mask[3, 3]
+    assert predictor.calls[0]["box"].tolist() == [8, 8, 20, 20]
+
+
+def test_a_box_no_candidate_covers_is_no_match_after_exactly_one_predict():
+    predictor = CandidatePredictor([_block(10, 10, 14, 14)], [0.9])
+    with pytest.raises(NoMatchingMask):
+        _model().predict_tile(predictor, [(12, 12)], [1], True, (SIDE, SIDE), box=(5, 5, 20, 20))
+    assert len(predictor.calls) == 1
+
+
+def test_a_click_no_candidate_covers_is_no_match_and_no_looser_prompt_is_tried():
+    predictor = PromptAwarePredictor({}, _field(False))
+    with pytest.raises(NoMatchingMask):
+        _model().predict_tile(
+            predictor, [CLICK, NEGATIVE], [1, 0], False, (SIDE, SIDE), box=None
+        )
+    assert len(predictor.calls) == 1
+
+
+def test_a_box_is_not_dropped_to_make_a_click_fit():
+    """The old ladder retried without the box when the best mask missed the click."""
+    predictor = PromptAwarePredictor({(True, True): _field(False)}, _field(True))
+    with pytest.raises(NoMatchingMask):
+        _model().predict_tile(
+            predictor, [CLICK, NEGATIVE], [1, 0], False, (SIDE, SIDE), box=(5, 5, 20, 20)
+        )
+    assert len(predictor.calls) == 1
+    assert predictor.calls[0].get("box") is not None
+
+
+def test_a_box_alone_is_a_valid_prompt_and_sends_no_empty_point_arrays():
+    predictor = CandidatePredictor([_block(0, 0, SIDE - 1, SIDE - 1)], [0.9])
+    mask, _logits, _score = _model().predict_tile(
+        predictor, [], [], False, (SIDE, SIDE), box=(4, 4, 10, 10)
+    )
+    assert mask.all()
+    assert predictor.calls[0]["point_coords"] is None
+    assert predictor.calls[0]["point_labels"] is None
+
+
+def test_no_prompt_at_all_is_an_empty_mask_without_calling_the_model():
+    predictor = CandidatePredictor([_block(0, 0, 3, 3)], [0.9])
+    mask, logits, score = _model().predict_tile(predictor, [], [], False, (SIDE, SIDE))
+    assert not mask.any() and mask.shape == (SIDE, SIDE)
+    assert logits is None and score == 0.0
+    assert predictor.calls == []
+
+
+def test_the_viewport_path_uses_the_same_rule_and_returns_a_single_segment():
+    wide = _block(0, 0, SIDE - 1, SIDE - 1)
+    narrow = _block(2, 2, 8, 8)
+    predictor = CandidatePredictor([narrow, wide], [0.99, 0.60])
+    labeled, segments = _model().segment_image_with_predictor(
+        predictor, [(4, 4), (20, 20)], [1, 1], True, (SIDE, SIDE)
+    )
+    assert len(segments) == 1
+    assert segments[0]["score"] == pytest.approx(0.60)
+    assert int(labeled[20, 20]) == 1
+
+
+def test_the_viewport_path_with_no_covered_click_raises_instead_of_returning_an_empty_answer():
+    predictor = CandidatePredictor([_block(0, 0, 3, 3)], [0.9])
+    with pytest.raises(NoMatchingMask):
+        _model().segment_image_with_predictor(predictor, [(20, 20)], [1], True, (SIDE, SIDE))
+
+
+def test_the_viewport_path_with_only_background_clicks_returns_every_candidate():
+    predictor = CandidatePredictor([_block(0, 0, 5, 5), _block(10, 10, 15, 15)], [0.9, 0.8])
+    _labeled, segments = _model().segment_image_with_predictor(
+        predictor, [(30, 30)], [0], True, (SIDE, SIDE)
+    )
+    assert len(segments) == 2
 
 
 class PromptAwarePredictor:
@@ -163,58 +280,63 @@ def _field(object_at_click: bool) -> np.ndarray:
     return field
 
 
-def _tile(predictor: PromptAwarePredictor, box=(5, 5, 20, 20)):
-    return _model().predict_tile_union(
-        predictor, [CLICK, NEGATIVE], [1, 0], False, (SIDE, SIDE), box
-    )
+class _ConcurrencyProbe(FakePredictor):
+    """Counts how many predict()/set_image() calls overlap in time."""
+
+    def __init__(self) -> None:
+        super().__init__(_ramp())
+        self._guard = threading.Lock()
+        self.running = 0
+        self.max_running = 0
+
+    def _enter(self) -> None:
+        with self._guard:
+            self.running += 1
+            self.max_running = max(self.max_running, self.running)
+        import time
+
+        time.sleep(0.02)
+        with self._guard:
+            self.running -= 1
+
+    def predict(self, **kwargs: Any):
+        self._enter()
+        return super().predict(**kwargs)
+
+    def set_image(self, _image: Any) -> None:
+        self._enter()
 
 
-def test_a_mask_that_holds_the_click_is_returned_without_retrying():
-    predictor = PromptAwarePredictor({}, _field(True))
-    mask, _logits, _score = _tile(predictor)
-    assert len(predictor.calls) == 1
-    assert mask[CLICK[1], CLICK[0]]
+def test_forwards_on_the_shared_model_never_overlap_across_predictors():
+    """Several inference workers must not run SAM2 on the shared weights at once."""
+    model = _model()
+    probe = _ConcurrencyProbe()
+    image = np.zeros((SIDE, SIDE, 3), dtype=np.uint8)
+
+    def predict() -> None:
+        model._predict_with_logits(probe, [(5, 5)], [1], False)
+
+    def encode() -> None:
+        model._encode_image(probe, image)
+
+    threads = [threading.Thread(target=fn) for fn in (predict, encode, predict, encode, predict, encode)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(10)
+
+    assert probe.max_running == 1
 
 
-def test_box_that_leaves_the_click_out_is_dropped():
-    predictor = PromptAwarePredictor({(True, True): _field(False)}, _field(True))
-    mask, _logits, _score = _tile(predictor)
-    assert len(predictor.calls) == 2
-    assert predictor.calls[1].get("box") is None
-    assert np.any(np.asarray(predictor.calls[1]["point_labels"]) == 0)
-    assert mask[CLICK[1], CLICK[0]]
+def test_a_failed_encode_still_releases_the_gpu_lock():
+    model = _model()
 
+    class Boom:
+        def set_image(self, _image: Any) -> None:
+            raise RuntimeError("out of memory")
 
-def test_negatives_are_dropped_when_the_box_was_not_the_cause():
-    predictor = PromptAwarePredictor(
-        {(True, True): _field(False), (False, True): _field(False)}, _field(True)
-    )
-    mask, _logits, _score = _tile(predictor)
-    assert len(predictor.calls) == 3
-    assert predictor.calls[2].get("box") is None
-    assert not np.any(np.asarray(predictor.calls[2]["point_labels"]) == 0)
-    assert mask[CLICK[1], CLICK[0]]
+    with pytest.raises(RuntimeError):
+        model._encode_image(Boom(), np.zeros((2, 2, 3), dtype=np.uint8))
 
-
-def test_without_a_box_the_first_retry_drops_the_negatives():
-    predictor = PromptAwarePredictor({(False, True): _field(False)}, _field(True))
-    mask, _logits, _score = _tile(predictor, box=None)
-    assert len(predictor.calls) == 2
-    assert not np.any(np.asarray(predictor.calls[1]["point_labels"]) == 0)
-    assert mask[CLICK[1], CLICK[0]]
-
-
-def test_no_retry_is_possible_for_a_lone_click_without_a_box():
-    predictor = PromptAwarePredictor({}, _field(False))
-    mask, _logits, _score = _model().predict_tile_union(
-        predictor, [CLICK], [1], False, (SIDE, SIDE), None
-    )
-    assert len(predictor.calls) == 1
-    assert not mask[CLICK[1], CLICK[0]]
-
-
-def test_when_every_rung_misses_the_click_the_original_mask_comes_back():
-    predictor = PromptAwarePredictor({}, _field(False))
-    mask, _logits, _score = _tile(predictor)
-    assert len(predictor.calls) == 3
-    assert not mask[CLICK[1], CLICK[0]]
+    assert model._gpu_lock.acquire(blocking=False)
+    model._gpu_lock.release()

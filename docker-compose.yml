@@ -117,11 +117,12 @@ services:
     build:
       context: .
       dockerfile: Servers/SegmentationServer/Dockerfile
+    # TLS only. The server waits up to SEGMENTATION_TLS_WAIT_SECONDS (120) for the certificate
+    # files, then exits and this policy starts it again, so it comes up on its own once the
+    # certificate renewer has enrolled. There is no cleartext port.
     restart: unless-stopped
-    command: ["--port", "80"]
     ports:
-      # Cleartext gRPC. Host 443/80 belong to the reverse proxy.
-      - "40080:80"
+      # gRPC over TLS. Host 443/80 belong to the reverse proxy.
       # Router forwards segmentation.codepharm.net:443 to this host port.
       - "40443:443"
       # Optional demo page (SEGMENTATION_DEMO_SITE=1). Same certificate as gRPC TLS.
@@ -145,6 +146,11 @@ services:
       SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
       # Off unless the operator sets SEGMENTATION_DEMO_SITE=1. HTTPS uses SSL_CERT_PATH.
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_DEMO_SITE:-0}
+      # The page listens on loopback inside the container by default, which the published port
+      # cannot reach. Set SEGMENTATION_DEMO_BIND=0.0.0.0 to expose it, and set
+      # SEGMENTATION_DEMO_TOKEN as well: the page has no other login.
+      SEGMENTATION_DEMO_BIND: ${SEGMENTATION_DEMO_BIND:-127.0.0.1}
+      SEGMENTATION_DEMO_TOKEN: ${SEGMENTATION_DEMO_TOKEN:-}
     volumes:
       - ${SEGMENTATION_MODEL_HOST:-D:/Docker/Run/segmentation-server}:/models:ro
       - ${SEGMENTATION_INDUCTOR_CACHE:-D:/Docker/cache/segmentation-inductor}:/home/user/.cache/torch_inductor

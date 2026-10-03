@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 
 from segmentation_server.cell_grid import CELL_SIZE, Cell, Point, tiles_for_cell, window_origin
+from segmentation_server.mask_utils import NoMatchingMask, count_covered_points, mask_covers_box
 from segmentation_server.tile_growth import GrowthResult, PredictUnavailable
 
 DOMAIN = 4096
@@ -74,7 +75,13 @@ class World:
         self.available: Optional[Set[Tuple[int, int]]] = None if available is None else set(available)
         self.calls: List[Tuple[Cell, List[Point], List[int]]] = []
 
-    def predict(self, row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
+    def predict(self, row: int, col: int, points: Sequence[Point], labels: Sequence[int], box=None):
+        """Stand in for the server's per-cell predict, selection rule included.
+
+        With a ``box`` (window-local, Y-down, inclusive) the answer must cover all of it; without
+        one it must cover at least one foreground click. Otherwise ``NoMatchingMask``, exactly as
+        ``SegmentationModel.predict_tile`` raises it.
+        """
         cell = Cell(row, col)
         if self.available is not None:
             missing = [t for t in tiles_for_cell(cell) if (t.row, t.col) not in self.available]
@@ -93,6 +100,12 @@ class World:
         count, pieces = cv2.connectedComponents(window.astype(np.uint8), connectivity=8)
         keep = {int(pieces[y, x]) for (x, y), label in zip(points, labels) if label == 1 and pieces[y, x] > 0}
         mask = np.isin(pieces, list(keep)) if keep else np.zeros_like(window)
+        positives = [(x, y) for (x, y), label in zip(points, labels) if label == 1]
+        if box is not None:
+            if not mask_covers_box(mask, box):
+                raise NoMatchingMask(f"mask does not cover box {tuple(box)} in cell {row},{col}")
+        elif positives and count_covered_points(mask, positives) == 0:
+            raise NoMatchingMask(f"mask covers none of the {len(positives)} click(s) in cell {row},{col}")
         return mask, self.logits_for(mask), 0.9
 
     @staticmethod

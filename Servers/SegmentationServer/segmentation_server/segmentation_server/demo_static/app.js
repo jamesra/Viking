@@ -61,7 +61,7 @@ async function uploadImage(file) {
   setStatus("Uploading…");
   let response;
   try {
-    response = await fetch("/api/images", {
+    response = await apiFetch("/api/images", {
       method: "POST",
       headers: { "Content-Type": file.type || "application/octet-stream" },
       body: file,
@@ -83,7 +83,7 @@ async function uploadImage(file) {
     return;
   }
   if (previousId !== null) {
-    fetch(`/api/images/${previousId}`, { method: "DELETE" }).catch(() => {});
+    apiFetch(`/api/images/${previousId}`, { method: "DELETE" }).catch(() => {});
   }
   imageId = response.headers.get("X-Image-Id");
   try {
@@ -117,7 +117,7 @@ async function segment() {
   setStatus("Segmenting…");
   let response;
   try {
-    response = await fetch(`/api/images/${imageId}/segment`, {
+    response = await apiFetch(`/api/images/${imageId}/segment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ points: sent }),
@@ -234,4 +234,28 @@ async function errorText(response) {
     return `Request failed (${response.status})`;
   }
   return `Request failed (${response.status})`;
+}
+// Every request that changes anything carries X-Demo-Client, which a page on another origin
+// cannot add without a CORS preflight the server never allows. When the server wants a token
+// (401), ask for it once, keep it for this tab only, and repeat the request.
+const TOKEN_KEY = "segmentation-demo-token";
+
+async function apiFetch(url, options = {}) {
+  const attempt = () => {
+    const headers = { ...(options.headers || {}), "X-Demo-Client": "1" };
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (token) {
+      headers["X-Demo-Token"] = token;
+    }
+    return fetch(url, { ...options, headers });
+  };
+  let response = await attempt();
+  if (response.status === 401) {
+    const token = window.prompt("This demo needs its access token:");
+    if (token) {
+      sessionStorage.setItem(TOKEN_KEY, token.trim());
+      response = await attempt();
+    }
+  }
+  return response;
 }

@@ -89,38 +89,67 @@ def find_circles(points: Sequence[Point]) -> List[CircleBox]:
     return circles
 
 
+_AXES: Tuple[Point, ...] = ((1, 0), (0, 1), (-1, 0), (0, -1))
+
+
 def _circle_at(
     clicks: Sequence[Point], used: Sequence[bool], center_index: int, cx: int, cy: int
 ) -> Optional[Tuple[List[int], CircleBox]]:
+    """Try every unused click as the outer-ring click on any one of the four axes.
+
+    Any outer click can anchor the pattern, whichever axis it lies on, so a pattern is found
+    even when the east click is the one that is off. The anchor only gives a first radius; once
+    all four outer clicks are matched the radius is their mean distance, and every target is
+    checked again against it, so one noisy click does not decide the geometry.
+    """
     for outer_index, (ox, oy) in enumerate(clicks):
         if outer_index == center_index or used[outer_index]:
             continue
-        radius = ox - cx
-        if radius < MIN_OUTER_RADIUS_PX or abs(oy - cy) > _tolerance(radius):
-            continue
-
-        tol = _tolerance(radius)
-        outer_targets = [(cx - radius, cy), (cx, cy + radius), (cx, cy - radius)]
-        inner = int(round(radius * INNER_RING_FRACTION / OUTER_RING_FRACTION / (2 ** 0.5)))
-        inner_targets = [(cx + sx * inner, cy + sy * inner) for sx in (1, -1) for sy in (1, -1)]
-
-        members = [center_index, outer_index]
-        taken = set(members)
-        for target in outer_targets + inner_targets:
-            match = _nearest(clicks, used, taken, target, tol)
-            if match is None:
-                break
-            taken.add(match)
-            members.append(match)
-        else:
-            outer = [clicks[i] for i in (outer_index, *members[2:5])]
-            outer_distance = sum(math.hypot(x - cx, y - cy) for x, y in outer) / len(outer)
-            inner_clicks = tuple(clicks[i] for i in members[5:9])
-            outer_clicks = tuple(clicks[i] for i in (members[1], *members[2:5]))
-            return members, CircleBox(
-                _inscribed_box(cx, cy, outer_distance), inner_clicks, outer_clicks
-            )
+        dx, dy = ox - cx, oy - cy
+        for ax, ay in _AXES:
+            radius = dx * ax + dy * ay
+            if radius < MIN_OUTER_RADIUS_PX or abs(dx * ay - dy * ax) > _tolerance(radius):
+                continue
+            found = _match_pattern(clicks, used, center_index, outer_index, (ax, ay), radius, cx, cy)
+            if found is not None:
+                return found
     return None
+
+
+def _match_pattern(
+    clicks: Sequence[Point],
+    used: Sequence[bool],
+    center_index: int,
+    anchor_index: int,
+    anchor_axis: Point,
+    radius: int,
+    cx: int,
+    cy: int,
+) -> Optional[Tuple[List[int], CircleBox]]:
+    tol = _tolerance(radius)
+    outer_targets = [(cx + ax * radius, cy + ay * radius) for ax, ay in _AXES if (ax, ay) != anchor_axis]
+    inner = int(round(radius * INNER_RING_FRACTION / OUTER_RING_FRACTION / (2 ** 0.5)))
+    inner_targets = [(cx + sx * inner, cy + sy * inner) for sx in (1, -1) for sy in (1, -1)]
+
+    members = [center_index, anchor_index]
+    taken = set(members)
+    for target in outer_targets + inner_targets:
+        match = _nearest(clicks, used, taken, target, tol)
+        if match is None:
+            return None
+        taken.add(match)
+        members.append(match)
+
+    outer_indexes = (anchor_index, *members[2:5])
+    outer_distance = sum(math.hypot(clicks[i][0] - cx, clicks[i][1] - cy) for i in outer_indexes) / 4
+    refined = int(round(outer_distance))
+    refined_tol = _tolerance(refined)
+    for i in outer_indexes:
+        if abs(math.hypot(clicks[i][0] - cx, clicks[i][1] - cy) - outer_distance) > refined_tol:
+            return None
+    inner_clicks = tuple(clicks[i] for i in members[5:9])
+    outer_clicks = tuple(clicks[i] for i in outer_indexes)
+    return members, CircleBox(_inscribed_box(cx, cy, outer_distance), inner_clicks, outer_clicks)
 
 
 def _inscribed_box(cx: int, cy: int, outer_distance: float) -> Box:

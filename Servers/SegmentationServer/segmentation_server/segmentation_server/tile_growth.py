@@ -15,15 +15,22 @@ The walk:
 
 1. Predict the cell that owns the first foreground click.
 2. OR the kept core, and the confident margin pixels, into ``G``.
-3. When ``G`` inside a core touches the core edge, or a prediction's margin put pixels in
-   a core, predict that cell. Its positive clicks are the foreground clicks in its window
-   plus 1 to 3 seeds at the center of each separate piece of ``G`` in its outer 256 px
-   margin (``sample_ring_seeds``), so it continues the same object.
-4. A cell is predicted again, up to a small cap, when ``G`` has grown inside its window
-   and the new pixels are not covered by what it last predicted. That finds the second
-   arm of a C or hairpin that comes back through cores already visited.
+3. When ``G`` in a core touches an edge it shares with a neighbor, that is a **range**: a
+   stretch of set pixels along the edge (``seams.edge_runs``). The neighbor sees the last 256
+   px of this core as its own outer margin band. Project from the edge into that band, pixel by
+   pixel, until a non-mask pixel; the largest rectangle under those depths with one side on the
+   edge is the neighbor's **box prompt**, with a click at its center. The longest range on the
+   edge gives the box; the other ranges on that edge add a click each (``seams.seed_for_run``).
+   Corners are not followed: a mask has to reach an edge to continue.
+4. Ranges already crossed live in a graph whose nodes are cells and whose edges hold the merged
+   ranges (``seams.SeamGraph``). A range that overlaps one already crossed is not crossed
+   again unless it is at least twice as long or joins two stored ranges, so a mask that loops
+   back over a seam, such as the return arm of a hairpin, is crossed where it is new and the
+   walk cannot go around forever. A prediction that finds no mask fitting its box claims its
+   ranges all the same, so that cell is not tried again until the range changes.
 5. Repeat until nothing is queued, then start from any foreground click still outside
-   ``G``.
+   ``G``. A cell started from a user click is prompted with the clicks (and the client's
+   boxes) in its window, not an edge.
 
 Aligned tiles the server does not hold are collected by ``GrowthWalk.take_requested`` and the
 walk continues without that cell. The walk object stays alive while the caller fetches the
@@ -33,15 +40,32 @@ was already predicted is predicted again and ``G`` only ever gains pixels.
 
 from __future__ import annotations
 
+import logging
 import os
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Callable, Deque, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+from typing import Callable, Deque, Dict, Iterable, Iterator, List, Mapping, Optional, Protocol, Sequence, Set, Tuple
 
 import cv2
 import numpy as np
 from numpy.typing import NDArray
 
+from segmentation_server.mask_utils import NoMatchingMask
+from segmentation_server.seams import (
+    MAX_EXTRA_CLICKS,
+    PixelRange,
+    RunSeed,
+    SIDES,
+    SeamGraph,
+    Side,
+    band_depths,
+    edge_clearance_px,
+    edge_coordinates,
+    edge_runs,
+    novel_runs,
+    order_runs,
+    seed_for_run,
+)
 from segmentation_server.cell_grid import (
     CELL_SIZE,
     CELL_STRIDE,
@@ -54,14 +78,10 @@ from segmentation_server.cell_grid import (
     Point,
     TileIndex,
     cell_of_point,
-    core_contacts,
     in_window,
     mosaic_to_window,
-    neighbor_cells,
-    sample_ring_seeds,
     tile_of_point,
     tiles_for_cell,
-    window_origin,
 )
 
 __all__ = [
@@ -79,6 +99,8 @@ __all__ = [
     "tile_of_point",
     "window_box",
 ]
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_REQUESTED_TILES = 8
 # A hairpin returns down cells the first arm already crossed, and each of them must be
@@ -102,11 +124,31 @@ DEFAULT_OWNER_VETO_LOGIT = -1.0
 # A box prompt clipped to less than this on a side says nothing useful about the object.
 MIN_BOX_SIDE = 16
 
-# (cell row, cell col, window points y-down, labels) -> mask of the window, logits or None, score
-CellPredict = Callable[
-    [int, int, Sequence[Point], Sequence[int]],
-    Tuple[MaskArray, Optional[NDArray], float],
-]
+class CellPredict(Protocol):
+    """What the walk calls to predict one cell.
+
+    ``points`` are window-local Y-down click positions with ``labels`` (1 foreground, 0
+    background). ``box`` is passed only when the prompt has one: a window-local Y-down inclusive
+    ``(x0, y0, x1, y1)``, and the answer must cover all of it (see ``mask_utils.select_mask``).
+    Returns the chosen mask of the window, its logits or None, and its score. May raise
+    ``PredictUnavailable`` (tiles missing) or ``NoMatchingMask`` (no candidate fits the prompt).
+    """
+
+    def __call__(
+        self,
+        row: int,
+        col: int,
+        points: Sequence[Point],
+        labels: Sequence[int],
+        box: Optional[Tuple[int, int, int, int]] = None,
+    ) -> Tuple[MaskArray, Optional[NDArray], float]: ...
+
+
+class _Rejected:
+    """Marker: the prediction ran but no mask fit its prompt."""
+
+
+_REJECTED = _Rejected()
 
 
 class PredictUnavailable(Exception):
@@ -145,6 +187,28 @@ class CellPrediction:
 
 
 @dataclass
+class SeamRecord:
+    """One prediction the walk made for a cell, and what seeded it.
+
+    ``kind`` is ``"user"`` (the client's clicks and boxes) or ``"edge"`` (a range on the edge the
+    ``parent`` cell shares with ``cell``; ``side`` is the parent's side facing ``cell``).
+    ``runs`` are the ranges, in mosaic coordinates along that edge, the prediction crossed.
+    ``box`` is the mosaic box prompt (Y up, inclusive) and ``clicks`` the extra mosaic clicks.
+    ``outcome`` is ``"accepted"`` or ``"rejected"`` (no mask fit the prompt, so the cell was
+    skipped for these ranges). The debug dump writes these so a seam can be inspected.
+    """
+
+    kind: str
+    cell: Cell
+    parent: Optional[Cell]
+    side: Optional[Side]
+    runs: List[PixelRange]
+    box: Optional[Tuple[int, int, int, int]]
+    clicks: List[Point]
+    outcome: str
+
+
+@dataclass
 class GrowthResult:
     """Fused mosaic and any aligned tiles the caller still needs to upload."""
 
@@ -154,13 +218,23 @@ class GrowthResult:
     score: float
     requested: List[TileIndex] = field(default_factory=list)
     cells: Dict[Cell, CellPrediction] = field(default_factory=dict)
+    seams: List[SeamRecord] = field(default_factory=list)
+    edges: Dict[Tuple[int, int, int, int], List[PixelRange]] = field(default_factory=dict)
+
+
+@dataclass
+class _Attempt:
+    """One prediction the walk is about to make for a cell."""
+
+    kind: str
+    parent: Optional[Cell] = None
+    side: Optional[Side] = None
+    seeds: List[RunSeed] = field(default_factory=list)
 
 
 @dataclass
 class _CellState:
     predictions: int = 0
-    seeds_used: Set[Point] = field(default_factory=set)
-    last_mask_up: Optional[MaskArray] = None
     last_raw: Optional[MaskArray] = None
     last_kept: Optional[MaskArray] = None
     last_logits: Optional[NDArray] = None
@@ -275,6 +349,11 @@ class GrowthWalk:
         omit_with_box: Optional[Sequence[Point]] = None,
     ) -> None:
         self._started = False
+        self._start_cell: Optional[Cell] = None
+        self._user_cells: Set[Cell] = set()
+        self._user_attempted: Set[Cell] = set()
+        self._graph = SeamGraph()
+        self._seams: List[SeamRecord] = []
         self._pending: List[TileIndex] = []
         self._asked: Set[TileIndex] = set()
         self._unavailable: Set[TileIndex] = set()
@@ -297,6 +376,7 @@ class GrowthWalk:
         self._canvas = Canvas()
         self._states: Dict[Cell, _CellState] = {}
         self._deferred: Set[Cell] = set()
+        self._attempted_owners: Set[Cell] = set()
         self._requested: List[TileIndex] = []
         self._queue: Deque[Cell] = deque()
         self._queued: Set[Cell] = set()
@@ -307,15 +387,25 @@ class GrowthWalk:
             self._started = True
             if not self._fg:
                 return
-            self._enqueue(cell_of_point(*self._fg[0]))
+            self._start_cell = cell_of_point(*self._fg[0])
+            self._user_cells.add(self._start_cell)
+            self._enqueue(self._start_cell)
         while True:
             while self._queue:
+                self._check_stop()
                 self._step(self._queue.popleft())
 
+            self._check_stop()
             pending = self._unreached_foreground_owners()
             if not pending:
                 break
             for cell in pending:
+                # A cell the budgets or a failed step leave without a state would otherwise be
+                # found unreached again and queued forever. One attempt per owner is enough
+                # because the budgets only ever shrink, and a deferred cell is re-queued by
+                # ``resume`` instead.
+                self._attempted_owners.add(cell)
+                self._user_cells.add(cell)
                 self._enqueue(cell)
 
     @property
@@ -357,7 +447,12 @@ class GrowthWalk:
             if self._canvas.contains(x, y):
                 continue
             owner = cell_of_point(x, y)
-            if owner in self._states or owner in self._deferred or owner in owners:
+            if (
+                owner in self._states
+                or owner in self._deferred
+                or owner in self._attempted_owners
+                or owner in owners
+            ):
                 continue
             owners.append(owner)
         return owners
@@ -376,29 +471,122 @@ class GrowthWalk:
         self._requested.append(tile)
 
     def _step(self, cell: Cell) -> None:
+        """Make every prediction this cell is owed: the user's prompt, then one per edge with new ranges."""
         self._queued.discard(cell)
-        if cell in self._deferred or self._predictions >= self._max_predictions:
+        if cell in self._deferred:
             return
+        for attempt in self._attempts(cell):
+            state = self._states.get(cell)
+            if self._predictions >= self._max_predictions:
+                return
+            if state is None and len(self._states) >= self._max_cells:
+                return
+            if state is not None and state.predictions >= MAX_PREDICTIONS_PER_CELL:
+                return
+            if not self._run_attempt(cell, attempt):
+                return
+
+    def _attempts(self, cell: Cell) -> Iterator[_Attempt]:
+        """The predictions this cell is owed, one at a time, each read from the canvas as it is now.
+
+        First the user's own prompt, if a user click started this cell and it has not run. Then,
+        for each side in a fixed order, the edge that the neighbor on that side shares with this
+        cell, when its set pixels hold a range that has not been crossed.
+        """
+        if cell in self._user_cells and cell not in self._user_attempted:
+            yield _Attempt(kind="user")
+        for side in SIDES:
+            parent = Cell(cell.row - side.step[0], cell.col - side.step[1])
+            seeds = self._edge_seeds(parent, side, cell)
+            if seeds:
+                yield _Attempt(kind="edge", parent=parent, side=side, seeds=seeds)
+
+    def _edge_seeds(self, parent: Cell, side: Side, cell: Cell) -> List[RunSeed]:
+        """Seeds for the ranges on ``parent``'s edge toward ``cell`` that have not been crossed.
+
+        Longest range first, so the first seed is the one whose rectangle becomes the box. A
+        range shorter than ``MIN_SEED_SIDE`` is noise and is neither crossed nor claimed.
+        """
+        core = self._canvas.core(parent)
+        local_runs = edge_runs(core, side)
+        if not local_runs:
+            return []
+        by_coordinates = {edge_coordinates(parent, side, run): run for run in local_runs}
+        fresh = novel_runs(sorted(by_coordinates), self._graph.ranges(parent, cell))
+        if not fresh:
+            return []
+        ordered = order_runs([by_coordinates[coordinates] for coordinates in fresh])
+        depths = band_depths(core, side, CORE_MARGIN - edge_clearance_px(), rows=ordered)
+        seeds = [seed_for_run(core, parent, side, run, depths=depths) for run in ordered]
+        return [seed for seed in seeds if not self._already_seen_by(cell, seed)]
+
+    def _already_seen_by(self, cell: Cell, seed: RunSeed) -> bool:
+        """True when ``cell``'s latest prediction already covers this range's seed.
+
+        A prediction leaves its confident margin pixels in the neighbors' cores, so a neighbor's
+        core edge can show a range that is only this cell's own answer coming back. Crossing it
+        would predict the cell again for nothing, and claiming it would block the forward
+        crossing the walk still has to make. A range the cell has not seen (the return arm of a
+        hairpin) is not covered and goes through. The seed's box, or its click when it has no
+        box, is what is tested.
+        """
         state = self._states.get(cell)
-        if state is None and len(self._states) >= self._max_cells:
-            return
-        if state is not None and state.predictions >= MAX_PREDICTIONS_PER_CELL:
-            return
+        if state is None or state.last_kept is None:
+            return False
+        if seed.box is not None:
+            left, top = mosaic_to_window(cell, seed.box[0], seed.box[3])
+            right, bottom = mosaic_to_window(cell, seed.box[2], seed.box[1])
+        else:
+            left, top = right, bottom = mosaic_to_window(cell, seed.click[0], seed.click[1])
+        if left < 0 or top < 0 or right >= CELL_SIZE or bottom >= CELL_SIZE:
+            return False
+        return bool(state.last_kept[top:bottom + 1, left:right + 1].all())
 
-        x0, y0 = window_origin(cell)
-        seeds = sample_ring_seeds(self._canvas.read(x0, y0, CELL_SIZE, CELL_SIZE), x0, y0)
-        if state is not None and not _has_new_seed(state, seeds, x0, y0):
-            return
+    def _run_attempt(self, cell: Cell, attempt: _Attempt) -> bool:
+        """Predict ``cell`` for one attempt and fold the answer into ``G``. False when the cell is deferred."""
+        if attempt.kind == "user":
+            box = window_box(cell, self._boxes)
+            points, labels, positives = self._prompts(cell, boxed=box is not None)
+            clicks: List[Point] = []
+            mosaic_box = None
+            fatal = cell == self._start_cell
+        else:
+            primary = attempt.seeds[0]
+            mosaic_box = primary.box
+            box = window_box(cell, [mosaic_box]) if mosaic_box is not None else None
+            clicks = [seed.click for seed in attempt.seeds[: 1 + MAX_EXTRA_CLICKS]]
+            points, labels, positives = self._build_prompts(cell, set(), extra_positives=clicks)
+            fatal = False
+        runs = [seed.coordinates for seed in attempt.seeds]
 
-        box = window_box(cell, self._boxes)
-        points, labels, positives = self._prompts(cell, seeds, boxed=box is not None)
         if not positives:
-            return
+            if attempt.kind == "user":
+                self._user_attempted.add(cell)
+            return True
 
-        mask_down = self._call_predict(cell, points, labels, box)
-        if mask_down is None:
-            return
-        score, raw_down, logits = mask_down
+        outcome = self._call_predict(cell, points, labels, box, fatal=fatal)
+        if outcome is None:
+            return False
+        if attempt.kind == "user":
+            self._user_attempted.add(cell)
+        elif attempt.parent is not None:
+            self._graph.claim(attempt.parent, cell, runs)
+
+        record = SeamRecord(
+            kind=attempt.kind,
+            cell=cell,
+            parent=attempt.parent,
+            side=attempt.side,
+            runs=runs,
+            box=mosaic_box,
+            clicks=clicks,
+            outcome="rejected" if outcome is _REJECTED else "accepted",
+        )
+        self._seams.append(record)
+        if outcome is _REJECTED:
+            return True
+
+        score, raw_down, logits = outcome
         kept_down = _components_with_positives(raw_down, positives)
         kept_up = np.flipud(kept_down)
         core_up = kept_up[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE]
@@ -408,9 +596,6 @@ class GrowthWalk:
 
         state = self._states.setdefault(cell, _CellState())
         state.predictions += 1
-        self._predictions += 1
-        state.seeds_used.update(seeds)
-        state.last_mask_up = kept_up
         state.last_raw = raw_down
         state.last_kept = kept_down
         state.last_logits = logits
@@ -418,25 +603,25 @@ class GrowthWalk:
             state.score = score
 
         self._spread(cell, added)
+        return True
 
-    def _prompts(
-        self, cell: Cell, seeds: Sequence[Point], boxed: bool = False
-    ) -> Tuple[List[Point], List[int], List[Point]]:
+    def _prompts(self, cell: Cell, boxed: bool = False) -> Tuple[List[Point], List[int], List[Point]]:
         omit = self._omit_with_box if boxed else set()
-        points, labels, positives = self._build_prompts(cell, seeds, omit)
+        points, labels, positives = self._build_prompts(cell, omit)
         # A box with no positive click would reach SAM2 as an empty point array. That only
         # happens when the window holds nothing but the omitted clicks, so send them then.
         if omit and not any(label == 1 for label in labels) and positives:
-            points, labels, positives = self._build_prompts(cell, seeds, set())
+            points, labels, positives = self._build_prompts(cell, set())
         return points, labels, positives
 
     def _build_prompts(
-        self, cell: Cell, seeds: Sequence[Point], omit: Set[Point]
+        self, cell: Cell, omit: Set[Point], extra_positives: Sequence[Point] = ()
     ) -> Tuple[List[Point], List[int], List[Point]]:
         """Window-local prompt points and labels, and every positive click in the window.
 
         Clicks in ``omit`` are left out of ``points`` and ``labels`` but still returned in
         ``positives``, which is what filters the answer to the pieces the user clicked.
+        ``extra_positives`` are mosaic clicks the walk added (a seed rectangle's center).
         """
         points: List[Point] = []
         labels: List[int] = []
@@ -457,11 +642,20 @@ class GrowthWalk:
 
         for point in self._fg:
             _add(point, 1)
-        for point in seeds:
+        for point in extra_positives:
             _add(point, 1)
         for point in self._bg:
             _add(point, 0)
         return points, labels, positives
+
+    def _check_stop(self) -> None:
+        """Raise ``GrowthCancelled`` when the caller asked to stop.
+
+        Checked before every step as well as before every SAM2 call, so a walk that is making
+        no predictions (budgets spent, nothing left to try) still honors a cancel.
+        """
+        if self._should_stop is not None and self._should_stop():
+            raise GrowthCancelled()
 
     def _call_predict(
         self,
@@ -469,9 +663,14 @@ class GrowthWalk:
         points: Sequence[Point],
         labels: Sequence[int],
         box: Optional[Tuple[int, int, int, int]] = None,
-    ) -> Optional[Tuple[float, MaskArray, Optional[NDArray]]]:
-        if self._should_stop is not None and self._should_stop():
-            raise GrowthCancelled()
+        fatal: bool = False,
+    ):
+        """One SAM2 call. Returns ``(score, mask, logits)``, ``_REJECTED``, or None when the cell is deferred.
+
+        ``fatal`` makes a rejection (no mask fits the prompt) raise out of the walk; it is set
+        for the cell the user clicked first, whose failure is the request's failure.
+        """
+        self._check_stop()
         try:
             if box is None:
                 mask, logits, score = self._predict(cell.row, cell.col, points, labels)
@@ -482,6 +681,15 @@ class GrowthWalk:
             for tile in unavailable.tiles:
                 self._request(tile)
             return None
+        except NoMatchingMask as rejected:
+            self._predictions += 1
+            if fatal:
+                raise
+            logger.warning(
+                "SegmentTiles cell row=%s col=%s skipped: %s", cell.row, cell.col, rejected
+            )
+            return _REJECTED
+        self._predictions += 1
 
         mask_bool = np.asarray(mask, dtype=np.bool_)
         if mask_bool.ndim != 2:
@@ -495,27 +703,25 @@ class GrowthWalk:
         return float(score), mask_bool, _window_logits(logits)
 
     def _follow_contacts(self, cell: Cell) -> None:
-        for d_row, d_col in core_contacts(self._canvas.core(cell)):
-            self._enqueue(Cell(cell.row + d_row, cell.col + d_col))
+        """Queue the neighbor across each edge where this cell's core holds a range. Corners are not followed."""
+        core = self._canvas.core(cell)
+        for side in SIDES:
+            if edge_runs(core, side):
+                self._enqueue(Cell(cell.row + side.step[0], cell.col + side.step[1]))
 
     def _spread(self, cell: Cell, added: Mapping[Cell, int]) -> None:
         """Queue the cells a prediction affects.
 
-        ``added`` maps each core that gained pixels to how many. The prediction's margin
-        lands in neighbor cores, so such a core is queued even if its own edge is not
-        touched (the object now reaches into it), and every already-predicted cell whose
-        window contains the new pixels is queued to see them as seeds. A cell's window
-        reaches only into its own core and its eight neighbors' cores.
+        ``added`` maps each core that gained pixels to how many. A core that gained pixels may
+        now touch an edge, so each is followed, and it is queued itself because its neighbors'
+        edges toward it may have changed. A queued cell predicts only if one of its incoming
+        edges holds a range that has not been crossed, so queueing is cheap.
         """
         self._follow_contacts(cell)
         for owner in added:
             self._follow_contacts(owner)
             if owner != cell:
                 self._enqueue(owner)
-            for neighbor in neighbor_cells(owner):
-                state = self._states.get(neighbor)
-                if neighbor != cell and state is not None and state.predictions < MAX_PREDICTIONS_PER_CELL:
-                    self._enqueue(neighbor)
 
     def _finish(self) -> GrowthResult:
         owners = self._canvas.cells()
@@ -561,6 +767,8 @@ class GrowthWalk:
             score=min(scores) if scores else 0.0,
             requested=list(self._requested),
             cells=cells,
+            seams=list(self._seams),
+            edges={key: list(runs) for key, runs in self._graph.edges.items()},
         )
 
 
@@ -580,9 +788,10 @@ def window_box(
         right, bottom = mosaic_to_window(cell, x_max, y_min)
         left, top = max(left, 0), max(top, 0)
         right, bottom = min(right, CELL_SIZE - 1), min(bottom, CELL_SIZE - 1)
-        if right - left < MIN_BOX_SIDE or bottom - top < MIN_BOX_SIDE:
+        # Corners are inclusive pixels, so a side spans (right - left + 1) pixels.
+        if right - left + 1 < MIN_BOX_SIDE or bottom - top + 1 < MIN_BOX_SIDE:
             continue
-        area = (right - left) * (bottom - top)
+        area = (right - left + 1) * (bottom - top + 1)
         if area > best_area:
             best, best_area = (left, top, right, bottom), area
     return best
@@ -605,6 +814,17 @@ def _window_logits(logits: Optional[NDArray]) -> Optional[NDArray]:
     return array.astype(np.float32, copy=False)
 
 
+def _make_margin_mask() -> MaskArray:
+    """True on the outer 256 px band of a window, False on its core. Built once; it never changes."""
+    mask = np.ones((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
+    mask[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE] = False
+    mask.setflags(write=False)
+    return mask
+
+
+_MARGIN_MASK = _make_margin_mask()
+
+
 def _gate_margin(kept_down: MaskArray, logits: Optional[NDArray], margin_logit_min: float) -> MaskArray:
     """The part of a kept window mask to write: its core, plus margin pixels the model is sure of.
 
@@ -620,9 +840,7 @@ def _gate_margin(kept_down: MaskArray, logits: Optional[NDArray], margin_logit_m
         return accepted
 
     confident = kept_down & (_full_res(logits) >= margin_logit_min)
-    margin = np.ones((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
-    margin[core, core] = False
-    return accepted | (confident & margin)
+    return accepted | (confident & _MARGIN_MASK)
 
 
 def _full_res(logits: NDArray) -> NDArray:
@@ -644,18 +862,6 @@ def _owner_veto(logits: Optional[NDArray], owner_veto_logit: float) -> Optional[
     return np.flipud(veto_down)
 
 
-def _has_new_seed(state: _CellState, seeds: Sequence[Point], x0: int, y0: int) -> bool:
-    """True when ``G`` offers a seed this cell has not been given and did not already cover."""
-    if state.last_mask_up is None:
-        return bool(seeds)
-    for sx, sy in seeds:
-        if (sx, sy) in state.seeds_used:
-            continue
-        if not state.last_mask_up[sy - y0, sx - x0]:
-            return True
-    return False
-
-
 def _components_with_positives(mask_down: MaskArray, positives: Sequence[Point]) -> MaskArray:
     """The connected pieces of a fresh SAM2 mask that hold a positive click.
 
@@ -671,4 +877,7 @@ def _components_with_positives(mask_down: MaskArray, positives: Sequence[Point])
         return np.zeros_like(mask_down)
     if count == 2:
         return mask_down
-    return np.isin(labels, list(keep))
+    # A lookup table indexed by label is much cheaper than np.isin over a million pixels.
+    wanted = np.zeros(count, dtype=np.bool_)
+    wanted[list(keep)] = True
+    return wanted[labels]

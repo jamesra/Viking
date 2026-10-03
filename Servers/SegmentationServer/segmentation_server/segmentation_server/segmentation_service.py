@@ -26,28 +26,31 @@ from segmentation_server.compile_config import (
 )
 from segmentation_server.embedding_store import EmbeddingStore, open_embedding_store
 from segmentation_server.cuda_errors import raise_if_cuda_lost
+from segmentation_server.encoder_parity import EncoderParityError, compare_feature_maps
 from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.mask_utils import (
     DEFAULT_MASK_THRESHOLD,
     LabeledImage,
     Point,
     SegmentInfo,
-    UnionMaskStats,
-    cleanup_mask,
     combined_mask_to_segments,
-    fill_small_holes,
-    get_mask_bounds,
-    mask_covers_any_positive,
-    mask_to_polygons,
+    count_covered_points,
     prepare_image_for_sam2,
     process_masks,
-    union_masks_covering_positives,
+    select_mask,
 )
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL_CFG = "configs/sam2.1/sam2.1_hiera_l.yaml"
 DEFAULT_CHECKPOINT_NAME = "sam2.1_hiera_large.pt"
+
+_GENERATION_ATTR = "_viking_encoder_generation"
+# Layout of a disk embedding blob. It touches private SAM2 predictor state (_features, _orig_hw),
+# so a blob carries this number and one with another value is discarded instead of installed.
+# Bump it when the payload or the SAM2 pin changes what those fields mean.
+DISK_BLOB_FORMAT = 1
+_PARITY_SEED = 20261002
 
 COMPILE_OFF = "off"
 COMPILE_WARMING = "warming"
@@ -65,11 +68,6 @@ class SegmentationModel:
 
     capabilities = SAM2_CAPABILITIES
 
-    cleanup_mask = staticmethod(cleanup_mask)
-    fill_small_holes = staticmethod(fill_small_holes)
-    get_mask_bounds = staticmethod(get_mask_bounds)
-    mask_to_polygons = staticmethod(mask_to_polygons)
-    prepare_image_for_sam2 = staticmethod(prepare_image_for_sam2)
 
     def __init__(
         self,
@@ -93,6 +91,10 @@ class SegmentationModel:
         logger.info("Using device: %s", self.device)
 
         self._swap_lock = threading.Lock()
+        # One SAM2 forward at a time on the shared weights, whatever the inference pool size.
+        # Re-entrant because a predict path may call back into another guarded step. Lock
+        # order everywhere is per-predictor lock first, then this one.
+        self._gpu_lock = threading.RLock()
         self._callback_lock = threading.Lock()
         self._on_compiled_ready = on_compiled_ready
         self._ready_notified = False
@@ -166,6 +168,7 @@ class SegmentationModel:
                 hydra_overrides_extra=hydra_overrides_for_image_encoder(True, "cuda"),
             )
             self._warmup_compiled_encoder(compiled)
+            self._verify_compiled_parity(compiled)
             compiled_predictor = SAM2ImagePredictor(compiled)
             with self._shared_predictor_lock:
                 with self._swap_lock:
@@ -186,7 +189,56 @@ class SegmentationModel:
                     logger.exception("on_compiled_ready callback failed")
         except Exception:
             logger.exception("Background image-encoder compile failed; staying on eager")
-            self.compile_status = COMPILE_FAILED
+            with self._callback_lock:
+                self.compile_status = COMPILE_FAILED
+
+    @property
+    def encoder_generation(self) -> str:
+        """``"eager"`` or ``"compiled"``: which encoder new embeddings are made with right now."""
+        with self._swap_lock:
+            return self._embedding_mode
+
+    @staticmethod
+    def predictor_generation(predictor: Any) -> Optional[str]:
+        """The encoder generation a predictor's embedding was made with, or None if unknown.
+
+        Stamped when the predictor is created, because a predictor keeps wrapping the model it
+        was built from after a swap, so its generation can lag the model's.
+        """
+        value = getattr(predictor, _GENERATION_ATTR, None)
+        return value if isinstance(value, str) else None
+
+    def _encoder_features(self, model: Any) -> List[NDArray]:
+        """Feature maps ``model``'s image encoder produces for a fixed pseudo-random image.
+
+        Runs under the same autocast and inference mode as serving. The input is seeded so the
+        eager and compiled encoders see identical pixels.
+        """
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(_PARITY_SEED)
+        image = torch.randn(
+            1, 3, SAM2_IMAGE_SIZE, SAM2_IMAGE_SIZE, generator=generator
+        ).to(self.device)
+        with torch.inference_mode(), self._autocast():
+            out = model.forward_image(image)
+        maps = [out["vision_features"], *out["backbone_fpn"]]
+        return [m.detach().float().cpu().numpy() for m in maps]
+
+    def _verify_compiled_parity(self, compiled: Any) -> None:
+        """Refuse the swap unless the compiled encoder agrees numerically with the eager one.
+
+        The eager forward takes the GPU lock because serving threads share that model.
+        Raises ``EncoderParityError`` on disagreement, which leaves the server on eager.
+        """
+        with self._swap_lock:
+            eager = self.sam2_model
+        with self._gpu_lock:
+            reference = self._encoder_features(eager)
+        candidate = self._encoder_features(compiled)
+        result = compare_feature_maps(reference, candidate)
+        if not result.ok:
+            raise EncoderParityError(result.detail)
+        logger.info("Compiled image encoder matches eager: %s", result.detail)
 
     def _warmup_compiled_encoder(self, model: Any) -> None:
         """Pay Inductor/Triton autotune on *model* before it replaces the eager encoder."""
@@ -216,39 +268,44 @@ class SegmentationModel:
         dtype = torch.bfloat16 if major >= 8 else torch.float16
         return torch.autocast("cuda", dtype=dtype)
 
-    def create_predictor(self) -> SAM2ImagePredictor:
-        """Return a new predictor wrapping the current weights; call set_image() before predict()."""
-        with self._swap_lock:
-            model = self.sam2_model
-        return SAM2ImagePredictor(model)
-
-    def create_initialized_predictor(self, image_data: bytes) -> SAM2ImagePredictor:
-        """Create a predictor whose image embedding is ready for predict().
-
-        Same PNG bytes reload the embedding from disk when the cache is enabled.
-        A miss runs set_image() and stores the feature maps for the next process.
-        The encoder generation (eager or compiled) is captured with the model so a
-        compile swap cannot file an eager embedding under the compiled namespace.
-        """
-        digest = hashlib.sha256(image_data).hexdigest()
-        with self._swap_lock:
-            model = self.sam2_model
-            mode = self._embedding_mode
-        predictor = SAM2ImagePredictor(model)
-        if self._try_load_disk_embedding(predictor, digest, mode):
-            return predictor
-        image_np = prepare_image_for_sam2(image_data)
+    def _encode_image(self, predictor: SAM2ImagePredictor, image_np: NDArray) -> None:
+        """``set_image()`` under the GPU lock, turning a dead CUDA context into its own error."""
         try:
-            with torch.inference_mode(), self._autocast():
+            with self._gpu_lock, torch.inference_mode(), self._autocast():
                 predictor.set_image(image_np)
         except Exception as e:
             raise_if_cuda_lost(e)
             raise
+
+    def create_initialized_predictor(
+        self, image_data: bytes, image_np: Optional[NDArray] = None
+    ) -> SAM2ImagePredictor:
+        """Create a predictor whose image embedding is ready for predict().
+
+        The embedding is filed under a hash of the decoded pixels (:func:`_image_digest`), the
+        same key an offset cell window gets in :meth:`predict_ephemeral`, so identical pixels
+        reload from disk whichever way they arrived. A miss runs set_image() and stores the
+        feature maps for the next process. ``image_np`` is the already decoded image when the
+        caller has one (the upload path decodes to validate), which saves decoding it again.
+        The encoder generation (eager or compiled) is captured with the model so a compile swap
+        cannot file an eager embedding under the compiled namespace.
+        """
+        if image_np is None:
+            image_np = prepare_image_for_sam2(image_data)
+        digest = _image_digest(image_np)
+        with self._swap_lock:
+            model = self.sam2_model
+            mode = self._embedding_mode
+        predictor = SAM2ImagePredictor(model)
+        setattr(predictor, _GENERATION_ATTR, mode)
+        if self._try_load_disk_embedding(predictor, digest, mode):
+            return predictor
+        self._encode_image(predictor, image_np)
         self._save_disk_embedding(predictor, digest, mode)
         return predictor
 
-    def note_disk_embedding_used(self, image_data: bytes) -> None:
-        """Bump the disk mtime when the GPU cache already held this PNG.
+    def note_disk_embedding_used(self, image_data: bytes, image_np: Optional[NDArray] = None) -> None:
+        """Bump the disk mtime when the GPU cache already held this image.
 
         UploadTile skips ``set_image()`` on an in-memory hit, so without this
         the file looks idle and the disk cap can drop a cell that is still live.
@@ -256,7 +313,9 @@ class SegmentationModel:
         store = self._embedding_store
         if store is None or not image_data:
             return
-        digest = hashlib.sha256(image_data).hexdigest()
+        if image_np is None:
+            image_np = prepare_image_for_sam2(image_data)
+        digest = _image_digest(image_np)
         with self._swap_lock:
             mode = self._embedding_mode
         store.touch(digest, mode)
@@ -274,7 +333,7 @@ class SegmentationModel:
         if blob is None:
             return False
         try:
-            payload = torch.load(io.BytesIO(blob), map_location="cpu", weights_only=True)
+            payload = torch.load(io.BytesIO(blob), map_location=predictor.device, weights_only=True)
             self._install_disk_features(predictor, payload)
         except Exception:
             logger.warning("Embedding disk blob unreadable sha=%s mode=%s", digest[:12], mode)
@@ -289,7 +348,8 @@ class SegmentationModel:
             return
         try:
             blob = self._export_disk_features(predictor)
-            store.save(digest, blob, mode)
+            if not store.save(digest, blob, mode):
+                return
         except Exception:
             logger.exception("Embedding disk write failed sha=%s mode=%s", digest[:12], mode)
             return
@@ -302,6 +362,7 @@ class SegmentationModel:
         height, width = predictor._orig_hw[0]
         high_res = list(features["high_res_feats"])
         payload: dict[str, torch.Tensor] = {
+            "format_version": torch.tensor([DISK_BLOB_FORMAT], dtype=torch.int64),
             "image_embed": features["image_embed"].detach().to("cpu").contiguous(),
             "orig_hw": torch.tensor([int(height), int(width)], dtype=torch.int64),
             "n_high": torch.tensor([len(high_res)], dtype=torch.int64),
@@ -316,6 +377,9 @@ class SegmentationModel:
     def _install_disk_features(predictor: SAM2ImagePredictor, payload: dict) -> None:
         """Restore set_image() state from a disk blob onto ``predictor``'s device."""
         device = predictor.device
+        found = payload.get("format_version")
+        if found is None or int(found.item()) != DISK_BLOB_FORMAT:
+            raise ValueError(f"embedding blob format {found} is not {DISK_BLOB_FORMAT}")
         n_high = int(payload["n_high"].item())
         high_res = [payload[f"high_res_{index}"].to(device) for index in range(n_high)]
         orig = payload["orig_hw"].tolist()
@@ -344,7 +408,12 @@ class SegmentationModel:
         return free_bytes < reserve
 
     def release_predictor(self, predictor: Any) -> None:
-        """Drop per-image embeddings so GPU memory can be reclaimed."""
+        """Drop per-image embeddings so GPU memory can be reclaimed.
+
+        The allocator keeps freed blocks for reuse, and the next tile embedding is the same size,
+        so handing them back to the driver on every release only makes the next ``set_image()``
+        allocate again. ``empty_cache`` runs only when free memory is already short.
+        """
         if predictor is None:
             return
         reset = getattr(predictor, "reset_predictor", None)
@@ -353,7 +422,7 @@ class SegmentationModel:
                 reset()
             except Exception:
                 logger.exception("Failed to reset predictor before release")
-        if self.device.type == "cuda":
+        if self.device.type == "cuda" and self.gpu_memory_under_pressure():
             torch.cuda.empty_cache()
 
     def _predict_with_logits(
@@ -380,12 +449,12 @@ class SegmentationModel:
         low-resolution logits as SAM2's ``mask_input`` and the same prompts. Single-mask
         output only: with ``multimask_output`` the flag is ignored, because mask_input is one mask.
         """
-        point_coords: NDArray[np.int_] = np.array(coordinates)
-        point_labels: NDArray[np.int_] = np.array(labels)
+        point_coords: Optional[NDArray[np.int_]] = np.array(coordinates) if len(coordinates) else None
+        point_labels: Optional[NDArray[np.int_]] = np.array(labels) if len(coordinates) else None
         box_xyxy = None if box is None else np.array(box, dtype=np.float32)
 
         try:
-            with torch.inference_mode(), self._autocast():
+            with self._gpu_lock, torch.inference_mode(), self._autocast():
                 masks, scores, logits = predictor.predict(
                     point_coords=point_coords,
                     point_labels=point_labels,
@@ -466,14 +535,9 @@ class SegmentationModel:
         predictor = SAM2ImagePredictor(model)
         try:
             if not self._try_load_disk_embedding(predictor, digest, mode):
-                try:
-                    with torch.inference_mode(), self._autocast():
-                        predictor.set_image(image)
-                except Exception as e:
-                    raise_if_cuda_lost(e)
-                    raise
+                self._encode_image(predictor, image)
                 self._save_disk_embedding(predictor, digest, mode)
-            return self.predict_tile_union(
+            return self.predict_tile(
                 predictor,
                 coordinates,
                 labels,
@@ -484,14 +548,9 @@ class SegmentationModel:
                 use_mask_input,
             )
         finally:
-            reset = getattr(predictor, "reset_predictor", None)
-            if callable(reset):
-                try:
-                    reset()
-                except Exception:
-                    logger.exception("Failed to reset ephemeral cell predictor")
+            self.release_predictor(predictor)
 
-    def predict_tile_union(
+    def predict_tile(
         self,
         predictor: SAM2ImagePredictor,
         coordinates: Sequence[Point],
@@ -502,17 +561,21 @@ class SegmentationModel:
         mask_threshold: float = DEFAULT_MASK_THRESHOLD,
         use_mask_input: bool = False,
     ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
-        """One tile predict: the highest-scoring mask of one predict(), plus its logits.
+        """One tile predict: the one mask the selection rule picks, its logits, and its score.
 
         ``box``, ``mask_threshold`` and ``use_mask_input`` are described on
-        ``_predict_with_logits``. The union of masks that cover a click (and the extra
-        single-click predicts for uncovered positives) is switched off for now, so the
-        answer is the one best mask; the growth walk still drops pieces that hold no click.
+        ``_predict_with_logits``. The mask is chosen by :func:`select_mask`, the same rule every
+        RPC uses: with a box, the highest-scoring candidate that covers the whole box; without
+        one, the candidate that covers the most foreground points. Nothing is combined and no
+        looser prompt is tried.
 
-        Logits are that mask's (often 256x256). Callers resize them. The returned score is
-        its score; cross-tile fusion takes the minimum of these.
+        Logits are the chosen mask's (often 256x256); callers resize them. The returned score is
+        its score, and cross-tile fusion takes the minimum of these.
+
+        Raises:
+            NoMatchingMask: No candidate satisfies the rule.
         """
-        if not coordinates:
+        if not coordinates and box is None:
             height, width = empty_shape
             return np.zeros((height, width), dtype=np.bool_), None, 0.0
 
@@ -525,113 +588,12 @@ class SegmentationModel:
             mask_threshold,
             use_mask_input,
         )
-        best_logits = None if logits is None or len(logits) == 0 else logits[0]
-
-        if not any(int(label) == 1 for label in labels):
-            labeled, segments = process_masks(masks, scores, empty_shape=empty_shape)
-            if not segments:
-                height, width = empty_shape
-                return np.zeros((height, width), dtype=np.bool_), best_logits, 0.0
-            return segments[0]["mask"], best_logits, float(segments[0]["score"])
-
-        # TODO: union_masks_covering_positives is commented out on request while mask size is
-        # tuned. It ORed every mask that covers a positive click and ran an extra predict for
-        # each uncovered click, which only ever adds territory. Restore this block (and the
-        # extra_predict helper) to bring it back.
-        #
-        # def extra_predict(
-        #     extra_coords: Sequence[Point], extra_labels: Sequence[int]
-        # ) -> Tuple[NDArray[np.bool_], NDArray[np.float32]]:
-        #     extra_masks, extra_scores, _extra_logits = self._predict_with_logits(
-        #         predictor, extra_coords, extra_labels, multimask_output=False
-        #     )
-        #     return extra_masks, extra_scores
-        #
-        # union, stats = union_masks_covering_positives(
-        #     masks,
-        #     scores,
-        #     coordinates,
-        #     labels,
-        #     extra_predict=extra_predict,
-        #     empty_shape=empty_shape,
-        # )
-        # self._log_union_stats(stats, empty_shape)
-        # return union, best_logits, float(stats.score)
-        mask, score = masks[0], float(scores[0])
         positives = [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
-        if mask_covers_any_positive(mask, positives):
-            return mask, best_logits, score
+        index = select_mask(masks, scores, box=box, positives=positives)
+        chosen_logits = None if logits is None or len(logits) <= index else logits[index]
+        return masks[index], chosen_logits, float(scores[index])
 
-        # SAM2 can answer a box or negative clicks with a confident mask that leaves the positive
-        # click itself outside (RC2 z=645 circle at 32758,54871: logit -3.9 at the click with the box,
-        # -3.6 with the neighbours' negatives, +1.9 from the click alone). The walk drops a mask that
-        # holds no click, so the cell would come back empty. Loosen the prompt a rung at a time and
-        # take the first mask that does hold a click.
-        for dropped, rung_coords, rung_labels, rung_box in self._looser_prompts(
-            coordinates, labels, positives, box
-        ):
-            rung_masks, rung_scores, rung_logits = self._predict_with_logits(
-                predictor,
-                rung_coords,
-                rung_labels,
-                multimask_output,
-                rung_box,
-                mask_threshold,
-                use_mask_input,
-            )
-            if len(rung_masks) and mask_covers_any_positive(rung_masks[0], positives):
-                logger.warning(
-                    "Prompt fallback: best mask left every positive click out, dropped %s and it now holds one "
-                    "(fg=%d bg=%d box=%s)",
-                    dropped,
-                    len(positives),
-                    len(coordinates) - len(positives),
-                    box is not None,
-                )
-                rung_best_logits = (
-                    None if rung_logits is None or len(rung_logits) == 0 else rung_logits[0]
-                )
-                return rung_masks[0], rung_best_logits, float(rung_scores[0])
-
-        logger.warning(
-            "Prompt fallback exhausted: no mask holds any of %d positive click(s) (box=%s)",
-            len(positives),
-            box is not None,
-        )
-        return mask, best_logits, score
-
-    @staticmethod
-    def _looser_prompts(
-        coordinates: Sequence[Point],
-        labels: Sequence[int],
-        positives: Sequence[Point],
-        box: Optional[Sequence[int]],
-    ) -> List[Tuple[str, Sequence[Point], Sequence[int], Optional[Sequence[int]]]]:
-        """Prompt variants to try, in order, when the best mask misses every positive click.
-
-        First the same clicks without the box, then the positives alone with neither box nor
-        negatives. Each rung is only listed when it differs from the one before it.
-        """
-        rungs: List[Tuple[str, Sequence[Point], Sequence[int], Optional[Sequence[int]]]] = []
-        has_negatives = len(positives) < len(coordinates)
-        if box is not None:
-            rungs.append(("the box", coordinates, labels, None))
-        if has_negatives:
-            rungs.append(("the box and negatives" if box is not None else "the negatives",
-                          list(positives), [1] * len(positives), None))
-        return rungs
-
-    def _log_union_stats(self, stats: UnionMaskStats, empty_shape: Tuple[int, int]) -> None:
-        height, width = empty_shape
-        if width <= 0 or height <= 0:
-            height, width = 0, 0
-        line = stats.log_line(width, height)
-        if stats.area == 0 or stats.n_uncovered > 0 or stats.n_positives_oob > 0:
-            logger.warning(line)
-        else:
-            logger.info(line)
-
-    def _segment_covering_positives(
+    def _segment_viewport(
         self,
         predictor: SAM2ImagePredictor,
         coordinates: Sequence[Point],
@@ -639,44 +601,47 @@ class SegmentationModel:
         multimask_output: bool,
         empty_shape: Tuple[int, int],
     ) -> Tuple[LabeledImage, List[SegmentInfo]]:
-        """All-points predict, then per-uncovered-positive extras; OR into one mask."""
-        initial_masks, initial_scores = self._predict_raw(
-            predictor, coordinates, labels, multimask_output
-        )
+        """One predict, then the one mask :func:`select_mask` picks: the most foreground points covered.
 
-        if not any(int(label) == 1 for label in labels):
-            labeled, segments = process_masks(initial_masks, initial_scores, empty_shape=empty_shape)
-            area = int(np.count_nonzero(labeled))
-            height, width = empty_shape
-            n_neg = sum(1 for label in labels if int(label) != 1)
+        A prompt with no foreground point has nothing to select against, so every non-empty
+        candidate is returned as its own segment.
+
+        Raises:
+            NoMatchingMask: No candidate covers any foreground point.
+        """
+        masks, scores = self._predict_raw(predictor, coordinates, labels, multimask_output)
+        height, width = empty_shape
+        positives = [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
+
+        if not positives:
+            labeled, segments = process_masks(masks, scores, empty_shape=empty_shape)
             logger.info(
-                "segment %sx%s fg=0 bg=%s initial=%s segments=%s area=%s",
+                "segment %sx%s fg=0 bg=%s candidates=%s segments=%s area=%s",
                 width,
                 height,
-                n_neg,
-                int(initial_masks.shape[0]) if initial_masks.ndim >= 1 else 0,
+                len(coordinates),
+                int(masks.shape[0]) if masks.ndim >= 1 else 0,
                 len(segments),
-                area,
+                int(np.count_nonzero(labeled)),
             )
             return labeled, segments
 
-        def extra_predict(
-            extra_coords: Sequence[Point], extra_labels: Sequence[int]
-        ) -> Tuple[NDArray[np.bool_], NDArray[np.float32]]:
-            return self._predict_raw(
-                predictor, extra_coords, extra_labels, multimask_output=False
-            )
-
-        union, stats = union_masks_covering_positives(
-            initial_masks,
-            initial_scores,
-            coordinates,
-            labels,
-            extra_predict=extra_predict,
-            empty_shape=empty_shape,
+        index = select_mask(masks, scores, positives=positives)
+        chosen = masks[index]
+        logger.info(
+            "segment %sx%s fg=%s bg=%s candidates=%s chose=%s covered=%s/%s area=%s score=%.3f",
+            width,
+            height,
+            len(positives),
+            len(coordinates) - len(positives),
+            int(masks.shape[0]),
+            index,
+            count_covered_points(chosen, positives),
+            len(positives),
+            int(np.count_nonzero(chosen)),
+            float(scores[index]),
         )
-        self._log_union_stats(stats, empty_shape)
-        return combined_mask_to_segments(union, stats.score, empty_shape=empty_shape)
+        return combined_mask_to_segments(chosen, float(scores[index]), empty_shape=empty_shape)
 
     def segment_image_with_predictor(
         self,
@@ -686,35 +651,33 @@ class SegmentationModel:
         multimask_output: bool = True,
         empty_shape: Tuple[int, int] = (0, 0),
     ) -> Tuple[LabeledImage, List[SegmentInfo]]:
-        """Run predict() on a predictor that already has set_image() applied."""
-        return self._segment_covering_positives(
-            predictor, coordinates, labels, multimask_output, empty_shape
-        )
+        """Run predict() on a predictor that already has set_image() applied.
+
+        Raises:
+            NoMatchingMask: No candidate covers any foreground point.
+        """
+        return self._segment_viewport(predictor, coordinates, labels, multimask_output, empty_shape)
 
     def segment_image(
         self,
-        image_data: bytes,
-        width: int,
-        height: int,
+        image_np: NDArray[np.uint8],
         coordinates: Sequence[Point],
         labels: Sequence[int],
         multimask_output: bool = True,
     ) -> Tuple[LabeledImage, List[SegmentInfo]]:
         """Inline-image path: set_image() + predict() on the shared predictor.
 
-        Concurrent callers are serialized on `_shared_predictor_lock` because the
-        shared predictor's embedding state is not thread-safe.
-        """
-        image_np = prepare_image_for_sam2(image_data)
+        ``image_np`` is the already decoded RGB image, so the caller has checked its size against
+        what the client declared. Concurrent callers are serialized on `_shared_predictor_lock`
+        because the shared predictor's embedding state is not thread-safe.
 
+        Raises:
+            NoMatchingMask: No candidate covers any foreground point.
+        """
+        height, width = int(image_np.shape[0]), int(image_np.shape[1])
         with self._shared_predictor_lock:
-            try:
-                with torch.inference_mode(), self._autocast():
-                    self.predictor.set_image(image_np)
-            except Exception as e:
-                raise_if_cuda_lost(e)
-                raise
-            return self._segment_covering_positives(
+            self._encode_image(self.predictor, image_np)
+            return self._segment_viewport(
                 self.predictor,
                 coordinates,
                 labels,
