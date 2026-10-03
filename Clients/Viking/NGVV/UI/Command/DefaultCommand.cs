@@ -27,35 +27,37 @@ namespace Viking.UI.Commands
 
         private object? LastNearestObject = null;
 
+        /// <summary>
+        /// Idle F1 catalog. Order is viewer keys, then overlay keys, then either the annotation
+        /// under the cursor or the idle command lines. Lines are not sorted, so a sequence of steps stays in order.
+        /// </summary>
         private string[] BuildHelpStrings()
         {
             List<string> s = [];
 
+            if (Parent is IHelpStrings parentHelp)
+            {
+                s.AddRange(parentHelp.HelpStrings);
+            }
+
+            if (ExtensionManager.SectionOverlays != null)
+            {
+                foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
+                {
+                    s.AddRange(GetHelpStringsFromObject(overlay));
+                }
+            }
+
             if (LastNearestObject is null)
             {
-                if (Parent is IHelpStrings parentHelp)
-                {
-                    s.AddRange(parentHelp.HelpStrings);
-                }
-
                 s.AddRange(Command.DefaultKeyHelpStrings);
                 s.AddRange(Command.DefaultMouseHelpStrings);
                 s.Add("Double Right Click: Open context menu for annotation");
-
-                if (ExtensionManager.SectionOverlays != null)
-                {
-                    foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
-                    {
-                        s.AddRange(GetHelpStringsFromObject(overlay));
-                    }
-                }
             }
             else
             {
                 s.AddRange(GetHelpStringsFromObject(LastNearestObject));
             }
-
-            s.Sort();
 
             return [.. s];
         }
@@ -88,23 +90,34 @@ namespace Viking.UI.Commands
             return nearest_obj;
         }
 
+        /// <summary>
+        /// Rebuilds the idle catalog when the annotation under the cursor changes.
+        /// Mouse and pen both call this so a pen over a shape updates the F1 bar.
+        /// </summary>
+        private void RefreshHelpForWorldPosition(Vector2 worldPosition)
+        {
+            object nearest = NearestObjectAtPositionAcrossAllExtensions(worldPosition);
+            if (object.Equals(nearest, LastNearestObject))
+                return;
+
+            LastNearestObject = nearest;
+            ObservableHelpStrings.Clear();
+            foreach (string helpStr in HelpStrings)
+            {
+                ObservableHelpStrings.Add(helpStr);
+            }
+        }
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-            object NewLastNearestObject = NearestObjectAtPositionAcrossAllExtensions(WorldPosition);
-
-            if (!object.Equals(NewLastNearestObject, LastNearestObject))
-            {
-                LastNearestObject = NewLastNearestObject;
-
-                ObservableHelpStrings.Clear();
-                foreach (string helpStr in this.HelpStrings)
-                {
-                    ObservableHelpStrings.Add(helpStr);
-                }
-            }
-
+            RefreshHelpForWorldPosition(Parent.ScreenToWorld(e.X, e.Y));
             base.OnMouseMove(sender, e);
+        }
+
+        protected override void OnPenMove(object sender, PenEventArgs e)
+        {
+            RefreshHelpForWorldPosition(Parent.ScreenToWorld(e.X, e.Y));
+            base.OnPenMove(sender, e);
         }
 
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)

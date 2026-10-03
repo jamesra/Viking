@@ -786,7 +786,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             public int Downsample { get; }
         }
         /// <summary>
-        /// Uploads visible cells plus any cells the server asked for, then segments.
+        /// Uploads cells that contain foreground points, plus any cells the server asked for, then segments.
+        /// Does not upload or name every visible cell: the server embedding cache is smaller than a DS1 view,
+        /// and listing those cells returns TILE_NOT_FOUND.
         /// Shows each response immediately, including a partial mask that still needs tiles.
         /// Called from point clicks, auto-segmentation activation, and the pan/zoom debounce.
         /// </summary>
@@ -810,10 +812,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     token.ThrowIfCancellationRequested();
                     if (generation != Volatile.Read(ref segmentGeneration))
                         return;
-                    (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
+                    (int downsample, TileSignature signature, _, bool grayscale) =
                         await ReadViewTilesAsync().ConfigureAwait(false);
                     mosaicDownsample = downsample;
-                    List<TileCell> needed = [.. visible, .. extras];
+                    List<TileCell> needed = TilesForRound(foregroundPoints, downsample, extras);
+                    if (needed.Count == 0)
+                        return;
                     if (!await UploadMissingTilesAsync(signature, needed, grayscale, token).ConfigureAwait(false))
                     {
                         Debug.WriteLine("No segmentation tiles could be uploaded");
@@ -821,19 +825,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     }
                     if (generation != Volatile.Read(ref segmentGeneration))
                         return;
-                    SegmentationResponse response;
-                    try
-                    {
-                        response = await SegmentUploadedTilesAsync(signature, token).ConfigureAwait(false);
-                    }
-                    catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound && TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
-                    {
-                        uploadedTileKeys.Remove(TileKey(signature, missingRow, missingCol));
-                        if (!await UploadMissingTilesAsync(signature, [new TileCell(missingRow, missingCol)], grayscale, token).ConfigureAwait(false))
-                            return;
-                        response = await SegmentUploadedTilesAsync(signature, token).ConfigureAwait(false);
-                    }
-                    if (generation != Volatile.Read(ref segmentGeneration))
+                    SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
+                        signature, needed, grayscale, token).ConfigureAwait(false);
+                    if (response is null || generation != Volatile.Read(ref segmentGeneration))
                         return;
                     await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
                     {
@@ -845,8 +839,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     extras.Clear();
                     foreach (TileCoord tile in response.RequestedTiles)
                     {
-                        if (tile.Downsample == downsample)
-                            extras.Add(new TileCell(tile.Row, tile.Col));
+                        if (tile.Downsample != downsample)
+                            continue;
+
+                        uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
+                        extras.Add(new TileCell(tile.Row, tile.Col));
                     }
                     if (extras.Count == 0)
                         break;
@@ -996,7 +993,83 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return anyReady;
         }
 
-        private async Task<SegmentationResponse> SegmentUploadedTilesAsync(TileSignature signature, CancellationToken token)
+        /// <summary>
+        /// Foreground cells plus growth neighbors. Background clicks do not add cells;
+        /// they can span the viewport and overflow the server embedding cache.
+        /// </summary>
+        private static List<TileCell> TilesForRound(
+            IReadOnlyList<Geometry.Vector2> foregroundPoints,
+            int downsample,
+            IReadOnlyList<TileCell> extras)
+        {
+            List<TileCell> cells = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
+            if (extras is null || extras.Count == 0)
+                return cells;
+
+            HashSet<(int Row, int Col)> seen = new(cells.Select(cell => (cell.Row, cell.Col)));
+            foreach (TileCell extra in extras)
+            {
+                if (seen.Add((extra.Row, extra.Col)))
+                    cells.Add(extra);
+            }
+
+            return cells;
+        }
+
+        /// <summary>
+        /// Re-uploads each TILE_NOT_FOUND cell and retries. A single retry used to abort
+        /// when the next evicted cell was still named in the request.
+        /// </summary>
+        private async Task<SegmentationResponse?> SegmentWithMissingTileRetriesAsync(
+            TileSignature signature,
+            List<TileCell> needed,
+            bool grayscale,
+            CancellationToken token)
+        {
+            const int maxNotFoundRetries = 16;
+            string? lastMissingKey = null;
+            int sameTileMisses = 0;
+            for (int attempt = 0; attempt <= maxNotFoundRetries; attempt++)
+            {
+                try
+                {
+                    return await SegmentUploadedTilesAsync(signature, needed, token).ConfigureAwait(false);
+                }
+                catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
+                    TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
+                {
+                    string missingKey = TileKey(signature, missingRow, missingCol);
+                    if (missingKey == lastMissingKey)
+                    {
+                        sameTileMisses++;
+                        if (sameTileMisses >= 2)
+                            throw;
+                    }
+                    else
+                    {
+                        lastMissingKey = missingKey;
+                        sameTileMisses = 0;
+                    }
+
+                    uploadedTileKeys.Remove(missingKey);
+                    TileCell missing = new(missingRow, missingCol);
+                    if (!needed.Any(cell => cell.Row == missingRow && cell.Col == missingCol))
+                        needed.Add(missing);
+                    if (!await UploadMissingTilesAsync(signature, [missing], grayscale, token).ConfigureAwait(false))
+                        return null;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// SegmentTiles for <paramref name="cells"/> that this command has already uploaded.
+        /// </summary>
+        private async Task<SegmentationResponse> SegmentUploadedTilesAsync(
+            TileSignature signature,
+            IReadOnlyList<TileCell> cells,
+            CancellationToken token)
         {
             if (grpcClient is null)
                 throw new InvalidOperationException("Segmentation client is not connected.");
@@ -1005,14 +1078,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 MultimaskOutput = false,
                 OmitLabeledImage = true
             };
-            string prefix = $"{signature.Volume}\n{signature.Section}\n{signature.Channel}\n{signature.Transform}\n{signature.Downsample}\n";
-            foreach (string key in uploadedTileKeys)
+            foreach (TileCell cell in cells)
             {
-                if (!key.StartsWith(prefix, StringComparison.Ordinal))
+                string key = TileKey(signature, cell.Row, cell.Col);
+                if (!uploadedTileKeys.Contains(key))
                     continue;
-                string[] parts = key.Split('\n');
-                if (parts.Length < 7)
-                    continue;
+
                 request.Tiles.Add(new TileCoord
                 {
                     Volume = signature.Volume,
@@ -1020,10 +1091,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Channel = signature.Channel,
                     Transform = signature.Transform,
                     Downsample = signature.Downsample,
-                    Row = int.Parse(parts[5]),
-                    Col = int.Parse(parts[6])
+                    Row = cell.Row,
+                    Col = cell.Col
                 });
             }
+
+            if (request.Tiles.Count == 0)
+                throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
             foreach (Geometry.Vector2 point in foregroundPoints)
             {
                 (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
@@ -1949,7 +2023,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
                 newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, mosaicGeometry);
 
-                // Enqueue command to save the structure
+                if (typeObj.ParentID.HasValue)
+                {
+                    Parent.CommandQueue.EnqueueCommand(
+                        typeof(LinkStructureToParentCommand),
+                        [Parent, newStruct, newLocation]);
+                }
+
                 Parent.CommandQueue.EnqueueCommand(
                     typeof(CreateNewStructureCommand),
                     [Parent, newStruct, newLocation]);
