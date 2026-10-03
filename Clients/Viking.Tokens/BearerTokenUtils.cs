@@ -160,7 +160,10 @@ namespace Viking.Tokens
             }
             else if (result.IsError)
             {
-                throw new Exception($"result.Error from {IdentityServerURL}");
+                var detail = string.IsNullOrWhiteSpace(result.Error)
+                    ? "unknown discovery error"
+                    : result.Error;
+                throw new Exception($"Identity discovery failed for {IdentityServerURL}: {detail}");
             }
 
             return result;

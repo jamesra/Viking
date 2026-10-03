@@ -491,8 +491,9 @@ namespace Viking.Identity.Server.Standalone
                 // Only initialize the main application database
                 serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
                 serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-                // Skip PersistedGrants database initialization for now
-                Log.Information("Skipping PersistedGrants database initialization - using in-memory operational store");
+                // A signing key wrapped by a data-protection key that is no longer in the ring
+                // cannot sign tokens. Drop those keys and let Duende create a replacement.
+                SigningKeyRecovery.RemoveUnreadableSigningKeys(serviceScope.ServiceProvider);
             }
 
             return app;
