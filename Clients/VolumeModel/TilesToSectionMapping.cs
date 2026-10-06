@@ -176,6 +176,7 @@ namespace Viking.VolumeModel
                 await LoadTransformSemaphore.WaitAsync().ConfigureAwait(false);
 
                 Interlocked.CompareExchange(ref _TileTransforms, null, _TileTransforms);
+                await base.FreeMemory().ConfigureAwait(false);
             }
             finally
             {

@@ -25,6 +25,9 @@ namespace Viking.Benchmarks.VolumeBench
     {
         private const string PhaseA = "A", PhaseB = "B", PhaseC = "C", PhaseD = "D", PhaseE = "E", PhaseF = "F";
 
+        /// <summary>Sections left cached before phase F revisits; the rest are evicted first. Matches earlier results files.</summary>
+        private const int SectionsKeptBeforeRevisit = 6;
+
         public static readonly IReadOnlyDictionary<string, string> PhaseNames = new Dictionary<string, string>
         {
             [PhaseA] = "Volume load",
@@ -284,6 +287,8 @@ namespace Viking.Benchmarks.VolumeBench
         /// Records the managed memory a set-up section keeps alive: its warped tile transforms, mosaic tiles and the volume
         /// transform's RTrees (the background prewarm is awaited first). Tiles in <c>Global.TileCache</c> are not included;
         /// that cache has its own size limit. Measured outside every timed scope because it forces full collections.
+        /// Also records the section cache's estimate (<c>estimatedKB</c>) for comparison. The first section's measurement
+        /// includes one-time startup allocations, and the estimate grows once scenes build the visible-tile index.
         /// </summary>
         private async Task RecordRetainedMemory(SectionContext s, long retainedBefore)
         {
@@ -301,6 +306,12 @@ namespace Viking.Benchmarks.VolumeBench
 
             long retained = GC.GetTotalMemory(forceFullCollection: true) - retainedBefore;
             Counts[$"section.{s.Instance}.retainedKB"] = retained / 1024;
+            SectionTransformsDictionary mappings = new();
+            if (s.Mosaic != null)
+                mappings["mosaic"] = s.Mosaic;
+            if (s.Tileset != null)
+                mappings["tileset"] = s.Tileset;
+            Counts[$"section.{s.Instance}.estimatedKB"] = new SectionMappingsCacheEntry(s.Number, mappings).EstimatedMemoryBytes() / 1024;
         }
 
         /// <summary>
@@ -332,18 +343,17 @@ namespace Viking.Benchmarks.VolumeBench
         }
 
         /// <summary>
-        /// Evicts every visited section except the most recent <c>NumSectionsToKeepInMemory</c>, the way the section
-        /// mapping cache is meant to.
+        /// Evicts every visited section except the most recent <see cref="SectionsKeptBeforeRevisit"/>, so phase F measures
+        /// setting sections up again.
         /// </summary>
         /// <remarks>
-        /// In the viewer the cache never actually evicts: <c>TimeQueueCache</c> only removes entries that missed a
-        /// <c>Checkpoint()</c>, nothing calls <c>Checkpoint()</c> on <c>SectionTransformsCache</c>, and every
-        /// <c>GetMapping</c> marks its section used. Without this step phase F would only measure cache hits. Eviction here
-        /// mirrors <c>SectionMappingsCacheEntry.Dispose</c>: drop the entry and free each mapping's memory.
+        /// The viewer's cache evicts by memory (about 1 GiB), which the benchmark sections never reach, so without this
+        /// step phase F would only measure cache hits. Eviction here mirrors <c>SectionMappingsCacheEntry.Dispose</c>: drop
+        /// the entry and free each mapping's memory.
         /// </remarks>
         private async Task EvictLikeAnLru(MappingManager mappings, List<SectionContext> visited)
         {
-            int keep = (int)mappings.SectionMappingCache.NumSectionsToKeepInMemory;
+            int keep = SectionsKeptBeforeRevisit;
             int evicted = 0;
             foreach (SectionContext s in visited.Take(Math.Max(0, visited.Count - keep)))
             {

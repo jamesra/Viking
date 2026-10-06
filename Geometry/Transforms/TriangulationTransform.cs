@@ -397,6 +397,35 @@ namespace Geometry.Transforms
             _ = mapTrianglesRTree;
         });
 
+        /// <summary>One triangle in one of the two triangle RTrees (about 1,070 bytes per triangle for both).</summary>
+        protected const long TriangleRTreeBytesPerTriangle = 535;
+        /// <summary>The per-point triangle lists built by <see cref="BuildTriangleList"/>.</summary>
+        protected const long TriangleListBytesPerPoint = 216;
+
+        /// <summary>
+        /// Bytes of triangle topology this transform owns: its triangle index array, plus edges in subclasses that keep
+        /// them. Grid transforms share both per grid size and count none.
+        /// </summary>
+        protected virtual long EstimatedTopologyBytes => (_TriangleIndicies?.Length ?? 0) * (long)sizeof(int);
+
+        /// <summary>Adds the triangle topology, per-point triangle lists and whichever triangle RTrees are built.</summary>
+        public override long EstimatedMemoryBytes
+        {
+            get
+            {
+                long bytes = base.EstimatedMemoryBytes + EstimatedTopologyBytes;
+                if (_TriangleList != null)
+                    bytes += MapPoints.Length * TriangleListBytesPerPoint;
+
+                long triangles = (_TriangleIndicies?.Length ?? 0) / 3;
+                if (Volatile.Read(ref _mapTrianglesRTree) is { IsValueCreated: true })
+                    bytes += triangles * TriangleRTreeBytesPerTriangle;
+                if (Volatile.Read(ref _controlTrianglesRTree) is { IsValueCreated: true })
+                    bytes += triangles * TriangleRTreeBytesPerTriangle;
+                return bytes;
+            }
+        }
+
         private List<MappingTriangle>[] _TriangleList;
         List<MappingTriangle>[] TriangleList
         {

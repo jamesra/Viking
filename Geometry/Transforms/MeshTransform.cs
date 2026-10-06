@@ -58,6 +58,13 @@ namespace Geometry.Transforms
             }
         }
 
+        /// <summary>The edge lists and the line search grid built with them.</summary>
+        protected const long EdgeBytesPerPoint = 440;
+
+        /// <summary>Adds the edges and line search grid when they are built.</summary>
+        protected override long EstimatedTopologyBytes =>
+            base.EstimatedTopologyBytes + (Volatile.Read(ref _edges) != null ? MapPoints.Length * EdgeBytesPerPoint : 0);
+
         #endregion
 
         public MeshTransform(MappingVector2[] points, TransformBasicInfo info) : base(points, info)

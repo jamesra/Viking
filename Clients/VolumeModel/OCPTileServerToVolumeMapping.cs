@@ -17,6 +17,9 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly ITransform VolumeTransform = Transform;
 
+        /// <inheritdoc/>
+        public override ITransform SharedVolumeTransform => VolumeTransform;
+
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>

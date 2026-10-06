@@ -28,6 +28,40 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public abstract ITransform[] GetLoadedTransformsOrNull();
 
+        /// <summary>Bytes per tile of the visible-tile index: its entry and its slot in the index RTree.</summary>
+        private const long TileIndexBytesPerTile = 640;
+
+        /// <summary>
+        /// The loaded tile transforms and the visible-tile index; zero before they load or after <see cref="FreeMemory"/>.
+        /// While the index exists it holds its tile array, so that array is counted even if the mapping has dropped it.
+        /// </summary>
+        public override long EstimatedMemoryBytes
+        {
+            get
+            {
+                ITransform[] loaded = GetLoadedTransformsOrNull();
+                VisibleTileIndex index = _TileIndex;
+                long bytes = EstimateTransformBytes(loaded);
+                if (index != null)
+                {
+                    bytes += index.Source.Length * TileIndexBytesPerTile;
+                    if (!ReferenceEquals(index.Source, loaded))
+                        bytes += EstimateTransformBytes(index.Source);
+                }
+                return bytes;
+            }
+        }
+
+        /// <summary>
+        /// Drops the visible-tile index, which keeps the tile array it was built from alive. Overrides must call this after
+        /// unloading their transforms, or the tiles stay in memory until the next <c>VisibleTiles</c> call.
+        /// </summary>
+        public override Task FreeMemory()
+        {
+            _TileIndex = null;
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// We need to know which pyramid we are working against so we know how many levels are available
         /// </summary>
