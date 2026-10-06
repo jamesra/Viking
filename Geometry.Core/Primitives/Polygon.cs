@@ -1974,9 +1974,6 @@ namespace Geometry
         private static ShapeRelation IsPointInsidePolygonByWindingTest(IReadOnlyList<LineSegment> polygonSegments, Line test_line)
         {
             Vector2 test_point = test_line.Origin;
-#if DEBUG
-            List<LineSegment> OriginalSegments = [.. polygonSegments]; //Create a copy so we can examine the debugger
-#endif
             //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
             //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
 
