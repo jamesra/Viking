@@ -133,7 +133,24 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly ITransform VolumeTransform = volumeTransform;
 
-        public override string CachedTransformsFileName => System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, VolumeTransform.ToString() + "_stos.cache");
+        /// <summary>
+        /// Warped-tile cache file. Named by the mapping (volume transform group, section and mosaic transform) as well as the
+        /// stos pair: two stos groups map the same section pair, and their warped tiles must not share a file.
+        /// </summary>
+        public override string CachedTransformsFileName => System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir,
+            SafeFileName(Name) + " " + VolumeTransform.ToString() + "_stos.cache");
+
+        private static string SafeFileName(string name)
+        {
+            char[] chars = (name ?? string.Empty).ToCharArray();
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (Array.IndexOf(invalid, chars[i]) >= 0)
+                    chars[i] = '_';
+            }
+            return new string(chars);
+        }
 
         public override async Task FreeMemory()
         {

@@ -131,7 +131,8 @@ namespace Viking.VolumeModel
                     var UniqueID = TileUniqueKey.Create(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
-                    if (false == Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+                    //TryGetTile reports a cached null (a known-empty tile) as a hit, so it is not rebuilt every frame
+                    if (false == Global.TileCache.TryGetTile(UniqueID, out TileViewModel tileViewModel))
                     {
                         //First create a new tile
                         int MipMapLevels = 1; //No mip maps

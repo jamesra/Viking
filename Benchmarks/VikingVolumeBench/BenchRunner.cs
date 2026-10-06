@@ -237,6 +237,7 @@ namespace Viking.Benchmarks.VolumeBench
             string instance = number.ToString("D4");
             Console.WriteLine($"  Section {number}: phase B");
             SectionContext s = new() { Number = number, Instance = instance };
+            long retainedBefore = GC.GetTotalMemory(forceFullCollection: true);
 
             using (_r.Measure("B.Total", PhaseB, "Section setup total", instance, MeasurementKind.Total))
             {
@@ -274,8 +275,32 @@ namespace Viking.Benchmarks.VolumeBench
 
             s.VolumeBounds = bounds.Value;
             BuildScenes(s);
+            await RecordRetainedMemory(s, retainedBefore).ConfigureAwait(false);
             Counts[$"section.{instance}.mosaicTiles"] = (s.Mosaic as FixedTileCountMapping)?.GetLoadedTransformsOrNull()?.Length ?? 0;
             return s;
+        }
+
+        /// <summary>
+        /// Records the managed memory a set-up section keeps alive: its warped tile transforms, mosaic tiles and the volume
+        /// transform's RTrees (the background prewarm is awaited first). Tiles in <c>Global.TileCache</c> are not included;
+        /// that cache has its own size limit. Measured outside every timed scope because it forces full collections.
+        /// </summary>
+        private async Task RecordRetainedMemory(SectionContext s, long retainedBefore)
+        {
+            foreach (MappingBase mapping in new[] { s.Mosaic, s.Tileset })
+            {
+                ITransform volumeTransform = mapping switch
+                {
+                    SectionToVolumeMapping m => m.VolumeTransform,
+                    TileGridToVolumeMapping m => m.VolumeTransform,
+                    _ => null,
+                };
+                if (volumeTransform is ISpatialIndexPrewarm prewarm)
+                    await prewarm.PrewarmSpatialIndexAsync().ConfigureAwait(false);
+            }
+
+            long retained = GC.GetTotalMemory(forceFullCollection: true) - retainedBefore;
+            Counts[$"section.{s.Instance}.retainedKB"] = retained / 1024;
         }
 
         /// <summary>
