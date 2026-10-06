@@ -249,6 +249,13 @@ namespace Viking.VolumeModel
                                                  double DownSample
                                                  ) => System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
 
+        /// <summary>
+        /// Completes when every tile build that earlier <see cref="VisibleTiles"/> calls started in the background has finished
+        /// and its tile is in <see cref="Global.TileCache"/>. Tile builds started after this call are not included.
+        /// Used by benchmarks and tests to time cold tile creation without polling; the viewer does not wait on it.
+        /// </summary>
+        public virtual Task WhenPendingTilesComplete() => Task.CompletedTask;
+
 
         public Vector2 SectionToVolume(Vector2 P)
         {

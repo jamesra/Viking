@@ -329,6 +329,23 @@ namespace Viking.VolumeModel
 
         public override Task<TilePyramid> VisibleTilesAsync(Rectangle VisibleBounds, double DownSample) => Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
 
+        /// <remarks>
+        /// A tile's entry leaves <see cref="TileTasks"/> in a continuation that can run after the tile task completes, and
+        /// <see cref="VisibleTiles"/> skips tiles still listed there. So this also waits for the entries to clear, giving up
+        /// after about 100 ms on entries that never clear (a faulted build is never removed).
+        /// </remarks>
+        public override async Task WhenPendingTilesComplete()
+        {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            while (!TileTasks.IsEmpty && timer.ElapsedMilliseconds < 100)
+            {
+                await Task.WhenAll(TileTasks.Values.Select(t => t.ContinueWith(_ => { }, TaskContinuationOptions.ExecuteSynchronously))).ConfigureAwait(false);
+                if (TileTasks.IsEmpty)
+                    return;
+                await Task.Yield();
+            }
+        }
+
         public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample)
         {
             TilePyramid VisibleTiles = new(VisibleBounds);
@@ -411,8 +428,9 @@ namespace Viking.VolumeModel
                     var UniqueID = TileUniqueKey.Create(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
 
-                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+                    if (Global.TileCache.TryGetTile(UniqueID, out TileViewModel tileViewModel))
                     {
+                        //A cached null tile is a known-empty tile (too few vertices); do not build it again
                         if (tileViewModel != null)
                             TilesToDraw.Add(tileViewModel);
                     }

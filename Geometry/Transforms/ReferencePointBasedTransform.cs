@@ -91,6 +91,21 @@ namespace Geometry.Transforms
             //Reset the bounds
             MappedBounds = new Rectangle();
             ControlBounds = new Rectangle();
+
+            OnMapPointsChanged();
+        }
+
+        /// <summary>
+        /// Called after <see cref="MapPoints"/> was replaced or its elements were changed in place by <see cref="Translate(Vector2)"/>.
+        /// Derived classes override this to drop data computed from the old points (cached point arrays, solved weights).
+        /// </summary>
+        /// <remarks>
+        /// Runs on the calling thread, and can run from the base constructor, before the derived constructor body. An override must
+        /// only touch fields that have initializers or default values. Code that mutates elements of <see cref="MapPoints"/> in place
+        /// must call this afterwards; <see cref="Translate(Vector2)"/> already does.
+        /// </remarks>
+        protected virtual void OnMapPointsChanged()
+        {
         }
 
         private static bool DebugVerifyPointsAreUnique(MappingVector2[] listPoints)
@@ -177,6 +192,7 @@ namespace Geometry.Transforms
 
             //Remove any cached data structures
             //MinimizeMemory();
+            OnMapPointsChanged();
 
             ControlBounds = new Rectangle(ControlBounds.Left + vector.X,
                                               ControlBounds.Right + vector.X,

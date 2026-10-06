@@ -24,6 +24,10 @@ namespace Viking.VolumeModel
             this.VolumeTransform = Transform;
             this._XYScale = ToWarp.XYScale;
 
+            //VisibleTiles maps the view back to the section and builds tile vertices from the volume transform's points,
+            //which use both of its RTrees. Start building them now, off the calling thread.
+            _ = (Transform as ISpatialIndexPrewarm)?.PrewarmSpatialIndexAsync();
+
             /*
             //Create a single grid transform for all tiles
             GridToVolumeTransform = new GridTransform();
@@ -187,8 +191,12 @@ namespace Viking.VolumeModel
                         continue;
 
                     var UniqueID = TileUniqueKey.Create(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
-                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+
+                    //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
+                    ;
+                    if (Global.TileCache.TryGetTile(UniqueID, out TileViewModel tileViewModel))
                     {
+                        //A cached null tile is a known-empty tile (too few vertices); do not build it again
                         if (tileViewModel != null)
                             TilesToDraw.Add(tileViewModel);
                     }

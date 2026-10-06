@@ -113,6 +113,7 @@ namespace Geometry.Transforms
 
             //Setting the mapPoints will sort and recalculate triangles
             newObj.MapPoints = [.. TempList];
+            newObj.ResetTriangleRTrees();
 
             return newObj;
         }
@@ -137,23 +138,11 @@ namespace Geometry.Transforms
             if (!MappedBounds.Covers(Point, epsilon))
                 return null;
 
-            //Fetch a list of triangles from the nearest point
-            //double distance;
-            List<MappingTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
-
-            if (triangles is null)
-                return null;
-
-            foreach (MappingTriangle t in triangles)
-            {
-                if (!t.MappedBoundingBox.Covers(Point))
-                    continue;
-
-                if (t.CanTransform(Point))
-                    return t;
-            }
-
-            return null;
+            //The first triangle whose RTree box holds the point and which covers it. RTree boxes are the triangles' exact
+            //bounding boxes, so no separate box test is needed; candidates are visited in the order Intersects returns them.
+            return mapTrianglesRTree.TryFindFirst(Point.X, Point.Y, 0, Point, static (t, p) => t.CanTransform(p), out MappingTriangle found)
+                ? found
+                : null;
         }
 
         /// <summary>
@@ -172,23 +161,9 @@ namespace Geometry.Transforms
             if (!ControlBounds.Covers(Point, epsilon))
                 return null;
 
-            //Fetch a list of triangles from the nearest point
-            List<MappingTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
-
-            if (triangles is null)
-                return null;
-
-
-            foreach (MappingTriangle t in triangles)
-            {
-                if (!t.ControlBoundingBox.Covers(Point))
-                    continue;
-
-                if (t.CanInverseTransform(Point))
-                    return t;
-            }
-
-            return null;
+            return controlTrianglesRTree.TryFindFirst(Point.X, Point.Y, 0, Point, static (t, p) => t.CanInverseTransform(p), out MappingTriangle found)
+                ? found
+                : null;
         }
 
         #endregion

@@ -9,8 +9,11 @@ namespace Geometry.Transforms
     /// A transform which uses a discreet transform where possible, but falls back to a continuous transform for points that cannot be mapped discreetly.
     /// </summary>
     [Serializable]
-    public class DiscreteTransformWithContinuousFallback : IContinuousTransform, ITransformInfo, IMemoryMinimization, IControlPointTriangulation
+    public class DiscreteTransformWithContinuousFallback : IContinuousTransform, ITransformInfo, IMemoryMinimization, IControlPointTriangulation, ISpatialIndexPrewarm
     {
+        public System.Threading.Tasks.Task PrewarmSpatialIndexAsync() =>
+            (DiscreteTransform as ISpatialIndexPrewarm)?.PrewarmSpatialIndexAsync() ?? System.Threading.Tasks.Task.CompletedTask;
+
         readonly IDiscreteTransform DiscreteTransform;
         readonly IContinuousTransform ContinuousTransform;
 
@@ -94,7 +97,19 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public Vector2[] Transform(in Vector2[] Points) => [.. Points.Select(p => this.Transform(p))];
+        /// <summary>
+        /// Maps every point: the discrete transform maps what it can in one batch call, and only the points it rejected go to the
+        /// continuous transform, again as one batch. Same result as mapping each point separately.
+        /// </summary>
+        public Vector2[] Transform(in Vector2[] Points)
+        {
+            if (Points is null)
+                throw new ArgumentNullException(nameof(Points));
+
+            bool[] discreteMapped = DiscreteTransform.TryTransform(Points, out Vector2[] output);
+            ApplyFallback(Points, discreteMapped, output, failed => ContinuousTransform.Transform(failed));
+            return output;
+        }
 
         public bool TryTransform(in Vector2 Point, out Vector2 v)
         {
@@ -105,7 +120,7 @@ namespace Geometry.Transforms
         public bool[] TryTransform(in Vector2[] Points, out Vector2[] v)
         {
             v = Transform(Points);
-            return [.. v.Select(p => true)];
+            return AllTrue(v.Length);
         }
 
         public Vector2 InverseTransform(in Vector2 Point)
@@ -118,7 +133,16 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public Vector2[] InverseTransform(in Vector2[] Points) => [.. Points.Select(p => this.InverseTransform(p))];
+        /// <summary>Inverse of <see cref="Transform(in Vector2[])"/>, with the same batching and fallback rules.</summary>
+        public Vector2[] InverseTransform(in Vector2[] Points)
+        {
+            if (Points is null)
+                throw new ArgumentNullException(nameof(Points));
+
+            bool[] discreteMapped = DiscreteTransform.TryInverseTransform(Points, out Vector2[] output);
+            ApplyFallback(Points, discreteMapped, output, failed => ContinuousTransform.InverseTransform(failed));
+            return output;
+        }
 
         public bool TryInverseTransform(in Vector2 Point, out Vector2 v)
         {
@@ -129,7 +153,50 @@ namespace Geometry.Transforms
         public bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] v)
         {
             v = InverseTransform(Points);
-            return [.. v.Select(p => true)];
+            return AllTrue(v.Length);
+        }
+
+        /// <summary>
+        /// Overwrites <paramref name="output"/> at every index the discrete transform rejected with the continuous result for that
+        /// point. <paramref name="output"/> must be the array the discrete batch call just returned, which this class owns.
+        /// </summary>
+        private static void ApplyFallback(Vector2[] points, bool[] discreteMapped, Vector2[] output, Func<Vector2[], Vector2[]> continuousBatch)
+        {
+            int failedCount = 0;
+            for (int i = 0; i < discreteMapped.Length; i++)
+            {
+                if (!discreteMapped[i])
+                    failedCount++;
+            }
+
+            if (failedCount == 0)
+                return;
+
+            Vector2[] failedPoints = new Vector2[failedCount];
+            int next = 0;
+            for (int i = 0; i < discreteMapped.Length; i++)
+            {
+                if (!discreteMapped[i])
+                    failedPoints[next++] = points[i];
+            }
+
+            Vector2[] fallbackResults = continuousBatch(failedPoints);
+
+            next = 0;
+            for (int i = 0; i < discreteMapped.Length; i++)
+            {
+                if (!discreteMapped[i])
+                    output[i] = fallbackResults[next++];
+            }
+        }
+
+        private static bool[] AllTrue(int length)
+        {
+            bool[] result = new bool[length];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = true;
+
+            return result;
         }
 
         public void Translate(in Vector2 vector) => throw new NotImplementedException();

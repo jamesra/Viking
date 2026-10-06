@@ -134,7 +134,7 @@ namespace Geometry
             {
                 if (!_Centroid.HasValue)
                 {
-                    _Centroid = CalculateCentroid(ExteriorRing);
+                    _Centroid = CalculateCentroid(_ExteriorRing);
                 }
 
                 return _Centroid.Value;
@@ -150,18 +150,45 @@ namespace Geometry
         public IReadOnlyList<Vector2[]> InteriorRings => [.. _InteriorPolygons.Select(p => p._ExteriorRing)];
 
         /// <summary>
-        /// Return a list of all exterior and interior line segments
+        /// Return a list of all exterior and interior line segments: this ring first, then each hole in order.
         /// </summary>
+        /// <remarks>
+        /// Always a fresh snapshot, not a cache. Holes are public <see cref="Polygon"/> objects that can be edited
+        /// without notifying their parent, so a cached list could go stale. Callers that only scan the segments
+        /// should use <see cref="AppendAllSegments"/> or walk <see cref="ExteriorSegments"/> directly.
+        /// </remarks>
         public List<LineSegment> AllSegments
         {
             get
             {
-                List<LineSegment> listLines = [.. this.ExteriorSegments];
-
-                listLines.AddRange(this.InteriorPolygons.SelectMany(inner => inner.AllSegments));
-
+                List<LineSegment> listLines = new(CountAllSegments());
+                AppendAllSegments(listLines);
                 return listLines;
             }
+        }
+
+        /// <summary>Total segment count over this ring and every hole, matching <see cref="AllSegments"/>.Count.</summary>
+        private int CountAllSegments()
+        {
+            int count = _ExteriorSegments.Length;
+            foreach (Polygon inner in _InteriorPolygons)
+                count += inner.CountAllSegments();
+
+            return count;
+        }
+
+        /// <summary>
+        /// Appends this ring's segments and then each hole's, in the same order as <see cref="AllSegments"/>, to
+        /// <paramref name="destination"/> without building intermediate lists.
+        /// </summary>
+        internal void AppendAllSegments(List<LineSegment> destination)
+        {
+            // List.AddRange(array) on .NET Framework copies through a temporary array, so add one at a time.
+            foreach (LineSegment segment in _ExteriorSegments)
+                destination.Add(segment);
+
+            foreach (Polygon inner in _InteriorPolygons)
+                inner.AppendAllSegments(destination);
         }
 
         public bool HasInteriorRings => _InteriorPolygons.Count > 0;
@@ -965,7 +992,7 @@ namespace Geometry
 
         public bool IsValid()
         {
-            if (this.ExteriorRing.Distinct().Count() != this.ExteriorRing.Length - 1)
+            if (_ExteriorRing.Distinct().Count() != _ExteriorRing.Length - 1)
                 return false;
 
             //if (this.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed))
@@ -1007,7 +1034,7 @@ namespace Geometry
         {
             IReadOnlyList<LineSegment> lines = poly.ExteriorSegments;
 
-            PolygonIndex Index = new(0, 0, poly.ExteriorRing.Length - 1);
+            PolygonIndex Index = new(0, 0, poly.RingStorage.Length - 1);
             PolygonIndex FirstRingIndex = Index.FirstInRing;
 
             do
@@ -1626,11 +1653,18 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
+        /// <summary>True if the circle meets any exterior or hole segment. Scans in place, in <see cref="AllSegments"/> order.</summary>
         internal bool CircleIntersectsBoundary(in Circle circle)
         {
-            foreach (LineSegment seg in AllSegments)
+            foreach (LineSegment seg in _ExteriorSegments)
             {
                 if (circle.Intersects(seg))
+                    return true;
+            }
+
+            foreach (Polygon inner in _InteriorPolygons)
+            {
+                if (inner.CircleIntersectsBoundary(circle))
                     return true;
             }
 
@@ -1680,15 +1714,25 @@ namespace Geometry
             return ShapeRelationHelpers.CombineParts(parts);
         }
 
-        ShapeRelation RelationToInfiniteLine(in Line line)
+        ShapeRelation RelationToInfiniteLine(in Line line) =>
+            InfiniteLineIntersectsBoundary(line) ? ShapeRelation.Intersecting : ShapeRelation.None;
+
+        /// <summary>True if the infinite line meets any exterior or hole segment. Scans in place, in <see cref="AllSegments"/> order.</summary>
+        bool InfiniteLineIntersectsBoundary(in Line line)
         {
-            foreach (LineSegment seg in AllSegments)
+            foreach (LineSegment seg in _ExteriorSegments)
             {
                 if (line.Intersects(seg, out _))
-                    return ShapeRelation.Intersecting;
+                    return true;
             }
 
-            return ShapeRelation.None;
+            foreach (Polygon inner in _InteriorPolygons)
+            {
+                if (inner.InfiniteLineIntersectsBoundary(line))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1809,6 +1853,13 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Per-thread scratch for <see cref="IsPointInsidePolygonByWindingTest"/>. The test is not re-entrant on a
+        /// thread (it calls no code that starts another winding test) and clears the list before use.
+        /// </summary>
+        [ThreadStatic]
+        private static List<SegmentIsLeftData> t_windingScratch;
+
+        /// <summary>
         /// The results of whether a polygon segment is left, right, or on a test line
         /// </summary>
         private readonly struct SegmentIsLeftData(int a_is_left, int b_is_left, LineSegment seg, int? is_p_left_of_seg)
@@ -1900,7 +1951,9 @@ namespace Geometry
             //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
             //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
 
-            List<SegmentIsLeftData> IsLeft = new(polygonSegments.Count);
+            //Only segments that cross or touch the line are kept, so the list stays short; reuse one per thread to avoid allocating on every query.
+            List<SegmentIsLeftData> IsLeft = t_windingScratch ??= new List<SegmentIsLeftData>(16);
+            IsLeft.Clear();
 
             for (int i = 0; i < polygonSegments.Count; i++)
             {
@@ -1914,14 +1967,14 @@ namespace Geometry
                 if (seg.TouchesLine)
                 {
                     //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
-                    if (seg.S.DistanceToPoint(test_point) < Tolerance.Epsilon)
+                    if (seg.S.IsWithinEpsilonOf(test_point))
                         return ShapeRelation.Touching;
 
                 }
                 else if (seg.CrossesLine || seg.OnTheLine)
                 {
                     //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
-                    if (seg.S.DistanceToPoint(test_point) < Tolerance.Epsilon)
+                    if (seg.S.IsWithinEpsilonOf(test_point))
                         return ShapeRelation.Touching;
                 }
 
@@ -1936,9 +1989,6 @@ namespace Geometry
             if (IsLeft.Count == 0)
                 return ShapeRelation.None;
 
-            //From here we mutate in parallel with IsLeft, so work on a private list instead of the caller's segments.
-            List<LineSegment> workingSegments = [.. IsLeft.Select(left => left.S)];
-
             //Find all segments that touch the line.  Remove the endpoints that touch the line and create a virtual segment that runs between the endpoints that did not touch the line.  This prevents double-counting windings.
             //InfiniteSequentialIndexSet SegEnumerator = new InfiniteSequentialIndexSet(0, IsLeft.Count, 0);
             for (int i = 0; i < IsLeft.Count; i++)
@@ -1948,7 +1998,7 @@ namespace Geometry
                 if (seg.A_is_left != 0 && seg.B_is_left != 0)
                 {
                     //Check the case of the point exactly on the line
-                    if (seg.S.DistanceToPoint(test_point) < Tolerance.Epsilon)
+                    if (seg.S.IsWithinEpsilonOf(test_point))
                         return ShapeRelation.Touching;
 
                     continue;   //Segment does not end on the line, continue;
@@ -1964,9 +2014,6 @@ namespace Geometry
 
                     if (nextSegIsLeft == seg.A_is_left) //We touch the line and retreat.  We can remove both entries 
                     {
-                        workingSegments.RemoveAt(Math.Max(i, iNext));
-                        workingSegments.RemoveAt(Math.Min(i, iNext));
-
                         IsLeft.RemoveAt(Math.Max(i, iNext));
                         IsLeft.RemoveAt(Math.Min(i, iNext));
 
@@ -1975,10 +2022,6 @@ namespace Geometry
                     else  //We touch the line and then cross over it.  We can remove both entries and add a new one
                     {
                         LineSegment virtualPolySegment = new(seg.S.A, nextSegEndpoint);
-                        workingSegments.RemoveAt(i);
-                        workingSegments.Insert(i, virtualPolySegment);
-                        workingSegments.RemoveAt(iNext);
-
                         SegmentIsLeftData newEntry = new(a_is_left: seg.A_is_left,
                             b_is_left: nextSegIsLeft,
                             seg: virtualPolySegment,
@@ -1992,14 +2035,8 @@ namespace Geometry
                 }
             }
 
-            var cross_or_parallel_segments = workingSegments; //polygonSegments.Where((s, i) => (IsLeft[i].A != IsLeft[i].B) || (IsLeft[i].A == 0 || IsLeft[i].B == 0)).ToArray(); //Find all segments that span the testline or are parallel
-
-            //If we share endpoints then we are always inside the polygon.  Handles case where we ask if a polygon vertex is inside the polygon
-            //if (cross_or_parallel_segments.Any(ps => ps.IsEndpoint(test_line.A)))
-            //    return ShapeRelation.Touching;
-
             int wind_count = 0;
-            for (int i = 0; i < cross_or_parallel_segments.Count; i++)
+            for (int i = 0; i < IsLeft.Count; i++)
             {
                 var SegData = IsLeft[i];
                 LineSegment polySeg = SegData.S;
@@ -2428,28 +2465,37 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Area-weighted centroid of a closed ring. Translates to the mean first so large coordinates do not overflow.
+        /// Area-weighted centroid of a closed ring. Subtracts the mean first so large coordinates do not lose precision.
         /// </summary>
+        /// <remarks>
+        /// Works over <paramref name="ExteriorRing"/> in place and never modifies it. The area is evaluated on the
+        /// mean-shifted ring and re-centered on that ring's own mean, the same two-step origin the copying
+        /// implementation used, so results are bit-identical to it.
+        /// </remarks>
         public static Vector2 CalculateCentroid(Vector2[] ExteriorRing, bool ValidateRing = true)
         {
             double accumulator_X = 0;
             double accumulator_Y = 0;
 
-            //To prevent precision errors we subtract the average value and add it again
-            ExteriorRing = [.. ExteriorRing.EnsureClosedRing()];
-            Vector2 Average = ExteriorRing.Average();
-            Vector2[] translated_Points = ExteriorRing.Translate(-Average);
+            int count = RingMath.ClosedCount(ExteriorRing);
+            Vector2 Average = RingMath.ShiftedAverage(ExteriorRing, count, Vector2.Zero);
 
-            for (int i = 0; i < translated_Points.Length - 1; i++)
+            Vector2 p0 = RingMath.ShiftedAt(ExteriorRing, 0, Average);
+            for (int i = 0; i < count - 1; i++)
             {
-                Vector2 p0 = translated_Points[i];
-                Vector2 p1 = translated_Points[i + 1];
+                Vector2 p1 = RingMath.ShiftedAt(ExteriorRing, i + 1, Average);
                 double SharedTerm = ((p0.X * p1.Y) - (p1.X * p0.Y));
                 accumulator_X += (p0.X + p1.X) * SharedTerm;
                 accumulator_Y += (p0.Y + p1.Y) * SharedTerm;
+                p0 = p1;
             }
 
-            double ExteriorArea = translated_Points.PolygonArea();
+            //The shifted ring is closed again on its own terms, which can add a closing point if rounding opened it.
+            Vector2 shiftedFirst = RingMath.ShiftedAt(ExteriorRing, 0, Average);
+            Vector2 shiftedLast = RingMath.ShiftedAt(ExteriorRing, count - 1, Average);
+            int areaCount = shiftedFirst != shiftedLast ? count + 1 : count;
+            Vector2 areaOrigin = RingMath.ShiftedAverage(ExteriorRing, areaCount, Average);
+            double ExteriorArea = RingMath.ShiftedArea(ExteriorRing, areaCount, Average, areaOrigin);
             double scalar = ExteriorArea * 6;
 
             return new Vector2((accumulator_X / scalar) + Average.X, (accumulator_Y / scalar) + Average.Y);

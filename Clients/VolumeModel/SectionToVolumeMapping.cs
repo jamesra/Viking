@@ -155,6 +155,46 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
+        /// Warps one mosaic tile into volume space. Returns null when the tile does not survive (no overlap with the volume
+        /// transform, or fewer than three points left). Called from a parallel loop, one tile per call.
+        /// </summary>
+        private ITransform WarpTile(ITransform tile, TransformBasicInfo VolumeTransformInfo)
+        {
+            IControlPointTriangulation T = tile as IControlPointTriangulation;
+            ITransform newTransform = null;
+
+            if (VolumeTransform != null && T != null)
+            {
+                TileTransformInfo originalInfo = ((ITransformInfo)T).Info as TileTransformInfo;
+                TileTransformInfo info = new(originalInfo.TileFileName,
+                                                               originalInfo.TileNumber,
+                                                               originalInfo.LastModified < VolumeTransformInfo.LastModified ? originalInfo.LastModified : VolumeTransformInfo.LastModified,
+                                                               originalInfo.ImageWidth,
+                                                               originalInfo.ImageHeight);
+                //FIXME
+                newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
+            }
+
+            if (newTransform is null)
+                return null;
+
+            //Don't include the tile if the mapped version doesn't have any triangles
+            ITransform kept = newTransform is IControlPointTriangulation cpt && cpt.MapPoints.Length > 2 ? newTransform : null;
+
+            if (T is IMemoryMinimization mmt)
+            {
+                mmt.MinimizeMemory();
+            }
+
+            if (newTransform is IMemoryMinimization nmmt)
+            {
+                nmmt.MinimizeMemory();
+            }
+
+            return kept;
+        }
+
+        /// <summary>
         /// If this section has not yet been warped, then do so.
         /// This method is invoked by threads.  
         /// </summary>
@@ -165,8 +205,16 @@ namespace Viking.VolumeModel
 
             Debug.Assert(this.VolumeTransform != null);
 
+            string sectionDetail = Section.Number.ToString();
+
+            //Inverse mapping (volume to section) uses the volume transform's RTrees; build them while the mosaic loads.
+            _ = (VolumeTransform as ISpatialIndexPrewarm)?.PrewarmSpatialIndexAsync();
+
             if (SourceMapping.Initialized == false)
-                await SourceMapping.Initialize(token).ConfigureAwait(false);
+            {
+                using (LoadStageTimings.Start(LoadStageTimings.MosaicLoad, sectionDetail))
+                    await SourceMapping.Initialize(token).ConfigureAwait(false);
+            }
 
             var VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
 
@@ -177,7 +225,9 @@ namespace Viking.VolumeModel
                 if (cacheFileInfo.LastWriteTimeUtc >= VolumeTransformInfo.LastModified &&
                     cacheFileInfo.LastWriteTimeUtc >= SourceMapping.LastModified)
                 {
-                    var cachedTransforms = LoadFromCache();
+                    ITransform[] cachedTransforms;
+                    using (LoadStageTimings.Start(LoadStageTimings.WarpCacheRead, sectionDetail))
+                        cachedTransforms = LoadFromCache();
                     if (cachedTransforms != null)
                         return cachedTransforms;
 
@@ -203,53 +253,20 @@ namespace Viking.VolumeModel
             if (token.IsCancellationRequested)
                 return null;
 
-            // We add transforms which surivive addition with at least three points to this list
-            List<ITransform> listTiles = new(volTransforms.Length);
+            //Tiles warp independently: each reads the shared volume transform and its own tile transform. Results are
+            //stored by index so the tile order matches the mosaic.
+            ITransform[] warped = new ITransform[volTransforms.Length];
+            var warpStage = LoadStageTimings.Start(LoadStageTimings.Warp, sectionDetail);
+            Parallel.For(0, volTransforms.Length, i => warped[i] = WarpTile(volTransforms[i], VolumeTransformInfo));
+            warpStage.Dispose();
 
-            for (int i = 0; i < volTransforms.Length; i++)
-            {
-                IControlPointTriangulation T = volTransforms[i] as IControlPointTriangulation;
-                //TriangulationTransform copy = (TriangulationTransform)T.Copy();
-                ITransform newTransform = null; // = (TriangulationTransform)T.Copy();
-
-
-                if (VolumeTransform != null && T != null)
-                {
-
-                    TileTransformInfo originalInfo = ((ITransformInfo)T).Info as TileTransformInfo;
-                    TileTransformInfo info = new(originalInfo.TileFileName,
-                                                                   originalInfo.TileNumber,
-                                                                   originalInfo.LastModified < VolumeTransformInfo.LastModified ? originalInfo.LastModified : VolumeTransformInfo.LastModified,
-                                                                   originalInfo.ImageWidth,
-                                                                   originalInfo.ImageHeight);
-                    //FIXME
-                    newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
-                }
-
-                if (newTransform is null)
-                    continue;
-
-                //Don't include the tile if the mapped version doesn't have any triangles
-                if (newTransform is IControlPointTriangulation cpt)
-                {
-                    if (cpt.MapPoints.Length > 2)
-                        listTiles.Add(newTransform);
-                }
-
-                if (T is IMemoryMinimization mmt)
-                {
-                    mmt.MinimizeMemory();
-                }
-
-                if (newTransform is IMemoryMinimization nmmt)
-                {
-                    nmmt.MinimizeMemory();
-                }
-            }
+            // Tiles which survive addition with at least three points
+            List<ITransform> listTiles = [.. warped.Where(t => t != null)];
 
             var result = listTiles.ToArray();
             //Try to save the transform to our cache
-            await SaveToCache(CachedTransformsFileName, [.. listTiles]).ConfigureAwait(false);
+            using (LoadStageTimings.Start(LoadStageTimings.WarpCacheWrite, sectionDetail))
+                await SaveToCache(CachedTransformsFileName, [.. listTiles]).ConfigureAwait(false);
 
             //OK, overwrite the tiles in our class
             return result;

@@ -135,8 +135,18 @@ namespace Geometry
 
             double[] tvalues = new double[NumInterpolations];
 
-            double[] tPointsArray = NumInterpolations == 1 ? [0.5] : [.. tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0)))];
-            tvalues = [.. tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1))];
+            if (NumInterpolations == 1)
+            {
+                tvalues[0] = t1 + 0.5 * (t2 - t1);
+            }
+            else
+            {
+                for (int i = 0; i < tvalues.Length; i++)
+                {
+                    double fraction = (double)i / ((double)NumInterpolations - 1.0);
+                    tvalues[i] = t1 + fraction * (t2 - t1);
+                }
+            }
 
             Vector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
             return output;
@@ -214,7 +224,12 @@ namespace Geometry
         /// <param name="p2"></param>
         /// <param name="p3"></param>
         /// <param name="tvalues">The fractional distances between P1 and P2 that we would like returned</param>
-        /// <returns></returns>
+        /// <returns>One point per t value, in the same order</returns>
+        /// <remarks>
+        /// Each point depends only on its own t value. The expressions and their order match the array-per-stage version this
+        /// replaced, so results are bit-identical (including NaN or infinity when two control points coincide). Do not
+        /// reassociate or hoist divisions into reciprocals.
+        /// </remarks>
         private static Vector2[] FitCurveSegmentWithTValues(Vector2 p0, Vector2 p1,
                                                     Vector2 p2, Vector2 p3,
                                                     double[] tvalues)
@@ -225,25 +240,33 @@ namespace Geometry
             double t2 = tj(t1, p1, p2, alpha);
             double t3 = tj(t2, p2, p3, alpha);
 
-            double[] A1X = [.. tvalues.Select(t => (t1 - t) / (t1 - t0) * p0.X + (t - t0) / (t1 - t0) * p1.X)];
-            double[] A1Y = [.. tvalues.Select(t => (t1 - t) / (t1 - t0) * p0.Y + (t - t0) / (t1 - t0) * p1.Y)];
+            Vector2[] output = new Vector2[tvalues.Length];
+            for (int i = 0; i < tvalues.Length; i++)
+            {
+                double t = tvalues[i];
 
-            double[] A2X = [.. tvalues.Select(t => (t2 - t) / (t2 - t1) * p1.X + (t - t1) / (t2 - t1) * p2.X)];
-            double[] A2Y = [.. tvalues.Select(t => (t2 - t) / (t2 - t1) * p1.Y + (t - t1) / (t2 - t1) * p2.Y)];
+                double a1x = (t1 - t) / (t1 - t0) * p0.X + (t - t0) / (t1 - t0) * p1.X;
+                double a1y = (t1 - t) / (t1 - t0) * p0.Y + (t - t0) / (t1 - t0) * p1.Y;
 
-            double[] A3X = [.. tvalues.Select(t => (t3 - t) / (t3 - t2) * p2.X + (t - t2) / (t3 - t2) * p3.X)];
-            double[] A3Y = [.. tvalues.Select(t => (t3 - t) / (t3 - t2) * p2.Y + (t - t2) / (t3 - t2) * p3.Y)];
+                double a2x = (t2 - t) / (t2 - t1) * p1.X + (t - t1) / (t2 - t1) * p2.X;
+                double a2y = (t2 - t) / (t2 - t1) * p1.Y + (t - t1) / (t2 - t1) * p2.Y;
 
-            double[] B1X = [.. tvalues.Select((t, i) => ((t2 - t) / (t2 - t0)) * A1X[i] + ((t - t0) / (t2 - t0)) * A2X[i])];
-            double[] B1Y = [.. tvalues.Select((t, i) => ((t2 - t) / (t2 - t0)) * A1Y[i] + ((t - t0) / (t2 - t0)) * A2Y[i])];
+                double a3x = (t3 - t) / (t3 - t2) * p2.X + (t - t2) / (t3 - t2) * p3.X;
+                double a3y = (t3 - t) / (t3 - t2) * p2.Y + (t - t2) / (t3 - t2) * p3.Y;
 
-            double[] B2X = [.. tvalues.Select((t, i) => ((t3 - t) / (t3 - t1)) * A2X[i] + ((t - t1) / (t3 - t1)) * A3X[i])];
-            double[] B2Y = [.. tvalues.Select((t, i) => ((t3 - t) / (t3 - t1)) * A2Y[i] + ((t - t1) / (t3 - t1)) * A3Y[i])];
+                double b1x = ((t2 - t) / (t2 - t0)) * a1x + ((t - t0) / (t2 - t0)) * a2x;
+                double b1y = ((t2 - t) / (t2 - t0)) * a1y + ((t - t0) / (t2 - t0)) * a2y;
 
-            double[] CX = [.. tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1X[i] + ((t - t1) / (t2 - t1)) * B2X[i])];
-            double[] CY = [.. tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1Y[i] + ((t - t1) / (t2 - t1)) * B2Y[i])];
+                double b2x = ((t3 - t) / (t3 - t1)) * a2x + ((t - t1) / (t3 - t1)) * a3x;
+                double b2y = ((t3 - t) / (t3 - t1)) * a2y + ((t - t1) / (t3 - t1)) * a3y;
 
-            return [.. CX.Select((cx, i) => new Vector2(cx, CY[i]))];
+                double cx = ((t2 - t) / (t2 - t1)) * b1x + ((t - t1) / (t2 - t1)) * b2x;
+                double cy = ((t2 - t) / (t2 - t1)) * b1y + ((t - t1) / (t2 - t1)) * b2y;
+
+                output[i] = new Vector2(cx, cy);
+            }
+
+            return output;
         }
 
         /// <summary>
@@ -287,20 +310,19 @@ namespace Geometry
             double t0 = 0;
             double t1 = tj(t0, in p0, in p1, alpha);
             double t2 = tj(t1, in p1, in p2, alpha);
-            double t3 = tj(t2, in p2, in p3, alpha);
 
-            double[] tPointsArray = [.. tPoints];
-            double[] tvalues = TScalarsToTValues(tPoints, t1, t2);
-
-            Vector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
-
-            if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref tPoints))
+            while (true)
             {
-                //We could not add any additional T points at high curvature regions, return the result
-                return output;
-            }
+                double[] tvalues = TScalarsToTValues(tPoints, t1, t2);
 
-            return RecursivelyFitCurveSegment(in p0, in p1, in p2, in p3, tPoints);
+                Vector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
+
+                if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref tPoints))
+                {
+                    //We could not add any additional T points at high curvature regions, return the result
+                    return output;
+                }
+            }
         }
 
         /// <summary>
@@ -310,7 +332,17 @@ namespace Geometry
         /// <param name="t1">Min val</param>
         /// <param name="t2">Max val</param>
         /// <returns></returns>
-        private static double[] TScalarsToTValues(this SortedSet<double> tpoints, double t1, double t2) => TScalarsToTValues(tpoints.ToArray(), t1, t2);
+        private static double[] TScalarsToTValues(this SortedSet<double> tpoints, double t1, double t2)
+        {
+            double[] tvalues = new double[tpoints.Count];
+            tpoints.CopyTo(tvalues);
+            for (int i = 0; i < tvalues.Length; i++)
+            {
+                tvalues[i] = t1 + tvalues[i] * (t2 - t1);
+            }
+
+            return tvalues;
+        }
 
         /// <summary>
         /// Interpolates scalar values into the range t1 and t2.
@@ -321,7 +353,12 @@ namespace Geometry
         /// <returns></returns>
         private static double[] TScalarsToTValues(this IReadOnlyList<double> tpoints, double t1, double t2)
         {
-            double[] tvalues = [.. tpoints.Select((t, i) => t1 + tpoints[i] * (t2 - t1))];
+            double[] tvalues = new double[tpoints.Count];
+            for (int i = 0; i < tvalues.Length; i++)
+            {
+                tvalues[i] = t1 + tpoints[i] * (t2 - t1);
+            }
+
             return tvalues;
         }
 

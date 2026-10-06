@@ -69,12 +69,7 @@ namespace Geometry
 
         public Triangle(in Vector2 p1, in Vector2 p2, in Vector2 p3)
         {
-            if (Vector2.DistanceSquared(p1, p2) <= Tolerance.EpsilonSquared ||
-                Vector2.DistanceSquared(p2, p3) <= Tolerance.EpsilonSquared ||
-                Vector2.DistanceSquared(p3, p1) <= Tolerance.EpsilonSquared)
-            {
-                throw new ArgumentException("This is not a triangle, it is a line");
-            }
+            ThrowIfDegenerate(p1, p2, p3);
 
             _points = [p1, p2, p3];
 
@@ -235,19 +230,46 @@ namespace Geometry
 
         public bool Covers(in Vector2 p) => GetRelation(p).IsCovers();
 
-        public ShapeRelation GetRelation(in Vector2 p)
+        public ShapeRelation GetRelation(in Vector2 p) => RelationToPoint(_BarycentricCoefficients, BoundingBox, P1, p);
+
+        /// <summary>
+        /// Throws the <see cref="ArgumentException"/> the constructor throws when two vertices coincide.
+        /// </summary>
+        public static void ThrowIfDegenerate(in Vector2 p1, in Vector2 p2, in Vector2 p3)
         {
-            if (false == BoundingBox.Covers(p))
+            if (Vector2.DistanceSquared(p1, p2) <= Tolerance.EpsilonSquared ||
+                Vector2.DistanceSquared(p2, p3) <= Tolerance.EpsilonSquared ||
+                Vector2.DistanceSquared(p3, p1) <= Tolerance.EpsilonSquared)
+            {
+                throw new ArgumentException("This is not a triangle, it is a line");
+            }
+        }
+
+        /// <summary>
+        /// Same result as <c>new Triangle(p1, p2, p3).Covers(point)</c>, including the exception for a degenerate triangle,
+        /// without allocating. For hot paths such as transform triangle lookups.
+        /// </summary>
+        public static bool Covers(in Vector2 p1, in Vector2 p2, in Vector2 p3, in Vector2 point)
+        {
+            ThrowIfDegenerate(p1, p2, p3);
+            Rectangle bounds = new(Math.Min(Math.Min(p1.X, p2.X), p3.X), Math.Max(Math.Max(p1.X, p2.X), p3.X),
+                                   Math.Min(Math.Min(p1.Y, p2.Y), p3.Y), Math.Max(Math.Max(p1.Y, p2.Y), p3.Y));
+            return RelationToPoint(new BaryCoefs(p1, p2, p3), bounds, p1, point).IsCovers();
+        }
+
+        private static ShapeRelation RelationToPoint(in BaryCoefs coefs, in Rectangle bounds, in Vector2 p1, in Vector2 p)
+        {
+            if (false == bounds.Covers(p))
                 return ShapeRelation.None;
 
-            Vector2 uv = Barycentric(p);
-            Vector3 uvw = new(uv.X, uv.Y, 1 - uv.X - uv.Y);
+            Vector2 uv = Barycentric(coefs, p1, p);
+            double u = uv.X, v = uv.Y, w = 1 - uv.X - uv.Y;
 
-            if (uvw.X >= 0 && uvw.Y >= 0 && uvw.Z >= 0)
+            if (u >= 0 && v >= 0 && w >= 0)
             {
-                if (uvw.X + uvw.Y + uvw.Z <= 1.0)
+                if (u + v + w <= 1.0)
                 {
-                    if (uvw.Coords.Any(c => c == 0))
+                    if (u == 0 || v == 0 || w == 0)
                         return ShapeRelation.Touching;
 
                     return ShapeRelation.Contained;
@@ -383,15 +405,24 @@ namespace Geometry
         /// <remarks>
         /// Area coordinates (Möbius). Implementation matches Ericson, Real-Time Collision Detection (2005), §3.4.
         /// </remarks>
-        public Vector2 Barycentric(in Vector2 point)
+        public Vector2 Barycentric(in Vector2 point) => Barycentric(_BarycentricCoefficients, P1, point);
+
+        /// <summary>
+        /// Same result as <c>new Triangle(p1, p2, p3).Barycentric(point)</c> without allocating. Does not check for a
+        /// degenerate triangle; see <see cref="ThrowIfDegenerate"/>.
+        /// </summary>
+        public static Vector2 Barycentric(in Vector2 p1, in Vector2 p2, in Vector2 p3, in Vector2 point) =>
+            Barycentric(new BaryCoefs(p1, p2, p3), p1, point);
+
+        private static Vector2 Barycentric(in BaryCoefs coefs, in Vector2 p1, in Vector2 point)
         {
-            Vector2 vPA = point - P1;
+            Vector2 vPA = point - p1;
 
-            double dotCAPA = Vector2.Dot(_BarycentricCoefficients.vCA, vPA);
-            double dotBAPA = Vector2.Dot(_BarycentricCoefficients.vBA, vPA);
+            double dotCAPA = Vector2.Dot(coefs.vCA, vPA);
+            double dotBAPA = Vector2.Dot(coefs.vBA, vPA);
 
-            double u = ((_BarycentricCoefficients.dotBABA * dotCAPA) - (_BarycentricCoefficients.dotCABA * dotBAPA)) * _BarycentricCoefficients.invDenom;
-            double v = ((_BarycentricCoefficients.dotCACA * dotBAPA) - (_BarycentricCoefficients.dotCABA * dotCAPA)) * _BarycentricCoefficients.invDenom;
+            double u = ((coefs.dotBABA * dotCAPA) - (coefs.dotCABA * dotBAPA)) * coefs.invDenom;
+            double v = ((coefs.dotCACA * dotBAPA) - (coefs.dotCABA * dotCAPA)) * coefs.invDenom;
 
             if (u < 0 && u >= -Tolerance.Epsilon)
                 u = 0.0;

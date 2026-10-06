@@ -51,7 +51,20 @@ namespace Geometry
         /// https://paulbourke.net/papers/triangulate/
         /// Points are sorted on X internally; duplicates closer than <see cref="Global.Epsilon"/> throw.
         /// </remarks>
-        public static int[] Triangulate(Vector2[] points, Vector2[] BoundingPoints)
+        public static int[] Triangulate(Vector2[] points, Vector2[] BoundingPoints) => TriangulateCore(points, BoundingPoints, PairwiseEdgeLimit);
+
+        /// <summary>
+        /// Cavities with at most this many boundary edges are de-duplicated by comparing every pair, which beats a hash for
+        /// the handful of edges a typical insertion produces.
+        /// </summary>
+        private const int PairwiseEdgeLimit = 48;
+
+        /// <summary>
+        /// <see cref="Triangulate(Vector2[], Vector2[])"/> with the pairwise de-duplication limit exposed so tests can force
+        /// either de-duplication path. Both paths return the same triangles in the same order.
+        /// </summary>
+        /// <param name="pairwiseEdgeLimit">Cavities with more edges than this use the hashed de-duplication</param>
+        internal static int[] TriangulateCore(Vector2[] points, Vector2[] BoundingPoints, int pairwiseEdgeLimit)
         {
             if (BoundingPoints is null)
             {
@@ -107,6 +120,7 @@ namespace Geometry
                                 new(iNumPoints + 1, iNumPoints + 2, iNumPoints + 3, ref allpoints)]);
 
             IndexEdge[] Edges = new IndexEdge[(triangles.Count * 3) * 2];
+            Dictionary<long, int> pendingEdges = [];
             for (int iPoint = 0; iPoint < points.Length; iPoint++)
             {
                 Vector2 P = points[iPoint];
@@ -116,9 +130,12 @@ namespace Geometry
                 if (Edges.Length < maxEdges)
                     Edges = new IndexEdge[maxEdges * 2];
 
-                int iTri = 0;
+                //Compact the list in place. The survivors keep their relative order, which is the order RemoveAt produced,
+                //and the order of the final triangle array depends on it.
                 int iEdge = 0;
-                while (iTri < triangles.Count)
+                int triangleCount = triangles.Count;
+                int iKept = 0;
+                for (int iTri = 0; iTri < triangleCount; iTri++)
                 {
                     GridIndexTriangle tri = triangles[iTri];
                     Circle circle = tri.Circle;
@@ -127,45 +144,65 @@ namespace Geometry
                         Edges[iEdge++] = new IndexEdge(tri.i1, tri.i2);
                         Edges[iEdge++] = new IndexEdge(tri.i2, tri.i3);
                         Edges[iEdge++] = new IndexEdge(tri.i3, tri.i1);
-
-                        /*                        Edges.AddRange(new IndexEdge[] {new IndexEdge(tri.i1, tri.i2), 
-                                                                                       new IndexEdge(tri.i2, tri.i3),
-                                                                                       new IndexEdge(tri.i3, tri.i1)});
-                                                */
-                        triangles.RemoveAt(iTri);
                     }
                     //Check if the triangle is safe from ever intersecting with a new point again
                     else if (circle.Center.X + circle.Radius + Global.Epsilon < P.X)
                     {
                         safeTriangles.Add(tri);
-                        triangles.RemoveAt(iTri);
                     }
                     else
                     {
-                        iTri++;
+                        if (iKept != iTri)
+                            triangles[iKept] = tri;
+
+                        iKept++;
                     }
                 }
+
+                if (iKept != triangleCount)
+                    triangles.RemoveRange(iKept, triangleCount - iKept);
 
                 //Record how many edges there are
                 int numEdges = iEdge;
 
-                //Remove duplicates from edge buffer
-                //This is easier with a list, but arrays were faster
-                for (int iA = 0; iA < numEdges; iA++)
+                //Edges on the cavity boundary appear once; edges inside it appear twice and cancel. An edge seen more than
+                //twice cancels in consecutive pairs (first with second, third with fourth), and an odd one out stays.
+                if (numEdges <= pairwiseEdgeLimit)
                 {
-                    if (Edges[iA].IsValid == false)
-                        continue;
-
-                    for (int iB = iA + 1; iB < numEdges; iB++)
+                    for (int iA = 0; iA < numEdges; iA++)
                     {
-                        if (Edges[iB].IsValid == false)
+                        if (Edges[iA].IsValid == false)
                             continue;
 
-                        if (Edges[iA] == Edges[iB])
+                        for (int iB = iA + 1; iB < numEdges; iB++)
                         {
-                            Edges[iB].IsValid = false;
+                            if (Edges[iB].IsValid == false)
+                                continue;
+
+                            if (Edges[iA] == Edges[iB])
+                            {
+                                Edges[iB].IsValid = false;
+                                Edges[iA].IsValid = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    pendingEdges.Clear();
+                    for (int iA = 0; iA < numEdges; iA++)
+                    {
+                        long key = ((long)Edges[iA].iA << 32) | (uint)Edges[iA].iB;
+                        if (pendingEdges.TryGetValue(key, out int iFirst))
+                        {
+                            Edges[iFirst].IsValid = false;
                             Edges[iA].IsValid = false;
-                            break;
+                            pendingEdges.Remove(key);
+                        }
+                        else
+                        {
+                            pendingEdges.Add(key, iA);
                         }
                     }
                 }
@@ -192,7 +229,22 @@ namespace Geometry
             //Return all the safe triangles to the triangles list 
             triangles.AddRange(safeTriangles);
 
-            //Yank all the triangles that are part of the bounding triangles
+            //Skip the triangles that are part of the bounding triangles
+            int keptTriangles = 0;
+            for (int iTri = 0; iTri < triangles.Count; iTri++)
+            {
+                GridIndexTriangle tri = triangles[iTri];
+                if (tri.i1 < iNumPoints &&
+                   tri.i2 < iNumPoints &&
+                   tri.i3 < iNumPoints)
+                {
+                    keptTriangles++;
+                }
+            }
+
+            //Build a list of triangle indicies to return
+            int[] TriangleIndicies = new int[keptTriangles * 3];
+            int iOut = 0;
             for (int iTri = 0; iTri < triangles.Count; iTri++)
             {
                 GridIndexTriangle tri = triangles[iTri];
@@ -200,20 +252,13 @@ namespace Geometry
                    tri.i2 >= iNumPoints ||
                    tri.i3 >= iNumPoints)
                 {
-                    triangles.RemoveAt(iTri);
-                    iTri--;
+                    continue;
                 }
-            }
 
-            //Build a list of triangle indicies to return
-            int[] TriangleIndicies = new int[triangles.Count * 3];
-            for (int iTri = 0; iTri < triangles.Count; iTri++)
-            {
-                GridIndexTriangle tri = triangles[iTri];
-                int iPoint = iTri * 3;
-                TriangleIndicies[iPoint] = tri.i1;
-                TriangleIndicies[iPoint + 1] = tri.i2;
-                TriangleIndicies[iPoint + 2] = tri.i3;
+                TriangleIndicies[iOut] = tri.i1;
+                TriangleIndicies[iOut + 1] = tri.i2;
+                TriangleIndicies[iOut + 2] = tri.i3;
+                iOut += 3;
             }
 
             return TriangleIndicies;
