@@ -227,6 +227,12 @@ namespace Geometry
         public bool IsEndpoint(in IPoint2D p) => A == p || B == p;
 
         /// <summary>
+        /// True when <paramref name="p"/> coincides with A or B within <see cref="Tolerance.Epsilon"/>. Same test as
+        /// the <see cref="IPoint2D"/> overload without boxing the point, which matters in per-segment loops.
+        /// </summary>
+        public bool IsEndpoint(in Vector2 p) => A == p || B == p;
+
+        /// <summary>
         /// Return true if point p is to left when standing at A looking towards B
         /// </summary>
         /// <param name="p"></param>
@@ -434,6 +440,76 @@ namespace Geometry
                 Intersection = DistA < DistB ? A : B;
                 return DistA < DistB ? DistA : DistB;
             }
+        }
+
+        /// <summary>
+        /// Relative margin for the squared-distance shortcuts in <see cref="IsWithinEpsilonOf"/>. Far larger than
+        /// double rounding error, so a shortcut can never disagree with the square-root comparison.
+        /// </summary>
+        private const double SquaredShortcutMargin = 1e-9;
+
+        /// <summary>
+        /// Same result as <c>DistanceToPoint(point) &lt; Tolerance.Epsilon</c>, without a square root unless the
+        /// squared distance falls within <see cref="SquaredShortcutMargin"/> of <see cref="Tolerance.EpsilonSquared"/>.
+        /// Mirrors the branch structure of <see cref="DistanceToPoint(in Vector2, out Vector2)"/> exactly; change both together.
+        /// </summary>
+        internal bool IsWithinEpsilonOf(in Vector2 point)
+        {
+            double DX = B.X - A.X;
+            double DY = B.Y - A.Y;
+
+            if (NearlyZero(DX))
+            {
+                if (point.Y <= MaxY && point.Y >= MinY)
+                    return Math.Abs(point.X - A.X) < Tolerance.Epsilon;
+
+                double endY = point.Y > MaxY ? MaxY : MinY;
+                double dX = point.X - A.X;
+                double dY = point.Y - endY;
+                return SquaredDistanceIsBelowEpsilon((dX * dX) + (dY * dY));
+            }
+            else if (NearlyZero(DY))
+            {
+                if (point.X <= MaxX && point.X >= MinX)
+                    return Math.Abs(point.Y - A.Y) < Tolerance.Epsilon;
+
+                double endX = point.X > MaxX ? MaxX : MinX;
+                double dX = point.X - endX;
+                double dY = point.Y - A.Y;
+                return SquaredDistanceIsBelowEpsilon((dX * dX) + (dY * dY));
+            }
+
+            double t = ((point.X - A.X) * DX + (point.Y - A.Y) * DY) / (DX * DX + DY * DY);
+            double tOnTheLine = Math.Min(Math.Max(0, t), 1);
+
+            if (tOnTheLine > 0 && tOnTheLine < 1.0)
+            {
+                double dX = point.X - (A.X + t * DX);
+                double dY = point.Y - (A.Y + t * DY);
+                return SquaredDistanceIsBelowEpsilon((dX * dX) + (dY * dY));
+            }
+
+            double aX = point.X - A.X;
+            double aY = point.Y - A.Y;
+            double bX = point.X - B.X;
+            double bY = point.Y - B.Y;
+            double distASquared = (aX * aX) + (aY * aY);
+            double distBSquared = (bX * bX) + (bY * bY);
+            return SquaredDistanceIsBelowEpsilon(distASquared < distBSquared ? distASquared : distBSquared);
+        }
+
+        /// <summary>
+        /// True when <c>Math.Sqrt(distanceSquared) &lt; Tolerance.Epsilon</c>. Takes the square root only when
+        /// <paramref name="distanceSquared"/> is within <see cref="SquaredShortcutMargin"/> of the threshold.
+        /// </summary>
+        private static bool SquaredDistanceIsBelowEpsilon(double distanceSquared)
+        {
+            if (distanceSquared < Tolerance.EpsilonSquared * (1 - SquaredShortcutMargin))
+                return true;
+            if (distanceSquared > Tolerance.EpsilonSquared * (1 + SquaredShortcutMargin))
+                return false;
+
+            return Math.Sqrt(distanceSquared) < Tolerance.Epsilon;
         }
 
         public bool Intersects(in LineSegment seg) => this.Intersects(seg, out IShape2D intersection);

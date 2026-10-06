@@ -168,6 +168,13 @@ namespace RTree
          * 
          * @return true if the rectangles intersect, false if they do not intersect
          */
+        /// <summary>
+        /// True if the point lies inside or on this rectangle. Same result as <see cref="intersects"/> with a zero-size
+        /// rectangle at the point, without allocating one.
+        /// </summary>
+        internal bool containsPoint(double x, double y, double z) =>
+            !(max[0] < x || min[0] > x || max[1] < y || min[1] > y || max[2] < z || min[2] > z);
+
         internal bool intersects(Rectangle r)
         {
             // Every dimension must intersect. If any dimension

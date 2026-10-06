@@ -1,0 +1,13 @@
+---
+description: Coordinate precision for transforms, mosaic, section and volume coordinates, annotation shapes, curve fitting and meshing.
+globs: Geometry/Transforms/**,Geometry/Primitives/**,Geometry.Core/Primitives/**,Geometry/CurveFitting/**,Geometry/Meshing/**,Clients/VolumeModel/**
+alwaysApply: false
+---
+# Coordinate precision
+
+Mosaic, section and volume coordinates reach several hundred thousand pixels, and mapping must be accurate to a single pixel. At that size `float` resolves only about 0.03 to 0.06 pixels, and it loses most of its remaining precision inside solves (thin-plate RBF basis values reach about 1e11).
+
+- Use `double` for every coordinate, transform weight, solve (`Matrix<double>` and `Vector<double>`, never `Matrix<float>`), and serialized transform field.
+- The only exception is the GPU boundary. MonoGame vertex positions may be `float`, but convert only after all mapping is done, and subtract a nearby origin (camera or tile center) first.
+- Do not trade precision for speed. Performance work must keep `double`.
+- Do not move per-point 2D math onto `System.Numerics` vectors or matrices; they are single precision.

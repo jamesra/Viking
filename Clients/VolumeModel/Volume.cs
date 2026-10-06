@@ -724,7 +724,8 @@ namespace Viking.VolumeModel
                     {
                         string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
                         workerThread?.Report(new ProgressInfo($"Loading compressed transform file {StosZipFileName}", 0));
-                        HaveVolumeStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath).ConfigureAwait(false);
+                        using (LoadStageTimings.Start(LoadStageTimings.StosZipFetch, StosZipFileName))
+                            HaveVolumeStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath).ConfigureAwait(false);
                     }
                 }
                 catch (XMLMissingDataException e)
@@ -758,9 +759,12 @@ namespace Viking.VolumeModel
                             QueueStosLoad(elem, HaveVolumeStosZip, stosGroupName: null, ListStosLoadingTasks, NumStosFiles, ref countStos, workerThread);
                             break;
                         case "sections":
-                            foreach (XElement sectionElem in elem.Elements().Where(e => string.Equals(e.Name.LocalName, "Section", StringComparison.OrdinalIgnoreCase)))
+                            using (LoadStageTimings.Start(LoadStageTimings.SectionQueue))
                             {
-                                QueueSectionLoad(sectionElem, ListSectionLoadingTasks, NumSections, ref countSections, workerThread, token);
+                                foreach (XElement sectionElem in elem.Elements().Where(e => string.Equals(e.Name.LocalName, "Section", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    QueueSectionLoad(sectionElem, ListSectionLoadingTasks, NumSections, ref countSections, workerThread, token);
+                                }
                             }
                             break;
                         case "section":
@@ -780,11 +784,14 @@ namespace Viking.VolumeModel
                     }
                 }
 
-                await WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread, token).ConfigureAwait(false);
+                using (LoadStageTimings.Start(LoadStageTimings.SectionParse))
+                    await WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread, token).ConfigureAwait(false);
 
-                await WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread, token).ConfigureAwait(false);
+                using (LoadStageTimings.Start(LoadStageTimings.StosParseWait))
+                    await WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread, token).ConfigureAwait(false);
 
-                CreateVolumeTransforms(workerThread);
+                using (LoadStageTimings.Start(LoadStageTimings.CreateVolumeTransforms))
+                    CreateVolumeTransforms(workerThread);
 
                 workerThread?.Report(new ProgressInfo("Done!", 100, 100));
 
@@ -811,15 +818,21 @@ namespace Viking.VolumeModel
             {
                 string zipFileName = stosGroupElem.GetAttributeCaseInsensitive("zip").Value;
                 workerThread?.Report(new ProgressInfo($"Loading compressed transform file {zipFileName}", 0));
-                haveGroupZip = await FetchStosZip(
-                    new Uri($"{Host}/{zipFileName}"),
-                    this.UserCredentials,
-                    this.Paths.GetServerStosCachePath(groupName)).ConfigureAwait(false);
+                using (LoadStageTimings.Start(LoadStageTimings.StosZipFetch, groupName))
+                {
+                    haveGroupZip = await FetchStosZip(
+                        new Uri($"{Host}/{zipFileName}"),
+                        this.UserCredentials,
+                        this.Paths.GetServerStosCachePath(groupName)).ConfigureAwait(false);
+                }
             }
 
-            foreach (XElement stosElem in stosGroupElem.Elements().Where(e => string.Equals(e.Name.LocalName, "stos", StringComparison.OrdinalIgnoreCase)))
+            using (LoadStageTimings.Start(LoadStageTimings.StosQueue, groupName))
             {
-                QueueStosLoad(stosElem, haveGroupZip, groupName, listStosLoadingTasks, numStosFiles, ref countStos, workerThread);
+                foreach (XElement stosElem in stosGroupElem.Elements().Where(e => string.Equals(e.Name.LocalName, "stos", StringComparison.OrdinalIgnoreCase)))
+                {
+                    QueueStosLoad(stosElem, haveGroupZip, groupName, listStosLoadingTasks, numStosFiles, ref countStos, workerThread);
+                }
             }
 
             return countStos;

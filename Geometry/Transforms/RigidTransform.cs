@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using MathNet.Numerics.LinearAlgebra;
 
 namespace Geometry.Transforms
 {
@@ -91,7 +90,8 @@ namespace Geometry.Transforms
     }
 
     /// <summary>
-    /// A simple translation only transform
+    /// An ITK Rigid2D transform: rotation about a center followed by a translation,
+    /// <c>T(p) = R(angle) * (p - center) + center + offset</c>.
     /// </summary>
     [Serializable]
     class RigidTransform(Vector2 sourceToTargetOffset, Vector2 sourceRotationCenter, double angle, TransformBasicInfo info) : IITKSerialization, ITransformBasicInfo, ISerializable, IContinuousTransform, Geometry.ITransformInfo
@@ -100,14 +100,14 @@ namespace Geometry.Transforms
 
         public Vector2 SourceToTargetOffset { get; set; } = sourceToTargetOffset;
 
+        /// <summary>Rotation in radians, about <see cref="SourceSpaceRotationCenter"/>.</summary>
         public readonly double Angle = angle;
 
         public readonly Vector2 SourceSpaceRotationCenter = sourceRotationCenter;
 
+        /// <summary>ITK text in the same layout the parser reads: <c>vp 3 angle offsetX offsetY fp 2 centerX centerY</c>.</summary>
         public string GetITKTransform()
         {
-            double Angle = 0;
-            Vector2 CenterOfRotation = Vector2.Zero;
             var output = $"Rigid2DTransform_double_2_2 vp 3 {Angle} {SourceToTargetOffset.X} {SourceToTargetOffset.Y} fp 2 {SourceSpaceRotationCenter.X} {SourceSpaceRotationCenter.Y}";
             return output;
         }
@@ -117,22 +117,26 @@ namespace Geometry.Transforms
         public DateTime LastModified { get; }
         public void GetObjectData(SerializationInfo info, StreamingContext context) => throw new NotImplementedException();
 
-        public Vector2 Transform(in Vector2 Point) => Transform([Point])[0];
+        public Vector2 Transform(in Vector2 Point) =>
+            (Point - SourceSpaceRotationCenter).Rotate(Angle) + SourceSpaceRotationCenter + SourceToTargetOffset;
 
         public Vector2[] Transform(in Vector2[] Points)
         {
-            var rotated_points = Points.Rotate(this.Angle, this.SourceSpaceRotationCenter);
-            rotated_points.Translate(this.SourceToTargetOffset);
-            return rotated_points;
+            Vector2[] output = new Vector2[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+                output[i] = Transform(Points[i]);
+            return output;
         }
 
-        public Vector2 InverseTransform(in Vector2 Point) => InverseTransform([Point])[0];
+        public Vector2 InverseTransform(in Vector2 Point) =>
+            (Point - SourceToTargetOffset - SourceSpaceRotationCenter).Rotate(-Angle) + SourceSpaceRotationCenter;
 
         public Vector2[] InverseTransform(in Vector2[] Points)
         {
-            var translated_points = Points.Translate(-this.SourceToTargetOffset);
-            var rotated_points = Points.Rotate(-this.Angle, this.SourceSpaceRotationCenter);
-            return rotated_points;
+            Vector2[] output = new Vector2[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+                output[i] = InverseTransform(Points[i]);
+            return output;
         }
 
         public bool CanTransform(in Vector2 Point) => true;

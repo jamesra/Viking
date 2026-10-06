@@ -265,6 +265,10 @@ namespace WebAnnotation.View
                     SmoothedVolumePolygon.InteriorPolygons[iInner]);
             }
 
+            timing?.RecordInitialization(
+                smoothTicks,
+                Stopwatch.GetTimestamp() - initializeStart - smoothTicks,
+                SmoothedVolumePolygon.TotalUniqueVertices);
 
             Interlocked.Exchange(ref _Initialized, 1);
             Interlocked.Exchange(ref _Initializing, 0);
@@ -350,8 +354,17 @@ namespace WebAnnotation.View
                           LocationPolygonView[] listToDraw)
         {
 
-            listToDraw = [.. listToDraw.Where(l => l.Initialized)];
-            OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
+            listToDraw = InitializedViews(listToDraw);
+
+            List<OverlappedLinkCircleView>? overlappedList = null;
+            for (int i = 0; i < listToDraw.Length; i++)
+            {
+                OverlappedLinkCircleView overlapped = listToDraw[i].OverlappedLinkView;
+                if (overlapped != null && overlapped.IsVisible(scene))
+                    (overlappedList ??= []).Add(overlapped);
+            }
+
+            OverlappedLinkCircleView[] overlappedLocations = overlappedList is null ? [] : [.. overlappedList];
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 
             double radius_scalar = Math.Sqrt((double)scene.Camera.Downsample);
@@ -359,8 +372,12 @@ namespace WebAnnotation.View
 
             //Todo: Check if control points will be visible.
 #if DEBUG
-            foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
+            for (int i = 0; i < listToDraw.Length; i++)
             {
+                LocationPolygonView lpv = listToDraw[i];
+                if (lpv.ControlPointView is null)
+                    continue;
+
                 if(Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
                     lpv.ControlPointRadius = expected_radius;
 
@@ -369,8 +386,12 @@ namespace WebAnnotation.View
 #else
             if (!Global.PenMode)
             {
-                foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
+                for (int i = 0; i < listToDraw.Length; i++)
                 {
+                    LocationPolygonView lpv = listToDraw[i];
+                    if (lpv.ControlPointView is null)
+                        continue;
+
                     if (lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
                         lpv.ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
 

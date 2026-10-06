@@ -44,10 +44,17 @@ namespace Geometry
         private static Vector2 ApplyKernelToIndex(Vector2[] points, double[] kernel, int iCenter)
         {
             int kernelRadius = (kernel.Length - 1) / 2;
-            Vector2[] items = GetKernelInput(points, kernelRadius, iCenter);
+            int iFirst = iCenter - kernelRadius;
 
-            double X = items.Select((p, i) => p.X * kernel[i]).Sum();
-            double Y = items.Select((p, i) => p.Y * kernel[i]).Sum();
+            //Sums from zero in kernel order, the same order Enumerable.Sum used, so the rounding is identical.
+            double X = 0;
+            double Y = 0;
+            for (int i = 0; i < kernel.Length; i++)
+            {
+                Vector2 p = points[iFirst + i];
+                X += p.X * kernel[i];
+                Y += p.Y * kernel[i];
+            }
 
             return new Vector2(X, Y);
         }

@@ -304,22 +304,11 @@ namespace Geometry.Transforms
         /// <returns></returns>
         internal override MappingTriangle? GetInverseTransform(in Vector2 Point)
         {
-            //Fetch a list of triangles from the nearest point
-            List<MappingTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
-
-            if (triangles is null)
-                return null;
-
-            foreach (MappingTriangle t in triangles)
-            {
-                if (!t.ControlBoundingBox.Covers(Point))
-                    continue;
-
-                if (t.CanInverseTransform(Point))
-                    return t;
-            }
-
-            return null;
+            //The first triangle whose RTree box (its exact control-space bounding box) holds the point and which covers it,
+            //in the order Intersects would return them
+            return controlTrianglesRTree.TryFindFirst(Point.X, Point.Y, 0, Point, static (t, p) => t.CanInverseTransform(p), out MappingTriangle found)
+                ? found
+                : null;
         }
 
         [FlagsAttribute]

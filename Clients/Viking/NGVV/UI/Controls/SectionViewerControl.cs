@@ -500,6 +500,8 @@ namespace Viking.UI.Controls
             CommandQueue.OnCommandInjected += this.OnCommandInjected;
             CommandQueue.OnQueueChanged += this.OnCommandQueueChanged;
             PendingTextureQueue.QueueBecameEmpty += this.OnPendingTextureQueueBecameEmpty;
+
+            this.Disposed += (_, _) => ReleaseSectionRenderTarget();
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -1695,7 +1697,7 @@ namespace Viking.UI.Controls
 
                 tileLayoutEffect.RenderToGreyscale();
 
-                backgroundSectionTexture = DrawSection(graphicsDevice, this.Section.section, this.CurrentChannel, scene);
+                backgroundSectionTexture = DrawSection(graphicsDevice, this.Section.section, this.CurrentChannel, scene, reuseRenderTarget: true);
             }
             else
             {
@@ -1794,7 +1796,9 @@ namespace Viking.UI.Controls
             graphicsDevice.Textures[5] = null;
             graphicsDevice.Textures[6] = null;
             graphicsDevice.Textures[7] = null;
-            backgroundSectionTexture?.Dispose();
+            //The single channel path draws into the control's cached render target, which lives until the next resize
+            if (!ReferenceEquals(backgroundSectionTexture, _sectionRenderTarget))
+                backgroundSectionTexture?.Dispose();
             backgroundSectionTexture = null;
             ChannelOverlay?.Dispose();
             ChannelOverlay = null;
@@ -2135,7 +2139,59 @@ namespace Viking.UI.Controls
         }
 
 
-        protected Texture2D DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene)
+        /// <summary>
+        /// Viewport-sized render target that single channel <see cref="DrawSection"/> calls draw into, kept between frames.
+        /// Created and used only on the UI thread. Owned by this control: <see cref="Draw(Scene)"/> must not dispose it,
+        /// and it is released by <see cref="ReleaseSectionRenderTarget"/>.
+        /// </summary>
+        private RenderTarget2D? _sectionRenderTarget;
+
+        /// <summary>
+        /// Returns the cached section render target, replacing it when the size or device no longer matches.
+        /// </summary>
+        /// <remarks>UI thread only. The previous target is disposed when it is replaced, so callers must have finished with it.</remarks>
+        private RenderTarget2D AcquireSectionRenderTarget(GraphicsDevice graphicsDevice, int width, int height)
+        {
+            RenderTarget2D? target = _sectionRenderTarget;
+            if (target is not null &&
+                !target.IsDisposed &&
+                target.Width == width &&
+                target.Height == height &&
+                ReferenceEquals(target.GraphicsDevice, graphicsDevice))
+            {
+                return target;
+            }
+
+            target?.Dispose();
+            target = new RenderTarget2D(graphicsDevice, width, height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
+            _sectionRenderTarget = target;
+            return target;
+        }
+
+        /// <summary>
+        /// Disposes the cached section render target. It is recreated by the next single channel draw.
+        /// </summary>
+        private void ReleaseSectionRenderTarget()
+        {
+            _sectionRenderTarget?.Dispose();
+            _sectionRenderTarget = null;
+        }
+
+        protected override void OnDeviceResetting(object sender, EventArgs e)
+        {
+            ReleaseSectionRenderTarget();
+            base.OnDeviceResetting(sender, e);
+        }
+
+        /// <summary>
+        /// Draws the tiles of one section and channel into a viewport-sized render target.
+        /// </summary>
+        /// <param name="reuseRenderTarget">
+        /// True to draw into the control's cached target, which the caller must not dispose. False to draw into a new target
+        /// that the caller owns and must dispose. Several channels are live at once while merging, so they need new targets.
+        /// </param>
+        /// <returns>The render target, or null if the section could not be drawn yet.</returns>
+        protected Texture2D DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene, bool reuseRenderTarget = false)
         {
             //           Microsoft.Xna.Framework.Color[] ColorWheel = new Microsoft.Xna.Framework.Color[] { new Microsoft.Xna.Framework.Color(1f,0,0), 
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
@@ -2160,17 +2216,22 @@ namespace Viking.UI.Controls
             //Get all of the visible tiles
             var visibleTiles = mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
 
-            RenderTarget2D renderTarget = new(graphicsDevice,
-                                              scene.Viewport.Width,
-                                              scene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
+            RenderTarget2D renderTarget = reuseRenderTarget
+                ? AcquireSectionRenderTarget(graphicsDevice, scene.Viewport.Width, scene.Viewport.Height)
+                : new(graphicsDevice,
+                      scene.Viewport.Width,
+                      scene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
 
             //        Debug.Assert(graphicsDevice.Viewport.Width == ClientRectangle.Width); 
 
             graphicsDevice.SetRenderTarget(renderTarget);
             //       graphicsDevice.SetRenderTarget(null);
 
-            //Clear the stencil buffer before we begin
-            graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
+            //Clear the stencil buffer before we begin.  A reused target still holds the last frame, a new one is empty.
+            if (reuseRenderTarget)
+                graphicsDevice.Clear(ClearOptions.Target | ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Transparent, 1f, 0);
+            else
+                graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)

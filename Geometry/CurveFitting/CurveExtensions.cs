@@ -182,14 +182,17 @@ namespace Geometry
             double[] degrees;
 
             degrees = output.MeasureCurvature();
-            degrees = [.. degrees.Select(d => Math.Abs(d))];
+            for (int i = 0; i < degrees.Length; i++)
+            {
+                degrees[i] = Math.Abs(degrees[i]);
+            }
 
             const double onedegree = (Math.PI * 2.0 / 360);
             double threshold = onedegree * angleThresholdInDegrees;
             const double distance_threshold = 0.0625; // Math.Pow(0.25,2);
 
             int StartingPoints = TPointsArray.Length;
-            bool[] NeedsInterpolation = [.. TPointsArray.Select(t => false)];
+            bool[] NeedsInterpolation = new bool[TPointsArray.Length];
 
             for (int i = TPointsArray.Length - 2; i > 0; i--)
             {
@@ -227,15 +230,19 @@ namespace Geometry
             int iStart = HalfKernelLength;
             int iStop = values.Length - HalfKernelLength;
 
-            double[] window = new double[kernel.Length];
-
             double[] output = new double[values.Length];
 
             for (int iCenter = iStart; iCenter < iStop; iCenter++)
             {
-                Array.Copy(values, iCenter - HalfKernelLength, window, 0, kernel.Length);
+                int iWindow = iCenter - HalfKernelLength;
 
-                double updated_value = window.Select((v, i) => v * kernel[i]).Sum();
+                //Sums from zero in kernel order, the same order Enumerable.Sum used, so the rounding is identical.
+                double updated_value = 0;
+                for (int i = 0; i < kernel.Length; i++)
+                {
+                    updated_value += values[iWindow + i] * kernel[i];
+                }
+
                 output[iCenter] = updated_value;
             }
 
@@ -334,9 +341,25 @@ namespace Geometry
         /// <returns></returns>
         public static List<Vector2> DouglasPeuckerReduction(this IList<Vector2> Points, Double Tolerance, ICollection<Vector2> PointsToPreserve)
         {
-            IEnumerable<int> PointsToPreserveIndicies = PointsToPreserve.Where(p => Points.Contains(p)).Select(p => Points.IndexOf(p));
+            if (PointsToPreserve is null)
+                throw new ArgumentNullException("source");
 
-            return DouglasPeuckerReduction(Points, Tolerance, PointsToPreserveIndicies);
+            return DouglasPeuckerReduction(Points, Tolerance, IndicesOfPointsToPreserve(Points, PointsToPreserve));
+        }
+
+        /// <summary>
+        /// Index in <paramref name="Points"/> of the first match for each preserved point, skipping preserved points that
+        /// are not in the list. One IndexOf per point replaces a Contains followed by an IndexOf.
+        /// Evaluated lazily, as before, so it is never run when the list is too short to reduce.
+        /// </summary>
+        private static IEnumerable<int> IndicesOfPointsToPreserve(IList<Vector2> Points, ICollection<Vector2> PointsToPreserve)
+        {
+            foreach (Vector2 p in PointsToPreserve)
+            {
+                int index = Points.IndexOf(p);
+                if (index >= 0)
+                    yield return index;
+            }
         }
 
         /// <summary>
