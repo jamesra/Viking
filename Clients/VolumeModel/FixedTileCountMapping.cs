@@ -118,39 +118,64 @@ namespace Viking.VolumeModel
 
         #region CacheIO
 
+        /// <summary>
+        /// Writes <paramref name="transforms"/> to the cache file atomically, then reads the file back and deletes it if it
+        /// cannot be loaded, so a broken cache is never left for the next session. Never throws: a cache that cannot be
+        /// written is only logged, and the transforms are rebuilt next time.
+        /// </summary>
         protected static Task SaveToCache(in string CachedTransformsFileName, in ITransform[] transforms)
         {
             //Replaced BinaryFormatter with modern JSON serialization to avoid security vulnerabilities
             if (transforms is null)
                 return Task.CompletedTask;
 
-            using (FileStream fstream = new(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
+            ITransform[] transformsCopy = transforms;
+            string cacheFile = CachedTransformsFileName;
+            try
             {
-                JsonTransformSerializer.SerializeArray(fstream, transforms);
+                TransformCacheFileIO.Save(cacheFile, stream =>
+                    JsonTransformSerializer.SerializeArray(stream, transformsCopy));
+
+                ITransform[] roundTrip = TransformCacheFileIO.TryLoad(
+                    cacheFile, JsonTransformSerializer.DeserializeArray, out Exception verifyError);
+                if (roundTrip is null || roundTrip.Length != transformsCopy.Length)
+                {
+                    TransformCacheFileIO.TryDelete(cacheFile);
+                    Trace.WriteLine($"Transform cache not saved (round-trip failed): {cacheFile}: {verifyError?.GetType().Name} - {verifyError?.Message}");
+                }
+            }
+            catch (Exception e)
+            {
+                TransformCacheFileIO.TryDelete(cacheFile);
+                Trace.WriteLine($"Unable to save transform cache {cacheFile}: {e.GetType().Name} - {e.Message}");
             }
 
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Loads the cache file, or returns null when it is missing or unreadable. An unreadable file (including the
+        /// older formats) is deleted so it is rebuilt.
+        /// </summary>
         protected virtual ITransform[] LoadFromCache()
         {
             //Replaced BinaryFormatter with modern JSON deserialization to avoid security vulnerabilities
+            string cachePath = CachedTransformsFileName;
+            ITransform[] transforms = TransformCacheFileIO.TryLoad(
+                cachePath,
+                JsonTransformSerializer.DeserializeArray,
+                out Exception loadError);
 
-            ITransform[] transforms = null;
+            if (transforms != null)
+                return transforms;
 
-            try
+            if (loadError != null)
             {
-                using FileStream fstream = new(CachedTransformsFileName, FileMode.Open, FileAccess.Read);
-                transforms = JsonTransformSerializer.DeserializeArray(fstream);
-            }
-            catch (Exception)
-            {
-                transforms = null;
-                Trace.WriteLine(string.Format("Unable to load {0} from cache", CachedTransformsFileName));
-                System.IO.File.Delete(CachedTransformsFileName);
+                Trace.WriteLine($"Unable to load {cachePath} from cache: {loadError.GetType().Name} - {loadError.Message}");
+                TransformCacheFileIO.TryDelete(cachePath);
             }
 
-            return transforms;
+            return null;
         }
 
         #endregion
