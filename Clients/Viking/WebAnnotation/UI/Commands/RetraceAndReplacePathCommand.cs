@@ -273,6 +273,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         public void ApplyCut(LocationObj location)
         {
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(location.ID, "Retrace");
             location.SetShapeFromGeometryInSection(mapping, OutputMosaicPolygon.ToSqlGeometry());
             if (SplitOffMosaicPolygon is null)
                 return;

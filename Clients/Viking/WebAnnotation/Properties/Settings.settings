@@ -86,12 +86,6 @@
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
     </Setting>
-    <Setting Name="AutoPolygonizeMinScreenAreaPercent" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">1</Value>
-    </Setting>
-    <Setting Name="AutoPolygonizeMinRadiusPixels" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">8</Value>
-    </Setting>
     <Setting Name="AutoPolygonizeMinRadiusNanometers" Type="System.Double" Scope="User">
       <Value Profile="(Default)">75</Value>
     </Setting>

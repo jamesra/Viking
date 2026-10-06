@@ -11,7 +11,8 @@ using System.Windows;
 using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
-using VikingXNAWinForms;
+using VikingXNAWinForms;
+
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -309,11 +310,37 @@ namespace Viking.UI.Commands
                 Parent.Invalidate();
         }
 
+        // #region agent log
+        private static void DebugCommandLog(string message)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viking-seg-diag.log"),
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} DIAG H14 {message}{System.Environment.NewLine}");
+            }
+            catch
+            {
+            }
+        }
+        // #endregion
+
         public void SubscribeToInterfaceEvents()
         {
             MyMouseClick = new MouseEventHandler(this.OnMouseClick);
-            MyMouseDoubleClick = new MouseEventHandler(this.OnMouseDoubleClick);
-            MyMouseDown = new MouseEventHandler(this.OnMouseDown);
+            // #region agent log
+            DebugCommandLog($"Command subscribed type={GetType().Name}");
+            MyMouseDoubleClick = new MouseEventHandler((s, e) =>
+            {
+                DebugCommandLog($"viewer MouseDoubleClick button={e.Button} routed to type={GetType().Name}");
+                OnMouseDoubleClick(s, e);
+            });
+            MyMouseDown = new MouseEventHandler((s, e) =>
+            {
+                DebugCommandLog($"viewer MouseDown button={e.Button} routed to type={GetType().Name}");
+                OnMouseDown(s, e);
+            });
+            // #endregion
             MyMouseUp = new MouseEventHandler(this.OnMouseUp);
             MyMouseWheel = new MouseEventHandler(this.OnMouseWheel);
             MyMouseMove = new MouseEventHandler(this.OnMouseMove);

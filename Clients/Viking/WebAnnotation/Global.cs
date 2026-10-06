@@ -202,10 +202,6 @@ namespace WebAnnotation
             private const int MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS = 10;
             private const double MIN_POLYGON_POINT_RADIUS = 1.0;
             private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
-            private const double MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT = 0.0;
-            private const double MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT = 10.0;
-            private const double MIN_AUTOPOLYGONIZE_RADIUS_PIXELS = 0.0;
-            private const double MAX_AUTOPOLYGONIZE_RADIUS_PIXELS = 256.0;
             private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
             private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
             private const double MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 1.0;
@@ -397,6 +393,11 @@ namespace WebAnnotation
                 get => Properties.Settings.Default.SegmentationServiceUrl;
                 set
                 {
+                    // Re-applying the same URL (picker confirmed again, volume reload) must not drop the shared
+                    // channel: that cancels in-flight segmentation for no reason.
+                    if (string.Equals(Properties.Settings.Default.SegmentationServiceUrl, value, StringComparison.Ordinal))
+                        return;
+
                     Properties.Settings.Default.SegmentationServiceUrl = value;
                     Properties.Settings.Default.Save();
                     // Clear cached availability check when URL changes
@@ -577,46 +578,6 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Circles smaller than this percent of the viewport area are skipped. 0 accepts any positive radius.
-            /// Matches the preferences PercentOfScreen preview (area fraction of the view).
-            /// </summary>
-            public static double AutoPolygonizeMinScreenAreaPercent
-            {
-                get => MathUtils.Clamp(
-                    Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent,
-                    MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT,
-                    MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT);
-                set
-                {
-                    Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = MathUtils.Clamp(
-                        value,
-                        MIN_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT,
-                        MAX_AUTOPOLYGONIZE_SCREEN_AREA_PERCENT);
-                    Properties.Settings.Default.Save();
-                }
-            }
-
-            /// <summary>
-            /// Minimum on-screen radius, in device pixels, for a circle to be auto-segmented.
-            /// 0 accepts any positive radius. Preferences show this as nanometers at the current zoom.
-            /// </summary>
-            public static double AutoPolygonizeMinRadiusPixels
-            {
-                get => MathUtils.Clamp(
-                    Properties.Settings.Default.AutoPolygonizeMinRadiusPixels,
-                    MIN_AUTOPOLYGONIZE_RADIUS_PIXELS,
-                    MAX_AUTOPOLYGONIZE_RADIUS_PIXELS);
-                set
-                {
-                    Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = MathUtils.Clamp(
-                        value,
-                        MIN_AUTOPOLYGONIZE_RADIUS_PIXELS,
-                        MAX_AUTOPOLYGONIZE_RADIUS_PIXELS);
-                    Properties.Settings.Default.Save();
-                }
-            }
-
-            /// <summary>
             /// Minimum circle radius, in nanometers, for auto-polygonize. Default 75.
             /// 0 accepts any positive radius. Preview size uses the current zoom.
             /// </summary>
@@ -790,8 +751,6 @@ namespace WebAnnotation
                 Properties.Settings.Default.SegmentationUseMaskInput = false;
                 Properties.Settings.Default.AutoPolygonizeCircles = false;
                 Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
-                Properties.Settings.Default.AutoPolygonizeMinScreenAreaPercent = 1.0;
-                Properties.Settings.Default.AutoPolygonizeMinRadiusPixels = 8.0;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = 75.0;
                 Properties.Settings.Default.AutoPolygonizeMaxDownsample = 2.0;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;

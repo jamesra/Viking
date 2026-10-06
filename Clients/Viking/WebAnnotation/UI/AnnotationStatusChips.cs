@@ -88,14 +88,18 @@ namespace WebAnnotation.UI
 
             bool autoOn = Global.AnnotationSettings.AutoPolygonizeCircles;
             bool autoBusy = AnnotationOverlay.CurrentOverlay?.IsAutoPolygonizeBusy == true;
-            var auto = DescribeAutoPolygonize(autoOn, autoBusy);
+            bool autoPaused = autoOn && AnnotationOverlay.CurrentOverlay?.IsAutoPolygonizePausedByZoom == true;
+            var auto = DescribeAutoPolygonize(autoOn, autoBusy, autoPaused);
             string autoTip = !autoOn
                 ? "Idle auto-polygonize is off. Click to enable."
                 : autoBusy
                     ? "Auto-polygonize is segmenting circles in view."
-                    : Global.IsSegmentationServiceAvailable
-                        ? "Idle auto-polygonize is on. Click to disable."
-                        : "Auto-polygonize is on, but no segmentation service is selected.";
+                    : autoPaused
+                        ? $"Auto-polygonize is paused: zoomed out past downsample {Global.AnnotationSettings.AutoPolygonizeMaxDownsample:0.#}. " +
+                          "Zoom in, or raise the auto-segment max downsample in Annotation preferences."
+                        : Global.IsSegmentationServiceAvailable
+                            ? "Idle auto-polygonize is on. Click to disable."
+                            : "Auto-polygonize is on, but no segmentation service is selected.";
             viewer.SetViewerStatusChip(
                 ViewerStatusChipSlot.AutoPolygonize,
                 auto.Text,
@@ -149,14 +153,19 @@ namespace WebAnnotation.UI
             => penOn ? ("Pen On", true, false, false) : ("Pen Off", false, false, false);
 
         /// <summary>
-        /// Pure AutoPoly chip label. Busy wins over On.
+        /// Pure AutoPoly chip label. Busy wins over Paused (zoomed out past the max downsample), which wins over On.
         /// </summary>
-        internal static (string Text, bool EmphasizeOn, bool EmphasizeBusy) DescribeAutoPolygonize(bool enabled, bool busy)
+        internal static (string Text, bool EmphasizeOn, bool EmphasizeBusy) DescribeAutoPolygonize(
+            bool enabled,
+            bool busy,
+            bool pausedByZoom = false)
         {
             if (!enabled)
                 return ("AutoPoly Off", false, false);
             if (busy)
                 return ("AutoPoly Busy", false, true);
+            if (pausedByZoom)
+                return ("AutoPoly Zoom", false, true);
             return ("AutoPoly On", true, false);
         }
 

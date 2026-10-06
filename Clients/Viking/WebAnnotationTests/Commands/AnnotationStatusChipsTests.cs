@@ -25,6 +25,14 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void DescribeAutoPolygonizePausedByZoomWinsOverOnButNotBusyOrOff()
+        {
+            Assert.AreEqual("AutoPoly Zoom", AnnotationStatusChips.DescribeAutoPolygonize(true, busy: false, pausedByZoom: true).Text);
+            Assert.AreEqual("AutoPoly Busy", AnnotationStatusChips.DescribeAutoPolygonize(true, busy: true, pausedByZoom: true).Text);
+            Assert.AreEqual("AutoPoly Off", AnnotationStatusChips.DescribeAutoPolygonize(false, busy: false, pausedByZoom: true).Text);
+        }
+
+        [TestMethod]
         public void DescribeSegmentationUnavailableWinsThenBusy()
         {
             Assert.AreEqual("Seg Off", AnnotationStatusChips.DescribeSegmentation(false, busy: true).Text);

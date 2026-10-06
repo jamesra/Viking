@@ -546,13 +546,27 @@ namespace WebAnnotation.ViewModel
         {
             try
             {
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
+                {
+                    MessageBox.Show("There is no open section viewer to segment in.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 // Get the circle geometry
+                // The same starting prompt auto-polygonize sends: the inscribed square and four axis clicks.
                 Circle mosaic_circle = GetCircleFromLocation();
-                IReadOnlyList<Geometry.Vector2> mosaicPoints = CircleSegmentationPrompts.CreateMosaicForegroundPoints(mosaic_circle);
-                IReadOnlyList<Geometry.Vector2> volume_points = CircleSegmentationPrompts.ToVolumePoints(
-                    mosaicPoints,
-                    parent.Section.ActiveSectionToVolumeTransform);
+                if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
+                        CircleSegmentationPrompts.ToVolumePoints(
+                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(mosaic_circle),
+                            parent.Section.ActiveSectionToVolumeTransform),
+                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                {
+                    MessageBox.Show("This circle could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                IReadOnlyList<Geometry.Vector2> volume_points = startingPrompt.Points;
 
                 void callback(Polygon outputPolygon)
                 {
@@ -569,7 +583,8 @@ namespace WebAnnotation.ViewModel
                     channelManager,
                     modelObj.Parent.TypeID,
                     modelObj.ID,
-                    modelObj.ParentID);
+                    modelObj.ParentID,
+                    startingBoxes: [startingPrompt.Box]);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -593,7 +608,13 @@ namespace WebAnnotation.ViewModel
                    this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
                     return;
 
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
+                {
+                    MessageBox.Show("There is no open section viewer to segment in.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 Polygon controlRing = modelObj.MosaicShape.ToPolygon();
                 IReadOnlyList<Geometry.Vector2> foregroundPoints =
                     PolygonSegmentationPrompts.CreateVolumeForegroundPoints(

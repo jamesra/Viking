@@ -270,6 +270,23 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void DismissInvalidatesRequestStartedBeforeIt()
+        {
+            AutoPolygonizeCache cache = new();
+            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            int generation = cache.MarkPending(9, 1, null, null);
+            Assert.IsTrue(cache.IsGenerationCurrent(9, generation));
+
+            cache.Dismiss(9, 1, first);
+
+            Assert.IsFalse(
+                cache.IsGenerationCurrent(9, generation),
+                "A response to a request that started before the reject must be dropped, not republished.");
+            Assert.IsFalse(cache.ShouldProcess(9, 1, first, LocationType.CIRCLE));
+        }
+
+        [TestMethod]
         public void DismissedCircleIsSkippedUntilUpdated()
         {
             AutoPolygonizeCache cache = new();
@@ -279,34 +296,6 @@ namespace WebAnnotationTests.Commands
             cache.Dismiss(9, 1, first);
             Assert.IsFalse(cache.ShouldProcess(9, 1, first, LocationType.CIRCLE));
             Assert.IsTrue(cache.ShouldProcess(9, 1, second, LocationType.CIRCLE));
-        }
-
-        [TestMethod]
-        public void ForegroundPromptHasCenterAndTwoRingsOfFourWithInnerRotated45()
-        {
-            Circle circle = new(new Vector2(10, 20), 8);
-            var points = CircleSegmentationPrompts.CreateMosaicForegroundPoints(circle);
-
-            Assert.AreEqual(9, points.Count);
-            Assert.AreEqual(1 + (2 * CircleSegmentationPrompts.ForegroundRingPointCount), points.Count);
-            Assert.AreEqual(circle.Center, points[0]);
-
-            double diagonal = 4 * Math.Cos(Math.PI / 4.0);
-            Vector2 innerNorthEast = points[1];
-            Assert.AreEqual(10 + diagonal, innerNorthEast.X, 1e-6);
-            Assert.AreEqual(20 + diagonal, innerNorthEast.Y, 1e-6);
-            Assert.AreEqual(
-                circle.Radius * CircleSegmentationPrompts.InnerRingRadiusFraction,
-                Vector2.Distance(circle.Center, innerNorthEast),
-                1e-6);
-
-            Vector2 outerEast = points[1 + CircleSegmentationPrompts.ForegroundRingPointCount];
-            Assert.AreEqual(16.4, outerEast.X, 1e-6);
-            Assert.AreEqual(20, outerEast.Y, 1e-6);
-            Assert.AreEqual(
-                circle.Radius * CircleSegmentationPrompts.OuterRingRadiusFraction,
-                Vector2.Distance(circle.Center, outerEast),
-                1e-6);
         }
 
         [TestMethod]

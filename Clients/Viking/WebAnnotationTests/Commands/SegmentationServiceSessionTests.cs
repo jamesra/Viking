@@ -1,7 +1,11 @@
 using System;
 using System.Reflection;
 using System.Runtime.Serialization;
+using Grpc.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 using Viking.UI;
 using Viking.ViewModels;
 using Viking.VolumeModel;
@@ -133,6 +137,70 @@ namespace WebAnnotationTests
             finally
             {
                 SegmentationServiceSession.AutoPolygonizeResubmit -= OnResubmit;
+            }
+        }
+
+        /// <summary>Counts <see cref="ResetChannel"/> calls so a test can see whether an apply dropped the channel.</summary>
+        private sealed class CountingChannelManager : IGrpcChannelManager
+        {
+            public int Resets;
+
+            public Channel? GetOrCreateChannel() => null;
+
+            public bool IsChannelHealthy() => false;
+
+            public void ResetChannel() => Resets++;
+
+            public void Shutdown()
+            {
+            }
+        }
+
+        private static CountingChannelManager InstallCountingChannelManager()
+        {
+            CountingChannelManager manager = new();
+            ServiceCollection services = new();
+            services.AddSingleton<IGrpcChannelManager>(manager);
+            ServiceLocator.Initialize(services.BuildServiceProvider(), services);
+            return manager;
+        }
+
+        [TestMethod]
+        public void ApplyEndpoint_SameUrlDoesNotResetChannel()
+        {
+            State.PersistSegmentationServiceSelection = e => { };
+            SegmentationServiceSession.ApplyEndpoint("http://a.example:50051/");
+
+            CountingChannelManager manager = InstallCountingChannelManager();
+            try
+            {
+                SegmentationServiceSession.ApplyEndpoint("http://a.example:50051/");
+                SegmentationServiceSession.ApplyEndpoint("  http://a.example:50051/  ");
+
+                Assert.AreEqual(0, manager.Resets, "Re-confirming the current server must not drop the shared channel.");
+            }
+            finally
+            {
+                ServiceLocator.Reset();
+            }
+        }
+
+        [TestMethod]
+        public void ApplyEndpoint_ChangedUrlResetsChannelOnce()
+        {
+            State.PersistSegmentationServiceSelection = e => { };
+            SegmentationServiceSession.ApplyEndpoint("http://a.example:50051/");
+
+            CountingChannelManager manager = InstallCountingChannelManager();
+            try
+            {
+                SegmentationServiceSession.ApplyEndpoint("http://b.example:50051/");
+
+                Assert.AreEqual(1, manager.Resets);
+            }
+            finally
+            {
+                ServiceLocator.Reset();
             }
         }
 

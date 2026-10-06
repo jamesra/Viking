@@ -244,7 +244,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// True when the live view is at least twice as fine as the downsample recorded
         /// when auto-segment last completed. Coarser views return false so an existing
-        /// proposal is kept. Called by <see cref="AutoPolygonizeCache.ShouldProcess"/>.
+        /// proposal is kept. Not used by <see cref="AutoPolygonizeCache.ShouldProcess"/>, which compares the
+        /// resolved tile pyramid levels instead; kept as a tested helper for a zoom-factor policy.
         /// A non-positive completed downsample has no baseline and does not resubmit.
         /// </summary>
         public static bool ResolutionIncreasedByFactorOfTwo(double liveDownsample, double completedDownsample)

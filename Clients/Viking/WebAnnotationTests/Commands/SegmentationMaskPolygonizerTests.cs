@@ -278,6 +278,110 @@ namespace WebAnnotationTests.Commands
             return mask;
         }
 
+        /// <summary>
+        /// The separable morphology must give the same mask as the plain square-kernel loops it replaced,
+        /// including at the image border (erosion treats outside as off, dilation ignores it).
+        /// </summary>
+        [TestMethod]
+        public void CleanMaskMatchesTheBruteForceSquareKernel()
+        {
+            System.Random random = new(20261002);
+            foreach (int radius in new[] { 1, 2, 3 })
+            {
+                foreach ((int width, int height) in new[] { (20, 13), (7, 7), (1, 9), (9, 1), (31, 24) })
+                {
+                    byte[] mask = new byte[width * height];
+                    for (int i = 0; i < mask.Length; i++)
+                        mask[i] = random.NextDouble() < 0.6 ? (byte)255 : (byte)0;
+
+                    byte[] expected = ReferenceCleanMask(mask, width, height, radius);
+                    byte[] actual = SegmentationMaskPolygonizer.CleanMask(mask, width, height, radius);
+
+                    CollectionAssert.AreEqual(expected, actual, $"radius={radius} size={width}x{height}");
+                }
+            }
+        }
+
+        private static byte[] ReferenceCleanMask(byte[] mask, int width, int height, int radius)
+        {
+            int pad = radius;
+            int paddedWidth = width + (2 * pad);
+            int paddedHeight = height + (2 * pad);
+            bool[] padded = new bool[paddedWidth * paddedHeight];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                    padded[((y + pad) * paddedWidth) + pad + x] = mask[(y * width) + x] > 0;
+            }
+
+            bool[] opened = ReferenceDilate(ReferenceErode(padded, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
+            bool[] closed = ReferenceErode(ReferenceDilate(opened, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
+
+            byte[] result = new byte[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                    result[(y * width) + x] = closed[((y + pad) * paddedWidth) + pad + x] ? (byte)255 : (byte)0;
+            }
+
+            return result;
+        }
+
+        private static bool[] ReferenceErode(bool[] source, int width, int height, int radius)
+        {
+            bool[] output = new bool[source.Length];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    bool keep = source[(y * width) + x];
+                    for (int dy = -radius; keep && dy <= radius; dy++)
+                    {
+                        for (int dx = -radius; dx <= radius; dx++)
+                        {
+                            int nx = x + dx;
+                            int ny = y + dy;
+                            if (nx < 0 || ny < 0 || nx >= width || ny >= height || !source[(ny * width) + nx])
+                            {
+                                keep = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    output[(y * width) + x] = keep;
+                }
+            }
+
+            return output;
+        }
+
+        private static bool[] ReferenceDilate(bool[] source, int width, int height, int radius)
+        {
+            bool[] output = new bool[source.Length];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (!source[(y * width) + x])
+                        continue;
+
+                    for (int dy = -radius; dy <= radius; dy++)
+                    {
+                        for (int dx = -radius; dx <= radius; dx++)
+                        {
+                            int nx = x + dx;
+                            int ny = y + dy;
+                            if (nx >= 0 && ny >= 0 && nx < width && ny < height)
+                                output[(ny * width) + nx] = true;
+                        }
+                    }
+                }
+            }
+
+            return output;
+        }
+
         private static void ClearRectangle(
             byte[] mask,
             int width,

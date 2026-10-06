@@ -127,6 +127,15 @@ namespace Viking.VolumeModel
 
     public static class VolumeToSectionMappingExtensions
     {
+        /// <summary>
+        /// Wraps a grid/mesh mapper so points outside its hull are extrapolated by an RBF instead of failing.
+        /// Mappers that are not <see cref="VolumeToSectionTransform"/> (tile mappings) are returned unchanged.
+        /// Use for edits such as pen cuts where a hole in the mapping would otherwise drop the whole shape.
+        /// Do not use for hit-testing or visibility, where "cannot map" is the intended answer.
+        /// </summary>
+        public static Viking.VolumeModel.IVolumeToSectionTransform WithContinuousFallback(this Viking.VolumeModel.IVolumeToSectionTransform mapper) =>
+            mapper is VolumeToSectionTransform v ? v.WithContinuousFallback() : mapper;
+
         public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out Vector2[] output) => mapper.TrySectionToVolume([.. points.Select(p => new Vector2(p.X, p.Y))], out output);
 
         public static Vector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.SectionToVolume([.. points.Select(p => new Vector2(p.X, p.Y))]);

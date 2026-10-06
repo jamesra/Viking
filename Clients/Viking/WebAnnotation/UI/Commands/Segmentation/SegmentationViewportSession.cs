@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Grpc.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -9,6 +9,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -79,8 +80,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private CancellationTokenSource renderCancellationTokenSource;
         private CancellationTokenSource linkedRenderCancellationTokenSource;
         private CancellationTokenSource uploadCancellationTokenSource;
-        private readonly HashSet<string> uploadedTileKeys = [];
+        private readonly TileUploadCache uploadedTileKeys = new();
+        private readonly Viking.Services.Grpc.IGrpcChannelManager? channelManager;
         private int mosaicDownsample = 1;
+
+        /// <summary>
+        /// Tile level each response was requested at. <see cref="mosaicDownsample"/> is overwritten by the next
+        /// request while an earlier response is still being polygonized, so mapping a mask to world space reads this.
+        /// </summary>
+        private readonly SegmentationResultContexts resultContexts = new();
         private int mosaicOriginX;
         private int mosaicOriginY;
 
@@ -110,9 +118,125 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Adopts the capabilities the server advertised in GetServerStatus. The local ceiling can only
         /// narrow the result. Throws if the server left a flag unspecified; the current profile is kept.
         /// </summary>
-        // TODO: call this from the status check; nothing fetches GetServerStatus yet.
         public static void AdoptModelCapabilities(Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities advertised)
             => Volatile.Write(ref modelProfile, SegmentationModelProfile.FromAdvertised(advertised, MaxTileDownsample));
+
+        /// <summary>
+        /// Profile worth adopting from <paramref name="advertised"/>, or null to keep the current one. Null when the
+        /// server left a mode unspecified (a server bug that must not change how input is submitted) or asks for
+        /// full-viewport submission: this client only implements the fixed tile path, so adopting that profile
+        /// would stop every request from being submittable.
+        /// </summary>
+        internal static SegmentationModelProfile? ProfileToAdopt(
+            Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities? advertised,
+            int maxTileDownsample)
+        {
+            if (advertised is null)
+                return null;
+
+            SegmentationModelProfile profile;
+            try
+            {
+                profile = SegmentationModelProfile.FromAdvertised(advertised, maxTileDownsample);
+            }
+            catch (ArgumentException ex)
+            {
+                SegmentationDiag.Log($"GetServerStatus: ignoring capabilities: {ex.Message}");
+                return null;
+            }
+
+            if (!profile.UsesFixedTiles)
+            {
+                SegmentationDiag.Log("GetServerStatus: server wants full-viewport submission, which this client cannot send; keeping fixed tiles");
+                return null;
+            }
+
+            return profile;
+        }
+
+        private static readonly object capabilitiesGate = new();
+        private static string? capabilitiesEndpoint;
+
+        /// <summary>
+        /// Forgets the capabilities of the previous server: the profile returns to
+        /// <see cref="SegmentationModelProfile.Default"/> and the next client connection asks the new server again.
+        /// Called when the segmentation endpoint changes.
+        /// </summary>
+        public static void ResetModelProfile()
+        {
+            lock (capabilitiesGate)
+                capabilitiesEndpoint = null;
+
+            Volatile.Write(ref modelProfile, SegmentationModelProfile.Default);
+        }
+
+        /// <summary>
+        /// Starts one GetServerStatus per endpoint to learn the model's capabilities. Later connections to the same
+        /// endpoint do nothing; a failed query is retried by the next connection. Never blocks the caller.
+        /// </summary>
+        private void BeginModelCapabilitiesRefresh(SegmentationServiceTypes.SegmentationService.SegmentationServiceClient client)
+        {
+            string endpoint;
+            try
+            {
+                endpoint = SegmentationServiceSession.CurrentEndpoint();
+            }
+            catch (Exception ex)
+            {
+                SegmentationDiag.Log($"GetServerStatus skipped: no endpoint ({ex.Message})");
+                return;
+            }
+
+            lock (capabilitiesGate)
+            {
+                if (string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                capabilitiesEndpoint = endpoint;
+            }
+
+            _ = RefreshModelCapabilitiesAsync(client, endpoint);
+        }
+
+        /// <summary>
+        /// Fetches GetServerStatus and installs the advertised profile when it is still for the current endpoint.
+        /// </summary>
+        private static async Task RefreshModelCapabilitiesAsync(
+            SegmentationServiceTypes.SegmentationService.SegmentationServiceClient client,
+            string endpoint)
+        {
+            try
+            {
+                CallOptions options = new(deadline: DateTime.UtcNow.AddSeconds(5));
+                ServerStatusResponse status = await client
+                    .GetServerStatusAsync(new ServerStatusRequest(), options)
+                    .ResponseAsync.ConfigureAwait(false);
+
+                SegmentationModelProfile? profile = ProfileToAdopt(status?.Capabilities, MaxTileDownsample);
+                if (profile is null)
+                    return;
+
+                lock (capabilitiesGate)
+                {
+                    if (!string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    Volatile.Write(ref modelProfile, profile);
+                }
+
+                SegmentationDiag.Log($"GetServerStatus: adopted submission={profile.Submission} resolution={profile.Resolution}");
+                WebAnnotation.UI.AnnotationStatusChips.Refresh();
+            }
+            catch (Exception ex)
+            {
+                SegmentationDiag.Log($"GetServerStatus failed: {ex.GetType().Name}: {ex.Message}");
+                lock (capabilitiesGate)
+                {
+                    if (string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                        capabilitiesEndpoint = null;
+                }
+            }
+        }
 
         /// <summary>
         /// Highest level the current model may be sent: <see cref="MaxTileDownsample"/> when its profile
@@ -168,9 +292,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Binds the session to a viewer. ViewportBounds starts as the live camera rectangle.
         /// </summary>
-        public SegmentationViewportSession(SectionViewerControl parent)
+        /// <param name="parent">The viewer to capture tiles from.</param>
+        /// <param name="channelManager">
+        /// Source of the shared gRPC channel. Null uses <see cref="ServiceLocator.GrpcChannelManager"/>; a caller
+        /// that already holds the manager passes it so the session does not depend on the global locator.
+        /// </param>
+        public SegmentationViewportSession(SectionViewerControl parent, Viking.Services.Grpc.IGrpcChannelManager? channelManager = null)
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            this.channelManager = channelManager;
             ViewportBounds = GetCurrentViewportBounds();
             mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
         }
@@ -188,6 +318,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>Pyramid level used for the last tile upload/segment (resolved from camera, capped).</summary>
         public int MosaicDownsample => mosaicDownsample > 0 ? mosaicDownsample : EffectiveTileCeiling;
 
+        /// <summary>
+        /// Tile level <paramref name="response"/> was requested at, fixed when the response arrived. Use this, not
+        /// <see cref="MosaicDownsample"/>, for anything about a specific response: the session level moves on with the next request.
+        /// </summary>
+        public int DownsampleFor(SegmentationServiceTypes.SegmentationResponse response)
+            => resultContexts.DownsampleOrDefault(response, MosaicDownsample);
+
         /// <summary>True when this session has accepted at least one UploadTile for the current view identity.</summary>
         public bool HasUploadedTiles => uploadedTileKeys.Count > 0;
 
@@ -202,7 +339,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             try
             {
-                var channel = ServiceLocator.GrpcChannelManager?.GetOrCreateChannel();
+                var channel = (channelManager ?? ServiceLocator.GrpcChannelManager)?.GetOrCreateChannel();
                 if (channel is null)
                 {
                     SegmentationDiag.Log("TryInitializeClient: GrpcChannelManager/channel is null");
@@ -210,6 +347,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
+                BeginModelCapabilitiesRefresh(grpcClient);
                 SegmentationDiag.Log("TryInitializeClient: ok");
                 return true;
             }
@@ -534,7 +672,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
                     await ReadViewTilesAsync().ConfigureAwait(false);
                 mosaicDownsample = downsample;
-                List<TileCell> needed = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
+                // The cells under the clicks, and under each box's center: the box says where the object is,
+                // so its center cell is the best first tile to have ready.
+                List<Geometry.Vector2> tilePoints = [.. foregroundPoints ?? []];
+                foreach (Geometry.Rectangle box in foregroundBoxes ?? [])
+                    tilePoints.Add(new Geometry.Vector2((box.Left + box.Right) / 2.0, (box.Bottom + box.Top) / 2.0));
+                List<TileCell> needed = SegmentationTileGrid.CellsContainingPoints(tilePoints, downsample);
                 SegmentationDiag.Log(
                     $"SegmentAsync ds={downsample} visible={visible.Count} promptTiles={needed.Count} " +
                     $"vol={signature.Volume} sec={signature.Section}");
@@ -568,6 +711,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return null;
                 }
 
+                resultContexts.Record(response, downsample);
                 mosaicOriginX = response.OriginX;
                 mosaicOriginY = response.OriginY;
                 uploadedImageBounds = MosaicWorldBounds(response);
@@ -590,6 +734,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.Status.Detail}");
                 Debug.WriteLine($"Segmentation found no matching mask: {rpcEx.Status.Detail}");
                 RecordSkip(SegmentationSkipKind.Error, rpcEx.Status.Detail);
+                return null;
+            }
+            catch (RpcException rpcEx) when (SegmentationRpcErrors.Describe(rpcEx) is not null)
+            {
+                // A timeout or a server limit says nothing is wrong with the request, so the user is
+                // told that trying again can work instead of being shown the raw gRPC status.
+                string reason = SegmentationRpcErrors.Describe(rpcEx)!;
+                SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
+                RecordSkip(SegmentationSkipKind.Error, reason);
                 return null;
             }
             catch (Exception ex)
@@ -632,10 +785,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             foreach (var segment in response.Segments.OrderByDescending(s => s.Score))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                byte[] pngBytes = segment.Mask.ToByteArray();
-                maskBytes += pngBytes.Length;
+                maskBytes += segment.Mask.Length;
                 Stopwatch decodeTimer = Stopwatch.StartNew();
-                var (decodedMaskData, decodedWidth, decodedHeight) = DecodePngMask(pngBytes);
+                var (decodedMaskData, decodedWidth, decodedHeight) = DecodeSegmentMask(segment);
                 decodeMs += decodeTimer.ElapsedMilliseconds;
                 if (decodedMaskData is null)
                     continue;
@@ -675,6 +827,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return polygons;
         }
 
+        /// <summary>Decoded mask of one segment, kept for the segment's lifetime.</summary>
+        private sealed class DecodedMask(byte[]? data, int width, int height)
+        {
+            public byte[]? Data { get; } = data;
+            public int Width { get; } = width;
+            public int Height { get; } = height;
+        }
+
+        private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, DecodedMask> decodedMasks = new();
+
+        /// <summary>
+        /// <see cref="DecodePngMask"/> of <paramref name="segment"/>, decoded once. Polygonizing and the mask
+        /// overlay both need the same pixels, and the decode is the costly part of a large mask. The returned array
+        /// is shared: callers must not write to it (the polygonizer and overlay only read).
+        /// </summary>
+        public (byte[]? maskData, int width, int height) DecodeSegmentMask(SegmentationServiceTypes.SegmentResult segment)
+        {
+            DecodedMask decoded = decodedMasks.GetValue(segment, s =>
+            {
+                (byte[]? data, int width, int height) = DecodePngMask(s.Mask.ToByteArray());
+                return new DecodedMask(data, width, height);
+            });
+            return (decoded.Data, decoded.Width, decoded.Height);
+        }
+
         /// <summary>
         /// Decodes a SAM2 probability PNG into 0–255 bytes. Older 1-bit masks arrive as 0 and 255.
         /// Returns null data on an invalid PNG.
@@ -703,54 +880,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Debug.WriteLine($"Error decoding PNG mask: {ex.Message}");
                 return (null, 0, 0);
             }
-        }
-
-        private SegmentationRequest? BuildSegmentationRequest(
-            IReadOnlyList<Geometry.Vector2> foregroundPoints,
-            IReadOnlyList<Geometry.Vector2> backgroundPoints)
-        {
-            if (!currentImageId.HasValue)
-                return null;
-
-            SegmentationRequest request = new()
-            {
-                ImageId = currentImageId.Value,
-                MultimaskOutput = false,
-                OmitLabeledImage = true
-            };
-
-            int width = uploadedImageWidth;
-            int height = uploadedImageHeight;
-
-            if (foregroundPoints is not null)
-            {
-                foreach (var pt in foregroundPoints)
-                {
-                    var screenPt = WorldToViewport(pt, width, height);
-                    request.Coordinates.Add(new SegmentationServiceTypes.Point
-                    {
-                        X = (int)screenPt.X,
-                        Y = height - (int)screenPt.Y
-                    });
-                    request.Labels.Add(1);
-                }
-            }
-
-            if (backgroundPoints is not null)
-            {
-                foreach (var pt in backgroundPoints)
-                {
-                    var screenPt = WorldToViewport(pt, width, height);
-                    request.Coordinates.Add(new SegmentationServiceTypes.Point
-                    {
-                        X = (int)screenPt.X,
-                        Y = height - (int)screenPt.Y
-                    });
-                    request.Labels.Add(0);
-                }
-            }
-
-            return request;
         }
 
         /// <summary>
@@ -795,7 +924,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int maskHeight)
         {
             int imageHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight);
-            int downsample = Math.Max(1, mosaicDownsample);
+            int downsample = Math.Max(1, DownsampleFor(response));
             Geometry.Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(
                 response.OriginX,
                 response.OriginY,
@@ -813,147 +942,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return new Geometry.Rectangle(topLeft, bottomRight);
         }
 
-        /// <summary>
-        /// Waits for visible tiles, GPU-captures on the UI thread, then encodes on a worker.
-        /// Returns null data when tiles never become ready or encode is cancelled.
-        /// </summary>
-        private async Task<(byte[]? data, int width, int height, Geometry.Rectangle capturedBounds)> CaptureViewportImage(CancellationToken cancellationToken)
-        {
-            try
-            {
-                if (parent.Scene is null || parent.Section is null)
-                    return (null, 0, 0, default);
-
-                if (!await parent.WaitForVisibleTexturesAsync(parent.Scene, parent.Section.Number, cancellationToken).ConfigureAwait(false))
-                {
-                    Debug.WriteLine("[SegmentationProfile] Skipping capture: visible tiles not ready");
-                    return (null, 0, 0, default);
-                }
-
-                Stopwatch totalTimer = Stopwatch.StartNew();
-                var (pixels, width, height, isGrayscale, capturedBounds, renderMs, readbackMs) =
-                    await ReadViewportPixelsAsync(cancellationToken).ConfigureAwait(false);
-                if (pixels is null || width <= 0 || height <= 0)
-                    return (null, 0, 0, default);
-
-                var encodeResult = await Task.Run(() =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    Stopwatch encodeTimer = Stopwatch.StartNew();
-                    byte[] encoded = SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, isGrayscale);
-                    long encodeMs = encodeTimer.ElapsedMilliseconds;
-
-                    Stopwatch validationTimer = Stopwatch.StartNew();
-                    var (isValid, errorMessage) = ValidateCapturedImage(encoded, width, height);
-                    long validationMs = validationTimer.ElapsedMilliseconds;
-                    if (!isValid)
-                    {
-                        Debug.WriteLine($"Captured image failed validation: {errorMessage}");
-                        return (data: (byte[]?)null, encodeMs, validationMs);
-                    }
-
-                    return (data: encoded, encodeMs, validationMs);
-                }, cancellationToken).ConfigureAwait(false);
-                if (encodeResult.data is null)
-                    return (null, 0, 0, default);
-
-                SegmentationCaptureEncoder.SaveCaptureForReview(encodeResult.data, width, height);
-                Debug.WriteLine(
-                    $"[SegmentationProfile] Capture dimensions={width}x{height} render={renderMs}ms " +
-                    $"readback={readbackMs}ms encode={encodeResult.encodeMs}ms validate={encodeResult.validationMs}ms " +
-                    $"total={totalTimer.ElapsedMilliseconds}ms bytes={encodeResult.data.Length}");
-                return (encodeResult.data, width, height, capturedBounds);
-            }
-            catch (OperationCanceledException)
-            {
-                return (null, 0, 0, default);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error capturing viewport: {ex.Message}");
-                return (null, 0, 0, default);
-            }
-        }
-
-        /// <summary>
-        /// GPU render and GetData stay on the UI dispatcher. Encode is not done here.
-        /// </summary>
-        private async Task<(Color[]? pixels, int width, int height, bool isGrayscale, Geometry.Rectangle capturedBounds, long renderMs, long readbackMs)> ReadViewportPixelsAsync(CancellationToken cancellationToken)
-        {
-            var dispatcher = Viking.UI.State.MainThreadDispatcher;
-            if (dispatcher is null)
-                return (null, 0, 0, false, default, 0, 0);
-
-            if (!dispatcher.CheckAccess())
-            {
-                var operation = dispatcher.InvokeAsync(() => ReadViewportPixelsCoreAsync(cancellationToken));
-                return await operation.Task.Unwrap().ConfigureAwait(false);
-            }
-
-            return await ReadViewportPixelsCoreAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        private async Task<(Color[]? pixels, int width, int height, bool isGrayscale, Geometry.Rectangle capturedBounds, long renderMs, long readbackMs)> ReadViewportPixelsCoreAsync(CancellationToken cancellationToken)
-        {
-            CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
-            var (graphicsDevice, scene, width, height) = ValidateRenderingContext();
-            if (graphicsDevice is null || scene is null)
-                return (null, 0, 0, false, default, 0, 0);
-
-            Stopwatch renderTimer = Stopwatch.StartNew();
-            var (renderTarget, isGrayscale) = await RenderViewportToTexture(scene, width, height, renderToken).ConfigureAwait(true);
-            long renderMs = renderTimer.ElapsedMilliseconds;
-            if (renderTarget is null)
-                return (null, 0, 0, false, default, renderMs, 0);
-
-            try
-            {
-                Stopwatch readbackTimer = Stopwatch.StartNew();
-                Color[] pixels = new Color[width * height];
-                renderTarget.GetData(pixels);
-                long readbackMs = readbackTimer.ElapsedMilliseconds;
-                Geometry.Rectangle capturedBounds = GetCurrentViewportBounds();
-                ViewportBounds = capturedBounds;
-                return (pixels, width, height, isGrayscale, capturedBounds, renderMs, readbackMs);
-            }
-            finally
-            {
-                renderTarget.Dispose();
-            }
-        }
-
-        private static (bool isValid, string errorMessage) ValidateCapturedImage(byte[] pngData, int expectedWidth, int expectedHeight)
-        {
-            if (pngData is null || pngData.Length == 0)
-                return (false, "Image validation failed: null or empty data");
-
-            if (pngData.Length < 8 ||
-                pngData[0] != 0x89 || pngData[1] != 0x50 || pngData[2] != 0x4E || pngData[3] != 0x47 ||
-                pngData[4] != 0x0D || pngData[5] != 0x0A || pngData[6] != 0x1A || pngData[7] != 0x0A)
-            {
-                return (false, "Image validation failed: invalid PNG signature");
-            }
-
-            if (expectedWidth <= 0 || expectedHeight <= 0)
-                return (false, $"Image validation failed: invalid dimensions {expectedWidth}x{expectedHeight}");
-
-            try
-            {
-                using MemoryStream stream = new(pngData);
-                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(stream);
-                if (image.Width != expectedWidth || image.Height != expectedHeight)
-                {
-                    return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {image.Width}x{image.Height}");
-                }
-
-                return (true, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Image validation failed: PNG decode error - {ex.Message}");
-            }
-        }
-
         private CancellationToken PrepareCancellationToken(CancellationToken externalToken)
         {
             linkedRenderCancellationTokenSource?.Cancel();
@@ -968,53 +956,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 externalToken,
                 renderCancellationTokenSource.Token);
             return linkedRenderCancellationTokenSource.Token;
-        }
-
-        private (GraphicsDevice device, VikingXNA.Scene scene, int width, int height) ValidateRenderingContext()
-        {
-            var graphicsDevice = parent.Device;
-            var scene = parent.Scene;
-            if (graphicsDevice is null || scene is null)
-                return (null, null, 0, 0);
-
-            int width = scene.Viewport.Width;
-            int height = scene.Viewport.Height;
-            if (width <= 0 || height <= 0)
-                return (null, null, 0, 0);
-
-            return (graphicsDevice, scene, width, height);
-        }
-
-        private async Task<(RenderTarget2D? renderTarget, bool isGrayscale)> RenderViewportToTexture(
-            VikingXNA.Scene scene, int width, int height, CancellationToken cancellationToken)
-        {
-            float centerX = scene.Camera.LookAt.X;
-            float centerY = scene.Camera.LookAt.Y;
-            int sectionZ = parent.Section.Number;
-
-            try
-            {
-                bool isGrayscale = parent.CurrentChannelset.Length == 1;
-                RenderTarget2D renderTarget = await parent.RenderSceneToTexture(
-                    scene,
-                    centerX,
-                    centerY,
-                    sectionZ,
-                    showOverlays: false,
-                    asyncTextureLoad: false,
-                    cancellationToken).ConfigureAwait(false);
-
-                return (renderTarget, isGrayscale);
-            }
-            catch (OperationCanceledException)
-            {
-                return (null, false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"RenderSceneToTexture failed: {ex.Message}");
-                return (null, false);
-            }
         }
 
     }

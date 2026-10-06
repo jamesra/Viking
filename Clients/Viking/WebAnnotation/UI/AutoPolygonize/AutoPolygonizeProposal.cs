@@ -48,7 +48,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return null;
 
             var bestSegment = response.Segments.OrderByDescending(segment => segment.Score).First();
-            var (decodedMaskData, decodedWidth, decodedHeight) = session.DecodePngMask(bestSegment.Mask.ToByteArray());
+            var (decodedMaskData, decodedWidth, decodedHeight) = session.DecodeSegmentMask(bestSegment);
             if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
                 return null;
 

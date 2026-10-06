@@ -595,6 +595,19 @@ namespace WebAnnotation
             MouseButtons button,
             Geometry.Vector2 worldPosition)
         {
+            // #region agent log
+            {
+                bool dbgDefault = IsCommandDefault();
+                AutoPolygonizeProposal dbgProposal = null;
+                double dbgDistance = double.NaN;
+                bool dbgHit = dbgDefault && autoPolygonizeController?.TryHit(worldPosition, out dbgProposal, out dbgDistance) == true;
+                WebAnnotation.UI.Commands.Segmentation.SegmentationDiag.Log(
+                    $"DIAG H14 TryHandleMouseDoubleClick button={button} isDefault={dbgDefault} command={_Parent.CurrentCommand?.GetType().Name} " +
+                    $"queueDepth={Parent.CommandQueue.QueueDepth} controllerNull={autoPolygonizeController is null} " +
+                    $"hit={dbgHit} distance={dbgDistance} world={worldPosition}");
+            }
+            // #endregion
+
             if (!IsCommandDefault() ||
                 autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
             {
@@ -739,6 +752,12 @@ namespace WebAnnotation
         /// True while idle auto-polygonize holds an in-flight batch. Status chips read this.
         /// </summary>
         internal bool IsAutoPolygonizeBusy => autoPolygonizeController?.IsBusy == true;
+
+        /// <summary>
+        /// True while auto-polygonize is on but the camera is coarser than the max-downsample preference,
+        /// so no batch will start until the user zooms in. Status chips read this.
+        /// </summary>
+        internal bool IsAutoPolygonizePausedByZoom => autoPolygonizeController?.IsPausedByZoom == true;
 
         /// <summary>
         /// Restarts the auto-segment idle wait when it is already on.
@@ -988,6 +1007,11 @@ namespace WebAnnotation
 
                 if (Global.PenMode)
                 {
+                    // Starting a stroke here would make the free-draw command current for the second click,
+                    // so the ring's double-click accept would go to it instead of DefaultCommand.
+                    if (autoPolygonizeController?.TryHit(WorldPosition, out _, out _) == true)
+                        return;
+
                     StartPenPath(WorldPosition);
                     return;
                 }

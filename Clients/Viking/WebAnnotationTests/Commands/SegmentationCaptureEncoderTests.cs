@@ -27,6 +27,25 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void PngHeaderDimensionsMatchTheEncodedImage()
+        {
+            Color[] pixels = new Color[6 * 3];
+            byte[] png = SegmentationCaptureEncoder.EncodeToPng(pixels, 6, 3, grayscale: true);
+
+            Assert.IsTrue(CapturedPng.TryReadDimensions(png, out int width, out int height));
+            Assert.AreEqual(6, width);
+            Assert.AreEqual(3, height);
+        }
+
+        [TestMethod]
+        public void PngHeaderReadRejectsTruncatedAndNonPngData()
+        {
+            Assert.IsFalse(CapturedPng.TryReadDimensions(null!, out _, out _));
+            Assert.IsFalse(CapturedPng.TryReadDimensions(new byte[10], out _, out _));
+            Assert.IsFalse(CapturedPng.TryReadDimensions(new byte[40], out _, out _));
+        }
+
+        [TestMethod]
         public void FlatImageIsNotStretched()
         {
             byte[] values = new byte[16];

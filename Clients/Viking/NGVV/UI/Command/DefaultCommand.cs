@@ -123,6 +123,17 @@ namespace Viking.UI.Commands
             double distance = double.MaxValue;
             object context_obj = null;
 
+            // #region agent log
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viking-seg-diag.log"),
+                    $"{System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} DIAG H14 DefaultCommand.OnMouseDoubleClick button={e.Button} " +
+                    $"showOverlays={Parent.ShowOverlays} overlays={ExtensionManager.SectionOverlays?.Length} world={WorldPosition}{System.Environment.NewLine}");
+            }
+            catch { }
+            // #endregion
+
             // Preferential overlay double-click (e.g. auto-polygonize rings) before
             // ObjectAtPosition so hollow hits do not steal single-click edit of annotations.
             if (Parent.ShowOverlays && ExtensionManager.SectionOverlays != null)

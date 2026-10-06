@@ -30,6 +30,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public static void NotifyEmptyMask(SectionViewerControl? parent)
             => NotifySkip(parent, SegmentationSkipKind.EmptyMask);
 
+        /// <summary>
+        /// Skip kind to show when the session returned no response. A session that gave up records its
+        /// reason, so <see cref="SegmentationSkipKind.None"/> here means the reason was lost, not that the
+        /// mask was empty: an empty mask arrives as a non-null response with no segments and is reported there.
+        /// </summary>
+        internal static SegmentationSkipKind KindForMissingResponse(SegmentationSkipKind recorded)
+            => recorded == SegmentationSkipKind.None ? SegmentationSkipKind.Error : recorded;
+
         /// <summary>Maps skip kind to status text. Null means do not show UI.</summary>
         internal static string? Format(SegmentationSkipKind kind, string? detail)
         {

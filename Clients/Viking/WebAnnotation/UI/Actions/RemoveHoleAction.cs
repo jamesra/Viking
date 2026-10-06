@@ -4,7 +4,7 @@ using SqlGeometryUtils;
 using System;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using WebAnnotationModel;
+using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -67,6 +67,7 @@ namespace WebAnnotation.UI.Actions
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_shape = Location.MosaicShape;
 
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "RemoveHole");
             Location.SetShapeFromGeometryInSection(Transform, UpdatedMosaicPolygon.ToSqlGeometry());
 
             try

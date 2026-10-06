@@ -8,33 +8,89 @@ using WebAnnotationModel;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// SAM2 prompt points for a circle. Context-menu Segment to Polygon and auto-polygonize
-    /// share this helper so both send the same nine foreground clicks and other-structure
-    /// avoid marks.
+    /// SAM2 prompts for a circle: the inscribed square and four axis clicks
+    /// (<see cref="TryCreateStartingPrompt"/>), shared by auto-polygonize and the circle context menu,
+    /// plus the other-structure avoid marks.
     /// </summary>
     internal static class CircleSegmentationPrompts
     {
-        /// <summary>Points on each concentric ring.</summary>
-        public const int ForegroundRingPointCount = 4;
+        /// <summary>
+        /// Distance of the four axis points from the center, as a fraction of the radius. They sit
+        /// just inside the circle's edge, outside the inscribed square's edges (which are at 0.707),
+        /// so SAM2 is told how far the object reaches as well as that the square is inside it.
+        /// </summary>
+        public const double StartingPointRadiusFraction = 0.95;
 
-        /// <summary>Inner ring stays well inside the disk.</summary>
-        public const double InnerRingRadiusFraction = 0.5;
+        /// <summary>The box and clicks that start a circle's segmentation, in volume space.</summary>
+        internal readonly struct StartingPrompt(Rectangle box, IReadOnlyList<Vector2> points)
+        {
+            /// <summary>The square inscribed in the circle, axis-aligned.</summary>
+            public Rectangle Box { get; } = box;
 
-        /// <summary>Outer ring near the mosaic boundary so SAM2 fills the cell, not just the core.</summary>
-        public const double OuterRingRadiusFraction = 0.8;
+            /// <summary>Four foreground clicks: east, north, west, south of the center at <see cref="StartingPointRadiusFraction"/> of the radius.</summary>
+            public IReadOnlyList<Vector2> Points { get; } = points;
+
+            /// <summary>Center of <see cref="Box"/>, which is the circle's center.</summary>
+            public Vector2 Center => new((Box.Left + Box.Right) / 2.0, (Box.Bottom + Box.Top) / 2.0);
+        }
 
         /// <summary>
-        /// Center plus two rings of four in mosaic space, nine points total. The outer ring (80% radius)
-        /// sits on the axes and the inner ring (half radius) is rotated 45 degrees, so no ring point
-        /// shares a ray from the center with another. Order is center, inner ring, outer ring.
+        /// The circle's center followed by the east, north, west and south ends of its radius, in mosaic
+        /// space. Map all five with <see cref="ToVolumePoints"/> and give the result to
+        /// <see cref="TryCreateStartingPrompt"/>, which builds the box and the clicks in volume space.
         /// </summary>
-        public static IReadOnlyList<Vector2> CreateMosaicForegroundPoints(Circle mosaicCircle)
+        public static IReadOnlyList<Vector2> CreateMosaicRadiusPoints(Circle mosaicCircle)
         {
-            List<Vector2> foregroundPoints = [mosaicCircle.Center];
-            AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * InnerRingRadiusFraction, Math.PI / 4.0);
-            AddRing(foregroundPoints, mosaicCircle.Center, mosaicCircle.Radius * OuterRingRadiusFraction, 0.0);
-            return foregroundPoints;
+            double radius = mosaicCircle.Radius;
+            Vector2 center = mosaicCircle.Center;
+            return
+            [
+                center,
+                new Vector2(center.X + radius, center.Y),
+                new Vector2(center.X, center.Y + radius),
+                new Vector2(center.X - radius, center.Y),
+                new Vector2(center.X, center.Y - radius),
+            ];
         }
+
+        /// <summary>
+        /// Builds the starting prompt in volume space from the five points of <see cref="CreateMosaicRadiusPoints"/>
+        /// after the section-to-volume transform. The transformed center and the mean distance from it to the four
+        /// radius ends give the circle in volume space. The box and the four clicks are then built from that circle
+        /// there: the box is the axis-aligned square inscribed in it, and the clicks lie exactly east, north, west and
+        /// south of its center at <see cref="StartingPointRadiusFraction"/> of its radius. The prompt is therefore
+        /// aligned to the axes of the image SAM2 sees whatever the transform does to the section. A transform
+        /// that stretches the axes unequally makes the circle an ellipse, which the mean radius only approximates.
+        /// False when a point failed to map or the radius is not positive.
+        /// </summary>
+        public static bool TryCreateStartingPrompt(IReadOnlyList<Vector2> volumeCenterAndRadiusPoints, out StartingPrompt prompt)
+        {
+            prompt = default;
+            if (volumeCenterAndRadiusPoints is null || volumeCenterAndRadiusPoints.Count != 1 + AxisPointCount)
+                return false;
+
+            Vector2 center = volumeCenterAndRadiusPoints[0];
+            double radius = volumeCenterAndRadiusPoints.Skip(1).Average(point => Vector2.Distance(center, point));
+            if (!(radius > 0))
+                return false;
+
+            double half = radius / Math.Sqrt(2.0);
+            double reach = radius * StartingPointRadiusFraction;
+            Rectangle box = new(
+                new Vector2(center.X - half, center.Y - half),
+                new Vector2(center.X + half, center.Y + half));
+            prompt = new StartingPrompt(
+                box,
+                [
+                    new Vector2(center.X + reach, center.Y),
+                    new Vector2(center.X, center.Y + reach),
+                    new Vector2(center.X - reach, center.Y),
+                    new Vector2(center.X, center.Y - reach),
+                ]);
+            return true;
+        }
+
+        private const int AxisPointCount = 4;
 
         /// <summary>
         /// Drops points the section-to-volume transform fails to map.
@@ -357,17 +413,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int step = Math.Max(1, (int)Math.Ceiling(count / (double)maxPoints));
             for (int i = 0; i < count; i += step)
                 yield return ring[i];
-        }
-
-        private static void AddRing(List<Vector2> points, Vector2 center, double radius, double startAngle)
-        {
-            for (int i = 0; i < ForegroundRingPointCount; i++)
-            {
-                double angle = startAngle + (2.0 * Math.PI * i) / ForegroundRingPointCount;
-                points.Add(new Vector2(
-                    center.X + radius * Math.Cos(angle),
-                    center.Y + radius * Math.Sin(angle)));
-            }
         }
     }
 }

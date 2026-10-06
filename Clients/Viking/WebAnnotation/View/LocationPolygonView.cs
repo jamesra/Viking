@@ -177,8 +177,16 @@ namespace WebAnnotation.View
         public double lineWidth = 32;
 
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
+        /// <summary>
+        /// Non-null only when this view was built because a pen command changed the boundary of an existing
+        /// polygon; collects the timings written by <see cref="PolygonViewTimingLog"/>.
+        /// </summary>
+        private readonly PolygonViewTiming timing;
+
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
+            long constructionStart = Stopwatch.GetTimestamp();
+            timing = PolygonViewTimingLog.TryBegin(obj.ID);
             _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
             var mappedShape = mapper.TryMapShapeSectionToVolume(obj.MosaicShape);
             if (mappedShape is null)
@@ -206,6 +214,11 @@ namespace WebAnnotation.View
             };
             ControlPointView.UpdateViews();
 
+            timing?.RecordConstruction(
+                Stopwatch.GetTimestamp() - constructionStart,
+                VolumePolygon.TotalUniqueVertices,
+                VolumePolygon.InteriorPolygons.Count);
+
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
             //polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
@@ -219,6 +232,16 @@ namespace WebAnnotation.View
                     SmoothedVolumePolygon.InteriorPolygons[iInner]);
             }
             */
+        }
+
+        /// <summary>
+        /// Called when the background <see cref="Initialize"/> task faults. The view stays uninitialized and is skipped by
+        /// every draw, so the failure is traced and, for pen-edit views, written to <see cref="PolygonViewTimingLog"/>.
+        /// </summary>
+        internal void ReportInitializeFailure(Exception ex)
+        {
+            Trace.WriteLine($"LocationPolygonView.Initialize failed for location {ID}: {ex}");
+            timing?.RecordInitializeFailure(ex);
         }
 
         private int _Initializing = 0;
@@ -238,10 +261,12 @@ namespace WebAnnotation.View
                 return Task.CompletedTask;
             }
 
+            long initializeStart = Stopwatch.GetTimestamp();
             ControlPointView.Points = GetAllPolygonVertices(VolumePolygon);
             ControlPointView.PointRadius = Global.AnnotationSettings.PolygonPointRadius;
             ControlPointView.UpdateViews();
 
+            long smoothStart = Stopwatch.GetTimestamp();
             try
             {
                 SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay);
@@ -252,7 +277,13 @@ namespace WebAnnotation.View
                 SmoothedVolumePolygon = VolumePolygon;
             }
 
-            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, HSLColor);
+            long smoothTicks = Stopwatch.GetTimestamp() - smoothStart;
+
+            SolidPolygonView mesh = new(SmoothedVolumePolygon, HSLColor);
+            // Must be set before polygonMesh is published: the triangulation starts on the first draw.
+            mesh.MeshBuildCompleted = timing is null ? null : timing.RecordTriangulation;
+            mesh.MeshBuildStarted = timing is null ? null : timing.RecordTriangulationStarted;
+            polygonMesh = mesh;
             // Warm the cut-fill cache while the cell is on screen so a later retrace does not triangulate it on the pen thread.
             WebAnnotation.UI.Commands.PolygonCutFillCache.Begin(SmoothedVolumePolygon);
             CreateLabelObjects();
@@ -402,8 +433,48 @@ namespace WebAnnotation.View
             //CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
 
             //MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: listToDraw.Select(l => l.polygonMesh));
-            SolidPolygonView.Draw(device, scene, OverlayStyle.Luma, listToDraw.Select(l => l.polygonMesh));
+            SolidPolygonView[] meshes = new SolidPolygonView[listToDraw.Length];
+            for (int i = 0; i < meshes.Length; i++)
+                meshes[i] = listToDraw[i].polygonMesh;
+
+            SolidPolygonView.Draw(device, scene, OverlayStyle.Luma, meshes);
             //FilledClosedCurvePolygonView.Draw(device, scene, listToDraw.Select(l => l.polyView));
+        }
+
+        /// <summary>
+        /// The views that have finished initializing, in their original order. Returns the same array when all of them have,
+        /// which is the usual case.
+        /// </summary>
+        /// <remarks>
+        /// Views initialize on other threads, so each view's state is read once per pass and the result is never sized from an
+        /// earlier read.
+        /// </remarks>
+        private static LocationPolygonView[] InitializedViews(LocationPolygonView[] views)
+        {
+            int firstUninitialized = -1;
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (!views[i].Initialized)
+                {
+                    firstUninitialized = i;
+                    break;
+                }
+            }
+
+            if (firstUninitialized < 0)
+                return views;
+
+            List<LocationPolygonView> initialized = new(views.Length);
+            for (int i = 0; i < firstUninitialized; i++)
+                initialized.Add(views[i]);
+
+            for (int i = firstUninitialized + 1; i < views.Length; i++)
+            {
+                if (views[i].Initialized)
+                    initialized.Add(views[i]);
+            }
+
+            return [.. initialized];
         }
 
         public override bool Contains(Geometry.Vector2 Position)

@@ -1,6 +1,8 @@
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -11,6 +13,23 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class SegmentationCommandTests
     {
+        #region Gesture Help Tests
+
+        /// <summary>
+        /// Finalize moved from a single click to a double-click on a green point; the help bar must say so
+        /// and must not still advertise the old gesture.
+        /// </summary>
+        [TestMethod]
+        public void MouseHelpDescribesDoubleClickFinalize()
+        {
+            string[] help = SegmentationCommand.DefaultMouseHelpStrings;
+
+            Assert.IsTrue(help.Any(line => line.StartsWith("Double-click a green point", StringComparison.Ordinal)));
+            Assert.IsFalse(help.Any(line => line.Contains("Left-click inside polygon")));
+        }
+
+        #endregion
+
         #region Point Management Tests
 
         [TestMethod]

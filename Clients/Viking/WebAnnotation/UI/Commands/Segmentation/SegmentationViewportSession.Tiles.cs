@@ -277,7 +277,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             string requestedTiles = string.Join(";", requestedTileList);
             string segmentSizes = string.Join(
                 ",",
-                response.Segments.Select(segment => $"{segment.X},{segment.Y}:{GetPngDimensions(segment.Mask.ToByteArray())}"));
+                response.Segments.Select(segment => $"{segment.X},{segment.Y}:{CapturedPng.DescribeDimensions(segment.Mask.ToByteArray())}"));
             SegmentationDiag.Log(
                 $"SegmentTiles response req={requestId}{(response.RequestId == requestId ? string.Empty : $" MISMATCH echoed={response.RequestId}")} mosaic={response.Width}x{response.Height} " +
                 $"origin=({response.OriginX},{response.OriginY}) submittedTiles=[{submittedTiles}] " +
@@ -393,12 +393,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         renderTarget.GetData(buffer);
                         return buffer;
                     }).Task.ConfigureAwait(false);
-                    byte[] pngData = SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale);
+                    // Awaiting the dispatcher task can resume this method on the UI thread; encoding a 1024x1024
+                    // tile there stalls the viewer, so it is pushed to the pool explicitly.
+                    byte[] pngData = await Task.Run(
+                        () => SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale),
+                        cancellationToken).ConfigureAwait(false);
                     SegmentationCaptureEncoder.SaveCaptureForReview(pngData, width, height);
-                    var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
+                    var (isValid, errorMessage) = CapturedPng.Validate(pngData, width, height);
                     SegmentationDiag.Log(
                         $"CaptureTile encoded row={cell.Row} col={cell.Col} " +
-                        $"png={GetPngDimensions(pngData)} bytes={pngData.Length} valid={isValid}");
+                        $"png={CapturedPng.DescribeDimensions(pngData)} bytes={pngData.Length} valid={isValid}");
                     if (!isValid)
                     {
                         Debug.WriteLine($"Tile capture failed validation: {errorMessage}");
@@ -424,36 +428,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Reads PNG IHDR dimensions for diagnostics without decoding pixel data.
-        /// </summary>
-        private static string GetPngDimensions(byte[] pngData)
-        {
-            if (pngData is null || pngData.Length < 24 ||
-                pngData[0] != 0x89 || pngData[1] != 0x50 ||
-                pngData[2] != 0x4E || pngData[3] != 0x47)
-            {
-                return "invalid";
-            }
-
-            int width =
-                (pngData[16] << 24) |
-                (pngData[17] << 16) |
-                (pngData[18] << 8) |
-                pngData[19];
-            int height =
-                (pngData[20] << 24) |
-                (pngData[21] << 16) |
-                (pngData[22] << 8) |
-                pngData[23];
-            return $"{width}x{height}";
-        }
-
-        /// <summary>
         /// World rectangle covering the fused mosaic for mask-to-polygon mapping.
         /// </summary>
         internal Geometry.Rectangle MosaicWorldBounds(SegmentationResponse response)
+            => MosaicWorldBounds(response, DownsampleFor(response));
+
+        /// <summary>
+        /// World rectangle of the mosaic for a response sent at <paramref name="requestedDownsample"/>.
+        /// </summary>
+        internal static Geometry.Rectangle MosaicWorldBounds(SegmentationResponse response, int requestedDownsample)
         {
-            int downsample = Math.Max(1, mosaicDownsample);
+            int downsample = Math.Max(1, requestedDownsample);
             int width = Math.Max(1, response.Width);
             int height = Math.Max(1, response.Height);
             int originX = response.OriginX;
