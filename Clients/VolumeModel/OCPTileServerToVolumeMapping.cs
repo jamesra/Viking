@@ -16,6 +16,9 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly ITransform VolumeTransform = Transform;
 
+        /// <inheritdoc/>
+        public override ITransform SharedVolumeTransform => VolumeTransform;
+
         public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
         public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);

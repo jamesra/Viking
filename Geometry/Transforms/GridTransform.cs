@@ -218,6 +218,9 @@ namespace Geometry.Transforms
             }
         }
 
+        /// <summary>Grid triangles and edges come from per-grid-size tables shared by every grid of that size.</summary>
+        protected override long EstimatedTopologyBytes => 0;
+
         private List<int>[] _Edges = null;
         public override List<int>[] Edges
         {

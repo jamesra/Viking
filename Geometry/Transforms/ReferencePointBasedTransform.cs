@@ -11,9 +11,36 @@ using System.Threading.Tasks;
 namespace Geometry.Transforms
 {
     [Serializable]
-    public abstract class ReferencePointBasedTransform : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization
+    public abstract class ReferencePointBasedTransform : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization, IMemoryEstimate
     {
         public TransformBasicInfo Info { get; set; }
+
+        /// <summary>
+        /// Per-element sizes for <see cref="EstimatedMemoryBytes"/>, measured on .NET Framework 4.8 x64 by building each cache
+        /// on 30 transforms of 25 and 1600 points and taking the GC heap difference.
+        /// </summary>
+        protected const long TransformObjectBytes = 400;
+        /// <summary>One <see cref="MappingVector2"/> in <see cref="MapPoints"/>.</summary>
+        protected const long MapPointBytes = 32;
+        /// <summary>One point in one of the two point RTrees (about 1,100 bytes per point for both).</summary>
+        protected const long PointRTreeBytesPerPoint = 550;
+
+        /// <summary>
+        /// The object, its points and whichever point RTrees are built. Subclasses add the caches they own.
+        /// </summary>
+        public virtual long EstimatedMemoryBytes
+        {
+            get
+            {
+                long points = _mapPoints?.Length ?? 0;
+                long bytes = TransformObjectBytes + (points * MapPointBytes);
+                if (_mappedPointsRTree != null)
+                    bytes += points * PointRTreeBytesPerPoint;
+                if (_controlPointsRTree != null)
+                    bytes += points * PointRTreeBytesPerPoint;
+                return bytes;
+            }
+        }
 
         public override string ToString()
         {

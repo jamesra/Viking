@@ -152,6 +152,12 @@ namespace Viking.VolumeModel
             return new string(chars);
         }
 
+        /// <summary>The warped tiles plus the source mosaic tiles, which <see cref="FreeMemory"/> also frees.</summary>
+        public override long EstimatedMemoryBytes => base.EstimatedMemoryBytes + SourceMapping.EstimatedMemoryBytes;
+
+        /// <inheritdoc/>
+        public override ITransform SharedVolumeTransform => VolumeTransform;
+
         public override async Task FreeMemory()
         {
             try
@@ -162,6 +168,11 @@ namespace Viking.VolumeModel
                     _TileTransforms = null;
                     await SourceMapping.FreeMemory().ConfigureAwait(false);
                 }
+
+                await base.FreeMemory().ConfigureAwait(false);
+
+                //The volume transform outlives this mapping; drop its RTrees, which are rebuilt on next use.
+                (VolumeTransform as IMemoryMinimization)?.MinimizeMemory();
             }
             finally
             {

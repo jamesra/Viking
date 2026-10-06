@@ -86,6 +86,9 @@ namespace Viking.VolumeModel
 
         public override Vector2[] SectionToVolume(Vector2[] P) => this.VolumeTransform.Transform(P);
 
+        /// <inheritdoc/>
+        public override ITransform SharedVolumeTransform => VolumeTransform;
+
         public override Task FreeMemory()
         {
             if (VolumeTransform is IMemoryMinimization memMin)

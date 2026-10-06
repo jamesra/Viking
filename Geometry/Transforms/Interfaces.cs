@@ -117,6 +117,19 @@ namespace Geometry
         Task PrewarmSpatialIndexAsync();
     }
 
+    /// <summary>
+    /// A transform that can estimate the managed memory it holds, counting only the caches it has actually built. Used by
+    /// memory-budgeted caches; an estimate from element counts, not a measurement.
+    /// </summary>
+    public interface IMemoryEstimate
+    {
+        /// <summary>
+        /// Estimated bytes. Cheap, lock-free and safe to read while other threads use the transform; never builds anything.
+        /// A race with a build or <see cref="IMemoryMinimization.MinimizeMemory"/> only makes one reading stale.
+        /// </summary>
+        long EstimatedMemoryBytes { get; }
+    }
+
     public interface ITransformInfo
     {
         TransformBasicInfo Info { get; set; }
