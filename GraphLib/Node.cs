@@ -25,17 +25,16 @@ namespace GraphLib
 
         public void GetObjectData(SerializationInfo info, StreamingContext context) => info.AddValue("Key", Key, typeof(KEY));
 
+        /// <summary>
+        /// Returns the <see cref="_Edges"/> key that <paramref name="Link"/> is filed under on this node:
+        /// the other endpoint, or the shared endpoint key when the edge is a loop.
+        /// </summary>
+        private KEY ResolvePartnerKey(EDGETYPE Link) =>
+            Link.IsLoop || Link.SourceNodeKey.CompareTo(this.Key) != 0 ? Link.SourceNodeKey : Link.TargetNodeKey;
+
         internal void AddEdge(EDGETYPE Link)
         {
-            KEY PartnerKey = Link.SourceNodeKey;
-            if (Link.IsLoop)
-            {
-                //Circular reference, just proceed
-            }
-            else if (Link.SourceNodeKey.CompareTo(this.Key) == 0)
-            {
-                PartnerKey = Link.TargetNodeKey;
-            }
+            KEY PartnerKey = ResolvePartnerKey(Link);
 
             SortedSet<EDGETYPE> edgeList = null;
             if (_Edges.ContainsKey(PartnerKey))
@@ -61,15 +60,7 @@ namespace GraphLib
 
         internal void RemoveEdge(EDGETYPE Link)
         {
-            KEY PartnerKey = Link.SourceNodeKey;
-            if (Link.IsLoop)
-            {
-                //Circular reference, just proceed
-            }
-            else if (Link.SourceNodeKey.CompareTo(this.Key) == 0)
-            {
-                PartnerKey = Link.TargetNodeKey;
-            }
+            KEY PartnerKey = ResolvePartnerKey(Link);
 
             SortedSet<EDGETYPE> edgeList = null;
             if (_Edges.ContainsKey(PartnerKey))
