@@ -2010,7 +2010,15 @@ namespace Geometry
                     int nextSegIsLeft = nextSeg.A_is_left != 0 ? nextSeg.A_is_left : nextSeg.B_is_left; //Figure out which part of the next line is not on the test line.  Create a new virtual line or delete
                     Vector2 nextSegEndpoint = nextSeg.A_is_left != 0 ? nextSeg.S.A : nextSeg.S.B;
 
-                    Debug.Assert(nextSeg.S.OppositeEndpoint(nextSegEndpoint).Y == seg.S.B.Y, "We expect the lines to be input in the order they appear in the ring.  Lines sharing endpoints must be adjacent.");
+                    // Near-horizontal ring edges are classified OnTheLine (IsLeft==0 via the collinear
+                    // Triangle path) and dropped above. The next kept touch then meets at a different
+                    // vertex with a nearly-equal Y, not a bitwise-identical one. Exact Y equality is
+                    // too strict; epsilon matches how IsLeft decided both points were on the ray.
+                    Vector2 nextOnLineEndpoint = nextSeg.S.OppositeEndpoint(nextSegEndpoint);
+                    Debug.Assert(
+                        nextOnLineEndpoint == seg.S.B
+                        || Math.Abs(nextOnLineEndpoint.Y - seg.S.B.Y) <= Tolerance.Epsilon,
+                        "We expect the lines to be input in the order they appear in the ring.  Lines sharing endpoints must be adjacent.");
 
                     if (nextSegIsLeft == seg.A_is_left) //We touch the line and retreat.  We can remove both entries 
                     {
