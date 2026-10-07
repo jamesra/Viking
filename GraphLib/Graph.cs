@@ -55,11 +55,7 @@ namespace GraphLib
 
             foreach (EDGETYPE e in _Edges.Values)
             {
-                NODETYPE source = _Nodes[e.SourceNodeKey];
-                NODETYPE target = _Nodes[e.TargetNodeKey];
-
-                source.AddEdge(e);
-                target.AddEdge(e);
+                IndexOnEndpoints(e);
             }
         }
 
@@ -137,10 +133,21 @@ namespace GraphLib
             Debug.Assert(_Nodes.ContainsKey(edge.TargetNodeKey));
             Debug.Assert(!_Edges.ContainsKey(edge));
 
-            this._Nodes[edge.SourceNodeKey].AddEdge(edge);
-            this._Nodes[edge.TargetNodeKey].AddEdge(edge);
+            IndexOnEndpoints(edge);
 
             this._Edges.Add(edge, edge);
+        }
+
+        /// <summary>
+        /// Files <paramref name="edge"/> in the edge index of its source and target nodes. Shared by
+        /// <see cref="AddEdge"/> and the deserialization constructor, which receives nodes with empty
+        /// indexes. A loop edge is filed twice on the same node; <see cref="Node{KEY, EDGETYPE}.AddEdge"/>'s
+        /// set ignores the second add.
+        /// </summary>
+        private void IndexOnEndpoints(EDGETYPE edge)
+        {
+            this._Nodes[edge.SourceNodeKey].AddEdge(edge);
+            this._Nodes[edge.TargetNodeKey].AddEdge(edge);
         }
 
         public void RemoveEdge(EDGETYPE edge)

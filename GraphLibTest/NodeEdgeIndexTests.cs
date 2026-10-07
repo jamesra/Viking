@@ -2,6 +2,7 @@ using FsCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 
 namespace GraphLibTest
 {
@@ -109,6 +110,41 @@ namespace GraphLibTest
                 }
 
                 return true;
+            }).Check(config);
+        }
+
+        /// <summary>
+        /// The deserialization constructor receives nodes with empty edge indexes and must file every
+        /// stored edge on its endpoints exactly as <c>AddEdge</c> would.
+        /// </summary>
+        [TestMethod]
+        public void DeserializedGraphIndexesEveryStoredEdgeOnItsEndpoints()
+        {
+            Configuration config = Configuration.QuickThrowOnFailure;
+            config.MaxNbOfTest = 500;
+
+            Prop.ForAll(ArbOps(), ops =>
+            {
+                SortedList<SimpleEdge, SimpleEdge> edges = [];
+                foreach (EdgeOp op in ops)
+                {
+                    SimpleEdge edge = new(op.Source, op.Target, op.Directional);
+                    if (!edges.ContainsKey(edge))
+                        edges.Add(edge, edge);
+                }
+
+                Dictionary<long, SimpleNode> nodes = Enumerable.Range(0, NodeCount)
+                    .ToDictionary(i => (long)i, i => new SimpleNode(i));
+
+#pragma warning disable SYSLIB0050 // Graph only exposes this constructor through the formatter-based ISerializable pattern.
+                SerializationInfo info = new(typeof(SimpleGraph), new FormatterConverter());
+#pragma warning restore SYSLIB0050
+                info.AddValue("_Edges", edges, typeof(SortedList<SimpleEdge, SimpleEdge>));
+                info.AddValue("_Nodes", nodes, typeof(Dictionary<long, SimpleNode>));
+
+                SimpleGraph graph = new(info, new StreamingContext());
+
+                return IndexMatches(graph, [.. edges.Values]);
             }).Check(config);
         }
 
