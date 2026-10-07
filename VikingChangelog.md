@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.78 — unreleased
+
+* Measure tool and scale-bar labels pick the unit that puts the number between 1 and 999: 303 nm no longer shows as 0.303 um, and 0.75 um shows as 750 nm.
+
 ## 1.2.77 — 2026-09-30
 
 * Auto-polygonize proposal rings no longer block translate/scale on the circle underneath. Hover and single-click prefer the annotation; double-click still accepts or dismisses the ring.

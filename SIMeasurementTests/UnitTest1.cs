@@ -1,5 +1,7 @@
+using FsCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SIMeasurement;
+using System;
 
 namespace SIMeasurementTests
 {
@@ -103,8 +105,44 @@ namespace SIMeasurementTests
             Assert.AreEqual(1.25, A.Length);
 
             LengthMeasurement B = meter - quartermeter;
-            Assert.AreEqual(SILengthUnits.mm, A.Units);
-            Assert.AreEqual(750, A.Length);
+            Assert.AreEqual(SILengthUnits.mm, B.Units);
+            Assert.AreEqual(750, B.Length);
+        }
+
+        /// <summary>
+        /// Any positive length whose readable form lies inside the defined SI prefixes converts to the
+        /// unit that puts its scalar in [1, 1000), from any starting unit. 3-digit scalars such as
+        /// 303 nm, and scalars below 1 such as 0.75 m, used to land in the wrong unit.
+        /// </summary>
+        [TestMethod]
+        public void ConvertToReadableUnitsPutsScalarInOneToOneThousand()
+        {
+            int maxUnit = Enum.GetValues(typeof(SILengthUnits)).Length - 1;
+
+            // Scalars stay at least 0.001 below 1000 so Log10 rounding at the upper edge cannot hop a unit.
+            // Exact powers of 1000 (scalar 1) are weighted up because Log10 rounding there decides the unit.
+            Gen<int> milliScalar = Gen.Frequency(
+                Tuple.Create(1, Gen.Constant(1000)),
+                Tuple.Create(3, Gen.Choose(1000, 999999)));
+
+            Gen<(int Start, int Target, double Scalar)> cases =
+                from start in Gen.Choose(0, maxUnit)
+                from target in Gen.Choose(0, maxUnit)
+                from milli in milliScalar
+                select (start, target, milli / 1000.0);
+
+            Configuration config = Configuration.QuickThrowOnFailure;
+            config.MaxNbOfTest = 1000;
+
+            Prop.ForAll(Arb.From(cases), c =>
+            {
+                double distance = c.Scalar * Math.Pow(1000, c.Target - c.Start);
+                LengthMeasurement readable = LengthMeasurement.ConvertToReadableUnits((SILengthUnits)c.Start, distance);
+
+                // Math.Pow and the reverse scaling each round once; 1e-12 relative is far above that.
+                return readable.Units == (SILengthUnits)c.Target &&
+                       Math.Abs(readable.Length - c.Scalar) <= 1e-12 * c.Scalar;
+            }).Check(config);
         }
     }
 }
