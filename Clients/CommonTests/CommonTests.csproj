@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
   </ItemGroup>
 
 </Project>
