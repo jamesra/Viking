@@ -285,14 +285,16 @@ namespace Viking
                 if (!TryDequeue(out PendingItem? item) || item is null)
                     break;
 
-                if (item?.TileView?.SectionLoadingCancelled ?? false)
-                {
-                    item.Tcs.TrySetResult(null);
-                    continue;
-                }
-
+                // Every exit for a dequeued item, including cancel, must pass through the finally below; a tile left
+                // in PendingTileViews makes TileView.GetOrLoadTextureAsync skip that tile key for the rest of the session.
                 try
                 {
+                    if (item.TileView?.SectionLoadingCancelled ?? false)
+                    {
+                        item.Tcs.TrySetResult(null);
+                        continue;
+                    }
+
                     GraphicsDevice device = null;
                     var viewer = State.ViewerControl;
                     if (viewer is GraphicsDeviceControl gdc)
