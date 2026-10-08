@@ -390,31 +390,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Maps world to capture-pixel space without a Y flip. SAM2 mask Y is flipped in <see cref="GetSegmentWorldBounds"/>.
         /// </summary>
         public Geometry.Vector2 WorldToViewport(Geometry.Vector2 worldPos, int viewportWidth, int viewportHeight)
-        {
-            Geometry.Vector2 boundsMin = ViewportBounds.LowerLeft;
-            Geometry.Vector2 boundsMax = ViewportBounds.UpperRight;
-
-            double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
-            double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
-
-            return new Geometry.Vector2(
-                normalizedX * viewportWidth,
-                normalizedY * viewportHeight);
-        }
+            => SegmentationExtensions.MapWorldToViewportPixel(
+                worldPos,
+                ViewportBounds,
+                viewportWidth,
+                viewportHeight);
 
         /// <summary>
         /// Inverse of <see cref="WorldToViewport"/>; pixel Y is not flipped here.
         /// </summary>
         public Geometry.Vector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
-        {
-            double normalizedX = (double)pixelX / viewportWidth;
-            double normalizedY = (double)pixelY / viewportHeight;
-            Geometry.Vector2 boundsMin = ViewportBounds.LowerLeft;
-            Geometry.Vector2 boundsMax = ViewportBounds.UpperRight;
-            return new Geometry.Vector2(
-                boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
-                boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y));
-        }
+            => SegmentationExtensions.MapViewportPixelToWorld(
+                pixelX,
+                pixelY,
+                ViewportBounds,
+                viewportWidth,
+                viewportHeight);
 
         /// <summary>
         /// Cancels in-flight render, linked render, and upload tokens. Does not delete a server image.

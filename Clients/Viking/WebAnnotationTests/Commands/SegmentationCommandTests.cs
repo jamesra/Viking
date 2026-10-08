@@ -124,7 +124,7 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 1000;
 
             // Act
-            Geometry.Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapWorldToViewportPixel(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(500.0, result.X, 0.01, "X coordinate should be at center");
@@ -144,7 +144,7 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 1000;
 
             // Act
-            Geometry.Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapWorldToViewportPixel(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(0.0, result.X, 0.01, "X coordinate should be at origin");
@@ -164,7 +164,7 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 1000;
 
             // Act
-            Geometry.Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapWorldToViewportPixel(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(1000.0, result.X, 0.01, "X coordinate should be at max");
@@ -185,7 +185,8 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 1000;
 
             // Act
-            Geometry.Vector2 result = ViewportToWorldHelper(pixelX, pixelY, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapViewportPixelToWorld(
+                pixelX, pixelY, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(50.0, result.X, 0.01, "X coordinate should be at center in world space");
@@ -205,55 +206,18 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 600;
 
             // Act: Convert world -> viewport -> world
-            Geometry.Vector2 viewportPos = WorldToViewportHelper(originalWorldPos, viewportBounds, viewportWidth, viewportHeight);
-            Geometry.Vector2 roundTripWorldPos = ViewportToWorldHelper(
-                (int)viewportPos.X, 
-                (int)viewportPos.Y, 
-                viewportBounds, 
-                viewportWidth, 
+            Geometry.Vector2 viewportPos = SegmentationExtensions.MapWorldToViewportPixel(
+                originalWorldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 roundTripWorldPos = SegmentationExtensions.MapViewportPixelToWorld(
+                (int)viewportPos.X,
+                (int)viewportPos.Y,
+                viewportBounds,
+                viewportWidth,
                 viewportHeight);
 
             // Assert
             Assert.AreEqual(originalWorldPos.X, roundTripWorldPos.X, 1.0, "X coordinate should round-trip correctly");
             Assert.AreEqual(originalWorldPos.Y, roundTripWorldPos.Y, 1.0, "Y coordinate should round-trip correctly");
-        }
-
-        /// <summary>
-        /// Helper method that simulates WorldToViewport logic from SegmentationCommand
-        /// </summary>
-        private Geometry.Vector2 WorldToViewportHelper(Geometry.Vector2 worldPos, Geometry.Rectangle viewportBounds, int viewportWidth, int viewportHeight)
-        {
-            Geometry.Vector2 boundsMin = viewportBounds.LowerLeft;
-            Geometry.Vector2 boundsMax = viewportBounds.UpperRight;
-
-            // Normalize to [0,1] range within viewport bounds
-            double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
-            double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
-
-            // Scale to viewport pixel dimensions
-            return new Geometry.Vector2(
-                normalizedX * viewportWidth,
-                normalizedY * viewportHeight
-            );
-        }
-
-        /// <summary>
-        /// Helper method that simulates ViewportToWorld logic from SegmentationCommand
-        /// </summary>
-        private Geometry.Vector2 ViewportToWorldHelper(int pixelX, int pixelY, Geometry.Rectangle viewportBounds, int viewportWidth, int viewportHeight)
-        {
-            // Normalize from pixel coordinates to [0,1] range
-            double normalizedX = (double)pixelX / viewportWidth;
-            double normalizedY = (double)pixelY / viewportHeight;
-
-            Geometry.Vector2 boundsMin = viewportBounds.LowerLeft;
-            Geometry.Vector2 boundsMax = viewportBounds.UpperRight;
-
-            // Scale to world coordinates within viewport bounds
-            return new Geometry.Vector2(
-                boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
-                boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y)
-            );
         }
 
         #endregion
