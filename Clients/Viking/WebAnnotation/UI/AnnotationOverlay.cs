@@ -395,6 +395,60 @@ namespace WebAnnotation
             Global.LastEditedAnnotationID = null;
         }
 
+        /// <summary>
+        /// Flies the camera from an AnnotationTest resolve payload (section + center) without a store lookup.
+        /// Called by the Viking Test–only resolve menu after <see cref="Viking.Common.AnnotationResolveClient"/> succeeds.
+        /// </summary>
+        public static void GoToResolvedLocation(Viking.Common.AnnotationResolveResult resolved)
+        {
+            if (resolved is null || Viking.UI.State.ViewerForm is null)
+                return;
+
+            double downsample = Global.DefaultLocationJumpDownsample;
+            double bboxWidth = resolved.BBox.Width;
+            if (bboxWidth > 0 && Viking.UI.State.ViewerForm.Width > 0)
+                downsample = (bboxWidth / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
+
+            Viking.UI.State.ViewerForm.GoToLocation(
+                new Microsoft.Xna.Framework.Vector2((float)resolved.Center.X, (float)resolved.Center.Y),
+                resolved.Section,
+                true,
+                downsample);
+
+            Viking.UI.State.SelectedObject = null;
+            Global.LastEditedAnnotationID = null;
+        }
+
+        /// <summary>
+        /// Store-based fly for last-edited location (production Backspace, and resolve fallback).
+        /// When <paramref name="resolveError"/> is set, a missing store entry includes the resolve failure text.
+        /// </summary>
+        public static void GoToLocationFromStoreOrWarn(long locationId, Exception resolveError)
+        {
+            LocationObj loc = Store.Locations.GetObjectByID(locationId);
+            if (loc != null && Viking.UI.State.ViewerForm != null)
+            {
+                double downsample = Global.DefaultLocationJumpDownsample;
+                if (loc.VolumeShape != null && Viking.UI.State.ViewerForm.Width > 0)
+                    downsample = (loc.VolumeShape.BoundingBox().Width / Viking.UI.State.ViewerForm.Width) * 2;
+
+                Viking.UI.State.ViewerForm.GoToLocation(
+                    new Microsoft.Xna.Framework.Vector2((float)loc.Position.X, (float)loc.Position.Y),
+                    (int)loc.Z,
+                    true,
+                    downsample);
+                return;
+            }
+
+            if (resolveError is null)
+                return;
+
+            string message =
+                $"Could not resolve location {locationId} via {AnnotationResolveOptions.BaseUrl}, " +
+                $"and it is not in the local store.\n\n{resolveError.Message}";
+            MessageBox.Show(message, "Resolve Location (Test)", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
         public int CurrentSectionNumber => _Parent.Section.Number;
 
         /// <summary>
@@ -1444,7 +1498,9 @@ break;
                 "F3 or Enter Key: Create new annotation linked to the last placed annotation",
                 "Tab: Place a new structure with segmentation",
                 "F5 Key: Reload section annotations",
-                "Back Key: Return to last edited location",
+                AnnotationResolveOptions.IsEnabled
+                    ? "Back Key: Return to last edited location (AnnotationTest resolve, then store)"
+                    : "Back Key: Return to last edited location",
                 "F12: Open goto location ID dialog",
                 "F11: Open goto structure ID dialog"
             };
@@ -1640,16 +1696,15 @@ break;
                 case Keys.Back:
                     if (Global.LastEditedAnnotationID.HasValue)
                     {
-                        LocationObj loc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
-
-                        if (loc != null)
+                        long lastId = Global.LastEditedAnnotationID.Value;
+                        // Viking Test: fly via AnnotationTest /test/resolve when enabled; store on failure.
+                        if (AnnotationResolveOptions.IsEnabled)
                         {
-                            Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
-                                                                                (float)loc.Position.Y),
-                                                                                (int)loc.Z,
-                                                                                true,
-                                                                                (double)((loc.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
+                            _ = AnnotationMenu.ResolveAndFlyAsync(lastId, fallbackToStoreOnFailure: true);
+                            return;
                         }
+
+                        GoToLocationFromStoreOrWarn(lastId, resolveError: null);
                     }
                     else
                     {
