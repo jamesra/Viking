@@ -63,7 +63,8 @@ namespace WebAnnotation
 
             menuPenMode = new ToolStripMenuItem("Pen Mode")
             {
-                Checked = WebAnnotation.Global.PenMode
+                Checked = WebAnnotation.Global.PenMode,
+                ShortcutKeyDisplayString = "*"
             };
             menuPenMode.Click += OnPenMode;
             menuRoot.DropDownItems.Add(menuPenMode);
@@ -638,6 +639,10 @@ namespace WebAnnotation
         [MenuItem("Open Last Modified Location")]
         public static void GoToLastModifiedLocation(object sender, EventArgs e) => AnnotationOverlay.GotoLastModifiedLocation();
 
+        /// <summary>
+        /// Toggles Pen Mode (menu, toolbar, status chip, and the <c>*</c> hotkey in
+        /// <see cref="AnnotationOverlay.OnKeyDown"/>). Refreshes chips/toolbar/menu checkmarks.
+        /// </summary>
         public static void OnPenMode(object sender, EventArgs e)
         {
             Global.PenMode = !Global.PenMode;

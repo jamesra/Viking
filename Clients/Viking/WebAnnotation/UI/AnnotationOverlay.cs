@@ -1723,6 +1723,21 @@ break;
                 case Keys.F11:
                     OpenGotoStructureForm();
                     break;
+                // Pen Mode toggle: main-keyboard * (Shift+8) and numpad *. Free under default shortcuts.
+                case Keys.Multiply:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
+                    return;
+                case Keys.D8:
+                    if (e.Shift && !e.Control && !e.Alt)
+                    {
+                        e.Handled = true;
+                        e.SuppressKeyPress = true;
+                        AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
+                        return;
+                    }
+                    break;
             }
 
             try
