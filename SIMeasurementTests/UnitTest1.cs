@@ -144,5 +144,68 @@ namespace SIMeasurementTests
                        Math.Abs(readable.Length - c.Scalar) <= 1e-12 * c.Scalar;
             }).Check(config);
         }
+
+        /// <summary>
+        /// The measure tool converts a zero distance when the drag starts (cursor still on the origin).
+        /// It used to read as 1 of the input unit.
+        /// </summary>
+        [TestMethod]
+        public void ZeroLengthReadsZeroInTheInputUnit()
+        {
+            foreach (SILengthUnits unit in Enum.GetValues(typeof(SILengthUnits)))
+            {
+                LengthMeasurement readable = LengthMeasurement.ConvertToReadableUnits(unit, 0);
+                Assert.AreEqual(unit, readable.Units);
+                Assert.AreEqual(0, readable.Length);
+            }
+
+            LengthMeasurement dragStart = new(SILengthUnits.nm, 0 * 2.18);
+            Assert.AreEqual(0, LengthMeasurement.ConvertToReadableUnits(dragStart).Length);
+        }
+
+        /// <summary>
+        /// Equal lengths subtract to zero and a larger subtrahend gives a negative length, instead of +1.
+        /// </summary>
+        [TestMethod]
+        public void SubtractionReadsZeroAndNegativeDifferences()
+        {
+            LengthMeasurement meter = new(SILengthUnits.m, 1);
+            LengthMeasurement quartermeter = new(SILengthUnits.mm, 250);
+
+            LengthMeasurement zero = meter - meter;
+            Assert.AreEqual(SILengthUnits.m, zero.Units);
+            Assert.AreEqual(0, zero.Length);
+
+            LengthMeasurement negative = quartermeter - meter;
+            Assert.AreEqual(SILengthUnits.mm, negative.Units);
+            Assert.AreEqual(-750, negative.Length, 1e-9);
+        }
+
+        /// <summary>
+        /// A negative length converts to the same unit as its absolute value and keeps its sign.
+        /// </summary>
+        [TestMethod]
+        public void ConvertToReadableUnitsOfNegativeMirrorsPositive()
+        {
+            int maxUnit = Enum.GetValues(typeof(SILengthUnits)).Length - 1;
+
+            Gen<(int Start, int Exponent, double Mantissa)> cases =
+                from start in Gen.Choose(0, maxUnit)
+                from exponent in Gen.Choose(-60, 60)
+                from milli in Gen.Choose(1000, 9999)
+                select (start, exponent, milli / 1000.0);
+
+            Configuration config = Configuration.QuickThrowOnFailure;
+            config.MaxNbOfTest = 1000;
+
+            Prop.ForAll(Arb.From(cases), c =>
+            {
+                double distance = c.Mantissa * Math.Pow(10, c.Exponent);
+                LengthMeasurement positive = LengthMeasurement.ConvertToReadableUnits((SILengthUnits)c.Start, distance);
+                LengthMeasurement negative = LengthMeasurement.ConvertToReadableUnits((SILengthUnits)c.Start, -distance);
+
+                return negative.Units == positive.Units && negative.Length == -positive.Length;
+            }).Check(config);
+        }
     }
 }

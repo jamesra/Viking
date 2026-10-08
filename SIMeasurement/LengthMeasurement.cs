@@ -54,6 +54,7 @@ namespace SIMeasurement
         /// <summary>
         /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of at least 1 and less than 1,000.
         /// Outside the defined prefixes the result clamps to <see cref="SILengthUnits.ym"/> or <see cref="SILengthUnits.Ym"/> and the scalar leaves that range.
+        /// Zero stays 0 in <paramref name="UnitOfMeasure"/>. A negative distance gets the unit of its absolute value and keeps its sign.
         /// Used for the measure tool and scale bar labels.
         /// </summary>
         /// <param name="UnitOfMeasure"></param>
@@ -61,13 +62,13 @@ namespace SIMeasurement
         /// <returns></returns>
         public static LengthMeasurement ConvertToReadableUnits(SILengthUnits UnitOfMeasure, double distance)
         {
-            if (distance <= 0)
-                return new LengthMeasurement(UnitOfMeasure, 1.0);
+            if (distance == 0)
+                return new LengthMeasurement(UnitOfMeasure, 0);
 
             int iStartUnit = (int)UnitOfMeasure;
 
             //Figure out how many 1,000 sized steps we make
-            int numUnitHops = Convert.ToInt32(Math.Floor(Math.Log10(distance) / 3.0));
+            int numUnitHops = Convert.ToInt32(Math.Floor(Math.Log10(Math.Abs(distance)) / 3.0));
             int numUnitDefinitions = Enum.GetValues(typeof(SILengthUnits)).Length;
 
             //Handle units that are out of our range
