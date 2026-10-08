@@ -200,7 +200,7 @@ namespace GraphLib
                     return null;
 
                 //Optimization, avoids copying the testedNodes set if there is only one path
-                IList<KEY> result = RecursePath(ref testedNodes, graph, linked_Keys.First(), IsMatch, CanTravelEdge);
+                IList<KEY> result = RecursePath(ref testedNodes, graph, linked_Keys.First(), IsMatch);
                 if (result is null)
                     return null;
 
@@ -217,7 +217,7 @@ namespace GraphLib
                         continue;
 
                     SortedSet<KEY> testedNodesCopy = [.. testedNodes];
-                    IList<KEY> result = RecursePath(ref testedNodesCopy, graph, linked_Key, IsMatch, CanTravelEdge);
+                    IList<KEY> result = RecursePath(ref testedNodesCopy, graph, linked_Key, IsMatch);
                     if (result is null)
                         continue;
 
