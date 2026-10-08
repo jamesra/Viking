@@ -13,12 +13,6 @@ namespace Viking.VolumeModel
 
     }
 
-    /// <summary>
-    /// Per-section transform mappings, keyed by section number. Size is counted in sections, so
-    /// <see cref="NumSectionsToKeepInMemory"/> is the limit <see cref="TimeQueueCache{KEY, CACHEENTRY, ADDTYPE, FETCHTYPE}.ReduceCacheFootprint"/>
-    /// trims to, least recently used first. A failed checkpoint never unloads a section by itself; see
-    /// <see cref="MappingManager.ReduceCacheFootprint"/>.
-    /// </summary>
     public class SectionTransformsCache : TimeQueueCache<int, SectionMappingsCacheEntry, SectionTransformsDictionary, SectionTransformsDictionary>
     {
         public long NumSectionsToKeepInMemory
@@ -52,11 +46,6 @@ namespace Viking.VolumeModel
             SectionMappingsCacheEntry cacheEntry = new(key, entry);
             return Task.FromResult(cacheEntry);
         }
-
-        /// <summary>
-        /// Keeps idle sections loaded while the cache is within <see cref="NumSectionsToKeepInMemory"/>.
-        /// </summary>
-        protected override void OnCheckpointFailed(SectionMappingsCacheEntry entry) { }
     }
 
     public class SectionMappingsCacheEntry : CacheEntry<int>
@@ -96,17 +85,7 @@ namespace Viking.VolumeModel
 
         public SectionTransformsCache SectionMappingCache = new();
 
-        /// <summary>
-        /// Unloads the least recently used sections beyond <see cref="SectionTransformsCache.NumSectionsToKeepInMemory"/>.
-        /// Viking's cache-cleaning timer calls this. The base trim skips entries used since the last checkpoint and
-        /// new entries start as used, so the checkpoint here is what makes them evictable; a section fetched after it
-        /// is skipped by the trim that follows. The trim itself runs on a background task.
-        /// </summary>
-        public void ReduceCacheFootprint()
-        {
-            SectionMappingCache.Checkpoint();
-            SectionMappingCache.ReduceCacheFootprint(null);
-        }
+        public void ReduceCacheFootprint() => SectionMappingCache.ReduceCacheFootprint(null);
 
         //static private ConcurrentDictionary<string, MappingBase> mapTable = new ConcurrentDictionary<string, MappingBase>();
 
