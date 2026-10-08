@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,9 +11,9 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "grpcio>=1.71.0",
-    "grpcio-tools>=1.71.0",
-    "protobuf>=5.29.0",
+    "grpcio>=1.84.0",
+    "grpcio-tools>=1.84.0",
+    "protobuf>=7.35.1,<8",
 ]
 
 [project.scripts]

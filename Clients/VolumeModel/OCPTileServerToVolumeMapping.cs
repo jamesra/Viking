@@ -16,6 +16,9 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly ITransform VolumeTransform = Transform;
 
+        /// <inheritdoc/>
+        public override ITransform SharedVolumeTransform => VolumeTransform;
+
         public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
         public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
@@ -131,7 +134,8 @@ namespace Viking.VolumeModel
                     var UniqueID = TileUniqueKey.Create(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
-                    if (false == Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+                    //TryGetTile reports a cached null (a known-empty tile) as a hit, so it is not rebuilt every frame
+                    if (false == Global.TileCache.TryGetTile(UniqueID, out TileViewModel tileViewModel))
                     {
                         //First create a new tile
                         int MipMapLevels = 1; //No mip maps

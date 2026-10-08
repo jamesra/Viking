@@ -8,7 +8,8 @@ namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
     /// Lists Identity Resource rows with ResourceTypeId Volume. Reads Name + Endpoint (VikingXML).
-    /// AnnotationEndpoint is selected when the column exists; otherwise left empty.
+    /// AnnotationEndpoint comes from the volume's AnnotationServer row when the Identity schema has
+    /// AnnotationServerId; on an older schema it is left empty.
     /// </summary>
     public sealed class SqlIdentityVolumeSource : IIdentityVolumeSource
     {
@@ -28,10 +29,12 @@ namespace Viking.GrpcSectionCorrectionService
             await using SqlConnection connection = new(_connectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-            bool hasAnnotation = await ColumnExistsAsync(connection, "Resource", "AnnotationEndpoint", cancellationToken)
+            bool hasAnnotation = await ColumnExistsAsync(connection, "Resource", "AnnotationServerId", cancellationToken)
                 .ConfigureAwait(false);
             string sql = hasAnnotation
-                ? "SELECT Name, Endpoint, AnnotationEndpoint FROM Resource WHERE ResourceTypeId = N'Volume'"
+                ? "SELECT v.Name, v.Endpoint, s.AnnotationEndpoint FROM Resource v " +
+                  "LEFT JOIN Resource s ON s.Id = v.AnnotationServerId AND s.ResourceTypeId = N'AnnotationServer' " +
+                  "WHERE v.ResourceTypeId = N'Volume'"
                 : "SELECT Name, Endpoint FROM Resource WHERE ResourceTypeId = N'Volume'";
 
             await using SqlCommand command = new(sql, connection);

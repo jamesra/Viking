@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,19 +11,24 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "grpcio>=1.71.0",
-    "grpcio-tools>=1.71.0",
-    "protobuf>=5.29.0",
+    # The generated stubs refuse to import below grpcio 1.84 and protobuf 7.35.1
+    # (see tests/test_stub_sync.py, which keeps these floors honest).
+    "grpcio>=1.84.0",
+    "grpcio-tools>=1.84.0",
+    "protobuf>=7.35.1,<8",
     "numpy",
     "pillow",
     "opencv-python",
-    "torch",
-    "sam2",
+    # Same torch and SAM2 commit as the Dockerfile (SAM2_GIT_SHA), so a local install runs the
+    # code production runs. tests/test_stub_sync.py fails if the SHA here and there drift.
+    "torch>=2.14,<2.15",
+    "sam2 @ https://github.com/facebookresearch/sam2/archive/2b90b9f5ceec907a1c18123530e92e794ad901a4.tar.gz",
     "segmentation_grpc",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio", "hypothesis"]
+# cryptography generates the self-signed certificate the TLS tests and local runs use.
+dev = ["pytest", "pytest-asyncio", "hypothesis", "cryptography"]
 
 [project.scripts]
 segmentation-server = "segmentation_server.__main__:run"
@@ -31,6 +36,13 @@ segmentation-server = "segmentation_server.__main__:run"
 [tool.setuptools]
 packages = ["segmentation_server"]
 
+[tool.setuptools.package-data]
+segmentation_server = ["demo_static/*"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: starts a real gRPC server on a local TLS port (deselect with -m 'not integration')",
+    "gpu: needs a CUDA device and the real SAM2 weights; none of the default tests do",
+]

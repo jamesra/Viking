@@ -12,7 +12,7 @@ namespace Geometry.Transforms
     /// A transform that uses a triangulation
     /// </summary>
     [Serializable]
-    public abstract class TriangulationTransform : ReferencePointBasedTransform, IDisposable, IDiscreteTransform, IControlPointTriangulation
+    public abstract class TriangulationTransform : ReferencePointBasedTransform, IDisposable, IDiscreteTransform, IControlPointTriangulation, ISpatialIndexPrewarm
     {
         /// <summary>
         /// Return the control triangle which can map the point
@@ -138,12 +138,15 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override Vector2[] Transform(in Vector2[] Points)
         {
-            return [.. Points.Select(p =>
+            Vector2[] output = new Vector2[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
             {
-                return GetTransform(p) is MappingTriangle t
+                Vector2 p = Points[i];
+                output[i] = GetTransform(p) is MappingTriangle t
                     ? t.Transform(p)
                     : throw new ArgumentOutOfRangeException(nameof(Points), string.Format("Transform: Point could not be mapped {0}", p.ToString()));
-            })];
+            }
+            return output;
         }
 
         /// <summary>
@@ -172,12 +175,16 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override bool[] TryTransform(in Vector2[] Points, out Vector2[] output)
         {
-            MappingTriangle?[] triangles = [.. Points.Select(Point => GetTransform(Point))];
-            bool[] IsTransformed = [.. triangles.Select(t => t.HasValue)];
-            Vector2[] inputPoints = Points;
-
-            output = [.. triangles.Select((tri, i) =>
-                tri is MappingTriangle triangle ? triangle.Transform(inputPoints[i]) : default)];
+            output = new Vector2[Points.Length];
+            bool[] IsTransformed = new bool[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+            {
+                if (GetTransform(Points[i]) is MappingTriangle triangle)
+                {
+                    output[i] = triangle.Transform(Points[i]);
+                    IsTransformed[i] = true;
+                }
+            }
 
             return IsTransformed;
         }
@@ -213,12 +220,15 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override Vector2[] InverseTransform(in Vector2[] Points)
         {
-            return [.. Points.Select(p =>
+            Vector2[] output = new Vector2[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
             {
-                return GetInverseTransform(p) is MappingTriangle t
+                Vector2 p = Points[i];
+                output[i] = GetInverseTransform(p) is MappingTriangle t
                     ? t.InverseTransform(p)
                     : throw new ArgumentOutOfRangeException(nameof(Points), string.Format("InverseTransform: Point could not be mapped {0}", p.ToString()));
-            })];
+            }
+            return output;
         }
 
         /// <summary>
@@ -248,12 +258,16 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public override bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] output)
         {
-            MappingTriangle?[] triangles = [.. Points.Select(Point => GetInverseTransform(Point))];
-            bool[] IsTransformed = [.. triangles.Select(t => t.HasValue)];
-            Vector2[] inputPoints = Points;
-
-            output = [.. triangles.Select((tri, i) =>
-                tri is MappingTriangle triangle ? triangle.InverseTransform(inputPoints[i]) : default)];
+            output = new Vector2[Points.Length];
+            bool[] IsTransformed = new bool[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+            {
+                if (GetInverseTransform(Points[i]) is MappingTriangle triangle)
+                {
+                    output[i] = triangle.InverseTransform(Points[i]);
+                    IsTransformed[i] = true;
+                }
+            }
 
             return IsTransformed;
         }
@@ -318,92 +332,97 @@ namespace Geometry.Transforms
         }
 
         /// <summary>
-        /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
+        /// RTrees over the triangles, one per space, each built the first time it is needed and then read without a lock.
         /// </summary>
-        ///
+        /// <remarks>
+        /// The fields are null until first use and are reset to null by <see cref="MinimizeMemory"/> and after
+        /// deserialization ([NonSerialized]). A <see cref="Lazy{T}"/> in ExecutionAndPublication mode makes concurrent first
+        /// callers wait for a single build. Grid transforms map forward by grid arithmetic and never touch the mapped-space
+        /// tree for that, so the two trees are built independently.
+        /// </remarks>
         [NonSerialized]
-        ReaderWriterLockSlim rwLockTriangles = new();
-        private RTree.RTree<MappingTriangle> _mapTrianglesRTree = null;
+        private Lazy<RTree.RTree<MappingTriangle>> _mapTrianglesRTree;
+
+        [NonSerialized]
+        private Lazy<RTree.RTree<MappingTriangle>> _controlTrianglesRTree;
 
         /// <summary>
-        /// Quadtree mapping mapped points to triangles that contain the points
+        /// RTree of triangles by their mapped-space bounding boxes
         /// </summary>
-        public RTree.RTree<MappingTriangle> mapTrianglesRTree
+        public RTree.RTree<MappingTriangle> mapTrianglesRTree => GetOrCreateTree(ref _mapTrianglesRTree, mappedSpace: true).Value;
+
+        /// <summary>
+        /// RTree of triangles by their control-space bounding boxes
+        /// </summary>
+        public RTree.RTree<MappingTriangle> controlTrianglesRTree => GetOrCreateTree(ref _controlTrianglesRTree, mappedSpace: false).Value;
+
+        private Lazy<RTree.RTree<MappingTriangle>> GetOrCreateTree(ref Lazy<RTree.RTree<MappingTriangle>> field, bool mappedSpace)
         {
-            get
-            {
-                //Try the read lock first since only one thread can be in upgradeable mode
-                try
-                {
-                    rwLockTriangles.EnterReadLock();
-                    if (_mapTrianglesRTree != null)
-                    {
-                        return _mapTrianglesRTree;
-                    }
-                }
-                finally
-                {
-                    if (rwLockTriangles.IsReadLockHeld)
-                        rwLockTriangles.ExitReadLock();
-                }
+            Lazy<RTree.RTree<MappingTriangle>> existing = Volatile.Read(ref field);
+            if (existing != null)
+                return existing;
 
-                //_mapTriangles was null, so get in line to populate it
-                try
-                {
-                    rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_mapTrianglesRTree is null)
-                        BuildTriangleRTree(); //Locks internally
-
-                    Debug.Assert(_mapTrianglesRTree != null);
-                    return _mapTrianglesRTree;
-                }
-                finally
-                {
-                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
-                        rwLockTriangles.ExitUpgradeableReadLock();
-                }
-            }
+            Lazy<RTree.RTree<MappingTriangle>> created = new(() => BuildTriangleRTree(mappedSpace), LazyThreadSafetyMode.ExecutionAndPublication);
+            return Interlocked.CompareExchange(ref field, created, null) ?? created;
         }
 
-        private RTree.RTree<MappingTriangle> _controlTrianglesRTree = null;
+        /// <summary>
+        /// Drops both RTrees so they are rebuilt from the current points on next use. Call after replacing <c>MapPoints</c>
+        /// on a copy, which would otherwise share the original's trees.
+        /// </summary>
+        protected void ResetTriangleRTrees()
+        {
+            Interlocked.Exchange(ref _mapTrianglesRTree, null);
+            Interlocked.Exchange(ref _controlTrianglesRTree, null);
+        }
 
         /// <summary>
-        /// Quadtree mapping control points to triangles that contain the points
+        /// The trees and the per-point triangle lists hold triangle bounds computed from the old points, for example after
+        /// <c>Translate</c> moves the control points in place.
         /// </summary>
-        public RTree.RTree<MappingTriangle> controlTrianglesRTree
+        protected override void OnMapPointsChanged()
+        {
+            base.OnMapPointsChanged();
+            ResetTriangleRTrees();
+            _TriangleList = null;
+        }
+
+        /// <summary>
+        /// Starts building both RTrees on the thread pool, for a transform that is about to be queried. The returned task
+        /// completes when both exist. Queries made before then wait for the build in progress instead of starting another.
+        /// </summary>
+        public Task PrewarmSpatialIndexAsync() => Task.Run(() =>
+        {
+            _ = controlTrianglesRTree;
+            _ = mapTrianglesRTree;
+        });
+
+        /// <summary>One triangle in one of the two triangle RTrees (about 1,070 bytes per triangle for both).</summary>
+        protected const long TriangleRTreeBytesPerTriangle = 535;
+        /// <summary>The per-point triangle lists built by <see cref="BuildTriangleList"/>.</summary>
+        protected const long TriangleListBytesPerPoint = 216;
+
+        /// <summary>
+        /// Bytes of triangle topology this transform owns: its triangle index array, plus edges in subclasses that keep
+        /// them. Grid transforms share both per grid size and count none.
+        /// </summary>
+        protected virtual long EstimatedTopologyBytes => (_TriangleIndicies?.Length ?? 0) * (long)sizeof(int);
+
+        /// <summary>Adds the triangle topology, per-point triangle lists and whichever triangle RTrees are built.</summary>
+        public override long EstimatedMemoryBytes
         {
             get
             {
-                //Try the read lock first since only one thread can be in upgradeable mode
-                try
-                {
-                    rwLockTriangles.EnterReadLock();
-                    if (_controlTrianglesRTree != null)
-                    {
-                        return _controlTrianglesRTree;
-                    }
-                }
-                finally
-                {
-                    if (rwLockTriangles.IsReadLockHeld)
-                        rwLockTriangles.ExitReadLock();
-                }
+                long bytes = base.EstimatedMemoryBytes + EstimatedTopologyBytes;
+                if (_TriangleList != null)
+                    bytes += MapPoints.Length * TriangleListBytesPerPoint;
 
-                //_mapTriangles was null, so get in line to populate it
-                try
-                {
-                    rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_controlTrianglesRTree is null)
-                        BuildTriangleRTree(); //Locks internally
-
-                    Debug.Assert(_controlTrianglesRTree != null);
-                    return _controlTrianglesRTree;
-                }
-                finally
-                {
-                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
-                        rwLockTriangles.ExitUpgradeableReadLock();
-                }
+                long triangles = (_TriangleIndicies?.Length ?? 0) / 3;
+                if (Volatile.Read(ref _mapTrianglesRTree) is { IsValueCreated: true })
+                    bytes += triangles * TriangleRTreeBytesPerTriangle;
+                if (Volatile.Read(ref _controlTrianglesRTree) is { IsValueCreated: true })
+                    bytes += triangles * TriangleRTreeBytesPerTriangle;
+                return bytes;
             }
         }
 
@@ -463,31 +482,37 @@ namespace Geometry.Transforms
             }
         }
 
+        /// <summary>
+        /// Builds both RTrees now, if they do not exist yet.
+        /// </summary>
         protected void BuildTriangleRTree()
         {
-            try
+            _ = mapTrianglesRTree;
+            _ = controlTrianglesRTree;
+        }
+
+        /// <summary>
+        /// Builds the RTree for one space. Throws for a degenerate triangle, as building each triangle's <see cref="Triangle"/>
+        /// for its bounding box used to.
+        /// </summary>
+        private RTree.RTree<MappingTriangle> BuildTriangleRTree(bool mappedSpace)
+        {
+            int[] triangleIndicies = this.TriangleIndicies;
+            MappingVector2[] mapPoints = this.MapPoints;
+            RTree.RTree<MappingTriangle> tree = new();
+
+            for (int i = 0; i < triangleIndicies.Length; i += 3)
             {
-                rwLockTriangles.EnterWriteLock();
+                MappingTriangle t = new(mapPoints, triangleIndicies[i], triangleIndicies[i + 1], triangleIndicies[i + 2]);
+                Vector2 a = mappedSpace ? mapPoints[t.N1].MappedPoint : mapPoints[t.N1].ControlPoint;
+                Vector2 b = mappedSpace ? mapPoints[t.N2].MappedPoint : mapPoints[t.N2].ControlPoint;
+                Vector2 c = mappedSpace ? mapPoints[t.N3].MappedPoint : mapPoints[t.N3].ControlPoint;
+                Triangle.ThrowIfDegenerate(a, b, c);
 
-                this._mapTrianglesRTree = new RTree.RTree<MappingTriangle>();
-                this._controlTrianglesRTree = new RTree.RTree<MappingTriangle>();
-
-                for (int i = 0; i < this.TriangleIndicies.Length; i += 3)
-                {
-                    MappingTriangle t = new(this.MapPoints,
-                                                                    _TriangleIndicies[i],
-                                                                    _TriangleIndicies[i + 1],
-                                                                    _TriangleIndicies[i + 2]);
-
-                    this._mapTrianglesRTree.Add(t.Mapped.BoundingBox.ToRTreeRect(0), t);
-                    this._controlTrianglesRTree.Add(t.Control.BoundingBox.ToRTreeRect(0), t);
-                }
+                tree.Add((mappedSpace ? t.MappedBoundingBox : t.ControlBoundingBox).ToRTreeRect(0), t);
             }
-            finally
-            {
-                if (rwLockTriangles.IsWriteLockHeld)
-                    rwLockTriangles.ExitWriteLock();
-            }
+
+            return tree;
         }
 
         private List<MappingVector2> IntersectingRectangleRTree(in Rectangle gridRect,
@@ -570,20 +595,9 @@ namespace Geometry.Transforms
         /// </summary>
         public override void MinimizeMemory()
         {
-
-            try
-            {
-                rwLockTriangles.EnterWriteLock();
-
-                _mapTrianglesRTree = null;
-                _controlTrianglesRTree = null;
-                _TriangleList = null;
-            }
-            finally
-            {
-                if (rwLockTriangles.IsWriteLockHeld)
-                    rwLockTriangles.ExitWriteLock();
-            }
+            //A query already holding a tree keeps using it; the next query builds a new one.
+            ResetTriangleRTrees();
+            _TriangleList = null;
 
             Edges = null;
 
@@ -597,11 +611,7 @@ namespace Geometry.Transforms
         {
             if (disposing)
             {
-                if (rwLockTriangles is null == false)
-                {
-                    rwLockTriangles.Dispose();
-                    rwLockTriangles = null;
-                }
+                ResetTriangleRTrees();
             }
         }
 
@@ -614,9 +624,26 @@ namespace Geometry.Transforms
 
 
         /// <summary>
+        /// Below this many unmapped points, hull crossings are resolved on the calling thread. Section warps already run tiles
+        /// in parallel, and most tiles have no unmapped points or only a handful.
+        /// </summary>
+        private const int ParallelEdgeResolutionThreshold = 256;
+
+        /// <summary>
+        /// Padding for the bounds test that filters hull candidates. Containment is inclusive at triangle edges, so the bounds
+        /// test is padded to stay a strict superset of <see cref="ITransform.CanInverseTransform"/>.
+        /// </summary>
+        private const double HullCandidateBoundsPadding = 1.0;
+
+        /// <summary>
         /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
         /// of this transform to match mapped section of adding transform
         /// </summary>
+        /// <remarks>
+        /// Each control point of <paramref name="AtoB"/> is mapped through <paramref name="BtoC"/> once. Points that do not map are
+        /// replaced by the points where their edges cross BtoC's hull (<see cref="UnmappedEdgeResolver"/>). Safe to call
+        /// concurrently for different <paramref name="AtoB"/> transforms sharing one <paramref name="BtoC"/>.
+        /// </remarks>
         public static ITransformControlPoints Transform(ITransform BtoC, IControlPointTriangulation AtoB, TransformBasicInfo info)
         {
             if (BtoC is null)
@@ -646,129 +673,55 @@ namespace Geometry.Transforms
             //filter.ControlBounds = new Rectangle(double.MinValue, double.MinValue, 0, 0);
             //filter.MappedBounds = new Rectangle(double.MinValue, double.MinValue, 0, 0);
 
-            List<AddTransformThreadObj> threadObjList = [];
+            //Map every control point of the warping transform through the fixed transform once
+            MappingVector2[] warpingPoints = AtoB.MapPoints;
+            Vector2[] warpingControlPoints = new Vector2[warpingPoints.Length];
+            for (int i = 0; i < warpingPoints.Length; i++)
+                warpingControlPoints[i] = warpingPoints[i].ControlPoint;
 
-            List<ManualResetEvent> doneEvents = [];
-            List<MappingVector2> newPoints = new(AtoB.MapPoints.Length);
+            bool[] mapped = BtoC.TryTransform(warpingControlPoints, out Vector2[] mappedControlPoints);
 
-#if DEBUG
-            //            List<Vector2> mapPointList = new List<Vector2>(newPoints.Count);
-#endif
-
-            int MinThreadPoints = 64;
-
-            //            Trace.WriteLine("Starting with " + mapPoints.Length + " points", "Geometry"); 
-
-            //    List<MappingVector2> newPoints = new List<MappingVector2>(); 
-
-            //           Trace.WriteLine("Started GridTransform.Add with " + mapPoints.Length.ToString() + " points", "Geometry"); 
-
-            //Search all mapping triangles and update control points, if they fall outside the grid then discard the triangle
-            //Give each thread a lot of work to do
-            int PointsPerThread = AtoB.MapPoints.Length / (System.Environment.ProcessorCount * 8);
-            if (PointsPerThread < MinThreadPoints)
+            List<MappingVector2> newPoints = new(warpingPoints.Length);
+            List<int> unmappedPoints = [];
+            for (int i = 0; i < warpingPoints.Length; i++)
             {
-                PointsPerThread = MinThreadPoints;
+                if (mapped[i])
+                    newPoints.Add(new MappingVector2(mappedControlPoints[i], warpingPoints[i].MappedPoint));
+                else
+                    unmappedPoints.Add(i);
             }
-
-            for (int iPoint = 0; iPoint < AtoB.MapPoints.Length; iPoint += PointsPerThread)
-            {
-                //Create a series of points for the thread to process so they aren't constantly hitting the queue lock looking for new work. 
-                List<int> listPoints = new(PointsPerThread);
-                for (int iAddPoint = iPoint; iAddPoint < iPoint + PointsPerThread; iAddPoint++)
-                {
-                    //Don't add if the point is out of range
-                    if (iAddPoint >= AtoB.MapPoints.Length)
-                        break;
-
-                    listPoints.Add(iAddPoint);
-                }
-
-                //MappingVector2 mapPoint = mapPoints[iPoint];
-                AddTransformThreadObj AddThreadObj = null;
-                try
-                {
-                    AddThreadObj = new AddTransformThreadObj([.. listPoints], AtoB, BtoC);
-
-                    threadObjList.Add(AddThreadObj);
-
-                    if (AtoB.MapPoints.Length <= MinThreadPoints)
-                    {
-                        AddThreadObj.DoneEvent.Set();
-                        AddThreadObj.ThreadPoolCallback(System.Threading.Thread.CurrentThread);
-                    }
-                    else
-                    {
-                        doneEvents.Add(AddThreadObj.DoneEvent);
-                        //For single threaded debug, comment out threadpool and uncomment AddThreadObj.ThreadPoolCallback line
-                        ThreadPool.QueueUserWorkItem(AddThreadObj.ThreadPoolCallback);
-                    }
-
-                    AddThreadObj = null;
-                }
-                catch (Exception)
-                {
-                    AddThreadObj?.Dispose();
-                    AddThreadObj = null;
-
-                    throw;
-                }
-
-#if false
-                for (int iTest = 1; iTest < newPoints.Count; iTest++)
-                {
-                    Debug.Assert(newPoints[iTest - 1].ControlPoint != newPoints[iTest].ControlPoint); 
-                }
-
-                for (int iMap = 0; iMap < AddThreadObj.newPoints.Length; iMap++)
-                {
-                    mapPointList.Add(AddThreadObj.newPoints[iMap].MappedPoint);
-                }
-
-                mapPointList.Sort();
-
-                for (int iMap = 1; iMap < mapPointList.Count; iMap++)
-                {
-                    Debug.Assert(Vector2.Distance(mapPointList[iMap], mapPointList[iMap - 1]) > Global.epsilon);
-                }
-#endif
-            }
-
-            //Wait for the threads to finish processing.  There is a 64 handle limit for WaitAll so we wait on one at a time
-            if (doneEvents.Count > 0)
-                ManualResetEvent.WaitAll([.. doneEvents]);
-
-            newPoints.Clear();
 
             //This indicates if every original point was transformable.  If it is true and we started with a grid transform we then know the output can also be a grid transform
-            bool AllPointsTransformed = true;
-            foreach (AddTransformThreadObj obj in threadObjList)
-            {
-                AllPointsTransformed = AllPointsTransformed && obj.AllPointsTransformed;
-                if (obj.newPoints != null)
-                    newPoints.AddRange(obj.newPoints);
+            bool AllPointsTransformed = unmappedPoints.Count == 0;
 
-                obj.Dispose();
+            //Edges from unmapped points are cut where they leave the fixed transform. Only a discrete fixed transform has a hull to cut against.
+            if (!AllPointsTransformed && BtoC is IDiscreteTransform discreteBtoC)
+            {
+                if (unmappedPoints.Count < ParallelEdgeResolutionThreshold)
+                {
+                    foreach (int iPoint in unmappedPoints)
+                        UnmappedEdgeResolver.AddHullCrossings(iPoint, AtoB, discreteBtoC, newPoints);
+                }
+                else
+                {
+                    object mergeLock = new();
+                    Parallel.ForEach(System.Collections.Concurrent.Partitioner.Create(0, unmappedPoints.Count),
+                        () => new List<MappingVector2>(),
+                        (range, _, local) =>
+                        {
+                            for (int k = range.Item1; k < range.Item2; k++)
+                                UnmappedEdgeResolver.AddHullCrossings(unmappedPoints[k], AtoB, discreteBtoC, local);
+                            return local;
+                        },
+                        local =>
+                        {
+                            lock (mergeLock)
+                                newPoints.AddRange(local);
+                        });
+                }
             }
 
-            //            Trace.WriteLine("Mapped " + newPoints.Count + " points", "Geometry"); 
-
-#if false
-
-            mapPointList.Clear(); 
-            for (int iMap = 0; iMap < newPoints.Count; iMap++)
-            {
-                mapPointList.Add(newPoints[iMap].MappedPoint);
-            }
-
-            mapPointList.Sort();
-
-            for (int iMap = 1; iMap < mapPointList.Count; iMap++)
-            {
-                Debug.Assert(Vector2.Distance(mapPointList[iMap], mapPointList[iMap - 1]) > Global.epsilon);
-            }
-#endif
-
+            //Both passes sort, so the result does not depend on the order hull crossings were added in
             MappingVector2.RemoveControlSpaceDuplicates(newPoints);
             MappingVector2.RemoveMappedSpaceDuplicates(newPoints);
 
@@ -796,17 +749,23 @@ namespace Geometry.Transforms
             //Optional, but useful step. In rare cases we lose some mappable space when the fixed transform are inside the control space of the mapped transform, but the triangulation of the mapped control points would eliminate these points
             //in these cases we can test if they can be added back in.
 
-            System.Collections.Concurrent.ConcurrentBag<MappingVector2> MappableFixedPoints = [];
+            List<MappingVector2> MappableFixedPoints = [];
 
             if (BtoC is ITransformControlPoints BtoCTriTransform)
             {
                 //We only check for points on the convex hull, this eliminates losing mappable area, but may not retain high warp correction areas.
                 var BtoC_ControlPoints = BtoCTriTransform.MapPoints.Select(mp => mp.ControlPoint).ToArray();
                 var BtoC_ConvexHullControlPoints = BtoC_ControlPoints.ConvexHull(out var originalIndicies);
-                var BtoC_PointsOfConcern = originalIndicies.Select(i => BtoCTriTransform.MapPoints[i]).ToArray();
 
-                Parallel.ForEach<MappingVector2>(BtoC_PointsOfConcern, FixedPointPair =>
+                //A hull point can only be added if AtoB can inverse-map it, which needs it inside AtoB's control bounds. Testing
+                //the bounds first skips the containment tests, and the RTree builds they trigger, for the hull points far from AtoB.
+                Rectangle AtoBControlBounds = AtoB.ControlBounds;
+                foreach (int iHull in originalIndicies)
                 {
+                    MappingVector2 FixedPointPair = BtoCTriTransform.MapPoints[iHull];
+                    if (!AtoBControlBounds.Covers(FixedPointPair.MappedPoint, HullCandidateBoundsPadding))
+                        continue;
+
                     if (!newTransform.CanInverseTransform(FixedPointPair.ControlPoint) &&
                         AtoB.CanInverseTransform(FixedPointPair.MappedPoint))
                     {
@@ -814,9 +773,8 @@ namespace Geometry.Transforms
                         MappableFixedPoints.Add(new MappingVector2(FixedPointPair.ControlPoint, NewMapPoint));
                     }
                 }
-                );
 
-                if (!MappableFixedPoints.IsEmpty)
+                if (MappableFixedPoints.Count > 0)
                 {
                     foreach (MappingVector2 newPoint in MappableFixedPoints)
                     {

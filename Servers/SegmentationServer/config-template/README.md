@@ -14,7 +14,9 @@ This folder is a **template** for the Let's Encrypt env file. Copy it to the loc
 
 PEM paths inside the container are `/etc/letsencrypt/live/<domain>/fullchain.pem` and `privkey.pem`.
 
-Docker publishes **40080:80** for cleartext gRPC and **40443:443** for TLS. Host ports 80 and 443 belong to the reverse proxy. Point the router’s `segmentation.codepharm.net:443` forward at host port 40443.
+Docker publishes **40443:443** for gRPC over TLS. There is no cleartext gRPC port. Host ports 80 and 443 belong to the reverse proxy. Point the router’s `segmentation.codepharm.net:443` forward at host port 40443.
+
+The optional point-prompt page listens on container port **8443** (host **40444**) only when `SEGMENTATION_DEMO_SITE=1`. It uses the same PEM files as gRPC TLS. While the flag is off nothing accepts connections on 8443. Forward `segmentation.codepharm.net:40444` only if that page should be reachable. `segmentation-certbot-renewer` (profile `letsencrypt`) enrolls the certificate and restarts `segmentation-server` when it renews.
 
 Enrollment:
 
@@ -22,7 +24,7 @@ Enrollment:
 docker compose --env-file D:/Docker/Builds/SegmentationServer/.env --profile letsencrypt up -d
 ```
 
-Without `--profile letsencrypt`, `segmentation-server` still starts and serves cleartext on host port 40080. TLS on container port 443 binds only after the certificate files exist.
+`segmentation-server` only listens with TLS, so it needs the certificate files. At start it waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for `SSL_CERT_PATH` and `SSL_KEY_PATH` to appear, then exits with a message naming the missing files; `restart: unless-stopped` starts it again. Bring it up together with the renewer (`--profile letsencrypt`) the first time, or provide the PEM files some other way. For a local run without Let's Encrypt, generate a self-signed pair with `python -m segmentation_server.dev_cert --out ./dev-cert` and point `SSL_CERT_PATH` and `SSL_KEY_PATH` at it.
 
 ## Fine-tuned checkpoint
 

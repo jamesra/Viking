@@ -670,22 +670,11 @@ namespace Geometry
         public static double PolygonArea(this Vector2[] points)
         {
             //System.Diagnostics.Debug.Assert(points.First() == points.Last(), "First and last point must be identical to determine area of polygon");
-            points = points.EnsureClosedRing();
+            int count = RingMath.ClosedCount(points);
 
-            //Ensure the points do not have large values.
-            Vector2 avg = points.Average();
-            points = points.Translate(-avg);
-
-            double accumulator = 0;
-
-            for (int i = 0; i < points.Length - 1; i++)
-            {
-                Vector2 p0 = points[i];
-                Vector2 p1 = points[i + 1];
-                accumulator += ((p0.X * p1.Y) - (p1.X * p0.Y));
-            }
-
-            return accumulator / 2.0;
+            //Subtract the ring average so large coordinates do not lose precision in the products.
+            Vector2 avg = RingMath.ShiftedAverage(points, count, Vector2.Zero);
+            return RingMath.ShiftedArea(points, count, Vector2.Zero, avg);
         }
 
         public static Vector2 Min(this IEnumerable<Vector2> points)

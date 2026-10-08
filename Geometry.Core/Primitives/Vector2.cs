@@ -295,7 +295,11 @@ namespace Geometry
             return s;
         }
 
-        public readonly double Magnitude => Math.Sqrt(Math.Pow(X, 2) + Math.Pow(Y, 2));
+        /// <summary>Euclidean length of the vector from the origin.</summary>
+        public readonly double Magnitude => Math.Sqrt(MagnitudeSquared);
+
+        /// <summary>Squared length of the vector; prefer this over <see cref="Magnitude"/> when only comparing lengths.</summary>
+        public readonly double MagnitudeSquared => (X * X) + (Y * Y);
 
         public Vector2 Normalize() => Normalize(this);
 

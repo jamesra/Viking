@@ -1,0 +1,66 @@
+@using Viking.Identity.Server.Extensions.Services
+@model List<VolumeCatalogSyncResult>
+
+@{
+    ViewData["Title"] ??= "Catalog sync results";
+    var created = Model.Count(r => r.CreatedAnnotationServer);
+    var problems = Model.Count(r => r.Status != CatalogSyncStatus.Linked && r.Status != CatalogSyncStatus.ImageOnly);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-arrow-repeat"></i> @ViewData["Title"]</h2>
+    <div class="btn-group">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-database"></i> Annotation Servers
+        </a>
+        @if (User.IsInRole(Special.Roles.Admin))
+        {
+            <a asp-action="Catalog" class="btn btn-outline-primary">
+                <i class="bi bi-clipboard-data"></i> Catalog Report
+            </a>
+        }
+    </div>
+</div>
+
+<div class="alert @(problems > 0 ? "alert-warning" : "alert-success")">
+    @Model.Count volume(s) read. @Model.Count(r => r.Status == CatalogSyncStatus.Linked) linked to an annotation server,
+    @created new annotation server(s), @Model.Count(r => r.Status == CatalogSyncStatus.ImageOnly) image-only,
+    @problems need attention.
+</div>
+
+<table class="table table-modern">
+    <thead>
+        <tr>
+            <th>Volume</th>
+            <th>Status</th>
+            <th>Annotation Server</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var result in Model.OrderBy(r => r.Status == CatalogSyncStatus.Linked).ThenBy(r => r.VolumeName))
+        {
+            var badge = result.Status switch
+            {
+                CatalogSyncStatus.Linked => "bg-success",
+                CatalogSyncStatus.ImageOnly => "bg-info",
+                _ => "bg-danger"
+            };
+            <tr>
+                <td><a asp-controller="Volumes" asp-action="Details" asp-route-id="@result.VolumeId">@result.VolumeName</a></td>
+                <td><span class="badge @badge">@result.Status</span></td>
+                <td>
+                    @if (result.AnnotationServerId.HasValue)
+                    {
+                        <a asp-action="Details" asp-route-id="@result.AnnotationServerId">@(result.AnnotationServerName ?? result.AnnotationServerId.ToString())</a>
+                        @if (result.CreatedAnnotationServer)
+                        {
+                            <span class="badge bg-warning text-dark ms-1">new</span>
+                        }
+                    }
+                </td>
+                <td class="small">@result.Message</td>
+            </tr>
+        }
+    </tbody>
+</table>

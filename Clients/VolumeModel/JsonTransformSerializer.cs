@@ -1,59 +1,58 @@
 using Geometry;
 using Geometry.Transforms;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace VolumeModel
 {
     /// <summary>
-    /// Mosaic/stos cache on disk. Files older than Global.OldestValidCachedTransform must be rebuilt.
+    /// Reads and writes the on-disk transform caches: parsed mosaic tiles (TilesToSectionMapping) and warped tiles
+    /// (SectionToVolumeMapping). Files older than <c>Global.OldestValidCachedTransform</c> must be rebuilt.
     /// </summary>
+    /// <remarks>
+    /// <para>Format version 2, written by hand with <see cref="Utf8JsonWriter"/> so nothing depends on reflection over the
+    /// transform classes (the version 1 reflection serializer wrote <c>{}</c> for every transform):</para>
+    /// <code>{"format":"viking-transform-cache","version":2,"transforms":[
+    ///   {"type":"grid","info":{...},"gridSizeX":n,"gridSizeY":n,"mappedBounds":[left,right,bottom,top],"points":[cx,cy,mx,my,...]},
+    ///   {"type":"mesh","info":{...},"points":[...]},
+    ///   {"type":"rbf","info":{...},"points":[...]} ]}</code>
+    /// <para>Doubles are written in round-trip form and points in <c>MapPoints</c> order, and each transform is rebuilt
+    /// with the constructor that built it, so a loaded transform maps exactly like the one that was saved. Mesh
+    /// triangulations and RBF weights are recomputed on first use, as they are for a freshly built transform.</para>
+    /// <para>Only <see cref="GridTransform"/>, <see cref="MeshTransform"/> and <see cref="RBFTransform"/> are supported;
+    /// writing anything else throws <see cref="NotSupportedException"/>. Reading anything other than version 2, including
+    /// version 1 files, throws <see cref="JsonException"/>; callers treat that as a stale cache and rebuild it.</para>
+    /// <para>Stateless and thread safe. Callers own the streams.</para>
+    /// </remarks>
     public static class JsonTransformSerializer
     {
-        internal static JsonSerializerOptions ReadOptions { get; } = CreateOptions();
-        private static readonly JsonSerializerOptions _writeJsonOptions = CreateOptions();
+        private const string FormatName = "viking-transform-cache";
+        private const int FormatVersion = 2;
 
-        private static JsonSerializerOptions CreateOptions()
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = false,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-                ReferenceHandler = ReferenceHandler.IgnoreCycles,
-            };
+        private const string GridType = "grid";
+        private const string MeshType = "mesh";
+        private const string RbfType = "rbf";
 
-            options.Converters.Add(new JsonStringEnumConverter());
-            options.Converters.Add(new Vector2JsonConverter());
-            options.Converters.Add(new RectangleJsonConverter());
-            options.Converters.Add(new TransformBasicInfoJsonConverter());
-            options.Converters.Add(new MappingVector2JsonConverter());
-            options.Converters.Add(new TransformJsonConverter());
-            return options;
-        }
-
+        /// <summary>Writes one transform as a cache file with a single entry.</summary>
         public static void Serialize(Stream stream, ITransform transform)
         {
-            if (stream is null)
-                throw new ArgumentNullException(nameof(stream));
             if (transform is null)
                 throw new ArgumentNullException(nameof(transform));
-
-            using var writer = new Utf8JsonWriter(stream);
-            TransformJsonConverter.WriteTransform(writer, transform, _writeJsonOptions);
-            writer.Flush();
+            SerializeArray(stream, [transform]);
         }
 
+        /// <summary>Reads a cache file written by <see cref="Serialize"/> and returns its only transform.</summary>
         public static ITransform Deserialize(Stream stream)
         {
-            if (stream is null)
-                throw new ArgumentNullException(nameof(stream));
-            return JsonSerializer.Deserialize<ITransform>(stream, ReadOptions);
+            ITransform[] transforms = DeserializeArray(stream);
+            if (transforms.Length != 1)
+                throw new JsonException($"Expected one transform, found {transforms.Length}");
+            return transforms[0];
         }
 
+        /// <summary>Writes <paramref name="transforms"/> in order. Throws <see cref="NotSupportedException"/> for an unsupported transform type before anything is written.</summary>
         public static void SerializeArray(Stream stream, ITransform[] transforms)
         {
             if (stream is null)
@@ -61,315 +60,256 @@ namespace VolumeModel
             if (transforms is null)
                 throw new ArgumentNullException(nameof(transforms));
 
-            using var writer = new Utf8JsonWriter(stream);
-            writer.WriteStartArray();
-            foreach (ITransform transform in transforms)
-                TransformJsonConverter.WriteTransform(writer, transform, _writeJsonOptions);
+            foreach (ITransform t in transforms)
+                _ = TypeName(t);
+
+            using Utf8JsonWriter writer = new(stream);
+            writer.WriteStartObject();
+            writer.WriteString("format", FormatName);
+            writer.WriteNumber("version", FormatVersion);
+            writer.WriteStartArray("transforms");
+            foreach (ITransform t in transforms)
+                WriteTransform(writer, t);
             writer.WriteEndArray();
+            writer.WriteEndObject();
             writer.Flush();
         }
 
+        /// <summary>Reads every transform in a version 2 cache file, in the order they were written.</summary>
         public static ITransform[] DeserializeArray(Stream stream)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
-            using JsonDocument doc = JsonDocument.Parse(stream);
-            JsonElement root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Array)
-                throw new JsonException("Expected JSON array of transforms");
-
-            var converter = new TransformJsonConverter();
-            var results = new ITransform[root.GetArrayLength()];
-            for (int i = 0; i < results.Length; i++)
+            byte[] bytes;
+            using (MemoryStream buffer = new())
             {
-                byte[] elementBytes = System.Text.Encoding.UTF8.GetBytes(root[i].GetRawText());
-                var reader = new Utf8JsonReader(elementBytes);
+                stream.CopyTo(buffer);
+                bytes = buffer.ToArray();
+            }
+
+            Utf8JsonReader reader = new(bytes);
+            Expect(ref reader, JsonTokenType.StartObject);
+
+            string format = null;
+            int version = 0;
+            List<ITransform> transforms = null;
+            while (Next(ref reader) == JsonTokenType.PropertyName)
+            {
+                string name = reader.GetString();
                 reader.Read();
-                results[i] = converter.Read(ref reader, typeof(ITransform), ReadOptions)
-                    ?? throw new JsonException($"Transform at index {i} deserialized to null");
+                switch (name)
+                {
+                    case "format": format = reader.GetString(); break;
+                    case "version": version = reader.GetInt32(); break;
+                    case "transforms":
+                        if (format != FormatName || version != FormatVersion)
+                            throw new JsonException($"Unsupported transform cache format '{format}' version {version}");
+                        transforms = ReadTransforms(ref reader);
+                        break;
+                    default: reader.Skip(); break;
+                }
             }
 
-            return results;
-        }
-    }
+            if (format != FormatName || version != FormatVersion || transforms is null)
+                throw new JsonException($"Not a version {FormatVersion} transform cache");
 
-    public class TransformJsonConverter : JsonConverter<ITransform>
-    {
-        public override ITransform Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            if (reader.TokenType != JsonTokenType.StartObject)
-                throw new JsonException("Expected start of object");
-
-            using JsonDocument jsonDoc = JsonDocument.ParseValue(ref reader);
-            return DeserializeTransform(jsonDoc.RootElement);
-        }
-
-        internal static ITransform DeserializeTransform(JsonElement root)
-        {
-            if (root.TryGetProperty("gridSizeX", out JsonElement gridSizeXEl))
-            {
-                MappingVector2[] mapPoints = ReadMapPoints(root);
-                TransformBasicInfo info = ReadInfo(root);
-                Rectangle mappedBounds = root.TryGetProperty("mappedBounds", out JsonElement mb)
-                    ? RectangleSerialization.Read(mb)
-                    : mapPoints.MappedBounds();
-                return new GridTransform(mapPoints, mappedBounds, gridSizeXEl.GetInt32(),
-                    root.GetProperty("gridSizeY").GetInt32(), info);
-            }
-
-            if (root.TryGetProperty("triangleIndicies", out _))
-            {
-                MappingVector2[] mapPoints = ReadMapPoints(root);
-                return new MeshTransform(mapPoints, ReadInfo(root));
-            }
-
-            if (root.TryGetProperty("mapPoints", out _))
-            {
-                MappingVector2[] mapPoints = ReadMapPoints(root);
-                return new RBFTransform(mapPoints, ReadInfo(root));
-            }
-
-            throw new JsonException("Unable to determine transform type from JSON");
+            return [.. transforms];
         }
 
-        private static MappingVector2[] ReadMapPoints(JsonElement root) =>
-            root.GetProperty("mapPoints").Deserialize<MappingVector2[]>(JsonTransformSerializer.ReadOptions)
-            ?? throw new JsonException("mapPoints is null");
-
-        private static TransformBasicInfo ReadInfo(JsonElement root) =>
-            TransformBasicInfoSerialization.Read(root.GetProperty("info"));
-
-        public override void Write(Utf8JsonWriter writer, ITransform value, JsonSerializerOptions options) =>
-            WriteTransform(writer, value, options);
-
-        internal static void WriteTransform(Utf8JsonWriter writer, ITransform value, JsonSerializerOptions options)
+        private static string TypeName(ITransform t) => t switch
         {
-            if (value is null)
-            {
-                writer.WriteNullValue();
-                return;
-            }
+            null => throw new NotSupportedException("Null transform in cache"),
+            GridTransform => GridType,
+            MeshTransform => MeshType,
+            RBFTransform => RbfType,
+            _ => throw new NotSupportedException($"Unsupported transform type for cache: {t.GetType().Name}"),
+        };
 
-            if (value is not ReferencePointBasedTransform rbt || value is not ITransformInfo infoTransform)
-                throw new JsonException($"Unsupported transform type for cache: {value.GetType().Name}");
-
+        private static void WriteTransform(Utf8JsonWriter writer, ITransform t)
+        {
+            ReferencePointBasedTransform points = (ReferencePointBasedTransform)t;
             writer.WriteStartObject();
-            writer.WritePropertyName("mapPoints");
-            WriteMapPoints(writer, rbt.MapPoints);
+            writer.WriteString("type", TypeName(t));
             writer.WritePropertyName("info");
-            TransformBasicInfoSerialization.Write(writer, infoTransform.Info);
+            WriteInfo(writer, ((ITransformInfo)t).Info);
 
-            switch (value)
+            if (t is GridTransform grid)
             {
-                case GridTransform grid:
-                    writer.WriteNumber("gridSizeX", grid.GridSizeX);
-                    writer.WriteNumber("gridSizeY", grid.GridSizeY);
-                    writer.WritePropertyName("mappedBounds");
-                    RectangleSerialization.Write(writer, grid.MappedBounds);
-                    break;
-                case MeshTransform mesh:
-                    writer.WritePropertyName("triangleIndicies");
-                    JsonSerializer.Serialize(writer, mesh.TriangleIndicies, options);
-                    break;
+                writer.WriteNumber("gridSizeX", grid.GridSizeX);
+                writer.WriteNumber("gridSizeY", grid.GridSizeY);
+                writer.WriteStartArray("mappedBounds");
+                writer.WriteNumberValue(grid.MappedBounds.Left);
+                writer.WriteNumberValue(grid.MappedBounds.Right);
+                writer.WriteNumberValue(grid.MappedBounds.Bottom);
+                writer.WriteNumberValue(grid.MappedBounds.Top);
+                writer.WriteEndArray();
             }
 
-            writer.WriteEndObject();
-        }
-
-        private static void WriteMapPoints(Utf8JsonWriter writer, MappingVector2[] mapPoints)
-        {
-            writer.WriteStartArray();
-            foreach (MappingVector2 point in mapPoints)
-                MappingVector2JsonConverter.WritePoint(writer, point);
+            writer.WriteStartArray("points");
+            foreach (MappingVector2 p in points.MapPoints)
+            {
+                writer.WriteNumberValue(p.ControlPoint.X);
+                writer.WriteNumberValue(p.ControlPoint.Y);
+                writer.WriteNumberValue(p.MappedPoint.X);
+                writer.WriteNumberValue(p.MappedPoint.Y);
+            }
             writer.WriteEndArray();
-        }
-    }
-
-    internal static class Vector2Serialization
-    {
-        internal static void Write(Utf8JsonWriter writer, in Vector2 value)
-        {
-            writer.WriteStartObject();
-            writer.WriteNumber("x", value.X);
-            writer.WriteNumber("y", value.Y);
             writer.WriteEndObject();
         }
 
-        internal static Vector2 Read(JsonElement element)
-        {
-            double x = element.TryGetProperty("x", out JsonElement xEl) ? xEl.GetDouble()
-                : element.GetProperty("X").GetDouble();
-            double y = element.TryGetProperty("y", out JsonElement yEl) ? yEl.GetDouble()
-                : element.GetProperty("Y").GetDouble();
-            return new Vector2(x, y);
-        }
-
-        internal static Vector2 Read(ref Utf8JsonReader reader)
-        {
-            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-            return Read(doc.RootElement);
-        }
-    }
-
-    internal sealed class Vector2JsonConverter : JsonConverter<Vector2>
-    {
-        public override Vector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-            Vector2Serialization.Read(ref reader);
-
-        public override void Write(Utf8JsonWriter writer, Vector2 value, JsonSerializerOptions options) =>
-            Vector2Serialization.Write(writer, in value);
-    }
-
-    internal static class RectangleSerialization
-    {
-        internal static void Write(Utf8JsonWriter writer, in Rectangle value)
-        {
-            writer.WriteStartObject();
-            writer.WriteNumber("left", value.Left);
-            writer.WriteNumber("right", value.Right);
-            writer.WriteNumber("bottom", value.Bottom);
-            writer.WriteNumber("top", value.Top);
-            writer.WriteEndObject();
-        }
-
-        internal static Rectangle Read(JsonElement element)
-        {
-            return new Rectangle(
-                element.GetProperty("left").GetDouble(),
-                element.GetProperty("right").GetDouble(),
-                element.GetProperty("bottom").GetDouble(),
-                element.GetProperty("top").GetDouble());
-        }
-    }
-
-    internal sealed class RectangleJsonConverter : JsonConverter<Rectangle>
-    {
-        public override Rectangle Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-            return RectangleSerialization.Read(doc.RootElement);
-        }
-
-        public override void Write(Utf8JsonWriter writer, Rectangle value, JsonSerializerOptions options) =>
-            RectangleSerialization.Write(writer, in value);
-    }
-
-    internal static class TransformBasicInfoSerialization
-    {
-        internal static void Write(Utf8JsonWriter writer, TransformBasicInfo info)
+        private static void WriteInfo(Utf8JsonWriter writer, TransformBasicInfo info)
         {
             writer.WriteStartObject();
             switch (info)
             {
                 case TileTransformInfo tile:
-                    writer.WriteString("infoType", "tile");
+                    writer.WriteString("kind", "tile");
                     writer.WriteString("tileFileName", tile.TileFileName);
                     writer.WriteNumber("tileNumber", tile.TileNumber);
                     writer.WriteNumber("imageWidth", tile.ImageWidth);
                     writer.WriteNumber("imageHeight", tile.ImageHeight);
-                    writer.WriteString("lastModified", tile.LastModified.ToString("O"));
                     break;
                 case StosTransformInfo stos:
-                    writer.WriteString("infoType", "stos");
+                    writer.WriteString("kind", "stos");
                     writer.WriteNumber("controlSection", stos.ControlSection);
                     writer.WriteNumber("mappedSection", stos.MappedSection);
-                    writer.WriteString("lastModified", stos.LastModified.ToString("O"));
                     break;
                 default:
-                    writer.WriteString("infoType", "basic");
-                    writer.WriteString("lastModified", info.LastModified.ToString("O"));
+                    writer.WriteString("kind", "basic");
                     break;
             }
+
+            //ToBinary keeps the DateTimeKind, which cache validity checks depend on
+            writer.WriteNumber("lastModified", (info ?? new TransformBasicInfo()).LastModified.ToBinary());
             writer.WriteEndObject();
         }
 
-        internal static TransformBasicInfo Read(JsonElement element)
+        private static List<ITransform> ReadTransforms(ref Utf8JsonReader reader)
         {
-            string infoType = element.TryGetProperty("infoType", out JsonElement typeEl)
-                ? typeEl.GetString()
-                : "basic";
-            DateTime lastModified = element.TryGetProperty("lastModified", out JsonElement lmEl)
-                ? DateTime.Parse(lmEl.GetString(), null, System.Globalization.DateTimeStyles.RoundtripKind)
-                : DateTime.MinValue;
+            if (reader.TokenType != JsonTokenType.StartArray)
+                throw new JsonException("Expected the transforms array");
 
-            return infoType switch
-            {
-                "tile" => new TileTransformInfo(
-                    element.GetProperty("tileFileName").GetString(),
-                    element.GetProperty("tileNumber").GetInt32(),
-                    lastModified,
-                    element.GetProperty("imageWidth").GetDouble(),
-                    element.GetProperty("imageHeight").GetDouble()),
-                "stos" => new StosTransformInfo(
-                    element.GetProperty("controlSection").GetInt32(),
-                    element.GetProperty("mappedSection").GetInt32(),
-                    lastModified),
-                _ => new TransformBasicInfo(lastModified),
-            };
-        }
-    }
-
-    internal sealed class TransformBasicInfoJsonConverter : JsonConverter<TransformBasicInfo>
-    {
-        public override TransformBasicInfo Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-            return TransformBasicInfoSerialization.Read(doc.RootElement);
+            List<ITransform> transforms = [];
+            while (Next(ref reader) == JsonTokenType.StartObject)
+                transforms.Add(ReadTransform(ref reader));
+            return transforms;
         }
 
-        public override void Write(Utf8JsonWriter writer, TransformBasicInfo value, JsonSerializerOptions options) =>
-            TransformBasicInfoSerialization.Write(writer, value);
-    }
-
-    internal sealed class MappingVector2JsonConverter : JsonConverter<MappingVector2>
-    {
-        public override MappingVector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        private static ITransform ReadTransform(ref Utf8JsonReader reader)
         {
-            if (reader.TokenType != JsonTokenType.StartObject)
-                throw new JsonException("Expected start of object for MappingVector2");
+            string type = null;
+            TransformBasicInfo info = null;
+            int gridSizeX = 0, gridSizeY = 0;
+            Rectangle? mappedBounds = null;
+            MappingVector2[] points = null;
 
-            Vector2 control = default;
-            Vector2 mapped = default;
-            while (reader.Read())
+            while (Next(ref reader) == JsonTokenType.PropertyName)
             {
-                if (reader.TokenType == JsonTokenType.EndObject)
-                    break;
-                if (reader.TokenType != JsonTokenType.PropertyName)
-                    throw new JsonException("Expected property name");
-
                 string name = reader.GetString();
                 reader.Read();
-                if (string.Equals(name, "controlPoint", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(name, "control", StringComparison.OrdinalIgnoreCase))
+                switch (name)
                 {
-                    control = Vector2Serialization.Read(ref reader);
-                }
-                else if (string.Equals(name, "mappedPoint", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(name, "mapped", StringComparison.OrdinalIgnoreCase))
-                {
-                    mapped = Vector2Serialization.Read(ref reader);
-                }
-                else
-                {
-                    reader.Skip();
+                    case "type": type = reader.GetString(); break;
+                    case "info": info = ReadInfo(ref reader); break;
+                    case "gridSizeX": gridSizeX = reader.GetInt32(); break;
+                    case "gridSizeY": gridSizeY = reader.GetInt32(); break;
+                    case "mappedBounds":
+                        double[] b = ReadDoubles(ref reader);
+                        if (b.Length != 4)
+                            throw new JsonException("mappedBounds needs 4 values");
+                        mappedBounds = new Rectangle(b[0], b[1], b[2], b[3]);
+                        break;
+                    case "points": points = ReadPoints(ref reader); break;
+                    default: reader.Skip(); break;
                 }
             }
 
-            return new MappingVector2(control, mapped);
+            if (points is null || info is null)
+                throw new JsonException("Transform entry needs points and info");
+
+            return type switch
+            {
+                GridType when mappedBounds.HasValue => new GridTransform(points, mappedBounds.Value, gridSizeX, gridSizeY, info),
+                MeshType => new MeshTransform(points, info),
+                RbfType => new RBFTransform(points, info),
+                _ => throw new JsonException($"Unknown or incomplete transform entry of type '{type}'"),
+            };
         }
 
-        public override void Write(Utf8JsonWriter writer, MappingVector2 value, JsonSerializerOptions options) =>
-            WritePoint(writer, value);
-
-        internal static void WritePoint(Utf8JsonWriter writer, MappingVector2 value)
+        private static TransformBasicInfo ReadInfo(ref Utf8JsonReader reader)
         {
-            writer.WriteStartObject();
-            writer.WritePropertyName("controlPoint");
-            Vector2Serialization.Write(writer, value.ControlPoint);
-            writer.WritePropertyName("mappedPoint");
-            Vector2Serialization.Write(writer, value.MappedPoint);
-            writer.WriteEndObject();
+            if (reader.TokenType != JsonTokenType.StartObject)
+                throw new JsonException("Expected the info object");
+
+            string kind = "basic", tileFileName = null;
+            int tileNumber = 0, controlSection = 0, mappedSection = 0;
+            double imageWidth = 0, imageHeight = 0;
+            long lastModified = DateTime.MinValue.ToBinary();
+
+            while (Next(ref reader) == JsonTokenType.PropertyName)
+            {
+                string name = reader.GetString();
+                reader.Read();
+                switch (name)
+                {
+                    case "kind": kind = reader.GetString(); break;
+                    case "tileFileName": tileFileName = reader.GetString(); break;
+                    case "tileNumber": tileNumber = reader.GetInt32(); break;
+                    case "imageWidth": imageWidth = reader.GetDouble(); break;
+                    case "imageHeight": imageHeight = reader.GetDouble(); break;
+                    case "controlSection": controlSection = reader.GetInt32(); break;
+                    case "mappedSection": mappedSection = reader.GetInt32(); break;
+                    case "lastModified": lastModified = reader.GetInt64(); break;
+                    default: reader.Skip(); break;
+                }
+            }
+
+            DateTime modified = DateTime.FromBinary(lastModified);
+            return kind switch
+            {
+                "tile" => new TileTransformInfo(tileFileName, tileNumber, modified, imageWidth, imageHeight),
+                "stos" => new StosTransformInfo(controlSection, mappedSection, modified),
+                _ => new TransformBasicInfo(modified),
+            };
+        }
+
+        private static MappingVector2[] ReadPoints(ref Utf8JsonReader reader)
+        {
+            double[] values = ReadDoubles(ref reader);
+            if (values.Length % 4 != 0)
+                throw new JsonException("points must hold groups of four values");
+
+            MappingVector2[] points = new MappingVector2[values.Length / 4];
+            for (int i = 0; i < points.Length; i++)
+            {
+                int v = i * 4;
+                points[i] = new MappingVector2(new Vector2(values[v], values[v + 1]), new Vector2(values[v + 2], values[v + 3]));
+            }
+            return points;
+        }
+
+        private static double[] ReadDoubles(ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray)
+                throw new JsonException("Expected an array of numbers");
+
+            List<double> values = [];
+            while (Next(ref reader) == JsonTokenType.Number)
+                values.Add(reader.GetDouble());
+
+            if (reader.TokenType != JsonTokenType.EndArray)
+                throw new JsonException("Expected only numbers in the array");
+            return [.. values];
+        }
+
+        private static JsonTokenType Next(ref Utf8JsonReader reader) =>
+            reader.Read() ? reader.TokenType : throw new JsonException("Unexpected end of transform cache");
+
+        private static void Expect(ref Utf8JsonReader reader, JsonTokenType token)
+        {
+            if (Next(ref reader) != token)
+                throw new JsonException($"Expected {token}");
         }
     }
 }

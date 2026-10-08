@@ -79,7 +79,7 @@ namespace Viking.Identity.Server.Standalone
                     .WriteTo.File("IdentityServerApiLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
                 );
 
-                Log.Information("Starting IdentityServer...");
+                Log.Information("Starting IdentityServer {Version}...", ServiceVersion.Current);
                 
                 // Configure services
                 ConfigureServices(builder.Services, builder.Configuration);
@@ -443,10 +443,12 @@ namespace Viking.Identity.Server.Standalone
                 app.UseHsts();
             }
             app.UseSerilogRequestLogging();
+            app.UseServiceVersionHeader();
             app.UseForwardedHeaders();
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseRouting();
+            app.MapServiceVersion("IdentityServerStandalone");
 
             Log.Information("Adding IdentityServer middleware...");
             app.UseIdentityServer();
@@ -491,8 +493,9 @@ namespace Viking.Identity.Server.Standalone
                 // Only initialize the main application database
                 serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
                 serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-                // Skip PersistedGrants database initialization for now
-                Log.Information("Skipping PersistedGrants database initialization - using in-memory operational store");
+                // A signing key wrapped by a data-protection key that is no longer in the ring
+                // cannot sign tokens. Drop those keys and let Duende create a replacement.
+                SigningKeyRecovery.RemoveUnreadableSigningKeys(serviceScope.ServiceProvider);
             }
 
             return app;

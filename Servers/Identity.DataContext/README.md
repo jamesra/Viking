@@ -195,7 +195,7 @@ If you want to keep the database but reset migration history:
 The following data is seeded during database initialization:
 
 - **Admin Role**: Created with ID `Special.Roles.AdminId`
-- **Resource Types**: Resource, OrganizationalUnit, Group, Volume
+- **Resource Types**: Resource, OrganizationalUnit, Group, Volume, SegmentationService, AnnotationServer
 - **Standard Permissions**: Various permissions for different resource types
 - **Everyone Group**: A default group that all users can be assigned to
 

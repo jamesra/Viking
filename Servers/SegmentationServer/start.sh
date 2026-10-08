@@ -8,6 +8,11 @@ if [ -n "${TORCHINDUCTOR_CACHE_DIR:-}" ]; then
         || true
 fi
 
+if { [ "$VS_CODE_DEBUG" = "true" ] || [ "$PYCHARM_DEBUG" = "true" ]; } && ! python3 -c "import debugpy" 2>/dev/null && ! python3 -c "import pydevd_pycharm" 2>/dev/null; then
+    echo "VS_CODE_DEBUG/PYCHARM_DEBUG is set but this image has no debugger installed." >&2
+    echo "Rebuild with: docker build --build-arg INSTALL_DEBUG_TOOLS=true ..." >&2
+    exit 1
+fi
 if [ "$VS_CODE_DEBUG" = "true" ] && [ "$PYCHARM_DEBUG" = "true" ]; then
     echo "Starting with both VS Code (debugpy) and PyCharm debugging..."
     python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server "$@"
@@ -16,7 +21,7 @@ elif [ "$VS_CODE_DEBUG" = "true" ]; then
     python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server "$@"
 elif [ "$PYCHARM_DEBUG" = "true" ]; then
     echo "Starting with PyCharm debugging on port 12348..."
-    python3 -c "import pydevd_pycharm; pydevd_pycharm.settrace('0.0.0.0', port=12348, stdout_to_server=True, stderr_to_server=True, suspend=False); import segmentation_server.__main__ as main_mod; main_mod.run()"
+    python3 -c "import pydevd_pycharm; pydevd_pycharm.settrace('0.0.0.0', port=12348, stdout_to_server=True, stderr_to_server=True, suspend=False); import segmentation_server.__main__ as main_mod; main_mod.run()" "$@"
 else
     echo "Starting normally..."
     python3 -m segmentation_server "$@"

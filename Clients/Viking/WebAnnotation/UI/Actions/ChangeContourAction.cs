@@ -1,6 +1,7 @@
 using Geometry;
 using SqlGeometryUtils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Viking.VolumeModel;
@@ -34,6 +35,18 @@ namespace WebAnnotation.UI.Actions
         /// </summary>
         public readonly Polygon NewSmoothedVolumePolygon;
 
+        /// <summary>Cell triangulated for the choice fill. Null when this action has no cached preview.</summary>
+        internal Polygon PreviewOriginal;
+
+        /// <summary>Cap removed from <see cref="PreviewOriginal"/> for a shrink choice. Not drawn by this action.</summary>
+        internal Polygon PreviewExcludedPatch;
+
+        /// <summary>Lobe added outside <see cref="PreviewOriginal"/> for a growth choice.</summary>
+        internal Polygon PreviewAddedPatch;
+
+        /// <summary>Pen path that cut <see cref="PreviewOriginal"/>. Used to keep the cap flood on the near side of the cut.</summary>
+        internal IReadOnlyList<Vector2> PreviewPath;
+
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
@@ -58,8 +71,6 @@ namespace WebAnnotation.UI.Actions
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
         public Change2DContourAction(long locationID, RetraceCommandAction retraceType, Polygon newMosaicPolygon, Polygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
         {
-            Debug.Assert(newMosaicPolygon.TotalUniqueVertices < 1000, "This is a huge polygon, why?");
-
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
             Location = Store.Locations[locationID];
@@ -73,8 +84,6 @@ namespace WebAnnotation.UI.Actions
 
         public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, Polygon newMosaicPolygon, Polygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
         {
-            Debug.Assert(newMosaicPolygon.TotalUniqueVertices < 1000, "This is a huge polygon, why?");
-
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
             Location = location;

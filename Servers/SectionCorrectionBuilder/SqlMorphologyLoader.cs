@@ -69,6 +69,12 @@ namespace Viking.SectionCorrectionBuilder
             return loc > link ? loc : link;
         }
 
+        /// <summary>
+        /// Loads residual-field candidate locations and links for a rebuild.
+        /// Called by <see cref="CorrectionPublisher"/>. SELECT must project every
+        /// <see cref="CandidateRow"/> property (including VolumeX/Y and HasVolumePosition);
+        /// EF Core <c>SqlQuery</c> fails the whole rebuild if a required column is missing.
+        /// </summary>
         public static async Task<LoadResult> LoadAsync(
             AnnotationContext db,
             Volume volume,
@@ -78,9 +84,12 @@ namespace Viking.SectionCorrectionBuilder
         {
             int min = minLocations < 1 ? 3 : minLocations;
             // Inline equivalent of dbo.ResidualFieldCandidateLocations so DBs without schema v85 still work.
+            // HasVolumePosition is computed (not a DB column); VolumeX/Y must be selected for BuildCells.
             List<CandidateRow> candidates = await db.Database
                 .SqlQuery<CandidateRow>($@"
-SELECT L.ID, L.ParentID, L.Z, L.X, L.Y, L.Terminal, L.OffEdge, L.TypeCode, L.LastModified
+SELECT L.ID, L.ParentID, L.Z, L.X, L.Y, L.VolumeX, L.VolumeY,
+       CAST(CASE WHEN L.VolumeX <> 0 OR L.VolumeY <> 0 THEN 1 ELSE 0 END AS bit) AS HasVolumePosition,
+       L.Terminal, L.OffEdge, L.TypeCode, L.LastModified
 FROM dbo.Location AS L
 INNER JOIN (
     SELECT ParentID
@@ -211,8 +220,10 @@ AND LK.B IN (
 
         /// <summary>
         /// Locations for the requested structures, plus child structures when <paramref name="includeChildren"/> is set.
-        /// Positions are the stored volume centroid (VolumeX/VolumeY times scale), the same point Bajaj reads from VolumeShape.
-        /// A location with no volume centroid falls back to mosaic XY mapped through the stos group.
+        /// Called by gRPC <c>CorrectStructures</c>. Positions prefer stored VolumeX/VolumeY (times scale);
+        /// otherwise mosaic XY mapped through the stos group. Open curves often leave X/Y at 0 — centroid
+        /// is taken with SQL <c>STCentroid</c> so CurvePolygon never materializes through NetTopologySuite
+        /// (NTS throws <c>Unsupported type: CurvePolygon</c> on outline-traced cells such as RC1 c410).
         /// </summary>
         public static async Task<List<MorphologyGraph>> LoadStructuresAsync(
             string annotationConnection,
@@ -228,6 +239,8 @@ AND LK.B IN (
             if (structureIds is null || structureIds.Count == 0)
                 return [];
 
+            // Keep NTS for the Location geometry columns on the model; never SELECT those
+            // columns into entities here — STCentroid runs in SQL and returns floats only.
             var dbOptions = new DbContextOptionsBuilder<AnnotationContext>()
                 .UseSqlServer(annotationConnection, sql => sql.UseNetTopologySuite())
                 .Options;
@@ -245,59 +258,24 @@ AND LK.B IN (
                     ids.Add(child);
             }
 
-            // Open curves often leave Location.X/Y at 0; MosaicShape still has the real section geometry.
-            var raw = await db.Locations.AsNoTracking()
-                .Where(l => ids.Contains(l.ParentId))
-                .Select(l => new
-                {
-                    l.Id,
-                    l.ParentId,
-                    l.Z,
-                    l.X,
-                    l.Y,
-                    l.VolumeX,
-                    l.VolumeY,
-                    l.MosaicShape,
-                    l.Terminal,
-                    l.OffEdge,
-                    l.TypeCode,
-                    l.LastModified
-                })
+            // Structure IDs are longs from the authenticated gRPC request only (not user SQL text).
+            string idList = string.Join(",", ids);
+#pragma warning disable EF1002 // idList is comma-joined Int64s; SqlQuery cannot bind a dynamic IN list
+            List<CandidateRow> candidates = await db.Database
+                .SqlQueryRaw<CandidateRow>($@"
+SELECT L.ID, L.ParentID, L.Z,
+       CASE WHEN L.X = 0 AND L.Y = 0 AND L.MosaicShape IS NOT NULL
+            THEN ISNULL(L.MosaicShape.STCentroid().STX, L.X) ELSE L.X END AS X,
+       CASE WHEN L.X = 0 AND L.Y = 0 AND L.MosaicShape IS NOT NULL
+            THEN ISNULL(L.MosaicShape.STCentroid().STY, L.Y) ELSE L.Y END AS Y,
+       L.VolumeX, L.VolumeY,
+       CAST(CASE WHEN L.VolumeX <> 0 OR L.VolumeY <> 0 THEN 1 ELSE 0 END AS bit) AS HasVolumePosition,
+       L.Terminal, L.OffEdge, L.TypeCode, L.LastModified
+FROM dbo.Location AS L
+WHERE L.ParentID IN ({idList})")
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-
-            List<CandidateRow> candidates = [];
-            foreach (var l in raw)
-            {
-                double x = l.X;
-                double y = l.Y;
-                bool hasVolume = l.VolumeX != 0 || l.VolumeY != 0;
-                if (!hasVolume && x == 0 && y == 0 && l.MosaicShape is not null && !l.MosaicShape.IsEmpty)
-                {
-                    var c = l.MosaicShape.Centroid;
-                    if (c is not null && !c.IsEmpty)
-                    {
-                        x = c.X;
-                        y = c.Y;
-                    }
-                }
-
-                candidates.Add(new CandidateRow
-                {
-                    ID = l.Id,
-                    ParentID = l.ParentId,
-                    Z = l.Z,
-                    X = x,
-                    Y = y,
-                    VolumeX = l.VolumeX,
-                    VolumeY = l.VolumeY,
-                    HasVolumePosition = hasVolume,
-                    Terminal = l.Terminal,
-                    OffEdge = l.OffEdge,
-                    TypeCode = l.TypeCode,
-                    LastModified = l.LastModified
-                });
-            }
+#pragma warning restore EF1002
 
             List<long> locationIds = [.. candidates.Select(c => c.ID)];
             List<LinkRow> links = await db.LocationLinks.AsNoTracking()

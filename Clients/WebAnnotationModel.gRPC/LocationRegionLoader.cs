@@ -81,5 +81,8 @@ namespace WebAnnotationModel.gRPC
             _locations.TouchSectionQueryTime(sectionNumber);
             return result;
         }
+
+        /// <inheritdoc />
+        public void InvalidateSection(int sectionNumber) => _cells.InvalidateSection(sectionNumber);
     }
 }

@@ -17,7 +17,7 @@ namespace Viking.Identity.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "9.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -357,6 +357,86 @@ namespace Viking.Identity.Data.Migrations
                     b.ToTable("GroupToGroupAssignments");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.ImageSet", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("PixelSpace")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("VersionLabel")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash");
+
+                    b.ToTable("ImageSets", (string)null);
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.ImageSetMirror", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("ImageSetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("LastCheckUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastStatus")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RegionLabel")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("VikingXmlUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImageSetId");
+
+                    b.ToTable("ImageSetMirrors", (string)null);
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.Resource", b =>
                 {
                     b.Property<long>("Id")
@@ -427,6 +507,10 @@ namespace Viking.Identity.Data.Migrations
                         },
                         new
                         {
+                            Id = "AnnotationServer"
+                        },
+                        new
+                        {
                             Id = "SegmentationService"
                         });
                 });
@@ -474,6 +558,24 @@ namespace Viking.Identity.Data.Migrations
                         {
                             ResourceTypeId = "Volume",
                             PermissionId = "Review"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "AnnotationServer",
+                            PermissionId = "Read",
+                            Description = "View annotations and the images of every linked volume"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "AnnotationServer",
+                            PermissionId = "Annotate",
+                            Description = "Create and edit annotations; implies Read"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "AnnotationServer",
+                            PermissionId = "Review",
+                            Description = "Review and correct annotations; implies Read"
                         },
                         new
                         {
@@ -549,6 +651,32 @@ namespace Viking.Identity.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.AnnotationServer", b =>
+                {
+                    b.HasBaseType("Viking.Identity.Models.Resource");
+
+                    b.Property<string>("AnnotationDatabaseName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("AnnotationEndpoint")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)")
+                        .HasColumnName("AnnotationEndpoint");
+
+                    b.Property<string>("AuthenticationUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExportUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasIndex("AnnotationEndpoint")
+                        .IsUnique()
+                        .HasFilter("[AnnotationEndpoint] IS NOT NULL");
+
+                    b.HasDiscriminator().HasValue("AnnotationServer");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.Group", b =>
                 {
                     b.HasBaseType("Viking.Identity.Models.Resource");
@@ -591,10 +719,31 @@ namespace Viking.Identity.Data.Migrations
                 {
                     b.HasBaseType("Viking.Identity.Models.Resource");
 
+                    b.Property<long?>("AnnotationServerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CatalogSyncMessage")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime?>("CatalogSyncedUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Endpoint")
                         .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("Endpoint");
+
+                    b.Property<long?>("ImageSetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("RegistrationName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasIndex("AnnotationServerId");
+
+                    b.HasIndex("ImageSetId");
 
                     b.HasDiscriminator().HasValue("Volume");
                 });
@@ -726,6 +875,17 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("Member");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.ImageSetMirror", b =>
+                {
+                    b.HasOne("Viking.Identity.Models.ImageSet", "ImageSet")
+                        .WithMany("Mirrors")
+                        .HasForeignKey("ImageSetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ImageSet");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.Resource", b =>
                 {
                     b.HasOne("Viking.Identity.Models.OrganizationalUnit", "Parent")
@@ -773,11 +933,35 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.Volume", b =>
+                {
+                    b.HasOne("Viking.Identity.Models.AnnotationServer", "AnnotationServer")
+                        .WithMany("Volumes")
+                        .HasForeignKey("AnnotationServerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Viking.Identity.Models.ImageSet", "ImageSet")
+                        .WithMany("Volumes")
+                        .HasForeignKey("ImageSetId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AnnotationServer");
+
+                    b.Navigation("ImageSet");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.ApplicationUser", b =>
                 {
                     b.Navigation("GroupAssignments");
 
                     b.Navigation("PermissionsHeld");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.ImageSet", b =>
+                {
+                    b.Navigation("Mirrors");
+
+                    b.Navigation("Volumes");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Resource", b =>
@@ -790,6 +974,11 @@ namespace Viking.Identity.Data.Migrations
             modelBuilder.Entity("Viking.Identity.Models.ResourceType", b =>
                 {
                     b.Navigation("Permissions");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.AnnotationServer", b =>
+                {
+                    b.Navigation("Volumes");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Group", b =>

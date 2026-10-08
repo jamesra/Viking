@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Duende.IdentityServer.Validation;
@@ -46,9 +47,10 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                 ResourceName = parts[0];
                 ScopeName = parts[1];
 
-                // Prefer Volume/SegmentationService when names collide with Group/OrgUnit (e.g. "Yiu").
+                // Prefer API-facing types when names collide with Group/OrgUnit (e.g. "Yiu"). A volume name
+                // still works as a scope prefix: its annotation server's grants are checked too.
                 var resource = await _context.FindApiFacingResourceAsync(ResourceName);
-                if (resource == null || (resource.ResourceTypeId != nameof(Volume) && resource.ResourceTypeId != nameof(SegmentationService)))
+                if (resource == null || !Special.ResourceTypes.ApiFacing.Contains(resource.ResourceTypeId))
                     continue;
 
                 var user = await FindTokenUserAsync(context.Result.ValidatedRequest);
@@ -59,7 +61,7 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                     return;
                 }
 
-                if(false == await _context.IsUserPermitted(resource.Id, user.Id, ScopeName))
+                if(false == await _context.IsUserPermittedEffectiveAsync(resource, user.Id, ScopeName))
                 {
                     context.Result.IsError = true;
                     context.Result.Error = $"{user.UserName} does not have access to scope {s.Name}";

@@ -44,6 +44,24 @@ namespace Viking.Common
 
         protected Int64 TotalCacheSize = 0;
 
+        /// <summary>Sum of the sizes of the cached entries, in the cache's size units.</summary>
+        public Int64 CachedSize => System.Threading.Interlocked.Read(ref TotalCacheSize);
+
+        /// <summary>
+        /// Resets the cache total to the sum of the current entry sizes. For caches that change <see cref="CacheEntry{KEY}.Size"/>
+        /// after an entry is added, which the running total does not track. Returns the new total.
+        /// </summary>
+        /// <remarks>An add or remove during the recount can leave the total briefly off; the next recount corrects it.</remarks>
+        protected Int64 RecountCacheSize()
+        {
+            Int64 total = 0;
+            foreach (CACHEENTRY entry in dictEntries.Values)
+                total += System.Threading.Interlocked.Read(ref entry.Size);
+
+            System.Threading.Interlocked.Exchange(ref TotalCacheSize, total);
+            return total;
+        }
+
         protected ConcurrentDictionary<KEY, CACHEENTRY> dictEntries = new();
 
         protected abstract FETCHTYPE Fetch(CACHEENTRY key);

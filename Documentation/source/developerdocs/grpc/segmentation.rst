@@ -42,8 +42,8 @@ Segment
 
    * - RPC
      - Behavior
-   * - ``SegmentTiles``
-     - Segments the fused mosaic of the given tiles. Foreground and background points are in that mosaic. Polygons are in the same space. ``requested_tiles`` lists cells the mask touched that the server does not have. Upload those cells and call again. An empty list means the mask is finished.
+   * - ``SegmentTilesStream``
+     - Bidirectional stream. The client sends one ``start`` (``SegmentTilesRequest``): the tiles it uploaded, plus foreground and background points in the fused mosaic. The server grows the mask over the cells it has. When the mask reaches cells it does not have, it sends ``needed`` (``TilesNeeded``) and waits. The client uploads those cells with ``UploadTile`` and sends an ``answer`` (``TilesAnswer``) listing each tile as ``ready`` or ``unavailable``. The server continues the same growth, so nothing already predicted is repeated. When nothing more is needed it sends ``result`` (the ``SegmentationResponse``, polygons in the mosaic space) and ends the call.
    * - ``SegmentImage``
      - One point set on one image. Non-zero ``image_id`` uses the cache and ignores ``image_data``. ``image_id`` 0 sends ``image_data`` and re-encodes every call. ``coordinates`` and ``labels`` are parallel arrays (label 1 foreground, 0 background). ``omit_labeled_image`` skips the full-frame PNG. Viking sets it.
    * - ``SegmentImageSets``
@@ -61,7 +61,7 @@ Response
 * ``labeled_image``, ``width``, ``height`` — full-frame label image. Empty when ``omit_labeled_image`` was set.
 * ``segments`` — one ``SegmentResult`` per object.
 * ``origin_x``, ``origin_y`` — bottom-left of a fused tile mosaic, in downsample pixels, Y upward. ``SegmentImage`` leaves these at 0 because the mosaic is the uploaded image.
-* ``requested_tiles`` — cells the client should upload next. Empty when the mask is finished.
+* ``request_id`` — the ``SegmentTilesRequest.request_id`` echoed back, 0 when the request had none.
 
 ``SegmentResult``
 

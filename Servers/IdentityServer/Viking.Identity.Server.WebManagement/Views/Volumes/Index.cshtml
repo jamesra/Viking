@@ -76,6 +76,13 @@
                                     <p class="card-text text-muted small">
                                         @(string.IsNullOrEmpty(volume.Description) ? "No description" : volume.Description)
                                     </p>
+                                    @if (volume.AnnotationServer != null)
+                                    {
+                                        <p class="card-text small mb-2">
+                                            <i class="bi bi-database"></i> Annotations:
+                                            <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@volume.AnnotationServer.Id">@volume.AnnotationServer.Name</a>
+                                        </p>
+                                    }
                                     
                                     @await Html.PartialAsync("_ResourceAccessBadge", (Viking.Identity.Models.Resource)volume)
                                     

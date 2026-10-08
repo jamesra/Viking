@@ -9,3 +9,5 @@ alwaysApply: false
 `Servers/SegmentationServer/Dockerfile` pins `facebookresearch/sam2` at `SAM2_GIT_SHA`.
 
 When editing that Dockerfile or SAM2 integration, check https://github.com/facebookresearch/sam2/commits/main. If `main` is newer than the pinned SHA, tell James and do not silently unpin unless he asks.
+
+For theory + API grounding before SAM2 plans or code changes, use `.cursor/skills/sam2-grounding/`.

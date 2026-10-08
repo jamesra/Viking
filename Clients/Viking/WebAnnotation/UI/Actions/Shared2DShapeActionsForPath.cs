@@ -99,10 +99,15 @@ namespace WebAnnotation.UI.Actions
 
             try
             {
+                // The walk follows the smoothed display ring, so it carries every interpolated sample.
+                // Drop samples that sit on the chord between neighbors before this piece is saved.
+                // The choice fill still draws from the cached cell, not from this reduced ring.
                 clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Clockwise, subpath);
-                clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(clockwise_poly.ExteriorRing, AnnotationOverlay.CurrentOverlay.Parent.Downsample < 2 ? 4 : AnnotationOverlay.CurrentOverlay.Parent.Downsample * 4, true)];
                 counter_clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Counterclockwise, subpath);
-                counter_clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, AnnotationOverlay.CurrentOverlay.Parent.Downsample < 2 ? 4 : AnnotationOverlay.CurrentOverlay.Parent.Downsample * 4, true)];
+                double downsample = AnnotationOverlay.CurrentOverlay.Parent.Downsample;
+                double tolerance = downsample < 2 ? 4 : downsample * 4;
+                clockwise_poly = clockwise_poly.ReduceExteriorRing(tolerance);
+                counter_clockwise_poly = counter_clockwise_poly.ReduceExteriorRing(tolerance);
             }
             catch (ArgumentException)
             {
@@ -140,12 +145,15 @@ namespace WebAnnotation.UI.Actions
                         UseCCW = counter_clockwise_poly.Area > clockwise_poly.Area;
                         Polygon outputVolumePoly = UseCCW ? counter_clockwise_poly : clockwise_poly;
                         Polygon outputMosaicPoly = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
+                        Polygon growthLobe = UseCCW ? clockwise_poly : counter_clockwise_poly;
                         grow_action = new Change2DContourAction(locObj, cutType, outputMosaicPoly, outputVolumePoly);
+                        AttachCachedPreview(grow_action, OriginalVolumePolygon, subpath, addedPatch: growthLobe, excludedPatch: null);
                         output.Add(grow_action);
                         break;
                     case RetraceCommandAction.SHRINK_EXTERIOR_RING:
                         counter_clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly);
                         clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true);
+                        AttachShrinkPreview(counter_clockwise_action, clockwise_action, OriginalVolumePolygon, subpath, counter_clockwise_poly, clockwise_poly);
                         output.Add(counter_clockwise_action);
                         output.Add(clockwise_action);
                         break;
@@ -187,6 +195,28 @@ namespace WebAnnotation.UI.Actions
             {
                 return EnterIsFirstInteraction ? RetraceCommandAction.SHRINK_EXTERIOR_RING : RetraceCommandAction.GROW_EXTERIOR_RING;
             }
+        }
+
+        /// <summary>
+        /// The larger shrink piece reuses the cached cell. The smaller piece is meshed on its own by the choice view.
+        /// </summary>
+        static void AttachShrinkPreview(Change2DContourAction counterClockwise, Change2DContourAction clockwise, Polygon original, IReadOnlyList<Vector2> path, Polygon counterClockwisePoly, Polygon clockwisePoly)
+        {
+            bool counterClockwiseIsCap = counterClockwisePoly.Area <= clockwisePoly.Area;
+            Change2DContourAction large = counterClockwiseIsCap ? clockwise : counterClockwise;
+            Polygon cap = counterClockwiseIsCap ? counterClockwisePoly : clockwisePoly;
+            AttachCachedPreview(large, original, path, addedPatch: null, excludedPatch: cap);
+        }
+
+        /// <summary>
+        /// Points the choice fill at the polygon that was triangulated when the cell was shown.
+        /// </summary>
+        static void AttachCachedPreview(Change2DContourAction action, Polygon original, IReadOnlyList<Vector2> path, Polygon addedPatch, Polygon excludedPatch)
+        {
+            action.PreviewOriginal = original;
+            action.PreviewPath = path;
+            action.PreviewAddedPatch = addedPatch;
+            action.PreviewExcludedPatch = excludedPatch;
         }
     }
 

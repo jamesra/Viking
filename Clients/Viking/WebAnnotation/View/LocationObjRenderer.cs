@@ -33,21 +33,34 @@ namespace WebAnnotation
                 return;
             }
 
-            int MaxCanvasViewDepth = listToDraw.Max(l => l.ParentDepth);
+            int MaxCanvasViewDepth = int.MinValue;
+            List<int> depths = [];
+            for (int i = 0; i < listToDraw.Count; i++)
+            {
+                int depth = listToDraw[i].ParentDepth;
+                if (depth > MaxCanvasViewDepth)
+                    MaxCanvasViewDepth = depth;
+
+                if (!depths.Contains(depth))
+                    depths.Add(depth);
+            }
 
             int StartingDepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
             const int DepthStencilStepSize = 5;
             int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * MaxCanvasViewDepth);
             int DepthStencilValue = EndingDepthStencilValue;
 
-            IEnumerable<IGrouping<int, LocationCanvasView>> depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
+            //Deepest group first
+            depths.Sort();
 
             DeviceStateManager.SaveDeviceState(graphicsDevice);
 
             DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
 
-            foreach (IGrouping<int, LocationCanvasView> depthGroup in depthGroups)
+            for (int iDepth = depths.Count - 1; iDepth >= 0; iDepth--)
             {
+                List<TypeBucket> depthGroup = BucketByType(listToDraw, depths[iDepth]);
+
                 //We render twice.  The first time we only update the Z-buffer. 
                 //The second time we write colors, but only when the Z-buffer is equal to the objects Z-value.
                 //This ensures that overlapping locations are not rendered overlapping which obscures the TEM textures underneath.
@@ -78,47 +91,113 @@ namespace WebAnnotation
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1);
         }
 
-        private static void DrawBackgroundsAtDepth(IGrouping<int, LocationCanvasView> depthGroup, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
+        /// <summary>
+        /// The views of one concrete type, in the order they appeared in the source list.
+        /// </summary>
+        private sealed class TypeBucket(Type type)
+        {
+            public readonly Type Type = type;
+            public readonly List<LocationCanvasView> Views = [];
+        }
+
+        private static void AddToBucket(List<TypeBucket> buckets, LocationCanvasView view)
+        {
+            Type type = view.GetType();
+            for (int i = 0; i < buckets.Count; i++)
+            {
+                if (buckets[i].Type == type)
+                {
+                    buckets[i].Views.Add(view);
+                    return;
+                }
+            }
+
+            TypeBucket bucket = new(type);
+            bucket.Views.Add(view);
+            buckets.Add(bucket);
+        }
+
+        /// <summary>
+        /// Groups the views at one depth by concrete type. Buckets are ordered by each type's first appearance and the views in a
+        /// bucket keep their source order, so drawing buckets in order draws in the same order a GroupBy would.
+        /// </summary>
+        private static List<TypeBucket> BucketByType(List<LocationCanvasView> views, int depth)
+        {
+            List<TypeBucket> buckets = [];
+            for (int i = 0; i < views.Count; i++)
+            {
+                if (views[i].ParentDepth == depth)
+                    AddToBucket(buckets, views[i]);
+            }
+
+            return buckets;
+        }
+
+        private static List<TypeBucket> BucketByType(ICollection<LocationCanvasView> views)
+        {
+            List<TypeBucket> buckets = [];
+            foreach (LocationCanvasView view in views)
+                AddToBucket(buckets, view);
+
+            return buckets;
+        }
+
+        private static T[] ToArray<T>(List<LocationCanvasView> views) where T : LocationCanvasView
+        {
+            T[] result = new T[views.Count];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = (T)views[i];
+
+            return result;
+        }
+
+        private static void DrawBackgroundsAtDepth(List<TypeBucket> typeGroups, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
                                            OverlayShaderEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
-            IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = depthGroup.GroupBy(l => l.GetType());
-
-            foreach (IGrouping<Type, LocationCanvasView> typeGroup in typeGroups)
+            foreach (TypeBucket typeGroup in typeGroups)
             {
-                if (typeGroup.Key == typeof(LocationOpenCurveView))
-                {
-                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationOpenCurveView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationClosedCurveView))
-                {
-                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationClosedCurveView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationPolygonView))
-                {
-                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationPolygonView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationLineView))
-                {
-                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationLineView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationCircleView))
-                {
-                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationCircleView>()]);
-                }
-                else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
-                {
-                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationCircleView>()], VisibleSectionNumber);
-                }
-                else if (typeGroup.Key == typeof(AdjacentLocationLineView))
-                {
-                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationLineView>()], VisibleSectionNumber);
-                }
-                else
-                {
-                    throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
-                }
+                DrawTypeBucket(typeGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
+            }
+        }
+
+        private static void DrawTypeBucket(TypeBucket typeGroup, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
+                                           OverlayShaderEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           RoundCurve.CurveManager overlayCurveManager,
+                                           VikingXNA.Scene Scene, int VisibleSectionNumber)
+        {
+            if (typeGroup.Type == typeof(LocationOpenCurveView))
+            {
+                LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, ToArray<LocationOpenCurveView>(typeGroup.Views));
+            }
+            else if (typeGroup.Type == typeof(LocationClosedCurveView))
+            {
+                LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, ToArray<LocationClosedCurveView>(typeGroup.Views));
+            }
+            else if (typeGroup.Type == typeof(LocationPolygonView))
+            {
+                LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, ToArray<LocationPolygonView>(typeGroup.Views));
+            }
+            else if (typeGroup.Type == typeof(LocationLineView))
+            {
+                LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, ToArray<LocationLineView>(typeGroup.Views));
+            }
+            else if (typeGroup.Type == typeof(LocationCircleView))
+            {
+                LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, ToArray<LocationCircleView>(typeGroup.Views));
+            }
+            else if (typeGroup.Type == typeof(AdjacentLocationCircleView))
+            {
+                AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, ToArray<AdjacentLocationCircleView>(typeGroup.Views), VisibleSectionNumber);
+            }
+            else if (typeGroup.Type == typeof(AdjacentLocationLineView))
+            {
+                AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, ToArray<AdjacentLocationLineView>(typeGroup.Views), VisibleSectionNumber);
+            }
+            else
+            {
+                throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Type.FullName);
             }
         }
 
@@ -127,42 +206,9 @@ namespace WebAnnotation
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
-            IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = views.GroupBy(l => l.GetType());
-
-            foreach (IGrouping<Type, LocationCanvasView> typeGroup in typeGroups)
+            foreach (TypeBucket typeGroup in BucketByType(views))
             {
-                if (typeGroup.Key == typeof(LocationOpenCurveView))
-                {
-                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationOpenCurveView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationClosedCurveView))
-                {
-                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationClosedCurveView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationPolygonView))
-                {
-                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationPolygonView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationLineView))
-                {
-                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationLineView>()]);
-                }
-                else if (typeGroup.Key == typeof(LocationCircleView))
-                {
-                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationCircleView>()]);
-                }
-                else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
-                {
-                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationCircleView>()], VisibleSectionNumber);
-                }
-                else if (typeGroup.Key == typeof(AdjacentLocationLineView))
-                {
-                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationLineView>()], VisibleSectionNumber);
-                }
-                else
-                {
-                    throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
-                }
+                DrawTypeBucket(typeGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
             }
         }
 

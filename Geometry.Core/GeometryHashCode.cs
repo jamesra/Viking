@@ -9,8 +9,14 @@ namespace Geometry
     /// </summary>
     internal static class GeometryHashCode
     {
+        /// <summary>
+        /// 10 raised to <see cref="Tolerance.SignificantDigits"/>, computed once with the same expression the
+        /// hash used per call so existing hash values do not change.
+        /// </summary>
+        private static readonly double QuantizeScale = Math.Pow(10, Tolerance.SignificantDigits);
+
         internal static int QuantizedCoord(double value) =>
-            (int)Math.Round(value * Math.Pow(10, Tolerance.SignificantDigits));
+            (int)Math.Round(value * QuantizeScale);
 
         internal static int Point2D(double x, double y)
         {

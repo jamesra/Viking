@@ -9,12 +9,21 @@ alwaysApply: false
 
 | Type | Role | Duende ApiResource / scopes? |
 |------|------|------------------------------|
-| `Volume` | Annotatable image volume | Yes — scopes `{Name}.Read\|Annotate\|Review` |
+| `AnnotationServer` | One annotation SQL database; holds the grants | Yes — scopes `{Name}.Read\|Annotate\|Review` |
+| `Volume` | Links one `ImageSet` to one `AnnotationServer` | Yes — same scopes, kept so volume-name scopes still work |
 | `SegmentationService` | Segmentation backend | Yes — scopes `{Name}.User\|Access Manager` |
 | `Group` | User grouping / grants | No — management only |
 | `OrganizationalUnit` | Hierarchy / ownership | No — management only (`Administrator`) |
 
-API-facing types only: `Volume`, `SegmentationService`. Resource stores must filter to these when building ApiResources/ApiScopes.
+API-facing types: `Special.ResourceTypes.ApiFacing` (`AnnotationServer`, `Volume`, `SegmentationService`, in preference order). Resource stores must filter to these when building ApiResources/ApiScopes.
+
+`ImageSet` / `ImageSetMirror` are plain tables, not resources. Mirrors of one set are exact clones (clients may load-balance); a different build is a new set behind its own Volume.
+
+## Volume access
+
+- Effective volume permissions = grants on the volume ∪ grants on its annotation server, with Read implied by Annotate or Review. Use `UserVolumePermissionsAsync`, `UserEffectiveResourcePermissionsAsync`, or `IsUserPermittedEffectiveAsync`; do not check volume grant rows alone.
+- New grants go on the annotation server (`GrantUserVolumeFullAccessAsync` does this). Volume grants remain for image-only volumes and as the legacy rollback path.
+- `AnnotationServerCatalogSync` creates annotation servers from each volume's VikingXML `VolumeToEndpoint`; it never merges volumes or image sets.
 
 ## Names are unique per type, not globally
 
@@ -22,7 +31,7 @@ API-facing types only: `Volume`, `SegmentationService`. Resource stores must fil
 
 When resolving permissions or token scopes **by name**:
 
-- Prefer Volume / SegmentationService (`FindApiFacingResourceAsync`)
+- Prefer AnnotationServer, then Volume, then SegmentationService (`FindApiFacingResourceAsync`). An annotation server is usually named after the oldest volume that uses it (e.g. both `"RC1"`).
 - Never use bare `Resource.FirstOrDefault(r => r.Name == name)` for volume login / scope checks — the Group row often wins by lower Id
 
 ```csharp
@@ -42,7 +51,8 @@ await context.FindApiFacingResourceAsync(name);
 ## OAuth scopes
 
 - Standard: `openid`, `profile`, `Viking.Annotation`
-- Per volume: `{VolumeName}.Read`, `{VolumeName}.Annotate`, `{VolumeName}.Review`
+- Per annotation server: `{ServerName}.Read`, `{ServerName}.Annotate`, `{ServerName}.Review`
+- Per volume (legacy, still accepted): `{VolumeName}.Read|Annotate|Review`, checked against the volume's annotation server too
 - Do not treat `Viking.Annotation` as a Volume named `Viking` when parsing `resource.permission` scopes
 
 ## Which process does what

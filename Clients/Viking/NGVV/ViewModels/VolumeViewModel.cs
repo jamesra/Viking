@@ -1,5 +1,6 @@
 using Geometry;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
@@ -153,25 +154,68 @@ namespace Viking.ViewModels
             return key;
         }
 
+        /// <summary>
+        /// A cached <see cref="VolumeToSectionTransform"/> and the section transform it wraps.
+        /// </summary>
+        private sealed class SectionTransformEntry(ITransform source, VolumeToSectionTransform wrapper)
+        {
+            public readonly ITransform Source = source;
+            public readonly VolumeToSectionTransform Wrapper = wrapper;
+        }
+
+        /// <summary>
+        /// The cached wrappers for one active volume transform, by section number.
+        /// </summary>
+        private sealed class ActiveTransformCache(string volumeTransformName)
+        {
+            public readonly string VolumeTransformName = volumeTransformName;
+            public readonly ConcurrentDictionary<int, SectionTransformEntry> Sections = new();
+        }
+
+        private volatile ActiveTransformCache? _SectionTransformCache;
+
+        /// <summary>
+        /// Wrappers for sections that have no transform in the active volume transform, by section number.
+        /// </summary>
+        private readonly ConcurrentDictionary<int, VolumeToSectionTransform> _IdentitySectionTransforms = new();
+
+        private VolumeToSectionTransform GetIdentitySectionTransform(int SectionNumber) =>
+            _IdentitySectionTransforms.GetOrAdd(SectionNumber,
+                number => new VolumeToSectionTransform(BuildTransformKey("Identity", number),
+                                                       new Geometry.Transforms.IdentityTransform()));
+
+        /// <summary>
+        /// Returns the transform between a section and the volume for the active volume transform.
+        /// </summary>
+        /// <remarks>
+        /// Safe to call from render and worker threads. One <see cref="VolumeToSectionTransform"/> is kept per section and
+        /// shared between callers; it is immutable. The cache is dropped when <see cref="ActiveVolumeTransform"/> changes, and an
+        /// entry is replaced if the volume now holds a different transform instance for the section.
+        /// </remarks>
         public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
         {
-            if (this.ActiveVolumeTransform is null)
-            {
-                return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
-                                                    new Geometry.Transforms.IdentityTransform());
-            }
-            else
-            {
+            string activeTransform = this.ActiveVolumeTransform;
+            if (activeTransform is null)
+                return GetIdentitySectionTransform(SectionNumber);
 
-                SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
+            SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[activeTransform];
 
-                if (SectionTransforms.TryGetValue(SectionNumber, out var transform))
-                    return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),
-                                                        transform);
-                else
-                    return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
-                                                        new Geometry.Transforms.IdentityTransform());
+            if (!SectionTransforms.TryGetValue(SectionNumber, out var transform))
+                return GetIdentitySectionTransform(SectionNumber);
+
+            ActiveTransformCache cache = _SectionTransformCache;
+            if (cache is null || !string.Equals(cache.VolumeTransformName, activeTransform, StringComparison.Ordinal))
+            {
+                cache = new ActiveTransformCache(activeTransform);
+                _SectionTransformCache = cache;
             }
+
+            if (cache.Sections.TryGetValue(SectionNumber, out SectionTransformEntry entry) && ReferenceEquals(entry.Source, transform))
+                return entry.Wrapper;
+
+            VolumeToSectionTransform wrapper = new(BuildTransformKey(activeTransform, SectionNumber), transform);
+            cache.Sections[SectionNumber] = new SectionTransformEntry(transform, wrapper);
+            return wrapper;
         }
 
         public void ReduceCacheFootprint(object state) => _MappingManager.ReduceCacheFootprint();
@@ -198,6 +242,7 @@ namespace Viking.ViewModels
                 {
                     string OldTransform = _ActiveVolumeTransform;
                     _ActiveVolumeTransform = value;
+                    _SectionTransformCache = null;
 
                     TransformChanged?.Invoke(this, new Viking.Common.TransformChangedEventArgs(_ActiveVolumeTransform, OldTransform));
                 }

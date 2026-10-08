@@ -78,6 +78,12 @@ else
                             <p class="card-text text-muted small">
                                 @(string.IsNullOrEmpty(volume.Description) ? "No description available" : volume.Description)
                             </p>
+                            @if (!string.IsNullOrEmpty(volume.AnnotationServerName))
+                            {
+                                <p class="card-text small mb-2">
+                                    <i class="bi bi-database"></i> Annotations: @volume.AnnotationServerName
+                                </p>
+                            }
                             
                             @if (volume.Permissions.Any())
                             {

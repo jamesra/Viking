@@ -43,55 +43,85 @@ namespace Geometry
 
         public Rectangle ControlBoundingBox => new(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
 
+        /// <summary>Allocates a <see cref="Triangle"/>. The mapping methods below use the vertices directly instead.</summary>
         public Triangle Control => new(Nodes[N1].ControlPoint, Nodes[N2].ControlPoint, Nodes[N3].ControlPoint);
 
+        /// <summary>Allocates a <see cref="Triangle"/>. The mapping methods below use the vertices directly instead.</summary>
         public Triangle Mapped => new(Nodes[N1].MappedPoint, Nodes[N2].MappedPoint, Nodes[N3].MappedPoint);
+
+        private Vector2 M1 => Nodes[N1].MappedPoint;
+        private Vector2 M2 => Nodes[N2].MappedPoint;
+        private Vector2 M3 => Nodes[N3].MappedPoint;
+        private Vector2 C1 => Nodes[N1].ControlPoint;
+        private Vector2 C2 => Nodes[N2].ControlPoint;
+        private Vector2 C3 => Nodes[N3].ControlPoint;
 
         public MappingTriangle Copy() => this;
 
         object ICloneable.Clone() => this;
 
-        public bool CanTransform(in Vector2 Point) => Mapped.Covers(Point);
+        //The mapping methods below give the same results, and throw the same ArgumentException for a degenerate triangle, as
+        //building the Mapped and Control triangles did, without allocating. They run once or more per mapped point.
 
-        public bool CanInverseTransform(in Vector2 Point) => Control.Covers(Point);
+        public bool CanTransform(in Vector2 Point) => Triangle.Covers(M1, M2, M3, Point);
+
+        public bool CanInverseTransform(in Vector2 Point) => Triangle.Covers(C1, C2, C3, Point);
 
         private static bool BarycentricCoordIsMappable(in Vector2 uv) =>
             uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0);
 
         public Vector2 Transform(in Vector2 Point)
         {
-            Vector2 uv = Mapped.Barycentric(Point);
+            Triangle.ThrowIfDegenerate(M1, M2, M3);
+            Vector2 uv = Triangle.Barycentric(M1, M2, M3, Point);
             Debug.Assert(BarycentricCoordIsMappable(uv));
 
-            Vector2 translated = Vector2.FromBarycentric(Control.P1, Control.P2, Control.P3, uv.Y, uv.X);
+            Triangle.ThrowIfDegenerate(C1, C2, C3);
+            Vector2 translated = Vector2.FromBarycentric(C1, C2, C3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
         }
 
         public Vector2 InverseTransform(in Vector2 Point)
         {
-            Vector2 uv = Control.Barycentric(Point);
+            Triangle.ThrowIfDegenerate(C1, C2, C3);
+            Vector2 uv = Triangle.Barycentric(C1, C2, C3, Point);
 
-            Vector2 translated = Vector2.FromBarycentric(Mapped.P1, Mapped.P2, Mapped.P3, uv.Y, uv.X);
+            Triangle.ThrowIfDegenerate(M1, M2, M3);
+            Vector2 translated = Vector2.FromBarycentric(M1, M2, M3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
         }
 
         public Vector2[] Transform(in Vector2[] Points)
         {
-            Triangle mapped = Mapped;
-            Triangle control = Control;
-            var uv_points = Points.Select(point => mapped.Barycentric(point));
-            Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
+            Vector2 m1 = M1, m2 = M2, m3 = M3, c1 = C1, c2 = C2, c3 = C3;
+            Triangle.ThrowIfDegenerate(m1, m2, m3);
+            Triangle.ThrowIfDegenerate(c1, c2, c3);
 
-            return [.. uv_points.Select(uv => Vector2.FromBarycentric(control.P1, control.P2, control.P3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
+            Vector2[] output = new Vector2[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+            {
+                Vector2 uv = Triangle.Barycentric(m1, m2, m3, Points[i]);
+                Debug.Assert(BarycentricCoordIsMappable(uv));
+                output[i] = Vector2.FromBarycentric(c1, c2, c3, uv.Y, uv.X).Round(Global.TransformSignificantDigits);
+            }
+
+            return output;
         }
 
         public Vector2[] InverseTransform(in Vector2[] Points)
         {
-            Triangle mapped = Mapped;
-            Triangle control = Control;
-            var uv_points = Points.Select(point => control.Barycentric(point));
+            Vector2 m1 = M1, m2 = M2, m3 = M3, c1 = C1, c2 = C2, c3 = C3;
+            Triangle.ThrowIfDegenerate(m1, m2, m3);
+            Triangle.ThrowIfDegenerate(c1, c2, c3);
 
-            return [.. uv_points.Select(uv => Vector2.FromBarycentric(mapped.P1, mapped.P2, mapped.P3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
+            Vector2[] output = new Vector2[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+            {
+                Vector2 uv = Triangle.Barycentric(c1, c2, c3, Points[i]);
+                output[i] = Vector2.FromBarycentric(m1, m2, m3, uv.Y, uv.X).Round(Global.TransformSignificantDigits);
+            }
+
+            return output;
         }
 
         public bool Equals(MappingTriangle other) =>
@@ -103,32 +133,36 @@ namespace Geometry
 
         public bool TryTransform(in Vector2 Point, out Vector2 translated)
         {
-            Vector2 uv = Mapped.Barycentric(Point);
+            Triangle.ThrowIfDegenerate(M1, M2, M3);
+            Vector2 uv = Triangle.Barycentric(M1, M2, M3, Point);
             if (false == BarycentricCoordIsMappable(uv))
             {
                 translated = default;
                 return false;
             }
 
-            translated = Vector2.FromBarycentric(Control.P1, Control.P2, Control.P3, uv.Y, uv.X);
+            Triangle.ThrowIfDegenerate(C1, C2, C3);
+            translated = Vector2.FromBarycentric(C1, C2, C3, uv.Y, uv.X);
             translated = translated.Round(Global.TransformSignificantDigits);
             return true;
         }
 
         public bool[] TryTransform(in Vector2[] Points, out Vector2[] output)
         {
-            output = Mapped.Barycentric(Points);
-            var wasMapped = output.Select(uv => BarycentricCoordIsMappable(uv)).ToArray();
+            Vector2 m1 = M1, m2 = M2, m3 = M3, c1 = C1, c2 = C2, c3 = C3;
+            Triangle.ThrowIfDegenerate(m1, m2, m3);
+
+            output = new Vector2[Points.Length];
+            bool[] wasMapped = new bool[Points.Length];
             for (int i = 0; i < Points.Length; i++)
             {
-                if (wasMapped[i] == false)
-                {
-                    output[i] = default;
+                Vector2 uv = Triangle.Barycentric(m1, m2, m3, Points[i]);
+                if (!BarycentricCoordIsMappable(uv))
                     continue;
-                }
 
-                output[i] = Vector2.FromBarycentric(Control.P1, Control.P2, Control.P3, output[i].Y, output[i].X);
-                output[i] = output[i].Round(Global.TransformSignificantDigits);
+                Triangle.ThrowIfDegenerate(c1, c2, c3);
+                wasMapped[i] = true;
+                output[i] = Vector2.FromBarycentric(c1, c2, c3, uv.Y, uv.X).Round(Global.TransformSignificantDigits);
             }
 
             return wasMapped;
@@ -136,32 +170,36 @@ namespace Geometry
 
         public bool TryInverseTransform(in Vector2 Point, out Vector2 translated)
         {
-            Vector2 uv = Control.Barycentric(Point);
+            Triangle.ThrowIfDegenerate(C1, C2, C3);
+            Vector2 uv = Triangle.Barycentric(C1, C2, C3, Point);
             if (false == BarycentricCoordIsMappable(uv))
             {
                 translated = default;
                 return false;
             }
 
-            translated = Vector2.FromBarycentric(Mapped.P1, Mapped.P2, Mapped.P3, uv.Y, uv.X);
+            Triangle.ThrowIfDegenerate(M1, M2, M3);
+            translated = Vector2.FromBarycentric(M1, M2, M3, uv.Y, uv.X);
             translated = translated.Round(Global.TransformSignificantDigits);
             return true;
         }
 
         public bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] output)
         {
-            output = Control.Barycentric(Points);
-            var wasMapped = output.Select(uv => BarycentricCoordIsMappable(uv)).ToArray();
+            Vector2 m1 = M1, m2 = M2, m3 = M3, c1 = C1, c2 = C2, c3 = C3;
+            Triangle.ThrowIfDegenerate(c1, c2, c3);
+
+            output = new Vector2[Points.Length];
+            bool[] wasMapped = new bool[Points.Length];
             for (int i = 0; i < Points.Length; i++)
             {
-                if (wasMapped[i] == false)
-                {
-                    output[i] = default;
+                Vector2 uv = Triangle.Barycentric(c1, c2, c3, Points[i]);
+                if (!BarycentricCoordIsMappable(uv))
                     continue;
-                }
 
-                output[i] = Vector2.FromBarycentric(Mapped.P1, Mapped.P2, Mapped.P3, output[i].Y, output[i].X);
-                output[i] = output[i].Round(Global.TransformSignificantDigits);
+                Triangle.ThrowIfDegenerate(m1, m2, m3);
+                wasMapped[i] = true;
+                output[i] = Vector2.FromBarycentric(m1, m2, m3, uv.Y, uv.X).Round(Global.TransformSignificantDigits);
             }
 
             return wasMapped;

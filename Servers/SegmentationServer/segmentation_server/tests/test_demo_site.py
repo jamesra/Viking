@@ -18,6 +18,7 @@ from PIL import Image
 from segmentation_grpc import DeleteImageResponse, SegmentationResponse, SegmentResult, UploadImageResponse
 from segmentation_server.demo_site import (
     DemoHttpsServer,
+    demo_bind_address,
     demo_enabled,
     handle_demo_request,
     start_demo_site,
@@ -66,12 +67,12 @@ def _png() -> bytes:
 
 
 @contextmanager
-def _running(servicer: object) -> Iterator[tuple[int, object]]:
+def _running(servicer: object, **server_options: object) -> Iterator[tuple[int, object]]:
     """Serve the demo handler on plain HTTP so tests can call it without a certificate."""
     loop = asyncio.new_event_loop()
     thread = threading.Thread(target=loop.run_forever, name="demo-test-loop", daemon=True)
     thread.start()
-    httpd = DemoHttpsServer(("127.0.0.1", 0), servicer, loop, ssl_context=None)
+    httpd = DemoHttpsServer(("127.0.0.1", 0), servicer, loop, ssl_context=None, **server_options)
     server_thread = threading.Thread(target=httpd.serve_forever, name="demo-test-http", daemon=True)
     server_thread.start()
     try:
@@ -83,10 +84,13 @@ def _running(servicer: object) -> Iterator[tuple[int, object]]:
         thread.join(timeout=5)
 
 
-def _request(port: int, path: str, method: str = "GET", body: bytes | None = None, content_type: str | None = None) -> tuple[int, dict[str, str], bytes]:
+def _request(port: int, path: str, method: str = "GET", body: bytes | None = None, content_type: str | None = None, extra_headers: dict[str, str] | None = None, client_header: bool = True) -> tuple[int, dict[str, str], bytes]:
     headers = {}
+    if client_header:
+        headers["X-Demo-Client"] = "1"
     if content_type is not None:
         headers["Content-Type"] = content_type
+    headers.update(extra_headers or {})
     request = urllib.request.Request(
         f"http://127.0.0.1:{port}{path}",
         data=body,
@@ -243,3 +247,126 @@ async def _segment_status(servicer: FakeServicer) -> tuple[int, dict[str, str], 
         b'{"points": []}',
         servicer,
     )
+
+def test_demo_binds_loopback_unless_told_otherwise(monkeypatch) -> None:
+    monkeypatch.delenv("SEGMENTATION_DEMO_BIND", raising=False)
+    assert demo_bind_address() == "127.0.0.1"
+    monkeypatch.setenv("SEGMENTATION_DEMO_BIND", "0.0.0.0")
+    assert demo_bind_address() == "0.0.0.0"
+    assert demo_bind_address("10.0.0.5") == "10.0.0.5"
+
+
+def test_a_changing_request_without_the_client_header_is_refused() -> None:
+    servicer = FakeServicer()
+    with _running(servicer) as (port, _servicer):
+        status, _h, payload = _request(port, "/api/images", "POST", _png(), "image/png", client_header=False)
+        assert status == 403
+        assert "X-Demo-Client" in json.loads(payload)["error"]
+        status, _h, _p = _request(port, "/api/images/42", "DELETE", client_header=False)
+        assert status == 403
+        assert servicer.last_upload is None and servicer.deleted == []
+        status, _h, _p = _request(port, "/", client_header=False)
+        assert status == 200
+
+
+def test_a_token_is_required_on_changing_requests_when_one_is_set() -> None:
+    servicer = FakeServicer()
+    with _running(servicer, token="s3cret") as (port, _servicer):
+        assert _request(port, "/api/images", "POST", _png(), "image/png")[0] == 401
+        wrong = _request(port, "/api/images", "POST", _png(), "image/png", extra_headers={"X-Demo-Token": "nope"})
+        assert wrong[0] == 401
+        assert servicer.last_upload is None
+        right = _request(port, "/api/images", "POST", _png(), "image/png", extra_headers={"X-Demo-Token": "s3cret"})
+        assert right[0] == 201
+        assert _request(port, "/")[0] == 200
+
+
+def _raw(port: int, request: bytes) -> bytes:
+    import socket
+
+    with socket.create_connection(("127.0.0.1", port), timeout=5) as sock:
+        sock.sendall(request)
+        chunks = []
+        try:
+            while True:
+                data = sock.recv(65536)
+                if not data:
+                    break
+                chunks.append(data)
+        except socket.timeout:
+            pass
+    return b"".join(chunks)
+
+
+def test_a_post_without_content_length_or_with_chunked_encoding_is_refused() -> None:
+    with _running(FakeServicer()) as (port, _servicer):
+        head = b"POST /api/images HTTP/1.1\r\nHost: x\r\nX-Demo-Client: 1\r\nConnection: close\r\n"
+        assert _raw(port, head + b"\r\n").startswith(b"HTTP/1.1 411")
+        chunked = head + b"Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n"
+        assert _raw(port, chunked).startswith(b"HTTP/1.1 411")
+
+
+def test_an_invalid_or_oversized_content_length_is_refused_before_reading() -> None:
+    with _running(FakeServicer()) as (port, _servicer):
+        head = b"POST /api/images/42/segment HTTP/1.1\r\nHost: x\r\nX-Demo-Client: 1\r\nConnection: close\r\n"
+        assert _raw(port, head + b"Content-Length: abc\r\n\r\n").startswith(b"HTTP/1.1 400")
+        assert _raw(port, head + b"Content-Length: -5\r\n\r\n").startswith(b"HTTP/1.1 400")
+        assert _raw(port, head + b"Content-Length: 99999999\r\n\r\n").startswith(b"HTTP/1.1 413")
+
+
+def test_a_full_pool_answers_503_at_once_instead_of_queueing(monkeypatch) -> None:
+    release = threading.Event()
+    started = threading.Event()
+
+    class SlowServicer(FakeServicer):
+        async def DeleteImage(self, request: object, context: object) -> DeleteImageResponse:
+            started.set()
+            while not release.is_set():
+                await asyncio.sleep(0.01)
+            return DeleteImageResponse(success=True)
+
+    results: list[int] = []
+    with _running(SlowServicer(), max_workers=1, max_pending=0) as (port, _servicer):
+        first = threading.Thread(target=lambda: results.append(_request(port, "/api/images/1", "DELETE")[0]))
+        first.start()
+        assert started.wait(5)
+        status, _h, _p = _request(port, "/api/images/2", "DELETE")
+        release.set()
+        first.join(10)
+    assert status == 503
+    assert results == [200]
+
+
+def test_internal_failures_are_not_echoed_to_the_browser() -> None:
+    class Failing:
+        async def DeleteImage(self, request: object, context: object) -> None:
+            await context.abort(grpc.StatusCode.INTERNAL, "CUDA error at /home/user/secret/path.py:12")
+
+    with _running(Failing()) as (port, _servicer):
+        status, _h, payload = _request(port, "/api/images/9", "DELETE")
+    assert status == 500
+    assert "secret" not in json.loads(payload)["error"]
+
+
+def test_a_not_found_image_gets_a_fixed_message() -> None:
+    class Missing:
+        async def DeleteImage(self, request: object, context: object) -> None:
+            await context.abort(grpc.StatusCode.NOT_FOUND, "Image ID=9 not found")
+
+    with _running(Missing()) as (port, _servicer):
+        status, _h, payload = _request(port, "/api/images/9", "DELETE")
+    assert status == 404
+    assert "upload it again" in json.loads(payload)["error"]
+
+
+def test_an_image_declaring_too_many_pixels_is_refused_before_it_is_decoded(monkeypatch) -> None:
+    monkeypatch.setenv("SEGMENTATION_MAX_IMAGE_PIXELS", "100")
+    servicer = FakeServicer()
+    with _running(servicer) as (port, _servicer):
+        big = Image.new("RGB", (20, 20), (1, 2, 3))
+        buffer = BytesIO()
+        big.save(buffer, format="PNG")
+        status, _h, payload = _request(port, "/api/images", "POST", buffer.getvalue(), "image/png")
+    assert status == 400
+    assert "limit" in json.loads(payload)["error"]
+    assert servicer.last_upload is None

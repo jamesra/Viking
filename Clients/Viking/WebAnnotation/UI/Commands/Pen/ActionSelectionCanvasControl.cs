@@ -3,11 +3,13 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.UI;
 using Viking.UI.Controls;
 using VikingXNA;
@@ -26,7 +28,7 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// Presents a set of overlays on a canvas that allow the user to select an action
     /// </summary>
-    internal class ActionSelectionCanvasControl : Viking.UI.Commands.Command
+    internal class ActionSelectionCanvasControl : Viking.UI.Commands.Command, IHelpStrings, IObservableHelpStrings
     {
         /// <summary>
         /// Maintains the set of interactable elements associated with each action. 
@@ -65,6 +67,17 @@ namespace WebAnnotation.UI.Commands
 
         private CircularButton[] Buttons => _Buttons;
 
+        private readonly ObservableCollection<string> _choiceHelp = [];
+
+        /// <summary>
+        /// One F1 line per choice button, using the same captions as <see cref="LabelFor"/>, then Cancel.
+        /// Bound while this command is current so the bar does not keep the freehand stroke's text.
+        /// </summary>
+        public ObservableCollection<string> ObservableHelpStrings => _choiceHelp;
+
+        /// <inheritdoc cref="ObservableHelpStrings"/>
+        public string[] HelpStrings => [.. _choiceHelp];
+
 
 
         public delegate void OnCommandSuccess();
@@ -86,11 +99,11 @@ namespace WebAnnotation.UI.Commands
         /// <summary>Target button diameter in screen pixels for the right-side chrome column.</summary>
         private const double ButtonScreenPixels = 56;
 
-        /// <summary>Horizontal gap between button edge and label, in radii.</summary>
-        private const double LabelGapRadii = 1.25;
+        /// <summary>Gap between the bottom of the circle and the top of its caption, in radii. World Y decreases down the screen.</summary>
+        private const double LabelGapRadii = 0.28;
 
-        /// <summary>Max label width as a fraction of the visible world width.</summary>
-        private const double LabelMaxWidthFraction = 0.28;
+        /// <summary>Caption wrap width in button radii so names stay under the circle.</summary>
+        private const double LabelWidthRadii = 2.6;
 
         private ActionSelectionCanvasControl(SectionViewerControl parent, OnCommandSuccess? success_callback = null) : base(parent)
         {
@@ -120,6 +133,7 @@ namespace WebAnnotation.UI.Commands
                 _Buttons = [];
                 _buttonLabels = [];
                 _labeledActions.Clear();
+                PublishChoiceHelp(actionIcons.Keys);
                 return;
             }
 
@@ -160,12 +174,29 @@ namespace WebAnnotation.UI.Commands
 
             LayoutButtons();
             CreateButtonLabels();
+            PublishChoiceHelp(_labeledActions);
         }
 
         /// <summary>
-        /// Text drawn to the left of each choice button. Called after <see cref="LayoutButtons"/>.
+        /// Fills the F1 bar from the choice captions. Newlines in a button label become spaces so the combo stays one line per choice.
+        /// </summary>
+        private void PublishChoiceHelp(IEnumerable<IAction> actions)
+        {
+            _choiceHelp.Clear();
+            _choiceHelp.Add("Click a button to choose");
+            foreach (IAction action in actions)
+            {
+                string line = LabelFor(action).Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+                _choiceHelp.Add(line);
+            }
+
+            _choiceHelp.Add("Cancel");
+        }
+
+        /// <summary>
+        /// Text drawn under each choice button. Called after <see cref="LayoutButtons"/>.
         /// Long names wrap via <see cref="LabelView.MaxLineWidth"/>. Font size tracks the
-        /// screen-fixed button radius so captions stay readable beside the chrome.
+        /// screen-fixed button radius so captions stay readable under the chrome.
         /// Cancel is the last button and is not in <see cref="_labeledActions"/>.
         /// </summary>
         private void CreateButtonLabels()
@@ -203,7 +234,7 @@ namespace WebAnnotation.UI.Commands
             for (int i = 0; i < Buttons.Length; i++)
             {
                 Circle circle = Buttons[i].Circle;
-                _buttonLabels[i].Position = circle.Center - new Geometry.Vector2(circle.Radius * LabelGapRadii, 0);
+                _buttonLabels[i].Position = LabelPositionUnderCircle(circle);
                 _buttonLabels[i].MaxLineWidth = maxLineWidth;
                 _buttonLabels[i].FontSize = fontSize;
             }
@@ -212,13 +243,13 @@ namespace WebAnnotation.UI.Commands
         private LabelView CreateLabelForButton(CircularButton button, string text, double maxLineWidth)
         {
             Circle circle = button.Circle;
-            Geometry.Vector2 position = circle.Center - new Geometry.Vector2(circle.Radius * LabelGapRadii, 0);
+            Geometry.Vector2 position = LabelPositionUnderCircle(circle);
             LabelView label = new(
                 text,
                 position,
                 Color.White,
-                Alignment.CenterRight,
-                Anchor.CenterRight,
+                Alignment.CenterCenter,
+                Anchor.TopCenter,
                 scaleFontWithScene: true,
                 fontSize: ScreenFixedLabelFontSize())
             {
@@ -228,22 +259,15 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// World-space wrap width for button captions (~28% of the view, floored by a few button widths).
-        /// Matched to <see cref="LabelView.FontSize"/> so long structure names wrap into multiple lines.
+        /// World position of the caption's top edge, centered under the circle.
         /// </summary>
-        private double LabelMaxLineWidthWorld()
-        {
-            Geometry.Rectangle visible = Parent.Scene.VisibleWorldBounds;
-            double radius = ScreenFixedButtonRadius();
-            double target = visible.Width * LabelMaxWidthFraction;
-            double minimum = radius * 5;
-            double maximum = visible.Width * 0.4;
-            if (target < minimum)
-                return Math.Min(minimum, maximum);
-            if (target > maximum)
-                return maximum;
-            return target;
-        }
+        private static Geometry.Vector2 LabelPositionUnderCircle(Circle circle) =>
+            new(circle.Center.X, circle.Center.Y - circle.Radius * (1 + LabelGapRadii));
+
+        /// <summary>
+        /// World-space wrap width so captions stay under the circle and wrap onto extra lines.
+        /// </summary>
+        private double LabelMaxLineWidthWorld() => ScreenFixedButtonRadius() * LabelWidthRadii;
 
         /// <summary>
         /// Font size in world units so captions stay proportional to the screen-fixed button radius.
@@ -282,8 +306,8 @@ namespace WebAnnotation.UI.Commands
                     return "Replace boundary";
                 case Change1DContourAction:
                     return "Replace line";
-                case ChangeToPolygonAction:
-                    return "To polygon";
+                case ChangeToPolygonAction convert:
+                    return $"Convert\n{convert.Location.ID}\nto polygon";
                 case ChangeToPolylineAction:
                     return "To line";
                 case LinkLocationAction:
@@ -351,8 +375,9 @@ namespace WebAnnotation.UI.Commands
             Geometry.Rectangle visible = Parent.Scene.VisibleWorldBounds;
             double radius = ScreenFixedButtonRadius();
             double margin = radius * 1.5;
-            double horizontalSpacing = radius * 3;
-            double verticalSpacing = radius * 3;
+            double horizontalSpacing = radius * 3.4;
+            // Room under each circle for a wrapped caption before the next button.
+            double verticalSpacing = radius * 4.6;
 
             int maxRows = Math.Max(1, (int)Math.Floor((visible.Height - 2 * margin) / verticalSpacing));
             int actionCount = Math.Max(0, Buttons.Length - 1);

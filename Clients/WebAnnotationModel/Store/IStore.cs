@@ -315,6 +315,26 @@ namespace WebAnnotationModel
         /// Instruct the store to evict cached sections beyond the given limits to save memory.
         /// </summary>
         void FreeExcessSections(int LoadedSectionLimit, int LoadingSectionLimit);
+
+        /// <summary>
+        /// Server watermark for the last successful incremental location query on this section.
+        /// <see cref="DateTime.MinValue"/> until a region or section refresh has seeded it.
+        /// </summary>
+        DateTime GetLastQueryTimeForSection(long SectionNumber);
+
+        /// <summary>
+        /// True while <see cref="RefreshSectionLocationsAsync"/> has an in-flight request for this section.
+        /// </summary>
+        bool HasOutstandingSectionQuery(long SectionNumber);
+
+        /// <summary>
+        /// Incremental GetLocationChanges for the section since the section watermark.
+        /// Applies adds/updates/deletes locally, then invokes <paramref name="onLoaded"/> with objects in the store from that round-trip.
+        /// </summary>
+        Task RefreshSectionLocationsAsync(
+            long SectionNumber,
+            Action<ICollection<LocationObj>> onLoaded = null,
+            CancellationToken token = default);
     }
 
     public interface ILocationLinkStore : IStoreWithKey<LocationLinkKey, LocationLinkObj>

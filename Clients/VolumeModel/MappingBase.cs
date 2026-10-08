@@ -193,6 +193,38 @@ namespace Viking.VolumeModel
         public virtual Task FreeMemory() => Task.CompletedTask;
 
         /// <summary>
+        /// Rough managed memory, in bytes, of the tile transforms this mapping owns and <see cref="FreeMemory"/> releases. The
+        /// section mapping cache uses it to stay under its memory budget. Excludes <see cref="SharedVolumeTransform"/>, which
+        /// the cache counts once per section. Must be cheap and must not build anything (for example a lazy triangulation).
+        /// </summary>
+        public virtual long EstimatedMemoryBytes => 0;
+
+        /// <summary>
+        /// The section's volume transform when this mapping uses one. Several mappings of a section share it, so the section
+        /// mapping cache counts its memory once rather than in each mapping's <see cref="EstimatedMemoryBytes"/>.
+        /// </summary>
+        public virtual ITransform SharedVolumeTransform => null;
+
+        /// <summary>Bytes assumed for a transform that cannot estimate itself.</summary>
+        protected const long UnknownTransformBytes = 1024;
+
+        /// <summary>Estimate for a transform from <see cref="IMemoryEstimate"/>. Null counts as zero.</summary>
+        public static long EstimateTransformBytes(ITransform transform) =>
+            transform is null ? 0 : (transform as IMemoryEstimate)?.EstimatedMemoryBytes ?? UnknownTransformBytes;
+
+        /// <summary>Estimate for an array of tile transforms. Null counts as zero.</summary>
+        protected static long EstimateTransformBytes(ITransform[] transforms)
+        {
+            if (transforms is null)
+                return 0;
+
+            long bytes = 0;
+            foreach (ITransform t in transforms)
+                bytes += EstimateTransformBytes(t);
+            return bytes;
+        }
+
+        /// <summary>
         /// The section to which the mapping applies
         /// </summary>
         protected readonly Section Section = section;
@@ -248,6 +280,13 @@ namespace Viking.VolumeModel
         public virtual System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(Rectangle VisibleBounds,
                                                  double DownSample
                                                  ) => System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
+
+        /// <summary>
+        /// Completes when every tile build that earlier <see cref="VisibleTiles"/> calls started in the background has finished
+        /// and its tile is in <see cref="Global.TileCache"/>. Tile builds started after this call are not included.
+        /// Used by benchmarks and tests to time cold tile creation without polling; the viewer does not wait on it.
+        /// </summary>
+        public virtual Task WhenPendingTilesComplete() => Task.CompletedTask;
 
 
         public Vector2 SectionToVolume(Vector2 P)

@@ -17,11 +17,7 @@ namespace Viking.Identity
 {
     public class IdentityServerCustomResourceStore : IResourceStore
     {
-        private static readonly string[] ApiFacingResourceTypeIds =
-        {
-            nameof(Volume),
-            nameof(SegmentationService)
-        };
+        private static readonly string[] ApiFacingResourceTypeIds = Special.ResourceTypes.ApiFacing;
 
         private readonly ApplicationDbContext _context;
         private readonly Secret _Secret;
@@ -75,14 +71,16 @@ namespace Viking.Identity
             ApiFacingResourceTypeIds.Contains(r.ResourceTypeId);
 
         /// <summary>
-        /// Keeps only Volume/SegmentationService rows and collapses duplicate names so Duende discovery stays valid.
+        /// Keeps only API-facing rows and collapses duplicate names so Duende discovery stays valid.
+        /// Volume names stay usable as scope prefixes; when a volume shares its name with its own annotation
+        /// server the two produce the same scopes, so the annotation server is kept without a warning.
         /// </summary>
         private List<Resource> SelectUniqueApiFacingResources(IEnumerable<Resource> resources)
         {
             var apiFacing = resources.Where(IsApiFacingResource).ToList();
             var duplicates = apiFacing
                 .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
-                .Where(g => g.Count() > 1)
+                .Where(g => g.Count() > 1 && !IsAnnotationServerWithItsVolumes(g))
                 .ToList();
 
             foreach (var group in duplicates)
@@ -95,8 +93,15 @@ namespace Viking.Identity
 
             return apiFacing
                 .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.OrderBy(r => r.Id).First())
+                .Select(g => g.OrderBy(r => Array.IndexOf(ApiFacingResourceTypeIds, r.ResourceTypeId)).ThenBy(r => r.Id).First())
                 .ToList();
+        }
+
+        private static bool IsAnnotationServerWithItsVolumes(IEnumerable<Resource> sameName)
+        {
+            var servers = sameName.OfType<AnnotationServer>().ToList();
+            return servers.Count == 1
+                && sameName.All(r => r is AnnotationServer || (r is Volume v && v.AnnotationServerId == servers[0].Id));
         }
 
         /// <summary>

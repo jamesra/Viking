@@ -49,7 +49,7 @@ namespace WebAnnotation.View
                 List<string> listStrings = [];
                 if (Global.PenMode)
                 {
-                    listStrings.Add("Draw path across shape: Replace annotation boundary");
+                    listStrings.Add("Pen: Draw across the shape to replace the boundary");
                 }
 
                 listStrings.Add("CTRL + Left click on interior hole: Remove interior hole");

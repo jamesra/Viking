@@ -44,15 +44,12 @@ namespace Viking.Identity.Data
             return context.IsUserPermitted(GroupId, UserId, Special.Permissions.Group.AccessManager);
         }
 
-        private static readonly string[] ApiFacingResourceTypeIds =
-        {
-            nameof(Volume),
-            nameof(SegmentationService)
-        };
+        private static readonly string[] ApiFacingResourceTypeIds = Special.ResourceTypes.ApiFacing;
 
         /// <summary>
         /// Resolves a resource by numeric id or by name. When looking up by name, prefers
-        /// Volume/SegmentationService so Group/OrgUnit name collisions (e.g. "Yiu") do not win.
+        /// API-facing types so Group/OrgUnit name collisions (e.g. "Yiu") do not win, and among those
+        /// prefers AnnotationServer, then Volume, then SegmentationService.
         /// </summary>
         public static async Task<Resource> FindApiFacingResourceAsync(this ApplicationDbContext context, string resourceIdOrName)
         {
@@ -62,14 +59,131 @@ namespace Viking.Identity.Data
                     r.Id == resourceId && ApiFacingResourceTypeIds.Contains(r.ResourceTypeId));
             }
 
-            return await context.Resource
+            var apiFacing = await context.Resource
                 .Where(r => r.Name == resourceIdOrName && ApiFacingResourceTypeIds.Contains(r.ResourceTypeId))
-                .OrderBy(r => r.Id)
-                .FirstOrDefaultAsync()
+                .ToListAsync();
+
+            return apiFacing
+                .OrderBy(r => Array.IndexOf(ApiFacingResourceTypeIds, r.ResourceTypeId))
+                .ThenBy(r => r.Id)
+                .FirstOrDefault()
                 ?? await context.Resource
                     .Where(r => r.Name == resourceIdOrName)
                     .OrderBy(r => r.Id)
                     .FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Annotate and Review on a volume or annotation server imply Read: anyone who can edit annotations
+        /// must be able to see the images under them.
+        /// </summary>
+        public static string[] WithImpliedRead(IEnumerable<string> permissionIds)
+        {
+            var set = new HashSet<string>(permissionIds ?? Array.Empty<string>());
+            if (set.Contains(Special.Permissions.AnnotationServer.Annotate) || set.Contains(Special.Permissions.AnnotationServer.Review))
+                set.Add(Special.Permissions.AnnotationServer.Read);
+
+            return set
+                .OrderBy(p => Array.IndexOf(Special.Permissions.AnnotationServer.All, p) is var i && i >= 0 ? i : int.MaxValue)
+                .ThenBy(p => p, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Effective permissions on every volume the user can reach: grants on the volume itself (legacy rows
+        /// and image-only volumes) unioned with grants on the volume's annotation server, with Read implied.
+        /// Site administrators get every permission on every volume.
+        /// </summary>
+        public static async Task<Dictionary<long, string[]>> UserVolumePermissionsAsync(this ApplicationDbContext context, [NotNull] string userId)
+        {
+            var grants = await context.UserResourcePermissionsByType(userId,
+                new[] { nameof(Volume), nameof(AnnotationServer) });
+            return await MergeVolumePermissionsAsync(context, grants);
+        }
+
+        /// <summary>
+        /// Same as <see cref="UserVolumePermissionsAsync"/> for callers without a session: Anonymous group grants only.
+        /// </summary>
+        public static async Task<Dictionary<long, string[]>> AnonymousVolumePermissionsAsync(this ApplicationDbContext context)
+        {
+            var grants = await context.UserResourcePermissionsByTypeForAnonymous(
+                new[] { nameof(Volume), nameof(AnnotationServer) });
+            return await MergeVolumePermissionsAsync(context, grants);
+        }
+
+        private static async Task<Dictionary<long, string[]>> MergeVolumePermissionsAsync(ApplicationDbContext context, Dictionary<long, string[]> grants)
+        {
+            var result = new Dictionary<long, string[]>();
+            if (grants.Count == 0)
+                return result;
+
+            var volumes = await context.Volume
+                .Select(v => new { v.Id, v.AnnotationServerId })
+                .ToListAsync();
+
+            foreach (var volume in volumes)
+            {
+                grants.TryGetValue(volume.Id, out var onVolume);
+                string[] onServer = null;
+                if (volume.AnnotationServerId.HasValue)
+                    grants.TryGetValue(volume.AnnotationServerId.Value, out onServer);
+
+                if (onVolume == null && onServer == null)
+                    continue;
+
+                result[volume.Id] = WithImpliedRead((onVolume ?? Array.Empty<string>()).Concat(onServer ?? Array.Empty<string>()));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Effective permissions on one resource from explicit grants (no site-admin shortcut, matching
+        /// <see cref="UserResourcePermissions(ApplicationDbContext, string, long)"/>). A volume also gets its
+        /// annotation server's grants; volumes and annotation servers get Read implied.
+        /// </summary>
+        public static async Task<string[]> UserEffectiveResourcePermissionsAsync(this ApplicationDbContext context, [NotNull] string userId, [NotNull] Resource resource)
+        {
+            var resourceIds = new List<long> { resource.Id };
+            var serverId = await AnnotationServerIdOfAsync(context, resource);
+            if (serverId.HasValue)
+                resourceIds.Add(serverId.Value);
+
+            var permissions = await (await context.UserResourcePermissions(userId, resourceIds)).Distinct().ToListAsync();
+
+            return resource.ResourceTypeId == nameof(Volume) || resource.ResourceTypeId == nameof(AnnotationServer)
+                ? WithImpliedRead(permissions)
+                : permissions.ToArray();
+        }
+
+        /// <summary>
+        /// <see cref="IsUserPermitted"/> extended for volumes (annotation server grants count) and for
+        /// implied Read on volumes and annotation servers. Site administrators are always permitted.
+        /// </summary>
+        public static async Task<bool> IsUserPermittedEffectiveAsync(this ApplicationDbContext context, [NotNull] Resource resource, string userId, string permissionId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return false;
+
+            if (await context.GetUsersInAdminRole().AnyAsync(u => u.Id == userId))
+                return true;
+
+            var permissions = await context.UserEffectiveResourcePermissionsAsync(userId, resource);
+            return permissions.Contains(permissionId);
+        }
+
+        private static async Task<long?> AnnotationServerIdOfAsync(ApplicationDbContext context, Resource resource)
+        {
+            if (resource is Volume volume)
+                return volume.AnnotationServerId;
+
+            if (resource.ResourceTypeId != nameof(Volume))
+                return null;
+
+            return await context.Volume
+                .Where(v => v.Id == resource.Id)
+                .Select(v => v.AnnotationServerId)
+                .FirstOrDefaultAsync();
         }
 
         public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)

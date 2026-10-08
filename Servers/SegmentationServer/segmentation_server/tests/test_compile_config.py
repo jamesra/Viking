@@ -28,3 +28,28 @@ def test_env_compile_flag(monkeypatch) -> None:
     assert env_compile_image_encoder_enabled() is False
     monkeypatch.setenv("SAM2_COMPILE_IMAGE_ENCODER", "false")
     assert env_compile_image_encoder_enabled() is False
+
+def test_a_misspelled_flag_is_off_and_is_logged_not_silently_on(monkeypatch, caplog) -> None:
+    from segmentation_server.compile_config import env_compile_image_encoder_enabled, env_flag_enabled
+
+    monkeypatch.setenv("SAM2_COMPILE_IMAGE_ENCODER", "ture")
+    with caplog.at_level("WARNING"):
+        assert env_compile_image_encoder_enabled() is False
+    assert any("SAM2_COMPILE_IMAGE_ENCODER" in r.getMessage() and "off" in r.getMessage() for r in caplog.records)
+    monkeypatch.setenv("SOME_FLAG", "maybe")
+    assert env_flag_enabled("SOME_FLAG", default=True) is False
+
+
+def test_recognised_values_and_unset_keep_their_meaning(monkeypatch) -> None:
+    from segmentation_server.compile_config import env_compile_image_encoder_enabled, env_flag_enabled
+
+    monkeypatch.delenv("SAM2_COMPILE_IMAGE_ENCODER", raising=False)
+    assert env_compile_image_encoder_enabled() is True
+    for on in ("1", "true", "YES", " on "):
+        monkeypatch.setenv("SAM2_COMPILE_IMAGE_ENCODER", on)
+        assert env_compile_image_encoder_enabled() is True
+    for off in ("0", "false", "No", "off", ""):
+        monkeypatch.setenv("SAM2_COMPILE_IMAGE_ENCODER", off)
+        assert env_compile_image_encoder_enabled() is False
+    monkeypatch.delenv("UNSET_FLAG", raising=False)
+    assert env_flag_enabled("UNSET_FLAG", default=False) is False

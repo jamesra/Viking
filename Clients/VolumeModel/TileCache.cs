@@ -38,6 +38,27 @@ namespace Viking.VolumeModel
             return key.TileViewModel;
         }
 
+        /// <summary>
+        /// Looks up a tile and, unlike <c>TryGetValue</c>, tells a cached "known empty" tile apart from a miss.
+        /// <see cref="ConstructTile"/> caches a null tile when the tile has too few vertices to draw.
+        /// </summary>
+        /// <param name="key">The tile to look up.</param>
+        /// <param name="tile">The cached tile. Null on a miss and also for a known-empty tile.</param>
+        /// <returns>True if the cache holds an entry for the key, even an entry whose tile is null. False on a miss.</returns>
+        /// <remarks>Thread-safe. Marks the entry as used for the cache checkpoint, like <c>TryGetValue</c>.</remarks>
+        public bool TryGetTile(TileUniqueKey key, out TileViewModel tile)
+        {
+            if (!dictEntries.TryGetValue(key, out TileCacheEntry entry))
+            {
+                tile = null;
+                return false;
+            }
+
+            entry.LastAccessed = DateTime.UtcNow;
+            tile = Fetch(entry);
+            return true;
+        }
+
         public TileViewModel ConstructTile(TileUniqueKey key,
                                 PositionNormalTextureVertex[] verticies,
                                 int[] TriangleIndicies,

@@ -1,21 +1,34 @@
 """Optional HTTPS page for point-prompt segmentation.
 
-gRPC already owns container ports 80 and 443, so this listener uses its own port
-and the same Let's Encrypt PEMs. Browsers cannot call the gRPC service, so the
-page talks to HTTP handlers that invoke SegmentationServicer on the server loop.
-The site stays down unless enabled, and it stays down when the certificate files
-are not on disk yet.
+gRPC already owns container port 443, so this listener uses its own port and the same
+Let's Encrypt PEMs. Browsers cannot call the gRPC service, so the page talks to HTTP
+handlers that invoke SegmentationServicer on the server loop.
+
+The site stays down unless enabled, and it stays down when the certificate files are not
+on disk yet. It is not an authenticated service, so it is cautious by default:
+
+* It binds ``127.0.0.1`` unless ``SEGMENTATION_DEMO_BIND`` (or ``bind``) says otherwise. A
+  container that publishes the port must opt in with ``0.0.0.0``.
+* Every request that changes anything must carry ``X-Demo-Client: 1``. A page on another
+  origin cannot add a custom header without a CORS preflight, which this server never
+  allows, so a third-party web page cannot make a visitor's browser drive the demo.
+* ``SEGMENTATION_DEMO_TOKEN``, when set, must also be sent as ``X-Demo-Token`` on those
+  requests. The page asks for it once and keeps it in ``sessionStorage``.
+* Requests are served by a small bounded pool with a socket timeout, not a thread each.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import hmac
 import json
 import logging
+import os
 import ssl
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from concurrent.futures import ThreadPoolExecutor
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -33,7 +46,7 @@ from segmentation_grpc import (
     UploadImageRequest,
 )
 from segmentation_server.compile_config import env_flag_enabled
-from segmentation_server.mask_utils import prepare_image_for_sam2
+from segmentation_server.mask_utils import ensure_image_within_limit, prepare_image_for_sam2
 from segmentation_server.server import resolve_tls_pem_paths
 
 logger = logging.getLogger(__name__)
@@ -41,7 +54,20 @@ logger = logging.getLogger(__name__)
 _UNSET = object()
 
 DEMO_SITE_ENV = "SEGMENTATION_DEMO_SITE"
+DEMO_BIND_ENV = "SEGMENTATION_DEMO_BIND"
+DEMO_TOKEN_ENV = "SEGMENTATION_DEMO_TOKEN"
 DEFAULT_DEMO_PORT = 8443
+DEFAULT_DEMO_BIND = "127.0.0.1"
+CLIENT_HEADER = "X-Demo-Client"
+TOKEN_HEADER = "X-Demo-Token"
+# Requests running at once, and requests allowed to wait for a worker. Anything past both gets
+# a 503 straight away, so a burst cannot pile up threads or memory.
+_MAX_WORKERS = 8
+_MAX_PENDING = 16
+# A client that stops sending, or never reads, is dropped after this long.
+_SOCKET_TIMEOUT_SECONDS = 30
+# Segmenting one image takes seconds; this is the ceiling for a stuck one.
+_REQUEST_TIMEOUT_SECONDS = 120
 _MAX_IMAGE_BYTES = 64 * 1024 * 1024
 _MAX_JSON_BYTES = 1024 * 1024
 _MAX_POINTS = 256
@@ -98,12 +124,16 @@ class DemoContext:
         raise DemoAbort(code, details)
 
 
-class DemoHttpsServer(ThreadingHTTPServer):
-    """Threading HTTP server that carries the servicer and the asyncio loop."""
+class DemoHttpsServer(HTTPServer):
+    """HTTP server with a bounded worker pool; it carries the servicer and the asyncio loop.
+
+    ``token``, when set, is required on every request that is not a plain GET.
+    """
 
     allow_reuse_address: bool = True
     servicer: Any
     loop: asyncio.AbstractEventLoop
+    token: Optional[str]
 
     def __init__(
         self,
@@ -111,12 +141,55 @@ class DemoHttpsServer(ThreadingHTTPServer):
         servicer: Any,
         loop: asyncio.AbstractEventLoop,
         ssl_context: Optional[ssl.SSLContext] = None,
+        token: Optional[str] = None,
+        max_workers: int = _MAX_WORKERS,
+        max_pending: int = _MAX_PENDING,
     ) -> None:
         self.servicer = servicer
         self.loop = loop
+        self.token = token or None
+        self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="demo-http")
+        self._slots = threading.BoundedSemaphore(max_workers + max_pending)
         super().__init__(server_address, DemoRequestHandler)
         if ssl_context is not None:
             self.socket = ssl_context.wrap_socket(self.socket, server_side=True)
+
+    def process_request(self, request: Any, client_address: Any) -> None:
+        """Hand the connection to the pool, or refuse it at once when the pool is full."""
+        if not self._slots.acquire(blocking=False):
+            self._refuse(request)
+            return
+        try:
+            self._pool.submit(self._serve_one, request, client_address)
+        except RuntimeError:
+            self._slots.release()
+            self._refuse(request)
+
+    def _serve_one(self, request: Any, client_address: Any) -> None:
+        try:
+            self.finish_request(request, client_address)
+        except Exception:
+            self.handle_error(request, client_address)
+        finally:
+            self.shutdown_request(request)
+            self._slots.release()
+
+    def _refuse(self, request: Any) -> None:
+        """Write a minimal 503 on the raw connection and close it."""
+        try:
+            request.settimeout(2)
+            request.sendall(
+                b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n"
+                b"Retry-After: 2\r\nConnection: close\r\n\r\n"
+            )
+        except OSError:
+            pass
+        finally:
+            self.shutdown_request(request)
+
+    def server_close(self) -> None:
+        super().server_close()
+        self._pool.shutdown(wait=False, cancel_futures=True)
 
 
 class DemoSite:
@@ -147,6 +220,18 @@ def demo_enabled(cli_value: Optional[bool]) -> bool:
     return env_flag_enabled(DEMO_SITE_ENV, default=False)
 
 
+def demo_bind_address(cli_value: Optional[str] = None) -> str:
+    """Address the demo listens on: the argument, SEGMENTATION_DEMO_BIND, or loopback only."""
+    if cli_value:
+        return cli_value.strip()
+    return os.environ.get(DEMO_BIND_ENV, "").strip() or DEFAULT_DEMO_BIND
+
+
+def demo_token() -> Optional[str]:
+    """Shared secret the page must send (SEGMENTATION_DEMO_TOKEN), or None when none is set."""
+    return os.environ.get(DEMO_TOKEN_ENV, "").strip() or None
+
+
 def start_demo_site(
     *,
     enabled: bool,
@@ -154,11 +239,13 @@ def start_demo_site(
     servicer: Any,
     loop: asyncio.AbstractEventLoop,
     pem_paths: Any = _UNSET,
+    bind: Optional[str] = None,
 ) -> Optional[DemoSite]:
     """Bind the HTTPS demo site, or return None when it must stay down.
 
     Pass pem_paths from the gRPC listener's lookup. None means the certificate
     files are already known to be missing. Omit pem_paths to look them up here.
+    ``bind`` overrides SEGMENTATION_DEMO_BIND; the default is loopback only.
     """
     if not enabled:
         logger.info(
@@ -180,14 +267,23 @@ def start_demo_site(
     except OSError as exc:
         logger.error("Demo HTTPS certificate could not be loaded: %s", exc)
         return None
+    address = demo_bind_address(bind)
+    token = demo_token()
     try:
-        httpd = DemoHttpsServer(("0.0.0.0", port), servicer, loop, context)
+        httpd = DemoHttpsServer((address, port), servicer, loop, context, token=token)
     except OSError:
-        logger.exception("Demo HTTPS site could not bind 0.0.0.0:%s", port)
+        logger.exception("Demo HTTPS site could not bind %s:%s", address, port)
         return None
     thread = threading.Thread(target=httpd.serve_forever, name="demo-https", daemon=True)
     thread.start()
-    logger.info("Demo HTTPS site listening on 0.0.0.0:%s", port)
+    logger.info("Demo HTTPS site listening on %s:%s (token %s)", address, port, "required" if token else "not set")
+    if address not in ("127.0.0.1", "::1", "localhost") and token is None:
+        logger.warning(
+            "Demo HTTPS site is reachable beyond this host and has no login. Set %s to require a shared "
+            "secret, or leave %s unset to keep it on loopback.",
+            DEMO_TOKEN_ENV,
+            DEMO_BIND_ENV,
+        )
     return DemoSite(httpd, thread)
 
 
@@ -196,6 +292,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     server: DemoHttpsServer
     protocol_version: str = "HTTP/1.1"
+    # Applies to every read and write on the connection (StreamRequestHandler.timeout).
+    timeout: float = _SOCKET_TIMEOUT_SECONDS
 
     def do_GET(self) -> None:
         self._handle()
@@ -210,22 +308,65 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         logger.info("%s - " + fmt, self.address_string(), *args)
 
     def _handle(self) -> None:
-        length = _content_length(self.headers)
-        limit = _MAX_IMAGE_BYTES if self.command == "POST" and urlsplit(self.path).path == "/api/images" else _MAX_JSON_BYTES
-        if self.command != "GET" and length > limit:
-            self._send(413, {"Content-Type": "application/json; charset=utf-8"}, _json_bytes({"error": "request body is too large"}))
+        refusal = self._refusal()
+        if refusal is not None:
+            self._send(*refusal)
             return
-        body = self.rfile.read(length) if length else b""
+        body = self._read_body()
+        if body is None:
+            return
         future = asyncio.run_coroutine_threadsafe(
             handle_demo_request(self.command, self.path, body, self.server.servicer),
             self.server.loop,
         )
         try:
-            status, headers, payload = future.result(timeout=600)
+            status, headers, payload = future.result(timeout=_REQUEST_TIMEOUT_SECONDS)
         except Exception:
+            future.cancel()
             logger.exception("Demo request failed")
             status, headers, payload = 500, {"Content-Type": "application/json; charset=utf-8"}, _json_bytes({"error": "demo request failed"})
         self._send(status, headers, payload)
+
+    def _refusal(self) -> Optional[DemoResult]:
+        """An error response when a changing request lacks the CSRF header or the token."""
+        if self.command == "GET":
+            return None
+        if self.headers.get(CLIENT_HEADER) != "1":
+            return _error(403, f"{CLIENT_HEADER}: 1 is required")
+        expected = self.server.token
+        if expected is not None:
+            given = self.headers.get(TOKEN_HEADER, "")
+            if not hmac.compare_digest(given.encode("utf-8"), expected.encode("utf-8")):
+                return _error(401, "a valid demo token is required")
+        return None
+
+    def _read_body(self) -> Optional[bytes]:
+        """The request body, or None after an error response has been sent.
+
+        A body needs an explicit, valid, in-range Content-Length. Chunked bodies are refused
+        (411) instead of being read as empty, and an oversized one is refused (413) before
+        any of it is read.
+        """
+        if self.command == "GET":
+            return b""
+        if self.headers.get("Transfer-Encoding"):
+            self._send(*_error(411, "Content-Length is required; chunked bodies are not accepted"))
+            return None
+        raw = self.headers.get("Content-Length")
+        if raw is None:
+            if self.command == "POST":
+                self._send(*_error(411, "Content-Length is required"))
+                return None
+            return b""
+        length = _content_length(self.headers)
+        if length is None:
+            self._send(*_error(400, "Content-Length is not a valid size"))
+            return None
+        limit = _MAX_IMAGE_BYTES if self.command == "POST" and urlsplit(self.path).path == "/api/images" else _MAX_JSON_BYTES
+        if length > limit:
+            self._send(*_error(413, "request body is too large"))
+            return None
+        return self.rfile.read(length) if length else b""
 
     def _send(self, status: int, headers: Mapping[str, str], payload: bytes) -> None:
         self.send_response(status)
@@ -354,6 +495,7 @@ def _canonical_png(image_data: bytes) -> tuple[bytes, int, int]:
     stored and sent back to the browser, so clicks land on the picture the user sees.
     """
     image = Image.open(BytesIO(image_data))
+    ensure_image_within_limit(image)
     transposed = ImageOps.exif_transpose(image)
     if transposed is not None:
         image = transposed
@@ -487,9 +629,23 @@ def _image_id_from_path(path: str) -> Optional[int]:
     return int(token)
 
 
+_PUBLIC_MESSAGES = {
+    grpc.StatusCode.NOT_FOUND: "image not found; it may have expired, so upload it again",
+    grpc.StatusCode.UNAVAILABLE: "the segmentation service is not available right now",
+}
+
+
 def _abort_result(exc: DemoAbort) -> DemoResult:
+    """Map a servicer abort to an HTTP error.
+
+    A bad-request detail is about the user's own input and is passed on. Anything else is
+    replaced by a fixed message, and the detail goes to the server log only.
+    """
     status = _STATUS_TO_HTTP.get(exc.code, 500)
-    return _error(status, exc.details or "segmentation request failed")
+    if exc.code == grpc.StatusCode.INVALID_ARGUMENT:
+        return _error(status, exc.details or "bad request")
+    logger.warning("Demo request aborted with %s: %s", exc.code, exc.details)
+    return _error(status, _PUBLIC_MESSAGES.get(exc.code, "segmentation request failed"))
 
 
 def _error(status: int, message: str) -> DemoResult:
@@ -504,10 +660,11 @@ def _json_bytes(payload: dict[str, Any]) -> bytes:
     return json.dumps(payload).encode("utf-8")
 
 
-def _content_length(headers: Mapping[str, str]) -> int:
+def _content_length(headers: Mapping[str, str]) -> Optional[int]:
+    """The declared body size, or None when the header is not a non-negative integer."""
     raw = headers.get("Content-Length", "0")
     try:
         length = int(raw)
     except (TypeError, ValueError):
-        return 0
-    return max(0, length)
+        return None
+    return length if length >= 0 else None

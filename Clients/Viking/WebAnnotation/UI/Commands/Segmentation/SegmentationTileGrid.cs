@@ -81,6 +81,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// Distinct cells that contain <paramref name="worldPoints"/>.
+        /// SegmentTiles names these cells, not every cell in the viewport.
+        /// The server keeps a few dozen embeddings; listing a whole DS1 view
+        /// evicts the prompt cells and the RPC returns TILE_NOT_FOUND.
+        /// </summary>
+        public static List<TileCell> CellsContainingPoints(IReadOnlyList<Vector2> worldPoints, int downsample)
+        {
+            if (downsample <= 0)
+                throw new ArgumentOutOfRangeException(nameof(downsample));
+            if (worldPoints is null || worldPoints.Count == 0)
+                return [];
+
+            List<TileCell> cells = new();
+            HashSet<(int Row, int Col)> seen = new();
+            foreach (Vector2 point in worldPoints)
+            {
+                TileCell cell = CellIndex(point.X, point.Y, downsample);
+                if (seen.Add((cell.Row, cell.Col)))
+                    cells.Add(cell);
+            }
+
+            return cells;
+        }
+
+        /// <summary>
         /// World-pixel coordinate of a point, Y up, for the server's mosaic space.
         /// </summary>
         public static (int X, int Y) WorldToMosaicPixel(double worldX, double worldY, int downsample)

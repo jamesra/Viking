@@ -443,6 +443,28 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 "SegmentationServices");
         }
 
+        // GET: GrantedPermissions/BulkEditAnnotationServers
+        public Task<IActionResult> BulkEditAnnotationServers(string annotationServerIds)
+        {
+            return BulkEditResources<AnnotationServer>(
+                ParseIds(annotationServerIds),
+                "Annotation Servers",
+                "AnnotationServers",
+                "bi bi-database",
+                nameof(BulkEditAnnotationServers));
+        }
+
+        // POST: GrantedPermissions/BulkEditAnnotationServers
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> BulkEditAnnotationServers([Bind()] BulkPermissionsEditViewModel model)
+        {
+            return ApplyBulkPermissions<AnnotationServer>(
+                model,
+                "Annotation Servers",
+                "AnnotationServers");
+        }
+
         private List<long> ParseIds(string ids)
         {
             if (string.IsNullOrWhiteSpace(ids))

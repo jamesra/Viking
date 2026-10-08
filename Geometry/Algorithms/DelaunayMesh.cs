@@ -1003,14 +1003,36 @@ namespace Geometry
             Vector2 target = mesh[origin_edge_target].Position;
             MeshEdgeAngleComparerFixedIndex<VERTEX> angleComparer = new(mesh, Origin.Index, new Line(Origin.Position, target - Origin.Position), clockwise);
 
-            List<long> edge_list = [.. Origin.Edges.Select(e => e.OppositeEnd((long)Origin.Index)).Where(e => e != origin_edge_target)];
-
             //We have to include angle == 0 for the case where points are on a uniform grid.  This allows the baseline finding code to correctly locate the point nearest the cut line.
-            //EdgeAngle[] edgeAngles = edge_list.Select(edge => new EdgeAngle(Origin.Index, edge, angleComparer.MeasureAngle(edge), clockwise)).Where(edge => edge.Angle >= 0 && edge.Angle < Math.PI).ToArray();
-            EdgeAngle[] edgeAngles = [.. edge_list.Select(edge => new EdgeAngle(Origin.Index, edge, angleComparer.MeasureAngle(edge), clockwise))];
-            EdgeAngle[] edgeAnglesFiltered = [.. edgeAngles.Where(edge => edge.Angle >= 0 && edge.Angle < Math.PI)];
+            int originIndex = Origin.Index;
+            int edgeCount = Origin.Edges.Count;
+            EdgeAngle[] edgeAnglesFiltered = new EdgeAngle[edgeCount];
+            double[] sortKeys = new double[edgeCount];
+            int numFiltered = 0;
+            foreach (IEdgeKey e in Origin.Edges)
+            {
+                long edge = e.OppositeEnd((long)originIndex);
+                if (edge == origin_edge_target)
+                    continue;
 
-            Array.Sort(edgeAnglesFiltered.Select(e => e.Angle).ToArray(), edgeAnglesFiltered);
+                EdgeAngle edgeAngle = new(originIndex, edge, angleComparer.MeasureAngle(edge), clockwise);
+                if (edgeAngle.Angle >= 0 && edgeAngle.Angle < Math.PI)
+                {
+                    edgeAnglesFiltered[numFiltered] = edgeAngle;
+                    sortKeys[numFiltered] = edgeAngle.Angle;
+                    numFiltered++;
+                }
+            }
+
+            if (numFiltered != edgeAnglesFiltered.Length)
+            {
+                Array.Resize(ref edgeAnglesFiltered, numFiltered);
+                Array.Resize(ref sortKeys, numFiltered);
+            }
+
+            //Array.Sort is not stable: with exactly equal angles the order depends on the algorithm and on the number of elements.
+            //This is the same call, keys and items as before so tied edges keep the order they always had; a stable sort would reorder them.
+            Array.Sort(sortKeys, edgeAnglesFiltered);
 
 
             /*

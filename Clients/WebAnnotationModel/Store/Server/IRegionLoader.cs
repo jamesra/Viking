@@ -29,5 +29,10 @@ namespace WebAnnotationModel
             QueryTargets queryTargets,
             CancellationToken token,
             Action<ICollection<OBJECT>> foundObjectCallback);
+
+        /// <summary>
+        /// Drop warm region cells after the object store evicts a section so a return visit re-fetches.
+        /// </summary>
+        void InvalidateSection(int sectionNumber);
     }
 }

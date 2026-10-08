@@ -1,8 +1,11 @@
 using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.Input;
 using Viking.UI;
 using Viking.VolumeModel;
@@ -18,7 +21,7 @@ namespace WebAnnotation.UI.Commands
         NEXTPOLY
     }
 
-    internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase
+    internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase, IHelpStrings, IObservableHelpStrings
     {
         //Variables:
 
@@ -38,8 +41,15 @@ namespace WebAnnotation.UI.Commands
         public PolygonIndex? PolyBeingCut;
 
         //Meshes of the individual cut pieces of the retrace and replace
-        private PositionColorMeshModel? ClockwiseWalkMesh = null;
-        private PositionColorMeshModel? CounterClockwiseWalkMesh = null;
+        private PositionColorMeshModel _choiceBaseMesh;
+        private PositionColorMeshModel _choiceCapMesh;
+        private Task<Geometry.Meshing.PolygonCutFill> _fillTask;
+        private Geometry.Meshing.PolygonCutFill _fill;
+        private Vector2[] _cutPath;
+        private Polygon _viewSmall;
+        private Task _choiceFallback;
+        private RetraceCommandAction _viewAction = RetraceCommandAction.NONE;
+        private bool _viewSwitch;
         private RetraceCommandAction CutAction = RetraceCommandAction.NONE;
         //Each of the cut pieces in polygon forms
         private Polygon? CounterClockwiseCutPolygon = null;
@@ -53,6 +63,18 @@ namespace WebAnnotation.UI.Commands
         /// True if we want to use the opposite polygon as normal
         /// </summary>
         protected bool SwitchSide => ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys).CtrlPressed();
+
+        /// <summary>
+        /// Pen help for a retrace cut. Ctrl swaps the kept side.
+        /// View keys stay. The freehand control-point lines are not included.
+        /// </summary>
+        public new string[] HelpStrings =>
+        [
+            .. DefaultKeyHelpStrings,
+            "Ctrl: Keep the other side of the cut"
+        ];
+
+        public new ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
         public bool IsCutComplete => PolyBeingCut.HasValue;
 
@@ -114,7 +136,9 @@ namespace WebAnnotation.UI.Commands
 
             PathView.Color = color.Invert(1.0f);
 
-            OriginalSmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            // The choice fill reuses this triangulation. Smoothing the whole ring here blocked the pen before the first point.
+            OriginalSmoothedVolumePolygon = OriginalVolumePolygon;
+            _fillTask = PolygonCutFillCache.Begin(OriginalVolumePolygon);
         }
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -276,10 +300,13 @@ namespace WebAnnotation.UI.Commands
 
             try
             {
-                clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Clockwise, path);
-                clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(clockwise_poly.ExteriorRing, 1.0, true)];
-                counter_clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Counterclockwise, path);
-                counter_clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, 1.0, true)];
+                // Walk splices the pen path into the original ring. A chord reduction drops samples
+                // that do not change the outline, without a Catmull-Rom refit of the far side.
+                clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Clockwise, path)
+                    .ReduceExteriorRing(1.0);
+                counter_clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Counterclockwise, path)
+                    .ReduceExteriorRing(1.0);
+                _cutPath = [.. path];
                 PolyBeingCut = FirstIntersection;
             }
             catch (ArgumentException)
@@ -348,39 +375,94 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         private void UpdateViews()
         {
-            Microsoft.Xna.Framework.Color CCW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Magenta.ConvertToHCL(0.5f) : Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
-            Microsoft.Xna.Framework.Color CW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f) : Microsoft.Xna.Framework.Color.Magenta.ConvertToHCL(0.5f);
+            Microsoft.Xna.Framework.Color kept = Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
+            Microsoft.Xna.Framework.Color dropped = Microsoft.Xna.Framework.Color.Magenta.ConvertToHCL(0.5f);
+            Microsoft.Xna.Framework.Color CCW_Color = SwitchSide ? dropped : kept;
+            Microsoft.Xna.Framework.Color CW_Color = SwitchSide ? kept : dropped;
             Microsoft.Xna.Framework.Color Grow_Color = Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
-            switch (CutAction)
+
+            if (CutAction == RetraceCommandAction.NONE || ClockwiseCutPolygon is null || CounterClockwiseCutPolygon is null)
             {
-                case RetraceCommandAction.NONE:
-                    CounterClockwiseWalkMesh = null;
-                    ClockwiseWalkMesh = null;
-                    break;
-                case RetraceCommandAction.GROW_EXTERIOR_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
-                    CounterClockwiseWalkMesh = GenerateOutputVolumePolygon().CreateMeshForPolygon2D(Grow_Color);
-                    ClockwiseWalkMesh = null;
-                    break;
-                case RetraceCommandAction.SHRINK_EXTERIOR_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
-                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHCL(0.5f));
+                _choiceBaseMesh = null;
+                _choiceCapMesh = null;
+                _viewSmall = null;
+                _viewAction = RetraceCommandAction.NONE;
+                return;
+            }
 
-                    CounterClockwiseWalkMesh = CounterClockwiseCutPolygon.CreateMeshForPolygon2D(CCW_Color);
-                    ClockwiseWalkMesh = ClockwiseCutPolygon.CreateMeshForPolygon2D(CW_Color);
-                    break;
-                case RetraceCommandAction.GROW_INTERNAL_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
-                    CounterClockwiseWalkMesh = GenerateOutputVolumePolygon().CreateMeshForPolygon2D(Grow_Color);
-                    ClockwiseWalkMesh = null;
-                    break;
-                case RetraceCommandAction.SHRINK_INTERNAL_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
-                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHCL(0.5f));
+            bool ccwSmaller = CounterClockwiseCutPolygon.Area <= ClockwiseCutPolygon.Area;
+            Polygon small = ccwSmaller ? CounterClockwiseCutPolygon : ClockwiseCutPolygon;
+            Microsoft.Xna.Framework.Color smallColor = ccwSmaller ? CCW_Color : CW_Color;
+            Microsoft.Xna.Framework.Color largeColor = ccwSmaller ? CW_Color : CCW_Color;
+            bool grow = CutAction is RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING;
+            if (grow)
+            {
+                smallColor = Grow_Color;
+                largeColor = Grow_Color;
+            }
 
-                    CounterClockwiseWalkMesh = CounterClockwiseCutPolygon.CreateMeshForPolygon2D(CCW_Color);
-                    ClockwiseWalkMesh = ClockwiseCutPolygon.CreateMeshForPolygon2D(CW_Color);
-                    break;
+            bool sameCut = ReferenceEquals(_viewSmall, small) && _viewAction == CutAction;
+            if (sameCut && _choiceBaseMesh is not null)
+            {
+                if (_viewSwitch != SwitchSide)
+                {
+                    _choiceBaseMesh.Color = largeColor;
+                    if (_choiceCapMesh is not null)
+                        _choiceCapMesh.Color = smallColor;
+                    _viewSwitch = SwitchSide;
+                }
+
+                return;
+            }
+
+            if (!sameCut)
+            {
+                _choiceBaseMesh = null;
+                _choiceCapMesh = null;
+                _choiceFallback = null;
+            }
+
+            _viewSmall = small;
+            _viewAction = CutAction;
+            _viewSwitch = SwitchSide;
+            TryBuildChoiceMeshes(small, largeColor, smallColor, grow);
+        }
+
+        /// <summary>
+        /// Fills the choice from the cached cell triangulation plus a mesh of the local piece.
+        /// Leaves the meshes empty while the cache is still running so the pen path stays responsive.
+        /// An interior-ring cut has no triangles in that cache, so it meshes the two pieces without a quality refinement.
+        /// </summary>
+        private void TryBuildChoiceMeshes(Polygon small, Microsoft.Xna.Framework.Color largeColor, Microsoft.Xna.Framework.Color smallColor, bool grow)
+        {
+            bool interior = CutAction is RetraceCommandAction.GROW_INTERNAL_RING or RetraceCommandAction.SHRINK_INTERNAL_RING;
+            if (!interior && _fill is null && _fillTask is { Status: TaskStatus.RanToCompletion })
+                _fill = _fillTask.Result;
+
+            if (!interior && _fill is not null && _cutPath is { Length: >= 2 })
+            {
+                int[] baseIndices = grow
+                    ? _fill.TriangleIndices as int[] ?? [.. _fill.TriangleIndices]
+                    : _fill.IndicesExcludingOrdinals(_fill.CapTriangleOrdinals(_cutPath, small.ExteriorRing));
+                _choiceBaseMesh = PolygonCutMeshBuilder.FromIndices(_fill, baseIndices, largeColor);
+                _choiceCapMesh = PolygonCutMeshBuilder.FromPatch(small, smallColor);
+                return;
+            }
+
+            if ((interior || _fillTask is { IsFaulted: true }) && _choiceFallback is null)
+            {
+                // The cached cell has no triangles inside a hole. Mesh off the pen thread, without a Steiner budget.
+                Polygon largePiece = grow
+                    ? GenerateOutputVolumePolygon()
+                    : (CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon);
+                Polygon capPiece = grow ? null : small;
+                _choiceFallback = Task.Run(() =>
+                {
+                    PositionColorMeshModel baseMesh = PolygonCutMeshBuilder.FromPatch(largePiece, largeColor);
+                    PositionColorMeshModel capMesh = PolygonCutMeshBuilder.FromPatch(capPiece, smallColor);
+                    _choiceBaseMesh = baseMesh;
+                    _choiceCapMesh = capMesh;
+                });
             }
         }
 
@@ -430,23 +512,19 @@ return false;
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (ClockwiseWalkMesh != null || CounterClockwiseWalkMesh != null)
+            if (CutAction != RetraceCommandAction.NONE && _choiceBaseMesh is null)
+                UpdateViews();
+
+            if (_choiceBaseMesh is not null || _choiceCapMesh is not null)
             {
                 float originalAlphaLuma = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
                 Parent.PolygonOverlayEffect.InputLumaAlphaValue = 0.5f;
-                if (CounterClockwiseWalkMesh is null)
-                {
-                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new PositionColorMeshModel[] { ClockwiseWalkMesh });
-                }
-                else if (ClockwiseWalkMesh is null)
-                {
-                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new PositionColorMeshModel[] { CounterClockwiseWalkMesh });
-                }
-                else
-                {
-                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new PositionColorMeshModel[] { ClockwiseWalkMesh, CounterClockwiseWalkMesh });
-                }
-
+                PositionColorMeshModel[] meshes = _choiceCapMesh is null
+                    ? [_choiceBaseMesh]
+                    : _choiceBaseMesh is null
+                        ? [_choiceCapMesh]
+                        : [_choiceBaseMesh, _choiceCapMesh];
+                MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: meshes);
                 Parent.PolygonOverlayEffect.InputLumaAlphaValue = originalAlphaLuma;
             }
 

@@ -1,0 +1,132 @@
+@using Viking.Identity.Server.Authorization
+@model IEnumerable<Viking.Identity.Models.AnnotationServer>
+
+@{
+    ViewData["Title"] = "Annotation Servers";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-database"></i> Annotation Servers</h2>
+    <div class="btn-group" role="group">
+        @if (this.User.IsInRole(Special.Roles.Admin))
+        {
+            <button type="button" class="btn btn-warning" id="bulkPermissionsServerBtn" style="display: none;">
+                <i class="bi bi-shield-check"></i> Bulk Edit Permissions (<span id="selectedServerCount">0</span>)
+            </button>
+            <a asp-action="Catalog" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-repeat"></i> Volume Catalog Sync
+            </a>
+        }
+    </div>
+</div>
+
+<p class="text-muted">
+    Each annotation server is one annotation database. Read, Annotate, and Review granted here apply to every
+    volume that stores its annotations in it, and Annotate or Review also allows viewing the images.
+</p>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        No annotation servers yet. They are created when the volume catalog sync reads each volume's VikingXML.
+    </div>
+}
+else
+{
+    <table class="table table-modern" id="annotationServersTable">
+        <thead>
+            <tr>
+                <th style="width: 40px;"></th>
+                <th>Name</th>
+                <th>Annotation Endpoint</th>
+                <th>Organization</th>
+                <th>Volumes</th>
+                <th>Grants</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var server in Model.OrderBy(s => s.Parent?.Name ?? "").ThenBy(s => s.Name))
+            {
+                var canManage = await AuthorizationService.IsParentOrgUnitAdminAsync(User, server);
+                <tr>
+                    <td>
+                        @if (canManage)
+                        {
+                            <input class="form-check-input server-checkbox" type="checkbox" value="@server.Id" id="server_@server.Id">
+                        }
+                    </td>
+                    <td>
+                        <i class="bi bi-database"></i>
+                        <a asp-action="Details" asp-route-id="@server.Id">@server.Name</a>
+                        @if (!string.IsNullOrEmpty(server.AnnotationDatabaseName) && server.AnnotationDatabaseName != server.Name)
+                        {
+                            <div class="small text-muted">Database: @server.AnnotationDatabaseName</div>
+                        }
+                    </td>
+                    <td class="small"><code>@server.AnnotationEndpoint</code></td>
+                    <td>
+                        @if (server.Parent != null)
+                        {
+                            <i class="bi bi-building text-org"></i>
+                            <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@server.Parent.Id">@server.Parent.Name</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        @foreach (var volume in server.Volumes.OrderBy(v => v.Name))
+                        {
+                            <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="badge bg-success text-decoration-none me-1">@volume.Name</a>
+                        }
+                    </td>
+                    <td>@(server.UsersWithPermissions.Count + server.GroupsWithPermissions.Count)</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a asp-action="Details" asp-route-id="@server.Id" class="btn btn-outline-info" title="Details">
+                                <i class="bi bi-info-circle"></i>
+                            </a>
+                            @if (canManage)
+                            {
+                                <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@server.Id" class="btn btn-outline-primary" title="Permissions">
+                                    <i class="bi bi-shield-check"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@server.Id" class="btn btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var $bulkBtn = $('#bulkPermissionsServerBtn');
+
+            function updateBulkButton() {
+                var selected = $('.server-checkbox:checked').length;
+                $('#selectedServerCount').text(selected);
+                $bulkBtn.toggle(selected > 0);
+            }
+
+            $(document).on('change', '.server-checkbox', updateBulkButton);
+
+            $bulkBtn.on('click', function () {
+                var selectedIds = $('.server-checkbox:checked').map(function () { return $(this).val(); }).get();
+                if (selectedIds.length === 0) {
+                    return;
+                }
+                window.location.href = '@Url.Action("BulkEditAnnotationServers", "GrantedPermissions")?annotationServerIds=' + selectedIds.join(',');
+            });
+
+            updateBulkButton();
+        });
+    </script>
+}

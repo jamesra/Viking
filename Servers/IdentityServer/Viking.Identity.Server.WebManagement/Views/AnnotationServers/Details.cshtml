@@ -1,0 +1,166 @@
+@using Viking.Identity.Server.Authorization
+@using Viking.Identity.Server.Extensions.Services
+@model Viking.Identity.Models.AnnotationServer
+
+@{
+    ViewData["Title"] = Model.Name;
+    var canManage = await AuthorizationService.IsParentOrgUnitAdminAsync(User, Model);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-database"></i> @Model.Name</h2>
+    <div class="btn-group" role="group">
+        @if (canManage)
+        {
+            <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="bi bi-shield-check"></i> Manage Permissions
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Annotation Database</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Name</dt>
+                    <dd class="col-sm-8">@Model.Name</dd>
+
+                    <dt class="col-sm-4">Description</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Description) ? "No description" : Model.Description)</dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.AnnotationEndpoint)</dt>
+                    <dd class="col-sm-8"><code>@Model.AnnotationEndpoint</code></dd>
+
+                    @if (!string.IsNullOrEmpty(Model.AnnotationDatabaseName))
+                    {
+                        <dt class="col-sm-4">@Html.DisplayNameFor(m => m.AnnotationDatabaseName)</dt>
+                        <dd class="col-sm-8">@Model.AnnotationDatabaseName</dd>
+                    }
+
+                    @if (Model.ExportUrl != null)
+                    {
+                        <dt class="col-sm-4">@Html.DisplayNameFor(m => m.ExportUrl)</dt>
+                        <dd class="col-sm-8"><code>@Model.ExportUrl</code></dd>
+                    }
+
+                    @if (Model.AuthenticationUrl != null)
+                    {
+                        <dt class="col-sm-4">@Html.DisplayNameFor(m => m.AuthenticationUrl)</dt>
+                        <dd class="col-sm-8"><code>@Model.AuthenticationUrl</code></dd>
+                    }
+
+                    @if (Model.Parent != null)
+                    {
+                        <dt class="col-sm-4">Organization</dt>
+                        <dd class="col-sm-8">
+                            <i class="bi bi-building text-org"></i>
+                            <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.Parent.Id">@Model.Parent.Name</a>
+                        </dd>
+                    }
+
+                    <dt class="col-sm-4">Token scopes</dt>
+                    <dd class="col-sm-8">
+                        @foreach (var permission in Special.Permissions.AnnotationServer.All)
+                        {
+                            <code class="me-2">@($"{Model.Name}.{permission}")</code>
+                        }
+                    </dd>
+                </dl>
+                <p class="text-muted small mb-0">
+                    Grants on this server apply to every volume listed below. Annotate and Review also allow
+                    viewing each volume's images; nobody can edit images through Identity.
+                </p>
+            </div>
+        </div>
+
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-hdd-stack"></i> Volumes using this database (@Model.Volumes.Count)</h5>
+            </div>
+            <div class="card-body">
+                @if (!Model.Volumes.Any())
+                {
+                    <p class="text-muted mb-0">No volumes are linked to this annotation server.</p>
+                }
+                else
+                {
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Volume</th>
+                                <th>Image set</th>
+                                <th>Mirrors</th>
+                                <th>Registration</th>
+                                <th>Last sync</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var volume in Model.Volumes.OrderBy(v => v.Name))
+                            {
+                                var mirrors = VolumeMetadata.MirrorsOf(volume.ImageSet);
+                                <tr>
+                                    <td><a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id">@volume.Name</a></td>
+                                    <td>
+                                        @if (volume.ImageSet != null)
+                                        {
+                                            @volume.ImageSet.Name
+                                            @if (!string.IsNullOrEmpty(volume.ImageSet.VersionLabel))
+                                            {
+                                                <span class="badge bg-secondary ms-1">@volume.ImageSet.VersionLabel</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>@mirrors.Count</td>
+                                    <td>@(string.IsNullOrEmpty(volume.RegistrationName) ? "VikingXML default" : volume.RegistrationName)</td>
+                                    <td class="small text-muted">@volume.CatalogSyncedUtc?.ToString("u")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-modern">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                @if (canManage)
+                {
+                    <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="list-group-item list-group-item-action">
+                        <i class="bi bi-shield-check"></i> Manage Permissions
+                    </a>
+                    <form asp-action="Resync" asp-route-id="@Model.Id" method="post" class="list-group-item">
+                        <button type="submit" class="btn btn-link p-0 text-decoration-none">
+                            <i class="bi bi-arrow-repeat"></i> Re-read VikingXML and check mirrors
+                        </button>
+                    </form>
+                }
+                @if (Model.Parent != null)
+                {
+                    <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.Parent.Id" class="list-group-item list-group-item-action">
+                        <i class="bi bi-building text-org"></i> View Organization
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

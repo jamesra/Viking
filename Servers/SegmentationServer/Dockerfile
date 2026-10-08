@@ -79,12 +79,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && apt-get install -y --no-install-recommends libcap2-bin \
     && setcap 'cap_net_bind_service=+ep' /usr/bin/python3.13
 
-COPY Servers/SegmentationServer/segmentation_grpc/setup.py \
-     Servers/SegmentationServer/segmentation_grpc/pyproject.toml \
+COPY Servers/SegmentationServer/segmentation_grpc/pyproject.toml \
      /home/user/segmentation_grpc/
-COPY Servers/SegmentationServer/segmentation_server/setup.py \
-     Servers/SegmentationServer/segmentation_server/pyproject.toml \
+COPY Servers/SegmentationServer/segmentation_server/pyproject.toml \
      Servers/SegmentationServer/segmentation_server/requirements-docker.txt \
+     Servers/SegmentationServer/segmentation_server/requirements-debug.txt \
      /home/user/segmentation_server/
 
 # Placeholder packages so pip -e succeeds before the full source COPY.
@@ -100,14 +99,22 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         --extra-index-url https://download.pytorch.org/whl/cu132 \
     && python3 -m pip install -e /home/user/segmentation_server --no-deps
 
+# debugpy and pydevd-pycharm open debug listeners, so they are not in the production image.
+# docker build --build-arg INSTALL_DEBUG_TOOLS=true for a development image.
+ARG INSTALL_DEBUG_TOOLS=false
+RUN --mount=type=cache,target=/root/.cache/pip \
+    if [ "$INSTALL_DEBUG_TOOLS" = "true" ]; then \
+        python3 -m pip install -r /home/user/segmentation_server/requirements-debug.txt; \
+    fi
+
 COPY --chmod=755 Servers/SegmentationServer/start.sh /home/user/start.sh
 
 COPY --chown=user:user gRPC_Protos/Segmentation /home/user/gRPC_Protos/Segmentation
 COPY --chown=user:user Servers/SegmentationServer/segmentation_grpc /home/user/segmentation_grpc
 COPY --chown=user:user Servers/SegmentationServer/segmentation_server/segmentation_server /home/user/segmentation_server/segmentation_server/
 
-EXPOSE 80
 EXPOSE 443
+# Debug ports. They accept connections only in an image built with INSTALL_DEBUG_TOOLS=true.
 EXPOSE 5678
 EXPOSE 12348
 
@@ -117,5 +124,10 @@ ENV PYTHONPATH=/home/user/segmentation_server:/home/user/segmentation_grpc \
     VS_CODE_DEBUG=false
 
 STOPSIGNAL SIGTERM
+
+# GetServerStatus over TLS on loopback. The start period covers waiting for the certificate
+# (SEGMENTATION_TLS_WAIT_SECONDS), loading the weights, and the first CUDA initialisation.
+HEALTHCHECK --interval=30s --timeout=15s --start-period=600s --retries=3 \
+    CMD ["python3", "-m", "segmentation_server.healthcheck"]
 
 ENTRYPOINT ["/home/user/start.sh"]

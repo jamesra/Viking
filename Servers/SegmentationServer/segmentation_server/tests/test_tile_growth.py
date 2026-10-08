@@ -1,559 +1,573 @@
-"""Tile growth tests. The predictor is a fake; no SAM2 weights."""
+"""Growth over overlapping cells, against a synthetic world with an edge-biased fake SAM2."""
 
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
-
+import cv2
 import numpy as np
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from segmentation_server.mask_utils import mask_to_polygons
-from segmentation_server.tile_growth import (
-    SEED_INSET_PX,
-    SeamGraph,
+from segmentation_server.cell_grid import (
+    CORE_MARGIN,
+    CORE_SIZE,
+    Cell,
     TileIndex,
+    cell_of_point,
+    tile_of_point,
+    tiles_for_cell,
+)
+from segmentation_server.mask_utils import NoMatchingMask
+from segmentation_server.tile_growth import (
+    MAX_PREDICTIONS_PER_CELL,
+    GrowthCancelled,
+    GrowthWalk,
+    _gate_margin,
     grow_segmentation,
-    paste_half_mask,
-    stitch_half_tile,
+)
+from cell_world import (
+    World,
+    circle_clicks,
+    ellipse,
+    iou,
+    longest_boundary_run,
+    ring,
+    stroke,
 )
 
-Point = Tuple[int, int]
-SIZE = 32
+
+def _grow(world: World, clicks, background=(), **kwargs):
+    return grow_segmentation(clicks, list(background), world.predict, **kwargs)
 
 
-def _interior(size: int = SIZE) -> np.ndarray:
-    mask = np.zeros((size, size), dtype=np.bool_)
-    mask[10:20, 10:20] = True
-    return mask
+def test_a_blob_inside_one_core_costs_one_predict_and_matches_the_truth() -> None:
+    truth = ellipse(2048, 2048, 150, 120, 0.3)
+    world = World(truth)
 
+    result = _grow(world, circle_clicks(2048, 2048, 80))
 
-def _right_edge(size: int = SIZE) -> np.ndarray:
-    mask = np.zeros((size, size), dtype=np.bool_)
-    mask[2:-2, -2:] = True
-    return mask
-
-
-def _reaching_right(size: int = SIZE) -> np.ndarray:
-    """Mask that reaches the right edge and contains the half-tile inset point."""
-    mask = np.zeros((size, size), dtype=np.bool_)
-    mask[2:-2, size // 2 :] = True
-    return mask
-
-
-def test_contained_mask_does_not_request_tiles() -> None:
-    calls: List[TileIndex] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        calls.append(TileIndex(row, col))
-        return _interior(), None, 0.9
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(1, 2)],
-        foreground=[(2 * SIZE + 15, SIZE + 15)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
-    )
-    assert calls == [TileIndex(1, 2)]
+    assert len(world.calls) == 1
+    assert iou(world.to_truth_frame(result), truth) == 1.0
     assert result.requested == []
-    assert result.origin_x == 2 * SIZE
-    assert result.origin_y == SIZE
-    assert result.score == 0.9
-    assert len(mask_to_polygons(result.mask)) == 1
 
 
-def test_right_edge_seeds_uploaded_neighbor() -> None:
-    seen: List[Tuple[int, List[Point]]] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        seen.append((col, list(points)))
-        if col == 0:
-            return _right_edge(), None, 0.8
-        return _interior(), None, 0.4
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
-    )
-    assert [col for col, _points in seen] == [0, 1]
-    neighbor_points = seen[1][1]
-    assert any(x == SEED_INSET_PX for x, _y in neighbor_points)
-    assert all(label == 1 for label in [1] * len(neighbor_points))
-    assert result.requested == []
-    assert result.score == 0.4
-    assert np.any(result.mask[:, :SIZE])
-    assert np.any(result.mask[:, SIZE:])
+ellipses = st.builds(
+    lambda cx, cy, a, b, theta: (cx, cy, a, b, theta),
+    st.integers(1900, 2200),
+    st.integers(1900, 2200),
+    st.integers(200, 600),
+    st.integers(200, 600),
+    st.floats(0.0, 3.14),
+)
 
 
-def test_missing_neighbor_returns_partial_and_requests_that_cell() -> None:
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        return _right_edge(), None, 0.7
+@settings(max_examples=12, deadline=None)
+@given(shape=ellipses, u1=st.floats(-0.5, 0.5), u2=st.floats(-0.5, 0.5))
+def test_a_blob_spanning_cores_is_recovered_from_any_start(shape, u1: float, u2: float) -> None:
+    cx, cy, a, b, theta = shape
+    truth = ellipse(cx, cy, a, b, theta)
+    start_x = cx + np.cos(theta) * u1 * a - np.sin(theta) * u2 * b
+    start_y = cy + np.sin(theta) * u1 * a + np.cos(theta) * u2 * b
+    world = World(truth)
 
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
-    )
-    assert result.requested == [TileIndex(0, 1)]
-    assert np.count_nonzero(result.mask) > 0
-    assert result.mask.shape == (SIZE, SIZE)
+    result = _grow(world, circle_clicks(int(start_x), int(start_y), 40))
 
-
-def test_request_cap_stops_extra_directions() -> None:
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.ones((SIZE, SIZE), dtype=np.bool_)
-        return mask, None, 0.5
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        max_requested=2,
-        tile_size=SIZE,
-    )
-    assert len(result.requested) == 2
-    assert np.count_nonzero(result.mask) == SIZE * SIZE
+    assert iou(world.to_truth_frame(result), truth) >= 0.985
+    assert len(world.calls) <= MAX_PREDICTIONS_PER_CELL * len(result.cells)
 
 
-def test_two_tiles_fuse_to_one_polygon() -> None:
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        if col == 0:
-            mask[10:22, 20:] = True
-            return mask, None, 0.9
-        mask[10:22, :12] = True
-        return mask, None, 0.3
+@settings(max_examples=12, deadline=None)
+@given(shape=ellipses)
+def test_a_curved_blob_has_no_straight_cut(shape) -> None:
+    cx, cy, a, b, theta = shape
+    truth = ellipse(cx, cy, a, b, theta)
+    world = World(truth)
 
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(15, 16), (SIZE + 4, 16)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
-    )
-    assert result.requested == []
-    assert result.mask.shape == (SIZE, SIZE * 2)
-    assert result.score == 0.3
-    assert len(mask_to_polygons(result.mask)) == 1
+    result = _grow(world, circle_clicks(cx, cy, 60))
+
+    assert longest_boundary_run(world.to_truth_frame(result)) <= longest_boundary_run(truth) + 8
 
 
-def test_mosaic_y_up_maps_to_image_y_down() -> None:
-    from segmentation_server.tile_growth import mosaic_to_image
+class _StingyOwner(World):
+    """One cell answers with a mask shrunk by ``shrink`` px; every other cell is exact.
 
-    assert mosaic_to_image(0, 0, TileIndex(0, 0), SIZE) == (0, SIZE - 1)
-    assert mosaic_to_image(0, SIZE - 1, TileIndex(0, 0), SIZE) == (0, 0)
-
-
-def test_c_shape_returns_to_the_first_tile() -> None:
-    """Two regions on one tile that meet only through the neighbor are both kept.
-
-    The click is in the upper region. The first predict cannot see the lower one.
-    Growth enters the neighbor, and the neighbor's far contact seeds the first tile again.
+    The pixels it gave up are only weakly negative (-0.5), as for a model that is unsure
+    rather than sure, so the owner veto leaves them to the neighbors that see them.
     """
-    calls: List[int] = []
 
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        calls.append(col)
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        if col == 0:
-            if any(y < SIZE // 2 for _x, y in points):
-                mask[2:8, 8:] = True
-            if any(y >= 20 for _x, y in points):
-                mask[24:30, 8:] = True
-            return mask, None, 0.9
-        mask[2:30, :8] = True
-        return mask, None, 0.5
+    def __init__(self, truth, stingy: Cell, shrink: int) -> None:
+        super().__init__(truth)
+        self._stingy = stingy
+        self._shrink = shrink
 
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(20, 27)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
-        seed_spacing=4,
-    )
-    assert calls == [0, 1, 0]
-    assert np.any(result.mask[2:8, 8:SIZE])
-    assert np.any(result.mask[24:30, 8:SIZE])
-    assert np.any(result.mask[2:30, SIZE:SIZE + 8])
+    def predict(self, row, col, points, labels, box=None):
+        mask, logits, score = super().predict(row, col, points, labels, box=box)
+        if Cell(row, col) == self._stingy:
+            size = 2 * self._shrink + 1
+            full = mask
+            mask = cv2.erode(mask.astype(np.uint8), np.ones((size, size), np.uint8)) > 0
+            logits = np.where(full & ~mask, np.float32(-0.5), self.logits_for(mask))
+        return mask, logits, score
+
+
+def test_margin_pixels_from_a_neighbor_fill_in_what_the_owner_cell_left_out() -> None:
+    truth = np.zeros_like(ellipse(2048, 2048, 1, 1, 0.0))
+    truth[2400:2700, 2200:3400] = True
+    owner = cell_of_point(2560, 2550)
+    world = _StingyOwner(truth, owner, shrink=40)
+
+    result = _grow(world, circle_clicks(2560, 2550, 100))
+
+    mask = world.to_truth_frame(result)
+    assert iou(mask, truth) >= 0.98
+    # The fake SAM2 blanks 6 px at each window border, so the x=2560 join between the two
+    # neighbors is the one strip only the stingy owner could have filled.
+    assert mask[2405:2695, 2300:2540].all()
+    assert mask[2405:2695, 2580:2800].all()
+
+
+class _UnsureMargin(_StingyOwner):
+    """Like ``_StingyOwner``, but every window's outer 256 px margin has only weak logits."""
+
+    def predict(self, row, col, points, labels, box=None):
+        mask, logits, score = super().predict(row, col, points, labels, box=box)
+        weak = np.full(logits.shape, True)
+        weak[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE] = False
+        logits = np.where(weak & mask, np.float32(0.5), logits)
+        return mask, logits, score
+
+
+def _bar_world(world_type):
+    truth = np.zeros_like(ellipse(2048, 2048, 1, 1, 0.0))
+    truth[2400:2700, 2200:3400] = True
+    owner = cell_of_point(2560, 2550)
+    return truth, world_type(truth, owner, shrink=40)
+
+
+def test_margin_pixels_below_the_logit_gate_are_left_to_the_cell_that_owns_them() -> None:
+    truth, world = _bar_world(_UnsureMargin)
+
+    gated = world.to_truth_frame(_grow(world, circle_clicks(2560, 2550, 100)))
+    _truth, again = _bar_world(_UnsureMargin)
+    open_gate = again.to_truth_frame(_grow(again, circle_clicks(2560, 2550, 100), margin_logit_min=0.0))
+
+    assert not gated[2410, 2400]
+    assert open_gate[2410:2690, 2300:2540].all()
+    assert gated.sum() < open_gate.sum()
+
+
+def test_a_prediction_without_logits_contributes_only_its_core() -> None:
+    class NoLogits(_StingyOwner):
+        def predict(self, row, col, points, labels, box=None):
+            mask, _logits, score = super().predict(row, col, points, labels, box=box)
+            return mask, None, score
+
+    truth, world = _bar_world(NoLogits)
+
+    result = _grow(world, circle_clicks(2560, 2550, 100))
+
+    mask = world.to_truth_frame(result)
+    assert mask.any()
+    assert not mask[2410, 2400]
+
+
+class _LeakyNeighbors(World):
+    """Every cell except ``owner`` adds a confident strip along y 2700..2760 to its mask.
+
+    The strip is joined to the truth bar, so it survives the component filter, and it sits
+    in ``owner``'s core where the owner (exact) is sure it is not object.
+    """
+
+    def __init__(self, truth, owner: Cell) -> None:
+        super().__init__(truth)
+        self._owner = owner
+
+    def predict(self, row, col, points, labels, box=None):
+        mask, logits, score = super().predict(row, col, points, labels, box=box)
+        if Cell(row, col) != self._owner and mask.any():
+            x0, y0 = col * 512, row * 512
+            top = 1023 - (2759 - y0)
+            bottom = 1023 - (2700 - y0)
+            if 0 <= top and bottom < 1024:
+                mask = mask.copy()
+                mask[top:bottom + 1, :] = True
+                logits = np.where(mask, np.float32(6.0), logits)
+        return mask, logits, score
+
+
+@pytest.mark.parametrize("start_x", [2560, 2320])
+def test_an_owner_cell_that_is_sure_vetoes_a_neighbors_confident_margin(start_x: int) -> None:
+    truth = np.zeros_like(ellipse(2048, 2048, 1, 1, 0.0))
+    truth[2400:2700, 2200:3400] = True
+    owner = cell_of_point(2560, 2550)
+    world = _LeakyNeighbors(truth, owner)
+
+    result = _grow(world, circle_clicks(start_x, 2550, 80))
+
+    mask = world.to_truth_frame(result)
+    assert owner in result.cells
+    assert not mask[2705:2760, 2310:2810].any()
+    assert mask[2410:2690, 2310:2540].all()
+    assert mask[2410:2690, 2540:2810].sum() >= 0.95 * 280 * 270
+
+
+def test_owner_veto_never_removes_what_the_owner_accepted_itself() -> None:
+    truth = np.zeros_like(ellipse(2048, 2048, 1, 1, 0.0))
+    truth[2400:2700, 2200:3400] = True
+    world = World(truth)
+
+    result = _grow(world, circle_clicks(2560, 2550, 100), owner_veto_logit=100.0)
+
+    assert iou(world.to_truth_frame(result), truth) >= 0.98
+
+
+def test_gate_margin_keeps_the_core_and_only_confident_margin() -> None:
+    kept = np.ones((1024, 1024), dtype=bool)
+    logits = np.full((1024, 1024), 0.5, dtype=np.float32)
+    logits[:, :100] = 3.0
+
+    accepted = _gate_margin(kept, logits, 1.5)
+
+    assert accepted[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE].all()
+    assert accepted[:, :100].all()
+    assert not accepted[:, 100:CORE_MARGIN].any()
+    assert not accepted[:CORE_MARGIN, CORE_MARGIN:].any()
+    assert int(accepted.sum()) == CORE_SIZE * CORE_SIZE + 100 * 1024
+
+
+def test_gate_margin_upsamples_low_resolution_logits_and_drops_margin_without_them() -> None:
+    kept = np.ones((1024, 1024), dtype=bool)
+    low = np.full((256, 256), -2.0, dtype=np.float32)
+    low[:, :32] = 4.0
+
+    accepted = _gate_margin(kept, low, 1.5)
+
+    assert accepted[:, :100].all()
+    assert not accepted[:, 200:CORE_MARGIN].any()
+    assert int(_gate_margin(kept, None, 1.5).sum()) == CORE_SIZE * CORE_SIZE
+
+
+def test_a_smaller_cell_budget_gives_a_subset_of_a_larger_one() -> None:
+    truth = ellipse(2048, 2048, 600, 450, 0.7)
+    clicks = circle_clicks(2048, 2048, 100)
+
+    small = World(truth)
+    large = World(truth)
+    small_mask = small.to_truth_frame(_grow(small, clicks, max_cells=3))
+    large_mask = large.to_truth_frame(_grow(large, clicks, max_cells=48))
+
+    assert small_mask.any()
+    assert not (small_mask & ~large_mask).any()
+    assert large_mask.sum() > small_mask.sum()
+
+
+def test_the_cell_budget_bounds_the_walk() -> None:
+    world = World(ellipse(2048, 2048, 900, 900, 0.0))
+
+    result = _grow(world, circle_clicks(2048, 2048, 100), max_cells=4)
+
+    assert len({cell for cell, _points, _labels in world.calls}) <= 4
+    assert len(world.calls) <= 4 * MAX_PREDICTIONS_PER_CELL
+    assert result.mask.any()
+
+
+def test_the_prediction_budget_bounds_the_walk() -> None:
+    world = World(ellipse(2048, 2048, 900, 900, 0.0))
+
+    _grow(world, circle_clicks(2048, 2048, 100), max_predictions=5)
+
+    assert len(world.calls) <= 5
+
+
+def _grow_with_deadline(world: World, clicks, seconds: float = 20.0, **kwargs):
+    """Run a growth on a thread so a walk that never ends fails the test instead of hanging it."""
+    import threading
+
+    box: dict = {}
+
+    def run() -> None:
+        try:
+            box["result"] = _grow(world, clicks, **kwargs)
+        except BaseException as error:  # noqa: BLE001 - reported to the test below
+            box["error"] = error
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(seconds)
+    assert not worker.is_alive(), "the growth walk did not terminate"
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
+
+
+@pytest.mark.parametrize("budget", [{"max_cells": 1}, {"max_predictions": 1}])
+def test_a_foreground_click_the_budget_never_reaches_does_not_hang_the_walk(budget) -> None:
+    near = ellipse(1500, 1500, 150, 150, 0.0)
+    far = ellipse(3000, 3000, 150, 150, 0.0)
+    world = World(near | far)
+    clicks = circle_clicks(1500, 1500, 60) + circle_clicks(3000, 3000, 60)
+
+    result = _grow_with_deadline(world, clicks, **budget)
+
+    mask = world.to_truth_frame(result)
+    assert iou(mask & near, near) >= 0.99
+    assert not (mask & far).any()
+    assert len(world.calls) == 1
+
+
+def test_a_walk_that_can_make_no_more_predictions_still_honors_a_cancel() -> None:
+    near = ellipse(1500, 1500, 150, 150, 0.0)
+    far = ellipse(3000, 3000, 150, 150, 0.0)
+    world = World(near | far)
+    clicks = circle_clicks(1500, 1500, 60) + circle_clicks(3000, 3000, 60)
+
+    with pytest.raises(GrowthCancelled):
+        _grow_with_deadline(
+            world, clicks, max_cells=1, should_stop=lambda: len(world.calls) >= 1
+        )
+
+
+def test_a_hairpin_whose_second_arm_returns_through_visited_cores_is_found() -> None:
+    top = 1300
+    left_arm, right_arm = 1500, 1700
+    points = [(left_arm, 2900), (left_arm, top), (right_arm, top), (right_arm, 2900)]
+    truth = stroke(points, 70)
+    world = World(truth)
+
+    result = _grow(world, circle_clicks(left_arm, 2850, 25))
+
+    assert iou(world.to_truth_frame(result), truth) >= 0.97
+
+
+def test_a_closed_ring_is_completed() -> None:
+    truth = ring(2048, 2048, 700, 90)
+    world = World(truth)
+
+    result = _grow(world, circle_clicks(2048 + 700, 2048, 30))
+
+    assert iou(world.to_truth_frame(result), truth) >= 0.97
+
+
+def test_a_foreground_click_on_a_separate_object_is_still_segmented() -> None:
+    near = ellipse(1500, 1500, 150, 150, 0.0)
+    far = ellipse(3000, 3000, 150, 150, 0.0)
+    world = World(near | far)
+
+    result = _grow(world, circle_clicks(1500, 1500, 60) + circle_clicks(3000, 3000, 60))
+
+    assert iou(world.to_truth_frame(result), near | far) >= 0.99
+
+
+def test_background_clicks_reach_only_the_windows_that_contain_them() -> None:
+    world = World(ellipse(2048, 2048, 150, 150, 0.0))
+    inside = (2048 + 100, 2048)
+    far_away = (3900, 3900)
+
+    _grow(world, circle_clicks(2048, 2048, 60), background=[inside, far_away])
+
+    _cell, points, labels = world.calls[0]
+    assert labels.count(0) == 1
+    assert len(points) == len(labels)
+
+
+def test_missing_tiles_are_requested_then_the_walk_completes_after_upload() -> None:
+    truth = ellipse(2048, 2048, 500, 400, 0.4)
+    clicks = circle_clicks(2048, 2048, 90)
+    owner = cell_of_point(2048, 2048)
+    needed = {(t.row, t.col) for t in tiles_for_cell(owner)}
+    held = {(tile_of_point(2048, 2048).row, tile_of_point(2048, 2048).col)}
+    assert len(needed) == 4
+
+    first = World(truth, available=held)
+    partial = _grow(first, clicks)
+
+    assert first.calls == []
+    assert partial.mask.size == 0
+    assert set(map(lambda t: (t.row, t.col), partial.requested)) == needed - held
+
+    everything = {(r, c) for r in range(4) for c in range(4)}
+    second = World(truth, available=everything)
+    complete = _grow(second, clicks)
+
+    assert iou(second.to_truth_frame(complete), truth) >= 0.985
+    assert complete.requested == []
+
+
+def _staged_walk(world: World, clicks, give):
+    """Run one GrowthWalk, giving it the tiles it asks for between ``advance`` calls.
+
+    ``give`` maps a requested tile to True (supplied) or False (unavailable). Returns the
+    walk and the truth-frame mask after each ``advance``.
+    """
+    walk = GrowthWalk(clicks, [], world.predict)
+    frames = []
+    asked = []
+    while True:
+        walk.advance()
+        frames.append(world.to_truth_frame(walk.result()))
+        needed = walk.take_requested()
+        if not needed:
+            return walk, frames, asked
+        asked.extend(needed)
+        unavailable = []
+        for tile in needed:
+            if give(tile):
+                world.available.add((tile.row, tile.col))
+            else:
+                unavailable.append(tile)
+        walk.resume(unavailable)
+
+
+def test_a_walk_continues_after_each_batch_of_tiles_and_never_loses_pixels() -> None:
+    truth = ellipse(2048, 2048, 500, 400, 0.4)
+    clicks = circle_clicks(2048, 2048, 90)
+    world = World(truth, available=set())
+
+    walk, frames, asked = _staged_walk(world, clicks, lambda _tile: True)
+
+    assert len(frames) > 1
+    for before, after in zip(frames, frames[1:]):
+        assert not (before & ~after).any()
+    assert iou(frames[-1], truth) >= 0.985
+    assert len(asked) == len(set(asked))
+
+
+def test_a_walk_in_stages_matches_a_walk_that_had_every_tile() -> None:
+    truth = ellipse(2048, 2048, 500, 400, 0.4)
+    clicks = circle_clicks(2048, 2048, 90)
+    everything = {(r, c) for r in range(-1, 6) for c in range(-1, 6)}
+    full_world = World(truth, available=everything)
+    full = _grow(full_world, clicks)
+
+    _walk, frames, _asked = _staged_walk(World(truth, available=set()), clicks, lambda _tile: True)
+
+    assert iou(frames[-1], full_world.to_truth_frame(full)) >= 0.99
+
+
+def test_a_tile_the_client_cannot_supply_is_not_asked_for_again() -> None:
+    truth = ellipse(2560, 2560, 600, 400, 0.0)
+    everything = {(r, c) for r in range(5) for c in range(5)}
+    world = World(truth, available=everything - {(2, 3)})
+
+    _walk, _frames, asked = _staged_walk(world, circle_clicks(2560, 2560, 90), lambda _tile: False)
+
+    assert len(asked) == len(set(asked))
+    assert (2, 3) in {(tile.row, tile.col) for tile in asked}
+
+
+def test_resume_without_waiting_cells_changes_nothing() -> None:
+    world = World(ellipse(2048, 2048, 150, 120, 0.3))
+    walk = GrowthWalk(circle_clicks(2048, 2048, 80), [], world.predict)
+    walk.advance()
+    calls = len(world.calls)
+
+    walk.resume()
+    walk.advance()
+
+    assert len(world.calls) == calls
+    assert walk.take_requested() == []
+
+
+def test_requested_tiles_are_capped() -> None:
+    world = World(ellipse(2048, 2048, 300, 300, 0.0), available=set())
+
+    result = _grow(world, circle_clicks(2048, 2048, 60), max_requested=2)
+
+    assert len(result.requested) == 2
+    assert all(isinstance(tile, TileIndex) for tile in result.requested)
+
+
+def test_a_cell_that_cannot_be_predicted_does_not_stop_the_other_cells() -> None:
+    truth = ellipse(2560, 2560, 600, 400, 0.0)
+    everything = {(r, c) for r in range(5) for c in range(5)}
+    world = World(truth, available=everything - {(2, 3)})
+
+    result = _grow(world, circle_clicks(2560, 2560, 90))
+
+    assert result.mask.any()
+    assert {(t.row, t.col) for t in result.requested} == {(2, 3)}
+    assert iou(world.to_truth_frame(result), truth) < 1.0
+
+def test_should_stop_cancels_before_the_next_predict() -> None:
+    world = World(ellipse(2048, 2048, 600, 400, 0.0))
+
+    with pytest.raises(GrowthCancelled):
+        _grow(world, circle_clicks(2048, 2048, 90), should_stop=lambda: True)
+
+    assert world.calls == []
+
+
+def test_no_foreground_is_an_empty_result() -> None:
+    world = World(ellipse(2048, 2048, 100, 100, 0.0))
+
+    result = _grow(world, [])
+
+    assert result.mask.size == 0
     assert result.requested == []
 
 
-def test_return_seed_skips_an_edge_the_mask_already_covers() -> None:
-    calls: List[int] = []
+def test_the_fused_mosaic_origin_and_size_follow_the_cores() -> None:
+    truth = ellipse(2048, 2048, 150, 150, 0.0)
+    world = World(truth)
 
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        calls.append(col)
-        if col == 0:
-            return _right_edge(), None, 0.8
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        # Same rows as _right_edge, so every return seed lands on mask already present.
-        mask[2:-2, :2] = True
-        return mask, None, 0.4
+    result = _grow(world, circle_clicks(2048, 2048, 60))
 
-    grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
+    owner = cell_of_point(2048, 2048)
+    assert result.mask.shape == (CORE_SIZE, CORE_SIZE)
+    assert (result.origin_x, result.origin_y) == (
+        owner.col * 512 + CORE_MARGIN,
+        owner.row * 512 + CORE_MARGIN,
     )
-    assert calls == [0, 1]
+    assert set(result.cells) == {owner}
+    assert result.cells[owner].core.shape == (CORE_SIZE, CORE_SIZE)
+
+class _RejectingWorld(World):
+    """Answers like World, but raises NoMatchingMask for the cells in ``reject``."""
+
+    def __init__(self, truth_up, reject, **kwargs) -> None:
+        super().__init__(truth_up, **kwargs)
+        self.reject = set(reject)
+
+    def predict(self, row: int, col: int, points, labels, box=None):
+        if Cell(row, col) in self.reject:
+            self.calls.append((Cell(row, col), list(points), list(labels)))
+            raise NoMatchingMask(f"nothing fits cell {row},{col}")
+        return super().predict(row, col, points, labels, box=box)
 
 
-def test_positive_logits_on_the_edge_do_not_request_a_neighbor() -> None:
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        logits = np.zeros((SIZE, SIZE), dtype=np.float32)
-        logits[2:-2, -1] = 1.0
-        return mask, logits, 0.2
+def test_a_no_match_for_the_starting_cell_fails_the_walk() -> None:
+    start = cell_of_point(2048, 2048)
+    world = _RejectingWorld(ellipse(2048, 2048, 600, 400, 0.0), reject={start})
 
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        tile_size=SIZE,
-    )
-    assert result.requested == []
+    with pytest.raises(NoMatchingMask):
+        _grow(world, circle_clicks(2048, 2048, 90))
+
+    assert [cell for cell, _p, _l in world.calls] == [start]
 
 
-def test_stitch_right_centers_the_cut() -> None:
-    left = np.zeros((8, 8), dtype=np.uint8)
-    right = np.zeros((8, 8), dtype=np.uint8)
-    left[:, 4:] = 1
-    right[:, :4] = 2
-    stitched = stitch_half_tile(left, right, "right")
-    assert np.all(stitched[:, :4] == 1)
-    assert np.all(stitched[:, 4:] == 2)
+def test_a_no_match_for_a_continuation_cell_skips_that_cell_and_the_walk_carries_on(caplog) -> None:
+    truth = ellipse(2048, 2048, 700, 300, 0.0)
+    start = cell_of_point(2048, 2048)
+    skipped = Cell(start.row, start.col + 1)
+    world = _RejectingWorld(truth, reject={skipped})
+
+    with caplog.at_level("WARNING"):
+        result = _grow_with_deadline(world, circle_clicks(2048, 2048, 90))
+
+    assert result.mask.any()
+    assert any(f"row={skipped.row} col={skipped.col} skipped" in r.getMessage() for r in caplog.records)
+    rejected = [seam for seam in result.seams if seam.outcome == "rejected"]
+    assert rejected and all(seam.cell == skipped for seam in rejected)
+    # Each edge into the skipped cell is tried once; a rejected range is claimed, not retried.
+    assert len({(seam.parent, seam.side) for seam in rejected}) == len(rejected)
+    assert len(rejected) <= 4
 
 
-def test_stitch_top_puts_the_upper_tile_above_the_cut() -> None:
-    lower = np.zeros((8, 8), dtype=np.uint8)
-    upper = np.zeros((8, 8), dtype=np.uint8)
-    lower[:4] = 1
-    upper[4:] = 2
-    stitched = stitch_half_tile(lower, upper, "top")
-    assert np.all(stitched[:4] == 2)
-    assert np.all(stitched[4:] == 1)
+def test_rejected_predictions_count_against_the_prediction_budget() -> None:
+    truth = ellipse(2048, 2048, 900, 900, 0.0)
+    start = cell_of_point(2048, 2048)
+    world = _RejectingWorld(truth, reject={Cell(start.row + dr, start.col + dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1)} - {start})
 
+    _grow_with_deadline(world, circle_clicks(2048, 2048, 100), max_predictions=3)
 
-def test_half_tile_replaces_the_edge_strip() -> None:
-    calls: List[int] = []
-    seams: List[Tuple[str, List[Point]]] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        calls.append(col)
-        return _reaching_right(), None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append((side, list(points)))
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[14:18, 8:20] = True
-        return mask, None, 0.7
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert calls == [0]
-    assert len(seams) == 1
-    assert seams[0][0] == "right"
-    assert seams[0][1] == [(11, 15)]
-    source = result.mask[:, :SIZE]
-    assert np.count_nonzero(source[:, -1]) < SIZE // 2
-    assert np.any(result.mask[:, SIZE:SIZE + 4])
-
-
-def test_half_tile_requests_a_neighbor_that_is_not_uploaded() -> None:
-    seams: List[str] = []
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append(side)
-        return np.zeros((SIZE, SIZE), dtype=np.bool_), None, 0.0
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=lambda row, col, points, labels: (_reaching_right(), None, 0.8),
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert seams == []
-    assert result.requested == [TileIndex(0, 1)]
-
-
-def test_shallow_edge_does_not_take_the_half_tile_step() -> None:
-    seams: List[str] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[2:-2, -1] = True
-        return mask, None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append(side)
-        return np.ones((SIZE, SIZE), dtype=np.bool_), None, 0.9
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert seams == []
-    assert result.requested == []
-    assert np.count_nonzero(result.mask) == SIZE - 4
-
-
-def test_full_edge_contact_prompts_one_point_per_run() -> None:
-    seams: List[List[Point]] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[2:8, SIZE // 2 :] = True
-        mask[20:28, SIZE // 2 :] = True
-        return mask, None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append(list(points))
-        return np.zeros((SIZE, SIZE), dtype=np.bool_), None, 0.0
-
-    grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert seams == [[(11, 4), (11, 23)]]
-
-
-def test_full_frame_seam_mask_fills_the_range_and_does_not_return() -> None:
-    seams: List[int] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        return _reaching_right(), None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append(1)
-        return np.ones((SIZE, SIZE), dtype=np.bool_), None, 0.9
-
-    result = grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert seams == [1]
-    assert result.mask.shape[1] == SIZE * 2
-    assert np.count_nonzero(result.mask[:, SIZE - 1]) == SIZE
-
-
-def test_overlapping_contact_does_not_search_the_original_tile() -> None:
-    seams: List[List[Point]] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[2:8, SIZE // 2 :] = True
-        return mask, None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append(list(points))
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[4, 11:18] = True
-        return mask, None, 0.6
-
-    grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert seams == [[(11, 4)]]
-
-
-def test_disjoint_contact_searches_the_return() -> None:
-    seams: List[List[Point]] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[2:8, SIZE // 2 :] = True
-        return mask, None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append((side, list(points)))
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        if len(seams) == 1:
-            mask[4, 11:24] = True
-            mask[4:23, 23] = True
-            mask[22, 16:24] = True
-            mask[20:25, 16] = True
-        else:
-            mask[22, 18:22] = True
-        return mask, None, 0.6
-
-    grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        tile_size=SIZE,
-    )
-    assert [side for side, _points in seams] == ["right", "left"]
-    assert seams[1][1][0] == (20, 22)
-
-
-def test_one_cut_is_one_undirected_edge() -> None:
-    graph = SeamGraph()
-    graph.claim(TileIndex(0, 0), TileIndex(0, 1), [(2, 8)])
-    graph.claim(TileIndex(0, 1), TileIndex(0, 0), [(6, 12), (20, 22)])
-    assert list(graph.edges) == [(0, 0, 0, 1)]
-    assert graph.ranges(TileIndex(0, 1), TileIndex(0, 0)) == [(2, 12), (20, 22)]
-
-
-def test_full_edge_paste_records_the_whole_border() -> None:
-    graph = SeamGraph()
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        return np.ones((SIZE, SIZE), dtype=np.bool_), None, 0.9
-
-    grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=lambda row, col, points, labels: (_reaching_right(), None, 0.8),
-        seam_predict=seam_predict,
-        seam_graph=graph,
-        tile_size=SIZE,
-    )
-    assert list(graph.edges) == [(0, 0, 0, 1)]
-    assert graph.ranges(TileIndex(0, 0), TileIndex(0, 1)) == [(0, SIZE - 1)]
-
-
-def test_remembered_range_skips_overlap_and_crosses_the_disjoint_run() -> None:
-    graph = SeamGraph()
-    graph.claim(TileIndex(0, 0), TileIndex(0, 1), [(2, 8)])
-    seams: List[List[Point]] = []
-
-    def predict(row: int, col: int, points: Sequence[Point], labels: Sequence[int]):
-        mask = np.zeros((SIZE, SIZE), dtype=np.bool_)
-        mask[2:9, SIZE // 2 :] = True
-        mask[20:28, SIZE // 2 :] = True
-        return mask, None, 0.8
-
-    def seam_predict(
-        src_row: int,
-        src_col: int,
-        dst_row: int,
-        dst_col: int,
-        side: str,
-        points: Sequence[Point],
-        labels: Sequence[int],
-    ):
-        seams.append(list(points))
-        return np.zeros((SIZE, SIZE), dtype=np.bool_), None, 0.0
-
-    grow_segmentation(
-        uploaded=[TileIndex(0, 0), TileIndex(0, 1)],
-        foreground=[(8, 16)],
-        background=[],
-        predict=predict,
-        seam_predict=seam_predict,
-        seam_graph=graph,
-        tile_size=SIZE,
-    )
-    assert seams == [[(11, 23)]]
-    assert list(graph.edges) == [(0, 0, 0, 1)]
-    assert graph.ranges(TileIndex(0, 0), TileIndex(0, 1)) == [(2, 8), (20, 27)]
-
-
-def test_paste_right_drops_the_edge_strip() -> None:
-    source = _right_edge()
-    synthetic = np.zeros((SIZE, SIZE), dtype=np.bool_)
-    synthetic[14:18, 12:20] = True
-    pasted, neighbor = paste_half_mask(source, None, synthetic, "right", SIZE)
-    assert np.count_nonzero(pasted[:, -1]) == 4
-    assert np.any(neighbor[:, :4])
+    assert len(world.calls) <= 3
