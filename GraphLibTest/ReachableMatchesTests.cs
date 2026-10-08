@@ -235,26 +235,23 @@ namespace GraphLibTest
         [TestMethod]
         public void FindReachableMatchesBlockedDirectionalEdgeToLowestNeighborAbandonsOtherNeighbors()
         {
-            // Today the edge check reads Edges[lowest unvisited neighbor], not the neighbor being
-            // visited, and a failed check returns from the whole node. Node 3 is reachable over an
-            // undirected edge yet is never found because 2 -> 1 cannot be travelled from 1.
+            // A blocked edge to the lowest unvisited neighbor must not prevent visiting other neighbors.
             SimpleGraph graph = CreateNodes(1, 2, 3);
             graph.AddEdge(new SimpleEdge(2, 1, true));
             graph.AddEdge(1, 3);
 
-            Assert.AreEqual(0, Matches(graph, 1, 3).Length);
+            CollectionAssert.AreEqual(new long[] { 3 }, Matches(graph, 1, 3));
         }
 
         [TestMethod]
         public void FindReachableMatchesTravelsBlockedDirectionalEdgeWhenLowestNeighborIsOpen()
         {
-            // Mirror of the test above: 3 -> 1 cannot be travelled from 1, but the check reads the
-            // open edge to 2, so 3 is still visited and reported.
+            // Each neighbor is checked on its own edge; 3 -> 1 cannot be travelled from 1 even when 1 -> 2 is open.
             SimpleGraph graph = CreateNodes(1, 2, 3);
             graph.AddEdge(1, 2);
             graph.AddEdge(new SimpleEdge(3, 1, true));
 
-            CollectionAssert.AreEqual(new long[] { 3 }, Matches(graph, 1, 3));
+            Assert.AreEqual(0, Matches(graph, 1, 3).Length);
         }
 
         [TestMethod]

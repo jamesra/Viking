@@ -320,9 +320,8 @@ namespace GraphLib
             {
                 foreach (KEY linked_node in linked_Keys)
                 {
-                    //Is the edge directional?
-                    if (false == CanTravelPath(Origin, origin_node.Edges[linked_Keys.First()], CanTravelPath))
-                        return;
+                    if (false == CanTravelPath(Origin, origin_node.Edges[linked_node], CanTravelPath))
+                        continue;
 
                     RecurseReachableNodes(ref testedNodes, ref matchingNodes, graph, linked_node, IsMatch);
                 }
