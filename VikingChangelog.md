@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.78 — unreleased
 
+* Zoom In, Zoom Out, and Home no longer spread NaN or infinity when toolbar magnification is corrupt; Home snaps to 0.5 and zoom clicks leave the bad value unchanged.
 * The scale bar no longer draws with invalid math when units per pixel is zero or not a number; it is skipped instead (the old check missed zero because it produced infinity).
 * The scale bar no longer crashes the viewer when the visible section width is zero (collapsed viewport or invalid scale).
 * Measure tool and scale-bar labels no longer crash when a distance is not a number or is infinite; the label keeps the starting unit instead of throwing.
