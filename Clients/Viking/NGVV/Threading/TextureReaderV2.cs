@@ -340,14 +340,6 @@ class TextureReaderV2 : IDisposable
     }
 
     /// <summary>
-    /// Disk-first cache load (no HTTP). Network download is handled by TryLoadingFromServer / revalidation.
-    /// </summary>
-    internal async Task<Texture2D?> TryLoadingFromCacheOrServer(Uri textureUri, string CacheFilename, CancellationToken token)
-    {
-        return await TryLoadingFromDiskOnly(CacheFilename, token).ConfigureAwait(false);
-    }
-
-    /// <summary>
     /// Downloads the texture, retrying up to five times on 503, 408 and 429 (429 honors Retry-After).
     /// Returns null on any other error status, setting <see cref="TextureNotFound"/> on 404.
     /// Every response is disposed before this returns or waits to retry.
