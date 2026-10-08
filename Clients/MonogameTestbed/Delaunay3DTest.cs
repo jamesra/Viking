@@ -38,7 +38,7 @@ namespace MonogameTestbed
             {
                 var map = Polygons[iPoly].CreatePointToPolyMap();
                 double Z = PolyZ[iPoly];
-                listPoints.AddRange(map.Keys.Select((Func<Geometry.Vector2, MIVector3>)(k => new MIVector3(k.ToVector3(Z), new PolygonIndex((int)iPoly, (int?)map[k].InnerShapeIndex, (int)map[k].VertexIndex, (IReadOnlyList<Polygon>)Polygons))));
+                listPoints.AddRange(map.Keys.Select((Func<GridVector2, MIVector3>)(k => new MIVector3((GridVector3)k.ToGridVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(GridVector2)k].iInnerPoly, (int)map[(GridVector2)k].iVertex, (IReadOnlyList<GridPolygon>)Polygons)))));
             }
 
             DelaunayTriangulation<MIVector3, DefaultTriangulationCell<MIVector3>> tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
