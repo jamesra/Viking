@@ -291,7 +291,9 @@ namespace Geometry
                     if (LCircle.HasValue == false)
                         LCircle = Circle.CircleFromThreePoints(LOrigin.Position, ROrigin.Position, LeftCandidate.Position);
 
-                    if (LCircle.Value.Covers(RightCandidate.Position))
+                    //Strict interior, as in TryGetNextCandidate: a right candidate in the epsilon band of a near-collinear
+                    //left circle is not inside it, and the angle fallback below can pick an edge through a vertex.
+                    if (LCircle.Value.Contains(RightCandidate.Position))
                     {
 
                         if (RCircle.HasValue == false)
@@ -1048,6 +1050,18 @@ namespace Geometry
             return edgeAnglesFiltered;
         }
 
+        /// <summary>
+        /// Guibas–Stolfi merge candidate on one side of <paramref name="baseline"/>: walks <paramref name="sortedCandidates"/>
+        /// in angle order and deletes the edge to each candidate whose circumcircle with the baseline strictly contains the
+        /// next candidate. Returns null when no candidate forms a triangle under 180 degrees. <paramref name="circle"/> is
+        /// null when it was not computed (single candidate or none).
+        /// </summary>
+        /// <remarks>
+        /// The in-circle test uses <see cref="Circle.Contains(in Vector2)"/>, not <c>Covers</c>: a near-collinear candidate
+        /// gives a circle with a radius of ~10^5 px, and a vertex within the <see cref="Tolerance.Epsilon"/> boundary band
+        /// is usually outside it. Treating the band as inside deletes an edge the triangulation needs; keeping a
+        /// borderline edge is safe because the final flip pass in <see cref="TriangulateToMesh"/> restores Delaunay.
+        /// </remarks>
         private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out Circle? circle)
         {
             if (sortedCandidates is null || sortedCandidates.Count == 0)
@@ -1129,14 +1143,8 @@ namespace Geometry
                 EdgeAngle nextCandidate = sortedCandidates[1];
                 IVertex2D nextCandidateVert = mesh[nextCandidate.Target];
 
-                if (circle.Value.Covers(nextCandidateVert.Position))
+                if (circle.Value.Contains(nextCandidateVert.Position))
                 {
-                    //Check edge case of a point exactly on the circle boundary
-                    if (Vector2.Distance(nextCandidateVert.Position, circle.Value.Center) == circle.Value.Radius)
-                    {
-                        return candidateVert;
-                    }
-
                     //This candidate doesn't work, delete the edge from origin to the candidate and check the next potential candidate.
 #if TRACEDELAUNAY
                     Debug.WriteLine(string.Format("Remove Edge: {0}-{1}", baseline.Origin, candidate));
