@@ -55,6 +55,7 @@ namespace SIMeasurement
         /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of at least 1 and less than 1,000.
         /// Outside the defined prefixes the result clamps to <see cref="SILengthUnits.ym"/> or <see cref="SILengthUnits.Ym"/> and the scalar leaves that range.
         /// Zero stays 0 in <paramref name="UnitOfMeasure"/>. A negative distance gets the unit of its absolute value and keeps its sign.
+        /// Non-finite values (<see cref="double.NaN"/>, infinities) stay in <paramref name="UnitOfMeasure"/> without unit hops so labels do not throw.
         /// Used for the measure tool and scale bar labels.
         /// </summary>
         /// <param name="UnitOfMeasure"></param>
@@ -64,6 +65,9 @@ namespace SIMeasurement
         {
             if (distance == 0)
                 return new LengthMeasurement(UnitOfMeasure, 0);
+
+            if (double.IsNaN(distance) || double.IsInfinity(distance))
+                return new LengthMeasurement(UnitOfMeasure, distance);
 
             int iStartUnit = (int)UnitOfMeasure;
 

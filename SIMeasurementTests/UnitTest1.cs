@@ -182,6 +182,33 @@ namespace SIMeasurementTests
         }
 
         /// <summary>
+        /// Bad lengths from corrupt transforms must not throw when the measure tool formats a label.
+        /// </summary>
+        [TestMethod]
+        public void ConvertToReadableUnitsNaNStaysInInputUnit()
+        {
+            LengthMeasurement readable = LengthMeasurement.ConvertToReadableUnits(SILengthUnits.nm, double.NaN);
+            Assert.AreEqual(SILengthUnits.nm, readable.Units);
+            Assert.IsTrue(double.IsNaN(readable.Length));
+        }
+
+        [TestMethod]
+        public void ConvertToReadableUnitsPositiveInfinityStaysInInputUnit()
+        {
+            LengthMeasurement readable = LengthMeasurement.ConvertToReadableUnits(SILengthUnits.m, double.PositiveInfinity);
+            Assert.AreEqual(SILengthUnits.m, readable.Units);
+            Assert.AreEqual(double.PositiveInfinity, readable.Length);
+        }
+
+        [TestMethod]
+        public void ConvertToReadableUnitsNegativeInfinityStaysInInputUnit()
+        {
+            LengthMeasurement readable = LengthMeasurement.ConvertToReadableUnits(SILengthUnits.mm, double.NegativeInfinity);
+            Assert.AreEqual(SILengthUnits.mm, readable.Units);
+            Assert.AreEqual(double.NegativeInfinity, readable.Length);
+        }
+
+        /// <summary>
         /// A negative length converts to the same unit as its absolute value and keeps its sign.
         /// </summary>
         [TestMethod]
