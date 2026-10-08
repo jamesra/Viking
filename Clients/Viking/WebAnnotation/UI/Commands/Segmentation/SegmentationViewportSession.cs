@@ -678,7 +678,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 resultContexts.Record(response, downsample);
                 mosaicOriginX = response.OriginX;
                 mosaicOriginY = response.OriginY;
-                uploadedImageBounds = MosaicWorldBounds(response);
+                uploadedImageBounds = MosaicWorldBounds(response, DownsampleFor(response));
                 uploadedImageWidth = Math.Max(1, response.Width);
                 uploadedImageHeight = Math.Max(1, response.Height);
                 ClearSkip();
@@ -758,7 +758,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 int captureWidth = Math.Max(1, response.Width > 0 ? response.Width : uploadedImageWidth);
                 int captureHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight);
-                Geometry.Rectangle mosaicBounds = MosaicWorldBounds(response);
+                Geometry.Rectangle mosaicBounds = MosaicWorldBounds(response, DownsampleFor(response));
 
                 Stopwatch polygonizeTimer = Stopwatch.StartNew();
                 polygons.AddRange(SegmentationMaskPolygonizer.CreatePolygons(

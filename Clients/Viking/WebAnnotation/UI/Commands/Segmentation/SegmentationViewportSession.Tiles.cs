@@ -428,12 +428,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// World rectangle covering the fused mosaic for mask-to-polygon mapping.
-        /// </summary>
-        internal Geometry.Rectangle MosaicWorldBounds(SegmentationResponse response)
-            => MosaicWorldBounds(response, DownsampleFor(response));
-
-        /// <summary>
         /// World rectangle of the mosaic for a response sent at <paramref name="requestedDownsample"/>.
         /// </summary>
         internal static Geometry.Rectangle MosaicWorldBounds(SegmentationResponse response, int requestedDownsample)
