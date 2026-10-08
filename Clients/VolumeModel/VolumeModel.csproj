@@ -21,10 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="VolumeModelTests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
     <ProjectReference Include="..\..\Utils\Utils.csproj" />

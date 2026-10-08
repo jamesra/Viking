@@ -30,13 +30,14 @@ namespace Viking.VolumeModel
 
             Geometry.Transforms.StosTransformInfo info = new(ControlSection, MappedSection, lastModified.Value);
 
-            try
+            result.Transform = await TransformFactory.ParseStos(stream, info, pixelSpacing);
+
+            if (stream != null)
             {
-                result.Transform = await TransformFactory.ParseStos(stream, info, pixelSpacing).ConfigureAwait(false);
-            }
-            finally
-            {
-                stream?.Dispose();
+                //TODO: Try to get this out of here, or at least wrap in try/finally
+                stream.Close();
+                stream.Dispose();
+                stream = null;
             }
 
             return result;
