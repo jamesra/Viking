@@ -14,6 +14,38 @@ namespace VikingCoreTests
         private const double Epsilon = 1e-9;
 
         [TestMethod]
+        public void IsPositiveFinite_ZeroOrNonFinite_ReturnsFalse()
+        {
+            Assert.IsFalse(ScaleBarLayout.IsPositiveFinite(0));
+            Assert.IsFalse(ScaleBarLayout.IsPositiveFinite(-1));
+            Assert.IsFalse(ScaleBarLayout.IsPositiveFinite(double.NaN));
+            Assert.IsFalse(ScaleBarLayout.IsPositiveFinite(double.PositiveInfinity));
+            Assert.IsFalse(ScaleBarLayout.IsPositiveFinite(double.NegativeInfinity));
+        }
+
+        [TestMethod]
+        public void IsPositiveFinite_PositiveFinite_ReturnsTrue()
+        {
+            Assert.IsTrue(ScaleBarLayout.IsPositiveFinite(1e-12));
+            Assert.IsTrue(ScaleBarLayout.IsPositiveFinite(1));
+            Assert.IsTrue(ScaleBarLayout.IsPositiveFinite(1_000_000));
+        }
+
+        [TestMethod]
+        public void TryGetViewWidthInUnits_ZeroUnitsPerPixel_ReturnsFalse()
+        {
+            Assert.IsFalse(MeasureOverlay.TryGetViewWidthInUnits(1000, 0, out _));
+            Assert.IsFalse(MeasureOverlay.TryGetViewWidthInUnits(1000, double.NaN, out _));
+        }
+
+        [TestMethod]
+        public void TryGetViewWidthInUnits_ValidScale_ReturnsQuotient()
+        {
+            Assert.IsTrue(MeasureOverlay.TryGetViewWidthInUnits(1000, 2, out double widthInUnits));
+            Assert.AreEqual(500, widthInUnits, Epsilon);
+        }
+
+        [TestMethod]
         public void TryRoundReadableLengthToBarDistance_ZeroOrNegative_ReturnsFalse()
         {
             Assert.IsFalse(ScaleBarLayout.TryRoundReadableLengthToBarDistance(0, out _));

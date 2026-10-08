@@ -11,12 +11,18 @@ namespace MeasurementExtension
         private static readonly double LogFive = Math.Log(5);
 
         /// <summary>
+        /// True when <paramref name="value"/> is positive, finite, and safe to use as a scale length or units-per-pixel divisor.
+        /// </summary>
+        public static bool IsPositiveFinite(double value) =>
+            value > 0 && !double.IsNaN(value) && !double.IsInfinity(value);
+
+        /// <summary>
         /// Returns false when the length is not positive and finite; otherwise writes the rounded bar distance.
         /// </summary>
         public static bool TryRoundReadableLengthToBarDistance(double readableLength, out double measureBarDistance)
         {
             measureBarDistance = 0;
-            if (readableLength <= 0 || double.IsNaN(readableLength) || double.IsInfinity(readableLength))
+            if (!IsPositiveFinite(readableLength))
                 return false;
 
             double log10 = Math.Log10(readableLength);

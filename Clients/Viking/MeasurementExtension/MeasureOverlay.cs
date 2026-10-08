@@ -22,17 +22,27 @@ namespace MeasurementExtension
 
         public static Geometry.Vector2 CornerOffsetFractions = new(0.01, 0.05);
 
+        /// <summary>
+        /// Converts a positive viewport width and units-per-pixel into a positive view width in display units.
+        /// Returns false when the viewport is non-positive, scale is zero/non-finite, or the quotient is not positive.
+        /// </summary>
+        internal static bool TryGetViewWidthInUnits(double viewWidthInPixels, double unitsPerPixel, out double viewWidthInUnits)
+        {
+            viewWidthInUnits = 0;
+            if (viewWidthInPixels <= 0 || !ScaleBarLayout.IsPositiveFinite(unitsPerPixel))
+                return false;
+
+            viewWidthInUnits = viewWidthInPixels / unitsPerPixel;
+            return viewWidthInUnits > 0;
+        }
+
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
             if (!Measurement.Properties.Settings.Default.ShowScaleBar || Parent is null)
                 return;
 
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;
-            if (ViewWidthInPixels <= 0)
-                return;
-
-            double ViewWidthInUnits = ViewWidthInPixels / Global.UnitsPerPixel;
-            if (ViewWidthInUnits <= 0)
+            if (!TryGetViewWidthInUnits(ViewWidthInPixels, Global.UnitsPerPixel, out double ViewWidthInUnits))
                 return;
 
             LengthMeasurement ApproximateViewBarWidth = new(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
