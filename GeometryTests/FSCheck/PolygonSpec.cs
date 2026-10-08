@@ -85,6 +85,64 @@ namespace GeometryTests
                 }),
                 nameof(NestedScaleIsContained));
 
+        /// <summary>
+        /// A ring around a hole, inside the solid part, covers the hole's area, which is outside this polygon:
+        /// Intersecting, not covered. The same ring with that hole cut out of it is still covered.
+        /// </summary>
+        [TestMethod]
+        public void RingEnclosingAHoleIsNotCovered() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), Arb.From(Gen.Choose(40, 90)), (p, percent) =>
+                {
+                    Polygon hole = p.InteriorPolygons[0];
+                    Polygon enclosing = new Polygon(p.ExteriorRing).Scale(percent / 100.0, p.Centroid);
+                    Polygon annulus = new(enclosing.ExteriorRing, [hole.ExteriorRing]);
+                    return p.GetRelation(enclosing) == ShapeRelation.Intersecting
+                        && !p.Covers(enclosing) && !p.Contains(enclosing)
+                        && p.Covers(annulus);
+                }),
+                nameof(RingEnclosingAHoleIsNotCovered));
+
+        [TestMethod]
+        public void BoxAroundAHoleIsNotCovered()
+        {
+            Polygon holed = new(Square(0, 10), [Square(4, 6)]);
+            Polygon aroundHole = new(Square(2, 8));
+            Assert.AreEqual(ShapeRelation.Intersecting, holed.GetRelation(aroundHole));
+            Assert.IsFalse(holed.Covers(aroundHole));
+            Assert.IsFalse(holed.Covers((IShape2D)aroundHole));
+            Assert.IsFalse(holed.Contains(aroundHole));
+            Assert.IsTrue(holed.Covers(new Polygon(Square(2, 8), [Square(4, 6)])), "Same hole cut out");
+            Assert.IsTrue(holed.Covers(new Polygon(Square(1, 3))), "Beside the hole");
+        }
+
+        /// <summary>Every hole corner sits on the enclosing ring, so no hole vertex is strictly inside it.</summary>
+        [TestMethod]
+        public void BoxWithHoleCornersOnItsEdgesIsNotCovered()
+        {
+            Vector2[] diamond = [new(5, 3), new(7, 5), new(5, 7), new(3, 5), new(5, 3)];
+            Polygon holed = new(Square(0, 10), [diamond]);
+            Polygon aroundHole = new(Square(3, 7));
+            Assert.AreEqual(ShapeRelation.Intersecting, holed.GetRelation(aroundHole));
+            Assert.IsFalse(holed.Covers(aroundHole));
+        }
+
+        /// <summary>
+        /// Reaches halfway into the hole along the hole's top and bottom edges, so no ring crosses another and
+        /// no vertex is inside the hole; only the overlap of the two areas shows it.
+        /// </summary>
+        [TestMethod]
+        public void BoxReachingIntoAHoleAlongItsEdgesIsNotCovered()
+        {
+            Polygon holed = new(Square(0, 10), [Square(4, 6)]);
+            Polygon intoHole = new([new(2, 4), new(5, 4), new(5, 6), new(2, 6), new(2, 4)]);
+            Assert.AreEqual(ShapeRelation.Intersecting, holed.GetRelation(intoHole));
+            Assert.IsFalse(holed.Covers(intoHole));
+        }
+
+        static Vector2[] Square(double min, double max) =>
+            [new(min, min), new(max, min), new(max, max), new(min, max), new(min, min)];
+
         [TestMethod]
         public void DisjointTranslateIsNone() =>
             CoreCheck.Run(

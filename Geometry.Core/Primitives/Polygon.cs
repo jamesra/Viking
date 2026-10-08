@@ -1704,6 +1704,7 @@ namespace Geometry
         /// <summary>
         /// How <paramref name="other"/> relates to this polygon: nested interior, shared boundary, crossing, or disjoint.
         /// Nested against the boundary is Touching (covered); boundary-only contact from outside is Touching | Exterior.
+        /// A hole of this polygon that lies inside <paramref name="other"/> makes it Intersecting.
         /// </summary>
         public ShapeRelation GetRelation(in Polygon other)
         {
@@ -1752,7 +1753,18 @@ namespace Geometry
                 anyContained = true;
 
             if (anyContained && !anyExterior)
+            {
+                // other's ring can enclose a hole without crossing it; the hole's area is then inside other but
+                // outside this. Any hole relation other than None or external contact means the interiors overlap.
+                foreach (Polygon inner in _InteriorPolygons)
+                {
+                    ShapeRelation hole = other.GetRelation(inner);
+                    if (hole != ShapeRelation.None && (hole & ShapeRelation.Exterior) == 0)
+                        return ShapeRelation.Intersecting;
+                }
+
                 return anyTouching || boundaryContact ? ShapeRelation.Touching : ShapeRelation.Contained;
+            }
 
             if (anyContained)
                 return ShapeRelation.Intersecting;
