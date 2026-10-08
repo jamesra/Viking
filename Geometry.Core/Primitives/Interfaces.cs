@@ -17,6 +17,10 @@ namespace Geometry
     /// </summary>
     /// <remarks>
     /// Flags so a collection can OR child results.
+    /// Bare <see cref="Touching"/> is boundary contact with nothing of the other shape outside this one (a point on
+    /// the boundary, a shape nestled inside against the boundary), so it is covered. Boundary-only contact from
+    /// outside (a shared edge or corner with a neighbor, an external tangent) is <c>Touching | Exterior</c>, which is
+    /// not covered. <see cref="Exterior"/> is never returned alone, and point relations never set it.
     /// Spatial predicates follow OGC Simple Features (DE-9IM): Open Geospatial Consortium,
     /// OpenGIS Implementation Standard for Geographic information — Simple feature access —
     /// Part 1: Common architecture, OGC 06-103r4 (2011). See also Egenhofer and Franzosa,
@@ -29,7 +33,10 @@ namespace Geometry
         None = 0,
         Contained = 0x01,
         Touching = 0x02,
-        Intersecting = 0x04
+        Intersecting = 0x04,
+
+        /// <summary>Set with <see cref="Touching"/> when the other shape meets this boundary from outside.</summary>
+        Exterior = 0x08
     }
 
     /// <summary>
@@ -44,14 +51,15 @@ namespace Geometry
         /// </summary>
         public static bool IsContains(this ShapeRelation relation) =>
             (relation & ShapeRelation.Contained) != 0 &&
-            (relation & ShapeRelation.Intersecting) == 0;
+            (relation & (ShapeRelation.Intersecting | ShapeRelation.Exterior)) == 0;
 
         /// <summary>
         /// OGC Covers: no point of the other geometry is outside this shape (boundary counts).
+        /// External boundary contact (<see cref="ShapeRelation.Exterior"/>) is false.
         /// </summary>
         public static bool IsCovers(this ShapeRelation relation) =>
             relation != ShapeRelation.None &&
-            (relation & ShapeRelation.Intersecting) == 0;
+            (relation & (ShapeRelation.Intersecting | ShapeRelation.Exterior)) == 0;
     }
 
     public enum ShapeType2D

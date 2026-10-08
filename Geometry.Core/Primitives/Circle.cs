@@ -302,7 +302,7 @@ namespace Geometry
 
             double distance = line.DistanceToPoint(Center);
             if (Math.Abs(distance - Radius) <= Tolerance.Epsilon)
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
             if (distance < Radius)
                 return ShapeRelation.Intersecting;
 
@@ -450,7 +450,7 @@ namespace Geometry
             double dist = Math.Abs((line.Direction.X * (Center.Y - line.Origin.Y)) -
                                    (line.Direction.Y * (Center.X - line.Origin.X)));
             if (Math.Abs(dist - Radius) <= Tolerance.Epsilon)
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
             if (dist < Radius)
                 return ShapeRelation.Intersecting;
             return ShapeRelation.None;

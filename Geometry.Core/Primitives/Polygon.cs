@@ -1592,6 +1592,8 @@ namespace Geometry
 
         /// <summary>
         /// How this polygon relates to the circle: contained (disk is inside the polygon), intersecting, touching, or none.
+        /// A tangent disk whose center is inside is Touching (covered); one whose center is outside, including in a
+        /// hole, is Touching | Exterior.
         /// </summary>
         public ShapeRelation GetRelation(in Circle other)
         {
@@ -1624,7 +1626,7 @@ namespace Geometry
             {
                 double dist = Distance(circle.Center);
                 if (Math.Abs(dist - circle.Radius) <= Tolerance.Epsilon)
-                    return ShapeRelation.Touching;
+                    return centerInside ? ShapeRelation.Touching : ShapeRelation.Touching | ShapeRelation.Exterior;
                 return ShapeRelation.Intersecting;
             }
 
@@ -1701,6 +1703,7 @@ namespace Geometry
 
         /// <summary>
         /// How <paramref name="other"/> relates to this polygon: nested interior, shared boundary, crossing, or disjoint.
+        /// Nested against the boundary is Touching (covered); boundary-only contact from outside is Touching | Exterior.
         /// </summary>
         public ShapeRelation GetRelation(in Polygon other)
         {
@@ -1761,7 +1764,7 @@ namespace Geometry
                 return ShapeRelation.Intersecting;
 
             if (anyTouching || boundaryContact)
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
 
             if (other.Covers(ExteriorRing[0]))
                 return ShapeRelation.Intersecting;

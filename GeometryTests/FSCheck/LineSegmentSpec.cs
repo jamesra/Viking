@@ -106,7 +106,7 @@ namespace GeometryTests
                 Prop.ForAll(CoreArbitraries.ArbLineSegment(), CoreArbitraries.ArbLineSegment(), (a, b) =>
                 {
                     ShapeRelation rel = a.GetRelation(b, out _);
-                    bool exclusive = rel is ShapeRelation.None or ShapeRelation.Contained or ShapeRelation.Touching or ShapeRelation.Intersecting;
+                    bool exclusive = rel is ShapeRelation.None or ShapeRelation.Contained or (ShapeRelation.Touching | ShapeRelation.Exterior) or ShapeRelation.Intersecting;
                     return exclusive && (rel == ShapeRelation.None) == !a.Intersects(b);
                 }),
                 nameof(GetRelationToOtherSegmentNoneIffNotIntersects));

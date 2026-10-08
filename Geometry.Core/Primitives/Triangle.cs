@@ -367,7 +367,7 @@ namespace Geometry
 
             //OK, make sure one endpoint isn't touching and the rest of the line is outside the triangle
             if (composite.HasFlag(ShapeRelation.Touching))
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
 
             return ShapeRelation.None;
         }

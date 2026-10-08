@@ -298,11 +298,10 @@ namespace Geometry
         /// OGC Covers: <paramref name="rect"/> lies in this closed rectangle.
         /// </summary>
         /// <remarks>
-        /// Not <see cref="ShapeRelationExtensions.IsCovers"/>: <see cref="GetRelation(in Rectangle)"/> reports a
-        /// rectangle touching from outside as Touching, which IsCovers would accept. QuadTree range queries rely on
-        /// this returning false for a neighboring quadrant that shares only an edge with the request.
+        /// QuadTree range queries rely on this returning false for a neighboring quadrant that shares only an edge
+        /// with the request; <see cref="GetRelation(in Rectangle)"/> reports that neighbor as Touching | Exterior.
         /// </remarks>
-        public bool Covers(in Rectangle rect) => GetRelation(rect) == ShapeRelation.Contained;
+        public bool Covers(in Rectangle rect) => GetRelation(rect).IsCovers();
 
         public bool Contains(in IPoint2D pos) => GetRelation(pos).IsContains();
 
@@ -359,7 +358,7 @@ namespace Geometry
         ShapeRelation RelationToCircle(in Circle circle)
         {
             ShapeRelation bboxRel = GetRelation(circle.BoundingBox);
-            if (bboxRel.IsContains() || bboxRel.IsCovers())
+            if (bboxRel.IsCovers() || bboxRel.HasFlag(ShapeRelation.Exterior))
                 return bboxRel;
             return RectangleIntersectionExtensions.Intersects(this, circle)
                 ? ShapeRelation.Intersecting
@@ -423,7 +422,7 @@ namespace Geometry
 
             //OK, make sure one endpoint isn't touching and the rest of the line is outside the triangle
             if (composite.HasFlag(ShapeRelation.Touching))
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
 
             return ShapeRelation.None;
         }
@@ -446,6 +445,10 @@ namespace Geometry
             pos.X < Right - epsilon &&
             pos.Y < Top - epsilon;
 
+        /// <summary>
+        /// Contained is closed containment (a shared boundary included); boundary-only contact from outside is
+        /// Touching | Exterior. Exact comparisons, no epsilon.
+        /// </summary>
         public ShapeRelation GetRelation(in Rectangle rect)
         {
             //Find out if the rectangles can't possibly intersect
@@ -470,10 +473,11 @@ namespace Geometry
             bool LRTouch = this.Left == rect.Right || this.Right == rect.Left;
             bool UDTouch = this.Bottom == rect.Top || this.Top == rect.Bottom;
 
+            // Closed containment returned above, so any remaining boundary-only contact is from outside.
             if ((LRTouch && UDIntersect) ||
                 (UDTouch && LRIntersect) ||
                 (LRTouch && UDTouch))
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
 
 
             if (rect.Width == 0 || rect.Height == 0 || this.Width == 0 || this.Height == 0)
@@ -483,7 +487,7 @@ namespace Geometry
                     return ShapeRelation.Intersecting;
 
                 if (LRTouch || UDTouch)
-                    return ShapeRelation.Touching;
+                    return ShapeRelation.Touching | ShapeRelation.Exterior;
             }
             else
             {

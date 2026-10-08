@@ -111,7 +111,7 @@ namespace GeometryTests
         /// <summary>
         /// Closed-set reference for two non-degenerate rectangles: disjoint is None, <paramref name="b"/> in
         /// closed <paramref name="a"/> is Contained, positive-area overlap is Intersecting, and contact along
-        /// an edge or at a corner only is Touching.
+        /// an edge or at a corner only is Touching | Exterior.
         /// </summary>
         private static ShapeRelation ReferenceRelation(Rectangle a, Rectangle b)
         {
@@ -126,7 +126,7 @@ namespace GeometryTests
                 return ShapeRelation.Contained;
             if (overlapLeft < overlapRight && overlapBottom < overlapTop)
                 return ShapeRelation.Intersecting;
-            return ShapeRelation.Touching;
+            return ShapeRelation.Touching | ShapeRelation.Exterior;
         }
 
         [TestMethod]
@@ -144,7 +144,29 @@ namespace GeometryTests
                 nameof(GetRelationRectangleMatchesClosedSetReferenceOnSharedLattice));
 
         /// <summary>
-        /// <see cref="Rectangle.GetRelation(in Rectangle)"/> as it was before shared-endpoint spans were classified.
+        /// The same lattice pairs through the polygon path (<see cref="Polygon.GetRelation(in Polygon)"/>, also used by
+        /// <see cref="Rectangle.Covers(in IShape2D)"/>): Covers is closed containment, so a neighbor sharing an edge
+        /// or corner from outside is not covered and a rectangle nestled on the boundary is.
+        /// </summary>
+        [TestMethod]
+        public void PolygonCoversMatchesClosedContainmentOnSharedLattice() =>
+            CoreCheck.Run(
+                Prop.ForAll(ArbLatticeRectanglePair(), pair =>
+                {
+                    (Rectangle a, Rectangle b) = pair;
+                    bool expected = ReferenceRelation(a, b) == ShapeRelation.Contained;
+                    Polygon pa = ShapeRelationHelpers.RectangleAsPolygon(a);
+                    Polygon pb = ShapeRelationHelpers.RectangleAsPolygon(b);
+                    return (pa.Covers(pb) == expected)
+                        .Label($"{a} vs {b}: Polygon.Covers {pa.Covers(pb)} ({pa.GetRelation(pb)}), expected {expected}")
+                        .And((a.Covers((IShape2D)pb) == expected)
+                        .Label($"{a} vs {b}: Rectangle.Covers(IShape2D) {a.Covers((IShape2D)pb)}, expected {expected}"));
+                }),
+                nameof(PolygonCoversMatchesClosedContainmentOnSharedLattice));
+
+        /// <summary>
+        /// <see cref="Rectangle.GetRelation(in Rectangle)"/> as it was before shared-endpoint spans were classified,
+        /// with external contact flagged <see cref="ShapeRelation.Exterior"/> as it is now.
         /// Valid as a reference only when a rectangle is degenerate: that path never reaches its Debug.Assert,
         /// and degenerate results must not change.
         /// </summary>
@@ -173,13 +195,13 @@ namespace GeometryTests
             bool UDTouch = a.Bottom == rect.Top || a.Top == rect.Bottom;
 
             if ((LRTouch && UDIntersect) || (UDTouch && LRIntersect) || (LRTouch && UDTouch))
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
 
             if (LRIntersect || UDIntersect)
                 return ShapeRelation.Intersecting;
 
             if (LRTouch || UDTouch)
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
 
             return ShapeRelation.None;
         }
@@ -203,7 +225,7 @@ namespace GeometryTests
             Rectangle a = new(5, 5, 0, 10);
             Rectangle b = new(5, 5, 2, 20);
             Assert.AreEqual(LegacyRelation(a, b), a.GetRelation(b));
-            Assert.AreEqual(ShapeRelation.Touching, a.GetRelation(b));
+            Assert.AreEqual(ShapeRelation.Touching | ShapeRelation.Exterior, a.GetRelation(b));
         }
 
         /// <summary>QuadTreeTestOne's request rectangle against the lower-right quadrant: they share only the edge y = 0.</summary>
@@ -212,7 +234,7 @@ namespace GeometryTests
         {
             Rectangle request = new(0, 15, 0, 15);
             Rectangle quadrant = new(0, 10, -10, 0);
-            Assert.AreEqual(ShapeRelation.Touching, request.GetRelation(quadrant));
+            Assert.AreEqual(ShapeRelation.Touching | ShapeRelation.Exterior, request.GetRelation(quadrant));
             Assert.IsFalse(request.Covers(quadrant));
         }
 
@@ -232,7 +254,7 @@ namespace GeometryTests
         {
             Rectangle request = new(0, 15, 1, 15);
             Rectangle neighbor = new(-10, 0, 0, 10);
-            Assert.AreEqual(ShapeRelation.Touching, request.GetRelation(neighbor));
+            Assert.AreEqual(ShapeRelation.Touching | ShapeRelation.Exterior, request.GetRelation(neighbor));
             Assert.IsFalse(request.Covers(neighbor));
         }
 

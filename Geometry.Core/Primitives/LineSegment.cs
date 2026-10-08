@@ -488,6 +488,10 @@ namespace Geometry
 
         public bool Intersects(LineSegment seg, out IShape2D Intersection) => GetRelation(in seg, out Intersection) != ShapeRelation.None;
 
+        /// <summary>
+        /// Classifies <paramref name="seg"/> against this segment and reports the shared point or overlap.
+        /// Contact at a single endpoint is Touching | Exterior: the rest of <paramref name="seg"/> lies off this segment.
+        /// </summary>
         public ShapeRelation GetRelation(in LineSegment seg, out IShape2D Intersection)
         {
             //Don't do the full check if the bounding boxes don't overlap
@@ -559,7 +563,7 @@ namespace Geometry
                     else if (endpointsOnLineCandidates.Length == 1)
                     {
                         Intersection = endpointsOnLineCandidates[0];
-                        return ShapeRelation.Touching;
+                        return ShapeRelation.Touching | ShapeRelation.Exterior;
                     }
                     else if (endpointsOnLineCandidates.Length == 2)
                     {
@@ -617,7 +621,7 @@ namespace Geometry
                 if (intersection_point == seg.A || intersection_point == seg.B || intersection_point == this.A || intersection_point == this.B)
                 {
                     //Contact is on the endpoint of a tested line
-                    return ShapeRelation.Touching;
+                    return ShapeRelation.Touching | ShapeRelation.Exterior;
                 }
                 else
                 {
