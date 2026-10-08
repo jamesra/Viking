@@ -1,5 +1,6 @@
 using Geometry;
 using System.Collections.Generic;
+using System.Linq;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
@@ -9,6 +10,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     public static class SegmentationExtensions
     {
+        /// <summary>
+        /// Returns the segment with the highest <see cref="SegmentationServiceTypes.SegmentResult.Score"/>,
+        /// or null when the response has no segments. Matches the previous
+        /// <c>OrderByDescending(s =&gt; s.Score).First()</c> choice (stable tie-break on list order).
+        /// </summary>
+        internal static SegmentationServiceTypes.SegmentResult? GetHighestScoringSegment(
+            this SegmentationServiceTypes.SegmentationResponse? response)
+        {
+            if (response?.Segments is null || response.Segments.Count == 0)
+                return null;
+
+            return response.Segments.OrderByDescending(segment => segment.Score).First();
+        }
+
         /// <summary>
         /// Converts a protobuf Polygon to a Polygon by transforming viewport pixel coordinates to world coordinates
         /// </summary>

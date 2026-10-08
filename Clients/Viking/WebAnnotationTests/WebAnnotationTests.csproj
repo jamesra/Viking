@@ -36,6 +36,7 @@
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="Commands\SegmentationRequestCoalescerTests.cs" />
     <Compile Include="Commands\SegmentationResultContextTests.cs" />
+    <Compile Include="Commands\SegmentationResponseExtensionsTests.cs" />
     <Compile Include="Commands\SegmentationCapabilitiesTests.cs" />
     <Compile Include="Commands\LocationRefreshQueueTests.cs" />
     <Compile Include="Commands\PanZoomDebouncerTests.cs" />

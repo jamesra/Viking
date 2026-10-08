@@ -1280,7 +1280,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private void CreateDebugMaskOverlay(SegmentationServiceTypes.SegmentationResponse response)
         {
-            var bestSegment = response.Segments.OrderByDescending(s => s.Score).First();
+            var bestSegment = response.GetHighestScoringSegment();
+            if (bestSegment is null)
+            {
+                maskOverlayView = null;
+                return;
+            }
 
             byte[] pngBytes = bestSegment.Mask.ToByteArray();
             var (decodedMaskData, decodedWidth, decodedHeight) = viewportSession.DecodePngMask(pngBytes);
