@@ -236,6 +236,67 @@ namespace GeometryTests
             Assert.IsFalse(request.Covers(neighbor));
         }
 
+        /// <summary>
+        /// A non-degenerate lattice rectangle and a lattice point up to one step outside it, so points on
+        /// edges and corners are common. Lattice coordinates are exact in double at volume magnitudes.
+        /// </summary>
+        private static Arbitrary<(Rectangle R, Vector2 P)> ArbLatticeRectangleAndPoint() =>
+            Arb.From(
+                from originX in Gen.Choose(-500000, 500000)
+                from originY in Gen.Choose(-500000, 500000)
+                from step in Gen.Elements(0.5, 1.0, 256.0)
+                from xs in Gen.Choose(-4, 4).Two().Where(t => t.Item1 != t.Item2)
+                from ys in Gen.Choose(-4, 4).Two().Where(t => t.Item1 != t.Item2)
+                from px in Gen.Choose(-5, 5)
+                from py in Gen.Choose(-5, 5)
+                select (Lattice(originX, originY, step, xs, ys), new Vector2(originX + px * step, originY + py * step)));
+
+        /// <summary>
+        /// The <see cref="Vector2"/> overloads: Covers is the closed rectangle (boundary included), Contains is the
+        /// open interior, and both agree with <see cref="Rectangle.GetRelation(in Vector2)"/>.
+        /// </summary>
+        [TestMethod]
+        public void Vector2ContainsIsInteriorAndCoversIsClosed() =>
+            CoreCheck.Run(
+                Prop.ForAll(ArbLatticeRectangleAndPoint(), pair =>
+                {
+                    (Rectangle r, Vector2 p) = pair;
+                    bool closed = p.X >= r.Left && p.X <= r.Right && p.Y >= r.Bottom && p.Y <= r.Top;
+                    bool interior = p.X > r.Left && p.X < r.Right && p.Y > r.Bottom && p.Y < r.Top;
+                    ShapeRelation rel = r.GetRelation(p);
+                    return (r.Covers(p) == closed).Label($"{r} Covers {p}: {r.Covers(p)}, expected {closed}")
+                        .And((r.Contains(p) == interior).Label($"{r} Contains {p}: {r.Contains(p)}, expected {interior}"))
+                        .And((r.Covers(p) == rel.IsCovers() && r.Contains(p) == rel.IsContains())
+                        .Label($"{r} vs {p}: GetRelation {rel}"));
+                }),
+                nameof(Vector2ContainsIsInteriorAndCoversIsClosed));
+
+        /// <summary>
+        /// Points exactly <see cref="Tolerance.Epsilon"/> outside and inside each edge: both bands count as the
+        /// boundary (Touching, covered, not contained). Lattice points never land on these values.
+        /// </summary>
+        [TestMethod]
+        public void Vector2EpsilonBandAroundEdgesIsBoundary()
+        {
+            Rectangle r = new(10, 50, 20, 40);
+            const double eps = Tolerance.Epsilon;
+            Vector2[] band =
+            {
+                new(r.Left - eps, 30), new(r.Right + eps, 30), new(30, r.Bottom - eps), new(30, r.Top + eps),
+                new(r.Left + eps, 30), new(r.Right - eps, 30), new(30, r.Bottom + eps), new(30, r.Top - eps),
+            };
+
+            foreach (Vector2 p in band)
+            {
+                Assert.AreEqual(ShapeRelation.Touching, r.GetRelation(p), $"GetRelation {p}");
+                Assert.IsTrue(r.Covers(p), $"Covers {p}");
+                Assert.IsFalse(r.Contains(p), $"Contains {p}");
+                Assert.IsFalse(r.Contains(p, eps), $"Contains with epsilon {p}");
+            }
+
+            Assert.IsTrue(r.Contains(r.Center, eps));
+        }
+
         [TestMethod]
         public void PadCoversOriginal() =>
             CoreCheck.Run(

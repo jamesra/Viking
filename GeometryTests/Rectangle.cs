@@ -55,11 +55,14 @@ namespace GeometryTests
         {
             Rectangle rectA = new(10, 50, 20, 40);
 
-            bool success = rectA.Contains(new Vector2(10, 20));
+            //Corners lie on the boundary: covered (closed set) but not contained (OGC interior).
+            bool success = rectA.Covers(new Vector2(10, 20));
             Assert.IsTrue(success);
+            Assert.IsFalse(rectA.Contains(new Vector2(10, 20)));
 
-            success = rectA.Contains(new Vector2(50, 40));
+            success = rectA.Covers(new Vector2(50, 40));
             Assert.IsTrue(success);
+            Assert.IsFalse(rectA.Contains(new Vector2(50, 40)));
 
             success = rectA.Contains(rectA.Center);
             Assert.IsTrue(success);
@@ -75,7 +78,7 @@ namespace GeometryTests
             success = rectA.Intersects(rectCNoOverlap);
             Assert.AreEqual(success, false);
 
-            success = rectA.Contains(rectBOverlaps);
+            success = rectA.Contains(rectCNoOverlap);
             Assert.AreEqual(success, false);
 
             Rectangle rectDContained = new(15, 45, 25, 35);
