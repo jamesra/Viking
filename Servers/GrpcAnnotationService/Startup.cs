@@ -195,6 +195,7 @@ namespace gRPCAnnotationService
                 endpoints.MapGrpcService<MetaDataService>().RequireAuthorization(ProtectedScopePolicy);
                 endpoints.MapGrpcService<CorrectionsService>().RequireAuthorization(ProtectedScopePolicy);
                 CorrectionsFileEndpoints.Map(endpoints, ProtectedScopePolicy);
+                TestResolveEndpoints.MapIfEnabled(endpoints, Configuration);
 
                 endpoints.MapGet("/", async context =>
                 {

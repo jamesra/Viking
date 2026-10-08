@@ -47,6 +47,9 @@ services:
     # `docker compose --env-file D:/Docker/Builds/AnnotationSql/.env ...`
     environment:
       ConnectionStrings__AnnotationConnection: "Server=annotation-sql,1433;Database=${ANNOTATION_DATABASE:-AnnotationTest};User ID=sa;Password=${MSSQL_SA_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True"
+      # Lounge / Viking Test deep-link prototype only. Do not enable on production hosts.
+      TestResolve__Enabled: "true"
+      TestResolve__VolumeName: "${ANNOTATION_DATABASE:-AnnotationTest}"
 
 volumes:
   annotation-sql-data:
