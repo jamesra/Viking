@@ -366,6 +366,11 @@ class TextureReaderV2 : IDisposable
         return await TryLoadingFromDiskOnly(CacheFilename, token).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Downloads the texture, retrying up to five times on 503, 408 and 429 (429 honors Retry-After).
+    /// Returns null on any other error status, setting <see cref="TextureNotFound"/> on 404.
+    /// Every response is disposed before this returns or waits to retry.
+    /// </summary>
     private async Task<Texture2D> TryLoadingFromServer(Uri textureUri, CancellationToken token)
     {
         if (Aborted || IsDisposed)
@@ -378,37 +383,39 @@ class TextureReaderV2 : IDisposable
             {
                 int nRetries = 5;
 
-                HttpResponseMessage? response = null;
+                HttpStatusCode? lastStatus = null;
                 while (nRetries >= 0)
                 {
-                    response = await client
-                        .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false);
-                    if (false == response.IsSuccessStatusCode)
+                    TimeSpan delay;
+                    // Each response is disposed before the retry delay so its buffered body is not held while waiting.
+                    using (HttpResponseMessage response = await client
+                        .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false))
                     {
-                        if (response.StatusCode == HttpStatusCode.ServiceUnavailable ||
-                            response.StatusCode == HttpStatusCode.RequestTimeout ||
-                            response.StatusCode == (HttpStatusCode)429)
+                        if (response.IsSuccessStatusCode)
+                            return await TryLoadingFromHttpClientResponse(response, CacheFilename, token).ConfigureAwait(false);
+
+                        lastStatus = response.StatusCode;
+                        if (response.StatusCode != HttpStatusCode.ServiceUnavailable &&
+                            response.StatusCode != HttpStatusCode.RequestTimeout &&
+                            response.StatusCode != (HttpStatusCode)429)
                         {
-                            nRetries--;
-                            TimeSpan delay = response.StatusCode == (HttpStatusCode)429
-                                ? DelayForTooManyRequests(response)
-                                : TimeSpan.FromMilliseconds(Geometry.Global.GetRandomRequestDelay());
-                            Debug.WriteLine($"Failed to load {textureUri} : {response.StatusCode}, delaying {delay.TotalMilliseconds:F0}ms for retry");
-                            response.Dispose();
-                            await Task.Delay(delay, token).ConfigureAwait(false);
-                            continue;
+                            if (response.StatusCode == HttpStatusCode.NotFound)
+                                this.TextureNotFound = true;
+                            break;
                         }
 
-                        if (response.StatusCode == HttpStatusCode.NotFound)
-                            this.TextureNotFound = true;
-                        break;
+                        nRetries--;
+                        delay = response.StatusCode == (HttpStatusCode)429
+                            ? DelayForTooManyRequests(response)
+                            : TimeSpan.FromMilliseconds(Geometry.Global.GetRandomRequestDelay());
+                        Debug.WriteLine($"Failed to load {textureUri} : {response.StatusCode}, delaying {delay.TotalMilliseconds:F0}ms for retry");
                     }
 
-                    return await TryLoadingFromHttpClientResponse(response, CacheFilename, token).ConfigureAwait(false);
+                    await Task.Delay(delay, token).ConfigureAwait(false);
                 }
 
-                if (response != null)
-                    Trace.WriteLine($"Failed to load {textureUri} : {response.StatusCode}");
+                if (lastStatus.HasValue)
+                    Trace.WriteLine($"Failed to load {textureUri} : {lastStatus.Value}");
                 return null;
             }
         }
@@ -458,6 +465,10 @@ class TextureReaderV2 : IDisposable
         return delay;
     }
 
+    /// <summary>
+    /// Decodes a texture from a server response and, when decoding succeeds, writes the body to the disk cache.
+    /// Sets <see cref="TextureNotFound"/> on 404. Does not dispose <paramref name="response"/>; the caller owns it.
+    /// </summary>
     private async Task<Texture2D> TryLoadingFromHttpClientResponse(HttpResponseMessage response, string CacheFilename, CancellationToken token)
     {
         try
