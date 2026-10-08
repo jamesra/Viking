@@ -15,11 +15,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public static long ChooseSurvivorId(IReadOnlyList<LocationObj> members)
         {
-            LocationObj survivor = members
-                .OrderByDescending(member => member.LinksCopy.Length)
-                .ThenBy(member => member.ID)
-                .First();
-            return survivor.ID;
+            List<(long Id, int LinkCount)> scores = new(members.Count);
+            foreach (LocationObj member in members)
+                scores.Add((member.ID, member.LinksCopy.Length));
+
+            return ChooseSurvivorId(scores);
         }
 
         /// <summary>
