@@ -322,11 +322,6 @@ class TextureReaderV2 : IDisposable
         {
             return null;
         }
-        catch (WebException e)
-        {
-            Trace.WriteLine($"Revalidate failed for {Filename}\nWeb Exception: {e.Status} - {e.Message}");
-            return null;
-        }
         catch (HttpRequestException e)
         {
             Trace.WriteLine($"Revalidate failed for {Filename}: {e.Message}");
@@ -395,10 +390,6 @@ class TextureReaderV2 : IDisposable
         catch (ArgumentException e)
         {
             Trace.WriteLine($"Failed to load {textureUri}", e.Message);
-        }
-        catch (WebException e)
-        {
-            ProcessTextureWebException(e);
         }
         catch (System.Net.Sockets.SocketException e)
         {
@@ -473,39 +464,6 @@ class TextureReaderV2 : IDisposable
         {
             Trace.WriteLine($"Failed to load {response}", e.Message);
             return null;
-        }
-    }
-
-
-    /// <summary>
-    /// Set objects texture to Null, records if the server responds with 404 not found, prints helpful error message
-    /// </summary>
-    /// <param name="e"></param>
-    private void ProcessTextureWebException(WebException e)
-    {
-        if (e.Status == WebExceptionStatus.RequestCanceled)
-        {
-            //Trace.WriteLine("Request Cancelled: " + state.request.Address.ToString());
-        }
-        else
-        {
-            using HttpWebResponse ErrorResponse = (HttpWebResponse)e.Response;
-
-            if (ErrorResponse != null)
-            {
-
-                //If the server doesn't have the tile write this down so we stop asking...
-                if (ErrorResponse.StatusCode == HttpStatusCode.NotFound)
-                {
-                    this.TextureNotFound = true;
-                }
-                else if (ErrorResponse.StatusCode == HttpStatusCode.InternalServerError)
-                {
-                    this.TextureNotFound = true;
-                    //Trace.WriteLine("WebException: " + state.request.Address.ToString());
-                    //Trace.WriteLine(ErrorResponse.StatusCode + " : " + ErrorResponse.StatusDescription, "TextureUse");
-                }
-            }
         }
     }
 
