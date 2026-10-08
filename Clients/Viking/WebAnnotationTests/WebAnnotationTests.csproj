@@ -56,6 +56,7 @@
     <Compile Include="RegionLoaderInvalidateSectionTests.cs" />
     <Compile Include="SectionRangeParserTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
+    <Compile Include="GlobalShouldLoadTests.cs" />
     <Compile Include="VolumePathTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
