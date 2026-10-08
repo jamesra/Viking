@@ -579,7 +579,7 @@ namespace Geometry
                 LR_baseline_candidate = mesh.ToLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToLineSegment(R.Index, L.Index);
 
-                SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
+                SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.GetSetOrEmpty(R.Index);
 
 
                 EdgeAngle[] L_C = EdgesByAngle(mesh, L, R.Index, false);
@@ -697,10 +697,7 @@ namespace Geometry
                 LR_baseline_candidate = mesh.ToLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToLineSegment(R.Index, L.Index);
 
-                var L_Rejected_Found = RejectedBaselinePairs.TryGetValue(R.Index, out SortedSet<int> L_Rejected_Candidates);
-                if (!L_Rejected_Found)
-                    L_Rejected_Candidates = [];
-
+                SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.GetSetOrEmpty(R.Index);
 
                 L_C = EdgesByAngle(mesh, L, R.Index, false);
 
@@ -863,9 +860,7 @@ namespace Geometry
                 if (NewCandidateFound)
                     continue;
 
-                var R_Rejected_found = RejectedBaselinePairs.TryGetValue(L.Index, out SortedSet<int> R_Rejected_Candidates);
-                if (!R_Rejected_found)
-                    R_Rejected_Candidates = [];
+                SortedSet<int> R_Rejected_Candidates = RejectedBaselinePairs.GetSetOrEmpty(L.Index);
 
                 //Reverse the IsLeft result for the Upper->Lower line
                 R_C = EdgesByAngle(mesh, R, L.Index, true);

@@ -22,6 +22,13 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Returns the live set stored under <paramref name="key"/> when present; otherwise a new empty set that is not inserted into the dictionary.
+        /// Used by <c>DelaunayMesh</c> when filtering baseline candidates against <see cref="AddToSet"/> rejections.
+        /// </summary>
+        public static SortedSet<int> GetSetOrEmpty(this Dictionary<int, SortedSet<int>> dict, int key) =>
+            dict.TryGetValue(key, out SortedSet<int>? set) ? set : [];
+
+        /// <summary>
         /// Creates a new array with the new values appended on to the end
         /// </summary>
         /// <typeparam name="T"></typeparam>

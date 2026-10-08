@@ -10,7 +10,7 @@ namespace GeometryTests
     /// <summary>
     /// Pins <see cref="CollectionExtensions"/>: the array copy helpers behind polygon vertex insert and remove
     /// (<c>Polygon.InsertVertex</c> and <c>RemoveVertex</c> call InsertIntoClosedRing and RemoveFromClosedRing on the exterior ring)
-    /// and <c>AddToSet</c>, which <c>DelaunayMesh.RejectedBaselinePairs</c> uses to remember rejected baseline pairs.
+    /// <c>AddToSet</c>, and <c>GetSetOrEmpty</c>, which <c>DelaunayMesh.RejectedBaselinePairs</c> uses to remember and read rejected baseline pairs.
     /// Closed rings are generated closed (first == last) because the helpers only assert that precondition in Debug.
     /// </summary>
     [TestClass]
@@ -217,6 +217,38 @@ namespace GeometryTests
             Assert.AreSame(existing, dict[4]);
             CollectionAssert.AreEqual(new[] { 2, 7 }, existing.ToArray());
         }
+
+        [TestMethod]
+        public void GetSetOrEmptyReturnsStoredSetWithoutAddingKey()
+        {
+            SortedSet<int> stored = new SortedSet<int> { 1, 3 };
+            Dictionary<int, SortedSet<int>> dict = new Dictionary<int, SortedSet<int>> { { 2, stored } };
+
+            Assert.AreSame(stored, dict.GetSetOrEmpty(2));
+            Assert.IsFalse(dict.ContainsKey(9));
+            Assert.AreEqual(0, dict.GetSetOrEmpty(9).Count);
+            Assert.IsFalse(dict.ContainsKey(9));
+        }
+
+        [TestMethod]
+        public void GetSetOrEmptyMatchesTryGetValueOrEmpty() =>
+            CoreCheck.Run(
+                Prop.ForAll(ArbPairs(), p =>
+                {
+                    Dictionary<int, SortedSet<int>> dict = new Dictionary<int, SortedSet<int>>();
+                    for (int i = 0; i < p.Keys.Length; i++)
+                        dict.AddToSet(p.Keys[i], p.Values[i]);
+
+                    int probeKey = p.Keys.Length > 0 ? p.Keys[0] : 0;
+                    SortedSet<int> fromHelper = dict.GetSetOrEmpty(probeKey);
+                    bool found = dict.TryGetValue(probeKey, out SortedSet<int>? fromDict);
+                    if (!found)
+                        return fromHelper.Count == 0;
+
+                    return ReferenceEquals(fromDict, fromHelper)
+                        && fromHelper.SequenceEqual(fromDict);
+                }),
+                nameof(GetSetOrEmptyMatchesTryGetValueOrEmpty));
 
         [TestMethod]
         public void AddAndAddRangeOnEmptyArrays()
