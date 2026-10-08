@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>net48;netstandard2.0;net10.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<RootNamespace>TriangleNet</RootNamespace>
 		<AssemblyName>Triangle</AssemblyName>
