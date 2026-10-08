@@ -118,6 +118,7 @@ def _servicer_factory(**_ignored):
     return SegmentationServicer(model=model, server_start_time=0.0)
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_serve_listens_with_tls_only_and_refuses_plaintext(dev_cert, monkeypatch) -> None:
     cert, key = dev_cert
@@ -174,9 +175,11 @@ def test_the_healthcheck_names_the_certificate_host_from_a_lets_encrypt_path(mon
     assert target_name("/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem") == "override.example"
 
 
-def test_the_healthcheck_port_comes_from_the_environment(monkeypatch) -> None:
+def test_the_healthcheck_port_comes_from_the_environment(monkeypatch, tmp_path) -> None:
+    from segmentation_server import healthcheck
     from segmentation_server.healthcheck import tls_port
 
+    monkeypatch.setattr(healthcheck, "port_file", lambda: tmp_path / "no-server-running")
     monkeypatch.delenv("SEGMENTATION_TLS_PORT", raising=False)
     assert tls_port() == 443
     monkeypatch.setenv("SEGMENTATION_TLS_PORT", "8443")
@@ -185,6 +188,7 @@ def test_the_healthcheck_port_comes_from_the_environment(monkeypatch) -> None:
     assert tls_port() == 443
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_the_healthcheck_passes_against_a_running_server_and_fails_when_it_is_down(dev_cert, monkeypatch) -> None:
     from segmentation_server.healthcheck import check
@@ -212,6 +216,7 @@ async def test_the_healthcheck_passes_against_a_running_server_and_fails_when_it
             await task
     assert await loop.run_in_executor(None, check, port, str(cert), 1.0) is not None
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_a_segmentation_travels_the_whole_wire_with_polygon_holes(dev_cert, monkeypatch) -> None:
     """UploadImage then SegmentImage over TLS, through the real servicer, cache and response encoder."""

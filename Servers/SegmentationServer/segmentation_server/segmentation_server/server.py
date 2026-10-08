@@ -52,6 +52,7 @@ from segmentation_server.image_cache import (
 )
 from segmentation_server.debug_dump import dump_enabled, dump_growth
 from segmentation_server.circle_boxes import find_circles, outer_ring_box_enabled
+from segmentation_server.healthcheck import forget_listening_port, record_listening_port
 from segmentation_server.responses import build_segmentation_response
 from segmentation_server.prompt_log import describe_prompts
 from segmentation_server.mask_utils import (
@@ -61,6 +62,7 @@ from segmentation_server.mask_utils import (
     combined_mask_to_segments,
     prepare_image_for_sam2,
 )
+from segmentation_server.tile_requests import TileRequestRegistry
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
     install_tile_work_logging,
@@ -114,6 +116,7 @@ class RequestLimits:
     max_boxes: int = 16
     max_sets: int = 5000
     max_answer_tiles: int = 4096
+    max_concurrent_streams: int = 32
 
     @classmethod
     def from_env(cls) -> "RequestLimits":
@@ -133,6 +136,9 @@ class RequestLimits:
             max_boxes=read("SEGMENTATION_MAX_BOXES", defaults.max_boxes),
             max_sets=read("SEGMENTATION_MAX_SETS", defaults.max_sets),
             max_answer_tiles=read("SEGMENTATION_MAX_ANSWER_TILES", defaults.max_answer_tiles),
+            max_concurrent_streams=read(
+                "SEGMENTATION_MAX_CONCURRENT_STREAMS", defaults.max_concurrent_streams
+            ),
         )
 
 
@@ -172,6 +178,118 @@ def tile_answer_timeout_seconds() -> float:
         return max(0.1, float(raw))
     except ValueError:
         return DEFAULT_TILE_ANSWER_TIMEOUT_SECONDS
+
+
+DEFAULT_TILE_SHARE_TIMEOUT_SECONDS = 5.0
+
+
+def tile_share_timeout_seconds() -> float:
+    """How long a stream waits for another stream's upload of a tile (SEGMENTATION_TILE_SHARE_TIMEOUT_SECONDS, default 5).
+
+    When one stream has already asked its client for a tile, a second stream that needs the same
+    tile waits this long for it to reach the cache before asking its own client. ``0`` turns the
+    sharing off, so every stream asks for every tile it needs.
+    """
+    raw = os.environ.get("SEGMENTATION_TILE_SHARE_TIMEOUT_SECONDS", "").strip()
+    if not raw:
+        return DEFAULT_TILE_SHARE_TIMEOUT_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return DEFAULT_TILE_SHARE_TIMEOUT_SECONDS
+
+
+DEFAULT_MAX_CONCURRENT_RPCS = 256
+
+
+def max_concurrent_rpcs_from_env() -> int:
+    """Most RPCs the server works on at once (SEGMENTATION_MAX_CONCURRENT_RPCS, default 256)."""
+    raw = os.environ.get("SEGMENTATION_MAX_CONCURRENT_RPCS", "").strip()
+    if not raw:
+        return DEFAULT_MAX_CONCURRENT_RPCS
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return DEFAULT_MAX_CONCURRENT_RPCS
+
+
+_READ_ENDED = object()
+
+
+class _StreamReader:
+    """Reads a request stream without losing a message when a wait is interrupted.
+
+    While a stream waits for tiles it also waits on other streams' uploads. A read cancelled by
+    the other event would drop the message it was about to deliver, so one read is started and
+    kept until a caller takes its result.
+    """
+
+    def __init__(self, request_iterator) -> None:
+        self._iterator = request_iterator
+        self._read: Optional["asyncio.Future[Any]"] = None
+
+    async def _next(self):
+        try:
+            return await self._iterator.__anext__()
+        except StopAsyncIteration:
+            return _READ_ENDED
+
+    def pending(self) -> "asyncio.Future[Any]":
+        """The read in progress, started on first use. Await it with ``asyncio.wait``, then :meth:`take`."""
+        if self._read is None:
+            self._read = asyncio.ensure_future(self._next())
+        return self._read
+
+    def take(self) -> Optional[SegmentTilesStreamRequest]:
+        """The finished read's message, or None once the client has ended its half of the stream."""
+        read, self._read = self._read, None
+        assert read is not None and read.done()
+        message = read.result()
+        return None if message is _READ_ENDED else message
+
+    def close(self) -> None:
+        """Stop a read nobody will collect."""
+        read, self._read = self._read, None
+        if read is None:
+            return
+        if not read.done():
+            read.cancel()
+        elif not read.cancelled():
+            read.exception()
+
+
+@dataclass
+class _SharedTile:
+    """A tile another stream is already fetching, and when this stream stops waiting for it."""
+
+    tile: TileIndex
+    key: TileCacheKey
+    future: "asyncio.Future[bool]"
+    deadline: float
+
+
+@dataclass
+class _TileWait:
+    """Where one round of tile fetching stands: what the client was asked, and what is borrowed.
+
+    ``asked`` holds the tiles this stream's client owes an answer for. ``to_send`` holds the ones
+    among them the client has not been told about yet. ``shared`` holds tiles another stream is
+    fetching; each moves to ``asked`` if its wait runs out or the other stream gives up.
+    """
+
+    asked: set = field(default_factory=set)
+    to_send: List[TileIndex] = field(default_factory=list)
+    shared: dict = field(default_factory=dict)
+    unavailable: List[TileIndex] = field(default_factory=list)
+    answer_deadline: float = 0.0
+
+    def ask(self, tile: TileIndex) -> None:
+        self.asked.add((tile.row, tile.col))
+        self.to_send.append(tile)
+
+    def take_to_send(self) -> List[TileIndex]:
+        sending, self.to_send = self.to_send, []
+        return sending
 
 
 async def _next_message(
@@ -273,6 +391,8 @@ class _TileSession:
     predictors: dict = field(default_factory=dict)
     images: "TileImages" = field(default_factory=lambda: TileImages())
     uploaded: List[TileIndex] = field(default_factory=list)
+    # Names this stream to the TileRequestRegistry. The session itself is unhashable.
+    token: object = field(default_factory=object)
 
 
 @dataclass(frozen=True)
@@ -296,15 +416,21 @@ class _PredictSettings:
 
 def _resolve_boxes(
     request: SegmentTilesRequest, foreground: List[Tuple[int, int]]
-) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int]]]:
-    """The boxes the starting cells get, and the clicks a boxed prompt leaves out.
+) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int]], bool]:
+    """The boxes the starting cells get, the clicks a boxed prompt leaves out, and who chose the boxes.
 
     A client that sends boxes chose them and the clicks that go with them, so nothing is inferred
-    and no click is left out. Otherwise nine-click circles are recognised and boxed from inside.
+    and no click is left out; the third value is True and the boxes are taken as object. Otherwise
+    nine-click circles are recognised and boxed from inside, and the third value is False.
     """
     client_boxes = _client_boxes(request.foreground_boxes)
     if client_boxes:
-        return client_boxes, []
+        logger.info(
+            "SegmentTiles client boxes (x0,y0,x1,y1 mosaic, Y up): %s; %d foreground click(s) sent as given",
+            client_boxes,
+            len(foreground),
+        )
+        return client_boxes, [], True
     circles = find_circles(foreground) if outer_ring_box_enabled() else []
     boxes = [circle.box for circle in circles]
     omit_with_box = [click for circle in circles for click in circle.ring_clicks]
@@ -315,7 +441,7 @@ def _resolve_boxes(
             boxes,
             len(omit_with_box),
         )
-    return boxes, omit_with_box
+    return boxes, omit_with_box, False
 
 
 def _session_tag(
@@ -386,11 +512,11 @@ class SegmentationServicer(SegmentationServiceServicer):
     ) -> None:
         """
         Args:
-            cache_max_memory_bytes: Image-byte cap for the cache (default 1 GiB).
+            cache_max_memory_bytes: Image-byte cap for the cache (default 16 GiB).
                 Shared tiles are kept until this cap, or until the GPU needs room.
             cache_ttl_seconds: Unused-entry lifetime for arbitrary uploads (default 5 minutes).
                 Shared tiles are not expired by the TTL.
-            cache_max_images: Max arbitrary uploads (default 32). Shared tiles do not count.
+            cache_max_images: Max arbitrary uploads (default 4096). Shared tiles do not count.
             inference_executor: Thread pool for SAM2 work; None uses the default executor.
             server_start_time: time.monotonic() at process start, for uptime.
             model: Injected SAM2 wrapper; constructed here if omitted.
@@ -420,13 +546,25 @@ class SegmentationServicer(SegmentationServiceServicer):
         )
         self._max_requested_tiles = max_requested_tiles_from_env()
         self._tile_answer_timeout = tile_answer_timeout_seconds()
+        self._tile_share_timeout = tile_share_timeout_seconds()
+        self._tile_requests = TileRequestRegistry()
         self._limits = RequestLimits.from_env()
+        self._active_streams = 0
+        # Image decoding and response encoding are CPU work. They get their own small pool so a
+        # burst of uploads can neither starve the SAM2 pool nor spawn threads without limit.
+        self._cpu_executor = futures.ThreadPoolExecutor(
+            max_workers=max(2, min(8, os.cpu_count() or 4)), thread_name_prefix="seg-cpu"
+        )
         try:
             self._loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
         except RuntimeError:
             self._loop = None
         if hasattr(self.model, "set_on_compiled_ready"):
             self.model.set_on_compiled_ready(self._flush_cache_after_compile)
+
+    def close(self) -> None:
+        """Release the servicer's own thread pool. The inference pool belongs to whoever passed it in."""
+        self._cpu_executor.shutdown(wait=False, cancel_futures=True)
 
     def _gpu_under_pressure(self) -> bool:
         """True when the model says the next shared-tile embedding needs GPU memory."""
@@ -520,10 +658,10 @@ class SegmentationServicer(SegmentationServiceServicer):
 
         Hole filling, bounds, PNG encoding and polygon extraction are CPU work that grows with
         the mask. On the event loop they would delay every other RPC and the cancel watchers.
-        The default executor is used so the GPU-bound inference pool is not tied up by it.
+        The servicer's CPU pool is used so the GPU-bound inference pool is not tied up by it.
         """
         return await asyncio.get_running_loop().run_in_executor(
-            None,
+            self._cpu_executor,
             functools.partial(
                 self._build_segmentation_response,
                 labeled_image,
@@ -712,10 +850,13 @@ class SegmentationServicer(SegmentationServiceServicer):
             return None
         try:
             decoded = await asyncio.get_running_loop().run_in_executor(
-                None, prepare_image_for_sam2, image_data
+                self._cpu_executor, prepare_image_for_sam2, image_data
             )
         except (OSError, ValueError) as e:
-            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Could not decode image_data: {e}")
+            # The decoder's own message names library internals; the client only needs to know
+            # the bytes were not an image.
+            logger.warning("Could not decode image_data (%s bytes): %s", len(image_data), e)
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Could not decode image_data as an image.")
             return None
         actual_height, actual_width = decoded.shape[:2]
         if actual_width != width or actual_height != height:
@@ -734,6 +875,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         multimask_output: bool,
         context: ServicerContext,
         empty_message: str,
+        omit_labeled_image: bool = False,
     ) -> SegmentationResponse:
         """Segment using a cache hit. Aborts the RPC on cache/predictor/input errors."""
         cached_result = await self.image_cache.get_image(image_id)
@@ -795,7 +937,9 @@ class SegmentationServicer(SegmentationServiceServicer):
                 len(segments),
                 elapsed,
             )
-            return await self._build_response_off_loop(labeled_image, segments, width, height)
+            return await self._build_response_off_loop(
+                labeled_image, segments, width, height, omit_labeled_image=omit_labeled_image
+            )
         finally:
             await self.image_cache.release_image(image_id)
 
@@ -809,6 +953,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         multimask_output: bool,
         context: ServicerContext,
         empty_message: str,
+        omit_labeled_image: bool = False,
     ) -> SegmentationResponse:
         """Segment an image sent on the request. Aborts the RPC on input or model errors."""
         start_time = time.perf_counter()
@@ -860,7 +1005,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             len(segments),
             elapsed,
         )
-        return await self._build_response_off_loop(labeled_image, segments, width, height)
+        return await self._build_response_off_loop(
+            labeled_image, segments, width, height, omit_labeled_image=omit_labeled_image
+        )
 
     async def _dispatch_segmentation(
         self,
@@ -873,6 +1020,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         multimask_output: bool,
         context: ServicerContext,
         empty_message: str,
+        omit_labeled_image: bool = False,
     ) -> SegmentationResponse:
         """Choose cached vs inline path from image_id."""
         if image_id != 0:
@@ -883,10 +1031,11 @@ class SegmentationServicer(SegmentationServiceServicer):
                     len(image_data),
                 )
             return await self._handle_cached_image_segmentation(
-                image_id, coordinates, labels, multimask_output, context, empty_message
+                image_id, coordinates, labels, multimask_output, context, empty_message, omit_labeled_image
             )
         return await self._handle_inline_image_segmentation(
-            image_data, width, height, coordinates, labels, multimask_output, context, empty_message
+            image_data, width, height, coordinates, labels, multimask_output, context, empty_message,
+            omit_labeled_image,
         )
 
     async def UploadImage(
@@ -924,9 +1073,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             logger.warning("UploadImage refused: %s", e)
             await context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, f"Image cache is full: {e}")
             raise
-        except Exception as e:
+        except Exception:
             logger.exception("Error uploading image")
-            await context.abort(grpc.StatusCode.INTERNAL, f"Error uploading image: {e}")
+            await context.abort(grpc.StatusCode.INTERNAL, "Error uploading image.")
             raise
         finally:
             self._load.end(time.perf_counter() - start_time)
@@ -945,9 +1094,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         logger.info("DeleteImage RPC: ID=%s", image_id)
         try:
             success: bool = await self.image_cache.delete_image(image_id)
-        except Exception as e:
+        except Exception:
             logger.exception("Error deleting image")
-            await context.abort(grpc.StatusCode.INTERNAL, f"Error deleting image: {e}")
+            await context.abort(grpc.StatusCode.INTERNAL, "Error deleting image.")
             return DeleteImageResponse(success=False)
 
         logger.info("DeleteImage ID=%s success=%s in %.3fs", image_id, success, time.perf_counter() - start_time)
@@ -1044,12 +1193,15 @@ class SegmentationServicer(SegmentationServiceServicer):
             logger.warning("UploadTile refused: %s", e)
             await context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, f"Image cache is full: {e}")
             return UploadTileResponse()
-        except Exception as e:
+        except Exception:
             logger.exception("Error uploading tile")
-            await context.abort(grpc.StatusCode.INTERNAL, f"Error uploading tile: {e}")
+            await context.abort(grpc.StatusCode.INTERNAL, "Error uploading tile.")
             return UploadTileResponse()
         finally:
             self._load.end(time.perf_counter() - start_time)
+        woken = self._tile_requests.arrived(tile_key)
+        if woken:
+            logger.info("UploadTile row=%s col=%s woke %d stream(s) waiting for it", coord.row, coord.col, woken)
         logger.info(
             "UploadTile ok key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s|row=%s|col=%s "
             "cache_id=%s %sx%s %s bytes already_cached=%s in %.3fs",
@@ -1096,7 +1248,19 @@ class SegmentationServicer(SegmentationServiceServicer):
         if identity is None:
             return
 
+        if self._active_streams >= self._limits.max_concurrent_streams:
+            await self._abort_over_limit(
+                context,
+                "concurrent tile streams",
+                self._active_streams + 1,
+                self._limits.max_concurrent_streams,
+                "SEGMENTATION_MAX_CONCURRENT_STREAMS",
+            )
+            return
+
         session = _TileSession(identity=identity)
+        reader = _StreamReader(request_iterator)
+        self._active_streams += 1
         self._load.begin()
         start_time = time.perf_counter()
         try:
@@ -1105,7 +1269,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             if not await self._pin_start_tiles(session, request, foreground, context):
                 return
             settings = _PredictSettings.from_request(request)
-            boxes, omit_with_box = _resolve_boxes(request, foreground)
+            boxes, omit_with_box, client_chose_boxes = _resolve_boxes(request, foreground)
             tag = _session_tag(identity, foreground, background)
             logger.info(
                 "SegmentTiles mask_threshold=%.3f use_mask_input=%s",
@@ -1122,6 +1286,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 should_stop=stop_growth.is_set,
                 boxes=boxes,
                 omit_with_box=omit_with_box,
+                assume_boxes=client_chose_boxes,
             )
             loop = asyncio.get_running_loop()
             cancel_watch = asyncio.create_task(self._watch_rpc_cancel(context, stop_growth))
@@ -1133,20 +1298,25 @@ class SegmentationServicer(SegmentationServiceServicer):
                     if not needed:
                         break
                     rounds += 1
-                    yield SegmentTilesStreamResponse(
-                        needed=TilesNeeded(tiles=[_coord_for(identity, tile) for tile in needed])
-                    )
-                    unavailable = await self._receive_tiles(
-                        request_iterator, identity, needed, session.predictors, session.images, session.pinned_ids
-                    )
-                    if unavailable is None:
-                        logger.info(
-                            "SegmentTiles req=%s abandoned: the client ended the stream while %d tiles were awaited",
-                            request.request_id,
-                            len(needed),
-                        )
-                        return
-                    walk.resume(unavailable)
+                    wait = await self._begin_tile_wait(session, needed)
+                    while True:
+                        if wait.to_send:
+                            yield SegmentTilesStreamResponse(
+                                needed=TilesNeeded(
+                                    tiles=[_coord_for(identity, tile) for tile in wait.take_to_send()]
+                                )
+                            )
+                        finished = await self._receive_tiles(reader, session, wait)
+                        if finished is None:
+                            logger.info(
+                                "SegmentTiles req=%s abandoned: the client ended the stream while %d tiles were awaited",
+                                request.request_id,
+                                len(needed),
+                            )
+                            return
+                        if finished:
+                            break
+                    walk.resume(wait.unavailable)
                 result = walk.result()
             except GrowthCancelled:
                 # The only thing that sets stop_growth is the client dropping the RPC, so there is
@@ -1175,9 +1345,9 @@ class SegmentationServicer(SegmentationServiceServicer):
                 # finds no matching mask is skipped inside it.
                 await self._abort_no_matching_mask(e, context)
                 return
-            except Exception as e:
+            except Exception:
                 logger.exception("Tile segmentation failed")
-                await context.abort(grpc.StatusCode.INTERNAL, f"Error processing segmentation request: {e}")
+                await context.abort(grpc.StatusCode.INTERNAL, "Error processing segmentation request.")
                 return
             finally:
                 stop_growth.set()
@@ -1192,8 +1362,11 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             yield SegmentTilesStreamResponse(result=response)
         finally:
+            reader.close()
+            self._tile_requests.release_all(session.token)
             for image_id in session.pinned_ids:
                 await self.image_cache.release_image(image_id)
+            self._active_streams -= 1
             self._load.end(time.perf_counter() - start_time)
 
     async def _validate_stream_start(
@@ -1420,54 +1593,163 @@ class SegmentationServicer(SegmentationServiceServicer):
         except asyncio.CancelledError:
             return
 
+    async def _begin_tile_wait(self, session: "_TileSession", needed: List[TileIndex]) -> "_TileWait":
+        """Decide, tile by tile, whether to ask this stream's client or wait for another stream's upload.
+
+        A tile some other stream has already asked its client for is subscribed to, not asked
+        again. Every other tile is asked of this client, and is recorded as in flight so a stream
+        that needs it later can subscribe in turn.
+        """
+        wait = _TileWait()
+        loop = asyncio.get_running_loop()
+        now = loop.time()
+        for tile in needed:
+            key = _tile_cache_key(_coord_for(session.identity, tile))
+            if self._tile_share_timeout <= 0:
+                self._tile_requests.join(key, session.token)
+                subscription = None
+            else:
+                subscription = self._tile_requests.claim(key, session.token)
+            if subscription is None:
+                wait.ask(tile)
+                continue
+            wait.shared[(tile.row, tile.col)] = _SharedTile(
+                tile=tile, key=key, future=subscription, deadline=now + self._tile_share_timeout
+            )
+            logger.info(
+                "SegmentTiles tile row=%s col=%s is already being fetched for another stream; waiting up to %.1fs",
+                tile.row,
+                tile.col,
+                self._tile_share_timeout,
+            )
+        wait.answer_deadline = now + self._tile_answer_timeout
+        return wait
+
     async def _receive_tiles(
         self,
-        request_iterator,
-        identity: TileCoord,
-        needed: List[TileIndex],
-        predictors: dict,
-        images: TileImages,
-        pinned_ids: List[int],
-    ) -> Optional[List[TileIndex]]:
-        """Wait until the client has answered for every tile in ``needed``, pinning those it uploaded.
+        reader: "_StreamReader",
+        session: "_TileSession",
+        wait: "_TileWait",
+    ) -> Optional[bool]:
+        """Wait until every tile in ``wait`` is pinned or known unusable, or there is something to send.
 
-        Returns the tiles that cannot be used: the ones the client reported unavailable and the
-        ones it reported ready but the cache no longer holds. Returns None when the client ends
-        its half of the stream first. The walk is paused while this runs, so ``predictors`` and
-        ``images`` are not read by the inference thread.
+        Two things can supply a tile: this stream's client (an ``answer`` after it uploads) and
+        another stream's upload reaching the cache. A borrowed tile whose wait runs out, or whose
+        other stream gives up, is asked of this client instead; that puts it in ``wait.to_send``
+        and this returns False so the caller sends it, then calls again.
+
+        Returns True when nothing is outstanding (``wait.unavailable`` lists the tiles that cannot
+        be used), False when ``wait.to_send`` has tiles to send, and None when the client ends its
+        half of the stream first. The walk is paused while this runs, so ``session.predictors`` and
+        ``session.images`` are not read by the inference thread.
 
         Raises:
             _ProtocolError: A message other than an ``answer`` arrived.
-            _AnswerTimeout: The client sent nothing for the idle limit.
+            _AnswerTimeout: The client answered nothing new for the idle limit.
         """
-        outstanding = {(tile.row, tile.col) for tile in needed}
-        unavailable: List[TileIndex] = []
-        while outstanding:
-            message = await _next_message(request_iterator, self._tile_answer_timeout)
-            if message is None:
-                return None
-            if message.WhichOneof("body") != "answer":
-                raise _ProtocolError("SegmentTilesStream expected an answer while tiles were requested.")
-            listed = len(message.answer.ready) + len(message.answer.unavailable)
-            if listed > self._limits.max_answer_tiles:
-                raise _ProtocolError(
-                    f"A TilesAnswer lists {listed} tiles; the server accepts at most "
-                    f"{self._limits.max_answer_tiles} (SEGMENTATION_MAX_ANSWER_TILES)."
-                )
-            for coord in message.answer.unavailable:
-                index = TileIndex(row=int(coord.row), col=int(coord.col))
-                if (index.row, index.col) in outstanding:
-                    outstanding.discard((index.row, index.col))
-                    unavailable.append(index)
-            for coord in message.answer.ready:
-                index = TileIndex(row=int(coord.row), col=int(coord.col))
-                if (index.row, index.col) not in outstanding:
+        loop = asyncio.get_running_loop()
+        while True:
+            if wait.to_send:
+                return False
+            if not wait.asked and not wait.shared:
+                return True
+            deadlines = [shared.deadline for shared in wait.shared.values()]
+            if wait.asked:
+                deadlines.append(wait.answer_deadline)
+            read = reader.pending()
+            watched = {read, *(shared.future for shared in wait.shared.values())}
+            done, _pending = await asyncio.wait(
+                watched,
+                timeout=max(0.0, min(deadlines) - loop.time()),
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            await self._settle_shared_tiles(session, wait, loop.time())
+            progressed = False
+            if read in done:
+                message = reader.take()
+                if message is None:
+                    return None
+                progressed = await self._apply_answer(message, session, wait)
+            now = loop.time()
+            if progressed:
+                wait.answer_deadline = now + self._tile_answer_timeout
+            elif wait.asked and not wait.to_send and now >= wait.answer_deadline:
+                raise _AnswerTimeout()
+
+    async def _settle_shared_tiles(self, session: "_TileSession", wait: "_TileWait", now: float) -> None:
+        """Pin borrowed tiles that have arrived; ask this client for the ones that did not."""
+        for coord, shared in list(wait.shared.items()):
+            expired = not shared.future.done() and now >= shared.deadline
+            if not shared.future.done() and not expired:
+                continue
+            del wait.shared[coord]
+            if expired:
+                self._tile_requests.abandon(shared.key, shared.future)
+                reason = f"no upload within {self._tile_share_timeout:.1f}s"
+            elif shared.future.cancelled() or not shared.future.result():
+                reason = "the stream fetching it gave up"
+            else:
+                if await self._pin_arrived_tile(
+                    session.identity, shared.tile, session.predictors, session.images, session.pinned_ids
+                ):
+                    logger.info(
+                        "SegmentTiles tile row=%s col=%s arrived from another stream's upload",
+                        shared.tile.row,
+                        shared.tile.col,
+                    )
                     continue
-                outstanding.discard((index.row, index.col))
-                if not await self._pin_arrived_tile(identity, index, predictors, images, pinned_ids):
-                    logger.info("SegmentTiles tile row=%s col=%s was reported ready but is not cached", index.row, index.col)
-                    unavailable.append(index)
-        return unavailable
+                reason = "it arrived but is no longer cached"
+            logger.info(
+                "SegmentTiles tile row=%s col=%s: %s; asking this stream's client",
+                shared.tile.row,
+                shared.tile.col,
+                reason,
+            )
+            self._tile_requests.join(shared.key, session.token)
+            wait.ask(shared.tile)
+            wait.answer_deadline = now + self._tile_answer_timeout
+
+    async def _apply_answer(self, message: SegmentTilesStreamRequest, session: "_TileSession", wait: "_TileWait") -> bool:
+        """Apply one ``answer`` to the tiles this client owes. True when it settled at least one.
+
+        An answer for a tile that is not owed (already settled, or never asked) is ignored.
+
+        Raises:
+            _ProtocolError: The message is not an ``answer``, or lists more tiles than the limit.
+        """
+        if message.WhichOneof("body") != "answer":
+            raise _ProtocolError("SegmentTilesStream expected an answer while tiles were requested.")
+        listed = len(message.answer.ready) + len(message.answer.unavailable)
+        if listed > self._limits.max_answer_tiles:
+            raise _ProtocolError(
+                f"A TilesAnswer lists {listed} tiles; the server accepts at most "
+                f"{self._limits.max_answer_tiles} (SEGMENTATION_MAX_ANSWER_TILES)."
+            )
+        progressed = False
+        for coord in message.answer.unavailable:
+            index = TileIndex(row=int(coord.row), col=int(coord.col))
+            if (index.row, index.col) not in wait.asked:
+                continue
+            wait.asked.discard((index.row, index.col))
+            wait.unavailable.append(index)
+            self._tile_requests.release(_tile_cache_key(_coord_for(session.identity, index)), session.token)
+            progressed = True
+        for coord in message.answer.ready:
+            index = TileIndex(row=int(coord.row), col=int(coord.col))
+            if (index.row, index.col) not in wait.asked:
+                continue
+            wait.asked.discard((index.row, index.col))
+            progressed = True
+            key = _tile_cache_key(_coord_for(session.identity, index))
+            if await self._pin_arrived_tile(
+                session.identity, index, session.predictors, session.images, session.pinned_ids
+            ):
+                self._tile_requests.arrived(key)
+                continue
+            logger.info("SegmentTiles tile row=%s col=%s was reported ready but is not cached", index.row, index.col)
+            wait.unavailable.append(index)
+            self._tile_requests.release(key, session.token)
+        return progressed
 
     async def _pin_arrived_tile(
         self,
@@ -1510,6 +1792,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 request.multimask_output,
                 context,
                 _EMPTY_COORDINATES_MESSAGE,
+                request.omit_labeled_image,
             )
         finally:
             self._load.end(time.perf_counter() - start)
@@ -1534,6 +1817,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 request.multimask_output,
                 context,
                 _EMPTY_FOREGROUND_POINTS_MESSAGE,
+                request.omit_labeled_image,
             )
         finally:
             self._load.end(time.perf_counter() - start)
@@ -1576,6 +1860,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                     request.multimask_output,
                     context,
                     _EMPTY_COORDINATES_MESSAGE,
+                    request.omit_labeled_image,
                 )
             finally:
                 self._load.end(time.perf_counter() - start)
@@ -1646,6 +1931,10 @@ SHUTDOWN_DRAIN_SECONDS = 30.0
 
 class TlsConfigurationError(RuntimeError):
     """TLS cannot be set up, and the server has no other listener to fall back on."""
+
+
+class PortBindError(RuntimeError):
+    """The TLS gRPC port could not be bound, usually because another process holds it."""
 
 
 def resolve_tls_pem_paths(
@@ -1775,6 +2064,10 @@ def drain_executor(executor: futures.ThreadPoolExecutor, timeout_seconds: float)
         executor.shutdown(wait=True, cancel_futures=False)
         done.set()
 
+    # On a timeout the second shutdown below runs while the thread above is still joining. That
+    # is safe: ThreadPoolExecutor.shutdown takes an internal lock only to flip its flag and
+    # empty the queue, and joins the workers outside it.
+
     threading.Thread(target=_wait, name="executor-drain", daemon=True).start()
     if done.wait(timeout_seconds):
         return True
@@ -1814,7 +2107,8 @@ def create_server(
     callers resolve certificates first and fail fast before that cost.
 
     Raises:
-        RuntimeError: The TLS port could not be bound. The executors are shut down first.
+        PortBindError: The TLS port could not be bound. The executors are shut down first, as
+            they are for any other failure while building.
     """
     server_start_time = time.monotonic()
     inference_executor = futures.ThreadPoolExecutor(
@@ -1823,29 +2117,40 @@ def create_server(
     grpc_executor = futures.ThreadPoolExecutor(
         max_workers=max_workers, thread_name_prefix="grpc-cb"
     )
-    server = grpc.aio.server(
-        grpc_executor,
-        options=[
-            ('grpc.max_send_message_length', 64 * 1024 * 1024),
-            ('grpc.max_receive_message_length', 64 * 1024 * 1024),
-        ],
-    )
-    servicer = SegmentationServicer(
-        inference_executor=inference_executor,
-        server_start_time=server_start_time,
-        inference_workers=inference_workers,
-        cache_ttl_seconds=cache_ttl_seconds,
-        cache_max_memory_bytes=cache_max_memory_bytes,
-        cache_max_images=cache_max_images,
-        compile_image_encoder=compile_image_encoder,
-    )
-    add_SegmentationServiceServicer_to_server(servicer, server)
+    servicer: Optional[SegmentationServicer] = None
+    try:
+        server = grpc.aio.server(
+            grpc_executor,
+            # Bounds in-flight RPCs, and with them queued predictor builds and held cache pins.
+            # Past it a call fails with RESOURCE_EXHAUSTED before it reaches a handler.
+            maximum_concurrent_rpcs=max_concurrent_rpcs_from_env(),
+            options=[
+                ('grpc.max_send_message_length', 64 * 1024 * 1024),
+                ('grpc.max_receive_message_length', 64 * 1024 * 1024),
+            ],
+        )
+        servicer = SegmentationServicer(
+            inference_executor=inference_executor,
+            server_start_time=server_start_time,
+            inference_workers=inference_workers,
+            cache_ttl_seconds=cache_ttl_seconds,
+            cache_max_memory_bytes=cache_max_memory_bytes,
+            cache_max_images=cache_max_images,
+            compile_image_encoder=compile_image_encoder,
+        )
+        add_SegmentationServiceServicer_to_server(servicer, server)
 
-    address = f'[::]:{port}'
-    if server.add_secure_port(address, credentials) == 0:
+        address = f'[::]:{port}'
+        if server.add_secure_port(address, credentials) == 0:
+            raise PortBindError(f"Could not bind the TLS gRPC port {address}")
+    except BaseException:
+        # Loading the model or binding the port failed. The caller never gets the pools, so
+        # nothing else would stop their threads.
+        if servicer is not None:
+            servicer.close()
         inference_executor.shutdown(wait=False, cancel_futures=True)
         grpc_executor.shutdown(wait=False, cancel_futures=True)
-        raise RuntimeError(f"Could not bind the TLS gRPC port {address}")
+        raise
     return ServerParts(server, servicer, inference_executor, grpc_executor, address)
 
 
@@ -1887,8 +2192,27 @@ async def serve(
     """
     install_tile_work_logging()
     install_sam2_log_filter()
+    forget_listening_port()
     pem_paths = await asyncio.to_thread(require_tls_pem_paths)
     credentials = load_server_credentials(*pem_paths)
+
+    loop = asyncio.get_running_loop()
+    # Import here so demo_site can import resolve_tls_pem_paths without a cycle.
+    from segmentation_server.demo_site import start_demo_site
+
+    grace_seconds = 5
+    server: Any = None
+    stop_requested = False
+
+    def _request_stop() -> None:
+        nonlocal stop_requested
+        stop_requested = True
+        if server is not None:
+            loop.create_task(server.stop(grace_seconds))
+
+    # Installed before the model loads. Loading blocks the loop, so a signal that arrives then is
+    # handled as soon as it returns, and the server is never started.
+    install_stop_handlers(loop, _request_stop)
 
     parts = create_server(
         port=port,
@@ -1900,23 +2224,18 @@ async def serve(
         cache_max_images=cache_max_images,
         compile_image_encoder=compile_image_encoder,
     )
-    server = parts.server
-    await server.start()
-    logger.info(
-        "Server started, TLS gRPC on %s (inference_workers=%s)", parts.address, inference_workers
-    )
-
-    loop = asyncio.get_running_loop()
-    # Import here so demo_site can import resolve_tls_pem_paths without a cycle.
-    from segmentation_server.demo_site import start_demo_site
-
-    grace_seconds = 5
     demo_listener = None
-
-    def _request_stop() -> None:
-        loop.create_task(server.stop(grace_seconds))
-
     try:
+        await asyncio.sleep(0)
+        if stop_requested:
+            logger.info("Stop requested while the model was loading; not starting the server")
+            return
+        server = parts.server
+        await server.start()
+        record_listening_port(port)
+        logger.info(
+            "Server started, TLS gRPC on %s (inference_workers=%s)", parts.address, inference_workers
+        )
         demo_listener = start_demo_site(
             enabled=demo_site,
             port=demo_port,
@@ -1925,15 +2244,16 @@ async def serve(
             pem_paths=pem_paths,
             bind=demo_bind,
         )
-        install_stop_handlers(loop, _request_stop)
         await server.wait_for_termination()
     except asyncio.CancelledError:
-        await server.stop(grace_seconds)
+        await parts.server.stop(grace_seconds)
     finally:
         if demo_listener is not None:
             demo_listener.close()
         await asyncio.to_thread(drain_executor, parts.inference_executor, SHUTDOWN_DRAIN_SECONDS)
         parts.grpc_executor.shutdown(wait=False, cancel_futures=True)
+        parts.servicer.close()
+        forget_listening_port()
 
 
 if __name__ == '__main__':

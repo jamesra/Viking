@@ -22,6 +22,7 @@ from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 from segmentation_server.compile_config import (
     SAM2_IMAGE_SIZE,
+    env_box_multimask_enabled,
     hydra_overrides_for_image_encoder,
 )
 from segmentation_server.embedding_store import EmbeddingStore, open_embedding_store
@@ -35,6 +36,7 @@ from segmentation_server.mask_utils import (
     SegmentInfo,
     combined_mask_to_segments,
     count_covered_points,
+    mask_grows_past_box,
     prepare_image_for_sam2,
     process_masks,
     select_mask,
@@ -50,6 +52,11 @@ _GENERATION_ATTR = "_viking_encoder_generation"
 # so a blob carries this number and one with another value is discarded instead of installed.
 # Bump it when the payload or the SAM2 pin changes what those fields mean.
 DISK_BLOB_FORMAT = 1
+# Sanity bounds for a blob read back from disk. SAM2 keeps two high-resolution levels and the
+# largest image the server accepts is far below 65536 pixels on a side; anything outside these
+# is a corrupt or foreign file and is discarded instead of installed on the predictor.
+_MAX_DISK_HIGH_RES_LEVELS = 4
+_MAX_DISK_IMAGE_SIDE = 65536
 _PARITY_SEED = 20261002
 
 COMPILE_OFF = "off"
@@ -227,14 +234,16 @@ class SegmentationModel:
     def _verify_compiled_parity(self, compiled: Any) -> None:
         """Refuse the swap unless the compiled encoder agrees numerically with the eager one.
 
-        The eager forward takes the GPU lock because serving threads share that model.
+        Both forwards take the GPU lock: the eager one because serving threads share that model,
+        the compiled one so it does not run a full encoder pass beside a serving prediction.
         Raises ``EncoderParityError`` on disagreement, which leaves the server on eager.
         """
         with self._swap_lock:
             eager = self.sam2_model
         with self._gpu_lock:
             reference = self._encoder_features(eager)
-        candidate = self._encoder_features(compiled)
+        with self._gpu_lock:
+            candidate = self._encoder_features(compiled)
         result = compare_feature_maps(reference, candidate)
         if not result.ok:
             raise EncoderParityError(result.detail)
@@ -381,8 +390,17 @@ class SegmentationModel:
         if found is None or int(found.item()) != DISK_BLOB_FORMAT:
             raise ValueError(f"embedding blob format {found} is not {DISK_BLOB_FORMAT}")
         n_high = int(payload["n_high"].item())
-        high_res = [payload[f"high_res_{index}"].to(device) for index in range(n_high)]
+        if not 0 < n_high <= _MAX_DISK_HIGH_RES_LEVELS:
+            raise ValueError(f"embedding blob has {n_high} high-resolution levels")
         orig = payload["orig_hw"].tolist()
+        if len(orig) != 2 or not all(0 < int(side) <= _MAX_DISK_IMAGE_SIDE for side in orig):
+            raise ValueError(f"embedding blob has implausible original size {orig}")
+        image_embed = payload["image_embed"]
+        high_res_cpu = [payload[f"high_res_{index}"] for index in range(n_high)]
+        for name, tensor in (("image_embed", image_embed), *((f"high_res_{i}", t) for i, t in enumerate(high_res_cpu))):
+            if tensor.dim() != 4 or tensor.shape[0] != 1 or tensor.numel() == 0:
+                raise ValueError(f"embedding blob tensor {name} has shape {tuple(tensor.shape)}, expected (1, C, H, W)")
+        high_res = [tensor.to(device) for tensor in high_res_cpu]
         predictor._features = {
             "image_embed": payload["image_embed"].to(device),
             "high_res_feats": high_res,
@@ -565,7 +583,7 @@ class SegmentationModel:
 
         ``box``, ``mask_threshold`` and ``use_mask_input`` are described on
         ``_predict_with_logits``. The mask is chosen by :func:`select_mask`, the same rule every
-        RPC uses: with a box, the highest-scoring candidate that covers the whole box; without
+        RPC uses: with a box, the highest-scoring candidate that covers at least 95% of the box and extends past it; without
         one, the candidate that covers the most foreground points. Nothing is combined and no
         looser prompt is tried.
 
@@ -579,19 +597,41 @@ class SegmentationModel:
             height, width = empty_shape
             return np.zeros((height, width), dtype=np.bool_), None, 0.0
 
+        # A box prompt can ask SAM2 for its three candidates (sub-part, part, whole) so the rule
+        # below chooses among them instead of only accepting or refusing a single guess. Off unless
+        # SEGMENTATION_BOX_MULTIMASK is set. mask_input refines one mask, so it is skipped then.
+        box_multimask = box is not None and not multimask_output and env_box_multimask_enabled()
         masks, scores, logits = self._predict_with_logits(
             predictor,
             coordinates,
             labels,
-            multimask_output,
+            multimask_output or box_multimask,
             box,
             mask_threshold,
             use_mask_input,
         )
         positives = [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
+        if box_multimask:
+            self._log_box_candidates(masks, scores, box)
         index = select_mask(masks, scores, box=box, positives=positives)
         chosen_logits = None if logits is None or len(logits) <= index else logits[index]
         return masks[index], chosen_logits, float(scores[index])
+
+    @staticmethod
+    def _log_box_candidates(masks: NDArray, scores: NDArray, box: Sequence[int]) -> None:
+        """One line naming each candidate for a box prompt: score, pixels, and whether it answers the box.
+
+        This is how the multimask trial is judged from real requests: the line shows what SAM2
+        offered, and the rule's choice follows from it.
+        """
+        parts = []
+        for index in range(len(scores)):
+            mask = masks[index]
+            parts.append(
+                f"#{index} score={float(scores[index]):.3f} px={int(np.count_nonzero(mask))} "
+                f"answers_box={mask_grows_past_box(mask, box)}"
+            )
+        logger.info("Box prompt %s candidates: %s", tuple(int(v) for v in box), "; ".join(parts))
 
     def _segment_viewport(
         self,

@@ -187,12 +187,6 @@ class SeamGraph:
     def copy(self) -> "SeamGraph":
         return SeamGraph(edges={key: list(runs) for key, runs in self.edges.items()})
 
-    def drop_cell(self, cell: Cell) -> None:
-        """Forget every edge that touches ``cell``, for example when its tiles are replaced."""
-        here = (int(cell.row), int(cell.col))
-        for key in [k for k in self.edges if (k[0], k[1]) == here or (k[2], k[3]) == here]:
-            del self.edges[key]
-
 
 # --- contacts and the seed rectangle ----------------------------------------------------------
 

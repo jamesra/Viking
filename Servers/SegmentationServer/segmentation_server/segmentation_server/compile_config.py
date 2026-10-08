@@ -42,6 +42,19 @@ def env_compile_image_encoder_enabled() -> bool:
     return env_flag_enabled(COMPILE_IMAGE_ENCODER_ENV, default=True)
 
 
+BOX_MULTIMASK_ENV = "SEGMENTATION_BOX_MULTIMASK"
+
+
+def env_box_multimask_enabled() -> bool:
+    """True when a box prompt should ask SAM2 for its three candidate masks (default off).
+
+    With one mask per prediction the selection rule can only accept or refuse SAM2's single guess.
+    With three, it can pick the best-scoring one that covers the box and extends past it. Read on
+    every prediction so it can be changed without a rebuild, and off by default until measured.
+    """
+    return env_flag_enabled(BOX_MULTIMASK_ENV, default=False)
+
+
 def hydra_overrides_for_image_encoder(compile_image_encoder: bool, device_type: str) -> list[str]:
     """Hydra overrides for build_sam2. Compile is CUDA-only; SAM2 uses dynamic=False."""
     if compile_image_encoder and device_type == "cuda":

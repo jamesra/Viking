@@ -126,8 +126,10 @@ services:
       # Router forwards segmentation.codepharm.net:443 to this host port.
       - "40443:443"
       # Optional demo page (SEGMENTATION_DEMO_SITE=1). Same certificate as gRPC TLS.
-      # Router may forward segmentation.codepharm.net:40444 here. Refused while the site is off.
-      - "40444:8443"
+      # Published on loopback only unless SEGMENTATION_DEMO_HOST_BIND=0.0.0.0, so a stack that does
+      # not run the demo page does not open a second port on the network. Router may forward
+      # segmentation.codepharm.net:40444 here once it is set. Refused while the site is off.
+      - "${SEGMENTATION_DEMO_HOST_BIND:-127.0.0.1}:40444:8443"
     cap_add:
       - NET_BIND_SERVICE
     gpus: all
@@ -144,6 +146,9 @@ services:
       # Set SEGMENTATION_DEBUG_DUMP=1 to write the newest 40 growth results (fused and per-tile masks) to
       # <embedding cache>/debug-dumps for offline inspection of tile-edge artifacts.
       SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
+      # 1 asks SAM2 for its three candidate masks on box prompts so the highest-scoring one that
+      # covers the box and extends past it is chosen. Off until judged on real sections.
+      SEGMENTATION_BOX_MULTIMASK: ${SEGMENTATION_BOX_MULTIMASK:-0}
       # Off unless the operator sets SEGMENTATION_DEMO_SITE=1. HTTPS uses SSL_CERT_PATH.
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_DEMO_SITE:-0}
       # The page listens on loopback inside the container by default, which the published port

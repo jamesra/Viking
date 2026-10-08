@@ -193,6 +193,25 @@ def test_set_veto_removes_a_neighbors_pixels_but_not_the_owners_own() -> None:
     assert np.array_equal(after, owner_window[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE])
 
 
+def test_assume_box_fills_the_box_across_cores_and_a_veto_cannot_take_it_back() -> None:
+    canvas = Canvas()
+    first = Cell(2, 2)
+    bx, by = core_origin(first)
+    box = (bx + 400, by + 450, bx + 600, by + 560)  # crosses the east and north core edges
+
+    added = canvas.assume_box(box)
+
+    assert sum(added.values()) == 201 * 111
+    assert canvas.core(first)[450:, 400:].all()
+    assert not canvas.core(first)[:450, :].any() and not canvas.core(first)[:, :400].any()
+    assert canvas.core(Cell(2, 3))[:, :89].any()
+    assert canvas.assume_box(box) == {}
+
+    for cell in added:
+        canvas.set_veto(cell, np.ones((CORE_SIZE, CORE_SIZE), dtype=bool))
+    assert sum(int(canvas.core(cell).sum()) for cell in added) == 201 * 111
+
+
 def test_a_vetoed_pixel_cannot_be_added_by_a_neighbor_later_and_none_clears_the_veto() -> None:
     canvas = Canvas()
     owner = Cell(2, 2)

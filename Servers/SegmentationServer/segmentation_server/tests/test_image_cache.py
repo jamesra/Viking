@@ -114,7 +114,7 @@ async def test_get_stats_reports_occupancy() -> None:
     assert stats["total_images"] == 1
     assert stats["total_memory_bytes"] == 5
     assert stats["max_memory_bytes"] == 100
-    assert stats["max_entries"] == 32
+    assert stats["max_entries"] == 4096
 
 
 @pytest.mark.asyncio
@@ -423,6 +423,30 @@ async def test_shared_tiles_evict_when_byte_cap_or_gpu_is_hit() -> None:
     pressure["on"] = True
     _new, _hit = await gpu_cache.upload_tile(_tile_key(1), b"b", 1, 1)
     assert await gpu_cache.get_image(kept) is None
+
+
+@pytest.mark.asyncio
+async def test_arbitrary_uploads_also_yield_to_gpu_pressure() -> None:
+    """A large entry cap must not be what protects the GPU: ad-hoc uploads yield to pressure too."""
+    pressure = {"on": False}
+    cache = ImageCache(
+        max_memory_bytes=1024,
+        ttl_seconds=60,
+        max_entries=4096,
+        gpu_under_pressure=lambda: pressure["on"] is True,
+    )
+    kept = await cache.upload_image(b"a", 1, 1)
+    pressure["on"] = True
+    await cache.upload_image(b"b", 1, 1)
+    assert await cache.get_image(kept) is None
+
+
+def test_defaults_hold_thousands_of_entries() -> None:
+    from segmentation_server.image_cache import DEFAULT_MAX_ENTRIES, DEFAULT_MAX_MEMORY_BYTES
+
+    assert DEFAULT_MAX_ENTRIES >= 4096
+    assert DEFAULT_MAX_MEMORY_BYTES >= 16 * 1024**3
+
 
 class _Gen:
     """A stand-in predictor that carries an encoder generation."""

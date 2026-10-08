@@ -27,6 +27,9 @@ SEGMENTATION_SSL_KEY_CONTAINER_PATH=/etc/letsencrypt/live/segmentation.codepharm
 # The page listens on loopback inside the container unless this says otherwise, so the published
 # port cannot reach it. To expose it, bind all addresses AND set a token (the page has no login).
 #SEGMENTATION_DEMO_BIND=0.0.0.0
+# Compose publishes the page's host port 40444 on loopback unless this is set. Needed for the
+# router to reach it.
+#SEGMENTATION_DEMO_HOST_BIND=0.0.0.0
 #SEGMENTATION_DEMO_TOKEN=
 
 # Fine-tuned SAM2 weights. Host folder is mounted read-only at /models.

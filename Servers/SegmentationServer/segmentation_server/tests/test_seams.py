@@ -135,15 +135,6 @@ def test_one_pixel_extensions_wait_until_the_range_doubles() -> None:
     assert travels == [(0, 10), (0, 21)]
 
 
-def test_dropping_a_cell_forgets_only_its_edges() -> None:
-    graph = SeamGraph()
-    graph.claim(Cell(0, 0), Cell(0, 1), [(0, 5)])
-    graph.claim(Cell(0, 1), Cell(0, 2), [(0, 5)])
-    graph.drop_cell(Cell(0, 0))
-    assert list(graph.ranges(Cell(0, 0), Cell(0, 1))) == []
-    assert list(graph.ranges(Cell(0, 1), Cell(0, 2))) == [(0, 5)]
-
-
 def test_the_copy_does_not_alias_the_original() -> None:
     graph = SeamGraph()
     graph.claim(Cell(0, 0), Cell(0, 1), [(0, 5)])

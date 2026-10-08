@@ -58,6 +58,45 @@ def cell_of_point(x: int, y: int) -> Cell:
     return Cell(row=(y - CORE_MARGIN) // CELL_STRIDE, col=(x - CORE_MARGIN) // CELL_STRIDE)
 
 
+Box = Tuple[int, int, int, int]
+
+# A box this large across is not a prompt for one window. The split below is skipped past this.
+MAX_BOX_CELLS = 64
+
+
+def cores_under_box(box: Box) -> Optional[Tuple[List[Cell], dict]]:
+    """Split the cores a mosaic box touches into those it covers entirely and those it covers in part.
+
+    ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. Returns ``(full, partial)``:
+    ``full`` lists the cells whose whole 512x512 core lies inside the box, and ``partial`` maps
+    every other touched cell to the box's overlap with that core (same form as ``box``, inside the
+    core, so at least 256 px from the cell's window border). None when the box spans more than
+    ``MAX_BOX_CELLS`` cores, which no longer describes a seed.
+    """
+    x0, y0, x1, y1 = (int(v) for v in box)
+    x0, x1 = min(x0, x1), max(x0, x1)
+    y0, y1 = min(y0, y1), max(y0, y1)
+    first = cell_of_point(x0, y0)
+    last = cell_of_point(x1, y1)
+    if (last.row - first.row + 1) * (last.col - first.col + 1) > MAX_BOX_CELLS:
+        return None
+    full: List[Cell] = []
+    partial: dict = {}
+    for row in range(first.row, last.row + 1):
+        for col in range(first.col, last.col + 1):
+            cell = Cell(row, col)
+            bx, by = core_origin(cell)
+            xa, xb = max(x0, bx), min(x1, bx + CORE_SIZE - 1)
+            ya, yb = max(y0, by), min(y1, by + CORE_SIZE - 1)
+            if xa > xb or ya > yb:
+                continue
+            if xa == bx and xb == bx + CORE_SIZE - 1 and ya == by and yb == by + CORE_SIZE - 1:
+                full.append(cell)
+            else:
+                partial[cell] = (xa, ya, xb, yb)
+    return full, partial
+
+
 def window_origin(cell: Cell) -> Point:
     """Mosaic point of the window's low-X, low-Y corner."""
     return cell.col * CELL_STRIDE, cell.row * CELL_STRIDE
@@ -176,6 +215,60 @@ class Canvas:
         added = int(np.count_nonzero(incoming & ~block))
         if added:
             block |= incoming
+        return added
+
+    def assume_core(self, cell: Cell) -> int:
+        """Mark the whole core as object without a prediction. Returns how many pixels were new.
+
+        Used for a core that lies entirely inside a box the user drew around the object. The
+        pixels count as the owner's own, so no neighbor's veto can take them back.
+        """
+        block = self._blocks.get(cell)
+        if block is None:
+            block = np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_)
+            self._blocks[cell] = block
+        new = CORE_SIZE * CORE_SIZE - int(np.count_nonzero(block))
+        block[:] = True
+        self._owned[cell] = np.ones((CORE_SIZE, CORE_SIZE), dtype=np.bool_)
+        return new
+
+    def assume_box(self, box: Box) -> dict[Cell, int]:
+        """Mark every pixel of a mosaic box as object without a prediction.
+
+        ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. Used for the rectangle a
+        client sent as the object's starting prompt: the user put it inside the structure, so
+        whatever SAM2 leaves out of it (an organelle, a pale compartment) is still the
+        structure. The pixels count as each owner's own, so no veto removes them. Returns the
+        number of new pixels per cell, omitting cells that gained nothing.
+        """
+        x0, y0, x1, y1 = (int(v) for v in box)
+        x0, x1 = min(x0, x1), max(x0, x1)
+        y0, y1 = min(y0, y1), max(y0, y1)
+        added: dict[Cell, int] = {}
+        first = cell_of_point(x0, y0)
+        last = cell_of_point(x1, y1)
+        for row in range(first.row, last.row + 1):
+            for col in range(first.col, last.col + 1):
+                cell = Cell(row, col)
+                bx, by = core_origin(cell)
+                xa, xb = max(x0, bx), min(x1, bx + CORE_SIZE - 1)
+                ya, yb = max(y0, by), min(y1, by + CORE_SIZE - 1)
+                if xa > xb or ya > yb:
+                    continue
+                block = self._blocks.get(cell)
+                if block is None:
+                    block = np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_)
+                    self._blocks[cell] = block
+                piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
+                new = (yb - ya + 1) * (xb - xa + 1) - int(np.count_nonzero(block[piece]))
+                block[piece] = True
+                owned = self._owned.get(cell)
+                if owned is None:
+                    owned = np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_)
+                    self._owned[cell] = owned
+                owned[piece] = True
+                if new:
+                    added[cell] = new
         return added
 
     def set_veto(self, cell: Cell, veto_up: Optional[MaskArray]) -> int:

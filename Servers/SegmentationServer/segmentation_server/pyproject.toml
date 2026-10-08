@@ -42,3 +42,7 @@ segmentation_server = ["demo_static/*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: starts a real gRPC server on a local TLS port (deselect with -m 'not integration')",
+    "gpu: needs a CUDA device and the real SAM2 weights; none of the default tests do",
+]

@@ -356,6 +356,7 @@ def _set_request(image_id: int, foreground: list[tuple[int, int]], background: l
         foreground=[_point(x, y) for x, y in foreground],
         background=[_point(x, y) for x, y in background],
         multimask_output=False,
+        omit_labeled_image=False,
     )
 
 
@@ -399,19 +400,54 @@ async def test_segment_image_sets_yields_one_response_per_set() -> None:
 async def test_segment_image_sets_requires_image_id() -> None:
     cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60)
     servicer = _servicer_with_cache(cache)
-    context = AsyncMock()
+    context = _aborting_context()
 
-    responses = [
-        response
-        async for response in servicer.SegmentImageSets(
-            _stream(_set_request(0, [(1, 1)], [])),
-            context,
-        )
-    ]
+    responses = await _collect_until_abort(
+        servicer.SegmentImageSets(_stream(_set_request(0, [(1, 1)], [])), context)
+    )
 
     assert responses == []
     context.abort.assert_awaited()
     servicer.model.segment_image_with_predictor.assert_not_called()
+
+
+def _aborting_context() -> AsyncMock:
+    """A context whose abort() raises, as grpc.aio's does, so the handler ends where it aborts."""
+    context = AsyncMock()
+    context.abort.side_effect = grpc.aio.AbortError("aborted")
+    return context
+
+
+async def _collect_until_abort(stream) -> list:
+    responses = []
+    try:
+        async for response in stream:
+            responses.append(response)
+    except grpc.aio.AbortError:
+        pass
+    return responses
+
+
+@pytest.mark.asyncio
+async def test_a_stream_that_changes_image_id_is_refused_and_yields_nothing_more() -> None:
+    predictor = object()
+    cache = ImageCache(max_memory_bytes=1024, ttl_seconds=60, create_predictor_func=lambda _d: predictor)
+    first = await cache.upload_image(b"png", 2, 2)
+    second = await cache.upload_image(b"other", 2, 2)
+    model = MagicMock()
+    model.segment_image_with_predictor.return_value = _empty_result()
+    servicer = _servicer_with_cache(cache, model)
+    context = _aborting_context()
+
+    responses = await _collect_until_abort(
+        servicer.SegmentImageSets(
+            _stream(_set_request(first, [(1, 1)], []), _set_request(second, [(1, 1)], [])), context
+        )
+    )
+
+    assert len(responses) == 1
+    assert context.abort.await_args.args[0] == grpc.StatusCode.INVALID_ARGUMENT
+    assert model.segment_image_with_predictor.call_count == 1
 
 @pytest.mark.asyncio
 async def test_an_upload_the_cache_cannot_hold_is_resource_exhausted() -> None:
@@ -480,14 +516,13 @@ async def test_a_stream_of_more_prompt_sets_than_the_limit_is_cut_off() -> None:
     model.segment_image_with_predictor.return_value = _empty_result()
     servicer = _servicer_with_cache(cache, model)
     servicer._limits = RequestLimits(max_sets=2)
-    context = AsyncMock()
+    context = _aborting_context()
 
-    responses = [
-        response
-        async for response in servicer.SegmentImageSets(
+    responses = await _collect_until_abort(
+        servicer.SegmentImageSets(
             _stream(*[_set_request(image_id, [(1, 1)], []) for _ in range(5)]), context
         )
-    ]
+    )
 
     assert len(responses) == 2
     assert context.abort.await_args.args[0] == grpc.StatusCode.RESOURCE_EXHAUSTED

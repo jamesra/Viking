@@ -16,7 +16,7 @@ from segmentation_server.image_cache import (
     DEFAULT_MAX_MEMORY_BYTES,
     DEFAULT_TTL_SECONDS,
 )
-from segmentation_server.server import DEFAULT_TLS_PORT, TlsConfigurationError, serve
+from segmentation_server.server import DEFAULT_TLS_PORT, PortBindError, TlsConfigurationError, serve
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ async def main() -> None:
         logger.info("Generating gRPC code...")
         if not generate_grpc_code(True):
             logger.error("Failed to generate gRPC code. Exiting.")
-            return
+            raise SystemExit(1)
     else:
         logger.info("Using committed gRPC stubs (pass --generate-grpc to regenerate)")
 
@@ -177,7 +177,7 @@ def run() -> None:
     )
     try:
         asyncio.run(main())
-    except TlsConfigurationError as error:
+    except (TlsConfigurationError, PortBindError) as error:
         logger.critical("Cannot start: %s", error)
         raise SystemExit(2) from error
 

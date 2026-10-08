@@ -64,15 +64,47 @@ tile corner (even row, even column) *is* an uploaded tile and reuses its pinned 
 other cell is cropped from two or four uploaded tiles and predicted on a throwaway predictor
 (its embedding is still cached on disk by image digest).
 
-1. Predict the cell that owns the first foreground click, with every foreground click and
-   background click that falls in its window, and the client's boxes (`foreground_boxes`, or the
-   inscribed square the server finds for a nine-click circle) clipped to the window. The mask
-   that answers a prompt is chosen by one rule for every RPC, with no combining of masks:
-   with a box, the highest-scoring candidate that covers **every pixel** of the box (auto-segment
-   masks grow past their rectangle, so one that does not is not an answer to it); without a box,
-   the candidate that covers the most foreground points, ties broken by score. If no candidate
-   qualifies the call fails with `FAILED_PRECONDITION` and a `NO_MATCHING_MASK` detail, which the
-   client logs; there is no empty or best-effort result.
+1. Start the walk in **the fewest windows that between them see the whole prompt**. The prompt
+   is every box (`foreground_boxes`) and every foreground point. A modern client sends the
+   square inscribed in a circle as the box, plus four foreground clicks on the axes at 95% of
+   the radius (outside the square's edges, just inside the circle), and nothing else; the center
+   is not sent. The candidates are the cells the prompt touches (each whose core holds part of a
+   box, each that owns a point). The candidate whose window holds the most of the prompt starts
+   first, with ties going to the window with the most room round it; that repeats for what is
+   still unseen. A window holds a box only when the whole box reaches its core and sits clear of
+   the window border, so a prompt that fits one window is predicted once, with all of it. A box
+   bigger than any window is cut to its overlap with each core it touches, which lies inside
+   the object and at least 256 px from the window border, where a mask can cover it, and every
+   one of those cores starts. Cells the prompt touches that were not needed start only if the
+   chosen windows find nothing, and a click the mask does not reach starts its own cell. A core
+   the box covers entirely is taken as object without a prediction (its tiles are not needed).
+   Edge crossings then carry the walk outward. A box the client sent is the user's statement
+   that its region is the structure, so it is added to the finished mask whole: what SAM2
+   leaves out of it (an organelle, a pale compartment) is not left as a hole. Only the result
+   is changed: the walk, and whether the request found anything, ignore the box. Boxes the
+   server inferred from nine-click circles are not added.
+
+   The mask that answers a prompt is chosen by one rule for every RPC, with no combining of
+   masks: with a box, the highest-scoring candidate that covers **at least 95%** of the box's pixels and
+   has more pixels than it (auto-segment masks grow past their rectangle, so one that does not,
+   or that is only the rectangle, is not an answer to it); without a box, the candidate that
+   covers the most foreground points, ties broken by score. A start cell with no matching
+   mask is logged and skipped; the call fails with `FAILED_PRECONDITION` and a `NO_MATCHING_MASK`
+   detail only when every start cell, reserve cells included, was rejected and nothing else was
+   found. There is no empty
+   or best-effort result.
+
+   With one mask per prediction (what the Viking client asks for) the rule can only accept or
+   refuse SAM2's single guess. Set `SEGMENTATION_BOX_MULTIMASK=1` to ask SAM2 for its three
+   candidates on box prompts instead, so the highest-scoring one that covers the box and extends
+   past it is chosen (the second `use_mask_input` pass is skipped then). It is off by default;
+   each candidate's score, pixel count and verdict is logged on one `Box prompt ... candidates`
+   line so the setting can be judged from real requests.
+
+   *Legacy prompt.* The production client sends nine clicks (the center, four at half the radius
+   rotated 45 degrees, four at 0.8 on the axes) and no box. The server infers the inscribed box
+   from them (`circle_boxes.find_circles`) and leaves the ring clicks out of the SAM2 prompt. That
+   inference exists only for that client and is deleted when it is retired.
 2. Drop any piece of the answer that holds no positive click, then OR the core into the result.
    Pixels in the outer 256 px margin are ORed in only where SAM2's logit is at least
    `SEGMENT_MARGIN_LOGIT` (default 1.5; a pixel is object above 0), so the margin counts only
@@ -114,6 +146,15 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    longer cached) is never asked for again and the cells that need it stay out of the mask.
    When no cell is waiting any more the server sends the finished `SegmentationResponse` and
    ends the call.
+   A tile that another stream has already asked its client for is not asked for again. The
+   server records each tile it asks for until the upload reaches the cache; a second stream
+   that needs the same tile leaves it out of its `TilesNeeded`, waits for that upload, and
+   pins it when it arrives. It asks its own client after `SEGMENTATION_TILE_SHARE_TIMEOUT_SECONDS`
+   (default 5; `0` turns sharing off), or at once if the stream it was waiting on ends, is
+   cancelled, or reports the tile `unavailable`. A client therefore sees a `TilesNeeded` that
+   lists fewer tiles than the walk wanted, or none for a round. A client that sends no answer
+   that settles a requested tile for `SEGMENTATION_TILE_ANSWER_TIMEOUT_SECONDS` (default 60)
+   gets `DEADLINE_EXCEEDED`; empty or unrelated answers do not restart that clock.
 
 The response mask is the fused cores with `origin_x`/`origin_y` at the mosaic pixel of its
 lower-left corner, always a multiple of 512 wide and tall.
@@ -122,9 +163,9 @@ Set `SEGMENTATION_DEBUG_DUMP=1` to write one `.npz` per call (fused mask, every 
 cell's raw answer, kept pieces and SAM2 logits, and the prompts) under the embedding cache mount
 for offline inspection.
 
-Request limits: a request over a limit is refused with `RESOURCE_EXHAUSTED`, naming the limit. `SEGMENTATION_MAX_TILES` (default 64) caps tiles on a `SegmentTilesStream` start, `SEGMENTATION_MAX_POINTS` (512) caps the prompt points on any segment request, `SEGMENTATION_MAX_BOXES` (16) caps boxes, `SEGMENTATION_MAX_SETS` (5000) caps prompt sets on one `SegmentImageSets` stream, and `SEGMENTATION_MAX_ANSWER_TILES` (4096) caps the tiles one `TilesAnswer` may list (over it is `INVALID_ARGUMENT`). An image is refused when its declared size is over `SEGMENTATION_MAX_IMAGE_PIXELS` (100 million), before it is decoded. An upload that cannot fit under the cache byte cap, because every other entry is held by a running request, is `RESOURCE_EXHAUSTED`; the client can retry.
+Request limits: a request over a limit is refused with `RESOURCE_EXHAUSTED`, naming the limit. `SEGMENTATION_MAX_TILES` (default 64) caps tiles on a `SegmentTilesStream` start, `SEGMENTATION_MAX_POINTS` (512) caps the prompt points on any segment request, `SEGMENTATION_MAX_BOXES` (16) caps boxes, `SEGMENTATION_MAX_SETS` (5000) caps prompt sets on one `SegmentImageSets` stream, and `SEGMENTATION_MAX_ANSWER_TILES` (4096) caps the tiles one `TilesAnswer` may list (over it is `INVALID_ARGUMENT`). `SEGMENTATION_MAX_CONCURRENT_STREAMS` (32) caps `SegmentTilesStream` calls running at once, since each holds cache pins while it waits for tiles, and `SEGMENTATION_MAX_CONCURRENT_RPCS` (256) caps every call in flight; a call over either is `RESOURCE_EXHAUSTED` and can be retried. An image is refused when its declared size is over `SEGMENTATION_MAX_IMAGE_PIXELS` (100 million), before it is decoded. An upload that cannot fit under the cache byte cap, because every other entry is held by a running request, is `RESOURCE_EXHAUSTED`; the client can retry.
 
-Cache defaults: 5 minute idle TTL, 1 GiB of encoded image bytes, and 32 GPU embeddings. Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`; missing tiles return `TILE_NOT_FOUND` with row/col so the client can re-upload.
+Cache defaults: 5 minute idle TTL for ad-hoc uploads (grid tiles do not expire), 16 GiB of encoded image bytes, and 4096 ad-hoc uploads. Grid tiles have no count cap. Every cached image holds about 9 MiB of GPU embedding, so the GPU is the real limit: when free CUDA memory drops below max(1 GiB, 10% of the card), the least recently used idle entry is dropped, tile or ad-hoc. The client re-uploads the PNG and the disk embedding cache below skips the encoder. Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`; missing tiles return `TILE_NOT_FOUND` with row/col so the client can re-upload.
 
 The GPU cap is the hot set. Feature maps for each cell are also written under `SEGMENTATION_EMBEDDING_CACHE` (inside the container, `/var/cache/segmentation-embeddings`). Compose mounts `${SEGMENTATION_EMBEDDING_CACHE_HOST:-D:/Docker/cache/segmentation-embeddings}` there. A later upload of the same PNG bytes reloads that file and skips `set_image()`. The directory is split by checkpoint identity and by encoder generation (`eager` while compile is warming, `compiled` after the swap), so a new checkpoint or the compiled encoder does not reuse the other generation. Default disk cap is 32 GiB (`SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES`, `0` for no cap). The client still sends the PNG; the disk hit skips the encoder only.
 
@@ -199,7 +240,7 @@ To run the server:
 python -m segmentation_server
 ```
 
-The server only listens with TLS; there is no cleartext gRPC port. Docker publishes gRPC TLS as **40443:443** and the optional demo page as **40444:8443**. Host ports 80 and 443 belong to the reverse proxy. The router forwards `segmentation.codepharm.net:443` to host port 40443. `SSL_CERT_PATH` and `SSL_KEY_PATH` must point at the certificate chain (`fullchain.pem`) and key; the server waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for them, then exits so the container restart policy retries. For local runs, `python -m segmentation_server.dev_cert --out ./dev-cert` writes a self-signed pair (needs the `cryptography` package). See [config-template/README.md](config-template/README.md) for Let's Encrypt enrollment. The demo page uses those same files and stays down until `SEGMENTATION_DEMO_SITE=1`.
+The server only listens with TLS; there is no cleartext gRPC port. Docker publishes gRPC TLS as **40443:443** and the optional demo page as **40444:8443**, on loopback only until `SEGMENTATION_DEMO_HOST_BIND=0.0.0.0` is set, so a stack that does not run the page opens no second port on the network. Host ports 80 and 443 belong to the reverse proxy. The router forwards `segmentation.codepharm.net:443` to host port 40443. `SSL_CERT_PATH` and `SSL_KEY_PATH` must point at the certificate chain (`fullchain.pem`) and key; the server waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for them, then exits so the container restart policy retries. For local runs, `python -m segmentation_server.dev_cert --out ./dev-cert` writes a self-signed pair (needs the `cryptography` package). See [config-template/README.md](config-template/README.md) for Let's Encrypt enrollment. The demo page uses those same files and stays down until `SEGMENTATION_DEMO_SITE=1`.
 
 Fine-tuned weights: put a Meta-format checkpoint at `D:\Docker\Run\segmentation-server\best_TEM_model.pt`. Compose mounts that folder at `/models` and sets `SAM2_CHECKPOINT=/models/best_TEM_model.pt` (override with `SEGMENTATION_MODEL_HOST` or `SAM2_CHECKPOINT`). Trainer `best_model.pt` is a raw state dict; convert it with `sam2-em-export-serve` before copying it here. Recreate the container after replacing the file. Eager and compiled encoders both load this checkpoint.
 
@@ -211,7 +252,7 @@ Optional arguments:
 - `--inference-workers`: SAM2 inference thread pool size (default: 1)
 - `--cache-ttl-seconds`: Unused cached-image lifetime (default: 300)
 - `--cache-max-memory-bytes`: Cap on cached encoded image bytes (default: 1 GiB)
-- `--cache-max-images`: Max cached images / GPU embeddings (default: 8)
+- `--cache-max-images`: Max ad-hoc uploaded images; grid tiles are not counted (default: 4096)
 - `--no-compile-image-encoder`: Skip Hiera `torch.compile` (default is on for CUDA)
 - `--demo-site` / `--no-demo-site`: HTTPS point-prompt page (default off; `SEGMENTATION_DEMO_SITE=1` turns it on)
 - `--demo-port`: Demo HTTPS port (default: 8443)

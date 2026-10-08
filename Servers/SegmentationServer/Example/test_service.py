@@ -75,11 +75,15 @@ async def test_service():
         environment = dict(os.environ, SSL_CERT_PATH=str(cert), SSL_KEY_PATH=str(key))
 
         print("Starting the service...")
+        # A file, not a pipe: nothing reads a pipe while the test runs, and a server that logs
+        # more than the pipe buffer holds would block on its next write.
+        log_path = Path(folder) / "service.log"
+        log_file = open(log_path, "w", encoding="utf-8")
         service_process = subprocess.Popen(
             [sys.executable, '-m', 'segmentation_server',
              '--tls-port', str(port), '--workers', '4', '--no-compile-image-encoder'],
             env=environment,
-            stdout=subprocess.PIPE,
+            stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
         )
@@ -113,10 +117,12 @@ async def test_service():
             print("Shutting down the service...")
             service_process.terminate()
             try:
-                output, _ = service_process.communicate(timeout=60)
+                service_process.wait(timeout=60)
             except subprocess.TimeoutExpired:
                 service_process.kill()
-                output, _ = service_process.communicate()
+                service_process.wait()
+            log_file.close()
+            output = log_path.read_text(encoding="utf-8", errors="replace")
             if output:
                 print("Service output:")
                 print(output)

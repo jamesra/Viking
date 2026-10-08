@@ -11,7 +11,9 @@ from PIL import Image
 from hypothesis import given, settings, strategies as st
 
 from segmentation_server.mask_utils import (
+    MIN_BOX_COVERAGE,
     NoMatchingMask,
+    box_coverage,
     count_covered_points,
     encode_png,
     ensure_image_within_limit,
@@ -204,6 +206,85 @@ def test_with_a_box_the_highest_scoring_mask_that_covers_all_of_it_wins() -> Non
     scores = np.array([0.5, 0.9, 0.99], dtype=np.float32)
     assert select_mask(masks, scores, box=(4, 4, 10, 10)) == 1  # the 0.99 mask is smaller than the box
     assert select_mask(masks, scores, box=(6, 6, 7, 7)) == 2
+
+
+def test_a_mask_that_is_only_the_rectangle_does_not_answer_it() -> None:
+    masks = _candidates((4, 4, 10, 10), (2, 2, 14, 14))
+    scores = np.array([0.99, 0.6], dtype=np.float32)
+
+    assert select_mask(masks, scores, box=(4, 4, 10, 10)) == 1  # the 0.99 mask is exactly the box
+
+    with pytest.raises(NoMatchingMask, match="extends past"):
+        select_mask(masks[:1], scores[:1], box=(4, 4, 10, 10))
+
+
+def test_a_mask_one_pixel_larger_than_the_rectangle_is_enough() -> None:
+    masks = _candidates((4, 4, 11, 10))
+
+    assert select_mask(masks, np.array([0.8], dtype=np.float32), box=(4, 4, 10, 10)) == 0
+
+
+def test_mask_grows_past_box_needs_cover_and_extra_area() -> None:
+    from segmentation_server.mask_utils import mask_grows_past_box
+
+    mask = _candidates((2, 2, 10, 10))[0]
+    assert mask_grows_past_box(mask, (3, 3, 9, 9))
+    assert not mask_grows_past_box(mask, (2, 2, 10, 10))  # the box itself
+    assert not mask_grows_past_box(mask, (-10, -10, 10, 10))  # mostly outside the mask
+
+
+def test_box_coverage_counts_the_share_of_box_pixels_set() -> None:
+    mask = _candidates((2, 2, 10, 10))[0]
+    assert box_coverage(mask, (3, 3, 9, 9)) == 1.0
+    assert box_coverage(mask, (1, 3, 9, 9)) == pytest.approx(56 / 63)  # x 2..9 of the 9 columns are set
+    assert box_coverage(mask, (9, 9, 3, 3)) == 0.0
+    assert box_coverage(mask, (30, 30, 40, 40)) == 0.0
+    # Outside the frame counts as not set: half of this box is off the 32x32 mask.
+    assert box_coverage(np.ones((32, 32), dtype=np.bool_), (24, 0, 39, 15)) == pytest.approx(0.5)
+
+
+def _grid_mask_with_holes(box_size: int, holes: int, margin: int = 4) -> np.ndarray:
+    """A mask covering a ``box_size`` square plus ``margin`` all round, with ``holes`` box pixels cleared."""
+    size = box_size + 2 * margin + 2
+    mask = np.zeros((size, size), dtype=np.bool_)
+    mask[1:size - 1, 1:size - 1] = True
+    cleared = 0
+    for y in range(margin + 1, margin + 1 + box_size):
+        for x in range(margin + 1, margin + 1 + box_size):
+            if cleared < holes:
+                mask[y, x] = False
+                cleared += 1
+    return mask
+
+
+def test_a_mask_with_few_holes_inside_the_box_answers_it_and_one_with_many_does_not() -> None:
+    from segmentation_server.mask_utils import mask_grows_past_box
+
+    box_size = 20
+    box = (5, 5, 5 + box_size - 1, 5 + box_size - 1)
+    area = box_size * box_size
+    allowed = int(area * (1 - MIN_BOX_COVERAGE))
+
+    assert mask_grows_past_box(_grid_mask_with_holes(box_size, allowed), box)
+    assert not mask_grows_past_box(_grid_mask_with_holes(box_size, allowed + 1), box)
+
+
+def test_select_mask_prefers_the_best_score_among_masks_above_the_coverage_threshold() -> None:
+    box_size = 20
+    box = (5, 5, 24, 24)
+    near_miss = _grid_mask_with_holes(box_size, 10)  # 97.5% covered
+    too_holey = _grid_mask_with_holes(box_size, 60)  # 85% covered
+    whole = _grid_mask_with_holes(box_size, 0)
+    masks = np.stack([too_holey, near_miss, whole])
+
+    scores = np.array([0.99, 0.8, 0.7], dtype=np.float32)
+    assert select_mask(masks, scores, box=box) == 1
+
+    scores = np.array([0.99, 0.6, 0.7], dtype=np.float32)
+    assert select_mask(masks, scores, box=box) == 2
+
+    with pytest.raises(NoMatchingMask, match="95%"):
+        select_mask(masks[:1], scores[:1], box=box)
 
 
 def test_with_a_box_no_covering_mask_is_no_match_even_if_a_point_is_covered() -> None:

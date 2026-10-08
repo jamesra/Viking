@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 from typing import List, Optional, Sequence
 
@@ -24,8 +25,37 @@ TIMEOUT_SECONDS = 5.0
 _LIVE_PATH = re.compile(r"[\\/]live[\\/]([^\\/]+)[\\/][^\\/]+$")
 
 
+def port_file() -> Path:
+    """Where a running server records the TLS port it bound, for this process to read back."""
+    return Path(tempfile.gettempdir()) / "segmentation-tls-port"
+
+
+def record_listening_port(port: int) -> None:
+    """Remember the bound port. ``--tls-port`` exists only in the server's own command line.
+
+    The health check is a separate process started by Docker with the container's environment,
+    so without this it would dial the default port for a server started with the flag.
+    """
+    try:
+        port_file().write_text(str(port), encoding="ascii")
+    except OSError:
+        pass
+
+
+def forget_listening_port() -> None:
+    """Drop a record left by an earlier run in the same container."""
+    try:
+        port_file().unlink()
+    except OSError:
+        pass
+
+
 def tls_port() -> int:
-    """The TLS port the server listens on (SEGMENTATION_TLS_PORT, default 443)."""
+    """The TLS port the server listens on: the running server's record, else SEGMENTATION_TLS_PORT, else 443."""
+    try:
+        return int(port_file().read_text(encoding="ascii").strip())
+    except (OSError, ValueError):
+        pass
     raw = os.environ.get("SEGMENTATION_TLS_PORT", "").strip()
     try:
         return int(raw) if raw else DEFAULT_PORT
@@ -54,7 +84,9 @@ def check(port: int, cert_path: Optional[str], timeout: float = TIMEOUT_SECONDS)
     """None when the server answers; otherwise a short reason."""
     name = target_name(cert_path)
     roots: List[Optional[bytes]] = [None]
-    if cert_path and Path(cert_path).is_file():
+    # A Let's Encrypt fullchain is not a root. Trusting it directly would let a broken chain pass,
+    # so only a certificate outside .../live/<domain>/ (the self-signed development one) is a fallback.
+    if cert_path and not _LIVE_PATH.search(cert_path) and Path(cert_path).is_file():
         roots.append(Path(cert_path).read_bytes())
     reasons: List[str] = []
     for root_certificates in roots:

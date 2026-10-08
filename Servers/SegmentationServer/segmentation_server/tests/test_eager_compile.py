@@ -2,47 +2,89 @@
 
 from __future__ import annotations
 
+import contextlib
+import importlib
+import importlib.util
 import sys
 import threading
 from unittest.mock import MagicMock
 
 import cv2
 import numpy as np
+import pytest
+
 
 class _Device:
     def __init__(self, kind: str) -> None:
         self.type = kind
 
 
-def _install_import_stubs() -> None:
-    """Let segmentation_service import on machines without torch or SAM2."""
-    existing = sys.modules.get("torch")
-    if existing is not None and not isinstance(existing, MagicMock):
-        return
+def _build_import_stubs() -> dict:
+    """Stand-ins for torch and SAM2 on a machine that has neither; empty when real torch exists."""
+    if importlib.util.find_spec("torch") is not None:
+        return {}
     torch = MagicMock()
     torch.cuda.is_available.return_value = True
     torch.cuda.get_device_properties.return_value.major = 8
     torch.backends.mps.is_available.return_value = False
     torch.device = _Device
-    sys.modules["torch"] = torch
     sam2 = MagicMock()
     sam2.__file__ = "sam2/__init__.py"
-    sys.modules["sam2"] = sam2
-    sys.modules.setdefault("sam2.build_sam", MagicMock())
-    sys.modules.setdefault("sam2.sam2_image_predictor", MagicMock())
+    return {
+        "torch": torch,
+        "sam2": sam2,
+        "sam2.build_sam": MagicMock(),
+        "sam2.sam2_image_predictor": MagicMock(),
+    }
 
 
-_install_import_stubs()
+_STUBS = _build_import_stubs()
 
-import segmentation_server.segmentation_service as svc  # noqa: E402
+
+@contextlib.contextmanager
+def _stubs_installed():
+    """Put the stubs in ``sys.modules`` and take them out again, so no other test module sees them.
+
+    A test module that guards on ``pytest.importorskip("torch")`` would otherwise find the mock and
+    run against it as if torch were installed.
+    """
+    saved = {name: sys.modules.get(name) for name in _STUBS}
+    sys.modules.update(_STUBS)
+    try:
+        yield
+    finally:
+        for name, previous in saved.items():
+            if previous is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = previous
+
+
+with _stubs_installed():
+    svc = importlib.import_module("segmentation_server.segmentation_service")
+
+if _STUBS:
+    # This copy of the module is bound to the stubs. Forget it so a later import builds its own.
+    sys.modules.pop("segmentation_server.segmentation_service", None)
+    import segmentation_server as _package
+
+    if hasattr(_package, "segmentation_service"):
+        delattr(_package, "segmentation_service")
+
+
+@pytest.fixture(autouse=True)
+def _torch_and_sam2_stubs():
+    with _stubs_installed():
+        yield
+
+
 from segmentation_server.compile_config import COMPILE_IMAGE_ENCODER_HYDRA  # noqa: E402
-from segmentation_server.segmentation_service import (  # noqa: E402
-    COMPILE_FAILED,
-    COMPILE_OFF,
-    COMPILE_READY,
-    COMPILE_WARMING,
-    SegmentationModel,
-)
+
+COMPILE_FAILED = svc.COMPILE_FAILED
+COMPILE_OFF = svc.COMPILE_OFF
+COMPILE_READY = svc.COMPILE_READY
+COMPILE_WARMING = svc.COMPILE_WARMING
+SegmentationModel = svc.SegmentationModel
 
 
 def test_resolve_prefers_sam2_checkpoint_env(monkeypatch) -> None:

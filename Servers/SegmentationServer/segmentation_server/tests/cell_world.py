@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 
 from segmentation_server.cell_grid import CELL_SIZE, Cell, Point, tiles_for_cell, window_origin
-from segmentation_server.mask_utils import NoMatchingMask, count_covered_points, mask_covers_box
+from segmentation_server.mask_utils import NoMatchingMask, count_covered_points, mask_grows_past_box
 from segmentation_server.tile_growth import GrowthResult, PredictUnavailable
 
 DOMAIN = 4096
@@ -99,11 +99,16 @@ class World:
 
         count, pieces = cv2.connectedComponents(window.astype(np.uint8), connectivity=8)
         keep = {int(pieces[y, x]) for (x, y), label in zip(points, labels) if label == 1 and pieces[y, x] > 0}
+        if not keep and box is not None:
+            # A box alone is a prompt too: SAM2 segments the object the box sits on.
+            center_x, center_y = (box[0] + box[2]) // 2, (box[1] + box[3]) // 2
+            if pieces[center_y, center_x] > 0:
+                keep = {int(pieces[center_y, center_x])}
         mask = np.isin(pieces, list(keep)) if keep else np.zeros_like(window)
         positives = [(x, y) for (x, y), label in zip(points, labels) if label == 1]
         if box is not None:
-            if not mask_covers_box(mask, box):
-                raise NoMatchingMask(f"mask does not cover box {tuple(box)} in cell {row},{col}")
+            if not mask_grows_past_box(mask, box):
+                raise NoMatchingMask(f"mask does not cover and extend past box {tuple(box)} in cell {row},{col}")
         elif positives and count_covered_points(mask, positives) == 0:
             raise NoMatchingMask(f"mask covers none of the {len(positives)} click(s) in cell {row},{col}")
         return mask, self.logits_for(mask), 0.9

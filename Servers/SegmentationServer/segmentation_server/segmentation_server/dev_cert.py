@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import ipaddress
+import os
 from pathlib import Path
 from typing import Sequence, Tuple
 
@@ -68,13 +69,18 @@ def generate_self_signed(
     cert_path.parent.mkdir(parents=True, exist_ok=True)
     key_path.parent.mkdir(parents=True, exist_ok=True)
     cert_path.write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
-    key_path.write_bytes(
-        key.private_bytes(
-            serialization.Encoding.PEM,
-            serialization.PrivateFormat.PKCS8,
-            serialization.NoEncryption(),
-        )
+    key_bytes = key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
     )
+    # Created owner-only so the unencrypted key is never readable by other users, not even briefly.
+    # os.open honours the mode on POSIX; on Windows only the read-only bit applies and access is
+    # governed by the directory ACL.
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0)
+    descriptor = os.open(key_path, flags, 0o600)
+    with os.fdopen(descriptor, "wb") as key_file:
+        key_file.write(key_bytes)
     return cert_path, key_path
 
 

@@ -8,6 +8,7 @@ encoded-byte cap or a GPU-memory check says an embedding has to be dropped.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import threading
 import time
@@ -19,12 +20,22 @@ from segmentation_server.tile_work import tile_work
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MAX_MEMORY_BYTES = 1073741824
+DEFAULT_MAX_MEMORY_BYTES = 16 * 1024**3
 DEFAULT_TTL_SECONDS = 300
-DEFAULT_MAX_ENTRIES = 32
+# A cached entry holds about 9 MiB of GPU embedding, so this count is not what protects the GPU:
+# gpu_under_pressure is. The count only bounds host bookkeeping for ad-hoc uploads.
+DEFAULT_MAX_ENTRIES = 4096
 
 # volume, section, channel, transform, downsample, row, col
 TileCacheKey = Tuple[str, int, str, str, int, int, int]
+
+
+@dataclass
+class _TileUploadSlot:
+    """The lock serializing uploads of one tile key, and how many uploads hold or await it."""
+
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    users: int = 0
 
 
 class PredictorCreationError(RuntimeError):
@@ -64,7 +75,7 @@ class ImageCache:
     Cache mutations take an asyncio.Lock. Predictor inference uses a per-image
     threading.Lock because it runs in executor threads. Encoded image bytes count
     toward max_memory_bytes for both modes. max_entries and the TTL apply only to
-    arbitrary uploads. Shared tiles are evicted when that byte cap is exceeded or
+    arbitrary uploads. Both kinds are evicted when that byte cap is exceeded or
     when gpu_under_pressure reports that the next embedding needs the GPU.
     """
 
@@ -91,7 +102,7 @@ class ImageCache:
             release_predictor_func: Called with a predictor before its entry is
                 dropped (delete, LRU, TTL). ImageCache stays torch-free.
             time_fn: Clock for TTL/LRU; inject a fake in tests.
-            gpu_under_pressure: Return True only when a shared-tile embedding
+            gpu_under_pressure: Return True only when a cached embedding
                 should be dropped to free GPU memory. None disables that check.
             predictor_generation: predictor -> the encoder generation its embedding was
                 made with (for example ``"eager"``), or None when unknown.
@@ -103,6 +114,7 @@ class ImageCache:
         # Deleted/evicted while SegmentImage still holds a pin; predictor reset waits for check-in.
         self._retiring: Dict[int, CachedImage] = {}
         self._coord_index: Dict[TileCacheKey, int] = {}
+        self._tile_upload_locks: Dict[TileCacheKey, _TileUploadSlot] = {}
         self._next_id: int = 1
         self._lock: asyncio.Lock = asyncio.Lock()
         self._max_memory_bytes: int = max_memory_bytes
@@ -296,7 +308,28 @@ class ImageCache:
         """
         volume, section, _channel, _transform, _downsample, row, col = tile_key
         with tile_work(volume, section, col, row):
-            return await self._upload_tile_body(tile_key, image_data, width, height, executor, decoded)
+            # One upload per key at a time. The body releases the cache lock while it encodes, so
+            # two uploads of the same key would otherwise both miss, both encode, and the one
+            # indexed first would be orphaned in the cache. Serialized, the second sees the
+            # first's entry: identical bytes are a hit, different bytes replace it cleanly.
+            async with self._tile_upload_slot(tile_key):
+                return await self._upload_tile_body(tile_key, image_data, width, height, executor, decoded)
+
+    @contextlib.asynccontextmanager
+    async def _tile_upload_slot(self, tile_key: TileCacheKey):
+        """Exclusive right to upload ``tile_key``. The per-key lock is dropped when nobody uses it."""
+        slot = self._tile_upload_locks.get(tile_key)
+        if slot is None:
+            slot = _TileUploadSlot()
+            self._tile_upload_locks[tile_key] = slot
+        slot.users += 1
+        try:
+            async with slot.lock:
+                yield
+        finally:
+            slot.users -= 1
+            if slot.users == 0:
+                self._tile_upload_locks.pop(tile_key, None)
 
     async def _upload_tile_body(
         self,
@@ -426,14 +459,15 @@ class ImageCache:
     def _eviction_reason(self, incoming_size_bytes: int, *, shared_tile: bool) -> Optional[str]:
         """Why the next insert must drop something, or None when it fits.
 
-        Arbitrary uploads still stop at max_entries. Shared tiles ignore that
-        count and the TTL; they yield only for the byte cap or GPU pressure.
+        Every insert yields to the byte cap and to GPU pressure, because each entry holds a GPU
+        embedding. Arbitrary uploads additionally stop at max_entries; shared tiles ignore that
+        count and the TTL.
         """
         if self._host_bytes_exceeded(incoming_size_bytes):
             return "memory cap"
+        if self._gpu_under_pressure():
+            return "GPU memory"
         if shared_tile:
-            if self._gpu_under_pressure():
-                return "GPU memory"
             return None
         if self._arbitrary_count() >= self._max_entries:
             return "entry cap"
