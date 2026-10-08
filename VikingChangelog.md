@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.78 — unreleased
 
+* The scale bar no longer crashes the viewer when the visible section width is zero (collapsed viewport or invalid scale).
 * Measure tool and scale-bar labels no longer crash when a distance is not a number or is infinite; the label keeps the starting unit instead of throwing.
 * Measure tool and scale-bar labels pick the unit that puts the number between 1 and 999: 303 nm no longer shows as 0.303 um, and 0.75 um shows as 750 nm.
 * The measure tool shows 0 when the drag starts on the clicked point; it showed 1 (for example 1.000 nm).

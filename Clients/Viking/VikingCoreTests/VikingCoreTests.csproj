@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MeasurementExtension\Measurement.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
   </ItemGroup>
 

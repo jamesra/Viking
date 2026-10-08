@@ -22,29 +22,24 @@ namespace MeasurementExtension
 
         public static Geometry.Vector2 CornerOffsetFractions = new(0.01, 0.05);
 
-        private static readonly double log5 = Math.Log(5);
-
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
             if (!Measurement.Properties.Settings.Default.ShowScaleBar || Parent is null)
                 return;
 
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;
+            if (ViewWidthInPixels <= 0)
+                return;
+
             double ViewWidthInUnits = ViewWidthInPixels / Global.UnitsPerPixel;
+            if (ViewWidthInUnits <= 0)
+                return;
 
             LengthMeasurement ApproximateViewBarWidth = new(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
             LengthMeasurement AdjustedApproximateViewBarWidth = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
 
-            //Round to the nearest power of 10
-            double log10 = Math.Log10(AdjustedApproximateViewBarWidth.Length);
-            int numDigits = Convert.ToInt32(Math.Ceiling(log10));
-
-            double MeasureBarDistance = Math.Pow(10, numDigits);
-
-            if (log10 - Math.Floor(log10) > log5 - 1)
-            {
-                MeasureBarDistance *= 5;
-            }
+            if (!ScaleBarLayout.TryRoundReadableLengthToBarDistance(AdjustedApproximateViewBarWidth.Length, out double MeasureBarDistance))
+                return;
 
             LengthMeasurement FinalBarWidth = new(AdjustedApproximateViewBarWidth.Units, MeasureBarDistance);
             FinalBarWidth = FinalBarWidth.ConvertTo(Global.PixelWidth.Units);
