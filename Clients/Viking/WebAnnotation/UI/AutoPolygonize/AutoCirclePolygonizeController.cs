@@ -1116,7 +1116,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (profile.ResultDependsOnViewport)
             {
                 Rectangle liveBounds = await session.GetLiveViewportBoundsAsync().ConfigureAwait(false);
-                viewportUnchanged = SegmentationViewportSession.ShouldUploadEncodedCapture(session.ViewportBounds, liveBounds);
+                viewportUnchanged = SegmentationViewportSession.AreViewportBoundsSimilar(session.ViewportBounds, liveBounds);
             }
 
             return new LiveViewCheck(resultLevel, liveLevel, viewportUnchanged);

@@ -201,7 +201,7 @@ namespace WebAnnotationTests.Commands
         public void ShouldUploadEncodedCaptureWhenBoundsUnchanged()
         {
             Rectangle bounds = new(0, 100, 0, 100);
-            Assert.IsTrue(SegmentationViewportSession.ShouldUploadEncodedCapture(bounds, bounds));
+            Assert.IsTrue(SegmentationViewportSession.AreViewportBoundsSimilar(bounds, bounds));
         }
 
         [TestMethod]
@@ -209,7 +209,7 @@ namespace WebAnnotationTests.Commands
         {
             Rectangle captured = new(0, 100, 0, 100);
             Rectangle current = new(50, 150, 0, 100);
-            Assert.IsFalse(SegmentationViewportSession.ShouldUploadEncodedCapture(captured, current));
+            Assert.IsFalse(SegmentationViewportSession.AreViewportBoundsSimilar(captured, current));
         }
 
         [TestMethod]
@@ -217,7 +217,7 @@ namespace WebAnnotationTests.Commands
         {
             Rectangle captured = new(0, 100, 0, 100);
             Rectangle current = new(0.5, 100.5, 0.5, 100.5);
-            Assert.IsTrue(SegmentationViewportSession.ShouldUploadEncodedCapture(captured, current));
+            Assert.IsTrue(SegmentationViewportSession.AreViewportBoundsSimilar(captured, current));
         }
 
         [TestMethod]
@@ -225,7 +225,7 @@ namespace WebAnnotationTests.Commands
         {
             Rectangle captured = new(0, 100, 0, 100);
             Rectangle live = new(40, 140, 0, 100);
-            Assert.IsFalse(SegmentationViewportSession.ShouldUploadEncodedCapture(captured, live));
+            Assert.IsFalse(SegmentationViewportSession.AreViewportBoundsSimilar(captured, live));
         }
 
         [TestMethod]

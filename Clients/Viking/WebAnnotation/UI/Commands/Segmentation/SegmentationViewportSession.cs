@@ -368,7 +368,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// True when corners differ by less than 1% of the larger side. Used to treat hitch jitter as the same view.
+        /// True when corners differ by less than 1% of the larger side. Used to treat hitch jitter as the same view,
+        /// including whether a PNG encode captured the same bounds as the live viewport before upload.
         /// </summary>
         public static bool AreViewportBoundsSimilar(Geometry.Rectangle a, Geometry.Rectangle b)
         {
@@ -378,13 +379,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                    Math.Abs(a.UpperRight.X - b.UpperRight.X) < tolerance &&
                    Math.Abs(a.UpperRight.Y - b.UpperRight.Y) < tolerance;
         }
-
-        /// <summary>
-        /// After PNG encode finishes, upload only when the live viewport still matches the captured bounds.
-        /// Used by UploadCurrentImageAsync and covered by auto-polygonize tests.
-        /// </summary>
-        public static bool ShouldUploadEncodedCapture(Geometry.Rectangle capturedBounds, Geometry.Rectangle currentBounds)
-            => AreViewportBoundsSimilar(capturedBounds, currentBounds);
 
         /// <summary>
         /// Cancels in-flight render, linked render, and upload tokens. Does not delete a server image.
