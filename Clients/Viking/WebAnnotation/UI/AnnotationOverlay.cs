@@ -110,6 +110,10 @@ namespace WebAnnotation
         /// </summary>
         private readonly HashSet<int> _requestedSectionNumbers = new();
         /// <summary>
+        /// Sections whose region annotation load is currently running on the worker (removed from requested when started).
+        /// </summary>
+        private readonly HashSet<int> _loadingSectionNumbers = new();
+        /// <summary>
         /// Current section number (Z); worker uses this to prioritize by distance.
         /// </summary>
         private int _currentSectionNumber;
@@ -120,6 +124,11 @@ namespace WebAnnotation
         private readonly SemaphoreSlim _annotationLoadWorkerSignal = new(0);
         private Task _annotationLoadWorkerTask;
         private readonly CancellationTokenSource _annotationLoadWorkerCts = new();
+
+        /// <summary>
+        /// Idle poll for locations changed on the visible section(s) since <see cref="Store.Locations"/> last section watermark.
+        /// </summary>
+        private System.Windows.Forms.Timer _sectionLocationPollTimer;
 
         static AnnotationOverlay()
         {
@@ -722,6 +731,7 @@ namespace WebAnnotation
             if (_annotationLoadWorkerTask is null || _annotationLoadWorkerTask.IsCompleted)
                 _annotationLoadWorkerTask = Task.Run(() => RunAnnotationLoadWorkerAsync(), _annotationLoadWorkerCts.Token);
             RequestSectionAnnotationsLoad(_currentSectionNumber);
+            StartSectionLocationPollTimer();
 
             // ViewerForm is assigned after SectionViewerForm construction; defer until the message pump runs.
             if (_Parent.IsHandleCreated)
@@ -817,7 +827,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Stops auto-polygonize timers and the annotation-load worker when the viewer is disposed.
+        /// Stops auto-polygonize timers, the section location poller, and the annotation-load worker when the viewer is disposed.
         /// </summary>
         public void Shutdown()
         {
@@ -825,6 +835,7 @@ namespace WebAnnotation
                 _Parent.Disposed -= OnParentDisposed;
 
             StopStartupLocationRetry();
+            StopSectionLocationPollTimer();
             cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
             autoPolygonizeController?.Stop();
             try
@@ -834,6 +845,98 @@ namespace WebAnnotation
             catch (ObjectDisposedException)
             {
             }
+        }
+
+        /// <summary>
+        /// Starts the 30s idle poll that refreshes locations changed on the visible section(s) since the last server watermark.
+        /// </summary>
+        private void StartSectionLocationPollTimer()
+        {
+            if (_sectionLocationPollTimer != null)
+                return;
+
+            _sectionLocationPollTimer = new System.Windows.Forms.Timer
+            {
+                Interval = SectionLocationPollPolicy.IntervalMilliseconds
+            };
+            _sectionLocationPollTimer.Tick += OnSectionLocationPollTick;
+            _sectionLocationPollTimer.Start();
+        }
+
+        /// <summary>
+        /// Stops and disposes the visible-section location poll timer.
+        /// </summary>
+        private void StopSectionLocationPollTimer()
+        {
+            if (_sectionLocationPollTimer == null)
+                return;
+
+            _sectionLocationPollTimer.Stop();
+            _sectionLocationPollTimer.Tick -= OnSectionLocationPollTick;
+            _sectionLocationPollTimer.Dispose();
+            _sectionLocationPollTimer = null;
+        }
+
+        /// <summary>
+        /// Incremental <see cref="Store.Locations.GetObjectsForSectionAsynch"/> for the current section and loaded adjacent sections.
+        /// Skips sections whose watermark is not seeded yet or that already have a query/load in flight.
+        /// </summary>
+        private void OnSectionLocationPollTick(object sender, EventArgs e)
+        {
+            if (_Parent == null || _Parent.IsDisposed || !_Parent.ShowOverlays || Parent?.Scene is null || _Parent.Section is null)
+                return;
+
+            foreach (int sectionNumber in GetVisibleSectionNumbersForLocationPoll())
+                PollSectionLocations(sectionNumber);
+        }
+
+        /// <summary>
+        /// Current section plus reference adjacent sections when present (same set AnnotationOverlay already loads for annotations).
+        /// </summary>
+        private IEnumerable<int> GetVisibleSectionNumbersForLocationPoll()
+        {
+            SectionViewModel section = _Parent.Section;
+            yield return section.Number;
+            if (section.ReferenceSectionAbove != null)
+                yield return section.ReferenceSectionAbove.Number;
+            if (section.ReferenceSectionBelow != null)
+                yield return section.ReferenceSectionBelow.Number;
+        }
+
+        /// <summary>
+        /// One incremental location change query for <paramref name="sectionNumber"/> when policy allows.
+        /// </summary>
+        private void PollSectionLocations(int sectionNumber)
+        {
+            if (sectionNumber <= 0)
+                return;
+
+            bool loadInFlight;
+            lock (_sectionAnnotationLoadLock)
+            {
+                loadInFlight = _requestedSectionNumbers.Contains(sectionNumber)
+                    || _loadingSectionNumbers.Contains(sectionNumber);
+            }
+
+            if (!SectionLocationPollPolicy.ShouldPollSection(
+                    Store.Locations.GetLastQueryTimeForSection(sectionNumber),
+                    Store.Locations.HasOutstandingSectionQuery(sectionNumber),
+                    loadInFlight))
+            {
+                return;
+            }
+
+            SectionAnnotationsView view = GetOrCreateAnnotationsForSection(sectionNumber);
+            if (view is null)
+                return;
+
+            Store.Locations.GetObjectsForSectionAsynch(sectionNumber, locations =>
+            {
+                if (locations is null || locations.Count == 0)
+                    return;
+                // Objects already in the store do not raise CollectionChanged; AddLocations is how they enter the canvas.
+                view.AddLocations(locations);
+            });
         }
 
         /// <summary>
@@ -2124,6 +2227,7 @@ break;
                 foreach (int s in toRemove)
                 {
                     _requestedSectionNumbers.Remove(s);
+                    _loadingSectionNumbers.Remove(s);
                     if (_sectionAnnotationLoadBySection.TryGetValue(s, out var cts))
                     {
                         cts.Cancel();
@@ -2497,6 +2601,7 @@ break;
                     if (best < 0)
                         continue;
                     _requestedSectionNumbers.Remove(best);
+                    _loadingSectionNumbers.Add(best);
                     sectionToken = _sectionAnnotationLoadBySection[best].Token;
                     sectionToLoad = best;
                 }
@@ -2521,6 +2626,13 @@ break;
                 catch (Exception ex)
                 {
                     Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(RunAnnotationLoadWorkerAsync)}: unexpected exception loading section {sectionToLoad}: {ex.Message}");
+                }
+                finally
+                {
+                    lock (_sectionAnnotationLoadLock)
+                    {
+                        _loadingSectionNumbers.Remove(sectionToLoad);
+                    }
                 }
             }
         }

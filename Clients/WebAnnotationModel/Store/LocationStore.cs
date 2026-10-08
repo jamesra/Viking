@@ -327,7 +327,10 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public override bool RemoveSection(int SectionNumber)
         {
-            //
+            // Region cells stamp LastQuery independently of the object store. Evicting locations
+            // without invalidating the pyramid leaves a warm empty FOV on the next visit.
+            Store.LocationsByRegion.InvalidateSection(SectionNumber);
+
             bool success = SectionToLocations.TryRemove(SectionNumber, out var sectionLocations);
             if (!success)
                 return true;
@@ -456,13 +459,14 @@ namespace WebAnnotationModel
             long[] deleted_objects = [];
             DateTime StartTime = DateTime.UtcNow;
             AnnotationSet serverAnnotations = null;
+            long QueryExecutedTime = 0;
             using (var proxy = CreateProxy())
             {
                 try
                 {
                     IAnnotateLocations client = (IAnnotateLocations)proxy;
 
-                    serverAnnotations = client.GetAnnotationsInMosaicRegion(out long QueryExecutedTime,
+                    serverAnnotations = client.GetAnnotationsInMosaicRegion(out QueryExecutedTime,
                         out deleted_objects,
                         SectionNumber,
                         bounds.ToBoundingRectangle(),
@@ -480,6 +484,7 @@ namespace WebAnnotationModel
             }
 
             ProcessAnnotationSet(serverAnnotations, deleted_objects, StartTime, SectionNumber);
+            AdvanceLastQueryTimeForSection(SectionNumber, QueryExecutedTime);
 
             return SpatialSearch.Intersects(bounds, SectionNumber);
         }
@@ -624,6 +629,8 @@ namespace WebAnnotationModel
                 }
 
                 ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
+                // Seed/advance the section watermark from server time so the 30s full-section poll is incremental.
+                AdvanceLastQueryTimeForSection(state.SectionNumber, TicksAtQueryExecute);
 
                 if (state.OnLoadCompletedCallBack != null)
                 {
