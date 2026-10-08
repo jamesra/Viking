@@ -10,9 +10,11 @@ namespace GraphLibTest
     /// Pins <see cref="GraphPathExtensions.ConnectedNodes{KEY, NODETYPE, EDGETYPE}"/> (undirected
     /// multi-hop reachability) and <see cref="GraphPathExtensions.FindReachableMatches{KEY, NODETYPE, EDGETYPE}"/>
     /// (matches reachable without walking through another match), which the morphology boundary finder
-    /// calls on its medial axis graph. Characterization only: two tests record the directional-edge
-    /// check as it behaves today, which tests the edge to the lowest neighbor key rather than the
-    /// neighbor being visited.
+    /// calls on its medial axis graph. Two tests pin directional-edge travel in
+    /// <see cref="Graph{KEY, NODETYPE, EDGETYPE}.RecurseReachableNodes"/>: each neighbor is checked on
+    /// <c>Edges[linked_node]</c> (aligned with <see cref="Graph{KEY, NODETYPE, EDGETYPE}.RecursePath"/>),
+    /// continuing to other neighbors when one edge is blocked and not walking a blocked edge because
+    /// another neighbor is open.
     /// </summary>
     [TestClass]
     public class ReachableMatchesTests
@@ -233,7 +235,7 @@ namespace GraphLibTest
         }
 
         [TestMethod]
-        public void FindReachableMatchesBlockedDirectionalEdgeToLowestNeighborAbandonsOtherNeighbors()
+        public void FindReachableMatchesVisitsOtherNeighborsWhenEdgeToLowestNeighborIsBlocked()
         {
             // A blocked edge to the lowest unvisited neighbor must not prevent visiting other neighbors.
             SimpleGraph graph = CreateNodes(1, 2, 3);
@@ -244,7 +246,7 @@ namespace GraphLibTest
         }
 
         [TestMethod]
-        public void FindReachableMatchesTravelsBlockedDirectionalEdgeWhenLowestNeighborIsOpen()
+        public void FindReachableMatchesDoesNotTravelBlockedDirectionalEdgeWhenOtherNeighborsAreOpen()
         {
             // Each neighbor is checked on its own edge; 3 -> 1 cannot be travelled from 1 even when 1 -> 2 is open.
             SimpleGraph graph = CreateNodes(1, 2, 3);
