@@ -34,10 +34,7 @@ namespace GraphLib
             where KEY : IComparable<KEY>, IEquatable<KEY>
             where NODETYPE : Node<KEY, EDGETYPE>
             where EDGETYPE : Edge<KEY>
-        {
-            SortedSet<KEY> testedNodes = [];
-            return Graph<KEY, NODETYPE, EDGETYPE>.RecursePath(ref testedNodes, graph, Origin, IsMatch);
-        }
+            => Graph<KEY, NODETYPE, EDGETYPE>.ShortestPath(graph, Origin, IsMatch);
 
         /// <summary>
         /// Return the shortest path from Origin to Destination
@@ -50,10 +47,7 @@ namespace GraphLib
             where KEY : IComparable<KEY>, IEquatable<KEY>
             where NODETYPE : Node<KEY, EDGETYPE>
             where EDGETYPE : Edge<KEY>
-        {
-            SortedSet<KEY> testedNodes = [];
-            return Graph<KEY, NODETYPE, EDGETYPE>.RecursePath(ref testedNodes, graph, Origin, (node) => node.Key.Equals(Destination));
-        }
+            => Graph<KEY, NODETYPE, EDGETYPE>.ShortestPath(graph, Origin, Destination);
 
         /// <summary>
         /// Return the set of nodes we can reach that match the condition without passing over a node that matches.
@@ -66,12 +60,7 @@ namespace GraphLib
             where KEY : IComparable<KEY>, IEquatable<KEY>
             where NODETYPE : Node<KEY, EDGETYPE>
             where EDGETYPE : Edge<KEY>
-        {
-            SortedSet<KEY> testedNodes = [];
-            SortedSet<KEY> matchingNodes = [];
-            Graph<KEY, NODETYPE, EDGETYPE>.RecurseReachableNodes(ref testedNodes, ref matchingNodes, graph, Origin, IsMatch);
-            return matchingNodes;
-        }
+            => Graph<KEY, NODETYPE, EDGETYPE>.FindReachableMatches(graph, Origin, IsMatch);
 
         public static IList<KEY> FindCycle<KEY, NODETYPE, EDGETYPE>(this Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin)
             where KEY : IComparable<KEY>, IEquatable<KEY>

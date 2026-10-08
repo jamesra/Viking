@@ -1,6 +1,8 @@
 using GraphLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GraphLibTest
 {
@@ -39,6 +41,21 @@ namespace GraphLibTest
             }
 
             return true;
+        }
+
+        [TestMethod]
+        public void ShortestPathStaticOverloadAgreesWithExtension()
+        {
+            SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
+
+            CollectionAssert.AreEqual(
+                graph.ShortestPath(1, 8).ToArray(),
+                SimpleGraph.ShortestPath(graph, 1, 8).ToArray());
+
+            Func<SimpleNode, bool> isMatch = n => n.Key == 8;
+            CollectionAssert.AreEqual(
+                graph.ShortestPath(1, isMatch).ToArray(),
+                SimpleGraph.ShortestPath(graph, 1, isMatch).ToArray());
         }
 
         [TestMethod]
