@@ -1,6 +1,8 @@
 using GraphLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace GraphLibTest
 {
@@ -169,6 +171,67 @@ namespace GraphLibTest
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
             IList<long> path = graph.FindCycle(7);
             Assert.IsNull(path);
+        }
+
+        /// <summary>
+        /// <see cref="Graph{KEY, NODETYPE, EDGETYPE}.RecursePath"/> must forward <c>CanTravelEdge</c> on recursive
+        /// calls so filters (including <see cref="SimpleGraph.FindCycle"/>'s forbidden back-edge) still apply below depth 1.
+        /// </summary>
+        [TestMethod]
+        public void RecursePathForwardsCanTravelEdgeOnRecursiveCalls()
+        {
+            SimpleGraph graph = CreateDiamond((1, 2), (2, 3), (3, 4));
+            SimpleEdge blockedAtDepthTwo = new(3, 4);
+
+            bool CanTravel(long source, SimpleEdge edge)
+            {
+                if (edge.Directional)
+                {
+                    if (edge.SourceNodeKey != source)
+                        return false;
+                }
+                else if (edge.SourceNodeKey != source && edge.TargetNodeKey != source)
+                {
+                    return false;
+                }
+
+                return !edge.Equals(blockedAtDepthTwo);
+            }
+
+            SortedSet<long> testedNodes = [];
+            IList<long> path = InvokeRecursePath(ref testedNodes, graph, 1, n => n.Key == 4, CanTravel);
+
+            Assert.IsNull(path);
+        }
+
+        /// <summary>
+        /// FindCycle's forbidden first-hop return edge must not be treated as a cycle when only that hop and the origin exist.
+        /// </summary>
+        [TestMethod]
+        public void FindCycleDoesNotTreatImmediateBackEdgeAsCycle()
+        {
+            SimpleGraph graph = new();
+            graph.AddNode(1);
+            graph.AddNode(2);
+            graph.AddEdge(1, 2);
+
+            Assert.IsNull(graph.FindCycle(1));
+        }
+
+        private static IList<long> InvokeRecursePath(
+            ref SortedSet<long> testedNodes,
+            SimpleGraph graph,
+            long origin,
+            Func<SimpleNode, bool> isMatch,
+            Func<long, SimpleEdge, bool> canTravelEdge)
+        {
+            MethodInfo recursePath = typeof(Graph<long, SimpleNode, SimpleEdge>).GetMethod(
+                "RecursePath",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(recursePath);
+
+            object[] args = [testedNodes, graph, origin, isMatch, canTravelEdge];
+            return (IList<long>)recursePath.Invoke(null, args);
         }
 
         [TestMethod]
