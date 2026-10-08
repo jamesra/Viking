@@ -549,7 +549,7 @@ class TextureReaderV2 : IDisposable
                 return null;
             }
 
-            if (Filename.Scheme == Uri.UriSchemeHttp || Filename.Scheme == Uri.UriSchemeHttps)
+            if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
             {
                 bool serverTried = false;
                 try
