@@ -65,9 +65,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return skip?.Kind ?? SegmentationSkipKind.None;
         }
 
-        /// <summary>True when the live camera is within Max Auto-Segment Downsample.</summary>
-        public bool CanSubmitTilesAtCurrentZoom() => IsCameraWithinTileSubmission(recordSkip: false);
-
         private void RecordSkip(SegmentationSkipKind kind, string? detail = null)
         {
             Volatile.Write(ref lastSkip, new SkipInfo(kind, detail));
