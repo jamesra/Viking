@@ -276,6 +276,12 @@ namespace Geometry
             return points;
         }
 
+        /// <summary>
+        /// Mean of the points. A closed ring (more than one point, first equal to last within
+        /// <see cref="Tolerance.Epsilon"/>) averages its distinct vertices: the closing duplicate is left out of the sum
+        /// and the count. Polygon.CalculateCentroid and PolygonArea translate closed rings by this value to keep
+        /// volume-scale coordinates near the origin. Throws on an empty collection.
+        /// </summary>
         public static Vector2 Average(this ICollection<Vector2> points)
         {
             double mX = 0;
@@ -287,14 +293,17 @@ namespace Geometry
                 mY += p.Y;
             }
 
+            int count = points.Count;
+
             //In case we are passed a closed loop of points we should remove the duplicate
-            if (points.First() == points.Last())
+            if (points.First() == points.Last() && count > 1)
             {
                 mX -= points.First().X;
                 mY -= points.First().Y;
+                count--;
             }
 
-            return new Vector2(mX / (double)points.Count, mY / (double)points.Count);
+            return new Vector2(mX / count, mY / count);
         }
 
         /// <summary>
@@ -956,6 +965,11 @@ namespace Geometry
                                 [maxX, maxY, maxZ]);
         }
 
+        /// <summary>
+        /// Mean of the points. A closed ring (more than one point, first equal to last within
+        /// <see cref="Tolerance.Epsilon"/>) averages its distinct vertices: the closing duplicate is left out of the sum
+        /// and the count. Throws on an empty collection.
+        /// </summary>
         public static Vector3 Average(this ICollection<Vector3> points)
         {
             double mX = 0;
@@ -969,15 +983,18 @@ namespace Geometry
                 mZ += p.Z;
             }
 
+            int count = points.Count;
+
             //In case we are passed a closed loop of points we should remove the duplicate
-            if (points.First() == points.Last())
+            if (points.First() == points.Last() && count > 1)
             {
                 mX -= points.First().X;
                 mY -= points.First().Y;
                 mZ -= points.First().Z;
+                count--;
             }
 
-            return new Vector3(mX / (double)points.Count, mY / (double)points.Count, mZ / (double)points.Count);
+            return new Vector3(mX / count, mY / count, mZ / count);
         }
 
         public static Vector2 XY(this Vector3 point) => new Vector2(point.X, point.Y);
