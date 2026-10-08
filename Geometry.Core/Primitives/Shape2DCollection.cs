@@ -168,10 +168,14 @@ namespace Geometry
             return $"Collection[{_shapes.Count}: {types}]";
         }
 
+        /// <summary>
+        /// Ordered child-wise equality with another collection; false for null or any non-collection shape.
+        /// Reached through <c>EqualityComparer&lt;IShape2D&gt;.Default</c> (list lookups) as well as direct calls.
+        /// </summary>
         public bool Equals(IShape2D other)
         {
             if (other is IShapeCollection2D otherColl)
-                return Equals(other);
+                return Equals(otherColl);
 
             return false;
         }
