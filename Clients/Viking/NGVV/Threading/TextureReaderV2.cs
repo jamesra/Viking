@@ -205,25 +205,6 @@ class TextureReaderV2 : IDisposable
     }
 
     /// <summary>
-    /// True when the cache path exists and has non-zero length. Used to prefer disk loads and bypass HTTP throttle.
-    /// </summary>
-    internal static bool HasUsableCacheFile(string? cacheFilename)
-    {
-        if (string.IsNullOrEmpty(cacheFilename))
-            return false;
-
-        try
-        {
-            var info = new FileInfo(cacheFilename);
-            return info.Exists && info.Length > 0;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Load texture bytes from the local cache only — no HTTP. Returns null if missing, empty, or corrupt.
     /// </summary>
     internal async Task<Texture2D?> TryLoadingFromDiskOnly(string cacheFilename, CancellationToken token)
