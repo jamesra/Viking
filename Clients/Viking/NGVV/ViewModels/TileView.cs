@@ -365,24 +365,6 @@ namespace Viking.ViewModels
             return await TextureRequestQueue.EnqueueRequest(this, graphicsDevice, token).ConfigureAwait(false);
         }
 
-        private Texture2D CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
-        {
-            var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
-            if (tokenSource is null || tokenSource.IsCancellationRequested)
-                return null;
-
-            this.ServerTextureNotFound = texReader.TextureNotFound;
-
-            if (texTask.IsFaulted == false && texTask.IsCanceled == false && texReader.HasTexture)
-            {
-                this.texture = texTask.Result;
-                return this.texture;
-            }
-
-            return null;
-        }
-
-
 #if DEBUG
         private static bool NullGridWarningPrinted = false;
 #endif
