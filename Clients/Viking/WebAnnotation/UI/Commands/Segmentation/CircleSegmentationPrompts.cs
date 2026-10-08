@@ -76,9 +76,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             double half = radius / Math.Sqrt(2.0);
             double reach = radius * StartingPointRadiusFraction;
-            Rectangle box = new(
-                new Vector2(center.X - half, center.Y - half),
-                new Vector2(center.X + half, center.Y + half));
+            Rectangle box = CenteredAxisAlignedSquare(center, half);
             prompt = new StartingPrompt(
                 box,
                 [
@@ -373,10 +371,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!(half > 0))
                 return null;
 
-            return new Rectangle(
-                new Vector2(center.X - half, center.Y - half),
-                new Vector2(center.X + half, center.Y + half));
+            return CenteredAxisAlignedSquare(center, half);
         }
+
+        /// <summary>
+        /// Axis-aligned square centered on <paramref name="center"/> with half-side <paramref name="halfSide"/>.
+        /// </summary>
+        private static Rectangle CenteredAxisAlignedSquare(Vector2 center, double halfSide)
+            => new(
+                new Vector2(center.X - halfSide, center.Y - halfSide),
+                new Vector2(center.X + halfSide, center.Y + halfSide));
 
         /// <summary>
         /// The centroid when it lies inside the polygon. A concave ring can put it outside, so then the
