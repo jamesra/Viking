@@ -52,12 +52,23 @@ namespace GeometryTests
         //
         #endregion
 
+        /// <summary>
+        /// Resolves a .stos fixture copied next to the test assembly (see the Content items in
+        /// GeometryTests.csproj), so the path is the same on net48 and net9.0 whatever the output depth.
+        /// </summary>
+        private static string FixturePath(string fileName) => System.IO.Path.Combine(AppContext.BaseDirectory, fileName);
+
+        /// <summary>
+        /// Composing slice 37->35 with 35->34 must map every control point of the result exactly as
+        /// applying the two parsed transforms in sequence does. The checked-in 34-37_grid.stos is not
+        /// compared: it was written by an older triangulation and has a different point set, so a text
+        /// match would fail without a defect in the composition.
+        /// </summary>
         [TestMethod]
-        public void TestMethod1()
+        public void ComposingGridStosTransformsMatchesSequentialApplication()
         {
-            string ControlStosFile = "..\\..\\35-37_grid.stos";
-            string MappedStosFile = "..\\..\\34-35_grid.stos";
-            string outputStosFile = "..\\..\\34-37_grid.stos";
+            string ControlStosFile = FixturePath("35-37_grid.stos");
+            string MappedStosFile = FixturePath("34-35_grid.stos");
 
             TriangulationTransform ControlTriangulation = null;
             TriangulationTransform MappedTriangulation = null;
@@ -79,11 +90,33 @@ namespace GeometryTests
                                                                                                MappedTriangulation,
                                                                                                new StosTransformInfo(37, 34,
                                                                                                DateTime.UtcNow));
-            using System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile);
-            string itk = ((Geometry.IITKSerialization)SliceToVolumeTriangulation).GetITKTransform();
-            fs.Write(itk);
+            Assert.IsNotNull(SliceToVolumeTriangulation);
+            Assert.IsTrue(SliceToVolumeTriangulation.MapPoints.Length >= 3);
 
-            fs.Flush();
+            // Fixture coordinates reach ~1400 px; 0.01 px is far above double round-off yet well below the
+            // pixel-scale errors a wrong composition would produce.
+            const double tolerancePixels = 0.01;
+            // The composition also synthesizes points on the hull of the control transform, and a point sitting
+            // on a triangulation boundary can fail TryTransform by round-off (e.g. X = -0.00). Those are skipped;
+            // the requirement is that most points are checked and every checked point agrees.
+            int compared = 0;
+            foreach (MappingVector2 mapPoint in SliceToVolumeTriangulation.MapPoints)
+            {
+                if (!MappedTriangulation.TryTransform(mapPoint.MappedPoint, out Vector2 viaMapped) ||
+                    !ControlTriangulation.TryTransform(viaMapped, out Vector2 expected))
+                    continue;
+
+                compared++;
+                double error = Vector2.Distance(expected, mapPoint.ControlPoint);
+                Assert.IsTrue(error <= tolerancePixels,
+                              $"Composed control point {mapPoint.ControlPoint} differs from sequential {expected} by {error} px for mapped point {mapPoint.MappedPoint}");
+            }
+
+            Assert.IsTrue(compared >= SliceToVolumeTriangulation.MapPoints.Length * 0.8,
+                          $"Only {compared} of {SliceToVolumeTriangulation.MapPoints.Length} composed points could be checked");
+
+            string itk = ((Geometry.IITKSerialization)SliceToVolumeTriangulation).GetITKTransform();
+            Assert.IsFalse(string.IsNullOrWhiteSpace(itk));
         }
     }
 }
