@@ -41,7 +41,34 @@
                 <label asp-for="Endpoint" class="form-label"></label>
                 <input asp-for="Endpoint" class="form-control" placeholder="https://example.com/volume" />
                 <span asp-validation-for="Endpoint" class="text-danger"></span>
-                <small class="form-text text-muted">Enter the endpoint URL for this volume</small>
+                <small class="form-text text-muted">
+                    VikingXML URL of the preferred mirror. Changing it re-reads the VikingXML and adds the URL as the
+                    preferred mirror. Manage other hosts under Image Set and Mirrors.
+                </small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Annotation Server</label>
+                <div class="form-control-plaintext">
+                    @if (Model.AnnotationServer != null)
+                    {
+                        <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>
+                        <span class="text-muted small ms-2"><code>@Model.AnnotationServer.AnnotationEndpoint</code></span>
+                    }
+                    else
+                    {
+                        <em class="text-muted">None (images only, or not synced)</em>
+                    }
+                </div>
+                <small class="form-text text-muted">Set from VolumeToEndpoint in the VikingXML.</small>
+            </div>
+            <div class="mb-3">
+                <label asp-for="RegistrationName" class="form-label"></label>
+                <input asp-for="RegistrationName" class="form-control" placeholder="VikingXML default" />
+                <span asp-validation-for="RegistrationName" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    StosGroup that aligns these images with the annotation database. Leave empty for the VikingXML
+                    default; use <code>None</code> when the images are already in volume space.
+                </small>
             </div>
             <div class="mb-3">
                 <label asp-for="Parent" class="form-label"></label>

@@ -128,7 +128,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 return Unauthorized();
 
             var volumes = await _permissionService.GetUserAccessibleVolumesAsync(caller.Id);
-            return ToObjectDictionary(volumes);
+            return ToVolumeObjectDictionary(volumes);
         }
 
         [AllowAnonymous]
@@ -174,6 +174,34 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                         Description = description,
                         Endpoint = endpoint,
                         permissions = p.Permissions
+                    };
+                });
+        }
+
+        /// <summary>
+        /// Same shape as <see cref="ToObjectDictionary"/> (Endpoint is still the VikingXML URL) plus the
+        /// annotation server, image set, mirrors, and registration added with the AnnotationServer split.
+        /// </summary>
+        private static Dictionary<long, object> ToVolumeObjectDictionary(Dictionary<long, UserResourcePermissions> volumes)
+        {
+            return volumes.ToDictionary(
+                kvp => kvp.Key,
+                kvp =>
+                {
+                    var v = kvp.Value;
+                    object Meta(string key) => v.Metadata.TryGetValue(key, out var value) ? value : null;
+                    return (object)new
+                    {
+                        v.Id,
+                        v.Name,
+                        Description = Meta(VolumeMetadata.Description),
+                        Endpoint = Meta(VolumeMetadata.Endpoint),
+                        AnnotationServerName = Meta(VolumeMetadata.AnnotationServerName),
+                        AnnotationEndpoint = Meta(VolumeMetadata.AnnotationEndpoint),
+                        ImageSet = Meta(VolumeMetadata.ImageSet),
+                        Mirrors = Meta(VolumeMetadata.Mirrors),
+                        RegistrationName = Meta(VolumeMetadata.RegistrationName),
+                        permissions = v.Permissions
                     };
                 });
         }

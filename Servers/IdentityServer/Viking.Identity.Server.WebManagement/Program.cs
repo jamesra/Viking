@@ -68,7 +68,7 @@ namespace Viking.Identity.Server.WebManagement
 
             try
             {
-                Log.Information("Starting IdentityManagementWebsite...");
+                Log.Information("Starting IdentityManagementWebsite {Version}...", ServiceVersion.Current);
                 var builder = WebApplication.CreateBuilder(args);
 
                 // Enable environment variable substitution in the main configuration
@@ -235,11 +235,15 @@ namespace Viking.Identity.Server.WebManagement
             services.AddScoped<ResourceProvisioningService>();
             services.AddScoped<CollaboratorOnboardingService>();
             services.AddScoped<VikingLaunchCodeService>();
+            services.Configure<VikingXmlCatalogOptions>(configuration.GetSection(VikingXmlCatalogOptions.SectionName));
             services.AddHttpClient<VikingXmlMetadataService>()
                 .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
                 {
                     AllowAutoRedirect = false
                 });
+            services.AddTransient<IVikingXmlSource>(sp => sp.GetRequiredService<VikingXmlMetadataService>());
+            services.AddScoped<AnnotationServerCatalogSync>();
+            services.AddScoped<AnnotationServerGrantCopy>();
 
             // Add HTTP context accessor
             services.AddHttpContextAccessor();
@@ -334,6 +338,7 @@ namespace Viking.Identity.Server.WebManagement
 
             Console.WriteLine(" Configuring middleware...");
             app.UseSerilogRequestLogging();
+            app.UseServiceVersionHeader();
             Console.WriteLine(" Serilog request logging configured");
 
             app.UseHttpsRedirection();
@@ -356,6 +361,8 @@ namespace Viking.Identity.Server.WebManagement
             Console.WriteLine(" Mapping routes...");
             app.MapDefaultControllerRoute();
             Console.WriteLine(" Default controller route mapped");
+
+            app.MapServiceVersion("IdentityManagementWebsite").AllowAnonymous();
             
             app.MapControllers();
             Console.WriteLine(" Controllers mapped");

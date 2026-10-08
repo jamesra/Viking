@@ -28,43 +28,28 @@ namespace Viking.Identity.Server.Extensions.Services
             if (resourceTypeId != null)
                 resourceTypes = new string[] { resourceTypeId };
 
-            var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypes);
-
-            // For Volume resources, include description and endpoint
             if (resourceTypeId == nameof(Volume))
+                return await VolumesWithPermissionsAsync(await _context.UserVolumePermissionsAsync(userId));
+
+            var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypes);
+            if (resourceTypeId == nameof(AnnotationServer))
             {
-                var resourceMap = from r in await _context.Volume.ToListAsync()
-                                  join upr in userPermittedResources.Keys on r.Id equals upr
-                                  select new UserResourcePermissions
-                                  {
-                                      Id = r.Id,
-                                      Name = r.Name,
-                                      ResourceType = resourceTypeId,
-                                      Permissions = userPermittedResources[upr],
-                                      ParentId = r.ParentID,
-                                      Metadata = new Dictionary<string, object>
-                                      {
-                                          ["Description"] = r.Description,
-                                          ["Endpoint"] = r.Endpoint?.ToString()
-                                      }
-                                  };
-                return resourceMap.ToDictionary(r => r.Id, r => r);
+                foreach (var id in userPermittedResources.Keys.ToList())
+                    userPermittedResources[id] = ApplicationDBContextExtensions.WithImpliedRead(userPermittedResources[id]);
             }
-            else
-            {
-                var resourceMap = from r in await _context.Resource.ToListAsync()
-                                  join upr in userPermittedResources.Keys on r.Id equals upr
-                                  select new UserResourcePermissions
-                                  {
-                                      Id = r.Id,
-                                      Name = r.Name,
-                                      ResourceType = r.ResourceTypeId,
-                                      Permissions = userPermittedResources[upr],
-                                      ParentId = r.ParentID,
-                                      Metadata = new Dictionary<string, object>()
-                                  };
-                return resourceMap.ToDictionary(r => r.Id, r => r);
-            }
+
+            var resourceMap = from r in await _context.Resource.ToListAsync()
+                              join upr in userPermittedResources.Keys on r.Id equals upr
+                              select new UserResourcePermissions
+                              {
+                                  Id = r.Id,
+                                  Name = r.Name,
+                                  ResourceType = r.ResourceTypeId,
+                                  Permissions = userPermittedResources[upr],
+                                  ParentId = r.ParentID,
+                                  Metadata = new Dictionary<string, object>()
+                              };
+            return resourceMap.ToDictionary(r => r.Id, r => r);
         }
 
         public async Task<List<UserResourcePermissions>> GetUserPermissionsAsync(string userId)
@@ -79,6 +64,10 @@ namespace Viking.Identity.Server.Extensions.Services
             }
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypeIds);
+
+            // Volumes reached only through their annotation server are listed too.
+            foreach (var volume in await _context.UserVolumePermissionsAsync(userId))
+                userPermittedResources[volume.Key] = volume.Value;
 
             if (userPermittedResources.Count == 0)
             {
@@ -123,8 +112,31 @@ namespace Viking.Identity.Server.Extensions.Services
                 return new List<string>();
             }
 
-            var result = await _context.UserResourcePermissions(userId, resourceObj.Id);
-            return await result.ToListAsync();
+            return (await _context.UserEffectiveResourcePermissionsAsync(userId, resourceObj)).ToList();
+        }
+
+        /// <summary>
+        /// Builds the volume rows of the accessible-volume APIs from effective permissions.
+        /// </summary>
+        private async Task<Dictionary<long, UserResourcePermissions>> VolumesWithPermissionsAsync(Dictionary<long, string[]> volumePermissions)
+        {
+            if (volumePermissions.Count == 0)
+                return new Dictionary<long, UserResourcePermissions>();
+
+            var ids = volumePermissions.Keys.ToList();
+            var volumes = await _context.WithCatalog()
+                .Where(v => ids.Contains(v.Id))
+                .ToListAsync();
+
+            return volumes.ToDictionary(v => v.Id, v => new UserResourcePermissions
+            {
+                Id = v.Id,
+                Name = v.Name,
+                ResourceType = nameof(Volume),
+                Permissions = volumePermissions[v.Id],
+                ParentId = v.ParentID,
+                Metadata = VolumeMetadata.Build(v)
+            });
         }
 
         public async Task<Dictionary<long, UserResourcePermissions>> GetUserAccessibleVolumesAsync(string userId)
@@ -198,26 +210,10 @@ namespace Viking.Identity.Server.Extensions.Services
 
             _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Permissions, "Found user '{Username}' with ID: {UserId}", username, appUser.Id);
 
-            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new string[] { nameof(Volume) });
-            _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Permissions, "User {Username} has permissions for {Count} Volume resources", username, userPermittedResources.Count);
+            var volumePermissions = await _context.UserVolumePermissionsAsync(appUser.Id);
+            _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Permissions, "User {Username} has permissions for {Count} Volume resources", username, volumePermissions.Count);
 
-            var resourceMap = from r in await _context.Volume.ToListAsync()
-                              join upr in userPermittedResources.Keys on r.Id equals upr
-                              select new UserResourcePermissions
-                              {
-                                  Id = r.Id,
-                                  Name = r.Name,
-                                  ResourceType = nameof(Volume),
-                                  Permissions = userPermittedResources[upr],
-                                  ParentId = r.ParentID,
-                                  Metadata = new Dictionary<string, object>
-                                  {
-                                      ["Description"] = r.Description,
-                                      ["Endpoint"] = r.Endpoint?.ToString()
-                                  }
-                              };
-            
-            return resourceMap.ToDictionary(r => r.Id, r => r);
+            return await VolumesWithPermissionsAsync(volumePermissions);
         }
 
         public async Task<List<VolumeTreeNode>> GetUserAccessibleVolumeTreeAsync(string userId)
@@ -227,28 +223,12 @@ namespace Viking.Identity.Server.Extensions.Services
 
         public async Task<List<VolumeTreeNode>> GetUserAccessibleVolumeTreeForAnonymousAsync()
         {
-            var userPermittedResources = await _context.UserResourcePermissionsByTypeForAnonymous(new[] { nameof(Volume) });
-            if (userPermittedResources.Count == 0)
+            var volumes = await VolumesWithPermissionsAsync(await _context.AnonymousVolumePermissionsAsync());
+            if (volumes.Count == 0)
             {
                 return new List<VolumeTreeNode>();
             }
 
-            var resourceMap = from r in await _context.Volume.ToListAsync()
-                             join upr in userPermittedResources.Keys on r.Id equals upr
-                             select new UserResourcePermissions
-                             {
-                                 Id = r.Id,
-                                 Name = r.Name,
-                                 ResourceType = nameof(Volume),
-                                 Permissions = userPermittedResources[upr],
-                                 ParentId = r.ParentID,
-                                 Metadata = new Dictionary<string, object>
-                                 {
-                                     ["Description"] = r.Description,
-                                     ["Endpoint"] = r.Endpoint?.ToString()
-                                 }
-                             };
-            var volumes = resourceMap.ToDictionary(r => r.Id, r => r);
             var tree = await BuildVolumeTreeAsync(null, null, volumes, null);
             return tree ?? new List<VolumeTreeNode>();
         }

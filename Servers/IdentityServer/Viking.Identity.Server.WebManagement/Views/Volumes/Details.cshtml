@@ -88,6 +88,77 @@
             </div>
         </div>
 
+        @{
+            var primaryMirror = Viking.Identity.Server.Extensions.Services.AnnotationServerCatalogSync.PrimaryMirror(Model.ImageSet);
+        }
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-diagram-2"></i> Annotations and Images</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Annotation Server</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.AnnotationServer != null)
+                        {
+                            <i class="bi bi-database"></i>
+                            <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>
+                            <div class="small text-muted"><code>@Model.AnnotationServer.AnnotationEndpoint</code></div>
+                        }
+                        else
+                        {
+                            <em class="text-muted">None. This volume shows images only, or its VikingXML has not been synced.</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Image Set</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.ImageSet != null)
+                        {
+                            @Model.ImageSet.Name
+                            @if (!string.IsNullOrEmpty(Model.ImageSet.VersionLabel))
+                            {
+                                <span class="badge bg-secondary ms-1">@Model.ImageSet.VersionLabel</span>
+                            }
+                            <span class="badge bg-light text-dark ms-1">@Model.ImageSet.PixelSpace space</span>
+                            <div class="small text-muted">
+                                @Model.ImageSet.Mirrors.Count(m => m.Enabled) enabled mirror(s)@(primaryMirror?.RegionLabel != null ? $"; preferred: {primaryMirror.RegionLabel}" : "")
+                            </div>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Not registered yet.</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Registration</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.RegistrationName) ? "VikingXML default" : Model.RegistrationName)</dd>
+
+                    <dt class="col-sm-3">Last Catalog Sync</dt>
+                    <dd class="col-sm-9">
+                        @(Model.CatalogSyncedUtc?.ToString("u") ?? "never")
+                        @if (!string.IsNullOrEmpty(Model.CatalogSyncMessage))
+                        {
+                            <div class="small text-muted">@Model.CatalogSyncMessage</div>
+                        }
+                    </dd>
+                </dl>
+                @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, Model)))
+                {
+                    <div class="d-flex gap-2">
+                        <form asp-action="Resync" asp-route-id="@Model.Id" method="post">
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-repeat"></i> Re-read VikingXML
+                            </button>
+                        </form>
+                        <a asp-action="Mirrors" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-globe"></i> Image Set and Mirrors
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
         @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, Model)))
         {
             <div class="card card-modern">
@@ -95,10 +166,26 @@
                     <h5 class="mb-0"><i class="bi bi-shield-check"></i> Permission Management</h5>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Manage which users and groups have access to this volume and what permissions they have.</p>
-                    <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
-                        <i class="bi bi-shield-check"></i> Manage Permissions
-                    </a>
+                    @if (Model.AnnotationServer != null)
+                    {
+                        <p class="text-muted">
+                            Access to this volume comes from its annotation server, <strong>@Model.AnnotationServer.Name</strong>,
+                            and covers every volume that shares that database. Grants made directly on the volume still apply.
+                        </p>
+                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.AnnotationServer.Id" class="btn btn-primary">
+                            <i class="bi bi-shield-check"></i> Manage Annotation Server Permissions
+                        </a>
+                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                            Volume-only grants
+                        </a>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Manage which users and groups have access to this volume and what permissions they have.</p>
+                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="bi bi-shield-check"></i> Manage Permissions
+                        </a>
+                    }
                 </div>
             </div>
         }

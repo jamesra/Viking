@@ -39,14 +39,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return View(model);
             }
 
-            var volumePermissions = await _context.UserResourcePermissionsByType(
-                userId,
-                new[] { nameof(Volume) });
+            var volumePermissions = await _context.UserVolumePermissionsAsync(userId);
 
             if (volumePermissions.Count > 0)
             {
                 var volumeIds = volumePermissions.Keys.ToArray();
                 var volumes = await _context.Volume
+                    .Include(v => v.AnnotationServer)
                     .Where(v => volumeIds.Contains(v.Id))
                     .ToListAsync();
 
@@ -57,6 +56,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         Name = v.Name,
                         Description = v.Description ?? string.Empty,
                         Endpoint = v.Endpoint?.ToString() ?? string.Empty,
+                        AnnotationServerName = v.AnnotationServer?.Name,
                         Permissions = volumePermissions.TryGetValue(v.Id, out var perms)
                             ? perms.ToList()
                             : new List<string>()

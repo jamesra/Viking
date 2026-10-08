@@ -66,7 +66,7 @@ public class Program
  
         try
         {
-            Log.Information("Starting Viking Identity Server WebApi");
+            Log.Information("Starting Viking Identity Server WebApi {Version}", ServiceVersion.Current);
 
             var builder = WebApplication.CreateBuilder(args);
 
@@ -254,6 +254,7 @@ public class Program
             }
 
             app.UseSerilogRequestLogging();
+            app.UseServiceVersionHeader();
             app.UseHttpsRedirection();
 
             app.UseRouting();
@@ -262,6 +263,7 @@ public class Program
             app.UseAuthorization();
 
             app.MapHealthChecks("/health").AllowAnonymous();
+            app.MapServiceVersion("Viking.Identity.Server.WebApi").AllowAnonymous();
             app.MapControllers();
             app.MapRazorPages();
             app.MapDefaultControllerRoute();

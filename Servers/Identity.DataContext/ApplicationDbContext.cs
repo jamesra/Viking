@@ -101,7 +101,8 @@ namespace Viking.Identity.Data
                 .HasValue<Volume>(nameof(Models.Volume))
                 .HasValue<OrganizationalUnit>(nameof(Models.OrganizationalUnit))
                 .HasValue<Group>(nameof(Models.Group))
-                .HasValue<SegmentationService>(nameof(Models.SegmentationService));
+                .HasValue<SegmentationService>(nameof(Models.SegmentationService))
+                .HasValue<AnnotationServer>(nameof(Models.AnnotationServer));
 
             var uriConverter = new ValueConverter<Uri, string>(
                 v => v == null ? null : v.ToString(),
@@ -116,6 +117,58 @@ namespace Viking.Identity.Data
                 .Property(s => s.Endpoint)
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
+
+            builder.Entity<AnnotationServer>()
+                .Property(s => s.AnnotationEndpoint)
+                .HasColumnName(nameof(AnnotationServer.AnnotationEndpoint));
+
+            builder.Entity<AnnotationServer>()
+                .HasIndex(s => s.AnnotationEndpoint)
+                .IsUnique()
+                .HasFilter("[AnnotationEndpoint] IS NOT NULL");
+
+            builder.Entity<AnnotationServer>()
+                .Property(s => s.ExportUrl)
+                .HasConversion(uriConverter);
+
+            builder.Entity<AnnotationServer>()
+                .Property(s => s.AuthenticationUrl)
+                .HasConversion(uriConverter);
+
+            // Self-reference inside the Resource table: SQL Server rejects cascade here, and deleting a
+            // server must not silently delete the volumes that point at it.
+            builder.Entity<Volume>()
+                .HasOne(v => v.AnnotationServer)
+                .WithMany(s => s.Volumes)
+                .HasForeignKey(v => v.AnnotationServerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Volume>()
+                .HasOne(v => v.ImageSet)
+                .WithMany(i => i.Volumes)
+                .HasForeignKey(v => v.ImageSetId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<ImageSet>()
+                .ToTable("ImageSets")
+                .Property(i => i.PixelSpace)
+                .HasConversion<string>()
+                .HasMaxLength(16);
+
+            builder.Entity<ImageSet>()
+                .HasIndex(i => i.ContentHash);
+
+            builder.Entity<ImageSetMirror>()
+                .ToTable("ImageSetMirrors")
+                .HasOne(m => m.ImageSet)
+                .WithMany(i => i.Mirrors)
+                .HasForeignKey(m => m.ImageSetId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ImageSetMirror>()
+                .Property(m => m.VikingXmlUrl)
+                .HasConversion(uriConverter)
+                .HasMaxLength(2048);
 
             builder.Entity<VikingLaunchCode>()
                 .ToTable("VikingLaunchCodes")
@@ -169,6 +222,11 @@ namespace Viking.Identity.Data
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Read });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Annotate });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Review });
+
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationServer) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Read, Description = "View annotations and the images of every linked volume" });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Annotate, Description = "Create and edit annotations; implies Read" });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Review, Description = "Review and correct annotations; implies Read" });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.SegmentationService) });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.AccessManager});
@@ -251,6 +309,12 @@ namespace Viking.Identity.Data
         public DbSet<Group> Group { get; set; }
 
         public DbSet<SegmentationService> SegmentationServices { get; set; }
+
+        public DbSet<AnnotationServer> AnnotationServers { get; set; }
+
+        public DbSet<ImageSet> ImageSets { get; set; }
+
+        public DbSet<ImageSetMirror> ImageSetMirrors { get; set; }
 
         public DbSet<UserToGroupAssignment> UserToGroupAssignments { get; set; }
 

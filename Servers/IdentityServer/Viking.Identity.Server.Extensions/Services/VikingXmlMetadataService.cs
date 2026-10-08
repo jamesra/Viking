@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.Extensions.Options;
 
 namespace Viking.Identity.Server.Extensions.Services
 {
@@ -20,20 +21,51 @@ namespace Viking.Identity.Server.Extensions.Services
     }
 
     /// <summary>
-    /// Fetches and parses VikingXML metadata for the collaborator onboarding wizard.
+    /// Bound from the <c>VikingXmlCatalog</c> configuration section.
     /// </summary>
-    public class VikingXmlMetadataService
+    public class VikingXmlCatalogOptions
+    {
+        public const string SectionName = "VikingXmlCatalog";
+
+        /// <summary>
+        /// Host names or IP addresses on private networks that the server may fetch VikingXML from,
+        /// for example a VPN-only image host. Every other private or loopback host is refused.
+        /// </summary>
+        public string[] AllowedInternalHosts { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Size limit for catalog fetches. Whole-volume VikingXML files are much larger than the
+        /// onboarding limit because they list every section and transform.
+        /// </summary>
+        public long CatalogMaxResponseBytes { get; set; } = 64L * 1024 * 1024;
+    }
+
+    /// <summary>
+    /// Downloads a VikingXML document as text.
+    /// </summary>
+    public interface IVikingXmlSource
+    {
+        Task<string> FetchXmlAsync(Uri vikingXmlUrl, CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>
+    /// Fetches and parses VikingXML metadata for the collaborator onboarding wizard,
+    /// and fetches whole VikingXML documents for the annotation server catalog sync.
+    /// </summary>
+    public class VikingXmlMetadataService : IVikingXmlSource
     {
         private const long MaxResponseBytes = 5 * 1024 * 1024;
         private const int MaxRedirects = 5;
         private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(15);
 
         private readonly HttpClient _httpClient;
+        private readonly VikingXmlCatalogOptions _options;
 
-        public VikingXmlMetadataService(HttpClient httpClient)
+        public VikingXmlMetadataService(HttpClient httpClient, IOptions<VikingXmlCatalogOptions> options)
         {
             _httpClient = httpClient;
             _httpClient.Timeout = RequestTimeout;
+            _options = options?.Value ?? new VikingXmlCatalogOptions();
         }
 
         public async Task<VikingXmlMetadata> FetchAsync(string vikingXmlUrl, CancellationToken cancellationToken = default)
@@ -41,27 +73,38 @@ namespace Viking.Identity.Server.Extensions.Services
             if (string.IsNullOrWhiteSpace(vikingXmlUrl))
                 throw new ArgumentException("VikingXML URL is required.", nameof(vikingXmlUrl));
 
-            if (!Uri.TryCreate(vikingXmlUrl, UriKind.Absolute, out var uri) ||
+            if (!Uri.TryCreate(vikingXmlUrl, UriKind.Absolute, out var uri))
+                throw new ArgumentException("VikingXML URL must be an absolute http or https URL.", nameof(vikingXmlUrl));
+
+            var xml = await FetchXmlAsync(uri, MaxResponseBytes, cancellationToken);
+
+            var metadata = Parse(xml);
+            metadata.SourceUrl = uri.ToString();
+            return metadata;
+        }
+
+        public Task<string> FetchXmlAsync(Uri vikingXmlUrl, CancellationToken cancellationToken = default) =>
+            FetchXmlAsync(vikingXmlUrl, _options.CatalogMaxResponseBytes, cancellationToken);
+
+        private async Task<string> FetchXmlAsync(Uri uri, long maxBytes, CancellationToken cancellationToken)
+        {
+            if (uri == null || !uri.IsAbsoluteUri ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
-                throw new ArgumentException("VikingXML URL must be an absolute http or https URL.", nameof(vikingXmlUrl));
+                throw new ArgumentException("VikingXML URL must be an absolute http or https URL.", nameof(uri));
             }
 
             using var response = await GetWithValidatedRedirectsAsync(uri, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var contentLength = response.Content.Headers.ContentLength;
-            if (contentLength.HasValue && contentLength.Value > MaxResponseBytes)
+            if (contentLength.HasValue && contentLength.Value > maxBytes)
                 throw new InvalidOperationException("VikingXML response exceeds the maximum allowed size.");
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var limited = new LimitedReadStream(stream, MaxResponseBytes);
+            using var limited = new LimitedReadStream(stream, maxBytes);
             using var reader = new StreamReader(limited, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            var xml = await reader.ReadToEndAsync(cancellationToken);
-
-            var metadata = Parse(xml);
-            metadata.SourceUrl = uri.ToString();
-            return metadata;
+            return await reader.ReadToEndAsync(cancellationToken);
         }
 
         /// <summary>
@@ -184,8 +227,11 @@ namespace Viking.Identity.Server.Extensions.Services
                 .FirstOrDefault(a => string.Equals(a.Name.LocalName, name, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static async Task EnsureHostIsPublicAsync(string host, CancellationToken cancellationToken)
+        private async Task EnsureHostIsPublicAsync(string host, CancellationToken cancellationToken)
         {
+            if (_options.AllowedInternalHosts?.Any(h => string.Equals(h?.Trim(), host, StringComparison.OrdinalIgnoreCase)) == true)
+                return;
+
             if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
                 host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
             {

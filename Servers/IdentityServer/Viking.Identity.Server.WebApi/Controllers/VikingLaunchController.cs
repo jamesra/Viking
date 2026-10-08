@@ -188,12 +188,14 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 return StatusCode(502, new { error = "invalid token response" });
             }
 
+            var mirrors = await _launchCodes.GetMirrorUrlsAsync(launchCode.VolumeName);
             var response = new LaunchExchangeResponse
             {
                 AccessToken = accessToken,
                 IdentityServerUrl = authority,
                 VolumeUrl = launchCode.VolumeUrl ?? "",
-                VolumeName = launchCode.VolumeName ?? ""
+                VolumeName = launchCode.VolumeName ?? "",
+                VolumeMirrors = mirrors.Count > 0 ? mirrors : null
             };
 
             return Ok(response);

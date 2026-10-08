@@ -77,7 +77,9 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
             if (resourceTypeId != null)
                 resourceTypes = new string[] { resourceTypeId };
 
-            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, resourceTypes);
+            var userPermittedResources = resourceTypeId == nameof(Volume)
+                ? await _context.UserVolumePermissionsAsync(appUser.Id)
+                : await _context.UserResourcePermissionsByType(appUser.Id, resourceTypes);
 
             var resourceMap = from r in await _context.Resource.ToListAsync()
                               join upr in userPermittedResources.Keys on r.Id equals upr
@@ -155,10 +157,7 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
                 return NotFound();
             }
 
-            var result = await _context.UserResourcePermissions(userId, resourceObj.Id);
-
-            var resultList = await result.ToListAsync();
-            return resultList;
+            return (await _context.UserEffectiveResourcePermissionsAsync(userId, resourceObj)).ToList();
         }
 
         /// <summary>

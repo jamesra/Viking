@@ -70,6 +70,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="AnnotationServers" asp-action="Index">
+                                <i class="bi bi-database"></i> Annotation Servers
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="SegmentationServices" asp-action="Index">
                                 <i class="bi bi-diagram-3"></i> Segmentation Services
                             </a>
@@ -82,6 +87,7 @@
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminDropdown">
                                     <li><a class="dropdown-item" asp-area="" asp-controller="CollaboratorOnboarding" asp-action="Index"><i class="bi bi-magic"></i> Collaborator Volume Wizard</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="AnnotationServers" asp-action="Catalog"><i class="bi bi-arrow-repeat"></i> Volume Catalog Sync</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="ResourceTypes" asp-action="Index"><i class="bi bi-tags"></i> Resource Types</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="ApplicationRoles" asp-action="Index"><i class="bi bi-key"></i> Application Roles</a></li>

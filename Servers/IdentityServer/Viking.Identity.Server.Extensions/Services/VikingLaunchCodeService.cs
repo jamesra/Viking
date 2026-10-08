@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -52,7 +53,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
         /// <summary>
         /// Same access rule as the management CreateCode action: site admin, parent OrgUnit admin,
-        /// or any direct/group grant on the volume.
+        /// or any direct/group grant on the volume or on its annotation server.
         /// </summary>
         public async Task<bool> UserCanAccessVolumeAsync(Volume volume, ClaimsPrincipal user, string userId)
         {
@@ -66,13 +67,30 @@ namespace Viking.Identity.Server.Extensions.Services
             if (user != null && await _authorization.IsParentOrgUnitAdminAsync(user, volume))
                 return true;
 
-            if (volume.UsersWithPermissions?.Any(p => p.UserId == userId) == true)
-                return true;
+            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, volume);
+            return permissions.Length > 0;
+        }
 
-            var userGroups = await _context.RecursiveMemberOfGroups(userId);
-            var userGroupIds = userGroups.Select(g => g.Id).ToList();
-            return userGroupIds.Any(groupId =>
-                volume.GroupsWithPermissions?.Any(p => p.GroupId == groupId) == true);
+        /// <summary>
+        /// Enabled mirror URLs of the volume's image set, preferred first. Empty when the volume
+        /// has no image set yet.
+        /// </summary>
+        public async Task<List<string>> GetMirrorUrlsAsync(string volumeName)
+        {
+            if (string.IsNullOrWhiteSpace(volumeName))
+                return new List<string>();
+
+            var name = volumeName.Trim();
+            var mirrors = await _context.Volume
+                .Where(v => v.Name == name && v.ImageSetId != null)
+                .SelectMany(v => v.ImageSet.Mirrors)
+                .Where(m => m.Enabled)
+                .OrderBy(m => m.Priority)
+                .ThenBy(m => m.Id)
+                .Select(m => m.VikingXmlUrl)
+                .ToListAsync();
+
+            return mirrors.Where(u => u != null).Select(u => u.ToString()).ToList();
         }
 
         /// <summary>Persists a one-use code bound to <paramref name="userId"/> and optional volume.</summary>

@@ -116,15 +116,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (User.IsInRole(Special.Roles.Admin))
                 return true;
 
-            var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume);
-            var hasDirectPermissions = volume.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
+            if (await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
+                return true;
 
-            var userGroups = await _context.RecursiveMemberOfGroups(userId);
-            var userGroupIds = userGroups.Select(g => g.Id).ToList();
-            var hasGroupPermissions = userGroupIds.Any(groupId =>
-                volume.GroupsWithPermissions?.Any(p => p.GroupId == groupId) == true);
-
-            return isParentAdmin || hasDirectPermissions || hasGroupPermissions;
+            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, volume);
+            return permissions.Length > 0;
         }
     }
 }

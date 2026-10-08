@@ -16,6 +16,10 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         public string Name { get; set; }
         public string Description { get; set; }
         public string Endpoint { get; set; }
+
+        /// <summary>Annotation database the permissions come from; null for image-only volumes.</summary>
+        public string AnnotationServerName { get; set; }
+
         public List<string> Permissions { get; set; } = new List<string>();
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Viking.Identity.Server
@@ -26,6 +27,14 @@ namespace Viking.Identity.Server
 
         [JsonPropertyName("volume_name")]
         public string VolumeName { get; set; }
+
+        /// <summary>
+        /// Enabled VikingXML mirrors of the volume's image set, preferred first. <see cref="VolumeUrl"/>
+        /// is the first entry. Omitted when the volume has no image set; older clients ignore it.
+        /// </summary>
+        [JsonPropertyName("volume_mirrors")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string> VolumeMirrors { get; set; }
     }
 
     /// <summary>

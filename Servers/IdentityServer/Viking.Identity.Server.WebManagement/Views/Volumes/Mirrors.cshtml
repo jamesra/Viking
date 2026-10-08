@@ -1,0 +1,160 @@
+@model Viking.Identity.Models.Volume
+
+@{
+    ViewData["Title"] = $"Image set for {Model.Name}";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Volumes", Url.Action("Index", "Volumes")),
+        (Model.Name, Url.Action("Details", "Volumes", new { id = Model.Id })),
+        ("Image Set and Mirrors", null)
+    };
+    var sharedWith = ViewBag.SharedWith as List<string> ?? new List<string>();
+    var primary = Viking.Identity.Server.Extensions.Services.AnnotationServerCatalogSync.PrimaryMirror(Model.ImageSet);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-globe"></i> Image Set and Mirrors: @Model.Name</h2>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Details
+    </a>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+@if (Model.ImageSet == null)
+{
+    <div class="alert alert-info">
+        This volume has no image set yet. Re-reading the VikingXML registers one with the volume URL as its first mirror.
+    </div>
+    <form asp-action="Resync" asp-route-id="@Model.Id" method="post">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> Re-read VikingXML</button>
+    </form>
+}
+else
+{
+    <div class="card card-modern mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-images"></i> Image Set</h5>
+        </div>
+        <div class="card-body">
+            @if (sharedWith.Any())
+            {
+                <div class="alert alert-warning small">
+                    This image set is also used by: @string.Join(", ", sharedWith). Changes here apply to those volumes too.
+                </div>
+            }
+            <form asp-action="UpdateImageSet" asp-route-id="@Model.Id" method="post" class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label" for="name">@Html.DisplayNameFor(m => m.ImageSet.Name)</label>
+                    <input class="form-control" id="name" name="name" value="@Model.ImageSet.Name" required maxlength="128" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="versionLabel">@Html.DisplayNameFor(m => m.ImageSet.VersionLabel)</label>
+                    <input class="form-control" id="versionLabel" name="versionLabel" value="@Model.ImageSet.VersionLabel" maxlength="64" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="pixelSpace">@Html.DisplayNameFor(m => m.ImageSet.PixelSpace)</label>
+                    <select class="form-select" id="pixelSpace" name="pixelSpace">
+                        @foreach (var space in Enum.GetValues<ImageSetPixelSpace>())
+                        {
+                            <option value="@space" selected="@(space == Model.ImageSet.PixelSpace)">@space</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Save</button>
+                </div>
+            </form>
+            <p class="small text-muted mt-3 mb-0">
+                Content hash <code>@(Model.ImageSet.ContentHash?.Substring(0, Math.Min(12, Model.ImageSet.ContentHash.Length)) ?? "unknown")</code>.
+                Every mirror must serve exactly these files; a different build belongs in its own volume pointing at
+                the same annotation server.
+            </p>
+        </div>
+    </div>
+
+    <div class="card card-modern mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-hdd-network"></i> Mirrors</h5>
+        </div>
+        <div class="card-body">
+            <p class="small text-muted">
+                Clients may load-balance across enabled mirrors. Lower priority values are preferred; the preferred
+                enabled mirror is also the volume URL older clients use.
+            </p>
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>VikingXML URL</th>
+                        <th style="width: 140px;">Region</th>
+                        <th style="width: 100px;">Priority</th>
+                        <th style="width: 80px;">Enabled</th>
+                        <th>Last check</th>
+                        <th style="width: 170px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mirror in Model.ImageSet.Mirrors.OrderBy(m => m.Priority).ThenBy(m => m.Id))
+                    {
+                        var formId = $"mirror_{mirror.Id}";
+                        <tr>
+                            <td class="small">
+                                <code>@mirror.VikingXmlUrl</code>
+                                @if (primary != null && primary.Id == mirror.Id)
+                                {
+                                    <span class="badge bg-success ms-1">preferred</span>
+                                }
+                            </td>
+                            <td><input form="@formId" class="form-control form-control-sm" name="region" value="@mirror.RegionLabel" maxlength="64" /></td>
+                            <td><input form="@formId" class="form-control form-control-sm" name="priority" type="number" value="@mirror.Priority" /></td>
+                            <td>
+                                <input form="@formId" class="form-check-input" type="checkbox" name="enabled" value="true" checked="@mirror.Enabled" />
+                                <input form="@formId" type="hidden" name="enabled" value="false" />
+                            </td>
+                            <td class="small text-muted">
+                                @(mirror.LastCheckUtc?.ToString("u") ?? "never")
+                                @if (!string.IsNullOrEmpty(mirror.LastStatus))
+                                {
+                                    <div>@mirror.LastStatus</div>
+                                }
+                            </td>
+                            <td>
+                                <form id="@formId" asp-action="UpdateMirror" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                    <input type="hidden" name="mirrorId" value="@mirror.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Save"><i class="bi bi-save"></i></button>
+                                </form>
+                                <form asp-action="RemoveMirror" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Remove this mirror?');">
+                                    <input type="hidden" name="mirrorId" value="@mirror.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <h6 class="mt-4">Add a mirror</h6>
+            <form asp-action="AddMirror" asp-route-id="@Model.Id" method="post" class="row g-2">
+                <div class="col-md-6">
+                    <input class="form-control" name="url" placeholder="https://mirror.example.org/Volume/SliceToVolume.VikingXML" required />
+                </div>
+                <div class="col-md-2">
+                    <input class="form-control" name="region" placeholder="Region" maxlength="64" />
+                </div>
+                <div class="col-md-2">
+                    <input class="form-control" name="priority" type="number" value="@((Model.ImageSet.Mirrors.Any() ? Model.ImageSet.Mirrors.Max(m => m.Priority) : 0) + 1)" />
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-circle"></i> Add</button>
+                </div>
+            </form>
+            <form asp-action="Resync" asp-route-id="@Model.Id" method="post" class="mt-3">
+                <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-repeat"></i> Re-read VikingXML and check all mirrors</button>
+            </form>
+        </div>
+    </div>
+}

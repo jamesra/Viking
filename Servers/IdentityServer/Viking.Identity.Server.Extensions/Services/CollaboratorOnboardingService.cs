@@ -40,15 +40,20 @@ namespace Viking.Identity.Server.Extensions.Services
         private readonly ApplicationDbContext _context;
         private readonly ResourceProvisioningService _provisioning;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AnnotationServerCatalogSync _catalogSync;
 
+        /// <param name="catalogSync">Links the new volume to its annotation server so the collaborator's
+        /// grants land there. Without it grants go on the volume.</param>
         public CollaboratorOnboardingService(
             ApplicationDbContext context,
             ResourceProvisioningService provisioning,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            AnnotationServerCatalogSync catalogSync = null)
         {
             _context = context;
             _provisioning = provisioning;
             _userManager = userManager;
+            _catalogSync = catalogSync;
         }
 
         public async Task<CollaboratorOnboardingResult> CreateLabAndInviteAsync(
@@ -70,6 +75,9 @@ namespace Viking.Identity.Server.Extensions.Services
             if (_context.IsResourceNameTaken(volumeName, nameof(Volume)))
                 throw new InvalidOperationException($"A volume named {volumeName} already exists.");
 
+            // Network fetch happens before the transaction so no database locks are held while it runs.
+            var catalog = _catalogSync == null ? null : await _catalogSync.FetchAsync(vikingXmlUrl);
+
             if (_context.Database.IsRelational())
             {
                 await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -77,7 +85,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 {
                     var result = await CreateLabAndInviteCoreAsync(
                         orgName, orgDescription, parentOrgId, volumeName, volumeDescription,
-                        vikingXmlUrl, collaboratorEmail, createdByUserId);
+                        vikingXmlUrl, collaboratorEmail, createdByUserId, catalog);
                     await transaction.CommitAsync();
                     return result;
                 }
@@ -90,7 +98,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
             return await CreateLabAndInviteCoreAsync(
                 orgName, orgDescription, parentOrgId, volumeName, volumeDescription,
-                vikingXmlUrl, collaboratorEmail, createdByUserId);
+                vikingXmlUrl, collaboratorEmail, createdByUserId, catalog);
         }
 
         private async Task<CollaboratorOnboardingResult> CreateLabAndInviteCoreAsync(
@@ -101,12 +109,15 @@ namespace Viking.Identity.Server.Extensions.Services
             string volumeDescription,
             Uri vikingXmlUrl,
             string collaboratorEmail,
-            string createdByUserId)
+            string createdByUserId,
+            VikingXmlFetchResult catalog)
         {
             var org = await _provisioning.CreateOrganizationalUnitAsync(orgName, orgDescription, parentOrgId);
             await _provisioning.GrantSiteAdminsOrgUnitAdminAsync(org.Id);
 
             var volume = await _provisioning.CreateVolumeAsync(volumeName, volumeDescription, org.Id, vikingXmlUrl);
+            if (catalog != null)
+                await _catalogSync.ApplyAsync(volume, catalog);
 
             var result = new CollaboratorOnboardingResult
             {

@@ -11,6 +11,7 @@ namespace Viking.Identity.Server.Extensions.Services
     /// <summary>
     /// Shared create/grant helpers for organizational units and volumes.
     /// Controllers keep authorization; this service owns persistence.
+    /// Linking a new volume to its annotation server is <see cref="AnnotationServerCatalogSync"/>'s job.
     /// </summary>
     public class ResourceProvisioningService
     {
@@ -69,11 +70,21 @@ namespace Viking.Identity.Server.Extensions.Services
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Grants Read, Annotate, and Review. The grant goes on the volume's annotation server so it covers
+        /// every copy of the images; a volume without one (images only) gets the grant directly.
+        /// </summary>
         public async Task GrantUserVolumeFullAccessAsync(string userId, long volumeId)
         {
-            await GrantUserPermissionIfMissingAsync(userId, volumeId, Special.Permissions.Volume.Read);
-            await GrantUserPermissionIfMissingAsync(userId, volumeId, Special.Permissions.Volume.Annotate);
-            await GrantUserPermissionIfMissingAsync(userId, volumeId, Special.Permissions.Volume.Review);
+            var annotationServerId = await _context.Volume
+                .Where(v => v.Id == volumeId)
+                .Select(v => v.AnnotationServerId)
+                .FirstOrDefaultAsync();
+            var resourceId = annotationServerId ?? volumeId;
+
+            foreach (var permissionId in Special.Permissions.AnnotationServer.All)
+                await GrantUserPermissionIfMissingAsync(userId, resourceId, permissionId);
+
             await _context.SaveChangesAsync();
         }
 
