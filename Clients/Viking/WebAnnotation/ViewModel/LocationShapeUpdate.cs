@@ -13,6 +13,8 @@ namespace WebAnnotation.ViewModel
     /// <summary>
     /// Persists a volume-space polygon onto a location, converting the type to CURVEPOLYGON.
     /// Used by Segment to Polygon and auto-polygonize accept; shows a MessageBox on save failure.
+    /// Callers simplify once before this (carve/accept or segmentation Execute); this does not
+    /// re-simplify.
     /// </summary>
     internal static class LocationShapeUpdate
     {

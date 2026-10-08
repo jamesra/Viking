@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
@@ -7,28 +5,53 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// Extra clicks while busy set <see cref="MarkDirty"/>; <see cref="OnFinishedShouldRetry"/> then
     /// starts a single request with the live prompt lists. Generations discard stale overlays.
     /// </summary>
+    /// <remarks>
+    /// Thread safety: every field is read and written under <see cref="gate"/>. The UI thread calls
+    /// <see cref="TryStart"/> and <see cref="MarkDirty"/> while the attempt finishes on a worker thread via
+    /// <see cref="OnFinishedShouldRetry"/>. Without one lock around busy and pending, a click that saw
+    /// busy and recorded its follow-up just after the worker read "nothing pending" was lost.
+    /// The critical sections are a few field accesses; nothing awaits or calls out while holding the lock.
+    /// </remarks>
     internal sealed class SegmentationRequestCoalescer
     {
+        private readonly object gate = new();
         private int requestGeneration;
         private int appliedGeneration;
-
-        private volatile bool isBusy;
+        private bool isBusy;
+        private bool pendingRefresh;
 
         /// <summary>
-        /// True while a SegmentImage attempt owns the coalescer. Volatile because status chips
-        /// read it from the UI thread while the attempt finishes on a worker thread.
+        /// True while a SegmentImage attempt owns the coalescer. Status chips read it from the UI thread
+        /// while the attempt finishes on a worker thread.
         /// </summary>
         public bool IsBusy
         {
-            get => isBusy;
-            private set => isBusy = value;
+            get
+            {
+                lock (gate)
+                    return isBusy;
+            }
         }
 
         /// <summary>True when a later click should run after the current attempt finishes.</summary>
-        public bool PendingRefresh { get; private set; }
+        public bool PendingRefresh
+        {
+            get
+            {
+                lock (gate)
+                    return pendingRefresh;
+            }
+        }
 
         /// <summary>Generation of the latest started attempt, including one that is still in flight.</summary>
-        public int CurrentGeneration => requestGeneration;
+        public int CurrentGeneration
+        {
+            get
+            {
+                lock (gate)
+                    return requestGeneration;
+            }
+        }
 
         /// <summary>
         /// Starts a new attempt and returns its generation. Returns false when already busy
@@ -36,16 +59,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public bool TryStart(out int generation)
         {
-            if (IsBusy)
+            lock (gate)
             {
-                PendingRefresh = true;
-                generation = requestGeneration;
-                return false;
-            }
+                if (isBusy)
+                {
+                    pendingRefresh = true;
+                    generation = requestGeneration;
+                    return false;
+                }
 
-            IsBusy = true;
-            generation = Interlocked.Increment(ref requestGeneration);
-            return true;
+                isBusy = true;
+                generation = ++requestGeneration;
+                return true;
+            }
         }
 
         /// <summary>
@@ -53,7 +79,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public void MarkDirty()
         {
-            PendingRefresh = true;
+            lock (gate)
+                pendingRefresh = true;
         }
 
         /// <summary>
@@ -61,12 +88,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public bool OnFinishedShouldRetry()
         {
-            IsBusy = false;
-            if (!PendingRefresh)
-                return false;
+            lock (gate)
+            {
+                isBusy = false;
+                if (!pendingRefresh)
+                    return false;
 
-            PendingRefresh = false;
-            return true;
+                pendingRefresh = false;
+                return true;
+            }
         }
 
         /// <summary>
@@ -74,7 +104,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public void CancelPending()
         {
-            PendingRefresh = false;
+            lock (gate)
+                pendingRefresh = false;
         }
 
         /// <summary>
@@ -82,25 +113,35 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public void Invalidate()
         {
-            PendingRefresh = false;
-            appliedGeneration = requestGeneration;
+            lock (gate)
+            {
+                pendingRefresh = false;
+                appliedGeneration = requestGeneration;
+            }
         }
 
         /// <summary>
         /// True when this generation is still allowed to replace the overlay.
         /// </summary>
-        public bool ShouldApply(int generation) => generation > appliedGeneration;
+        public bool ShouldApply(int generation)
+        {
+            lock (gate)
+                return generation > appliedGeneration;
+        }
 
         /// <summary>
         /// Claims the overlay for <paramref name="generation"/>. False if a newer result already won.
         /// </summary>
         public bool TryApply(int generation)
         {
-            if (generation <= appliedGeneration)
-                return false;
+            lock (gate)
+            {
+                if (generation <= appliedGeneration)
+                    return false;
 
-            appliedGeneration = generation;
-            return true;
+                appliedGeneration = generation;
+                return true;
+            }
         }
     }
 }

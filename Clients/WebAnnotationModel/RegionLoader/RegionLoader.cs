@@ -282,6 +282,14 @@ namespace WebAnnotationModel
         private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber) => this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
 
         /// <summary>
+        /// Drop the region pyramid after the object store evicts a section.
+        /// Cells keep a warm <see cref="RegionRequestData{OBJECT}.LastQuery"/> stamp; if the store
+        /// was cleared underneath them, a return visit would skip the server for
+        /// <see cref="RegionUpdateInterval"/> and paint an empty FOV until the user pans into new cells.
+        /// </summary>
+        public void InvalidateSection(int sectionNumber) => sectionPyramids.TryRemove(sectionNumber, out _);
+
+        /// <summary>
         /// True when every pyramid cell covering the mosaic FOV has completed a server query
         /// (HasBeenQueried and AsyncResult is null). Missing cells or in-flight queries return false.
         /// In-flight cells fail via a non-null AsyncResult. OutstandingQuery is true only while that result is incomplete.

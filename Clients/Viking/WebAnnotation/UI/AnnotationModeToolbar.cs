@@ -23,6 +23,9 @@ namespace WebAnnotation.UI
         /// <summary>Slider steps per logit unit, so one tick is 0.1.</summary>
         private const int MaskThresholdTicksPerUnit = 10;
 
+        /// <summary>Pixel width of the threshold track bar and its toolbar host; both must match or the host clips the bar.</summary>
+        private const int MaskThresholdSliderWidth = 300;
+
         /// <summary>
         /// Adds the two mode toggles once on the viewer's tool strip.
         /// </summary>
@@ -84,7 +87,7 @@ namespace WebAnnotation.UI
                 SmallChange = 1,
                 LargeChange = 5,
                 AutoSize = false,
-                Width = 150,
+                Width = MaskThresholdSliderWidth,
                 Height = 28
             };
             trackMaskThreshold.ValueChanged += OnMaskThresholdSliderChanged;
@@ -93,7 +96,7 @@ namespace WebAnnotation.UI
             {
                 Name = "SAM2 Mask Threshold",
                 AutoSize = false,
-                Width = 150,
+                Width = MaskThresholdSliderWidth,
                 ToolTipText = "SAM2 mask threshold. Higher values shrink every segmentation mask, lower values grow it."
             };
 

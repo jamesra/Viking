@@ -33,6 +33,8 @@ namespace WebAnnotation
             bool endpointChanged = !string.Equals(previous, normalized, StringComparison.OrdinalIgnoreCase);
             if (endpointChanged)
             {
+                // The capabilities belong to the old server; the next connection asks the new one.
+                WebAnnotation.UI.Commands.Segmentation.SegmentationViewportSession.ResetModelProfile();
                 bool newEndpointIsUsable = Global.HasValidSegmentationServiceUrl(normalized);
                 AutoPolygonizeResubmit?.Invoke(newEndpointIsUsable);
                 AnnotationOverlay.CurrentOverlay?.OnSegmentationEndpointChanged(newEndpointIsUsable);
@@ -45,9 +47,11 @@ namespace WebAnnotation
                     appSettings.SegmentationURL = normalized;
             }
 
-            // Setter clears availability cache and resets the gRPC channel.
+            // The setter ignores an unchanged URL; otherwise it clears the availability cache and resets the
+            // gRPC channel. Re-confirming the current server must leave in-flight requests alone.
             Global.AnnotationSettings.SegmentationServiceUrl = normalized;
-            Global.InvalidateSegmentationServiceAvailability();
+            if (endpointChanged)
+                Global.InvalidateSegmentationServiceAvailability();
 
             if (!string.IsNullOrEmpty(normalized))
             {

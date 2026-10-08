@@ -13,18 +13,104 @@ namespace Viking.VolumeModel
 
     }
 
+    /// <summary>
+    /// The mappings for each section the viewer has used, kept so returning to a section does not load and warp it again.
+    /// Entry sizes are estimated bytes (<see cref="MappingBase.EstimatedMemoryBytes"/>), and the cache is held under
+    /// <see cref="MemoryBudgetBytes"/> by <see cref="EnforceMemoryBudget"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Every GetMapping marks its section used, and a section used since the last checkpoint is never evicted. Each
+    /// <see cref="EnforceMemoryBudget"/> pass evicts first and checkpoints after, so a pass can evict only sections nobody
+    /// asked for since the previous pass; the section on screen is asked for every frame and stays.</para>
+    /// <para>A checkpoint here never evicts on its own (<see cref="OnCheckpointFailed"/> does nothing); eviction is by
+    /// size only. An RC2 section takes about 9 MB once drawn, so the default 1 GiB holds over a hundred sections.</para>
+    /// </remarks>
     public class SectionTransformsCache : TimeQueueCache<int, SectionMappingsCacheEntry, SectionTransformsDictionary, SectionTransformsDictionary>
     {
-        public long NumSectionsToKeepInMemory
+        /// <summary>Default memory budget for cached sections: 1 GiB.</summary>
+        public const long DefaultMemoryBudgetBytes = 1L << 30;
+
+        /// <summary>Estimated bytes of section mappings to keep before least recently used sections are evicted.</summary>
+        public long MemoryBudgetBytes
         {
             get => this.MaxCacheSize;
-            set => this.MaxCacheSize = value;
+            set => this.MaxCacheSize = Math.Max(1, value);
         }
 
+        /// <summary>1 while an <see cref="EnforceMemoryBudget"/> pass runs, so overlapping timer ticks skip.</summary>
+        private int _enforcing;
 
         public SectionTransformsCache()
         {
-            this.NumSectionsToKeepInMemory = 6; //Total number of sections we will keep loaded by default
+            this.MemoryBudgetBytes = DefaultMemoryBudgetBytes;
+        }
+
+        /// <summary>
+        /// Recomputes every section's estimated size from its mappings (they grow after the entry is added, as sections
+        /// load, warp and are drawn) and returns the new total.
+        /// </summary>
+        public long RefreshEntrySizes()
+        {
+            foreach (SectionMappingsCacheEntry entry in dictEntries.Values)
+                Interlocked.Exchange(ref entry.Size, Math.Max(1, entry.EstimatedMemoryBytes()));
+
+            return RecountCacheSize();
+        }
+
+        /// <summary>
+        /// One budget pass: refreshes entry sizes; if the cache is over <see cref="MemoryBudgetBytes"/>, evicts sections not
+        /// used since the previous pass, least recently used first, until it is under budget; then checkpoints so the next
+        /// pass sees only sections used from now on. Returns the number of sections evicted.
+        /// </summary>
+        /// <remarks>
+        /// Runs synchronously; call it off the UI thread. Meant to be called periodically (Viking's cache-cleaning timer
+        /// calls it every 60 s through <see cref="MappingManager.ReduceCacheFootprint"/>). If every section was used since
+        /// the previous pass the cache stays over budget until a later pass. Returns 0 at once if a pass is running.
+        /// </remarks>
+        public int EnforceMemoryBudget()
+        {
+            if (Interlocked.CompareExchange(ref _enforcing, 1, 0) != 0)
+                return 0;
+
+            try
+            {
+                int evicted = 0;
+                if (RefreshEntrySizes() > MemoryBudgetBytes)
+                {
+                    List<SectionMappingsCacheEntry> oldestFirst = [.. dictEntries.Values];
+                    oldestFirst.Sort();
+
+                    foreach (SectionMappingsCacheEntry entry in oldestFirst)
+                    {
+                        if (CachedSize <= MemoryBudgetBytes)
+                            break;
+
+                        if (entry.WasUsedSinceLastCheckpoint || entry.CheckpointExempt)
+                            continue;
+
+                        RemoveEntry(entry);
+                        evicted++;
+                    }
+
+                    if (evicted > 0)
+                        System.Diagnostics.Trace.WriteLine($"Section cache evicted {evicted} sections; {CachedSize / (1 << 20)} MB of {MemoryBudgetBytes / (1 << 20)} MB remain", "Cache");
+                }
+
+                Checkpoint();
+                return evicted;
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _enforcing, 0);
+            }
+        }
+
+        /// <summary>
+        /// A checkpoint only clears the used marks. Eviction is by size, in <see cref="EnforceMemoryBudget"/>, so an unused
+        /// section stays cached while the cache is under budget.
+        /// </summary>
+        protected override void OnCheckpointFailed(SectionMappingsCacheEntry entry)
+        {
         }
 
         protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry) => entry.TransformsForSection;
@@ -59,6 +145,31 @@ namespace Viking.VolumeModel
             this.TransformsForSection = entry;
         }
 
+        /// <summary>
+        /// Estimated memory of this section's mappings, counting a volume transform shared by several of them once. Zero once
+        /// disposed.
+        /// </summary>
+        public long EstimatedMemoryBytes()
+        {
+            SectionTransformsDictionary mappings = TransformsForSection;
+            if (mappings is null)
+                return 0;
+
+            long bytes = 0;
+            List<ITransform> volumeTransforms = new(2);
+            foreach (MappingBase mapping in mappings.Values)
+            {
+                bytes += mapping.EstimatedMemoryBytes;
+                ITransform shared = mapping.SharedVolumeTransform;
+                if (shared != null && !volumeTransforms.Exists(t => ReferenceEquals(t, shared)))
+                {
+                    volumeTransforms.Add(shared);
+                    bytes += MappingBase.EstimateTransformBytes(shared);
+                }
+            }
+            return bytes;
+        }
+
         public sealed override void Dispose()
         {
             if (TransformsForSection != null)
@@ -85,7 +196,12 @@ namespace Viking.VolumeModel
 
         public SectionTransformsCache SectionMappingCache = new();
 
-        public void ReduceCacheFootprint() => SectionMappingCache.ReduceCacheFootprint(null);
+        /// <summary>
+        /// Starts a section cache budget pass on the thread pool: evicts least recently used sections, not used since the
+        /// previous pass, while the cached mappings are over their memory budget (about 1 GiB). Called periodically by the
+        /// viewer's cache-cleaning timer, on the UI thread, so it does not wait for the pass.
+        /// </summary>
+        public void ReduceCacheFootprint() => Task.Run(SectionMappingCache.EnforceMemoryBudget);
 
         //static private ConcurrentDictionary<string, MappingBase> mapTable = new ConcurrentDictionary<string, MappingBase>();
 

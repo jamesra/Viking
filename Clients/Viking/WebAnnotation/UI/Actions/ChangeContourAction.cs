@@ -100,6 +100,7 @@ namespace WebAnnotation.UI.Actions
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
             //var mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "ChangeContour");
             Location.SetShapeFromGeometryInSection(Transform, NewMosaicPolygon.ToSqlGeometry());
 
             try

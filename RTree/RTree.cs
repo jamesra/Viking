@@ -600,6 +600,55 @@ namespace RTree
         }
 
         /// <summary>
+        /// Finds the first item whose rectangle contains the point and for which <paramref name="predicate"/> returns true,
+        /// visiting candidates in the same order <see cref="Intersects(Rectangle)"/> would return them and stopping at the
+        /// first match. Allocates nothing; pass a static lambda and the per-call data as <paramref name="state"/> to keep
+        /// it that way.
+        /// </summary>
+        /// <remarks>Takes the read lock for the whole search. The predicate must not modify the tree.</remarks>
+        public bool TryFindFirst<TState>(double x, double y, double z, TState state, Func<T, TState, bool> predicate, out T found)
+        {
+            if (predicate is null)
+                throw new ArgumentNullException(nameof(predicate));
+
+            try
+            {
+                rwLock.EnterReadLock();
+                return FindFirst(getNode(rootNodeId), x, y, z, state, predicate, out found);
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+        }
+
+        private bool FindFirst<TState>(Node<T> n, double x, double y, double z, TState state, Func<T, TState, bool> predicate, out T found)
+        {
+            for (int i = 0; i < n.entryCount; i++)
+            {
+                if (!n.entries[i].containsPoint(x, y, z))
+                    continue;
+
+                if (n.isLeaf())
+                {
+                    T item = IdsToItems[n.ids[i]];
+                    if (predicate(item, state))
+                    {
+                        found = item;
+                        return true;
+                    }
+                }
+                else if (FindFirst(getNode(n.ids[i]), x, y, z, state, predicate, out found))
+                {
+                    return true;
+                }
+            }
+
+            found = default;
+            return false;
+        }
+
+        /// <summary>
         /// Retrieve items which intersect with Rectangle whose opposite corners are points A,B
         /// </summary>
         /// <param name="r"></param>

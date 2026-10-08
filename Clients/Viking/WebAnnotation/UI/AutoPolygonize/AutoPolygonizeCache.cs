@@ -197,12 +197,16 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Suppresses the circle until LastModified changes. Keeps upload context and the PropertyChanged handler.
+        /// Bumps <see cref="Entry.Generation"/> so a request already in flight for this circle (a resubmit or
+        /// refresh running while the user rejects the ring) is discarded when it completes instead of
+        /// republishing the ring and clearing the dismissal.
         /// </summary>
         public void Dismiss(long locationId, int sectionNumber, DateTime lastModified, LocationObj? location = null)
         {
             lock (gate)
             {
                 Entry entry = GetOrAddEntryUnlocked(locationId, sectionNumber);
+                entry.Generation++;
                 entry.ProposalLastModified = null;
                 entry.ProposalTypeCode = null;
                 entry.DismissedAt = lastModified;

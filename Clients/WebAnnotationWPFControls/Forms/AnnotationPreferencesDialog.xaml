@@ -521,7 +521,7 @@
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding SegmentationEdgeCleanupRadius, Mode=TwoWay}"
                                     Minimum="0"
-                                    Maximum="10"
+                                    Maximum="32"
                                     TickFrequency="1"
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>

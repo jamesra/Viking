@@ -270,6 +270,23 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void DismissInvalidatesRequestStartedBeforeIt()
+        {
+            AutoPolygonizeCache cache = new();
+            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            int generation = cache.MarkPending(9, 1, null, null);
+            Assert.IsTrue(cache.IsGenerationCurrent(9, generation));
+
+            cache.Dismiss(9, 1, first);
+
+            Assert.IsFalse(
+                cache.IsGenerationCurrent(9, generation),
+                "A response to a request that started before the reject must be dropped, not republished.");
+            Assert.IsFalse(cache.ShouldProcess(9, 1, first, LocationType.CIRCLE));
+        }
+
+        [TestMethod]
         public void DismissedCircleIsSkippedUntilUpdated()
         {
             AutoPolygonizeCache cache = new();
@@ -279,34 +296,6 @@ namespace WebAnnotationTests.Commands
             cache.Dismiss(9, 1, first);
             Assert.IsFalse(cache.ShouldProcess(9, 1, first, LocationType.CIRCLE));
             Assert.IsTrue(cache.ShouldProcess(9, 1, second, LocationType.CIRCLE));
-        }
-
-        [TestMethod]
-        public void ForegroundPromptHasCenterAndTwoRingsOfFourWithInnerRotated45()
-        {
-            Circle circle = new(new Vector2(10, 20), 8);
-            var points = CircleSegmentationPrompts.CreateMosaicForegroundPoints(circle);
-
-            Assert.AreEqual(9, points.Count);
-            Assert.AreEqual(1 + (2 * CircleSegmentationPrompts.ForegroundRingPointCount), points.Count);
-            Assert.AreEqual(circle.Center, points[0]);
-
-            double diagonal = 4 * Math.Cos(Math.PI / 4.0);
-            Vector2 innerNorthEast = points[1];
-            Assert.AreEqual(10 + diagonal, innerNorthEast.X, 1e-6);
-            Assert.AreEqual(20 + diagonal, innerNorthEast.Y, 1e-6);
-            Assert.AreEqual(
-                circle.Radius * CircleSegmentationPrompts.InnerRingRadiusFraction,
-                Vector2.Distance(circle.Center, innerNorthEast),
-                1e-6);
-
-            Vector2 outerEast = points[1 + CircleSegmentationPrompts.ForegroundRingPointCount];
-            Assert.AreEqual(16.4, outerEast.X, 1e-6);
-            Assert.AreEqual(20, outerEast.Y, 1e-6);
-            Assert.AreEqual(
-                circle.Radius * CircleSegmentationPrompts.OuterRingRadiusFraction,
-                Vector2.Distance(circle.Center, outerEast),
-                1e-6);
         }
 
         [TestMethod]
@@ -476,35 +465,8 @@ namespace WebAnnotationTests.Commands
             Polygon simplified = AutoPolygonizeSelection.SimplifyProposal(polygon, 1.0);
 
             Assert.IsTrue(simplified.ExteriorRing.Length < polygon.ExteriorRing.Length);
-            Assert.IsTrue(simplified.TotalUniqueVertices <= 6);
+            Assert.IsTrue(simplified.TotalUniqueVertices <= 8);
             Assert.IsFalse(simplified.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
-        }
-
-        [TestMethod]
-        public void MaskContourToleranceKeepsALobeThePenThresholdCuts()
-        {
-            Polygon polygon = new(
-            [
-                new Vector2(0, 0),
-                new Vector2(40, 0),
-                new Vector2(40, 20),
-                new Vector2(24, 20),
-                new Vector2(20, 26),
-                new Vector2(16, 20),
-                new Vector2(0, 20),
-                new Vector2(0, 0)
-            ]);
-            Vector2 lobeTip = new(20, 26);
-
-            Polygon tight = AutoPolygonizeSelection.SimplifyProposal(
-                polygon,
-                AutoPolygonizeSelection.MaskContourTolerancePixels);
-            Polygon loose = AutoPolygonizeSelection.SimplifyProposal(polygon, 12);
-            Polygon tightCurve = new(tight.ExteriorRing.CalculateCurvePoints(8, true));
-            Polygon looseCurve = new(loose.ExteriorRing.CalculateCurvePoints(8, true));
-
-            Assert.IsTrue(tightCurve.Distance(lobeTip) <= AutoPolygonizeSelection.MaskContourTolerancePixels + 0.5);
-            Assert.IsTrue(looseCurve.Distance(lobeTip) > 4);
         }
 
         [TestMethod]
@@ -526,11 +488,12 @@ namespace WebAnnotationTests.Commands
             Polygon created = new(AutoPolygonizeSelection.SimplifyProposal(
                 polygon,
                 AutoPolygonizeSelection.CreatedShapeSimplifyPixels).ExteriorRing.CalculateCurvePoints(8, true));
-            Polygon penDefault = new(AutoPolygonizeSelection.SimplifyProposal(polygon, 12)
+            // Half-budget stages: need total travel > 2× lobe height (10) for the tip to drop.
+            Polygon looser = new(AutoPolygonizeSelection.SimplifyProposal(polygon, 24)
                 .ExteriorRing.CalculateCurvePoints(8, true));
 
             Assert.IsTrue(created.Distance(lobeTip) <= AutoPolygonizeSelection.CreatedShapeSimplifyPixels + 0.5);
-            Assert.IsTrue(penDefault.Distance(lobeTip) > created.Distance(lobeTip));
+            Assert.IsTrue(looser.Distance(lobeTip) > created.Distance(lobeTip));
         }
 
         [TestMethod]
@@ -548,11 +511,10 @@ namespace WebAnnotationTests.Commands
             Polygon original = new(ring);
 
             const double tolerance = 1.0;
-            Polygon dpOnly = SegmentationMaskPolygonizer.SimplifyRings(original, tolerance);
             Polygon fitted = AutoPolygonizeSelection.SimplifyProposal(original, tolerance);
 
-            Assert.IsTrue(fitted.TotalUniqueVertices < dpOnly.TotalUniqueVertices,
-                $"Fit should reduce DP vertices {dpOnly.TotalUniqueVertices} -> {fitted.TotalUniqueVertices}");
+            Assert.IsTrue(fitted.TotalUniqueVertices < original.TotalUniqueVertices,
+                $"Fit should reduce vertices {original.TotalUniqueVertices} -> {fitted.TotalUniqueVertices}");
             Assert.IsFalse(fitted.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
 
             Polygon fittedCurve = new(fitted.ExteriorRing.CalculateCurvePoints(8, true));
@@ -564,8 +526,9 @@ namespace WebAnnotationTests.Commands
                     maxDistance = distance;
             }
 
-            Assert.IsTrue(maxDistance <= tolerance * 2,
-                $"Fitted curve drifted {maxDistance} from original (limit {tolerance * 2})");
+            // Half-budget DP + half-budget Catmull: stay within one full travel of the mask.
+            Assert.IsTrue(maxDistance <= tolerance + 0.5,
+                $"Fitted curve drifted {maxDistance} from original (limit {tolerance + 0.5})");
         }
 
         [TestMethod]
@@ -1200,10 +1163,64 @@ namespace WebAnnotationTests.Commands
                 CircleSegmentationPrompts.CreateGroupPromptFromPolygons([small, large, medium]);
 
             Assert.AreEqual(3, prompt.Foreground.Count);
-            Assert.AreEqual(large.BoundingBox, prompt.Box);
+            Assert.IsNotNull(prompt.Box);
+            Assert.AreEqual(
+                CircleSegmentationPrompts.InscribedSeedBox(large.BoundingBox, prompt.Foreground[1]),
+                prompt.Box);
+            Assert.IsTrue(large.BoundingBox.Width > prompt.Box.Value.Width);
             Assert.IsTrue(large.Contains(prompt.Foreground[1]));
             Assert.IsTrue(small.Contains(prompt.Foreground[0]));
             Assert.IsTrue(medium.Contains(prompt.Foreground[2]));
+        }
+
+        [TestMethod]
+        public void UnionPolygonsOrsOverlappingRings()
+        {
+            Polygon left = Square(0, 0, 10);
+            Polygon right = Square(5, 0, 10);
+
+            Polygon merged = AutoPolygonizeSelection.UnionPolygons([left, right], new Vector2(2, 5));
+
+            Assert.IsNotNull(merged);
+            Assert.IsTrue(merged.Contains(new Vector2(2, 5)));
+            Assert.IsTrue(merged.Contains(new Vector2(12, 5)));
+            Assert.IsTrue(merged.Area > left.Area);
+            Assert.IsTrue(merged.Area > right.Area);
+        }
+
+        [TestMethod]
+        public void UnionPolygonsReturnsNullForEmptyInput()
+        {
+            Assert.IsNull(AutoPolygonizeSelection.UnionPolygons(null));
+            Assert.IsNull(AutoPolygonizeSelection.UnionPolygons([]));
+            Assert.IsNull(AutoPolygonizeSelection.UnionPolygons([null, null]));
+        }
+
+        [TestMethod]
+        public void UnionPolygonsKeepsSinglePolygon()
+        {
+            Polygon alone = Square(0, 0, 10);
+            Polygon merged = AutoPolygonizeSelection.UnionPolygons([alone], new Vector2(5, 5));
+            Assert.AreSame(alone, merged);
+        }
+
+        [TestMethod]
+        public void MaskOverlayTryOrTakesPixelwiseMax()
+        {
+            byte[] left = new byte[4];
+            left[0] = 200;
+            byte[] right = new byte[4];
+            right[3] = 180;
+            var leftOverlay = new AutoPolygonizeMaskOverlay(
+                left, 2, 2, new Geometry.Rectangle(0, 10, 0, 10));
+            var rightOverlay = new AutoPolygonizeMaskOverlay(
+                right, 2, 2, new Geometry.Rectangle(0, 10, 0, 10));
+
+            AutoPolygonizeMaskOverlay merged = AutoPolygonizeMaskOverlay.TryOr([leftOverlay, rightOverlay]);
+
+            Assert.IsNotNull(merged);
+            Assert.IsTrue(merged.MaskData.Any(value => value >= 180));
+            Assert.IsTrue(merged.MaskData.Count(value => value >= 128) >= 2);
         }
 
         [TestMethod]

@@ -88,6 +88,7 @@ namespace WebAnnotation
 
                 try
                 {
+                    WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(loc.ID, "CutHole");
                     loc.SetShapeFromGeometryInSection(transform, updatedMosaicShape);
                 }
                 catch (ArgumentException e)

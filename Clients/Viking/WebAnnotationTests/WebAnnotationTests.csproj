@@ -27,6 +27,7 @@
   </ItemGroup>
   <ItemGroup>
         <Compile Include="ExceptionReportTests.cs" />
+        <Compile Include="View\PolygonViewTimingLogTests.cs" />
         <Compile Include="Commands\PolygonHoleFillTests.cs" />
         <Compile Include="Commands\PenModeContactTests.cs" />
         <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
@@ -34,15 +35,25 @@
     <Compile Include="Commands\StructureColorForIdTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="Commands\SegmentationRequestCoalescerTests.cs" />
+    <Compile Include="Commands\SegmentationResultContextTests.cs" />
+    <Compile Include="Commands\SegmentationCapabilitiesTests.cs" />
+    <Compile Include="Commands\LocationRefreshQueueTests.cs" />
+    <Compile Include="Commands\PanZoomDebouncerTests.cs" />
+    <Compile Include="Commands\TileUploadCacheTests.cs" />
+    <Compile Include="Commands\CapturedPngTests.cs" />
     <Compile Include="Commands\SegmentationCameraPolicyTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
     <Compile Include="Commands\AnnotationStatusChipsTests.cs" />
+    <Compile Include="Commands\VolumeToSectionFallbackTests.cs" />
     <Compile Include="Commands\HitTestLocationLinkPreferenceTests.cs" />
     <Compile Include="Commands\SegmentationUserFeedbackTests.cs" />
-    <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
+    <Compile Include="Commands\SegmentationRpcErrorsTests.cs" />
+    <Compile Include="Commands\CircleStartingPromptTests.cs" />    <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />
+    <Compile Include="SectionLocationPollPolicyTests.cs" />
+    <Compile Include="RegionLoaderInvalidateSectionTests.cs" />
     <Compile Include="SectionRangeParserTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
     <Compile Include="VolumePathTests.cs" />

@@ -48,7 +48,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return null;
 
             var bestSegment = response.Segments.OrderByDescending(segment => segment.Score).First();
-            var (decodedMaskData, decodedWidth, decodedHeight) = session.DecodePngMask(bestSegment.Mask.ToByteArray());
+            var (decodedMaskData, decodedWidth, decodedHeight) = session.DecodeSegmentMask(bestSegment);
             if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
                 return null;
 
@@ -69,6 +69,89 @@ namespace WebAnnotation.UI.AutoPolygonize
                 decodedWidth,
                 decodedHeight);
             return new AutoPolygonizeMaskOverlay(decodedMaskData, decodedWidth, decodedHeight, worldBounds);
+        }
+
+        /// <summary>
+        /// Pixel-wise max (soft-mask OR) of several overlays onto a shared world canvas.
+        /// Used when merging same-cell sibling proposals so the debug overlay matches the
+        /// unioned ring. Null/empty sources are skipped; a single usable source is returned as-is.
+        /// Output size is capped so a wide group cannot allocate an unbounded texture.
+        /// </summary>
+        public static AutoPolygonizeMaskOverlay? TryOr(IEnumerable<AutoPolygonizeMaskOverlay?>? sources)
+        {
+            if (sources is null)
+                return null;
+
+            List<AutoPolygonizeMaskOverlay> masks = [];
+            foreach (AutoPolygonizeMaskOverlay? source in sources)
+            {
+                if (source is null || source.MaskData is null || source.Width <= 0 || source.Height <= 0)
+                    continue;
+                if (source.MaskData.Length != source.Width * source.Height)
+                    continue;
+                masks.Add(source);
+            }
+
+            if (masks.Count == 0)
+                return null;
+            if (masks.Count == 1)
+                return masks[0];
+
+            Geometry.Rectangle bounds = masks[0].WorldBounds;
+            for (int i = 1; i < masks.Count; i++)
+                bounds = Geometry.Rectangle.Union(bounds, masks[i].WorldBounds);
+
+            double worldWidth = Math.Max(bounds.Width, 1e-6);
+            double worldHeight = Math.Max(bounds.Height, 1e-6);
+            double pixelsPerWorld = masks.Max(mask =>
+                Math.Max(mask.Width / Math.Max(mask.WorldBounds.Width, 1e-6),
+                    mask.Height / Math.Max(mask.WorldBounds.Height, 1e-6)));
+
+            int width = Math.Max(1, (int)Math.Ceiling(worldWidth * pixelsPerWorld));
+            int height = Math.Max(1, (int)Math.Ceiling(worldHeight * pixelsPerWorld));
+            const int maxSide = 2048;
+            if (width > maxSide || height > maxSide)
+            {
+                double scale = maxSide / (double)Math.Max(width, height);
+                width = Math.Max(1, (int)Math.Floor(width * scale));
+                height = Math.Max(1, (int)Math.Floor(height * scale));
+            }
+
+            byte[] merged = new byte[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                double worldY = bounds.Bottom + ((y + 0.5) / height) * worldHeight;
+                for (int x = 0; x < width; x++)
+                {
+                    double worldX = bounds.Left + ((x + 0.5) / width) * worldWidth;
+                    byte value = 0;
+                    foreach (AutoPolygonizeMaskOverlay mask in masks)
+                    {
+                        byte sample = Sample(mask, worldX, worldY);
+                        if (sample > value)
+                            value = sample;
+                    }
+
+                    merged[y * width + x] = value;
+                }
+            }
+
+            return new AutoPolygonizeMaskOverlay(merged, width, height, bounds);
+        }
+
+        private static byte Sample(AutoPolygonizeMaskOverlay mask, double worldX, double worldY)
+        {
+            Geometry.Rectangle bounds = mask.WorldBounds;
+            double w = Math.Max(bounds.Width, 1e-6);
+            double h = Math.Max(bounds.Height, 1e-6);
+            double nx = (worldX - bounds.Left) / w;
+            double ny = (worldY - bounds.Bottom) / h;
+            if (nx < 0 || ny < 0 || nx >= 1 || ny >= 1)
+                return 0;
+
+            int px = Math.Min(mask.Width - 1, (int)(nx * mask.Width));
+            int py = Math.Min(mask.Height - 1, (int)(ny * mask.Height));
+            return mask.MaskData[py * mask.Width + px];
         }
     }
 
@@ -142,6 +225,12 @@ namespace WebAnnotation.UI.AutoPolygonize
             ForegroundPrompts = foregroundPrompts is { Count: > 0 } ? [.. foregroundPrompts] : [];
             BackgroundPrompts = backgroundPrompts is { Count: > 0 } ? [.. backgroundPrompts] : [];
         }
+
+        /// <summary>
+        /// Soft-mask bytes for the optional debug overlay. Sibling merge ORs these with the
+        /// group remask; null when the SegmentImage had no decodable mask.
+        /// </summary>
+        public AutoPolygonizeMaskOverlay? MaskOverlay => maskOverlayData;
 
         /// <summary>Lowest ID in <see cref="LocationIds"/>; used for color and dictionary lookup.</summary>
         public long LocationId { get; }

@@ -20,7 +20,7 @@ namespace WebAnnotation.Properties
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        [global::System.Configuration.DefaultSettingValueAttribute("8")]
         public int SegmentationEdgeCleanupRadius
         {
             get => (int)this[nameof(SegmentationEdgeCleanupRadius)];
@@ -73,25 +73,6 @@ namespace WebAnnotation.Properties
         {
             get => (bool)this[nameof(AutoPolygonizeCirclesUserSet)];
             set => this[nameof(AutoPolygonizeCirclesUserSet)] = value;
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public double AutoPolygonizeMinScreenAreaPercent
-        {
-            get => (double)this[nameof(AutoPolygonizeMinScreenAreaPercent)];
-            set => this[nameof(AutoPolygonizeMinScreenAreaPercent)] = value;
-        }
-
-        /// <summary>Minimum on-screen circle radius, in device pixels, for auto-polygonize.</summary>
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("8")]
-        public double AutoPolygonizeMinRadiusPixels
-        {
-            get => (double)this[nameof(AutoPolygonizeMinRadiusPixels)];
-            set => this[nameof(AutoPolygonizeMinRadiusPixels)] = value;
         }
 
         /// <summary>Minimum circle radius, in nanometers, for auto-polygonize. Default 75.</summary>

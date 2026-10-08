@@ -43,7 +43,10 @@ namespace Geometry.Meshing
 
         public override bool Equals(object obj) => obj is EndpointPair other && Equals(other);
 
-        public override int GetHashCode() => (int)(((long)A * (long)B) & int.MaxValue);
+        /// <summary>
+        /// Same value as <see cref="EdgeKey.GetHashCode"/> for the same two vertices (see <see cref="MeshHash"/>).
+        /// </summary>
+        public override int GetHashCode() => MeshHash.Pair(A, B);
     }
 
     /// <summary>

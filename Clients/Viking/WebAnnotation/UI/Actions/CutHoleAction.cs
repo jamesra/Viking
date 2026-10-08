@@ -60,6 +60,7 @@ namespace WebAnnotation.UI.Actions
             Geometry.Vector2[] mosaic_points = Transform.VolumeToSection(NewVolumeInteriorPolygon.ExteriorRing);
             SqlGeometry updatedMosaicShape = Location.MosaicShape.AddInteriorPolygon(mosaic_points);
 
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "CutHole");
             Location.SetShapeFromGeometryInSection(Transform, updatedMosaicShape);
 
             try

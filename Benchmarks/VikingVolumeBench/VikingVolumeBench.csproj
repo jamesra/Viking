@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless end-to-end benchmark for Viking's volume loading, section warping, VisibleTiles and VikingAU-style
+       annotation mapping. net48 only, matching what Viking ships. See README.md for usage. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Viking.Benchmarks.VolumeBench</RootNamespace>
+    <AssemblyName>VikingVolumeBench</AssemblyName>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <NoWarn>$(NoWarn);CA1014</NoWarn>
+    <!-- Differences between the two client trees. VikingLegacy-Maintenance: WCF LocationStore lives in WebAnnotationModel,
+         and TileViewModel's vertex field is spelled Verticies. VikingLegacy builds the same sources without these. -->
+    <DefineConstants>$(DefineConstants);VIKINGBENCH_WCF_ANNOTATIONS;VIKINGBENCH_TILE_VERTICIES</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- SqlServerTypesLoader expects msvcr120 and SqlServerSpatial under SqlServerTypes\x64 and \x86; use Viking's copies. -->
+    <None Include="..\..\Clients\Viking\Viking\SqlServerTypes\**\*.dll" Link="SqlServerTypes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\..\Clients\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\..\Clients\WebAnnotationModel\WebAnnotationModel.csproj" />
+    <ProjectReference Include="..\..\Clients\Common\Common.csproj" />
+    <ProjectReference Include="..\..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
+    <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+    <ProjectReference Include="..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Grpc.Core;
 using Viking.DependencyInjection;
 
@@ -25,25 +26,34 @@ namespace Viking.Services.Grpc
             }
 
             GrpcChannelTarget target = parsed.Value;
-            lock (_lock)
+            Channel? stale = null;
+            try
             {
-                if (_channel is null ||
-                    _currentServiceUrl != target.ChannelKey ||
-                    _channel.State == ChannelState.Shutdown ||
-                    _channel.State == ChannelState.TransientFailure)
+                lock (_lock)
                 {
-                    ShutdownChannelInternal();
+                    if (_channel is null ||
+                        _currentServiceUrl != target.ChannelKey ||
+                        _channel.State == ChannelState.Shutdown ||
+                        _channel.State == ChannelState.TransientFailure)
+                    {
+                        stale = DetachChannelUnlocked();
 
-                    ChannelCredentials credentials = target.UseTransportSecurity
-                        ? new SslCredentials()
-                        : ChannelCredentials.Insecure;
-                    _channel = new Channel(target.Target, credentials);
-                    _currentServiceUrl = target.ChannelKey;
+                        // The segmentation server no longer has a cleartext listener, so every
+                        // channel is TLS whatever scheme the saved endpoint was written with.
+                        _channel = new Channel(target.Target, new SslCredentials());
+                        _currentServiceUrl = target.ChannelKey;
 
-                    Trace.WriteLine($"Created new shared gRPC channel to {target.Target} tls={target.UseTransportSecurity}");
+                        Trace.WriteLine(target.UpgradedFromPlaintext
+                            ? $"Created new shared gRPC channel to {target.Target} with TLS (the saved endpoint \"{_configuration.Endpoint()}\" named plaintext, which the server no longer serves)"
+                            : $"Created new shared gRPC channel to {target.Target} with TLS");
+                    }
+
+                    return _channel;
                 }
-
-                return _channel;
+            }
+            finally
+            {
+                ShutdownDetached(stale, wait: false);
             }
         }
 
@@ -58,24 +68,35 @@ namespace Viking.Services.Grpc
             }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Drops the shared channel so the next <see cref="GetOrCreateChannel"/> reconnects. The old channel is
+        /// detached under the lock and shut down after it is released, without waiting, so a caller on the UI
+        /// thread is not held for the shutdown and other threads can create the new channel at once.
+        /// Calls already running on the old channel finish or fail with their own cancellation.
+        /// </summary>
         public void ResetChannel()
         {
+            Channel? stale;
             lock (_lock)
             {
-                ShutdownChannelInternal();
+                stale = DetachChannelUnlocked();
                 _currentServiceUrl = null;
             }
+
+            ShutdownDetached(stale, wait: false);
         }
 
         /// <inheritdoc />
         public void Shutdown()
         {
+            Channel? stale;
             lock (_lock)
             {
-                ShutdownChannelInternal();
+                stale = DetachChannelUnlocked();
                 _currentServiceUrl = null;
             }
+
+            ShutdownDetached(stale, wait: true);
         }
 
         /// <summary>
@@ -96,8 +117,20 @@ namespace Viking.Services.Grpc
         }
 
         /// <summary>
-        /// C-core channel targets are host:port[/path][?query]. HTTPS keeps the port and selects TLS;
-        /// a missing scheme is treated as plaintext HTTP. Called when the shared channel is created.
+        /// The port the segmentation server published for its cleartext listener before that listener
+        /// was removed. A saved endpoint that still names it is moved to <see cref="TlsPort"/>.
+        /// </summary>
+        internal const int LegacyCleartextPort = 40080;
+
+        /// <summary>The port the segmentation server publishes for gRPC over TLS.</summary>
+        internal const int TlsPort = 40443;
+
+        /// <summary>
+        /// C-core channel targets are host:port[/path][?query]. The segmentation server only speaks
+        /// TLS, so the result always selects TLS. An <c>http://</c> endpoint or one with no scheme was
+        /// plaintext before; it keeps its host and port (except <see cref="LegacyCleartextPort"/>,
+        /// which becomes <see cref="TlsPort"/>) and is flagged <see cref="GrpcChannelTarget.UpgradedFromPlaintext"/>
+        /// so the channel log says what happened. Called when the shared channel is created.
         /// </summary>
         internal static GrpcChannelTarget? TryFormatChannelTarget(string rawEndpoint)
         {
@@ -121,51 +154,73 @@ namespace Viking.Services.Grpc
             string host = parsedUri.HostNameType == UriHostNameType.IPv6
                 ? $"[{parsedUri.Host}]"
                 : parsedUri.Host;
-            string target = $"{host}:{parsedUri.Port}{absolutePath}{parsedUri.Query}";
-            bool useTransportSecurity = parsedUri.Scheme == Uri.UriSchemeHttps;
-            return new GrpcChannelTarget(target, useTransportSecurity);
+            bool upgradedFromPlaintext = parsedUri.Scheme == Uri.UriSchemeHttp;
+            int port = upgradedFromPlaintext && parsedUri.Port == LegacyCleartextPort
+                ? TlsPort
+                : parsedUri.Port;
+            string target = $"{host}:{port}{absolutePath}{parsedUri.Query}";
+            return new GrpcChannelTarget(target, upgradedFromPlaintext);
         }
 
-        private void ShutdownChannelInternal()
+        /// <summary>Takes the current channel out of service. Caller holds <c>_lock</c> and shuts the result down after releasing it.</summary>
+        private Channel? DetachChannelUnlocked()
         {
-            if (_channel is null || _channel.State == ChannelState.Shutdown)
+            Channel? channel = _channel;
+            _channel = null;
+            return channel;
+        }
+
+        /// <summary>
+        /// Shuts down a channel that is no longer reachable through the manager. Never call while holding
+        /// <c>_lock</c>. With <paramref name="wait"/> false the shutdown runs in the background and a failure is logged.
+        /// </summary>
+        private static void ShutdownDetached(Channel? channel, bool wait)
+        {
+            if (channel is null || channel.State == ChannelState.Shutdown)
             {
                 return;
             }
 
             try
             {
-                _channel.ShutdownAsync().Wait(TimeSpan.FromSeconds(5));
-                Trace.WriteLine("Shared gRPC channel shut down successfully");
+                Task shutdown = channel.ShutdownAsync();
+                if (wait)
+                {
+                    shutdown.Wait(TimeSpan.FromSeconds(5));
+                    Trace.WriteLine("Shared gRPC channel shut down successfully");
+                    return;
+                }
+
+                _ = shutdown.ContinueWith(
+                    task => Trace.WriteLine(task.IsFaulted
+                        ? $"Error shutting down shared gRPC channel: {task.Exception?.GetBaseException().Message}"
+                        : "Shared gRPC channel shut down successfully"),
+                    TaskScheduler.Default);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"Error shutting down shared gRPC channel: {ex.Message}");
             }
-            finally
-            {
-                _channel = null;
-            }
         }
     }
 
     /// <summary>
-    /// Host:port target for <see cref="Channel"/> plus whether the original URL was HTTPS.
-    /// <see cref="ChannelKey"/> includes the security mode so http and https to the same host do not share a channel.
+    /// Host:port target for a TLS <see cref="Channel"/>, and whether the saved endpoint named plaintext
+    /// (<c>http://</c> or no scheme) and was upgraded.
     /// </summary>
     internal readonly struct GrpcChannelTarget
     {
-        public GrpcChannelTarget(string target, bool useTransportSecurity)
+        public GrpcChannelTarget(string target, bool upgradedFromPlaintext)
         {
             Target = target;
-            UseTransportSecurity = useTransportSecurity;
+            UpgradedFromPlaintext = upgradedFromPlaintext;
         }
 
         public string Target { get; }
 
-        public bool UseTransportSecurity { get; }
+        public bool UpgradedFromPlaintext { get; }
 
-        public string ChannelKey => $"{(UseTransportSecurity ? "tls" : "plain")}|{Target}";
+        public string ChannelKey => $"tls|{Target}";
     }
 }
 

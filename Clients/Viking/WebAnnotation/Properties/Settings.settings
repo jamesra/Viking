@@ -45,7 +45,7 @@
       <Value Profile="(Default)">4</Value>
     </Setting>
     <Setting Name="PenSimplifyThreshold" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">8</Value>
+      <Value Profile="(Default)">4</Value>
     </Setting>
     <Setting Name="MinRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
@@ -72,7 +72,7 @@
       <Value Profile="(Default)">0.03</Value>
     </Setting>
     <Setting Name="SegmentationEdgeCleanupRadius" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">2</Value>
+      <Value Profile="(Default)">8</Value>
     </Setting>
     <Setting Name="AutoPolygonizeCircles" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -85,12 +85,6 @@
     </Setting>
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
-    </Setting>
-    <Setting Name="AutoPolygonizeMinScreenAreaPercent" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">1</Value>
-    </Setting>
-    <Setting Name="AutoPolygonizeMinRadiusPixels" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">8</Value>
     </Setting>
     <Setting Name="AutoPolygonizeMinRadiusNanometers" Type="System.Double" Scope="User">
       <Value Profile="(Default)">75</Value>

@@ -65,7 +65,8 @@ namespace WebAnnotation.UI.Actions
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             LocationObj locObj = Store.Locations[locID];
-            IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            // Cuts near or past the edge of the registration grid have vertices a discrete grid cannot map; the RBF fallback extrapolates them.
+            IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform.WithContinuousFallback();
 
             Polygon PolyToCut = OriginalVolumePolygon.Clone() as Polygon;
             if (FirstIntersection.IsInner)
@@ -145,13 +146,20 @@ namespace WebAnnotation.UI.Actions
                         Polygon outputVolumePoly = UseCCW ? counter_clockwise_poly : clockwise_poly;
                         Polygon outputMosaicPoly = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
                         Polygon growthLobe = UseCCW ? clockwise_poly : counter_clockwise_poly;
-                        grow_action = new Change2DContourAction(locObj, cutType, outputMosaicPoly, outputVolumePoly);
+                        // Only the kept piece is saved, so an unmappable discarded lobe must not block the cut.
+                        if (outputMosaicPoly is null)
+                            return output;
+                        grow_action = new Change2DContourAction(locObj, cutType, outputMosaicPoly, outputVolumePoly, transform: Transform);
                         AttachCachedPreview(grow_action, OriginalVolumePolygon, subpath, addedPatch: growthLobe, excludedPatch: null);
                         output.Add(grow_action);
                         break;
                     case RetraceCommandAction.SHRINK_EXTERIOR_RING:
-                        counter_clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly);
-                        clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true);
+                        // TryMapShapeVolumeToSection returns null when any vertex is outside the section's mapped area.
+                        // Both pieces are offered as choices, so one that cannot be saved means no valid pair.
+                        if (mosaic_counter_clockwise_poly is null || mosaic_clockwise_poly is null)
+                            return output;
+                        counter_clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly, transform: Transform);
+                        clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true, Transform);
                         AttachShrinkPreview(counter_clockwise_action, clockwise_action, OriginalVolumePolygon, subpath, counter_clockwise_poly, clockwise_poly);
                         output.Add(counter_clockwise_action);
                         output.Add(clockwise_action);
@@ -160,20 +168,24 @@ namespace WebAnnotation.UI.Actions
                         UseCCW = counter_clockwise_poly.Area > clockwise_poly.Area;
                         Polygon mosaic_shape_clone = locObj.MosaicShape.ToPolygon();
                         inner_ring_replacement = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
+                        if (inner_ring_replacement is null)
+                            return output;
                         mosaic_shape_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, inner_ring_replacement);
-                        grow_action = new Change2DContourAction(locObj, cutType, mosaic_shape_clone);
+                        grow_action = new Change2DContourAction(locObj, cutType, mosaic_shape_clone, transform: Transform);
                         output.Add(grow_action);
                         break;
                     case RetraceCommandAction.SHRINK_INTERNAL_RING:
+                        if (mosaic_counter_clockwise_poly is null || mosaic_clockwise_poly is null)
+                            return output;
                         //Counterclockwise action
                         input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
                         input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_counter_clockwise_poly);
-                        counter_clockwise_action = new Change2DContourAction(locObj, cutType, input_poly_clone);
+                        counter_clockwise_action = new Change2DContourAction(locObj, cutType, input_poly_clone, transform: Transform);
 
                         //Clockwise action
                         input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
                         input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_clockwise_poly);
-                        clockwise_action = new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true);
+                        clockwise_action = new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true, transform: Transform);
 
                         output.Add(counter_clockwise_action);
                         output.Add(clockwise_action);
@@ -368,8 +380,10 @@ namespace WebAnnotation.UI.Actions
 
                 IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
                 Polygon mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
+                if (mosaic_shape is null)
+                    return actions;
 
-                Change2DContourAction action = new(origin_loc, RetraceCommandAction.REPLACE_EXTERIOR_RING, mosaic_shape, newShape);
+                Change2DContourAction action = new(origin_loc, RetraceCommandAction.REPLACE_EXTERIOR_RING, mosaic_shape, newShape, transform: Transform);
                 actions.Add(action);
             }
             else if (origin_loc.TypeCode.AllowsOpen2DShape() && path.HasSelfIntersection == false)//1-D Case

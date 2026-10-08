@@ -148,11 +148,20 @@ namespace Geometry.Meshing
         [NonSerialized]
         private int? _hashcode;
 
+        /// <summary>
+        /// Triangles hash their sorted vertex indices, which is consistent with <see cref="Equals(IFace)"/> (it compares sorted
+        /// vertices) and avoids the collisions the old product of the first three indices had.
+        /// Quads keep the old product of the first three indices, listed order and all. That formula does not give two Equal
+        /// quads listed from different corners the same hash, so hashed collections of faces treat them as different; a hash
+        /// that fixed it would change which faces those collections find.
+        /// </summary>
         public override int GetHashCode()
         {
             if (_hashcode.HasValue == false)
             {
-                _hashcode = (int)(((ulong)_iVerts[0] * (ulong)_iVerts[1] * (ulong)_iVerts[2]) & uint.MaxValue);//_iVerts.Sum();
+                _hashcode = _iVerts.Length == 3
+                    ? MeshHash.Triple(_sorted_verts[0], _sorted_verts[1], _sorted_verts[2])
+                    : (int)(((ulong)_iVerts[0] * (ulong)_iVerts[1] * (ulong)_iVerts[2]) & uint.MaxValue);
             }
 
             return _hashcode.Value;

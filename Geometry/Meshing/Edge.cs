@@ -6,6 +6,57 @@ using System.Linq;
 
 namespace Geometry.Meshing
 {
+    /// <summary>
+    /// Hash mixing for mesh keys. The earlier hashes multiplied the vertex indices, so every edge touching vertex 0
+    /// collided and index pairs with the same product (3*8 and 4*6) collided as well.
+    /// </summary>
+    /// <remarks>
+    /// Nothing in the mesh code orders output by these hashes: <see cref="System.Collections.Generic.Dictionary{TKey,TValue}"/>
+    /// and <see cref="System.Collections.Generic.HashSet{T}"/> enumerate in insertion and removal order, never in hash order,
+    /// and no ConcurrentDictionary, Hashtable or immutable hash collection is keyed on an edge or a face.
+    /// Keep it that way: an enumeration that depended on hash order would change with this function.
+    /// </remarks>
+    internal static class MeshHash
+    {
+        /// <summary>
+        /// Hash of two vertex indices. Callers pass them in the same order for equal keys (smaller index first).
+        /// </summary>
+        /// <returns>A non-negative value, like the A*B hash it replaces.</returns>
+        public static int Pair(int a, int b)
+        {
+            unchecked
+            {
+                ulong x = ((ulong)(uint)a << 32) | (uint)b;
+                return Finish(x);
+            }
+        }
+
+        /// <summary>
+        /// Hash of three vertex indices in ascending order, used for triangle faces.
+        /// </summary>
+        public static int Triple(int a, int b, int c)
+        {
+            unchecked
+            {
+                ulong x = (((ulong)(uint)a << 32) | (uint)b) ^ ((ulong)(uint)c * 0x9E3779B97F4A7C15UL);
+                return Finish(x);
+            }
+        }
+
+        private static int Finish(ulong x)
+        {
+            unchecked
+            {
+                x ^= x >> 33;
+                x *= 0xFF51AFD7ED558CCDUL;
+                x ^= x >> 33;
+                x *= 0xC4CEB9FE1A85EC53UL;
+                x ^= x >> 33;
+                return (int)(x & int.MaxValue);
+            }
+        }
+    }
+
     public readonly struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>, IComparable<IEdgeKey>, IEquatable<IEdgeKey>, IEdgeKey
     {
         public int[] Vertices => [A, B]; //The two verticies defining the edge
@@ -20,11 +71,21 @@ namespace Geometry.Meshing
             get;
         }
 
+        /// <summary>
+        /// Creates the key with the smaller index in <see cref="A"/>, so (3, 7) and (7, 3) are the same key.
+        /// </summary>
         public EdgeKey(int a, int b)
         {
-            int[] ordered = a < b ? [a, b] : [b, a];
-            this.A = ordered[0];
-            this.B = ordered[1];
+            if (a < b)
+            {
+                this.A = a;
+                this.B = b;
+            }
+            else
+            {
+                this.A = b;
+                this.B = a;
+            }
         }
 
         public EdgeKey(long a, long b) : this((int)a, (int)b)
@@ -82,7 +143,11 @@ namespace Geometry.Meshing
             return false;
         }
 
-        public override int GetHashCode() => (int)(((long)A * (long)B) & int.MaxValue);
+        /// <summary>
+        /// Shares <see cref="MeshHash.Pair"/> with <see cref="EndpointPair"/> and <see cref="Edge"/>, so all three give one hash
+        /// for the same two vertices. Always non-negative.
+        /// </summary>
+        public override int GetHashCode() => MeshHash.Pair(A, B);
 
         public override string ToString() => $"{A}-{B}";
 

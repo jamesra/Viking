@@ -46,7 +46,9 @@ namespace WebAnnotation.View
                 case LocationType.POLYGON:
                     {
                         LocationPolygonView polyview = new(obj, mapping);
-                        Task.Run(() => polyview.Initialize());
+                        Task.Run(() => polyview.Initialize()).ContinueWith(
+                            t => polyview.ReportInitializeFailure(t.Exception.GetBaseException()),
+                            TaskContinuationOptions.OnlyOnFaulted);
                         return polyview;
                     }
                 case LocationType.CLOSEDCURVE:

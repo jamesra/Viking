@@ -1671,6 +1671,72 @@ namespace GeometryTests
             PolygonTest.ValidatePolygonCut(counterclockwise_output, new Polygon(expected_ring_counterclockwise), expected_start, expected_end);
         }
 
+        /// <summary>
+        /// Straight cut through the box center with an interior sample — the common pen-retrace case.
+        /// </summary>
+        [TestMethod]
+        public void WalkPolygonCut_InteriorSampleOnly_Succeeds()
+        {
+            Polygon box = Primitives.BoxPolygon(10);
+            Vector2 expected_start = new(-10, 0);
+            Vector2 expected_end = new(10, 0);
+            Vector2[] path =
+            [
+                new(-15, 0),
+                new(0, 0),
+                new(15, 0)
+            ];
+
+            Polygon clockwise_output = Polygon.WalkPolygonCut(box, RotationDirection.Clockwise, path);
+            Polygon counterclockwise_output = Polygon.WalkPolygonCut(box, RotationDirection.Counterclockwise, path);
+
+            Assert.IsTrue(clockwise_output.IsValid());
+            Assert.IsTrue(counterclockwise_output.IsValid());
+            Assert.IsTrue(clockwise_output.Covers(expected_start));
+            Assert.IsTrue(clockwise_output.Covers(expected_end));
+        }
+
+        /// <summary>
+        /// Pen strokes that graze a polygon corner put a cutline vertex on the walked arc.
+        /// That must not Debug.Assert; the UI catches ArgumentException and skips the cut.
+        /// CW from BL to BR walks via TL, and the cutline also includes TL.
+        /// </summary>
+        [TestMethod]
+        public void WalkPolygonCut_DuplicateCutVertexOnWalkedArc_Throws()
+        {
+            Polygon box = Primitives.BoxPolygon(10);
+            int iBL = Array.FindIndex(box.ExteriorRing, p => p == new Vector2(-10, -10));
+            int iBR = Array.FindIndex(box.ExteriorRing, p => p == new Vector2(10, -10));
+            Assert.IsTrue(iBL >= 0 && iBR >= 0);
+
+            PolygonIndex startIndex = new(0, iBL, box.ExteriorRing.Length - 1);
+            PolygonIndex endIndex = new(0, iBR, box.ExteriorRing.Length - 1);
+            Vector2[] cutThroughTL = [new(-10, 10), new(0, 5)];
+
+            ArgumentException ex = Assert.ThrowsException<ArgumentException>(() =>
+                Polygon.WalkPolygonCut(startIndex, endIndex, box, RotationDirection.Clockwise, cutThroughTL));
+            StringAssert.Contains(ex.Message, "walked polygon arc");
+        }
+
+        /// <summary>
+        /// Cutline vertex on the entry point is skipped when closing the ring (not asserted).
+        /// </summary>
+        [TestMethod]
+        public void WalkPolygonCut_CutVertexOnEntry_Skipped()
+        {
+            Polygon box = Primitives.BoxPolygon(10);
+            int iBL = Array.FindIndex(box.ExteriorRing, p => p == new Vector2(-10, -10));
+            int iBR = Array.FindIndex(box.ExteriorRing, p => p == new Vector2(10, -10));
+            Assert.IsTrue(iBL >= 0 && iBR >= 0);
+
+            PolygonIndex startIndex = new(0, iBL, box.ExteriorRing.Length - 1);
+            PolygonIndex endIndex = new(0, iBR, box.ExteriorRing.Length - 1);
+            Vector2[] cut = [new(-10, -10), new(0, 0)];
+
+            Polygon result = Polygon.WalkPolygonCut(startIndex, endIndex, box, RotationDirection.Counterclockwise, cut);
+            Assert.IsTrue(result.IsValid());
+        }
+
         private static void ValidatePolygonCut(Polygon cut, Polygon expected_cut, Vector2 expected_start, Vector2 expected_end)
         {
             Assert.IsTrue(cut.Covers(expected_start));

@@ -286,7 +286,7 @@ namespace WebAnnotation.WPF.Forms
             get => _segmentationEdgeCleanupRadius;
             set
             {
-                int clampedValue = MathUtils.Clamp(value, 0, 10);
+                int clampedValue = MathUtils.Clamp(value, 0, 32);
                 if (_segmentationEdgeCleanupRadius != clampedValue)
                 {
                     _segmentationEdgeCleanupRadius = clampedValue;
@@ -710,7 +710,7 @@ namespace WebAnnotation.WPF.Forms
             _defaultLocationJumpDownsample = 4.0;
             _adjacentLocationRadiusScalar = 0.5;
             _numClosedCurveInterpolationPointsForDisplay = 4;
-            _penSimplifyThreshold = 8;
+            _penSimplifyThreshold = 4;
             _minRadius = 0.5;
             _polygonOpacityParentless = 0.5;
             _polygonOpacityWithParent = 0.33;
@@ -718,7 +718,7 @@ namespace WebAnnotation.WPF.Forms
             _circleOpacityWithParent = 1.0;
             _segmentationPointRadius = 5.0;
             _segmentationHoleDropFraction = 0.03;
-            _segmentationEdgeCleanupRadius = 2;
+            _segmentationEdgeCleanupRadius = 8;
             _segmentationMaskThreshold = DefaultSegmentationMaskThreshold;
             _segmentationUseMaskInput = false;
             _autoPolygonizeCircles = false;

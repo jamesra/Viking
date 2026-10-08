@@ -10,7 +10,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// Converts a SAM2 probability mask to world-space <see cref="Polygon"/>s.
     /// Each byte is a probability in 0–255. The contour is the logit-zero crossing
     /// at <see cref="SoftMaskIsoLevel"/>, interpolated between pixels.
-    /// Callers reduce vertex count with <c>MaskContourTolerancePixels</c> (one screen pixel).
+    /// Callers reduce vertex count with CreatedShapeSimplify (mask pixel-travel).
     /// This type does not simplify.
     /// </summary>
     internal static class SegmentationMaskPolygonizer
@@ -310,9 +310,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     padded[destRow + x] = maskData[sourceRow + x] > 0;
             }
 
-            (int dx, int dy)[] kernel = BuildSquareKernel(radius);
-            bool[] opened = Dilate(Erode(padded, paddedWidth, paddedHeight, kernel), paddedWidth, paddedHeight, kernel);
-            bool[] closed = Erode(Dilate(opened, paddedWidth, paddedHeight, kernel), paddedWidth, paddedHeight, kernel);
+            bool[] opened = Dilate(Erode(padded, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
+            bool[] closed = Erode(Dilate(opened, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
 
             byte[] result = new byte[width * height];
             for (int y = 0; y < height; y++)
@@ -432,66 +431,54 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return count;
         }
 
-        private static (int dx, int dy)[] BuildSquareKernel(int radius)
-        {
-            List<(int dx, int dy)> offsets = [];
-            for (int dy = -radius; dy <= radius; dy++)
-            {
-                for (int dx = -radius; dx <= radius; dx++)
-                    offsets.Add((dx, dy));
-            }
+        /// <summary>
+        /// Erosion by a square of half-width <paramref name="radius"/>. A pixel survives only when every pixel in the
+        /// square is on and the square lies fully inside the image (outside counts as off). A square is separable, so
+        /// a horizontal pass then a vertical pass equals the 2D result in O(width x height) instead of
+        /// O(width x height x (2r+1)^2).
+        /// </summary>
+        private static bool[] Erode(bool[] source, int width, int height, int radius) =>
+            SquarePass(SquarePass(source, width, height, radius, horizontal: true, erode: true),
+                width, height, radius, horizontal: false, erode: true);
 
-            return [.. offsets];
-        }
+        /// <summary>
+        /// Dilation by a square of half-width <paramref name="radius"/>: a pixel is on when any in-bounds pixel in the
+        /// square is on. Separable like <see cref="Erode"/>.
+        /// </summary>
+        private static bool[] Dilate(bool[] source, int width, int height, int radius) =>
+            SquarePass(SquarePass(source, width, height, radius, horizontal: true, erode: false),
+                width, height, radius, horizontal: false, erode: false);
 
-        private static bool[] Erode(bool[] source, int width, int height, (int dx, int dy)[] kernel)
+        /// <summary>
+        /// One 1-D pass of a separable square morphology along rows or columns, using a running count over each line
+        /// so the cost does not depend on <paramref name="radius"/>.
+        /// </summary>
+        private static bool[] SquarePass(bool[] source, int width, int height, int radius, bool horizontal, bool erode)
         {
             bool[] output = new bool[source.Length];
-            for (int y = 0; y < height; y++)
+            int lines = horizontal ? height : width;
+            int length = horizontal ? width : height;
+            int step = horizontal ? 1 : width;
+            int[] prefix = new int[length + 1];
+            for (int line = 0; line < lines; line++)
             {
-                int row = y * width;
-                for (int x = 0; x < width; x++)
+                int start = horizontal ? line * width : line;
+
+                // Counts off pixels when eroding (any off pixel kills the window), on pixels when dilating.
+                for (int i = 0; i < length; i++)
                 {
-                    if (!source[row + x])
-                        continue;
-
-                    bool keep = true;
-                    foreach ((int dx, int dy) in kernel)
-                    {
-                        int nx = x + dx;
-                        int ny = y + dy;
-                        if (nx < 0 || ny < 0 || nx >= width || ny >= height || !source[(ny * width) + nx])
-                        {
-                            keep = false;
-                            break;
-                        }
-                    }
-
-                    output[row + x] = keep;
+                    bool on = source[start + (i * step)];
+                    prefix[i + 1] = prefix[i] + ((erode ? !on : on) ? 1 : 0);
                 }
-            }
 
-            return output;
-        }
-
-        private static bool[] Dilate(bool[] source, int width, int height, (int dx, int dy)[] kernel)
-        {
-            bool[] output = new bool[source.Length];
-            for (int y = 0; y < height; y++)
-            {
-                int row = y * width;
-                for (int x = 0; x < width; x++)
+                for (int i = 0; i < length; i++)
                 {
-                    if (!source[row + x])
-                        continue;
-
-                    foreach ((int dx, int dy) in kernel)
-                    {
-                        int nx = x + dx;
-                        int ny = y + dy;
-                        if (nx >= 0 && ny >= 0 && nx < width && ny < height)
-                            output[(ny * width) + nx] = true;
-                    }
+                    int low = i - radius;
+                    int high = i + radius;
+                    bool value = erode
+                        ? low >= 0 && high < length && prefix[high + 1] - prefix[low] == 0
+                        : prefix[Math.Min(high, length - 1) + 1] - prefix[Math.Max(low, 0)] > 0;
+                    output[start + (i * step)] = value;
                 }
             }
 

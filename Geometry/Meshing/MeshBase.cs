@@ -527,28 +527,47 @@ namespace Geometry.Meshing
         {
             SortedSet<IFace> testedFaces = [];
             Dictionary<IFace, List<IFace>> PathCache = [];
-            return RecurseFacePath(ref testedFaces, this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
+            return RecurseFacePath(testedFaces, [], this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
         }
 
+        /// <summary>
+        /// Same search, using the caller's set of examined faces. Faces already in <paramref name="CheckedFaces"/> are not
+        /// entered, and every face the search examines is added to it by the time the call returns.
+        /// </summary>
         public List<IFace> FindFacesInPath(IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
             Dictionary<IFace, List<IFace>> PathCache = [];
-            return RecurseFacePath(ref CheckedFaces, this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
+            return RecurseFacePath(CheckedFaces, [], this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
+        }
+
+        /// <summary>
+        /// Adds a face to the tested set and, when it was not already there, records it in the journal so a caller can undo it.
+        /// </summary>
+        private static void MarkTested(SortedSet<IFace> testedFaces, List<IFace> addedFaces, IFace face)
+        {
+            if (testedFaces.Add(face))
+                addedFaces.Add(face);
         }
 
         /// <summary>
         /// Recursively search for the shortest path between two faces by walking adjacent faces whose shared edges meet a criteria function and whose faces meet a criteria function
         /// </summary>
-        /// <param name="testedFaces"></param>
+        /// <param name="testedFaces">Faces already examined. Shared by the whole search and only ever grows within one call, except that a
+        /// branch which finds the target hands its additions back (see <paramref name="addedFaces"/>)</param>
+        /// <param name="addedFaces">Journal of the faces newly added to <paramref name="testedFaces"/>, in order. A branch that
+        /// finds the target must not leave its faces visible to its sibling branches, so the parent removes everything
+        /// journaled since the branch began, then adds them back after all siblings have run. A branch that fails keeps its
+        /// additions, so later siblings skip those faces. This replaces copying the set for every branch with the same visibility.</param>
         /// <param name="mesh"></param>
         /// <param name="Origin"></param>
         /// <param name="IsMatch"></param>
         /// <param name="PathCache">Contains a lookup table of the shortest route to the target for each face</param>
-        /// <returns></returns>
-        private static List<IFace> RecurseFacePath(ref SortedSet<IFace> testedFaces, MeshBase<VERTEX> mesh, IFace Origin, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
+        /// <returns>The path from Origin to a face that matches, or null. When several branches succeed, the first
+        /// (in face sort order) of the shortest ones wins.</returns>
+        private static List<IFace> RecurseFacePath(SortedSet<IFace> testedFaces, List<IFace> addedFaces, MeshBase<VERTEX> mesh, IFace Origin, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
         {
             //System.Diagnostics.Trace.WriteLine(Origin.ToString());
-            testedFaces.Add(Origin);
+            MarkTested(testedFaces, addedFaces, Origin);
 
             List<IFace> path =
             [
@@ -576,11 +595,11 @@ namespace Geometry.Meshing
                 //Check if the face can be part of the path, if not don't bother investigating this route
                 if (!CanBePartOfPath(adjacentFace))
                 {
-                    testedFaces.Add(adjacentFace);
+                    MarkTested(testedFaces, addedFaces, adjacentFace);
                     return null;
                 }
 
-                List<IFace> result = RecurseFacePath(ref testedFaces, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
+                List<IFace> result = RecurseFacePath(testedFaces, addedFaces, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
                 if (result is null)
                     return null;
 
@@ -591,7 +610,7 @@ namespace Geometry.Meshing
             else
             {
                 List<List<IFace>> listPotentialPaths = new(untestedFaces.Count);
-                SortedSet<IFace> AllBranchesTested = [];
+                List<IFace> AllBranchesTested = [];
                 foreach (IFace adjacentFace in untestedFaces)
                 {
                     if (testedFaces.Contains(adjacentFace))
@@ -600,33 +619,48 @@ namespace Geometry.Meshing
                     //Check if the face can be part of the path, if not don't bother investigating this route
                     if (!CanBePartOfPath(adjacentFace))
                     {
-                        testedFaces.Add(adjacentFace);
+                        MarkTested(testedFaces, addedFaces, adjacentFace);
                         continue;
                     }
 
-                    SortedSet<IFace> testedFacesCopy = [.. testedFaces];
-                    List<IFace> result = RecurseFacePath(ref testedFacesCopy, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
+                    int branchStart = addedFaces.Count;
+                    List<IFace> result = RecurseFacePath(testedFaces, addedFaces, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
                     if (result is null)
                     {
-                        //We know none of the faces lead to the target so don't bother checking them again
-                        testedFaces.UnionWith(testedFacesCopy);
+                        //We know none of the faces lead to the target so don't bother checking them again.
+                        //The branch's additions stay in testedFaces, which is what the next sibling must see.
                         continue;
                     }
 
-                    AllBranchesTested.UnionWith(testedFacesCopy);
+                    //A branch that reaches the target is independent of its siblings: hide its faces until they have all run
+                    for (int iAdded = branchStart; iAdded < addedFaces.Count; iAdded++)
+                    {
+                        testedFaces.Remove(addedFaces[iAdded]);
+                        AllBranchesTested.Add(addedFaces[iAdded]);
+                    }
+
+                    addedFaces.RemoveRange(branchStart, addedFaces.Count - branchStart);
                     listPotentialPaths.Add(result);
                 }
 
                 //Add the faces we tested so we don't check again
-                testedFaces.UnionWith(AllBranchesTested);
+                foreach (IFace tested in AllBranchesTested)
+                {
+                    MarkTested(testedFaces, addedFaces, tested);
+                }
 
                 //If no paths lead to destination, return null. 
                 if (listPotentialPaths.Count == 0)
                     return null;
 
-                //Otherwise, select the shortest path
-                int MinDistance = listPotentialPaths.Select(L => L.Count).Min();
-                List<IFace> shortestPath = listPotentialPaths.First(L => L.Count == MinDistance);
+                //Otherwise, select the shortest path. Ties go to the earliest branch.
+                List<IFace> shortestPath = listPotentialPaths[0];
+                for (int iPath = 1; iPath < listPotentialPaths.Count; iPath++)
+                {
+                    if (listPotentialPaths[iPath].Count < shortestPath.Count)
+                        shortestPath = listPotentialPaths[iPath];
+                }
+
                 path.AddRange(shortestPath);
                 PathCache[Origin] = path;
                 return path;
@@ -639,7 +673,20 @@ namespace Geometry.Meshing
         /// <param name="face"></param>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public IFace[] AdjacentFaces(IFace face) => [.. face.Edges.SelectMany(e => this[e].Faces.Where(f => f.Equals(face) == false))];
+        public IFace[] AdjacentFaces(IFace face)
+        {
+            List<IFace> adjacent = new(face.Edges.Length * 2);
+            foreach (IEdgeKey e in face.Edges)
+            {
+                foreach (IFace f in this[e].Faces)
+                {
+                    if (f.Equals(face) == false)
+                        adjacent.Add(f);
+                }
+            }
+
+            return adjacent.ToArray();
+        }
 
         public abstract void SplitFace(IFace face);
 

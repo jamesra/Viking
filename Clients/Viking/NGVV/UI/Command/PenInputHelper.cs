@@ -297,9 +297,10 @@ namespace Viking.UI
         }
 
         /// <summary>
-        /// This constructor is used for test cases
+        /// This constructor is used for test cases. Default tolerance matches the
+        /// WebAnnotation Pen Simplify Threshold preference default (4 screen pixels).
         /// </summary>
-        /// <param name="simplifiedPathToleranceInPixels"></param>
+        /// <param name="simplifiedPathToleranceInPixels">Max screen-pixel drift from the stroke.</param>
         internal PenInputHelper(double simplifiedPathToleranceInPixels = 4.0)
         {
             AssignID();
@@ -307,6 +308,12 @@ namespace Viking.UI
             NumCurveInterpolations = Geometry.Global.NumCurveInterpolationPoints(false);
         }
 
+        /// <summary>
+        /// Live pen input. Pass the annotation Pen Simplify Threshold so stroke simplify
+        /// matches context-menu Simplify Shape and saved mask contours.
+        /// </summary>
+        /// <param name="Parent">Viewer that owns mouse/pen events and camera scale.</param>
+        /// <param name="simplifiedPathToleranceInPixels">Max screen-pixel drift from the stroke.</param>
         public PenInputHelper(Viking.UI.Controls.SectionViewerControl Parent, double simplifiedPathToleranceInPixels = 4.0) : this()
         {
             this.Parent = Parent;

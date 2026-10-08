@@ -439,13 +439,15 @@ namespace Viking
                 numMathProcs = 1;
 
             MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
-            bool MKLSuccess = Geometry.Global.TryUseNativeMKL();
-            if (MKLSuccess)
-                Console.WriteLine("Success loading MKL Library");
-            else
-            {
-                Console.WriteLine("Unable to load MKL Libarry");
-            }
+            bool MKLSuccess = Geometry.Global.TryUseNativeMKL(out string mathNetReport);
+
+            // Written to the startup log directly: Trace is stripped from Release builds, and a silent
+            // fall back to the managed provider makes the RBF fallback transform noticeably slower.
+            SynchronizedDebugWriter?.WriteLine(
+                $"{DateTime.Now:O} MathNet native linear algebra {(MKLSuccess ? "ENABLED" : "UNAVAILABLE (managed provider in use)")}, " +
+                $"MaxDegreeOfParallelism={MathNet.Numerics.Control.MaxDegreeOfParallelism}");
+            SynchronizedDebugWriter?.WriteLine(mathNetReport);
+            SynchronizedDebugWriter?.Flush();
         }
 
         private static ApplicationSettings? ShowLoginWindow(

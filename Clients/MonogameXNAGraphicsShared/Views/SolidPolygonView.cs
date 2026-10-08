@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -23,10 +24,21 @@ namespace VikingXNAGraphics
         /// </summary>
         bool _modelFailed;
 
+        /// <summary>
+        /// The mesh once it has been built, or null while it is building or if building failed.
+        /// </summary>
+        /// <remarks>
+        /// Callable from any thread. Once the mesh exists it is returned without taking <see cref="ModelRWLock"/>;
+        /// the lock only guards the transition from the background build task to <c>_meshModel</c>.
+        /// </remarks>
         PositionColorMeshModel meshModel
         {
             get
             {
+                PositionColorMeshModel built = Volatile.Read(ref _meshModel);
+                if (built is not null)
+                    return built;
+
                 try
                 {
                     ModelRWLock.EnterUpgradeableReadLock();
@@ -38,7 +50,7 @@ namespace VikingXNAGraphics
                     {
                         if (_modelTask is null)
                         {
-                            _modelTask = Task<PositionColorMeshModel>.Run(() => InitializeModel(InputPolygon, InputColor));
+                            _modelTask = Task<PositionColorMeshModel>.Run(() => InitializeTimedModel());
                         }
                         else if (_modelTask.IsFaulted || _modelTask.IsCanceled)
                         {
@@ -52,7 +64,7 @@ namespace VikingXNAGraphics
                             try
                             {
                                 ModelRWLock.EnterWriteLock();
-                                _meshModel = _modelTask.Result;
+                                Volatile.Write(ref _meshModel, _modelTask.Result);
                             }
                             finally
                             {
@@ -177,6 +189,58 @@ namespace VikingXNAGraphics
             {
                 _meshModel = InitializeModel(InputPolygon, InputColor);
                 _modelFailed = _meshModel is null;
+            }
+        }
+
+        /// <summary>
+        /// Raised once from the background build thread when the lazy triangulation finishes or fails.
+        /// The arguments are the time spent in <see cref="InitializeModel"/> (centering, Delaunay triangulation,
+        /// and conversion to a vertex mesh) and whether a mesh was produced. Set it before the first draw,
+        /// because the build starts when the mesh is first requested. Not raised when the view is built with
+        /// <c>LazyInit: false</c>.
+        /// </summary>
+        public Action<TimeSpan, bool> MeshBuildCompleted { get; set; }
+
+        /// <summary>
+        /// Raised from the background build thread just before triangulation begins, with the polygon being
+        /// triangulated. Pair with <see cref="MeshBuildCompleted"/> to detect a build that never finishes.
+        /// </summary>
+        public Action<Polygon> MeshBuildStarted { get; set; }
+
+        /// <summary>
+        /// Background build entry point: runs <see cref="InitializeModel"/> and reports its duration to
+        /// <see cref="MeshBuildCompleted"/> even when triangulation throws.
+        /// </summary>
+        private PositionColorMeshModel InitializeTimedModel()
+        {
+            long start = Stopwatch.GetTimestamp();
+            PositionColorMeshModel model = null;
+            try
+            {
+                try
+                {
+                    MeshBuildStarted?.Invoke(InputPolygon);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"SolidPolygonView.MeshBuildStarted handler failed: {ex.Message}");
+                }
+
+                start = Stopwatch.GetTimestamp();
+                model = InitializeModel(InputPolygon, InputColor);
+                return model;
+            }
+            finally
+            {
+                TimeSpan elapsed = TimeSpan.FromSeconds((Stopwatch.GetTimestamp() - start) / (double)Stopwatch.Frequency);
+                try
+                {
+                    MeshBuildCompleted?.Invoke(elapsed, model is not null);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"SolidPolygonView.MeshBuildCompleted handler failed: {ex.Message}");
+                }
             }
         }
 

@@ -104,6 +104,32 @@ namespace Geometry
         void MinimizeMemory();
     }
 
+    /// <summary>
+    /// A transform that builds its spatial indexes on first use and can start building them early, so the first query
+    /// does not pay for the build. Only worth calling for a transform that is about to be queried.
+    /// </summary>
+    public interface ISpatialIndexPrewarm
+    {
+        /// <summary>
+        /// Starts the build on the thread pool without waiting. The task completes when the indexes exist; callers usually
+        /// discard it. Queries made before then wait for the build in progress.
+        /// </summary>
+        Task PrewarmSpatialIndexAsync();
+    }
+
+    /// <summary>
+    /// A transform that can estimate the managed memory it holds, counting only the caches it has actually built. Used by
+    /// memory-budgeted caches; an estimate from element counts, not a measurement.
+    /// </summary>
+    public interface IMemoryEstimate
+    {
+        /// <summary>
+        /// Estimated bytes. Cheap, lock-free and safe to read while other threads use the transform; never builds anything.
+        /// A race with a build or <see cref="IMemoryMinimization.MinimizeMemory"/> only makes one reading stale.
+        /// </summary>
+        long EstimatedMemoryBytes { get; }
+    }
+
     public interface ITransformInfo
     {
         TransformBasicInfo Info { get; set; }
