@@ -470,7 +470,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!placementFinished && e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
             {
                 Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
-                Polygon clickedPolygon = ForegroundPointsContain(worldPos) ? FindPolygonContainingPoint(worldPos) : null;
+                Polygon clickedPolygon = ForegroundPointsContain(worldPos)
+                    ? FindPolygonViewContainingPoint(worldPos)?.InputPolygon
+                    : null;
                 if (clickedPolygon is not null)
                 {
                     selectedPolygon = clickedPolygon;
@@ -779,9 +781,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private SolidPolygonView FindPolygonViewContainingPoint(Geometry.Vector2 worldPos) =>
             segmentPolygonViews.FirstOrDefault(polygonView =>
                 polygonView?.InputPolygon != null && polygonView.InputPolygon.Covers(worldPos));
-
-        private Polygon FindPolygonContainingPoint(Geometry.Vector2 worldPos) =>
-            FindPolygonViewContainingPoint(worldPos)?.InputPolygon;
 
         /// <summary>
         /// Returns the point that contains the worldPos parameter.  Otherwise null
