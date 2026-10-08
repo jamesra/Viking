@@ -244,12 +244,68 @@ namespace GeometryTests
                 Assert.AreEqual(test.Expected, Intersection);
             }
 
+            //Collinear overlap endpoint order is unspecified and LineSegment equality is directed, so compare undirected.
             foreach (var test in IntersectionTests)
             {
-                var result = Primary.Intersects(test.Input, out var intersection);
+                var result = Primary.Intersects(test.Input, out IShape2D intersection);
                 Assert.IsTrue(result);
-                Assert.IsTrue(test.Expected.Equals(intersection));
+                Assert.AreEqual(ShapeType2D.Line, intersection.ShapeType);
+                Assert.IsTrue(((LineSegment)test.Expected).EquivalentUndirected((LineSegment)intersection),
+                    $"{test.Input}: expected {test.Expected}, got {intersection}");
             }
+        }
+
+        /// <summary>
+        /// Collinear segment pairs on a horizontal, vertical, or 45 degree line at volume-scale coordinates.
+        /// The intersection must match the overlap of the two parameter intervals: none when disjoint,
+        /// the shared point when they only touch, otherwise the overlap segment in either direction.
+        /// </summary>
+        [TestMethod]
+        public void CollinearOverlapMatchesIntervalOverlap()
+        {
+            //Endpoints cluster around one base value so shared endpoints and single-point touches are common,
+            //while the base spans the hundreds of thousands of pixels seen in real volume coordinates.
+            Gen<int[]> gen = from axis in Gen.Choose(0, 2)
+                             from c in Gen.Choose(-500000, 500000)
+                             from origin in Gen.Choose(-500000, 500000)
+                             from a1 in Gen.Choose(-8, 8)
+                             from a2 in Gen.Choose(-8, 8)
+                             from b1 in Gen.Choose(-8, 8)
+                             from b2 in Gen.Choose(-8, 8)
+                             where a1 != a2 && b1 != b2
+                             select new[] { axis, c, origin + a1, origin + a2, origin + b1, origin + b2 };
+
+            CoreCheck.Run(
+                Prop.ForAll(Arb.From(gen), v =>
+                {
+                    int axis = v[0];
+                    double c = v[1];
+                    Vector2 At(double t) => axis switch
+                    {
+                        0 => new Vector2(t, c),
+                        1 => new Vector2(c, t),
+                        _ => new Vector2(t, c + t),
+                    };
+
+                    LineSegment a = new(At(v[2]), At(v[3]));
+                    LineSegment b = new(At(v[4]), At(v[5]));
+                    double lo = Math.Max(Math.Min(v[2], v[3]), Math.Min(v[4], v[5]));
+                    double hi = Math.Min(Math.Max(v[2], v[3]), Math.Max(v[4], v[5]));
+
+                    bool intersects = a.Intersects(b, out IShape2D shape);
+                    if (lo > hi)
+                        return (!intersects).Label($"{a} x {b}: expected none, got {shape}");
+                    if (!intersects)
+                        return false.Label($"{a} x {b}: expected overlap [{lo}, {hi}], got none");
+                    if (lo == hi)
+                        return (shape.ShapeType == ShapeType2D.Point && (Vector2)shape == At(lo))
+                            .Label($"{a} x {b}: expected point {At(lo)}, got {shape}");
+
+                    return (shape.ShapeType == ShapeType2D.Line &&
+                            ((LineSegment)shape).EquivalentUndirected(new LineSegment(At(lo), At(hi))))
+                        .Label($"{a} x {b}: expected segment {At(lo)}-{At(hi)}, got {shape}");
+                }),
+                nameof(CollinearOverlapMatchesIntervalOverlap));
         }
 
 
