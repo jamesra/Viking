@@ -10,7 +10,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// Converts a SAM2 probability mask to world-space <see cref="Polygon"/>s.
     /// Each byte is a probability in 0–255. The contour is the logit-zero crossing
     /// at <see cref="SoftMaskIsoLevel"/>, interpolated between pixels.
-    /// Callers reduce vertex count with <c>MaskContourTolerancePixels</c> (one screen pixel).
+    /// Callers reduce vertex count with CreatedShapeSimplify (mask pixel-travel).
     /// This type does not simplify.
     /// </summary>
     internal static class SegmentationMaskPolygonizer

@@ -580,10 +580,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            toApply = AutoPolygonizeSelection.SimplifyProposal(
-                toApply,
-                AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample));
-
+            toApply = AutoPolygonizeSelection.SimplifyForCreatedShape(toApply, parent.Downsample);
             bool dbgApplied = LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent);
             // #region agent log
             SegmentationDiag.Log($"DIAG H14 Accept ApplyVolumePolygon survivor={survivorId} applied={dbgApplied}");
@@ -929,7 +926,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
                 int sectionNumber = parent.Section.Number;
                 double downsample = parent.Camera.Downsample;
-                double simplifyTolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample);
+                double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
 
                 stepTimer.Restart();
                 SegmentationDiag.Log("RunBatch CaptureSharedViewportAsync begin");
@@ -1844,7 +1841,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     circle,
                     sectionNumber,
                     downsample,
-                    AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample),
+                    AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample),
                     foreground,
                     background,
                     response,
@@ -2368,33 +2365,68 @@ namespace WebAnnotation.UI.AutoPolygonize
                         "auto-overlap-group", involved, parentId, visibleForPrompts, foreground, background));
                     SegmentationDiag.Log($"auto-overlap-group boxes={foregroundBoxes.Count} clicks={foreground.Count}");
 
+                    // Snapshot before the remask: OR keeps every original footprint even when the
+                    // group SegmentAsync returns NO_MATCHING_MASK or a partial remask.
+                    List<Polygon> originalPolygons = [.. promptPolygons];
+                    List<AutoPolygonizeMaskOverlay?> originalMasks = [.. members.Select(member => member.MaskOverlay)];
+
                     var response = await session.SegmentAsync(
                         foreground,
                         background,
                         processToken,
                         foregroundBoxes,
                         (ulong)job.Ticket).ConfigureAwait(false);
-                    if (response is null)
+                    if (processToken.IsCancellationRequested)
                         return;
 
                     if (!locationIds.All(IsGroupMemberValid))
                         return;
 
-                    double simplifyTolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(parent.Downsample);
-                    (Polygon? Polygon, AutoPolygonizeMaskOverlay? Mask) processed = await Task.Run(() =>
+                    double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
+                    (Polygon? Remask, AutoPolygonizeMaskOverlay? RemaskOverlay) remask = (null, null);
+                    if (response is not null)
                     {
-                        IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
-                            response,
-                            preserveHolesContainingWorldPoints: background,
-                            keepComponentsContainingWorldPoints: foreground);
-                        Polygon? first = polygons.FirstOrDefault();
-                        if (first is null)
-                            return ((Polygon?)null, (AutoPolygonizeMaskOverlay?)null);
+                        remask = await Task.Run(() =>
+                        {
+                            IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
+                                response,
+                                preserveHolesContainingWorldPoints: background,
+                                keepComponentsContainingWorldPoints: foreground);
+                            Polygon? first = polygons.FirstOrDefault();
+                            if (first is null)
+                                return ((Polygon?)null, (AutoPolygonizeMaskOverlay?)null);
 
-                        return (
-                            AutoPolygonizeSelection.SimplifyProposal(first, simplifyTolerance),
-                            AutoPolygonizeMaskOverlay.TryCreate(session, response));
-                    }).ConfigureAwait(false);
+                            return (
+                                AutoPolygonizeSelection.SimplifyProposal(first, simplifyTolerance),
+                                AutoPolygonizeMaskOverlay.TryCreate(session, response));
+                        }).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        SegmentationDiag.Log(
+                            $"auto-overlap-group remask missing ids=[{string.Join(",", locationIds)}]; " +
+                            "OR of original sibling masks will still publish");
+                    }
+
+                    Vector2 unionKeepPoint = originalPolygons.Count > 0
+                        ? originalPolygons[0].Centroid
+                        : foreground[0];
+
+                    List<Polygon?> unionInputs = [.. originalPolygons];
+                    if (remask.Remask is not null)
+                        unionInputs.Add(remask.Remask);
+
+                    Polygon? merged = await Task.Run(() =>
+                        AutoPolygonizeSelection.UnionPolygons(unionInputs, unionKeepPoint)).ConfigureAwait(false);
+                    if (merged is not null)
+                        merged = AutoPolygonizeSelection.SimplifyProposal(merged, simplifyTolerance);
+
+                    AutoPolygonizeMaskOverlay? mergedMask = AutoPolygonizeMaskOverlay.TryOr(
+                        [.. originalMasks, remask.RemaskOverlay]);
+
+                    SegmentationDiag.Log(
+                        $"auto-overlap-group OR originals={originalPolygons.Count} remask={(remask.Remask is null ? "none" : $"area={remask.Remask.Area:F0}")} " +
+                        $"merged={(merged is null ? "null" : $"area={merged.Area:F0}")} mask={(mergedMask is null ? "none" : $"{mergedMask.Width}x{mergedMask.Height}")}");
 
                     var dispatcher = Viking.UI.State.MainThreadDispatcher;
                     if (dispatcher is null)
@@ -2407,14 +2439,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                         if (processToken.IsCancellationRequested || !locationIds.All(IsGroupMemberValid))
                             return;
 
-                        Polygon? polygon = processed.Polygon;
+                        Polygon? polygon = merged;
                         if (polygon is not null)
                         {
                             LocationObj? keepLocation = Store.Locations.GetObjectByID(locationIds[0], false);
+                            Vector2 keepPoint = keepLocation?.VolumePosition ?? unionKeepPoint;
                             polygon = CarveAgainstExistingPolygons(
                                 polygon,
                                 locationIds,
-                                keepLocation?.VolumePosition ?? polygon.Centroid,
+                                keepPoint,
                                 parentId);
                         }
 
@@ -2441,7 +2474,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                                 AutoPolygonizeProposal.ColorForLocation(locationIds[0]),
                                 circleRadius,
                                 downsample),
-                            processed.Mask,
+                            mergedMask,
                             locationIds,
                             parentId,
                             overlapRound,

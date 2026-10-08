@@ -714,6 +714,10 @@ namespace Viking.UI.Controls
                 if (this.Parent is Form hostForm)
                     hostForm.MainMenuStrip = this.menuStrip;
 
+                // Zoom / Home live on the viewer tool strip; create it before overlays so
+                // annotation toggles append after the magnification buttons.
+                EnsureViewerToolStrip();
+
                 // Re-home a tool strip created before Parent existed (overlay attach race).
                 if (_viewerToolStrip is not null && this.Parent is not null &&
                     _viewerToolStrip.Parent != this.Parent)

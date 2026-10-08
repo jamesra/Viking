@@ -217,7 +217,7 @@ namespace WebAnnotation.UI.Commands
             "Escape Key: Cancel command",
             "Page up/down key: Change Magnification",
             "Arrow key: Move view",
-            "Home key: Round magnification to whole number"
+            "Home key: Round magnification to nearest power of 2"
             ];
 
         //protected List<Geometry.Vector2> vert_stack = new List<Geometry.Vector2>();
@@ -241,7 +241,7 @@ namespace WebAnnotation.UI.Commands
 #endif
 
             parent.Cursor = Cursors.Cross;
-            PenInput = new Viking.UI.PenInputHelper(parent);
+            PenInput = new Viking.UI.PenInputHelper(parent, Global.PenSimplifyThreshold);
             //Ensure any pen subscriptions are released in the OnDeactivate call
             System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Subscribed to events");
             PenInput.OnPathChanged += OnPenPathChanged;

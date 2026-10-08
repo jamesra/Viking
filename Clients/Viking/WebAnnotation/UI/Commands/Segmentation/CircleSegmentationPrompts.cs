@@ -320,16 +320,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Prompt for several overlapping polygons of one structure: SAM2 takes one box per call.
-        /// <paramref name="Box"/> is the bounding box of the largest polygon, or null when none qualifies.
+        /// <paramref name="Box"/> is an inscribed seed square inside the largest polygon (same
+        /// sizing as a circle's inscribed square relative to its AABB). A full proposal AABB is
+        /// wrong: the server requires the mask to cover 95% of the box and extend past it, so a
+        /// tight remask of an already-complete footprint always returns <c>NO_MATCHING_MASK</c>.
         /// <paramref name="Foreground"/> holds one interior click per polygon, the largest included.
         /// </summary>
         public readonly record struct GroupPrompt(IReadOnlyList<Vector2> Foreground, Rectangle? Box);
 
         /// <summary>
-        /// One SAM2 box and one click per polygon. The largest polygon (by area) supplies the box;
-        /// every polygon, the largest included, supplies a single click inside it. Many boundary clicks
-        /// in one prompt (the old 17 per polygon) made SAM2 return a smaller mask than fewer clicks did.
-        /// Polygons with no interior point, or degenerate rings, are skipped.
+        /// One SAM2 seed box and one click per polygon. The largest polygon (by area) supplies an
+        /// inscribed seed square centered on its interior click; every polygon supplies one click.
+        /// Many boundary clicks in one prompt (the old 17 per polygon) made SAM2 return a smaller
+        /// mask than fewer clicks did. Polygons with no interior point, or degenerate rings, are skipped.
         /// </summary>
         public static GroupPrompt CreateGroupPromptFromPolygons(IEnumerable<Polygon> polygons)
         {
@@ -352,11 +355,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (polygon.Area > largestArea)
                 {
                     largestArea = polygon.Area;
-                    box = polygon.BoundingBox;
+                    box = InscribedSeedBox(polygon.BoundingBox, click.Value);
                 }
             }
 
             return new GroupPrompt(clicks, box);
+        }
+
+        /// <summary>
+        /// Axis-aligned square centered on <paramref name="center"/> with the same size ratio as
+        /// <see cref="TryCreateStartingPrompt"/>'s inscribed square for a circle whose AABB is
+        /// <paramref name="boundingBox"/> (half-side = min(width,height) / (2√2)).
+        /// </summary>
+        internal static Rectangle? InscribedSeedBox(Rectangle boundingBox, Vector2 center)
+        {
+            double half = Math.Min(boundingBox.Width, boundingBox.Height) / (2.0 * Math.Sqrt(2.0));
+            if (!(half > 0))
+                return null;
+
+            return new Rectangle(
+                new Vector2(center.X - half, center.Y - half),
+                new Vector2(center.X + half, center.Y + half));
         }
 
         /// <summary>

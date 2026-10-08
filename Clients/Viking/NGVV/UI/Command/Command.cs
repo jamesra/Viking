@@ -10,6 +10,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using Viking.Common;
+using Viking.UI;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 
@@ -242,7 +243,7 @@ namespace Viking.UI.Commands
             "Shift +/- key: Step up/down ten sections",
             "Page up/down key: Change Magnification",
             "Arrow key: Move view",
-            "Home key: Round magnification to whole number"
+            "Home key: Round magnification to nearest power of 2"
             ];
 
         public static string[] AllDefaultHelpStrings
@@ -813,7 +814,7 @@ namespace Viking.UI.Commands
                     this.Parent.Invalidate();
                     break;
                 case Keys.Home:
-                    Parent.Downsample = Math.Round(Parent.Downsample) < 1.0 ? 0.5 : Math.Round(Parent.Downsample);
+                    Parent.Downsample = ViewerMagnificationSteps.NearestPowerOfTwo(Parent.Downsample);
                     this.Parent.Invalidate();
                     break;
             }

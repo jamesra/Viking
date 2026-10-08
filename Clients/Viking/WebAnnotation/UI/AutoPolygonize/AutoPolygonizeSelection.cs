@@ -169,45 +169,52 @@ namespace WebAnnotation.UI.AutoPolygonize
             => annotationOrNull ?? proposalOrNull;
 
         /// <summary>
-        /// Screen pixels the preview outline may leave the contour. One pixel tracked
-        /// mask noise; two drops that wiggle and still follows the membrane.
+        /// Screen-pixel travel for autoseg preview rings and saved mask shapes. Tight enough
+        /// that the Catmull ring tracks the mask; pen strokes use
+        /// <see cref="Global.PenSimplifyThreshold"/> instead.
         /// </summary>
-        internal const double MaskContourTolerancePixels = 2.0;
+        internal const double CreatedShapeSimplifyPixels = 2.0;
 
         /// <summary>
-        /// Screen pixels a saved mask shape may leave the contour. Matches the pen
-        /// simplify default, which is tight enough to keep membrane lobes.
-        /// </summary>
-        internal const double CreatedShapeSimplifyPixels = 8.0;
-
-        /// <summary>
-        /// World-unit form of <see cref="MaskContourTolerancePixels"/> at the current view scale.
-        /// </summary>
-        public static double MaskContourToleranceWorld(double downsample) =>
-            MaskContourTolerancePixels * (downsample > 0 ? downsample : 1);
-
-        /// <summary>
-        /// World-unit form of <see cref="CreatedShapeSimplifyPixels"/> at the current view scale.
-        /// Applied when a proposal or segmentation polygon is written to a location.
+        /// World-unit pixel-travel for autoseg rings (preview and save).
         /// </summary>
         public static double CreatedShapeSimplifyWorld(double downsample) =>
             CreatedShapeSimplifyPixels * (downsample > 0 ? downsample : 1);
 
         /// <summary>
-        /// Douglas-Peucker on the mask contour, then a Catmull-Rom control-point fit so the
-        /// drawn curve stays within <paramref name="tolerance"/> of that polyline. Tolerance
-        /// is in world units (<see cref="MaskContourToleranceWorld"/>). Falls back to the
-        /// Douglas-Peucker ring when the curve fit self-intersects.
+        /// Single Catmull-Rom control-point fit at <see cref="CreatedShapeSimplifyWorld"/>.
+        /// Used for the pre-accept ring and for the polygon written on accept.
+        /// </summary>
+        public static Polygon SimplifyForCreatedShape(Polygon polygon, double downsample) =>
+            SimplifyProposal(polygon, CreatedShapeSimplifyWorld(downsample));
+
+        /// <summary>
+        /// Fits a CURVEPOLYGON to the mask contour within <paramref name="tolerance"/>.
+        /// Douglas-Peucker and Catmull-Rom each get half the budget so they do not stack to
+        /// ~2× drift (DP spent the full travel, then the curve fit spent it again).
+        /// Falls back to full-budget Douglas-Peucker when the curve fit fails.
         /// </summary>
         public static Polygon SimplifyProposal(Polygon polygon, double tolerance)
         {
-            Polygon simplified = SegmentationMaskPolygonizer.SimplifyRings(polygon, tolerance);
-            return FitCurveControlPoints(simplified, tolerance);
+            if (polygon is null || tolerance <= 0)
+                return polygon;
+
+            double stage = tolerance * 0.5;
+            Polygon reduced = SegmentationMaskPolygonizer.SimplifyRings(polygon, stage);
+            Polygon fitted = FitCurveControlPoints(reduced, stage);
+            if (fitted is not null &&
+                fitted.ExteriorRing.Length >= 4 &&
+                !fitted.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed))
+            {
+                return fitted;
+            }
+
+            return SegmentationMaskPolygonizer.SimplifyRings(polygon, tolerance);
         }
 
         /// <summary>
-        /// Replaces Douglas-Peucker vertices with Catmull-Rom control points so the drawn
-        /// curve, not only the control polygon, stays inside the tolerance.
+        /// Catmull-Rom control points whose interpolated curve stays within
+        /// <paramref name="tolerance"/> of <paramref name="polygon"/>.
         /// </summary>
         internal static Polygon FitCurveControlPoints(Polygon polygon, double tolerance)
         {
@@ -353,17 +360,30 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Merge when one ring nested-contains the other or their interiors cross.
-        /// Bare <see cref="ShapeRelation.Touching"/> (shared edge, no overlap) is not a sibling group.
-        /// Both directions are required because <see cref="ShapeRelation.Contained"/> is one-sided.
-        /// Used by <see cref="CollectOverlappingSameCellComponent"/>.
+        /// Merge when rings area-overlap. Uses <see cref="Polygon.Intersects"/> (the original
+        /// sibling-merge criterion) so noisy SAM2 rings still group when
+        /// <see cref="Polygon.GetRelation(in Polygon)"/> under-classifies the overlap.
+        /// Bare edge contact alone is not a sibling group.
         /// </summary>
         internal static bool ShouldGroupSiblingPolygons(Polygon a, Polygon b)
         {
             if (a is null || b is null)
                 return false;
 
-            return ShouldGroupSiblingRelation(a.GetRelation(b)) || ShouldGroupSiblingRelation(b.GetRelation(a));
+            if (!a.Intersects(b))
+                return false;
+
+            ShapeRelation ab = a.GetRelation(b);
+            ShapeRelation ba = b.GetRelation(a);
+            if (ShouldGroupSiblingRelation(ab) || ShouldGroupSiblingRelation(ba))
+                return true;
+
+            // Shared edge/vertex only: Intersects can still be true via segment contact.
+            if (ab == ShapeRelation.Touching || ba == ShapeRelation.Touching)
+                return false;
+
+            // Intersects without Contained/Intersecting/Touching — trust Intersects.
+            return true;
         }
 
         private static bool ShouldGroupSiblingRelation(ShapeRelation relation) =>
@@ -505,6 +525,68 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             return components;
+        }
+
+        /// <summary>
+        /// Boolean OR of proposal rings (SqlGeometry <c>STUnion</c>). Used when same-cell
+        /// siblings overlap: keep every original SAM2 footprint and any successful group
+        /// remask so a <c>NO_MATCHING_MASK</c> remask still yields one merged overlay.
+        /// Null/empty inputs are skipped. Returns null when nothing usable remains.
+        /// MultiPolygon results keep the part containing <paramref name="keepPoint"/>, else the largest.
+        /// </summary>
+        public static Polygon? UnionPolygons(
+            IEnumerable<Polygon?>? polygons,
+            Vector2? keepPoint = null)
+        {
+            if (polygons is null)
+                return null;
+
+            SqlGeometry? combined = null;
+            Polygon? lastGood = null;
+            try
+            {
+                foreach (Polygon? polygon in polygons)
+                {
+                    if (polygon is null)
+                        continue;
+
+                    SqlGeometry next;
+                    try
+                    {
+                        next = EnsureValid(polygon.ToSqlGeometry());
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Auto polygonize union skipped invalid geometry ({ex.Message})");
+                        continue;
+                    }
+
+                    if (next is null || next.IsNull || next.STIsEmpty().IsTrue)
+                        continue;
+
+                    if (combined is null || combined.IsNull || combined.STIsEmpty().IsTrue)
+                    {
+                        combined = next;
+                        lastGood = polygon;
+                        continue;
+                    }
+
+                    combined = EnsureValid(combined.STUnion(next));
+                    if (combined is null || combined.IsNull || combined.STIsEmpty().IsTrue)
+                        continue;
+
+                    Polygon? converted = TrySelectPolygonPart(combined, keepPoint);
+                    if (converted is not null)
+                        lastGood = converted;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Auto polygonize union failed: {ex.Message}");
+                return lastGood;
+            }
+
+            return lastGood;
         }
 
         /// <summary>

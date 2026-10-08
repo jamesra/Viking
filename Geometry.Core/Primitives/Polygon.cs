@@ -3217,37 +3217,33 @@ namespace Geometry
 
             walkedPoints.Add(end_index.Point(originPolygon));
 
-            //Add the intersection point of where we crossed the boundary 
-            //List<Vector2> SimplifiedPath = CurveSimplificationExtensions.DouglasPeuckerReduction(cutLine, Global.PenSimplifyThreshold);
-            //Since we start walking the polygon from the first intersection point we always add the cutline in reverse order to return to the cirst intersection point.
+            // Since we start walking the polygon from the first intersection point we always add the cutline in reverse order to return to the first intersection point.
             List<Vector2> SimplifiedPath = [.. cutLine.Reverse()];
+            Vector2 startPoint = start_index.Point(originPolygon);
 
-            //The intersection point marks where we enter the polygon.  The first point in the path is not added because it indicates where the line exited the cut region. 
-            //Add the PenInput.Path 
-
-            //Temp for debugging ///////////////
+            // Pen free-draw often places a cut vertex on (or within epsilon of) a ring vertex already on the walked arc,
+            // especially corners. Skip duplicates of the exit/entry endpoints; reject coincidence with an intermediate arc vertex.
             for (int iCut = 0; iCut < SimplifiedPath.Count; iCut++)
             {
-                Debug.Assert(walkedPoints.Contains(SimplifiedPath[iCut]) == false);
-                if (Vector2.DistanceSquared(SimplifiedPath[iCut], walkedPoints.Last()) <= Tolerance.EpsilonSquared)
-                {
-                    //int i = 5; //Temp for debugging
+                Vector2 cutPoint = SimplifiedPath[iCut];
+                if (Vector2.DistanceSquared(cutPoint, walkedPoints.Last()) <= Tolerance.EpsilonSquared)
                     continue;
+
+                // About to close onto start_index; a cut vertex that lands on the entry point is not a new ring vertex.
+                if (Vector2.DistanceSquared(cutPoint, startPoint) <= Tolerance.EpsilonSquared)
+                    continue;
+
+                if (walkedPoints.Contains(cutPoint))
+                {
+                    throw new ArgumentException(
+                        "Cut line coincides with a vertex already on the walked polygon arc. (Does the cutting line graze a corner?)");
                 }
 
-                walkedPoints.Add(SimplifiedPath[iCut]);
+                walkedPoints.Add(cutPoint);
             }
-            /////////////////////////////////////
-            //
-            //walkedPoints.AddRange(cutLine);
-#if DEBUG
-            //Ensure we do not have duplicates in our list
-            Vector2[] walkedPoints_noduplicates = walkedPoints.RemoveDuplicates();
-            Debug.Assert(walkedPoints_noduplicates.Length == walkedPoints.Count);
-#endif
 
             //Close the ring
-            walkedPoints.Add(start_index.Point(originPolygon));
+            walkedPoints.Add(startPoint);
 
             /*
             Debug.Assert(walkedPoints.ToArray().AreClockwise() == (direction == RotationDirection.Clockwise));

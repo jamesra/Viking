@@ -1148,7 +1148,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            polygons = SimplifyToMaskContour(polygons);
+            polygons = SimplifyPreviewRings(polygons);
 
             if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
                 return;
@@ -1213,7 +1213,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double? holeDropFraction = null,
             int? edgeCleanupRadius = null)
         {
-            IReadOnlyList<Polygon> polygons = SimplifyToMaskContour(viewportSession.CreatePolygonsFromResponse(
+            IReadOnlyList<Polygon> polygons = SimplifyPreviewRings(viewportSession.CreatePolygonsFromResponse(
                 response,
                 holeDropFraction,
                 lastSegmentationBackground,
@@ -1223,16 +1223,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Keeps the preview outline within two screen pixels of the mask contour.
-        /// The saved polygon is simplified further in <see cref="Execute"/>.
+        /// Preview rings use the same mask pixel-travel fit as the polygon written on accept
+        /// (<see cref="AutoPolygonizeSelection.SimplifyForCreatedShape"/>).
         /// </summary>
-        private IReadOnlyList<Polygon> SimplifyToMaskContour(IReadOnlyList<Polygon> polygons)
+        private IReadOnlyList<Polygon> SimplifyPreviewRings(IReadOnlyList<Polygon> polygons)
         {
             if (polygons is null || polygons.Count == 0)
                 return polygons;
 
-            double tolerance = AutoPolygonizeSelection.MaskContourToleranceWorld(Parent.Downsample);
-            return [.. polygons.Select(polygon => AutoPolygonizeSelection.SimplifyProposal(polygon, tolerance))];
+            return [.. polygons.Select(polygon =>
+                AutoPolygonizeSelection.SimplifyForCreatedShape(polygon, Parent.Downsample))];
         }
 
         /// <summary>
@@ -1433,14 +1433,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
-                Polygon savedPolygon = AutoPolygonizeSelection.SimplifyProposal(
+                Polygon savedPolygon = AutoPolygonizeSelection.SimplifyForCreatedShape(
                     selectedPolygon,
-                    AutoPolygonizeSelection.CreatedShapeSimplifyWorld(Parent.Downsample));
+                    Parent.Downsample);
                 this.Output = savedPolygon;
                 placementFinished = true;
                 this?.success_callback(savedPolygon);
-                // Create structure and location using the selected polygon
-                //CreateAnnotationFromPolygon(selectedPolygon);
 
                 // Clean up and deactivate
                 CleanupCommand();
@@ -1457,7 +1455,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Saves <paramref name="polygon"/> as a new polygon location. Called when Tab segmentation accepts a mask.
+        /// Saves <paramref name="polygon"/> as a new polygon location. Called when Tab
+        /// segmentation accepts a mask; <see cref="Execute"/> has already simplified once.
         /// <paramref name="type"/> null uses the structure selected in the list, or cell type 1.
         /// A type that requires a parent enqueues <see cref="LinkStructureToParentCommand"/> before the save.
         /// </summary>
@@ -1475,8 +1474,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
-                // Set the polygon geometry
-                // SetShapeFromGeometryInSection will transform the mosaic shape to volume coordinates
                 SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
                 newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, mosaicGeometry);
 
