@@ -373,11 +373,11 @@ namespace Viking
                 if (_items.Count < TextureRequestQueue.MaxWorkers)
                     return;
 
-                var sorted = _items
-                    .OrderBy(item => item.TileView != null && item.TileView.Bounds.Intersects(visibleBounds) ? 0 : 1)
-                    .ThenBy(item => Math.Abs((item.TileView?.Section ?? currentSectionZ) - currentSectionZ))
-                    .ThenByDescending(item => item.TileView?.Downsample ?? 0)
-                    .ToList();
+                var sorted = TextureLoadQueueSort.SortToList(
+                    _items,
+                    visibleBounds,
+                    currentSectionZ,
+                    item => item.TileView);
 
                 _items.Clear();
                 _items.AddRange(sorted);
