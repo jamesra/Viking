@@ -15,14 +15,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// or null when the response has no segments. Matches the previous
         /// <c>OrderByDescending(s =&gt; s.Score).First()</c> choice (stable tie-break on list order).
         /// </summary>
-        internal static SegmentationServiceTypes.SegmentResult? GetHighestScoringSegment(
+        /// <summary>
+        /// Segments from highest to lowest score, or empty when the response has none.
+        /// Tie-breaking matches <see cref="Enumerable.OrderByDescending{TSource, TKey}(IEnumerable{TSource}, Func{TSource, TKey})"/>.
+        /// </summary>
+        internal static IEnumerable<SegmentationServiceTypes.SegmentResult> GetSegmentsByDescendingScore(
             this SegmentationServiceTypes.SegmentationResponse? response)
         {
             if (response?.Segments is null || response.Segments.Count == 0)
-                return null;
+                yield break;
 
-            return response.Segments.OrderByDescending(segment => segment.Score).First();
+            foreach (SegmentationServiceTypes.SegmentResult segment in response.Segments.OrderByDescending(s => s.Score))
+                yield return segment;
         }
+
+        internal static SegmentationServiceTypes.SegmentResult? GetHighestScoringSegment(
+            this SegmentationServiceTypes.SegmentationResponse? response)
+            => response.GetSegmentsByDescendingScore().FirstOrDefault();
 
         /// <summary>
         /// Converts a protobuf Polygon to a Polygon by transforming viewport pixel coordinates to world coordinates

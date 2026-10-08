@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Linq;
 using Viking.gRPC.SegmentationServiceTypes.V1;
 using WebAnnotation.UI.Commands.Segmentation;
@@ -55,6 +56,23 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreSame(fromLinq, fromHelper);
             Assert.AreSame(firstTie, fromHelper);
+        }
+
+        [TestMethod]
+        public void GetSegmentsByDescendingScoreMatchesOrderByDescendingOnScores()
+        {
+            var response = new SegmentationResponse();
+            var low = new SegmentResult { Score = 0.1f, Index = 0 };
+            var mid = new SegmentResult { Score = 0.5f, Index = 1 };
+            var high = new SegmentResult { Score = 0.9f, Index = 2 };
+            response.Segments.Add(mid);
+            response.Segments.Add(high);
+            response.Segments.Add(low);
+
+            List<SegmentResult> fromHelper = [.. response.GetSegmentsByDescendingScore()];
+            List<SegmentResult> fromLinq = response.Segments.OrderByDescending(s => s.Score).ToList();
+
+            CollectionAssert.AreEqual(fromLinq, fromHelper);
         }
     }
 }

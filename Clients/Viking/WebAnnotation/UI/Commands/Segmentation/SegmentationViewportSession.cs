@@ -782,7 +782,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double dropFraction = holeDropFraction ?? WebAnnotation.Global.AnnotationSettings.SegmentationHoleDropFraction;
             int cleanupRadius = edgeCleanupRadius ?? WebAnnotation.Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
             List<Polygon> polygons = [];
-            foreach (var segment in response.Segments.OrderByDescending(s => s.Score))
+            foreach (var segment in response.GetSegmentsByDescendingScore())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 maskBytes += segment.Mask.Length;
