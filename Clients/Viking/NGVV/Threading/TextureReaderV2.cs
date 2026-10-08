@@ -23,8 +23,6 @@ class TextureReaderV2 : IDisposable
     readonly string CacheFilename = string.Empty;
     GraphicsDevice? graphicsDevice = null;
     private Texture2D? _Result = null;
-    private ManualResetEvent? DoneEvent = new(false);
-    public bool FinishedReading = false;
     //        public RefreshDelegate RefreshMethod; 
 
     public static int nextid = 0;
@@ -39,11 +37,6 @@ class TextureReaderV2 : IDisposable
 
     private bool _TextureNotFound = false;
 
-
-    static TextureReaderV2()
-    {
-
-    }
 
     /// <summary>
     /// TextureNotFound is set to true when we successfully communicated with the server and it did not have the requested texture
@@ -691,11 +684,7 @@ class TextureReaderV2 : IDisposable
             */
 
             this._Result = tex;
-            this.FinishedReading = true;
             graphicsDevice = null;
-
-            if (!IsDisposed)
-                DoneEvent.Set();
         }
         finally
         {
@@ -927,8 +916,6 @@ class TextureReaderV2 : IDisposable
             //Debug.Assert(_Result is null);
             _Result?.Dispose();
             _Result = null;
-            DoneEvent?.Close();
-            DoneEvent = null;
         }
         finally
         {
