@@ -48,10 +48,14 @@ namespace SqlGeometryUtilsTest
             AssertPosition(points[2], new Vector2(1, 1));
         }
 
+        /// <summary>
+        /// <see cref="Polygon"/> stores its exterior ring counter-clockwise and reverses a clockwise input,
+        /// so <c>ToPoints</c> must match the constructed polygon's ring, not the raw input array.
+        /// </summary>
         [TestMethod]
         public void IShape2D_Polygon_ToPoints_IsExteriorRing()
         {
-            Vector2[] ring =
+            Vector2[] clockwiseRing =
             [
                 new(-10, -10),
                 new(-10, 10),
@@ -59,11 +63,76 @@ namespace SqlGeometryUtilsTest
                 new(10, -10),
                 new(-10, -10)
             ];
-            IShape2D shape = new Polygon(ring);
-            Vector2[] points = shape.ToPoints();
-            Assert.AreEqual(ring.Length, points.Length);
-            for (int i = 0; i < ring.Length; i++)
-                AssertPosition(points[i], ring[i]);
+            Polygon polygon = new(clockwiseRing);
+            Vector2[] points = ((IShape2D)polygon).ToPoints();
+            Vector2[] exteriorRing = polygon.ExteriorRing;
+
+            Assert.AreEqual(exteriorRing.Length, points.Length);
+            for (int i = 0; i < exteriorRing.Length; i++)
+                AssertPosition(points[i], exteriorRing[i]);
+        }
+
+        [TestMethod]
+        public void IShape2D_Polygon_ToPoints_ClockwiseInputIsReversed()
+        {
+            Vector2[] clockwiseRing =
+            [
+                new(-10, -10),
+                new(-10, 10),
+                new(10, 10),
+                new(10, -10),
+                new(-10, -10)
+            ];
+            Vector2[] points = ((IShape2D)new Polygon(clockwiseRing)).ToPoints();
+
+            Assert.AreEqual(clockwiseRing.Length, points.Length);
+            for (int i = 0; i < clockwiseRing.Length; i++)
+                AssertPosition(points[i], clockwiseRing[clockwiseRing.Length - 1 - i]);
+        }
+
+        [TestMethod]
+        public void IShape2D_Polygon_ToPoints_CounterClockwiseInputIsKept()
+        {
+            Vector2[] counterClockwiseRing =
+            [
+                new(-10, -10),
+                new(10, -10),
+                new(10, 10),
+                new(-10, 10),
+                new(-10, -10)
+            ];
+            Vector2[] points = ((IShape2D)new Polygon(counterClockwiseRing)).ToPoints();
+
+            Assert.AreEqual(counterClockwiseRing.Length, points.Length);
+            for (int i = 0; i < counterClockwiseRing.Length; i++)
+                AssertPosition(points[i], counterClockwiseRing[i]);
+        }
+
+        [TestMethod]
+        public void IShape2D_Polygon_ToPoints_ExcludesInteriorRings()
+        {
+            Vector2[] exterior =
+            [
+                new(-10, -10),
+                new(10, -10),
+                new(10, 10),
+                new(-10, 10),
+                new(-10, -10)
+            ];
+            Vector2[] hole =
+            [
+                new(-5, -5),
+                new(5, -5),
+                new(5, 5),
+                new(-5, 5),
+                new(-5, -5)
+            ];
+            Polygon polygon = new(exterior, [hole]);
+            Vector2[] points = ((IShape2D)polygon).ToPoints();
+
+            Assert.AreEqual(polygon.ExteriorRing.Length, points.Length);
+            foreach (Vector2 p in points)
+                Assert.IsTrue(Math.Abs(p.X) == 10 || Math.Abs(p.Y) == 10, $"{p} is not on the exterior ring");
         }
 
         [TestMethod]
