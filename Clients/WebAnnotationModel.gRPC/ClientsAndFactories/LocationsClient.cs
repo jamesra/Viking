@@ -100,7 +100,9 @@ namespace WebAnnotationModel.gRPC
         }
     }
 
-    public interface ILocationsClient : IServerAnnotationsClient<long, ILocation, ILocation, ILocation>
+    public interface ILocationsClient :
+        IServerAnnotationsClient<long, ILocation, ILocation, ILocation>,
+        IServerAnnotationsBySectionClient<long, ILocation[]>
     {
         Task<ILocation[]> GetStructureLocations(long structureID);
 

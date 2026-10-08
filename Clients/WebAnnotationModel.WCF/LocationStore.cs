@@ -358,7 +358,7 @@ namespace WebAnnotationModel
             GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
             Location[] objects = new Location[0];
-            long QueryExecutedTime;
+            long QueryExecutedTime = 0;
             long[] deleted_objects = new long[0];
             AnnotateLocationsClient proxy = null;
             DateTime StartTime = DateTime.UtcNow;
@@ -393,6 +393,7 @@ namespace WebAnnotationModel
             }
 
             ProcessAnnotationSet(serverAnnotations, deleted_objects, StartTime, SectionNumber);
+            AdvanceLastQueryTimeForSection(SectionNumber, QueryExecutedTime);
 
             return SpatialSearch.Intersects(bounds, SectionNumber);
         }
@@ -510,6 +511,8 @@ namespace WebAnnotationModel
             }
 
             ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
+            // Seed/advance the section watermark from server time so the 30s full-section poll is incremental.
+            AdvanceLastQueryTimeForSection(state.SectionNumber, TicksAtQueryExecute);
 
             if (state.OnLoadCompletedCallBack != null)
             {

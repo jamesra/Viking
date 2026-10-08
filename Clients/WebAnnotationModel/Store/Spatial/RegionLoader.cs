@@ -228,6 +228,12 @@ namespace WebAnnotationModel
             return this.sectionPyramids.GetOrAdd(sectionNumber, (n) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
         }
 
+        /// <summary>
+        /// Drop the region pyramid after the object store evicts a section.
+        /// Warm LastQuery stamps would otherwise skip server refetch and leave an empty FOV.
+        /// </summary>
+        public void InvalidateSection(int sectionNumber) => sectionPyramids.TryRemove(sectionNumber, out _);
+
         /*
         private async Task ReportLocalObjectsInRegion(RegionRequestData<OBJECT> cell,
             IRegionPyramidLevel<RegionRequestData<OBJECT>> level, int sectionNumber, CancellationToken aToken,

@@ -848,9 +848,37 @@ namespace WebAnnotationModel
 
         #endregion
 
+        /// <summary>
+        /// Last successful section watermark, or DateTime.MinValue when unset.
+        /// Does not insert a dictionary entry — GetOrAdd(MinValue) inflated FreeExcessSections.
+        /// </summary>
         public DateTime GetLastQueryTimeForSection(long SectionNumber)
         {
-            return LastQueryForSection.GetOrAdd(SectionNumber, DateTime.MinValue);
+            return LastQueryForSection.TryGetValue(SectionNumber, out DateTime last) ? last : DateTime.MinValue;
+        }
+
+        /// <summary>
+        /// True while GetObjectsForSectionAsynch has an in-flight WCF request for this section.
+        /// The 30s visible-section poll skips those sections so it does not stack duplicate change queries.
+        /// </summary>
+        public bool HasOutstandingSectionQuery(long SectionNumber)
+        {
+            return OutstandingSectionQueries.ContainsKey(SectionNumber);
+        }
+
+        /// <summary>
+        /// Advances the section watermark when the server reports a later TicksAtQueryExecute.
+        /// Region/FOV loads use this because they do not participate in the full-section CAS below.
+        /// </summary>
+        protected void AdvanceLastQueryTimeForSection(long SectionNumber, long TicksAtQueryExecute)
+        {
+            if (TicksAtQueryExecute <= 0)
+                return;
+
+            LastQueryForSection.AddOrUpdate(
+                SectionNumber,
+                _ => new DateTime(TicksAtQueryExecute, DateTimeKind.Utc),
+                (_, existing) => SectionLocationPollPolicy.MergeWatermark(existing, TicksAtQueryExecute));
         }
 
         private bool TrySetLastQueryTimeForSection(long SectionNumber, long TicksAtQueryExecute, DateTime OldQueryExecuteTime)

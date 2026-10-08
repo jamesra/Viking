@@ -118,7 +118,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public new static string[] DefaultMouseHelpStrings =
         [
             "Left-click: Add foreground point (green)",
-            "Left-click inside polygon: Finalize and create annotation",
+            "Double-click a green point: Finalize and create annotation",
             "Middle-click: Remove nearest point",
             "Right-click: Add background point (red)",
             "Ctrl + Left-click: Delete foreground point",
@@ -132,7 +132,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             get
             {
                 List<string> s = [.. DefaultMouseHelpStrings, .. Viking.UI.Commands.Command.DefaultKeyHelpStrings];
-                s.Sort();
                 return [.. s];
             }
         }
@@ -327,8 +326,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Just null out the client reference
             grpcClient = null;
 
-            panZoomDebounceTimer?.Dispose();
-            panZoomDebounceTimer = null;
+            if (panZoomDebounceTimer is not null)
+            {
+                panZoomDebounceTimer.Stop();
+                panZoomDebounceTimer.Elapsed -= OnPanZoomDebounceElapsed;
+                panZoomDebounceTimer.Dispose();
+                panZoomDebounceTimer = null;
+            }
 
             uploadCancellationTokenSource?.Dispose();
             uploadCancellationTokenSource = null;
@@ -404,23 +408,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return anyRemoved;
         }
 
-        private void HandleForegroundPointAddition(Geometry.Vector2 worldPos)
+        /// <summary>
+        /// Left double-click finalizes: the click must land on a green point and inside a segmented polygon.
+        /// A single click on a green point only repeats the overlap check in <see cref="HandlePointAddition"/>
+        /// and changes nothing, so the first click of a double-click never adds a stray point.
+        /// </summary>
+        protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            //Check if we are clicking inside a foreground point
-            if (ForegroundPointsContain(worldPos))
+            if (e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
             {
-                // Check if clicking inside existing polygon to execute (finalize)
-                Polygon clickedPolygon = FindPolygonContainingPoint(worldPos);
-                if (clickedPolygon != null)
+                Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Polygon clickedPolygon = ForegroundPointsContain(worldPos) ? FindPolygonContainingPoint(worldPos) : null;
+                if (clickedPolygon is not null)
                 {
-                    //Check if the user has selected a foreground point
-
                     selectedPolygon = clickedPolygon;
                     Execute();
                     return;
                 }
             }
 
+            base.OnMouseDoubleClick(sender, e);
+        }
+
+        private void HandleForegroundPointAddition(Geometry.Vector2 worldPos)
+        {
             HandlePointAddition(foregroundPoints, worldPos);
         }
 
@@ -581,35 +592,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private void OnPanZoomDebounceElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            // User has stopped panning/zooming
-            // Recompute structure-type background points when visible set changes (replaces any previously derived points)
+            // System.Timers.Timer raises Elapsed on a thread-pool thread. The point lists, point views and camera
+            // are UI-thread state, so the whole settle runs as one queued UI action.
+            Viking.UI.State.MainThreadDispatcher?.BeginInvoke(new Action(SettlePromptsOnUiThread));
+        }
+
+        /// <summary>
+        /// UI-thread body of the pan/zoom settle. Skips quietly when the command was deactivated between the timer
+        /// firing and this action running: cleanup disposes the timer but cannot recall a queued action.
+        /// </summary>
+        private void SettlePromptsOnUiThread()
+        {
+            if (panZoomDebounceTimer is null || Deactivated || foregroundPointsView is null || backgroundPointsView is null)
+                return;
+
+            // Recompute structure-type background points when the visible set changes (replaces any previously derived points)
             if (structureTypeIdsForBackgroundPoints is not null && Parent.Scene is not null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                {
-                    backgroundPoints.Clear();
-                    AddBackgroundPointsFromStructureTypes(structureTypeIdsForBackgroundPoints, includedStructureIds, Parent.Scene);
-                    UpdatePointViews();
-                }));
+                backgroundPoints.Clear();
+                AddBackgroundPointsFromStructureTypes(structureTypeIdsForBackgroundPoints, includedStructureIds, Parent.Scene);
+                UpdatePointViews();
             }
 
-            // Only re-request segmentation if we have points and an uploaded image
-            if (foregroundPoints.Count > 0 || backgroundPoints.Count > 0)
-            {
-                double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
-                backgroundPointsView.PointRadius = pointRadius;
-                foregroundPointsView.PointRadius = pointRadius;
-                Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
-
-                // Must invoke on UI thread
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                    // RequestSegmentation will handle uploading if needed
-                    RequestSegmentation()));
-            }
-            else
+            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
             {
                 Debug.WriteLine("Viewport settled, no points present - no upload needed");
+                return;
             }
+
+            double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+            backgroundPointsView.PointRadius = pointRadius;
+            foregroundPointsView.PointRadius = pointRadius;
+            Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
+            RequestSegmentation();
         }
         #endregion
 

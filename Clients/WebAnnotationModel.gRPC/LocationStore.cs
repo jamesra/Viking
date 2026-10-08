@@ -35,6 +35,11 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
 
+        /// <summary>
+        /// Sections with an in-flight <see cref="RefreshSectionLocationsAsync"/> so the 30s poll does not stack duplicates.
+        /// </summary>
+        private readonly ConcurrentDictionary<long, byte> OutstandingSectionRefreshes = new ConcurrentDictionary<long, byte>();
+
         private readonly IStructureStore _structureStore;
         private readonly ILocationLinkStore _locationLinkStore;
 
@@ -107,8 +112,78 @@ namespace WebAnnotationModel.gRPC
             return false;
         }
 
+        /// <inheritdoc />
+        public DateTime GetLastQueryTimeForSection(long SectionNumber) =>
+            LastQueryForSection.TryGetValue(SectionNumber, out var last) ? last : DateTime.MinValue;
+
+        /// <inheritdoc />
+        public bool HasOutstandingSectionQuery(long SectionNumber) =>
+            OutstandingSectionRefreshes.ContainsKey(SectionNumber);
+
         internal void TouchSectionQueryTime(long sectionNumber) =>
-            LastQueryForSection.AddOrUpdate(sectionNumber, DateTime.UtcNow, (_, __) => DateTime.UtcNow);
+            AdvanceSectionQueryTime(sectionNumber, DateTime.UtcNow);
+
+        /// <summary>
+        /// Monotonic advance of the section watermark (server QueryExecutedTime preferred when available).
+        /// </summary>
+        internal void AdvanceSectionQueryTime(long sectionNumber, DateTime queryTimeUtc)
+        {
+            if (queryTimeUtc == DateTime.MinValue)
+                return;
+
+            LastQueryForSection.AddOrUpdate(
+                sectionNumber,
+                queryTimeUtc,
+                (_, existing) => SectionLocationPollPolicy.MergeWatermark(existing, queryTimeUtc.Ticks));
+        }
+
+        /// <inheritdoc />
+        public async Task RefreshSectionLocationsAsync(
+            long SectionNumber,
+            Action<ICollection<LocationObj>> onLoaded = null,
+            CancellationToken token = default)
+        {
+            if (!OutstandingSectionRefreshes.TryAdd(SectionNumber, 0))
+                return;
+
+            try
+            {
+                DateTime? modifiedAfter = null;
+                if (TryGetSectionQueryTime(SectionNumber, out DateTime lastQueryUtc))
+                    modifiedAfter = lastQueryUtc;
+
+                var client = _locationClientFactory.GetOrCreate();
+                var update = await client.GetAsync(SectionNumber, modifiedAfter, token).ConfigureAwait(false);
+                if (token.IsCancellationRequested)
+                    return;
+
+                ILocation[] locations = update.NewOrUpdated ?? Array.Empty<ILocation>();
+                await EnsureParentStructuresAsync(locations, token).ConfigureAwait(false);
+
+                var changes = await ServerQueryResultsHandler
+                    .ProcessServerUpdate(locations, update.DeletedIDs ?? Array.Empty<long>())
+                    .ConfigureAwait(false);
+                await CallOnCollectionChanged(changes).ConfigureAwait(false);
+                await OnServerObjectsLoaded(locations, update.QueryTime).ConfigureAwait(false);
+
+                AdvanceSectionQueryTime(SectionNumber, update.QueryTime);
+                onLoaded?.Invoke(changes.ObjectsInStore);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine(
+                    $"{nameof(RefreshSectionLocationsAsync)} failed for section {SectionNumber}: {e.Message}",
+                    nameof(WebAnnotationModel));
+            }
+            finally
+            {
+                OutstandingSectionRefreshes.TryRemove(SectionNumber, out _);
+            }
+        }
 
         internal async Task ApplyDeletedLocationIdsAsync(long[] ids)
         {
@@ -302,6 +377,10 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         public bool RemoveSection(long SectionNumber)
         {
+            // Region cells stamp LastQuery independently of the object store. Evicting locations
+            // without invalidating the pyramid leaves a warm empty FOV on the next visit.
+            Store.LocationsByRegion?.InvalidateSection((int)SectionNumber);
+
             LastQueryForSection.TryRemove(SectionNumber, out _);
             if (!SectionToLocations.TryRemove(SectionNumber, out var sectionObjects))
                 return true;
