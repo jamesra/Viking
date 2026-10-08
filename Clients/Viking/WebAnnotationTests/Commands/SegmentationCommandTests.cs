@@ -318,6 +318,18 @@ namespace WebAnnotationTests.Commands
             }
         }
 
+        [TestMethod]
+        public void ColorFromHsl_AutoPolygonizeLocationIdHue_Regression()
+        {
+            float hue = (float)((42L * 0.6180339887) % 1.0);
+            Microsoft.Xna.Framework.Color color = SegmentationDistinctColors.ColorFromHsl(hue, 0.80f, 0.70f, 0.92f);
+
+            Assert.AreEqual(239, color.R);
+            Assert.AreEqual(117, color.G);
+            Assert.AreEqual(148, color.B);
+            Assert.AreEqual(234, color.A);
+        }
+
         #endregion
 
         #region Tile grid

@@ -553,11 +553,12 @@ namespace WebAnnotation.UI.AutoPolygonize
             LocationObj location = Store.Locations.GetObjectByID(locationId, false);
             if (location?.Parent is { TypeID: 1 } cell)
             {
-                return ColorFromHsl(HueOf(cell.Color.ToXNAColor(1f)), RingSaturation, lightness, alpha);
+                return SegmentationDistinctColors.ColorFromHsl(
+                    HueOf(cell.Color.ToXNAColor(1f)), RingSaturation, lightness, alpha);
             }
 
             float hue = (float)((locationId * 0.6180339887) % 1.0);
-            return ColorFromHsl(hue, RingSaturation, lightness, alpha);
+            return SegmentationDistinctColors.ColorFromHsl(hue, RingSaturation, lightness, alpha);
         }
 
         /// <summary>
@@ -581,29 +582,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     : ((r - g) / delta) + 4f;
             hue /= 6f;
             return hue < 0f ? hue + 1f : hue;
-        }
-
-        private static Color ColorFromHsl(float hue, float saturation, float lightness, float alpha)
-        {
-            hue -= (float)Math.Floor(hue);
-            float q = lightness < 0.5f
-                ? lightness * (1 + saturation)
-                : lightness + saturation - lightness * saturation;
-            float p = 2 * lightness - q;
-            float r = HueToRgb(p, q, hue + 1f / 3f);
-            float g = HueToRgb(p, q, hue);
-            float b = HueToRgb(p, q, hue - 1f / 3f);
-            return new Color(r, g, b, alpha);
-        }
-
-        private static float HueToRgb(float p, float q, float t)
-        {
-            if (t < 0f) t += 1f;
-            if (t > 1f) t -= 1f;
-            if (t < 1f / 6f) return p + (q - p) * 6f * t;
-            if (t < 1f / 2f) return q;
-            if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f;
-            return p;
         }
     }
 }
