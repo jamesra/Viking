@@ -491,6 +491,9 @@ namespace Geometry
         /// <summary>
         /// Classifies <paramref name="seg"/> against this segment and reports the shared point or overlap.
         /// Contact at a single endpoint is Touching | Exterior: the rest of <paramref name="seg"/> lies off this segment.
+        /// A collinear <paramref name="seg"/> lying on this segment (identical, or a sub-segment, with or without a shared
+        /// endpoint) is Contained; a collinear overlap that reaches past this segment is Intersecting. The overlap's
+        /// endpoint order follows the endpoint scan (seg.A, seg.B, this.A, this.B), not this segment's direction.
         /// </summary>
         public ShapeRelation GetRelation(in LineSegment seg, out IShape2D Intersection)
         {
@@ -568,7 +571,9 @@ namespace Geometry
                     else if (endpointsOnLineCandidates.Length == 2)
                     {
                         Intersection = new LineSegment(endpointsOnLineCandidates[0], endpointsOnLineCandidates[1]);
-                        return ShapeRelation.Intersecting;
+                        // Both of seg's endpoints inside the overlap means seg lies on this segment (identical or sub-segment).
+                        bool segOnThis = endpointsOnLineCandidates.Contains(other.A) && endpointsOnLineCandidates.Contains(other.B);
+                        return segOnThis ? ShapeRelation.Contained : ShapeRelation.Intersecting;
                     }
                     else
                     {
