@@ -37,9 +37,6 @@ class TextureReaderV2 : IDisposable
 
     private bool IsDisposed = false;
 
-    static readonly System.Net.Cache.RequestCachePolicy HeaderCachePolicy = new(System.Net.Cache.RequestCacheLevel.Revalidate);
-    static readonly System.Net.Cache.RequestCachePolicy BodyCachePolicy = new(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
-
     private bool _TextureNotFound = false;
 
 
@@ -496,151 +493,6 @@ class TextureReaderV2 : IDisposable
     }
 
 
-    private async Task<Texture2D> HandleWebResponse(HttpWebResponse response)
-    {
-        {
-            //Trace.WriteLine("HandleWebResponse on thread #" + Thread.CurrentThread.ManagedThreadId.ToString());
-
-            if (response is null)
-            {
-                return null;
-            }
-
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                this.TextureNotFound = true;
-                return null;
-            }
-            else if (response.StatusCode != HttpStatusCode.OK)
-            {
-                return null;
-            }
-            else if (response.ContentLength < 0)
-            {
-                return null;
-            }
-            else if (Aborted)
-            {
-                return null;
-            }
-
-            /*
-            if (Aborted || IsDisposed)
-            {
-                if (BodyRequestState != null)
-                {
-                    //Trace.WriteLine("Ignoring EndGetServerResponse response for: " + this.Filename.ToString());
-                    BodyRequestState.Dispose();
-                    BodyRequestState = null;
-                    return;
-                }
-            }
-            */
-
-            try
-            {
-                //AsyncState state = this.BodyRequestState; //new AsyncState(this.Filename.ToString());
-
-                //state.response = response;
-                //state.databuffer = new byte[response.ContentLength];
-                //state.responseStream = response.GetResponseStream(); 
-
-                //BodyRequestState.response = response;
-                //Stream stream = response.GetResponseStream();
-
-                //BodyRequestState.databuffer = new byte[response.ContentLength];
-                //BodyRequestState.responseStream = response.GetResponseStream();
-
-                //I tried very hard to make async reads of the server response work. Unfortunately it always resulted in an access violation.  Data is now read synchronously.
-
-                //state.responseStream.BeginRead(state.databuffer, 0, (int)state.ReadRequestSize(), new AsyncCallback(this.EndReadResponseStream), state);
-
-                //Byte[] data = state.databuffer;
-
-
-                //Byte[] data = new byte[response.ContentLength];
-                Texture2D? result = null;
-                using (MemoryStream memStream = new())
-                {
-                    using (Stream stream = response.GetResponseStream())
-                    {
-                        if (Aborted)
-                            return null;
-
-                        if (stream is null)
-                            return null;
-
-                        stream.ReadTimeout = 60000;
-
-                        stream.CopyTo(memStream);
-                    }
-                    /*
-
-                    int BytesRead = 0;
-                    stream.ReadTimeout = 30000; //30 seconds to read a ~4Kx4K tile should be plenty of time.  The default was 300 seconds.
-                    while (BytesRead < response.ContentLength)
-                    {
-                        BytesRead += await stream.ReadAsync(data, BytesRead, (data.Length - BytesRead)).ConfigureAwait(false);
-                    }
-                    */
-
-                    //state.Dispose();
-                    Debug.Assert(graphicsDevice != null);
-                    result = await GetTextureFromStreamAsync(graphicsDevice, memStream).ConfigureAwait(false);
-
-                    if (CacheFilename != null && result != null)
-                    {
-                        memStream.Seek(0, SeekOrigin.Begin);
-                        await Global.TextureCache.AddAsync(CacheFilename, memStream);
-                    }
-                }
-
-                /*if (CacheFilename != null && result != null)
-                {
-                    using(Stream stream = response.GetResponseStream())
-                    {
-                        //stream.Seek(0, SeekOrigin.Begin);
-                        await Global.TextureCache.AddAsync(CacheFilename, stream);
-                    }
-                }*/
-
-                //data = null;
-                return result;
-            }
-            catch (WebException e)
-            {
-                ProcessTextureWebException(e);
-            }
-            catch (InvalidOperationException)
-            {
-                //TODO: There is an interaction with aborting requests where an corrupt version of the image ends up in the cache and continues to be used.  I have to 
-                //figure out how to flush that bad image out of the cache if this occurs. Currently the workaround is to never cache images
-
-
-                //Trace.WriteLine(e.Message, "TextureUse");
-
-            }
-            catch (ArgumentException e)
-            {
-                //Very rare, usually the result of a corrupt file
-                Trace.WriteLine("Unanticipated Argument Exception loading texture: " + response.ResponseUri.ToString(), "TextureUse");
-                Trace.WriteLine(e.Message, "TextureUse");
-
-                this.TextureNotFound = true;
-            }
-            catch (Exception e)
-            {
-                Trace.WriteLine("Unanticipated Exception loading texture: " + response.ResponseUri.ToString(), "TextureUse");
-                Trace.WriteLine(e.Message, "TextureUse");
-
-                throw;
-            }
-        }
-
-        return null;
-    }
-
-
     /// <summary>
     /// Set objects texture to Null, records if the server responds with 404 not found, prints helpful error message
     /// </summary>
@@ -684,22 +536,6 @@ class TextureReaderV2 : IDisposable
             Trace.WriteLine("Could not delete file: " + Filename);
             Trace.WriteLine(e.Message);
         }
-    }
-
-    private async Task<byte[]> StreamToBytesAsync(Stream stream, CancellationToken token)
-    {
-        byte[] data = new byte[stream.Length];
-        int bytesRead = 0;
-        while (bytesRead < stream.Length)
-        {
-            bytesRead += await stream.ReadAsync(data, bytesRead, (int)(stream.Length - bytesRead), token).ConfigureAwait(false);
-
-            if (token.IsCancellationRequested)
-                return null;
-            //Trace.WriteLineIf(bytesRead < stream.Length, "Not all bytes read on first try when loading filestream: " + this.CacheFilename);
-        }
-
-        return data;
     }
 
     /// <summary>
@@ -946,15 +782,6 @@ class TextureReaderV2 : IDisposable
         return tex;
     }
     */
-
-    protected Task<Texture2D> GetTextureFromBytesAsync(GraphicsDevice device, byte[] streamdata)
-    {
-        Debug.Assert(device != null);
-        //Trace.WriteLine("TextureFromStreamAsync: " + this.Filename.ToString()); 
-
-        using MemoryStream stream = new(streamdata);
-        return GetTextureFromTextureDataAsync(device, TextureDataFromStream(stream));
-    }
 
 
     protected async Task<Texture2D> GetTextureFromStreamAsync(GraphicsDevice device, Stream streamdata)
