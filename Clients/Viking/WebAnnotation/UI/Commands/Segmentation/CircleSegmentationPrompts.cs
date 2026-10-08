@@ -74,11 +74,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!(radius > 0))
                 return false;
 
-            double half = radius / Math.Sqrt(2.0);
+            Rectangle circleAabb = new(
+                new Vector2(center.X - radius, center.Y - radius),
+                new Vector2(center.X + radius, center.Y + radius));
+            Rectangle? seedBox = InscribedSeedBox(circleAabb, center);
+            if (seedBox is null)
+                return false;
+
             double reach = radius * StartingPointRadiusFraction;
-            Rectangle box = CenteredAxisAlignedSquare(center, half);
             prompt = new StartingPrompt(
-                box,
+                seedBox.Value,
                 [
                     new Vector2(center.X + reach, center.Y),
                     new Vector2(center.X, center.Y + reach),
