@@ -18,6 +18,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Polygons with three or more vertices on one exactly vertical or horizontal line, plus a vertex a fraction of a pixel off that line, now triangulate. Before, they could fail to draw filled, and segmentation fell back to a single centroid prompt for them.
 * Image tiles no longer stay blank for the rest of the session after a quick section change. A tile whose image was decoded but not yet shown when the section changed was never requested again.
 * An image tile whose cached copy on disk cannot be read (for example, file permissions deny reading it) is downloaded from the server again instead of staying blank.
+* Polygon area centroids at large mosaic coordinates (hundreds of thousands of pixels) no longer drift by tens of millipixels when the ring is stored closed; labels and geometry that use the centroid match the vertex mean again.
 
 ## 1.2.77 — 2026-09-30
 

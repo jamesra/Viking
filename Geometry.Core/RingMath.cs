@@ -59,13 +59,15 @@ namespace Geometry
 
             Vector2 first = ShiftedAt(ring, 0, shift);
             Vector2 last = ShiftedAt(ring, count - 1, shift);
-            if (first == last)
+            int divisor = count;
+            if (first == last && divisor > 1)
             {
                 mX -= first.X;
                 mY -= first.Y;
+                divisor--;
             }
 
-            return new Vector2(mX / (double)count, mY / (double)count);
+            return new Vector2(mX / divisor, mY / divisor);
         }
 
         /// <summary>
