@@ -74,9 +74,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!(radius > 0))
                 return false;
 
-            Rectangle circleAabb = new(
-                new Vector2(center.X - radius, center.Y - radius),
-                new Vector2(center.X + radius, center.Y + radius));
+            Rectangle circleAabb = CenteredAxisAlignedSquare(center, radius);
             Rectangle? seedBox = InscribedSeedBox(circleAabb, center);
             if (seedBox is null)
                 return false;
