@@ -123,6 +123,10 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="NumInterpolations">The number of points we would like returned between p1 and p2</param>
         /// <returns></returns>
+        /// <remarks>
+        /// Sample t values lie in [t1, t2], so only the p0-p1 and p1-p2 knots are needed here.
+        /// The p2-p3 knot (t3) is used only by the interpolation, which computes it itself.
+        /// </remarks>
         public static Vector2[] FitCurveSegment(in Vector2 p0, in Vector2 p1,
             in Vector2 p2, in Vector2 p3,
                                                     int NumInterpolations)
@@ -131,7 +135,6 @@ namespace Geometry
             double t0 = 0;
             double t1 = tj(t0, in p0, in p1, alpha);
             double t2 = tj(t1, in p1, in p2, alpha);
-            //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
 
             double[] tvalues = new double[NumInterpolations];
 
@@ -161,6 +164,10 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPointsArray">Fraction distances along curve between p1 & p2 to add points</param>
         /// <returns></returns>
+        /// <remarks>
+        /// Fractions map into [t1, t2], so only the p0-p1 and p1-p2 knots are needed here.
+        /// The p2-p3 knot (t3) is used only by the interpolation, which computes it itself.
+        /// </remarks>
         public static Vector2[] FitCurveSegment(in Vector2 p0, in Vector2 p1,
                                                     in Vector2 p2, in Vector2 p3,
                                                     double[] tPointsArray)
@@ -169,7 +176,6 @@ namespace Geometry
             double t0 = 0;
             double t1 = tj(t0, in p0, in p1, alpha);
             double t2 = tj(t1, in p1, in p2, alpha);
-            //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
 
             double[] tvalues = TScalarsToTValues(tPointsArray, t1, t2);
 
