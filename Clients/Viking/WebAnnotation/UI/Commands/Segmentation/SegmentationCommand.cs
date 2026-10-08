@@ -803,69 +803,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return packed.ToXNAColor(0.25f);
             }
 
-            return GenerateDistinctColor(index, total);
+            return SegmentationDistinctColors.GenerateDistinctColor(index, total);
         }
 
-        /// <summary>
-        /// Generates a distinct color for a segment based on its index
-        /// </summary>
-        /// <param name="index">Index of the segment</param>
-        /// <param name="total">Total number of segments</param>
-        /// <returns>A color with distinct hue</returns>
-        private Color GenerateDistinctColor(int index, int total)
-        {
-            // Distribute hues evenly across the color spectrum
-            float hue = (float)index / Math.Max(total, 1);
-            return ColorFromHSL(hue, 0.8f, 0.5f, 0.25f);
-        }
-
-        /// <summary>
-        /// Converts HSL color values to RGB Color
-        /// </summary>
-        /// <param name="hue">Hue value from 0.0 to 1.0</param>
-        /// <param name="saturation">Saturation value from 0.0 to 1.0</param>
-        /// <param name="lightness">Lightness value from 0.0 to 1.0</param>
-        /// <param name="alpha">Alpha value from 0.0 to 1.0</param>
-        /// <returns>RGB Color</returns>
-        private Color ColorFromHSL(float hue, float saturation, float lightness, float alpha)
-        {
-            // Ensure hue wraps around
-            hue = hue - (float)Math.Floor(hue);
-
-            float r, g, b;
-
-            if (saturation == 0)
-            {
-                // Achromatic (gray)
-                r = g = b = lightness;
-            }
-            else
-            {
-                float q = lightness < 0.5f
-                    ? lightness * (1 + saturation)
-                    : lightness + saturation - lightness * saturation;
-                float p = 2 * lightness - q;
-
-                r = HueToRGB(p, q, hue + 1f / 3f);
-                g = HueToRGB(p, q, hue);
-                b = HueToRGB(p, q, hue - 1f / 3f);
-            }
-
-            return new Color(r, g, b, alpha);
-        }
-
-        /// <summary>
-        /// Helper function for HSL to RGB conversion
-        /// </summary>
-        private float HueToRGB(float p, float q, float t)
-        {
-            if (t < 0f) t += 1f;
-            if (t > 1f) t -= 1f;
-            if (t < 1f / 6f) return p + (q - p) * 6f * t;
-            if (t < 1f / 2f) return q;
-            if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f;
-            return p;
-        }
         #endregion
 
         #region Server Image Upload/Delete

@@ -301,7 +301,7 @@ namespace WebAnnotationTests.Commands
             // Act - Generate distinct colors
             for (int i = 0; i < totalColors; i++)
             {
-                var color = GenerateDistinctColorHelper(i, totalColors);
+                var color = SegmentationDistinctColors.GenerateDistinctColor(i, totalColors);
                 colors.Add(color);
             }
 
@@ -316,50 +316,6 @@ namespace WebAnnotationTests.Commands
                     Assert.IsTrue(isDifferent, $"Colors at index {i} and {j} should be different");
                 }
             }
-        }
-
-        /// <summary>
-        /// Helper method that simulates GenerateDistinctColor logic from SegmentationCommand
-        /// </summary>
-        private Microsoft.Xna.Framework.Color GenerateDistinctColorHelper(int index, int total)
-        {
-            float hue = (float)index / System.Math.Max(total, 1);
-            return ColorFromHSL(hue, 0.8f, 0.5f, 0.25f);
-        }
-
-        private Microsoft.Xna.Framework.Color ColorFromHSL(float hue, float saturation, float lightness, float alpha)
-        {
-            hue = hue - (float)System.Math.Floor(hue);
-
-            float r, g, b;
-
-            if (saturation == 0)
-            {
-                r = g = b = lightness;
-            }
-            else
-            {
-                float q = lightness < 0.5f 
-                    ? lightness * (1 + saturation) 
-                    : lightness + saturation - lightness * saturation;
-                float p = 2 * lightness - q;
-
-                r = HueToRGB(p, q, hue + 1f / 3f);
-                g = HueToRGB(p, q, hue);
-                b = HueToRGB(p, q, hue - 1f / 3f);
-            }
-
-            return new Microsoft.Xna.Framework.Color(r, g, b, alpha);
-        }
-
-        private float HueToRGB(float p, float q, float t)
-        {
-            if (t < 0f) t += 1f;
-            if (t > 1f) t -= 1f;
-            if (t < 1f / 6f) return p + (q - p) * 6f * t;
-            if (t < 1f / 2f) return q;
-            if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f;
-            return p;
         }
 
         #endregion
