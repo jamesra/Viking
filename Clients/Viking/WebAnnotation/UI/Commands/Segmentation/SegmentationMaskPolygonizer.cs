@@ -56,34 +56,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int imageHeight,
             Rectangle viewportBounds,
             double holeDropFraction,
-            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints = null,
-            int edgeCleanupRadius = 0)
-        {
-            return CreatePolygons(
-                maskData,
-                maskWidth,
-                maskHeight,
-                offsetX,
-                offsetY,
-                imageWidth,
-                imageHeight,
-                viewportBounds,
-                holeDropFraction,
-                preserveHolesContainingWorldPoints,
-                edgeCleanupRadius,
-                out _);
-        }
-
-        public static IReadOnlyList<Polygon> CreatePolygons(
-            byte[] maskData,
-            int maskWidth,
-            int maskHeight,
-            int offsetX,
-            int offsetY,
-            int imageWidth,
-            int imageHeight,
-            Rectangle viewportBounds,
-            double holeDropFraction,
             IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
             int edgeCleanupRadius,
             out CleanupStats cleanupStats,
