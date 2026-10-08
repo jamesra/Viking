@@ -387,27 +387,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             => AreViewportBoundsSimilar(capturedBounds, currentBounds);
 
         /// <summary>
-        /// Maps world to capture-pixel space without a Y flip. SAM2 mask Y is flipped in <see cref="GetSegmentWorldBounds"/>.
-        /// </summary>
-        public Geometry.Vector2 WorldToViewport(Geometry.Vector2 worldPos, int viewportWidth, int viewportHeight)
-            => SegmentationExtensions.MapWorldToViewportPixel(
-                worldPos,
-                ViewportBounds,
-                viewportWidth,
-                viewportHeight);
-
-        /// <summary>
-        /// Inverse of <see cref="WorldToViewport"/>; pixel Y is not flipped here.
-        /// </summary>
-        public Geometry.Vector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
-            => SegmentationExtensions.MapViewportPixelToWorld(
-                pixelX,
-                pixelY,
-                ViewportBounds,
-                viewportWidth,
-                viewportHeight);
-
-        /// <summary>
         /// Cancels in-flight render, linked render, and upload tokens. Does not delete a server image.
         /// </summary>
         public void CancelPendingWork()
