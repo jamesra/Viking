@@ -587,6 +587,12 @@ class TextureReaderV2 : IDisposable
     {
         TextureRequestQueue.SetMaxWorkers(max);
     }
+
+    /// <summary>
+    /// Loads the tile: for http(s), the disk cache first, then the server when the cache yields nothing or its read
+    /// throws (the bad cache file is deleted first). The server is asked at most once per call. Returns null when
+    /// cancelled or nothing loaded; an exception from the fallback download propagates to the caller.
+    /// </summary>
     /// <param name="allowNetwork">
     /// When false, only attempt a disk cache read (no HTTP). Used by the disk fast-path so network work can take MaxWorkers separately.
     /// </param>
@@ -614,11 +620,15 @@ class TextureReaderV2 : IDisposable
 
             if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
             {
+                bool serverTried = false;
                 try
                 {
                     var texture = await TryLoadingFromDiskOnly(CacheFilename, token).ConfigureAwait(false);
                     if (texture is null && allowNetwork)
+                    {
+                        serverTried = true;
                         texture = await TryLoadingFromServer(this.Filename, token).ConfigureAwait(false);
+                    }
 
                     if (texture != null)
                         SetTexture(texture);
@@ -650,6 +660,15 @@ class TextureReaderV2 : IDisposable
                     Trace.WriteLine($"Problem loading cached tile {CacheFilename}, deleting and loading from server.\n{e}");
                     TryDeleteFile(CacheFilename);
                     //Continue and try to load from server
+                }
+
+                // Only a throw from the disk read falls back here; a throw after the download started is not retried.
+                if (allowNetwork && !serverTried)
+                {
+                    var texture = await TryLoadingFromServer(this.Filename, token).ConfigureAwait(false);
+                    if (texture != null)
+                        SetTexture(texture);
+                    return this._Result;
                 }
             }
             else
