@@ -44,18 +44,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// True when <paramref name="context"/> covers the same screen bounds (within 1%)
-        /// and was uploaded at the same resolved tile downsample as the live camera.
-        /// </summary>
-        public static bool CanReuse(in AutoPolygonizeUploadContext context, Rectangle liveBounds, double liveDownsample)
-        {
-            if (!context.MatchesSubmittedTileDownsample(liveDownsample))
-                return false;
-
-            return SegmentationViewportSession.AreViewportBoundsSimilar(context.WorldBounds, liveBounds);
-        }
-
-        /// <summary>
         /// Copies a finished upload into the lease shape. Null when the session never recorded tile or image dimensions.
         /// Downsample is the session mosaic level (resolved from camera), not a raw fractional zoom.
         /// </summary>
@@ -108,7 +96,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             ulong? releaseId = null;
             lock (gate)
             {
-                if (published is not { } current || CanReuse(current, liveBounds, liveDownsample))
+                if (published is not { } current || current.MatchesViewportForReuse(liveBounds, liveDownsample))
                     return;
 
                 published = null;
@@ -175,7 +163,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int generation;
             lock (gate)
             {
-                if (published is { } current && CanReuse(current, liveBounds, liveDownsample))
+                if (published is { } current && current.MatchesViewportForReuse(liveBounds, liveDownsample))
                     return Task.FromResult<AutoPolygonizeUploadContext?>(current);
 
                 if (inFlight is not null && InFlightMatches(liveBounds, liveDownsample))

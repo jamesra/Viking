@@ -22,8 +22,8 @@ namespace WebAnnotationTests.Commands
             Rectangle bounds = new(0, 1000, 0, 800);
             AutoPolygonizeUploadContext context = Context(7, 2, bounds);
 
-            Assert.IsTrue(SharedViewportImageLease.CanReuse(context, bounds, 2));
-            Assert.IsTrue(SharedViewportImageLease.CanReuse(context, new Rectangle(4, 1004, 0, 800), 1.5));
+            Assert.IsTrue(context.MatchesViewportForReuse(bounds, 2));
+            Assert.IsTrue(context.MatchesViewportForReuse(new Rectangle(4, 1004, 0, 800), 1.5));
         }
 
         [TestMethod]
@@ -32,7 +32,7 @@ namespace WebAnnotationTests.Commands
             Rectangle bounds = new(0, 1000, 0, 800);
             AutoPolygonizeUploadContext context = Context(7, 2, bounds);
 
-            Assert.IsFalse(SharedViewportImageLease.CanReuse(context, new Rectangle(20, 1020, 0, 800), 2));
+            Assert.IsFalse(context.MatchesViewportForReuse(new Rectangle(20, 1020, 0, 800), 2));
         }
 
         [TestMethod]
@@ -41,8 +41,8 @@ namespace WebAnnotationTests.Commands
             Rectangle bounds = new(0, 1000, 0, 800);
             AutoPolygonizeUploadContext atDs2 = Context(7, 2, bounds);
 
-            Assert.IsFalse(SharedViewportImageLease.CanReuse(atDs2, bounds, 1));
-            Assert.IsTrue(SharedViewportImageLease.CanReuse(atDs2, bounds, 4));
+            Assert.IsFalse(atDs2.MatchesViewportForReuse(bounds, 1));
+            Assert.IsTrue(atDs2.MatchesViewportForReuse(bounds, 4));
         }
 
         [TestMethod]

@@ -44,6 +44,17 @@ namespace WebAnnotation.UI.AutoPolygonize
             int submitted = SegmentationViewportSession.ResolveTileDownsample(liveCameraDownsample);
             return (int)Downsample == submitted;
         }
+
+        /// <summary>
+        /// True when this upload matches the live view: same resolved tile level and world bounds within 1%.
+        /// </summary>
+        public bool MatchesViewportForReuse(Rectangle liveBounds, double liveCameraDownsample)
+        {
+            if (!MatchesSubmittedTileDownsample(liveCameraDownsample))
+                return false;
+
+            return SegmentationViewportSession.AreViewportBoundsSimilar(WorldBounds, liveBounds);
+        }
     }
 
     /// <summary>

@@ -1756,7 +1756,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         uploadContext.WorldBounds,
                         uploadContext.Width,
                         uploadContext.Height);
-                    if (SharedViewportImageLease.CanReuse(uploadContext, viewBounds, downsample))
+                    if (uploadContext.MatchesViewportForReuse(viewBounds, downsample))
                         viewportImageLease.Publish(uploadContext);
                 }
                 else if (reuse)
@@ -1949,7 +1949,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (context is not { IsUsable: true } ready)
                 return null;
 
-            if (!SharedViewportImageLease.CanReuse(ready, GetCurrentViewportBounds(), GetCurrentDownsample()))
+            if (!ready.MatchesViewportForReuse(GetCurrentViewportBounds(), GetCurrentDownsample()))
             {
                 viewportImageLease.ForgetIfViewMoved(GetCurrentViewportBounds(), GetCurrentDownsample());
                 return null;
@@ -2302,7 +2302,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                                 upload.WorldBounds,
                                 upload.Width,
                                 upload.Height);
-                            if (SharedViewportImageLease.CanReuse(upload, GetCurrentViewportBounds(), downsample))
+                            if (upload.MatchesViewportForReuse(GetCurrentViewportBounds(), downsample))
                                 viewportImageLease.Publish(upload);
                             reused = true;
                             break;
