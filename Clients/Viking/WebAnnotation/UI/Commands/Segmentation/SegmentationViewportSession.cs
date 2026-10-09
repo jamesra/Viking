@@ -242,11 +242,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private static int EffectiveTileCeiling => ModelProfile.TileLevelCanChange ? MaxTileDownsample : 1;
 
         /// <summary>
-        /// Legacy name for <see cref="MaxTileDownsample"/>. Prefer the max name.
-        /// </summary>
-        public static int PinnedTileDownsample => MaxTileDownsample;
-
-        /// <summary>
         /// False when the live camera is coarser than
         /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
         /// Equality still submits. The preference is capped at DS 4 (default 2), so a camera at DS 5
