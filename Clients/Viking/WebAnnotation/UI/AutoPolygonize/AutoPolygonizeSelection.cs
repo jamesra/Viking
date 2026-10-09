@@ -256,15 +256,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Squared-distance compare so batch SegmentImage can run nearest-to-farthest from the view center.
-        /// Negative when <paramref name="a"/> is closer to <paramref name="center"/>.
-        /// </summary>
-        public static int CompareDistanceFromCenter(Vector2 a, Vector2 b, Vector2 center)
-        {
-            return Vector2.DistanceSquared(a, center).CompareTo(Vector2.DistanceSquared(b, center));
-        }
-
-        /// <summary>
         /// Stable nearest-first order around <paramref name="center"/>. Used by CollectEligibleCircles.
         /// Equal distances keep input order.
         /// </summary>

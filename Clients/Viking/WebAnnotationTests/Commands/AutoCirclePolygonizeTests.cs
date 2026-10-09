@@ -68,7 +68,6 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(onCenter, ordered[0]);
             Assert.AreEqual(near, ordered[1]);
             Assert.AreEqual(far, ordered[2]);
-            Assert.IsTrue(AutoPolygonizeSelection.CompareDistanceFromCenter(onCenter, far, center) < 0);
         }
 
         [TestMethod]
@@ -83,7 +82,6 @@ namespace WebAnnotationTests.Commands
                 position => position,
                 center);
 
-            Assert.AreEqual(0, AutoPolygonizeSelection.CompareDistanceFromCenter(right, left, center));
             Assert.AreEqual(right, ordered[0]);
             Assert.AreEqual(left, ordered[1]);
         }
