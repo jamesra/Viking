@@ -128,7 +128,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (liveDownsample > 0 &&
                         entry.ProposalDownsample is double completed &&
                         completed > 0 &&
-                        !SegmentationViewportSession.SameResolvedTileDownsample(liveDownsample, completed))
+                        !SegmentationViewportSession.StoredTileLevelMatchesLiveCamera(completed, liveDownsample))
                     {
                         return true;
                     }
@@ -211,7 +211,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         continue;
                     }
 
-                    if (SegmentationViewportSession.ResolveTileDownsample(completed) != liveResolvedTileDownsample)
+                    if ((int)completed != liveResolvedTileDownsample)
                     {
                         entry.ProposalLastModified = null;
                         entry.ProposalTypeCode = null;

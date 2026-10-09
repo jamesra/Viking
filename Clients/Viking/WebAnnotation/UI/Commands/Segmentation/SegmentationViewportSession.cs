@@ -317,10 +317,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Geometry.Rectangle liveBounds,
             double liveCameraDownsample)
         {
-            if (!StoredTileLevelMatchesLiveCamera(storedMosaicTileDownsample, liveCameraDownsample))
-                return false;
-
-            return AreViewportBoundsSimilar(storedBounds, liveBounds);
+            return ViewMatchesForReuseWhen(
+                StoredTileLevelMatchesLiveCamera(storedMosaicTileDownsample, liveCameraDownsample),
+                storedBounds,
+                liveBounds);
         }
 
         /// <summary>
@@ -333,10 +333,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Geometry.Rectangle liveBounds,
             double liveCameraDownsample)
         {
-            if (!SameResolvedTileDownsample(referenceCameraDownsample, liveCameraDownsample))
-                return false;
+            return ViewMatchesForReuseWhen(
+                SameResolvedTileDownsample(referenceCameraDownsample, liveCameraDownsample),
+                referenceBounds,
+                liveBounds);
+        }
 
-            return AreViewportBoundsSimilar(referenceBounds, liveBounds);
+        private static bool ViewMatchesForReuseWhen(
+            bool tileLevelsMatch,
+            Geometry.Rectangle a,
+            Geometry.Rectangle b)
+        {
+            return tileLevelsMatch && AreViewportBoundsSimilar(a, b);
         }
 
         /// <summary>
