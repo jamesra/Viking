@@ -183,7 +183,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Single Catmull-Rom control-point fit at <see cref="CreatedShapeSimplifyWorld"/>.
-        /// Used for the pre-accept ring and for the polygon written on accept.
+        /// Call once, when the mask contour becomes the ring drawn for the user.
+        /// Accept and segmentation submit persist that ring and must not call this again:
+        /// a second pass treats the control polygon as a new target and can move the boundary.
         /// </summary>
         public static Polygon SimplifyForCreatedShape(Polygon polygon, double downsample) =>
             SimplifyProposal(polygon, CreatedShapeSimplifyWorld(downsample));
