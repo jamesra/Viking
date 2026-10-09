@@ -34,6 +34,24 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
             ?? throw new InvalidOperationException("AppSettings:VolumeURL not configured");
     }
 
+    /// <summary>
+    /// Host used for StructureURL links in exported graphs. Prefer the annotation
+    /// endpoint so OData is derived by replacing Annotation with OData; fall back to
+    /// the configured OData URL, then the volume service root.
+    /// </summary>
+    private string GetAnnotationUrlForLinks()
+    {
+        string annotation = _configuration["AppSettings:AnnotationURL"];
+        if (!string.IsNullOrWhiteSpace(annotation))
+            return annotation;
+
+        string odata = _configuration["AppSettings:ODataURL"];
+        if (!string.IsNullOrWhiteSpace(odata))
+            return odata;
+
+        return GetVolumeUrl();
+    }
+
     private async Task<UnitsAndScale.Scale> GetOrFetchScaleAsync()
     {
         if (_cachedScale != null)
@@ -112,7 +130,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         {
             structure_graph.ToStickFigure();
         }
-        MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetVolumeUrl());
+        MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetAnnotationUrlForLinks());
         TlpGraph.SaveTLP(userOutputFileFullPath);
 
         return RedirectToFile(outputFile);
@@ -189,7 +207,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         {
             structure_graph.ToStickFigure();
         }
-        MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetVolumeUrl());
+        MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetAnnotationUrlForLinks());
         TlpGraph.SaveTLP(userOutputFileFullPath);
 
         return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);

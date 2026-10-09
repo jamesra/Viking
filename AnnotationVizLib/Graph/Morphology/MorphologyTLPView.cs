@@ -64,7 +64,7 @@ namespace AnnotationVizLib
             NodeAttribs.Add("StructureTags", ObjAttribute.AttributesToString(node.Graph.structure.TagsXML));
             NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.TagsXml));
 
-            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));
+            NodeAttribs.Add("StructureURL", ODataLinkBuilder.Location(this.VolumeURL, node.Location.ID));
 
             if (node.Graph.structureType != null)
                 NodeAttribs.Add("Type", node.Graph.structureType.Name);
