@@ -63,12 +63,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Copies a finished upload into the lease shape. Null when the session never recorded tile or image dimensions.
         /// Downsample is the session mosaic level (resolved from camera), not a raw fractional zoom.
         /// </summary>
-        public static AutoPolygonizeUploadContext? TryCreateContext(SegmentationViewportSession session, double downsample)
+        public static AutoPolygonizeUploadContext? TryCreateContext(SegmentationViewportSession session)
         {
             if (session is null || session.UploadedImageWidth <= 0 || session.UploadedImageHeight <= 0)
                 return null;
 
-            _ = downsample;
             Rectangle bounds = session.UploadedImageBounds ?? session.ViewportBounds;
             return new AutoPolygonizeUploadContext(
                 session.CurrentImageId ?? 0,

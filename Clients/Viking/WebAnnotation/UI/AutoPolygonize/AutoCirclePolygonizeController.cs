@@ -1256,7 +1256,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         circle.LastModified,
                         circle.TypeCode,
                         Store.Locations.GetObjectByID(circle.ID, false),
-                        TryCreateUploadContext(session, downsample),
+                        SharedViewportImageLease.TryCreateContext(session),
                         downsample));
                 if (!published)
                     return;
@@ -1825,7 +1825,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
 
                 downsample = GetCurrentDownsample();
-                AutoPolygonizeUploadContext? afterSegment = TryCreateUploadContext(session, downsample);
+                AutoPolygonizeUploadContext? afterSegment = SharedViewportImageLease.TryCreateContext(session);
                 if (afterSegment is { ImageId: not 0 } next &&
                     holdImageId is ulong held &&
                     held != next.ImageId)
@@ -1890,7 +1890,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 circle.LastModified,
                 circle.TypeCode,
                 Store.Locations.GetObjectByID(circle.ID, false),
-                TryCreateUploadContext(session, downsample),
+                SharedViewportImageLease.TryCreateContext(session),
                 downsample);
         }
 
@@ -1905,7 +1905,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             SegmentationViewportSession session,
             double downsample)
         {
-            AutoPolygonizeUploadContext? upload = TryCreateUploadContext(session, downsample);
+            AutoPolygonizeUploadContext? upload = SharedViewportImageLease.TryCreateContext(session);
             foreach (long id in locationIds)
             {
                 LocationObj loc = Store.Locations.GetObjectByID(id, false);
@@ -1919,9 +1919,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     downsample);
             }
         }
-
-        private static AutoPolygonizeUploadContext? TryCreateUploadContext(SegmentationViewportSession session, double downsample)
-            => SharedViewportImageLease.TryCreateContext(session, downsample);
 
         /// <summary>
         /// Reuses a viewport-similar upload or runs one capture shared with <see cref="SegmentationCommand"/>.
@@ -1971,7 +1968,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 session.ViewportBounds = viewBounds;
                 if (!await session.UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
                     return null;
-                return SharedViewportImageLease.TryCreateContext(session, downsample);
+                return SharedViewportImageLease.TryCreateContext(session);
             }
 
             return ready;
@@ -1990,7 +1987,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!await session.UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
                 return null;
 
-            return SharedViewportImageLease.TryCreateContext(session, downsample);
+            return SharedViewportImageLease.TryCreateContext(session);
         }
 
         /// <summary>Removes a proposal overlay. Cache membership and subscriptions stay with <see cref="AutoPolygonizeCache"/>.</summary>
@@ -2486,7 +2483,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                         PublishProposalOnUiThread(group, () =>
                         {
-                            AutoPolygonizeUploadContext? uploadContext = TryCreateUploadContext(session, downsample);
+                            AutoPolygonizeUploadContext? uploadContext = SharedViewportImageLease.TryCreateContext(session);
                             foreach (long id in locationIds)
                             {
                                 LocationObj loc = Store.Locations.GetObjectByID(id, false);
