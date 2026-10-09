@@ -532,6 +532,43 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void SecondSimplifyProposalPassIsNotTheRingAlreadyShown()
+        {
+            List<Vector2> ring = [];
+            const int samples = 80;
+            for (int i = 0; i < samples; i++)
+            {
+                double t = 2 * Math.PI * i / samples;
+                ring.Add(new Vector2(50 * Math.Cos(t), 30 * Math.Sin(t)));
+            }
+
+            ring.Add(ring[0]);
+            Polygon original = new(ring);
+            const double tolerance = 1.0;
+            Polygon once = AutoPolygonizeSelection.SimplifyProposal(original, tolerance);
+            Polygon twice = AutoPolygonizeSelection.SimplifyProposal(once, tolerance);
+
+            Assert.IsFalse(ExteriorRingsMatch(once, twice),
+                "Accept and segmentation submit must keep the ring already shown. A second simplify is a different polygon.");
+        }
+
+        private static bool ExteriorRingsMatch(Polygon left, Polygon right)
+        {
+            Vector2[] a = left.ExteriorRing;
+            Vector2[] b = right.ExteriorRing;
+            if (a.Length != b.Length)
+                return false;
+
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (Math.Abs(a[i].X - b[i].X) > 1e-6 || Math.Abs(a[i].Y - b[i].Y) > 1e-6)
+                    return false;
+            }
+
+            return true;
+        }
+
+        [TestMethod]
         public void SimplifyRingsCollapsesColinearEdgeSamples()
         {
             List<Vector2> ring = [];

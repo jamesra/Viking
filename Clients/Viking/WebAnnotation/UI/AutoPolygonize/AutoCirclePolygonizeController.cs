@@ -712,7 +712,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            toApply = AutoPolygonizeSelection.SimplifyForCreatedShape(toApply, parent.Downsample);
+            // The overlay ring was simplified once when the mask was polygonized. Carving may clip
+            // that ring; simplifying again would move the boundary the user accepted.
             bool dbgApplied = LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent);
             // #region agent log
             SegmentationDiag.Log($"DIAG H14 Accept ApplyVolumePolygon survivor={survivorId} applied={dbgApplied}");

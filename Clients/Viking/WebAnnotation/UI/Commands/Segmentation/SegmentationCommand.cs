@@ -1241,8 +1241,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Preview rings use the same mask pixel-travel fit as the polygon written on accept
-        /// (<see cref="AutoPolygonizeSelection.SimplifyForCreatedShape"/>).
+        /// One mask pixel-travel fit (<see cref="AutoPolygonizeSelection.SimplifyForCreatedShape"/>)
+        /// before the ring is drawn. <see cref="Execute"/> submits this polygon unchanged.
         /// </summary>
         private IReadOnlyList<Polygon> SimplifyPreviewRings(IReadOnlyList<Polygon> polygons)
         {
@@ -1465,12 +1465,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
-                Polygon savedPolygon = AutoPolygonizeSelection.SimplifyForCreatedShape(
-                    selectedPolygon,
-                    Parent.Downsample);
-                this.Output = savedPolygon;
+                // SimplifyPreviewRings already fit this ring. A second pass would move the boundary
+                // the user accepted, so the annotation store receives the polygon on screen.
+                this.Output = selectedPolygon;
                 placementFinished = true;
-                this?.success_callback(savedPolygon);
+                this?.success_callback(selectedPolygon);
 
                 // Clean up and deactivate
                 CleanupCommand();
@@ -1488,7 +1487,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Saves <paramref name="polygon"/> as a new polygon location. Called when Tab
-        /// segmentation accepts a mask; <see cref="Execute"/> has already simplified once.
+        /// segmentation accepts a mask. The polygon is the ring already shown; this method does not simplify it.
         /// <paramref name="type"/> null uses the structure selected in the list, or cell type 1.
         /// A type that requires a parent enqueues <see cref="LinkStructureToParentCommand"/> before the save.
         /// </summary>
