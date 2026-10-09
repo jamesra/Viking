@@ -16,9 +16,7 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(coalescer.TryStart(out int first));
             Assert.AreEqual(1, first);
             Assert.IsFalse(coalescer.TryStart(out _));
-            Assert.IsTrue(coalescer.PendingRefresh);
             Assert.IsTrue(coalescer.OnFinishedShouldRetry());
-            Assert.IsFalse(coalescer.PendingRefresh);
             Assert.IsTrue(coalescer.TryStart(out int followUp));
             Assert.AreEqual(2, followUp);
         }
@@ -34,17 +32,6 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(coalescer.TryStart(out _));
 
             Assert.IsTrue(coalescer.OnFinishedShouldRetry());
-            Assert.IsFalse(coalescer.OnFinishedShouldRetry());
-        }
-
-        [TestMethod]
-        public void CancelPendingDoesNotRetry()
-        {
-            SegmentationRequestCoalescer coalescer = new();
-
-            Assert.IsTrue(coalescer.TryStart(out _));
-            coalescer.MarkDirty();
-            coalescer.CancelPending();
             Assert.IsFalse(coalescer.OnFinishedShouldRetry());
         }
 
@@ -131,7 +118,6 @@ namespace WebAnnotationTests.Commands
                 Volatile.Read(ref newestCaptured),
                 "The last click was never answered by a started attempt.");
             Assert.IsFalse(coalescer.IsBusy);
-            Assert.IsFalse(coalescer.PendingRefresh);
         }
 
         [TestMethod]

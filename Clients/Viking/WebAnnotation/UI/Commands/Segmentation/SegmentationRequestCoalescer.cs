@@ -33,26 +33,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        /// <summary>True when a later click should run after the current attempt finishes.</summary>
-        public bool PendingRefresh
-        {
-            get
-            {
-                lock (gate)
-                    return pendingRefresh;
-            }
-        }
-
-        /// <summary>Generation of the latest started attempt, including one that is still in flight.</summary>
-        public int CurrentGeneration
-        {
-            get
-            {
-                lock (gate)
-                    return requestGeneration;
-            }
-        }
-
         /// <summary>
         /// Starts a new attempt and returns its generation. Returns false when already busy
         /// and records a follow-up instead.
@@ -97,15 +77,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 pendingRefresh = false;
                 return true;
             }
-        }
-
-        /// <summary>
-        /// Drops a scheduled follow-up without touching the in-flight busy flag.
-        /// </summary>
-        public void CancelPending()
-        {
-            lock (gate)
-                pendingRefresh = false;
         }
 
         /// <summary>
