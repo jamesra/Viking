@@ -49,11 +49,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public static bool CanReuse(in AutoPolygonizeUploadContext context, Rectangle liveBounds, double liveDownsample)
         {
-            if (!context.IsUsable)
-                return false;
-
-            int submitted = SegmentationViewportSession.ResolveTileDownsample(liveDownsample);
-            if ((int)context.Downsample != submitted)
+            if (!context.MatchesSubmittedTileDownsample(liveDownsample))
                 return false;
 
             return SegmentationViewportSession.AreViewportBoundsSimilar(context.WorldBounds, liveBounds);

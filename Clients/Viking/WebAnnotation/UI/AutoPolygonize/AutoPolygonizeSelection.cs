@@ -245,11 +245,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             double liveDownsample,
             Vector2 volumeCenter)
         {
-            if (!context.IsUsable)
-                return false;
-
-            int submitted = SegmentationViewportSession.ResolveTileDownsample(liveDownsample);
-            if ((int)context.Downsample != submitted)
+            if (!context.MatchesSubmittedTileDownsample(liveDownsample))
                 return false;
 
             return context.WorldBounds.Covers(volumeCenter);

@@ -31,6 +31,19 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>False when width/height were never recorded. ImageId may be 0 in tiled mode.</summary>
         public bool IsUsable => Width > 0 && Height > 0;
+
+        /// <summary>
+        /// True when this upload was recorded at the tile pyramid level that
+        /// <paramref name="liveCameraDownsample"/> resolves to for segment/upload.
+        /// </summary>
+        public bool MatchesSubmittedTileDownsample(double liveCameraDownsample)
+        {
+            if (!IsUsable)
+                return false;
+
+            int submitted = SegmentationViewportSession.ResolveTileDownsample(liveCameraDownsample);
+            return (int)Downsample == submitted;
+        }
     }
 
     /// <summary>
