@@ -1141,18 +1141,6 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void PolygonForegroundPointsIncludeCentroidAndSubsampledRing()
-        {
-            Polygon square = Square(0, 0, 10);
-            IReadOnlyList<Vector2> points = CircleSegmentationPrompts.CreateForegroundPointsFromPolygons([square], 16);
-
-            Assert.IsTrue(points.Count >= 5);
-            Assert.AreEqual(square.Centroid, points[0]);
-            Assert.IsTrue(square.Contains(points[0]));
-            Assert.IsTrue(points.Skip(1).Any(p => p == new Vector2(0, 0) || p == new Vector2(10, 0)));
-        }
-
-        [TestMethod]
         public void GroupPromptBoxesTheLargestPolygonAndClicksEachPolygonOnce()
         {
             Polygon small = Square(100, 100, 10);
@@ -1265,13 +1253,6 @@ namespace WebAnnotationTests.Commands
                 RequestSupersession.Untracked, new long[] { 1 }, [Published(9, 1)]));
             Assert.IsFalse(RequestSupersession.IsSuperseded(
                 5, new long[] { 1 }, [Published(RequestSupersession.Untracked, 1)]));
-        }
-
-        [TestMethod]
-        public void PolygonForegroundPointsRejectEmptyAndDegenerate()
-        {
-            Assert.AreEqual(0, CircleSegmentationPrompts.CreateForegroundPointsFromPolygons(null).Count);
-            Assert.AreEqual(0, CircleSegmentationPrompts.CreateForegroundPointsFromPolygons([]).Count);
         }
 
         [TestMethod]

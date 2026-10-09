@@ -291,35 +291,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 : string.Join(",", ids.Take(max)) + $"+{ids.Count - max}";
 
         /// <summary>
-        /// Volume-space SAM2 clicks from overlapping proposal polygons: each centroid (when
-        /// inside) plus a subsampled exterior so one SegmentImage can cover the group.
-        /// Degenerate or empty rings are skipped.
-        /// </summary>
-        public static IReadOnlyList<Vector2> CreateForegroundPointsFromPolygons(
-            IEnumerable<Polygon> polygons,
-            int maxRingPointsPerPolygon = 16)
-        {
-            if (polygons is null || maxRingPointsPerPolygon <= 0)
-                return [];
-
-            List<Vector2> points = [];
-            foreach (Polygon polygon in polygons)
-            {
-                if (polygon?.ExteriorRing is null || polygon.ExteriorRing.Length < 4)
-                    continue;
-
-                Vector2 centroid = polygon.Centroid;
-                if (polygon.Contains(centroid))
-                    points.Add(centroid);
-
-                foreach (Vector2 vertex in SubsampleClosedRing(polygon.ExteriorRing, maxRingPointsPerPolygon))
-                    points.Add(vertex);
-            }
-
-            return points;
-        }
-
-        /// <summary>
         /// Prompt for several overlapping polygons of one structure: SAM2 takes one box per call.
         /// <paramref name="Box"/> is an inscribed seed square inside the largest polygon (same
         /// sizing as a circle's inscribed square relative to its AABB). A full proposal AABB is
