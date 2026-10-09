@@ -783,6 +783,7 @@ namespace WebAnnotation
             private static void RefreshActiveSegmentationPolygons(double? holeDropFraction = null)
             {
                 InvokeOnActiveSegmentationCommand(command => command.RefreshPolygonsFromLastMask(holeDropFraction));
+                AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeFromStoredMasks();
             }
 
             private static void RefreshActiveSegmentationPromptPoints(double? pointRadiusPixels = null)

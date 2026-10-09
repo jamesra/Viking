@@ -875,6 +875,15 @@ namespace WebAnnotation
             autoPolygonizeController?.InvalidateOverlay();
         }
 
+        /// <summary>
+        /// Retraces auto-segment rings and mask overlays from the raw server masks
+        /// after an edge-cleanup or hole-drop change. No new SegmentImage call.
+        /// </summary>
+        public void RefreshAutoPolygonizeFromStoredMasks()
+        {
+            autoPolygonizeController?.RefreshFromStoredMasks();
+        }
+
         private void OnParentDisposed(object sender, EventArgs e)
         {
             Shutdown();

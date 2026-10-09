@@ -262,9 +262,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Removes wisps and fills notches on the decision boundary, then writes those edits
-        /// back onto the probability field. Pixels that remain inside keep their original
-        /// soft values so the contour still interpolates the SAM2 edge.
+        /// Fills notches on the decision boundary, then writes those edits back onto the
+        /// probability field. Pixels that stay inside keep their original soft values so the
+        /// contour still interpolates the SAM2 edge. There is no opening: eroding first would
+        /// pull a curved membrane inward by about the kernel radius.
         /// </summary>
         internal static byte[] ApplyEdgeCleanup(byte[] field, int width, int height, int radius)
         {
@@ -291,7 +292,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Morphological open then close with a square kernel. Pads so edge pixels are not eroded away.
+        /// Morphological close with a square kernel: dilate, then erode. Fills gaps and notches
+        /// narrower than <paramref name="radius"/> and leaves the exterior in place.
+        /// Pads so the dilate is not clipped by the crop; a clipped dilate would make the
+        /// following erode treat the crop boundary as background.
         /// </summary>
         internal static byte[] CleanMask(byte[] maskData, int width, int height, int radius)
         {
@@ -310,8 +314,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     padded[destRow + x] = maskData[sourceRow + x] > 0;
             }
 
-            bool[] opened = Dilate(Erode(padded, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
-            bool[] closed = Erode(Dilate(opened, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
+            bool[] closed = Erode(Dilate(padded, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
 
             byte[] result = new byte[width * height];
             for (int y = 0; y < height; y++)
