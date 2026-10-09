@@ -46,7 +46,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
             {
-                int downsample = CurrentPyramidDownsample();
+                int downsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
                 TileSignature signature = CurrentTileSignature(downsample);
                 Geometry.Rectangle bounds = GetCurrentViewportBounds();
                 ViewportBounds = bounds;
@@ -60,13 +60,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return (downsample, signature, visible, grayscale);
             }).Task.ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Pyramid level for UploadTile/SegmentTiles from the live camera via
-        /// <see cref="ResolveTileDownsample"/>.
-        /// </summary>
-        private int CurrentPyramidDownsample()
-            => ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
 
         private TileSignature CurrentTileSignature(int downsample)
         {
