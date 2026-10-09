@@ -87,7 +87,10 @@
       <Value Profile="(Default)">0.5</Value>
     </Setting>
     <Setting Name="AutoPolygonizeMinRadiusNanometers" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">75</Value>
+      <Value Profile="(Default)">40</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMinRadiusMigrated" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="AutoPolygonizeMaxDownsample" Type="System.Double" Scope="User">
       <Value Profile="(Default)">2</Value>

@@ -412,7 +412,14 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>
-        /// Auto-polygonize cutoff as circle radius in nanometers. Default 75.
+        /// Factory default for <see cref="AutoPolygonizeMinRadiusNanometers"/>.
+        /// Keep in step with WebAnnotation.Properties.Settings.
+        /// </summary>
+        public const double DefaultAutoPolygonizeMinRadiusNanometers = 40.0;
+
+        /// <summary>
+        /// Auto-polygonize cutoff as circle radius in nanometers.
+        /// Default <see cref="DefaultAutoPolygonizeMinRadiusNanometers"/>.
         /// The preview circle is that radius at the current <see cref="NanometersPerPixel"/>.
         /// </summary>
         private double _autoPolygonizeMinRadiusNanometers;
@@ -722,7 +729,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentationMaskThreshold = DefaultSegmentationMaskThreshold;
             _segmentationUseMaskInput = false;
             _autoPolygonizeCircles = false;
-            _autoPolygonizeMinRadiusNanometers = 75.0;
+            _autoPolygonizeMinRadiusNanometers = DefaultAutoPolygonizeMinRadiusNanometers;
             _autoPolygonizeMaxDownsample = 8.0;
 #if DEBUG
             _autoPolygonizeOverlayMasks = true;

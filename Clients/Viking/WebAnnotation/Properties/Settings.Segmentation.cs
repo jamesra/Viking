@@ -75,15 +75,40 @@ namespace WebAnnotation.Properties
             set => this[nameof(AutoPolygonizeCirclesUserSet)] = value;
         }
 
-        /// <summary>Minimum circle radius, in nanometers, for auto-polygonize. Default 75.</summary>
+        /// <summary>
+        /// Minimum circle radius, in nanometers, for auto-polygonize.
+        /// Default <see cref="DefaultAutoPolygonizeMinRadiusNanometers"/>.
+        /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("75")]
+        [global::System.Configuration.DefaultSettingValueAttribute("40")]
         public double AutoPolygonizeMinRadiusNanometers
         {
             get => (double)this[nameof(AutoPolygonizeMinRadiusNanometers)];
             set => this[nameof(AutoPolygonizeMinRadiusNanometers)] = value;
         }
+
+        /// <summary>
+        /// True after <see cref="MigrateLegacyAutoPolygonizeMinRadius"/> has run for this user.config.
+        /// Stops a later explicit choice of the old 75 nm default from being rewritten to 40.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AutoPolygonizeMinRadiusMigrated
+        {
+            get => (bool)this[nameof(AutoPolygonizeMinRadiusMigrated)];
+            set => this[nameof(AutoPolygonizeMinRadiusMigrated)] = value;
+        }
+
+        /// <summary>Factory default for <see cref="AutoPolygonizeMinRadiusNanometers"/>. Keep in step with the settings attribute.</summary>
+        internal const double DefaultAutoPolygonizeMinRadiusNanometers = 40.0;
+
+        /// <summary>
+        /// First shipped default. Any settings save wrote it into user.config, so a version
+        /// upgrade kept restoring 75 even after the factory default changed.
+        /// </summary>
+        internal const double LegacyAutoPolygonizeMinRadiusNanometers = 75.0;
 
         /// <summary>
         /// Coarsest camera downsample at which auto-segment still runs. A coarser view is skipped.
@@ -165,21 +190,25 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
-        /// Copies this settings section from the previous Viking.exe version once.
+        /// Copies this settings section from the previous Viking.exe version once, then applies
+        /// <see cref="MigrateLegacyAutoPolygonizeMinRadius"/>.
         /// Viking's startup upgrade only migrates Viking.Properties.Settings, so a version bump
         /// otherwise drops annotation preferences, including the mask overlay.
-        /// A same-version user.config that already has this section is left alone.
+        /// A same-version user.config that already has this section is not upgraded again.
+        /// The min-radius migration still runs until its flag is set.
         /// Called from <see cref="WebAnnotation.Global.AnnotationSettings"/> before any setting is read.
         /// </summary>
         internal static void UpgradeFromPreviousVersionIfNeeded()
         {
             try
             {
-                if (CurrentVersionHasSavedSettings())
-                    return;
+                if (!CurrentVersionHasSavedSettings())
+                {
+                    Default.Upgrade();
+                    Default.Save();
+                }
 
-                Default.Upgrade();
-                Default.Save();
+                MigrateLegacyAutoPolygonizeMinRadius();
             }
             catch (Exception ex)
             {
@@ -201,6 +230,43 @@ namespace WebAnnotation.Properties
             XDocument document = XDocument.Load(config.FilePath);
             string sectionName = typeof(Settings).FullName;
             return document.Descendants().Any(element => element.Name.LocalName == sectionName);
+        }
+
+        /// <summary>
+        /// Replaces a stored 75 nm min radius with <see cref="DefaultAutoPolygonizeMinRadiusNanometers"/> once.
+        /// Called on startup from <see cref="UpgradeFromPreviousVersionIfNeeded"/> until the flag is set.
+        /// A radius the user chose is left alone. After the flag is set, an explicit 75 nm stays 75.
+        /// </summary>
+        private static void MigrateLegacyAutoPolygonizeMinRadius()
+        {
+            if (Default.AutoPolygonizeMinRadiusMigrated)
+                return;
+
+            double resolved = ResolveAutoPolygonizeMinRadiusNanometers(
+                Default.AutoPolygonizeMinRadiusNanometers,
+                alreadyMigrated: false);
+            if (Math.Abs(Default.AutoPolygonizeMinRadiusNanometers - resolved) > 0.001)
+                Default.AutoPolygonizeMinRadiusNanometers = resolved;
+
+            Default.AutoPolygonizeMinRadiusMigrated = true;
+            Default.Save();
+        }
+
+        /// <summary>
+        /// Radius to keep when applying the one-time 75 nm to 40 nm default change.
+        /// Tests call this directly. <paramref name="alreadyMigrated"/> keeps an explicit 75 nm.
+        /// </summary>
+        /// <param name="savedNanometers">Value stored in user.config, or the factory default when none is stored.</param>
+        /// <param name="alreadyMigrated">True after this migration has already run for that user.config.</param>
+        internal static double ResolveAutoPolygonizeMinRadiusNanometers(double savedNanometers, bool alreadyMigrated)
+        {
+            if (alreadyMigrated)
+                return savedNanometers;
+
+            if (Math.Abs(savedNanometers - LegacyAutoPolygonizeMinRadiusNanometers) < 0.001)
+                return DefaultAutoPolygonizeMinRadiusNanometers;
+
+            return savedNanometers;
         }
     }
 }
