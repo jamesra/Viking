@@ -114,8 +114,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (liveDownsample > 0 &&
                         entry.ProposalDownsample is double completed &&
                         completed > 0 &&
-                        SegmentationViewportSession.ResolveTileDownsample(liveDownsample) !=
-                        SegmentationViewportSession.ResolveTileDownsample(completed))
+                        !SegmentationViewportSession.SameResolvedTileDownsample(liveDownsample, completed))
                     {
                         return true;
                     }

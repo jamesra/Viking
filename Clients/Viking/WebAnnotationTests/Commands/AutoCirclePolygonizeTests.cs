@@ -987,6 +987,13 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void SameResolvedTileDownsample_MatchesWhenCeilLevelsAgree()
+        {
+            Assert.IsTrue(SegmentationViewportSession.SameResolvedTileDownsample(1.0, 1.21));
+            Assert.IsTrue(SegmentationViewportSession.SameResolvedTileDownsample(1.21, 2.0));
+        }
+
+        [TestMethod]
         public void LastImageLeaseReleaseIsReported()
         {
             AutoPolygonizeCache cache = new();

@@ -194,11 +194,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private bool InFlightMatches(Rectangle liveBounds, double liveDownsample)
         {
-            if (SegmentationViewportSession.ResolveTileDownsample(inFlightDownsample) !=
-                SegmentationViewportSession.ResolveTileDownsample(liveDownsample))
-            {
+            if (!SegmentationViewportSession.SameResolvedTileDownsample(inFlightDownsample, liveDownsample))
                 return false;
-            }
 
             return SegmentationViewportSession.AreViewportBoundsSimilar(inFlightBounds, liveBounds);
         }

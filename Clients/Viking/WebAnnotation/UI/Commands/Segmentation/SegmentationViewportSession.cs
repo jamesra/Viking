@@ -282,6 +282,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// True when two live camera downsamples map to the same tile pyramid level for upload/segment.
+        /// </summary>
+        public static bool SameResolvedTileDownsample(double cameraDownsampleA, double cameraDownsampleB)
+        {
+            return ResolveTileDownsample(cameraDownsampleA) == ResolveTileDownsample(cameraDownsampleB);
+        }
+
+        /// <summary>
         /// Binds the session to a viewer. ViewportBounds starts as the live camera rectangle.
         /// </summary>
         /// <param name="parent">The viewer to capture tiles from.</param>
