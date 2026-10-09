@@ -238,14 +238,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             return generation;
         }
 
-        public int GetGeneration(long locationId)
-        {
-            lock (gate)
-            {
-                return entries.TryGetValue(locationId, out Entry entry) ? entry.Generation : 0;
-            }
-        }
-
         public bool IsGenerationCurrent(long locationId, int generation)
         {
             lock (gate)
