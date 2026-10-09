@@ -181,12 +181,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         private bool InFlightMatches(Rectangle liveBounds, double liveDownsample)
-        {
-            if (!SegmentationViewportSession.SameResolvedTileDownsample(inFlightDownsample, liveDownsample))
-                return false;
-
-            return SegmentationViewportSession.AreViewportBoundsSimilar(inFlightBounds, liveBounds);
-        }
+            => SegmentationViewportSession.LiveCameraViewMatches(
+                inFlightBounds,
+                inFlightDownsample,
+                liveBounds,
+                liveDownsample);
 
         private async Task<AutoPolygonizeUploadContext?> FinishUploadAsync(
             TaskCompletionSource<AutoPolygonizeUploadContext?> mine,

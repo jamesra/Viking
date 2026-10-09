@@ -290,6 +290,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// True when two views share a resolved tile pyramid level and world bounds differ by less than 1%.
+        /// <paramref name="referenceCameraDownsample"/> may be a live camera downsample or a stored tile level
+        /// from <see cref="MosaicDownsample"/> or a stored upload tile level.
+        /// </summary>
+        public static bool LiveCameraViewMatches(
+            Geometry.Rectangle referenceBounds,
+            double referenceCameraDownsample,
+            Geometry.Rectangle liveBounds,
+            double liveCameraDownsample)
+        {
+            if (!SameResolvedTileDownsample(referenceCameraDownsample, liveCameraDownsample))
+                return false;
+
+            return AreViewportBoundsSimilar(referenceBounds, liveBounds);
+        }
+
+        /// <summary>
         /// Binds the session to a viewer. ViewportBounds starts as the live camera rectangle.
         /// </summary>
         /// <param name="parent">The viewer to capture tiles from.</param>

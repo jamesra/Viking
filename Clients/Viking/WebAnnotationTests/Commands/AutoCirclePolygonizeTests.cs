@@ -994,6 +994,16 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void LiveCameraViewMatches_RequiresTileLevelAndBounds()
+        {
+            Rectangle bounds = new(0, 1000, 0, 800);
+            Assert.IsTrue(SegmentationViewportSession.LiveCameraViewMatches(bounds, 2, bounds, 2));
+            Assert.IsTrue(SegmentationViewportSession.LiveCameraViewMatches(bounds, 2, new Rectangle(4, 1004, 0, 800), 1.5));
+            Assert.IsFalse(SegmentationViewportSession.LiveCameraViewMatches(bounds, 2, new Rectangle(20, 1020, 0, 800), 2));
+            Assert.IsTrue(SegmentationViewportSession.LiveCameraViewMatches(bounds, 1.0, bounds, 1.21));
+        }
+
+        [TestMethod]
         public void LastImageLeaseReleaseIsReported()
         {
             AutoPolygonizeCache cache = new();
