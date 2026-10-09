@@ -26,10 +26,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             parent.ShowTransientStatus(message);
         }
 
-        /// <summary>Empty mask or polygonize produced no shapes after a non-null response.</summary>
-        public static void NotifyEmptyMask(SectionViewerControl? parent)
-            => NotifySkip(parent, SegmentationSkipKind.EmptyMask);
-
         /// <summary>
         /// Skip kind to show when the session returned no response. A session that gave up records its
         /// reason, so <see cref="SegmentationSkipKind.None"/> here means the reason was lost, not that the

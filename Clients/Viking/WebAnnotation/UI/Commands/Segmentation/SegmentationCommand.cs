@@ -1053,7 +1053,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (response.Segments.Count == 0)
             {
                 Debug.WriteLine("No segments returned");
-                SegmentationUserFeedback.NotifyEmptyMask(Parent);
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.EmptyMask);
                 return;
             }
 
@@ -1083,7 +1083,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (polygons is null || polygons.Count == 0)
             {
                 Debug.WriteLine($"Segmentation process generation={generation} produced no polygons");
-                SegmentationUserFeedback.NotifyEmptyMask(Parent);
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.EmptyMask);
                 return;
             }
 
