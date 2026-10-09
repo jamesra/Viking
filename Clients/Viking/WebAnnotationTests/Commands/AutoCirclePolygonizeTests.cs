@@ -967,23 +967,9 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void ResolutionIncreasedByFactorOfTwoIsOneDirection()
-        {
-            Assert.IsTrue(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(2, 4));
-            Assert.IsTrue(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(1, 4));
-            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(2.1, 4));
-            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(8, 4));
-            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(4, 4));
-            Assert.IsFalse(AutoPolygonizeSelection.ResolutionIncreasedByFactorOfTwo(2, 0));
-        }
-
-        [TestMethod]
         public void UploadReuseRequiresMatchingResolvedTileDownsample()
         {
             AutoPolygonizeUploadContext atDs2 = new(9, 2, new Rectangle(0, 100, 0, 100), 32, 32);
-            Assert.IsTrue(AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(8, 4));
-            Assert.IsTrue(AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(2, 4));
-            Assert.IsFalse(AutoPolygonizeSelection.DownsampleChangedByFactorOfTwo(4, 4));
             Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1.5, new Vector2(50, 50)));
             Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1, new Vector2(50, 50)));
             AutoPolygonizeUploadContext atDs1 = new(9, 1, new Rectangle(0, 100, 0, 100), 32, 32);

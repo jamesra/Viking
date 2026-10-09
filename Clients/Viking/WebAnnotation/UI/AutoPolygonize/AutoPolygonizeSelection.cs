@@ -236,34 +236,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// True when live downsample moved by 2× or more versus the cached upload.
-        /// Same rule as annotation reload on camera change. Used by image reuse, which
-        /// must recapture in both directions.
-        /// </summary>
-        public static bool DownsampleChangedByFactorOfTwo(double liveDownsample, double cachedDownsample)
-        {
-            if (cachedDownsample <= 0 || liveDownsample <= 0)
-                return true;
-
-            return liveDownsample >= 2 * cachedDownsample || liveDownsample <= cachedDownsample / 2;
-        }
-
-        /// <summary>
-        /// True when the live view is at least twice as fine as the downsample recorded
-        /// when auto-segment last completed. Coarser views return false so an existing
-        /// proposal is kept. Not used by <see cref="AutoPolygonizeCache.ShouldProcess"/>, which compares the
-        /// resolved tile pyramid levels instead; kept as a tested helper for a zoom-factor policy.
-        /// A non-positive completed downsample has no baseline and does not resubmit.
-        /// </summary>
-        public static bool ResolutionIncreasedByFactorOfTwo(double liveDownsample, double completedDownsample)
-        {
-            if (completedDownsample <= 0 || liveDownsample <= 0)
-                return false;
-
-            return liveDownsample <= completedDownsample / 2;
-        }
-
-        /// <summary>
         /// True when the cached SAM2 tiles can be reused for a single-ID refresh:
         /// usable context, matching resolved tile downsample, and the circle center still
         /// inside the uploaded world rectangle.
