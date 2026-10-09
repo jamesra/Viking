@@ -156,6 +156,136 @@ namespace WebAnnotation.UI.AutoPolygonize
     }
 
     /// <summary>
+    /// One raw SAM2 field kept so a later edge-cleanup or hole-drop change can retrace
+    /// the ring without another SegmentImage call. <see cref="Mask"/> bytes stay the server
+    /// values; cleanup is applied only while tracing.
+    /// </summary>
+    internal sealed class AutoPolygonizeMaskSource
+    {
+        public AutoPolygonizeMaskSource(
+            AutoPolygonizeMaskOverlay mask,
+            IReadOnlyList<Geometry.Vector2>? keepPoints,
+            IReadOnlyList<Geometry.Vector2>? preserveHoles)
+        {
+            Mask = mask ?? throw new ArgumentNullException(nameof(mask));
+            KeepPoints = keepPoints is { Count: > 0 } ? [.. keepPoints] : [];
+            PreserveHoles = preserveHoles is { Count: > 0 } ? [.. preserveHoles] : [];
+        }
+
+        /// <summary>Decoded server probability field. Not replaced when the cleanup radius changes.</summary>
+        public AutoPolygonizeMaskOverlay Mask { get; }
+
+        /// <summary>World points that choose which connected piece of <see cref="Mask"/> to trace.</summary>
+        public IReadOnlyList<Geometry.Vector2> KeepPoints { get; }
+
+        /// <summary>World points whose holes are kept even when they are under the drop threshold.</summary>
+        public IReadOnlyList<Geometry.Vector2> PreserveHoles { get; }
+
+        /// <summary>
+        /// Traces this field at <paramref name="edgeCleanupRadius"/>. The mask rectangle is the
+        /// viewport, which matches <see cref="SegmentationViewportSession.GetSegmentWorldBounds"/>
+        /// for a segment crop (pixel Y is top-origin, world Y is up).
+        /// </summary>
+        public Polygon? CreatePolygon(double holeDropFraction, int edgeCleanupRadius)
+        {
+            IReadOnlyList<Polygon> polygons = SegmentationMaskPolygonizer.CreatePolygons(
+                Mask.MaskData,
+                Mask.Width,
+                Mask.Height,
+                0,
+                0,
+                Mask.Width,
+                Mask.Height,
+                Mask.WorldBounds,
+                holeDropFraction,
+                PreserveHoles,
+                edgeCleanupRadius,
+                out _,
+                KeepPoints);
+            return polygons.FirstOrDefault();
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds a proposal ring and its on-screen mask from stored server fields.
+    /// Called when edge cleanup or hole dropping changes, off the UI thread.
+    /// </summary>
+    internal static class AutoPolygonizeMaskRetrace
+    {
+        /// <summary>
+        /// Polygonizes each source at the new radius, unions those rings with
+        /// <paramref name="fixedPolygons"/> (saved shapes that have no mask), and builds
+        /// the mask texture from the cleaned fields. Source bytes are not modified.
+        /// Returns false when nothing can be traced.
+        /// </summary>
+        public static bool TryCreate(
+            IReadOnlyList<AutoPolygonizeMaskSource>? sources,
+            IReadOnlyList<Polygon>? fixedPolygons,
+            Geometry.Vector2 keepPoint,
+            double holeDropFraction,
+            int edgeCleanupRadius,
+            double simplifyTolerance,
+            out Polygon? polygon,
+            out AutoPolygonizeMaskOverlay? displayMask)
+        {
+            polygon = null;
+            displayMask = null;
+            if (sources is null || sources.Count == 0)
+                return false;
+
+            List<Polygon> parts = [];
+            List<AutoPolygonizeMaskOverlay> cleaned = new(sources.Count);
+            foreach (AutoPolygonizeMaskSource source in sources)
+            {
+                if (source?.Mask?.MaskData is null)
+                    continue;
+
+                Polygon? traced = source.CreatePolygon(holeDropFraction, edgeCleanupRadius);
+                if (traced is not null)
+                    parts.Add(AutoPolygonizeSelection.SimplifyProposal(traced, simplifyTolerance));
+
+                byte[] displayBytes = edgeCleanupRadius > 0
+                    ? SegmentationMaskPolygonizer.ApplyEdgeCleanup(
+                        source.Mask.MaskData,
+                        source.Mask.Width,
+                        source.Mask.Height,
+                        edgeCleanupRadius)
+                    : source.Mask.MaskData;
+                cleaned.Add(new AutoPolygonizeMaskOverlay(
+                    displayBytes,
+                    source.Mask.Width,
+                    source.Mask.Height,
+                    source.Mask.WorldBounds));
+            }
+
+            if (fixedPolygons is not null)
+            {
+                foreach (Polygon fixedPolygon in fixedPolygons)
+                {
+                    if (fixedPolygon is not null)
+                        parts.Add(fixedPolygon);
+                }
+            }
+
+            if (parts.Count == 0)
+                return false;
+
+            Polygon? merged = parts.Count == 1
+                ? parts[0]
+                : AutoPolygonizeSelection.UnionPolygons(parts, keepPoint);
+            if (merged is null)
+                return false;
+
+            if (parts.Count > 1)
+                merged = AutoPolygonizeSelection.SimplifyProposal(merged, simplifyTolerance);
+
+            polygon = merged;
+            displayMask = AutoPolygonizeMaskOverlay.TryOr(cleaned);
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Hollow-line preview of a SAM2 polygon over a circle. Left double-click accepts.
     /// Right/middle double-click opens the ring context menu (Accept / Reject); that menu
     /// is the intended extension point for multi-blob pick and prompt-density prefs later.
@@ -188,6 +318,13 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private readonly AutoCirclePolygonizeController controller;
         private readonly AutoPolygonizeMaskOverlay? maskOverlayData;
+
+        /// <summary>
+        /// Cleaned copy shown in the mask overlay. Null until a radius change builds one;
+        /// the texture then falls back to <see cref="maskOverlayData"/> (the raw server field).
+        /// </summary>
+        private AutoPolygonizeMaskOverlay? displayMask;
+
         private Texture2D maskTexture;
         private TextureOverlayView maskOverlayView;
         private PointSetView? foregroundPointsView;
@@ -207,7 +344,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             long? parentId = null,
             int overlapResubmitRound = 0,
             IReadOnlyList<Geometry.Vector2>? foregroundPrompts = null,
-            IReadOnlyList<Geometry.Vector2>? backgroundPrompts = null)
+            IReadOnlyList<Geometry.Vector2>? backgroundPrompts = null,
+            IReadOnlyList<Geometry.Rectangle>? startingBoxes = null,
+            IReadOnlyList<AutoPolygonizeMaskSource>? maskSources = null,
+            IReadOnlyList<Polygon>? fixedPolygons = null)
         {
             this.controller = controller;
             LocationIds = locationIds is { Count: > 0 }
@@ -224,13 +364,37 @@ namespace WebAnnotation.UI.AutoPolygonize
             maskOverlayData = maskOverlay;
             ForegroundPrompts = foregroundPrompts is { Count: > 0 } ? [.. foregroundPrompts] : [];
             BackgroundPrompts = backgroundPrompts is { Count: > 0 } ? [.. backgroundPrompts] : [];
+            StartingBoxes = startingBoxes is { Count: > 0 } ? [.. startingBoxes] : [];
+            // A caller that already chose sources (a group union) passes them in.
+            // A single SegmentImage passes null and we keep that one raw field.
+            MaskSources = maskSources is not null
+                ? [.. maskSources.Where(source => source is not null)]
+                : maskOverlay is null
+                    ? []
+                    : [new AutoPolygonizeMaskSource(maskOverlay, ForegroundPrompts, BackgroundPrompts)];
+            FixedPolygons = fixedPolygons is { Count: > 0 }
+                ? [.. fixedPolygons.Where(shape => shape is not null)]
+                : [];
         }
 
         /// <summary>
-        /// Soft-mask bytes for the optional debug overlay. Sibling merge ORs these with the
-        /// group remask; null when the SegmentImage had no decodable mask.
+        /// Raw server field for the optional debug overlay. Sibling merge ORs these with the
+        /// group remask. Null when the SegmentImage had no decodable mask. Edge cleanup does
+        /// not replace these bytes; the on-screen texture uses <see cref="SetDisplayMask"/>.
         /// </summary>
         public AutoPolygonizeMaskOverlay? MaskOverlay => maskOverlayData;
+
+        /// <summary>
+        /// Raw fields this ring was traced from. Empty when the proposal has no decodable mask
+        /// (a refresh then leaves the ring alone). Group proposals flatten each member's sources.
+        /// </summary>
+        public IReadOnlyList<AutoPolygonizeMaskSource> MaskSources { get; }
+
+        /// <summary>
+        /// Rings unioned with <see cref="MaskSources"/> that have no mask of their own,
+        /// such as a saved sibling polygon in an overlap group.
+        /// </summary>
+        public IReadOnlyList<Polygon> FixedPolygons { get; }
 
         /// <summary>Lowest ID in <see cref="LocationIds"/>; used for color and dictionary lookup.</summary>
         public long LocationId { get; }
@@ -261,8 +425,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         public IReadOnlyList<CurveView> RingViews { get; private set; }
 
         /// <summary>
-        /// Rebuilds hollow rings after carving against a newly accepted annotation.
-        /// The SAM2 mask overlay is left alone so debug view still shows the original mask.
+        /// Rebuilds hollow rings after carving or after a cleanup-radius retrace.
+        /// The stored server mask is left alone; pass a cleaned field to <see cref="SetDisplayMask"/>
+        /// when the on-screen texture should match the new ring.
         /// </summary>
         public void ReplacePolygon(Polygon polygon, double downsample)
         {
@@ -279,6 +444,13 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>Volume-space SAM2 label-0 clicks from the same request. Drawn red in mask-debug mode.</summary>
         public IReadOnlyList<Geometry.Vector2> BackgroundPrompts { get; }
+
+        /// <summary>
+        /// Volume-space <c>foreground_boxes</c> from the same SegmentImage (inscribed circle square or
+        /// group seed box). Empty when the request had none. Kept so Add points can reopen
+        /// <see cref="SegmentationCommand"/> without remasking clicks alone.
+        /// </summary>
+        public IReadOnlyList<Geometry.Rectangle> StartingBoxes { get; }
 
         public bool IsHighlighted
         {
@@ -298,11 +470,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public string[] HelpStrings =>
         [
             "Double-click: Accept polygonalization",
-            "Double right-click: Proposal menu (Accept / Reject)"
+            "Double right-click: Proposal menu (Accept / Add points / Reject)"
         ];
 
         /// <summary>
-        /// Accept / Reject for the ring. Extra items for multi-blob and prompt prefs can land here later.
+        /// Accept, refine with extra points, or Reject for the ring.
         /// </summary>
         public ContextMenuStrip ContextMenu
         {
@@ -312,6 +484,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ToolStripMenuItem accept = new("Accept polygonalization");
                 accept.Click += (_, _) => controller.Accept(this);
                 menu.Items.Add(accept);
+
+                ToolStripMenuItem addPoints = new("Add points");
+                addPoints.Click += (_, _) => controller.BeginAddPoints(this);
+                menu.Items.Add(addPoints);
 
                 ToolStripMenuItem reject = new("Reject proposal");
                 reject.Click += (_, _) => controller.Dismiss(this);
@@ -361,6 +537,23 @@ namespace WebAnnotation.UI.AutoPolygonize
         public void EnsureMaskOverlay(GraphicsDevice? graphicsDevice)
         {
             if (maskOverlayView is not null || !HasMaskSource)
+                return;
+
+            AttachMaskOverlay(graphicsDevice);
+        }
+
+        /// <summary>
+        /// Swaps the on-screen mask for a cleaned field built from the stored originals.
+        /// Pass null to show the raw server field again. Must run on the graphics thread.
+        /// Does nothing to the GPU texture until the overlay is on or a texture already exists.
+        /// </summary>
+        public void SetDisplayMask(AutoPolygonizeMaskOverlay? mask, GraphicsDevice? graphicsDevice)
+        {
+            displayMask = mask;
+            if (graphicsDevice is null)
+                return;
+
+            if (maskTexture is null && !Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
                 return;
 
             AttachMaskOverlay(graphicsDevice);
@@ -459,15 +652,16 @@ namespace WebAnnotation.UI.AutoPolygonize
         public void AttachMaskOverlay(GraphicsDevice graphicsDevice)
         {
             DisposeMaskOverlay();
-            if (graphicsDevice is null || maskOverlayData?.MaskData is null)
+            AutoPolygonizeMaskOverlay? shown = displayMask ?? maskOverlayData;
+            if (graphicsDevice is null || shown?.MaskData is null)
                 return;
 
             Color color = ColorForLocation(LocationId).SetAlpha(MaskOverlayAlpha);
-            maskTexture = CreateMaskTexture(graphicsDevice, maskOverlayData, color);
+            maskTexture = CreateMaskTexture(graphicsDevice, shown, color);
             if (maskTexture is null)
                 return;
 
-            maskOverlayView = new TextureOverlayView(maskTexture, maskOverlayData.WorldBounds, color);
+            maskOverlayView = new TextureOverlayView(maskTexture, shown.WorldBounds, color);
         }
 
         /// <summary>

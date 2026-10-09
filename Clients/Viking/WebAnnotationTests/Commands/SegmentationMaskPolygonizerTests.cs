@@ -2,6 +2,7 @@ using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
+using WebAnnotation.UI.AutoPolygonize;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -85,17 +86,20 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void EdgeCleanupRemovesOutwardWisp()
+        public void EdgeCleanupKeepsOutwardWisp()
         {
             byte[] mask = FilledRectangleMask(24, 24, 4, 4, 19, 19);
             mask[(12 * 24) + 20] = 255;
 
             byte[] cleaned = SegmentationMaskPolygonizer.CleanMask(mask, 24, 24, 1);
+            Polygon rawPolygon = CreatePolygon(mask, 24, 24, 0.03);
             Polygon cleanedPolygon = CreatePolygon(mask, 24, 24, 0.03, edgeCleanupRadius: 1);
-            Vector2 wispPoint = new(20.5, 11.5);
 
-            Assert.AreEqual(0, cleaned[(12 * 24) + 20]);
-            Assert.IsFalse(cleanedPolygon.Contains(wispPoint));
+            Assert.AreEqual(255, cleaned[(12 * 24) + 20]);
+            Assert.AreEqual(
+                rawPolygon.ExteriorRing.Max(point => point.X),
+                cleanedPolygon.ExteriorRing.Max(point => point.X),
+                0.01);
         }
 
         [TestMethod]
@@ -110,6 +114,50 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(255, cleaned[(12 * 24) + 4]);
             Assert.IsTrue(cleanedPolygon.Contains(notchPoint));
+        }
+
+        [TestMethod]
+        public void StoredMaskRetraceKeepsServerBytesAndAppliesTheNewRadius()
+        {
+            byte[] mask = FilledRectangleMask(24, 24, 4, 4, 19, 19);
+            mask[(12 * 24) + 4] = 0;
+            AutoPolygonizeMaskOverlay overlay = new(
+                mask,
+                24,
+                24,
+                new Rectangle(new Vector2(0, 0), new Vector2(24, 24)));
+            AutoPolygonizeMaskSource source = new(overlay, null, null);
+            Vector2 keep = new(12, 12);
+
+            Assert.IsTrue(AutoPolygonizeMaskRetrace.TryCreate(
+                [source],
+                [],
+                keep,
+                0.03,
+                edgeCleanupRadius: 0,
+                simplifyTolerance: 0,
+                out Polygon? raw,
+                out AutoPolygonizeMaskOverlay? rawDisplay));
+            Assert.IsTrue(AutoPolygonizeMaskRetrace.TryCreate(
+                [source],
+                [],
+                keep,
+                0.03,
+                edgeCleanupRadius: 1,
+                simplifyTolerance: 0,
+                out Polygon? cleaned,
+                out AutoPolygonizeMaskOverlay? cleanedDisplay));
+
+            Assert.IsNotNull(raw);
+            Assert.IsNotNull(cleaned);
+            Assert.IsNotNull(rawDisplay);
+            Assert.IsNotNull(cleanedDisplay);
+            Assert.IsTrue(raw.Contains(keep));
+            Assert.IsTrue(cleaned.Contains(keep));
+            Assert.IsTrue(cleaned.Contains(new Vector2(4.5, 11.5)));
+            Assert.AreEqual(0, rawDisplay.MaskData[(12 * 24) + 4]);
+            Assert.AreEqual(255, cleanedDisplay.MaskData[(12 * 24) + 4]);
+            Assert.AreEqual(0, mask[(12 * 24) + 4]);
         }
 
         [TestMethod]
@@ -314,8 +362,7 @@ namespace WebAnnotationTests.Commands
                     padded[((y + pad) * paddedWidth) + pad + x] = mask[(y * width) + x] > 0;
             }
 
-            bool[] opened = ReferenceDilate(ReferenceErode(padded, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
-            bool[] closed = ReferenceErode(ReferenceDilate(opened, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
+            bool[] closed = ReferenceErode(ReferenceDilate(padded, paddedWidth, paddedHeight, radius), paddedWidth, paddedHeight, radius);
 
             byte[] result = new byte[width * height];
             for (int y = 0; y < height; y++)

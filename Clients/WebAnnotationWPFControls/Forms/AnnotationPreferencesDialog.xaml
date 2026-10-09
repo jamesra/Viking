@@ -537,7 +537,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Screen-pixel radius for opening then closing the mask before tracing. Removes thin wisps and notches. Set to 0 to disable."/>
+                                     Text="Screen-pixel radius for closing the mask (dilate, then erode) before tracing. Fills thin inward notches and does not shrink the outer boundary. Apply retraces masks already on screen from the original server result. Set to 0 to show that result with no cleanup."/>
                         </Grid>
 
                         <Grid>

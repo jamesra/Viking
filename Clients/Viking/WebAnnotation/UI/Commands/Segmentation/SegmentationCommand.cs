@@ -196,6 +196,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public delegate void OnCommandSuccess(Polygon output);
         private readonly OnCommandSuccess success_callback;
 
+        /// <summary>
+        /// Invoked from <see cref="OnDeactivate"/> when the command ends without a successful
+        /// accept (Escape / queue clear). Not called after <see cref="Execute"/> or
+        /// <see cref="AcceptPlacementFallback"/>, which set <see cref="placementFinished"/> first.
+        /// </summary>
+        private readonly Action? onAbandoned;
+
         #endregion
 
         /// <summary>
@@ -223,10 +230,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             long? structureTypeId = null,
             long? excludeLocationId = null,
             long? excludeStructureId = null,
-            Polygon? placementFallback = null) : base(parent)
+            Polygon? placementFallback = null,
+            Action? onAbandoned = null) : base(parent)
         {
             this.success_callback = success_callback;
             this.placementFallback = placementFallback;
+            this.onAbandoned = onAbandoned;
 
             // Load configuration from AppSettings
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
@@ -245,6 +254,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <paramref name="placementFallback"/> is the dragged volume polygon Escape saves when the mask has not arrived.
         /// <paramref name="startingBoxes"/> are volume-space boxes sent as <c>foreground_boxes</c> with every request,
         /// for example the square inscribed in a circle (see <see cref="CircleSegmentationPrompts.TryCreateStartingPrompt"/>).
+        /// <paramref name="onAbandoned"/> runs when the command deactivates without accepting a mask.
         /// </summary>
         public SegmentationCommand(SectionViewerControl parent,
             IEnumerable<Geometry.Vector2> initialForegroundPoints,
@@ -255,7 +265,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             long? excludeLocationId = null,
             long? excludeStructureId = null,
             Polygon? placementFallback = null,
-            IReadOnlyList<Geometry.Rectangle>? startingBoxes = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId, placementFallback)
+            IReadOnlyList<Geometry.Rectangle>? startingBoxes = null,
+            Action? onAbandoned = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId, placementFallback, onAbandoned)
         {
             this.startingBoxes = startingBoxes ?? [];
             // Populate initial points
@@ -380,6 +391,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         protected override void OnDeactivate()
         {
+            bool abandoned = !placementFinished;
+
             viewportSession.CancelPendingWork();
             CancelSegmentRequest();
             ReleaseHeldImage();
@@ -390,6 +403,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             panZoomDebouncer = null;
 
             Parent.Cursor = Cursors.Default;
+            if (abandoned)
+                onAbandoned?.Invoke();
             base.OnDeactivate();
         }
         #endregion
@@ -1159,6 +1174,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 edgeCleanupRadius,
                 keepComponentsContainingWorldPoints: lastSegmentationForeground));
             ApplyPolygonViews(polygons, response.Segments.Count);
+#if DEBUG
+            CreateDebugMaskOverlay(response, edgeCleanupRadius);
+#endif
         }
 
         /// <summary>
@@ -1212,12 +1230,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
 #if DEBUG
         /// <summary>
-        /// Builds the debug SAM2 texture for the pen command. The rectangle is the fused mosaic
-        /// bounds from <see cref="SegmentationViewportSession.GetSegmentWorldBounds"/>, the same
-        /// mapping the polygon and the prompt clicks use. Camera-rectangle mapping shifts the
-        /// texture off the points. <see cref="OnDraw"/> shows it only when the overlay preference is on.
+        /// Builds the debug SAM2 texture for the pen command from the stored server mask.
+        /// Edge cleanup is applied to the texture only; the response bytes stay original so the
+        /// next radius change can retrace. The rectangle is the fused mosaic bounds from
+        /// <see cref="SegmentationViewportSession.GetSegmentWorldBounds"/>, the same mapping the
+        /// polygon and the prompt clicks use. Camera-rectangle mapping shifts the texture off
+        /// the points. <see cref="OnDraw"/> shows it only when the overlay preference is on.
         /// </summary>
-        private void CreateDebugMaskOverlay(SegmentationServiceTypes.SegmentationResponse response)
+        private void CreateDebugMaskOverlay(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int? edgeCleanupRadius = null)
         {
             var bestSegment = response.GetHighestScoringSegment();
             if (bestSegment is null)
@@ -1232,6 +1254,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 maskOverlayView = null;
                 return;
+            }
+
+            int radius = edgeCleanupRadius ?? WebAnnotation.Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
+            if (radius > 0)
+            {
+                decodedMaskData = SegmentationMaskPolygonizer.ApplyEdgeCleanup(
+                    decodedMaskData,
+                    decodedWidth,
+                    decodedHeight,
+                    radius);
             }
 
             currentMaskData = decodedMaskData;

@@ -7,7 +7,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 using Viking.UI;
 using Viking.UI.Commands;
 using Viking.UI.Controls;
@@ -80,12 +83,24 @@ namespace WebAnnotation.UI.AutoPolygonize
         private AutoPolygonizeProposal? hoveredProposal;
 
         /// <summary>
+        /// Proposal removed from the overlay while <see cref="BeginAddPoints"/> runs an interactive
+        /// <see cref="SegmentationCommand"/>. Escape restores it; accept clears it.
+        /// </summary>
+        private AutoPolygonizeProposal? parkedForAddPoints;
+
+        /// <summary>
         /// <see cref="Stopwatch.GetTimestamp"/> of the last <see cref="RemoveProposalsThatAreNoLongerCircles"/> pass.
         /// UI thread only (Draw and hit-testing).
         /// </summary>
         private long lastStaleScanTimestamp;
         private readonly Dictionary<string, OverlapGroupJob> overlapResubmitsInFlight = [];
         private long requestTicketCounter;
+
+        /// <summary>
+        /// Bumped when edge cleanup or hole dropping is applied again, so a slower retrace
+        /// does not paint over a newer radius.
+        /// </summary>
+        private int maskRefreshGeneration;
 
         /// <summary>
         /// Next request ticket. Taken when a segmentation request starts, so a larger ticket always
@@ -220,6 +235,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 proposals.Clear();
             }
             hoveredProposal = null;
+            parkedForAddPoints = null;
             cache.Clear();
         }
 
@@ -427,6 +443,114 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// Retraces on-screen proposals from the raw server masks at the current edge-cleanup
+        /// radius and hole-drop fraction. Called when those preferences are applied. Proposals
+        /// that never stored a mask are left as they are.
+        /// </summary>
+        public void RefreshFromStoredMasks()
+        {
+            if (parent.InvokeRequired)
+            {
+                parent.BeginInvoke(new Action(RefreshFromStoredMasks));
+                return;
+            }
+
+            AutoPolygonizeProposal[] snapshot;
+            lock (proposalLock)
+                snapshot = [.. DistinctProposalsUnlocked().Where(proposal => proposal.MaskSources.Count > 0)];
+
+            if (snapshot.Length == 0)
+                return;
+
+            int generation = Interlocked.Increment(ref maskRefreshGeneration);
+            double holeDrop = Global.AnnotationSettings.SegmentationHoleDropFraction;
+            int radius = Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
+            double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
+
+            _ = Task.Run(() =>
+            {
+                List<(AutoPolygonizeProposal Proposal, Polygon Polygon, AutoPolygonizeMaskOverlay? Display)> rebuilt = [];
+                foreach (AutoPolygonizeProposal proposal in snapshot)
+                {
+                    if (generation != Volatile.Read(ref maskRefreshGeneration))
+                        return;
+
+                    Geometry.Vector2 keepPoint = proposal.ForegroundPrompts.Count > 0
+                        ? proposal.ForegroundPrompts[0]
+                        : proposal.Polygon.Centroid;
+                    if (!AutoPolygonizeMaskRetrace.TryCreate(
+                            proposal.MaskSources,
+                            proposal.FixedPolygons,
+                            keepPoint,
+                            holeDrop,
+                            radius,
+                            simplifyTolerance,
+                            out Polygon? polygon,
+                            out AutoPolygonizeMaskOverlay? display) ||
+                        polygon is null)
+                    {
+                        continue;
+                    }
+
+                    rebuilt.Add((proposal, polygon, display));
+                }
+
+                var dispatcher = Viking.UI.State.MainThreadDispatcher;
+                if (dispatcher is null || generation != Volatile.Read(ref maskRefreshGeneration))
+                    return;
+
+                _ = dispatcher.InvokeAsync(() =>
+                {
+                    if (generation != Volatile.Read(ref maskRefreshGeneration))
+                        return;
+
+                    bool changed = false;
+                    foreach ((AutoPolygonizeProposal proposal, Polygon polygon, AutoPolygonizeMaskOverlay? display) in rebuilt)
+                    {
+                        if (!IsProposalStillShown(proposal))
+                            continue;
+
+                        Geometry.Vector2 keepPoint = proposal.ForegroundPrompts.Count > 0
+                            ? proposal.ForegroundPrompts[0]
+                            : polygon.Centroid;
+                        Polygon? carved = CarveAgainstExistingPolygons(
+                            polygon,
+                            proposal.LocationIds,
+                            keepPoint,
+                            proposal.ParentID);
+                        if (carved is null)
+                            continue;
+
+                        proposal.ReplacePolygon(carved, parent.Downsample);
+                        proposal.SetDisplayMask(display, parent.Device);
+                        changed = true;
+                    }
+
+                    if (changed)
+                        parent.Invalidate();
+                });
+            });
+        }
+
+        /// <summary>True when <paramref name="proposal"/> is still the overlay for one of its locations.</summary>
+        private bool IsProposalStillShown(AutoPolygonizeProposal proposal)
+        {
+            lock (proposalLock)
+            {
+                foreach (long id in proposal.LocationIds)
+                {
+                    if (proposals.TryGetValue(id, out AutoPolygonizeProposal current) &&
+                        ReferenceEquals(current, proposal))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Preference toggle for green foreground and red background prompt dots.
         /// The points are already on each proposal, so this only redraws.
         /// </summary>
@@ -540,9 +664,15 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Writes the proposal polygon onto the survivor location. For a same-cell group,
         /// unique Z-links move to the survivor and the other locations are deleted first.
         /// </summary>
-        public void Accept(AutoPolygonizeProposal proposal)
+        public void Accept(AutoPolygonizeProposal proposal) => Accept(proposal, proposal?.Polygon);
+
+        /// <summary>
+        /// Writes <paramref name="polygon"/> onto the survivor for <paramref name="proposal"/>.
+        /// Used by Accept polygonalization and by Add points after interactive refinement.
+        /// </summary>
+        public void Accept(AutoPolygonizeProposal proposal, Polygon? polygon)
         {
-            if (proposal is null)
+            if (proposal is null || polygon is null)
                 return;
 
             List<LocationObj> members = [];
@@ -555,6 +685,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             if (members.Count == 0)
             {
+                ClearParkedIf(proposal);
                 RemoveProposal(proposal.LocationId);
                 return;
             }
@@ -564,17 +695,18 @@ namespace WebAnnotation.UI.AutoPolygonize
             List<LocationObj> victims = [.. members.Where(member => member.ID != survivorId)];
 
             Polygon? toApply = CarveAgainstExistingPolygons(
-                proposal.Polygon,
+                polygon,
                 proposal.LocationIds,
                 survivor.VolumePosition,
                 survivor.ParentID);
             // #region agent log
             SegmentationDiag.Log(
                 $"DIAG H14 Accept ids=[{string.Join(",", proposal.LocationIds)}] members={members.Count} survivor={survivorId} " +
-                $"carvedNull={toApply is null} proposalVerts={proposal.Polygon?.TotalUniqueVertices}");
+                $"carvedNull={toApply is null} proposalVerts={polygon.TotalUniqueVertices}");
             // #endregion
             if (toApply is null)
             {
+                ClearParkedIf(proposal);
                 RemoveProposal(proposal.LocationId);
                 parent.Invalidate();
                 return;
@@ -587,8 +719,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             // #endregion
             if (!dbgApplied)
             {
-                // The proposal stays so the user can try again or reject it; silence read as a dead double-click.
+                // Overlay Accept keeps the ring; Add points restores the parked proposal so the user can retry.
                 parent.ShowTransientStatus("Could not save the auto-segment outline for this annotation.");
+                if (ReferenceEquals(parkedForAddPoints, proposal))
+                    RestoreParkedProposal();
                 return;
             }
 
@@ -607,9 +741,161 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             foreach (long id in proposal.LocationIds)
                 cache.Remove(id);
+            ClearParkedIf(proposal);
             RemoveProposal(proposal.LocationId);
             CarveRemainingProposals(toApply, proposal.LocationIds);
             parent.Invalidate();
+        }
+
+        /// <summary>
+        /// Parks the proposal overlay and opens <see cref="SegmentationCommand"/> seeded with its
+        /// prompts and starting boxes so the user can add foreground/background points before accept.
+        /// Escape restores the parked overlay; accept writes through <see cref="Accept(AutoPolygonizeProposal, Polygon)"/>.
+        /// </summary>
+        public void BeginAddPoints(AutoPolygonizeProposal proposal)
+        {
+            if (proposal is null || !AreProposalMembersValid(proposal))
+                return;
+
+            if (parkedForAddPoints is not null && !ReferenceEquals(parkedForAddPoints, proposal))
+                RestoreParkedProposal();
+
+            LocationObj? seedLoc = Store.Locations.GetObjectByID(proposal.LocationId, false);
+            if (seedLoc?.Parent is null)
+            {
+                parent.ShowTransientStatus("This proposal has no structure to segment.");
+                return;
+            }
+
+            IReadOnlyList<Vector2> foreground = proposal.ForegroundPrompts;
+            IReadOnlyList<Rectangle> startingBoxes = proposal.StartingBoxes;
+            if (foreground.Count == 0 || startingBoxes.Count == 0)
+            {
+                if (!TryResolveAddPointsSeed(proposal, out IReadOnlyList<Vector2> fallbackFg, out IReadOnlyList<Rectangle> fallbackBoxes))
+                {
+                    MessageBox.Show(
+                        "This proposal has no segmentation prompts to edit.",
+                        "Add points",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (foreground.Count == 0)
+                    foreground = fallbackFg;
+                if (startingBoxes.Count == 0)
+                    startingBoxes = fallbackBoxes;
+            }
+
+            if (foreground.Count == 0)
+            {
+                MessageBox.Show(
+                    "This proposal has no foreground points to edit.",
+                    "Add points",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            CancelProcessPhase();
+            RemoveProposal(proposal.LocationId);
+            parkedForAddPoints = proposal;
+            parent.Invalidate();
+
+            AutoPolygonizeProposal parked = proposal;
+            void onSuccess(Polygon refined) => Accept(parked, refined);
+
+            try
+            {
+                IGrpcChannelManager channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                parent.CurrentCommand = new SegmentationCommand(
+                    parent,
+                    foreground,
+                    Array.Empty<Vector2>(),
+                    onSuccess,
+                    channelManager,
+                    seedLoc.Parent.TypeID,
+                    proposal.LocationId,
+                    proposal.ParentID ?? seedLoc.ParentID,
+                    startingBoxes: startingBoxes,
+                    onAbandoned: RestoreParkedProposal);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"BeginAddPoints failed: {ex.Message}");
+                RestoreParkedProposal();
+                MessageBox.Show(
+                    $"Failed to open segmentation: {ex.Message}",
+                    "Add points",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds FG clicks and seed boxes when the proposal did not store them (older overlays).
+        /// Single-id circles use the inscribed square; multi-id uses the group prompt from the union ring.
+        /// </summary>
+        private bool TryResolveAddPointsSeed(
+            AutoPolygonizeProposal proposal,
+            out IReadOnlyList<Vector2> foreground,
+            out IReadOnlyList<Rectangle> startingBoxes)
+        {
+            foreground = [];
+            startingBoxes = [];
+
+            if (proposal.LocationIds.Count == 1)
+            {
+                LocationObj? circle = Store.Locations.GetObjectByID(proposal.LocationId, false);
+                if (circle is null || circle.TypeCode != LocationType.CIRCLE || parent.Section is null)
+                    return false;
+
+                if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
+                        CircleSegmentationPrompts.ToVolumePoints(
+                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
+                            parent.Section.ActiveSectionToVolumeTransform),
+                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                {
+                    return false;
+                }
+
+                foreground = startingPrompt.Points;
+                startingBoxes = [startingPrompt.Box];
+                return true;
+            }
+
+            CircleSegmentationPrompts.GroupPrompt groupPrompt =
+                CircleSegmentationPrompts.CreateGroupPromptFromPolygons([proposal.Polygon]);
+            if (groupPrompt.Foreground.Count == 0)
+                return false;
+
+            foreground = groupPrompt.Foreground;
+            startingBoxes = groupPrompt.Box is Rectangle box ? [box] : [];
+            return startingBoxes.Count > 0 || foreground.Count > 0;
+        }
+
+        /// <summary>Re-publishes the proposal parked by <see cref="BeginAddPoints"/> when still valid.</summary>
+        private void RestoreParkedProposal()
+        {
+            AutoPolygonizeProposal? parked = parkedForAddPoints;
+            parkedForAddPoints = null;
+            if (parked is null)
+                return;
+
+            if (!AreProposalMembersValid(parked))
+            {
+                parent.Invalidate();
+                return;
+            }
+
+            PublishProposalOnUiThread(parked);
+            parent.Invalidate();
+        }
+
+        private void ClearParkedIf(AutoPolygonizeProposal proposal)
+        {
+            if (ReferenceEquals(parkedForAddPoints, proposal))
+                parkedForAddPoints = null;
         }
 
         /// <summary>Hides the proposal until each involved location's LastModified changes.</summary>
@@ -618,6 +904,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (proposal is null)
                 return;
 
+            ClearParkedIf(proposal);
             foreach (long id in proposal.LocationIds)
             {
                 LocationObj loc = Store.Locations.GetObjectByID(id, false);
@@ -1048,7 +1335,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                             liveCheck,
                             processToken,
                             requestTicket,
-                            keepPoints);
+                            keepPoints,
+                            startingBoxes);
                         processBatch.ResponseTasks.Add(responseTask);
                     }
                     catch (OperationCanceledException)
@@ -1151,7 +1439,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             LiveViewCheck? liveCheck,
             CancellationToken processToken,
             long requestTicket,
-            IReadOnlyList<Vector2>? extraKeepPoints = null)
+            IReadOnlyList<Vector2>? extraKeepPoints = null,
+            IReadOnlyList<Rectangle>? startingBoxes = null)
         {
             if (processToken.IsCancellationRequested || !enabled || !cache.IsGenerationCurrent(circle.ID, generation))
                 return;
@@ -1224,6 +1513,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
                 }
 
+                IReadOnlyList<Vector2> sourceKeepPoints = extraKeepPoints is { Count: > 0 }
+                    ? [.. foreground, .. extraKeepPoints]
+                    : foreground;
+                IReadOnlyList<AutoPolygonizeMaskSource> maskSources = processed.Mask is null
+                    ? []
+                    : [new AutoPolygonizeMaskSource(processed.Mask, sourceKeepPoints, background)];
                 AutoPolygonizeProposal proposal = new(
                     this,
                     circle.ID,
@@ -1240,7 +1535,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     locationIds: [circle.ID],
                     parentId: circle.ParentID,
                     foregroundPrompts: foreground,
-                    backgroundPrompts: background)
+                    backgroundPrompts: background,
+                    startingBoxes: startingBoxes,
+                    maskSources: maskSources)
                 {
                     RequestTicket = requestTicket
                 };
@@ -1854,7 +2151,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     liveCheck: null,
                     processToken,
                     requestTicket,
-                    keepPoints).ConfigureAwait(false);
+                    keepPoints,
+                    startingBoxes).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -2459,6 +2757,33 @@ namespace WebAnnotation.UI.AutoPolygonize
                             return;
                         }
 
+                        List<AutoPolygonizeMaskSource> maskSources = [];
+                        foreach (AutoPolygonizeProposal member in members)
+                        {
+                            if (member.MaskSources.Count > 0)
+                                maskSources.AddRange(member.MaskSources);
+                        }
+
+                        if (remask.RemaskOverlay is not null)
+                            maskSources.Add(new AutoPolygonizeMaskSource(remask.RemaskOverlay, foreground, background));
+
+                        List<Polygon> fixedPolygons = [];
+                        foreach (Polygon shape in originalPolygons)
+                        {
+                            bool retracedFromMask = false;
+                            foreach (AutoPolygonizeProposal member in members)
+                            {
+                                if (member.MaskSources.Count > 0 && ReferenceEquals(member.Polygon, shape))
+                                {
+                                    retracedFromMask = true;
+                                    break;
+                                }
+                            }
+
+                            if (!retracedFromMask)
+                                fixedPolygons.Add(shape);
+                        }
+
                         AutoPolygonizeProposal group = new(
                             this,
                             locationIds[0],
@@ -2476,7 +2801,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                             parentId,
                             overlapRound,
                             foreground,
-                            background)
+                            background,
+                            foregroundBoxes,
+                            maskSources,
+                            fixedPolygons)
                         {
                             RequestTicket = job.Ticket
                         };

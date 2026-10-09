@@ -578,8 +578,10 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Minimum circle radius, in nanometers, for auto-polygonize. Default 75.
+            /// Minimum circle radius, in nanometers, for auto-polygonize.
+            /// Default <see cref="Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers"/>.
             /// 0 accepts any positive radius. Preview size uses the current zoom.
+            /// A saved value is kept across restarts. The old 75 nm default is replaced once at startup.
             /// </summary>
             public static double AutoPolygonizeMinRadiusNanometers
             {
@@ -751,7 +753,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.SegmentationUseMaskInput = false;
                 Properties.Settings.Default.AutoPolygonizeCircles = false;
                 Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
-                Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = 75.0;
+                Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers;
                 Properties.Settings.Default.AutoPolygonizeMaxDownsample = 2.0;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
@@ -783,6 +785,7 @@ namespace WebAnnotation
             private static void RefreshActiveSegmentationPolygons(double? holeDropFraction = null)
             {
                 InvokeOnActiveSegmentationCommand(command => command.RefreshPolygonsFromLastMask(holeDropFraction));
+                AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeFromStoredMasks();
             }
 
             private static void RefreshActiveSegmentationPromptPoints(double? pointRadiusPixels = null)
