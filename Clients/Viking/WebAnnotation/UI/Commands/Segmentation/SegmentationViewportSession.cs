@@ -290,9 +290,42 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// True when two views share a resolved tile pyramid level and world bounds differ by less than 1%.
-        /// <paramref name="referenceCameraDownsample"/> may be a live camera downsample or a stored tile level
-        /// from <see cref="MosaicDownsample"/> or a stored upload tile level.
+        /// True when a stored mosaic tile pyramid level matches what
+        /// <paramref name="liveCameraDownsample"/> resolves to for upload/segment.
+        /// Stored values are not re-resolved (they are already a tile level from
+        /// <see cref="MosaicDownsample"/> or <see cref="AutoPolygonizeUploadContext.Downsample"/>).
+        /// </summary>
+        public static bool StoredTileLevelMatchesLiveCamera(double storedMosaicTileDownsample, double liveCameraDownsample)
+        {
+            if (storedMosaicTileDownsample <= 0 ||
+                double.IsNaN(storedMosaicTileDownsample) ||
+                double.IsInfinity(storedMosaicTileDownsample))
+            {
+                return false;
+            }
+
+            return (int)storedMosaicTileDownsample ==
+                   ResolveTileDownsample(liveCameraDownsample);
+        }
+
+        /// <summary>
+        /// True when a stored upload matches the live view: same resolved tile level and world bounds within 1%.
+        /// </summary>
+        public static bool StoredUploadViewMatches(
+            Geometry.Rectangle storedBounds,
+            double storedMosaicTileDownsample,
+            Geometry.Rectangle liveBounds,
+            double liveCameraDownsample)
+        {
+            if (!StoredTileLevelMatchesLiveCamera(storedMosaicTileDownsample, liveCameraDownsample))
+                return false;
+
+            return AreViewportBoundsSimilar(storedBounds, liveBounds);
+        }
+
+        /// <summary>
+        /// True when two live camera views share a resolved tile pyramid level and world bounds differ by less than 1%.
+        /// For a stored upload tile level, use <see cref="StoredUploadViewMatches"/> instead.
         /// </summary>
         public static bool LiveCameraViewMatches(
             Geometry.Rectangle referenceBounds,

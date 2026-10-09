@@ -41,8 +41,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!IsUsable)
                 return false;
 
-            int submitted = SegmentationViewportSession.ResolveTileDownsample(liveCameraDownsample);
-            return (int)Downsample == submitted;
+            return SegmentationViewportSession.StoredTileLevelMatchesLiveCamera(Downsample, liveCameraDownsample);
         }
 
         /// <summary>
@@ -50,10 +49,14 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public bool MatchesViewportForReuse(Rectangle liveBounds, double liveCameraDownsample)
         {
-            if (!MatchesSubmittedTileDownsample(liveCameraDownsample))
+            if (!IsUsable)
                 return false;
 
-            return SegmentationViewportSession.AreViewportBoundsSimilar(WorldBounds, liveBounds);
+            return SegmentationViewportSession.StoredUploadViewMatches(
+                WorldBounds,
+                Downsample,
+                liveBounds,
+                liveCameraDownsample);
         }
     }
 

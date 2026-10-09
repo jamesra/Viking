@@ -1004,6 +1004,20 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void StoredUploadViewMatches_ComparesStoredTileLevelWithoutReResolve()
+        {
+            Rectangle bounds = new(0, 1000, 0, 800);
+            Assert.IsTrue(SegmentationViewportSession.StoredTileLevelMatchesLiveCamera(1, 1.21));
+            Assert.IsFalse(SegmentationViewportSession.StoredTileLevelMatchesLiveCamera(2, 1.21));
+            Assert.IsTrue(SegmentationViewportSession.StoredUploadViewMatches(bounds, 1, bounds, 1.0));
+            Assert.IsFalse(SegmentationViewportSession.StoredUploadViewMatches(
+                bounds,
+                2,
+                new Rectangle(20, 1020, 0, 800),
+                2));
+        }
+
+        [TestMethod]
         public void LastImageLeaseReleaseIsReported()
         {
             AutoPolygonizeCache cache = new();
