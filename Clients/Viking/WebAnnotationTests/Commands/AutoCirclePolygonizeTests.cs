@@ -862,11 +862,11 @@ namespace WebAnnotationTests.Commands
             location.TypeCode = LocationType.CIRCLE;
 
             cache.RememberProposal(location.ID, location.Section, first, LocationType.CIRCLE, location);
-            Assert.IsTrue(cache.IsSubscribed(location.ID));
+            int generation = cache.MarkPending(location.ID, location.Section, location, null);
+            Assert.IsTrue(cache.IsGenerationCurrent(location.ID, generation));
 
             cache.Remove(location.ID);
-            Assert.IsFalse(cache.IsSubscribed(location.ID));
-            Assert.IsFalse(cache.Contains(location.ID));
+            Assert.IsFalse(cache.IsGenerationCurrent(location.ID, generation));
         }
 
         [TestMethod]
@@ -880,10 +880,11 @@ namespace WebAnnotationTests.Commands
             cache.LocationForgotten += _ => forgotten++;
 
             cache.RememberProposal(location.ID, location.Section, first, LocationType.CIRCLE, location);
+            int generation = cache.MarkPending(location.ID, location.Section, location, null);
             location.TypeCode = LocationType.POLYGON;
 
             Assert.AreEqual(1, forgotten);
-            Assert.IsFalse(cache.Contains(location.ID));
+            Assert.IsFalse(cache.IsGenerationCurrent(location.ID, generation));
         }
 
         [TestMethod]

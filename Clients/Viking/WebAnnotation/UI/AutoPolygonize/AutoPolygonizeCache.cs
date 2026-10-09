@@ -261,22 +261,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             return false;
         }
 
-        public bool Contains(long locationId)
-        {
-            lock (gate)
-            {
-                return entries.ContainsKey(locationId);
-            }
-        }
-
-        public bool IsSubscribed(long locationId)
-        {
-            lock (gate)
-            {
-                return entries.TryGetValue(locationId, out Entry entry) && entry.Location is not null;
-            }
-        }
-
         /// <summary>Batch hold so FinishProcessBatch does not delete while entries still reference the id.</summary>
         public void AcquireBatchHold(ulong imageId)
         {
