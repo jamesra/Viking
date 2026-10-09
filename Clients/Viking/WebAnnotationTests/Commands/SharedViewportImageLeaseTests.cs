@@ -74,8 +74,18 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(11ul, a?.ImageId);
             Assert.AreEqual(11ul, b?.ImageId);
             Assert.IsTrue(cache.IsImageHeld(11));
-            Assert.IsTrue(lease.TryAdopt(bounds, 2, out AutoPolygonizeUploadContext adopted));
-            Assert.AreEqual(11ul, adopted.ImageId);
+
+            int extraUploads = 0;
+            AutoPolygonizeUploadContext? cached = await lease.GetOrUploadAsync(
+                bounds,
+                2,
+                () =>
+                {
+                    extraUploads++;
+                    return Task.FromResult<AutoPolygonizeUploadContext?>(null);
+                });
+            Assert.AreEqual(0, extraUploads);
+            Assert.AreEqual(11ul, cached?.ImageId);
         }
 
         [TestMethod]
@@ -106,8 +116,18 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(2ul, current?.ImageId);
             Assert.IsFalse(cache.IsImageHeld(1));
             Assert.IsTrue(cache.IsImageHeld(2));
-            Assert.IsTrue(lease.TryAdopt(bounds, 2, out AutoPolygonizeUploadContext adopted));
-            Assert.AreEqual(2ul, adopted.ImageId);
+
+            int extraUploads = 0;
+            AutoPolygonizeUploadContext? cached = await lease.GetOrUploadAsync(
+                bounds,
+                2,
+                () =>
+                {
+                    extraUploads++;
+                    return Task.FromResult<AutoPolygonizeUploadContext?>(null);
+                });
+            Assert.AreEqual(0, extraUploads);
+            Assert.AreEqual(2ul, cached?.ImageId);
         }
 
         [TestMethod]
@@ -126,7 +146,18 @@ namespace WebAnnotationTests.Commands
 
             Assert.IsFalse(cache.IsImageHeld(5));
             Assert.AreEqual(5ul, released);
-            Assert.IsFalse(lease.TryAdopt(bounds, 2, out _));
+
+            int uploadsAfterForget = 0;
+            AutoPolygonizeUploadContext? afterForget = await lease.GetOrUploadAsync(
+                bounds,
+                2,
+                () =>
+                {
+                    uploadsAfterForget++;
+                    return Task.FromResult<AutoPolygonizeUploadContext?>(Context(99, 2, bounds));
+                });
+            Assert.AreEqual(1, uploadsAfterForget);
+            Assert.AreEqual(99ul, afterForget?.ImageId);
         }
     }
 }

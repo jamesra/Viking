@@ -79,24 +79,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Returns the published image when it still matches the live view. Does not start an upload.
-        /// </summary>
-        public bool TryAdopt(Rectangle liveBounds, double liveDownsample, out AutoPolygonizeUploadContext context)
-        {
-            lock (gate)
-            {
-                if (published is { } current && CanReuse(current, liveBounds, liveDownsample))
-                {
-                    context = current;
-                    return true;
-                }
-            }
-
-            context = default;
-            return false;
-        }
-
-        /// <summary>
         /// Records an upload another path already finished (per-circle refresh) so the next command can adopt it.
         /// </summary>
         public void Publish(in AutoPolygonizeUploadContext context)
