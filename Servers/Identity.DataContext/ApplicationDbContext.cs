@@ -120,13 +120,13 @@ namespace Viking.Identity.Data
                 .HasConversion(uriConverter);
 
             builder.Entity<AnnotationServer>()
-                .Property(s => s.AnnotationEndpoint)
-                .HasColumnName(nameof(AnnotationServer.AnnotationEndpoint));
+                .Property(s => s.BaseUrl)
+                .HasColumnName(nameof(AnnotationServer.BaseUrl));
 
             builder.Entity<AnnotationServer>()
-                .HasIndex(s => s.AnnotationEndpoint)
+                .HasIndex(s => s.BaseUrl)
                 .IsUnique()
-                .HasFilter("[AnnotationEndpoint] IS NOT NULL");
+                .HasFilter("[BaseUrl] IS NOT NULL");
 
             builder.Entity<AnnotationServer>()
                 .Property(s => s.ExportUrl)
@@ -176,6 +176,29 @@ namespace Viking.Identity.Data
                 .WithMany(c => c.AnnotationServers)
                 .HasForeignKey(s => s.ConnectomeId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AnnotationContextServer>()
+                .ToTable("AnnotationContextServers")
+                .HasKey(l => new { l.AnnotationContextId, l.AnnotationServerId });
+
+            builder.Entity<AnnotationContextServer>()
+                .HasOne(l => l.AnnotationContext)
+                .WithMany(c => c.AnnotationServerLinks)
+                .HasForeignKey(l => l.AnnotationContextId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<AnnotationContextServer>()
+                .HasOne(l => l.AnnotationServer)
+                .WithMany(s => s.ContextLinks)
+                .HasForeignKey(l => l.AnnotationServerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // At most one default annotation server per context.
+            builder.Entity<AnnotationContextServer>()
+                .HasIndex(l => l.AnnotationContextId)
+                .IsUnique()
+                .HasFilter("[IsDefault] = 1")
+                .HasDatabaseName("IX_AnnotationContextServers_AnnotationContextId_Default");
 
             builder.Entity<Volume>()
                 .ToTable("Volumes")
@@ -352,6 +375,8 @@ namespace Viking.Identity.Data
         public DbSet<AnnotationServer> AnnotationServers { get; set; }
 
         public DbSet<Volume> Volumes { get; set; }
+
+        public DbSet<AnnotationContextServer> AnnotationContextServers { get; set; }
 
         public DbSet<VolumeMirror> VolumeMirrors { get; set; }
 

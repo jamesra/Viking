@@ -93,7 +93,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // POST: AnnotationServers/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,ParentID")] AnnotationServer input)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,ParentID,BaseUrl,ExportUrl")] AnnotationServer input)
         {
             if (id != input.Id)
                 return NotFound();
@@ -123,16 +123,26 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (await _context.AnnotationContexts.AnyAsync(v => v.Name == input.Name && !linkedVolumeIds.Contains(v.Id)))
                 ModelState.AddModelError(nameof(input.Name), $"A volume named {input.Name} uses a different annotation database");
 
+            var baseUrl = AnnotationServiceUrls.ToBaseUrl(input.BaseUrl);
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                ModelState.AddModelError(nameof(input.BaseUrl), "Base URL must be an absolute http or https URL.");
+            else if (!AnnotationServiceUrls.FitsBaseUrlColumn(baseUrl))
+                ModelState.AddModelError(nameof(input.BaseUrl), $"Base URL is longer than {AnnotationServer.MaxEndpointLength} characters.");
+            else if (await _context.AnnotationServers.AnyAsync(s => s.Id != id && s.BaseUrl == baseUrl))
+                ModelState.AddModelError(nameof(input.BaseUrl), "Another annotation server already uses this Base URL.");
+
             if (!ModelState.IsValid)
             {
                 ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, input.ParentID);
-                input.AnnotationEndpoint = existing.AnnotationEndpoint;
+                input.BaseUrl = existing.BaseUrl;
                 return View(input);
             }
 
             existing.Name = input.Name;
             existing.Description = input.Description;
             existing.ParentID = input.ParentID;
+            existing.BaseUrl = baseUrl;
+            existing.ExportUrl = input.ExportUrl;
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = $"Saved annotation server {existing.Name}.";

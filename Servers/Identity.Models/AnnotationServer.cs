@@ -6,9 +6,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Viking.Identity.Models
 {
     /// <summary>
-    /// One SQL annotation database, exposed at an annotation URL root. Read / Annotate / Review
-    /// grants live here; every <see cref="AnnotationContext"/> that points at this server inherits them.
-    /// Rows are created by the VikingXML catalog sync from each context's VolumeToEndpoint element.
+    /// One SQL annotation database, exposed at a service <see cref="BaseUrl"/>. Read / Annotate / Review
+    /// grants live here; every <see cref="AnnotationContext"/> linked to this server inherits them.
+    /// Rows are created by the VikingXML catalog sync or assigned manually on a context.
     /// </summary>
     public class AnnotationServer : Resource
     {
@@ -18,18 +18,22 @@ namespace Viking.Identity.Models
         public const int MaxEndpointLength = 400;
 
         /// <summary>
-        /// Normalized annotation URL root (lower-case scheme and host, no default port, no trailing slash).
-        /// Unique across annotation servers; the catalog sync matches contexts to servers on this value.
+        /// Normalized service root (lower-case scheme and host, no default port, no trailing slash).
+        /// Unique across annotation servers. Annotation / OData / Export URLs are derived from this
+        /// unless an override (e.g. <see cref="ExportUrl"/>) is set.
         /// </summary>
         [MaxLength(MaxEndpointLength)]
-        [Display(Name = "Annotation Endpoint", Description = "Root URL of the annotation service for this database")]
-        public virtual string AnnotationEndpoint { get; set; }
+        [Display(Name = "Base URL", Description = "Service root used to build Annotation, OData, and Export URLs")]
+        public virtual string BaseUrl { get; set; }
 
         [MaxLength(128)]
         [Display(Name = "Database Name", Description = "Database name reported by VolumeToEndpoint in the VikingXML")]
         public virtual string AnnotationDatabaseName { get; set; }
 
-        [Display(Name = "Export URL", Description = "URL of the export service for this database")]
+        /// <summary>
+        /// Optional Export override when the Export host is not <c>{BaseUrl}/Export/</c>.
+        /// </summary>
+        [Display(Name = "Export URL", Description = "Override for the export service; leave empty to use BaseUrl/Export/")]
         public virtual Uri ExportUrl { get; set; }
 
         [Display(Name = "Authentication URL", Description = "Identity server the VikingXML names for this database")]
@@ -42,8 +46,16 @@ namespace Viking.Identity.Models
         [Display(Name = "Connectome", Description = "Connectome this annotation database belongs to")]
         public virtual Connectome Connectome { get; set; }
 
+        /// <summary>
+        /// Contexts whose default annotation server is this database.
+        /// Prefer <see cref="ContextLinks"/> for the full many-to-many set.
+        /// </summary>
         [InverseProperty(nameof(AnnotationContext.AnnotationServer))]
-        [Display(Name = "Annotation Contexts", Description = "Contexts whose annotations are stored in this database")]
+        [Display(Name = "Default Contexts", Description = "Contexts whose default annotation server is this database")]
         public virtual List<AnnotationContext> AnnotationContexts { get; } = new List<AnnotationContext>();
+
+        /// <summary>All context links that include this server (default or alternate).</summary>
+        [InverseProperty(nameof(AnnotationContextServer.AnnotationServer))]
+        public virtual List<AnnotationContextServer> ContextLinks { get; } = new List<AnnotationContextServer>();
     }
 }

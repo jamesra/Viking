@@ -55,7 +55,7 @@
 {
     <li>
         <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@server.Id">@server.Name</a>
-        <span class="text-muted">@server.AnnotationEndpoint</span>
+        <span class="text-muted">@server.BaseUrl</span>
     </li>
 }
 @if (!Model.AnnotationServers.Any())

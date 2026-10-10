@@ -11,7 +11,7 @@ namespace Viking.GrpcSectionCorrectionService
     /// <c>Volume</c> discriminator and the post-migration <c>AnnotationContext</c>
     /// name (migration <c>AddConnectomesAndAnnotationContexts</c>). Reads Name +
     /// Endpoint (VikingXML). AnnotationEndpoint prefers the linked AnnotationServer
-    /// row, then the volume row's own AnnotationEndpoint column when present.
+    /// <c>BaseUrl</c> (or legacy <c>AnnotationEndpoint</c> column before rename).
     /// </summary>
     public sealed class SqlIdentityVolumeSource : IIdentityVolumeSource
     {
@@ -33,10 +33,19 @@ namespace Viking.GrpcSectionCorrectionService
 
             bool hasAnnotation = await ColumnExistsAsync(connection, "Resource", "AnnotationServerId", cancellationToken)
                 .ConfigureAwait(false);
+            bool hasBaseUrl = hasAnnotation
+                && await ColumnExistsAsync(connection, "Resource", "BaseUrl", cancellationToken).ConfigureAwait(false);
+            bool hasLegacyEndpoint = hasAnnotation
+                && await ColumnExistsAsync(connection, "Resource", "AnnotationEndpoint", cancellationToken).ConfigureAwait(false);
             // Identity 2026-10-08 renamed TPH ResourceTypeId Volume → AnnotationContext.
             // Query both so this service works against either schema.
+            string annotationExpr = hasBaseUrl
+                ? "s.BaseUrl"
+                : hasLegacyEndpoint
+                    ? "COALESCE(s.AnnotationEndpoint, v.AnnotationEndpoint)"
+                    : "NULL";
             string sql = hasAnnotation
-                ? "SELECT v.Name, v.Endpoint, COALESCE(s.AnnotationEndpoint, v.AnnotationEndpoint) FROM Resource v " +
+                ? $"SELECT v.Name, v.Endpoint, {annotationExpr} FROM Resource v " +
                   "LEFT JOIN Resource s ON s.Id = v.AnnotationServerId AND s.ResourceTypeId = N'AnnotationServer' " +
                   "WHERE v.ResourceTypeId IN (N'Volume', N'AnnotationContext')"
                 : "SELECT Name, Endpoint FROM Resource WHERE ResourceTypeId IN (N'Volume', N'AnnotationContext')";

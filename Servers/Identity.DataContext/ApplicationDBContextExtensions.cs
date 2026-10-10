@@ -91,7 +91,7 @@ namespace Viking.Identity.Data
 
         /// <summary>
         /// Effective permissions on every volume the user can reach: grants on the volume itself (legacy rows
-        /// and image-only volumes) unioned with grants on the volume's annotation server, with Read implied.
+        /// and image-only volumes) unioned with grants on every linked annotation server, with Read implied.
         /// Site administrators get every permission on every volume.
         /// </summary>
         public static async Task<Dictionary<long, string[]>> UserAnnotationContextPermissionsAsync(this ApplicationDbContext context, [NotNull] string userId)
@@ -121,17 +121,31 @@ namespace Viking.Identity.Data
                 .Select(v => new { v.Id, v.AnnotationServerId })
                 .ToListAsync();
 
+            var linkedServers = await context.AnnotationContextServers
+                .Select(l => new { l.AnnotationContextId, l.AnnotationServerId })
+                .ToListAsync();
+            var serversByVolume = linkedServers
+                .GroupBy(l => l.AnnotationContextId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.AnnotationServerId).ToList());
+
             foreach (var volume in volumes)
             {
                 grants.TryGetValue(volume.Id, out var onVolume);
-                string[] onServer = null;
-                if (volume.AnnotationServerId.HasValue)
-                    grants.TryGetValue(volume.AnnotationServerId.Value, out onServer);
 
-                if (onVolume == null && onServer == null)
+                var serverIds = new List<long>();
+                if (serversByVolume.TryGetValue(volume.Id, out var linked))
+                    serverIds.AddRange(linked);
+                else if (volume.AnnotationServerId.HasValue)
+                    serverIds.Add(volume.AnnotationServerId.Value);
+
+                var onServers = serverIds
+                    .Distinct()
+                    .SelectMany(id => grants.TryGetValue(id, out var perms) ? perms : Array.Empty<string>());
+
+                if (onVolume == null && !serverIds.Any(id => grants.ContainsKey(id)))
                     continue;
 
-                result[volume.Id] = WithImpliedRead((onVolume ?? Array.Empty<string>()).Concat(onServer ?? Array.Empty<string>()));
+                result[volume.Id] = WithImpliedRead((onVolume ?? Array.Empty<string>()).Concat(onServers));
             }
 
             return result;
@@ -139,15 +153,14 @@ namespace Viking.Identity.Data
 
         /// <summary>
         /// Effective permissions on one resource from explicit grants (no site-admin shortcut, matching
-        /// <see cref="UserResourcePermissions(ApplicationDbContext, string, long)"/>). A volume also gets its
-        /// annotation server's grants; volumes and annotation servers get Read implied.
+        /// <see cref="UserResourcePermissions(ApplicationDbContext, string, long)"/>). A volume also gets
+        /// grants from every linked annotation server; volumes and annotation servers get Read implied.
         /// </summary>
         public static async Task<string[]> UserEffectiveResourcePermissionsAsync(this ApplicationDbContext context, [NotNull] string userId, [NotNull] Resource resource)
         {
             var resourceIds = new List<long> { resource.Id };
-            var serverId = await AnnotationServerIdOfAsync(context, resource);
-            if (serverId.HasValue)
-                resourceIds.Add(serverId.Value);
+            foreach (var serverId in await AnnotationServerIdsOfAsync(context, resource))
+                resourceIds.Add(serverId);
 
             var permissions = await (await context.UserResourcePermissions(userId, resourceIds)).Distinct().ToListAsync();
 
@@ -172,18 +185,24 @@ namespace Viking.Identity.Data
             return permissions.Contains(permissionId);
         }
 
-        private static async Task<long?> AnnotationServerIdOfAsync(ApplicationDbContext context, Resource resource)
+        private static async Task<List<long>> AnnotationServerIdsOfAsync(ApplicationDbContext context, Resource resource)
         {
-            if (resource is AnnotationContext connectome)
-                return connectome.AnnotationServerId;
+            if (resource.ResourceTypeId != nameof(AnnotationContext) && resource is not AnnotationContext)
+                return new List<long>();
 
-            if (resource.ResourceTypeId != nameof(AnnotationContext))
-                return null;
+            long contextId = resource.Id;
+            var linked = await context.AnnotationContextServers
+                .Where(l => l.AnnotationContextId == contextId)
+                .Select(l => l.AnnotationServerId)
+                .ToListAsync();
+            if (linked.Count > 0)
+                return linked;
 
-            return await context.AnnotationContexts
-                .Where(v => v.Id == resource.Id)
-                .Select(v => v.AnnotationServerId)
-                .FirstOrDefaultAsync();
+            long? defaultId = resource is AnnotationContext annotationContext
+                ? annotationContext.AnnotationServerId
+                : await context.AnnotationContexts.Where(v => v.Id == contextId).Select(v => v.AnnotationServerId).FirstOrDefaultAsync();
+
+            return defaultId.HasValue ? new List<long> { defaultId.Value } : new List<long>();
         }
 
         public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)

@@ -92,6 +92,7 @@ namespace ConnectomeODataV4
             AddPermittedStructureLinks(builder);
             AddLocationLinks(builder);
             AddNetworkFunctions(builder);
+            AddStructureFreshnessFunction(builder);
             AddDistinctLabelFunctions(builder);
 
             var edmModel = builder.GetEdmModel();
@@ -252,6 +253,19 @@ namespace ConnectomeODataV4
             ResidualFieldLocationsFuncConfig.Parameter<int>("MinLocations");
             ResidualFieldLocationsFuncConfig.ReturnsCollectionFromEntitySet<Location>("Locations");
             ResidualFieldLocationsFuncConfig.Namespace = null;
+        }
+
+        /// <summary>
+        /// Registers unbound <c>StructureFreshness(IDs)</c> for batched cache-key queries.
+        /// </summary>
+        public static void AddStructureFreshnessFunction(ODataModelBuilder builder)
+        {
+            builder.ComplexType<StructureFreshness>();
+
+            var freshness = builder.Function("StructureFreshness");
+            freshness.CollectionParameter<long>("IDs");
+            freshness.ReturnsCollection<StructureFreshness>();
+            freshness.Namespace = null;
         }
     }
 }

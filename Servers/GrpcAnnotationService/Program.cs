@@ -26,6 +26,7 @@ namespace gRPCAnnotationService
                         // UseDockerPorts is set in the container. Local launch uses launchSettings endpoints.
                         if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
                         {
+                            // :80 stays h2c-only for gRPC. :443 serves gRPC over HTTPS.
                             options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);
                             options.ListenAnyIP(443, listen =>
                             {

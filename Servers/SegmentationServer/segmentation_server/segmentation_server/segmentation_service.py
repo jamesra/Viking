@@ -83,6 +83,9 @@ class SegmentationModel:
     ) -> None:
         if torch.cuda.is_available():
             self.device: torch.device = torch.device("cuda")
+            # Tile cells, seam stitches, and SAM2's encoder are all 1024×1024, so
+            # cuDNN can pick convolution algorithms once instead of on every shape.
+            torch.backends.cudnn.benchmark = True
             if torch.cuda.get_device_properties(0).major >= 8:
                 torch.backends.cuda.matmul.allow_tf32 = True
                 torch.backends.cudnn.allow_tf32 = True

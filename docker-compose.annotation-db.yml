@@ -45,6 +45,9 @@ services:
         condition: service_healthy
     # ${MSSQL_SA_PASSWORD} and ${ANNOTATION_DATABASE} come from
     # `docker compose --env-file D:/Docker/Builds/AnnotationSql/.env ...`
+    # Volume SQL map already used by section correction (AnnotationConnections__RC2, …).
+    env_file:
+      - ${SECTION_CORRECTION_BUILD_ENV_PATH:-D:/Docker/Builds/SectionCorrectionService}/.env.Docker
     environment:
       ConnectionStrings__AnnotationConnection: "Server=annotation-sql,1433;Database=${ANNOTATION_DATABASE:-AnnotationTest};User ID=sa;Password=${MSSQL_SA_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True"
 

@@ -1,14 +1,22 @@
 @model Viking.Identity.Models.AnnotationContext
+@using Viking.Identity.Models
+@using Viking.Identity.Server.Extensions.Services
 
 @{
     ViewData["Title"] = "Edit Volume";
     ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
     {
         ("Dashboard", Url.Action("Index", "Home")),
-        ("Volumes", Url.Action("Index", "Volumes")),
-        (Model.Name, Url.Action("Details", "Volumes", new { id = Model.Id })),
+        ("Annotation Contexts", Url.Action("Index", "AnnotationContexts")),
+        (Model.Name, Url.Action("Details", "AnnotationContexts", new { id = Model.Id })),
         ("Edit", null)
     };
+    var allServers = (IEnumerable<AnnotationServer>)(ViewBag.AvailableAnnotationServers ?? Array.Empty<AnnotationServer>());
+    var linkedIds = new HashSet<long>(
+        (Model.AnnotationServerLinks ?? new List<AnnotationContextServer>())
+            .Select(l => l.AnnotationServerId)
+            .Concat(Model.AnnotationServerId.HasValue ? new[] { Model.AnnotationServerId.Value } : Array.Empty<long>()));
+    var selectedServerId = Model.AnnotationServerPinned ? Model.AnnotationServerId : null;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -48,29 +56,45 @@
             </div>
             <div class="mb-3">
                 <label asp-for="AnnotationServerId" class="form-label">Annotation Server</label>
-                @{
-                    var servers = (IEnumerable<Viking.Identity.Models.AnnotationServer>)(ViewBag.AvailableAnnotationServers ?? Array.Empty<Viking.Identity.Models.AnnotationServer>());
-                    var selectedServerId = Model.AnnotationServerPinned ? Model.AnnotationServerId : null;
-                }
                 <select asp-for="AnnotationServerId" class="form-select">
                     <option value="" selected="@(selectedServerId == null)">
                         Use VikingXML@(Model.AnnotationServer != null && !Model.AnnotationServerPinned ? $" ({Model.AnnotationServer.Name})" : "")
                     </option>
-                    @foreach (var server in servers)
+                    @foreach (var server in allServers.OrderBy(s => s.Name))
                     {
-                        <option value="@server.Id" selected="@(selectedServerId == server.Id)">@server.Name - @server.AnnotationEndpoint</option>
+                        <option value="@server.Id" selected="@(selectedServerId == server.Id)">@server.Name - @server.BaseUrl</option>
                     }
                 </select>
                 <span asp-validation-for="AnnotationServerId" class="text-danger"></span>
                 <small class="form-text text-muted">
-                    Choose a server to override the one named by VolumeToEndpoint in the VikingXML. The choice is kept when the
-                    catalog syncs. Select "Use VikingXML" to go back to the automatic link; images-only contexts then have no
-                    annotation server.
+                    Choose a server to override the one named by <code>VolumeToEndpoint</code> in the VikingXML. The choice is
+                    kept when the catalog syncs. Select "Use VikingXML" to return to the automatic link; images-only contexts
+                    then have no annotation server.
                     @if (Model.AnnotationServer != null)
                     {
                         <span>Currently: <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>@(Model.AnnotationServerPinned ? " (manual)" : " (from VikingXML)").</span>
                     }
                 </small>
+                @if (allServers.Any())
+                {
+                    <div class="border rounded p-3 mt-2">
+                        <p class="small text-muted mb-2">
+                            Also offer these servers: when more than one is linked, the user can pick another at login.
+                        </p>
+                        @foreach (var server in allServers.OrderBy(s => s.Name))
+                        {
+                            <div class="form-check">
+                                <input type="checkbox" name="linkedAnnotationServerIds" value="@server.Id"
+                                       id="link-@server.Id" class="form-check-input"
+                                       @(linkedIds.Contains(server.Id) ? "checked" : null) />
+                                <label class="form-check-label" for="link-@server.Id">
+                                    <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@server.Id">@server.Name</a>
+                                    <code class="small">@server.BaseUrl</code>
+                                </label>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
             <div class="mb-3">
                 <label asp-for="RegistrationName" class="form-label"></label>

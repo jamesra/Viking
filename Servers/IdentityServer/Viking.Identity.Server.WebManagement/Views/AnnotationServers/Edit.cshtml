@@ -1,4 +1,5 @@
 @model Viking.Identity.Models.AnnotationServer
+@using Viking.Identity.Server.Extensions.Services
 
 @{
     ViewData["Title"] = "Edit Annotation Server";
@@ -9,6 +10,9 @@
         (Model.Name, Url.Action("Details", "AnnotationServers", new { id = Model.Id })),
         ("Edit", null)
     };
+    var annotationUrl = AnnotationServiceUrls.AnnotationUrl(Model);
+    var odataUrl = AnnotationServiceUrls.ODataUrl(Model);
+    var exportUrl = AnnotationServiceUrls.ExportUrl(Model);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -52,9 +56,31 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="AnnotationEndpoint" class="form-label"></label>
-                <div class="form-control-plaintext"><code>@Model.AnnotationEndpoint</code></div>
-                <small class="form-text text-muted">Read from the VikingXML of the linked volumes; it cannot be edited here.</small>
+                <label asp-for="BaseUrl" class="form-label"></label>
+                <input asp-for="BaseUrl" class="form-control" placeholder="https://websvc.example/RC1" />
+                <span asp-validation-for="BaseUrl" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    Service root. Annotation, OData, and Export URLs are derived from this unless Export is overridden below.
+                </small>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Derived URLs</label>
+                <dl class="row small mb-0">
+                    <dt class="col-sm-3">Annotation</dt>
+                    <dd class="col-sm-9"><code>@(annotationUrl ?? "—")</code></dd>
+                    <dt class="col-sm-3">OData</dt>
+                    <dd class="col-sm-9"><code>@(odataUrl ?? "—")</code></dd>
+                    <dt class="col-sm-3">Export (effective)</dt>
+                    <dd class="col-sm-9"><code>@(exportUrl ?? "—")</code></dd>
+                </dl>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ExportUrl" class="form-label"></label>
+                <input asp-for="ExportUrl" class="form-control" placeholder="Leave empty for BaseUrl/Export/" />
+                <span asp-validation-for="ExportUrl" class="text-danger"></span>
+                <small class="form-text text-muted">Optional override when Export is hosted outside the Base URL.</small>
             </div>
 
             <div class="form-group mt-4">

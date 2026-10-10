@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -37,6 +38,10 @@ namespace Viking.Identity.Models
         /// </summary>
         [Display(Name = "Annotation Server Override", Description = "When set, the catalog sync does not replace the annotation server from the VikingXML")]
         public virtual bool AnnotationServerPinned { get; set; }
+
+        /// <summary>All annotation servers available for this context (default and alternates).</summary>
+        [InverseProperty(nameof(AnnotationContextServer.AnnotationContext))]
+        public virtual List<AnnotationContextServer> AnnotationServerLinks { get; } = new List<AnnotationContextServer>();
 
         [Display(Name = "Volume", Description = "Images and transforms displayed for this context")]
         public virtual long? VolumeId { get; set; }

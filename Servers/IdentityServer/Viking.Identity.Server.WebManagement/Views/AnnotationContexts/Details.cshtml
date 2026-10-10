@@ -97,17 +97,42 @@
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-3">Annotation Server</dt>
+                    <dt class="col-sm-3">Annotation Servers</dt>
                     <dd class="col-sm-9">
-                        @if (Model.AnnotationServer != null)
+                        @{
+                            var links = (Model.AnnotationServerLinks ?? new List<Viking.Identity.Models.AnnotationContextServer>())
+                                .Where(l => l.AnnotationServer != null)
+                                .OrderByDescending(l => l.IsDefault)
+                                .ThenBy(l => l.AnnotationServer.Name)
+                                .ToList();
+                        }
+                        @if (links.Count > 0)
+                        {
+                            <ul class="list-unstyled mb-0">
+                            @foreach (var link in links)
+                            {
+                                <li class="mb-1">
+                                    <i class="bi bi-database"></i>
+                                    <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@link.AnnotationServer.Id">@link.AnnotationServer.Name</a>
+                                    @if (link.IsDefault)
+                                    {
+                                        <span class="badge bg-success ms-1">Default</span>
+                                    }
+                                    <div class="small text-muted"><code>@link.AnnotationServer.BaseUrl</code></div>
+                                </li>
+                            }
+                            </ul>
+                        }
+                        else if (Model.AnnotationServer != null)
                         {
                             <i class="bi bi-database"></i>
                             <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>
-                            <div class="small text-muted"><code>@Model.AnnotationServer.AnnotationEndpoint</code></div>
+                            <span class="badge bg-success ms-1">Default</span>
+                            <div class="small text-muted"><code>@Model.AnnotationServer.BaseUrl</code></div>
                         }
                         else
                         {
-                            <em class="text-muted">None. This volume shows images only, or its VikingXML has not been synced.</em>
+                            <em class="text-muted">None. Viking will use VikingXML VolumeToEndpoint when present.</em>
                         }
                     </dd>
 

@@ -563,8 +563,83 @@ namespace ConnectomeDataModel
             return Links.AsQueryable<StructureLink>();
         }
 
+        /// <summary>
+        /// Batched freshness for cache keys: for each requested id, max LastModified and
+        /// location count over that structure and its direct children. Unknown ids omitted.
+        /// Called by OData <c>StructureFreshness(IDs=…)</c> for sbfsem-tools and similar clients.
+        /// </summary>
+        public IList<StructureFreshness> SelectStructureFreshness(IEnumerable<long> IDs)
+        {
+            List<long> idList = IDs?.Distinct().ToList() ?? [];
+            if (idList.Count == 0)
+                return [];
 
+            HashSet<long> idSet = [.. idList];
 
+            var structures = this.Structures.AsNoTracking()
+                .Where(s => idSet.Contains(s.ID) || (s.ParentID != null && idSet.Contains(s.ParentID.Value)))
+                .Select(s => new { s.ID, s.ParentID, s.LastModified })
+                .ToList();
+
+            // (RootId, MemberId, StructureLastModified) — a member can contribute to more than one root
+            // when both parent and child appear in the request.
+            List<(long RootId, long MemberId, DateTime StructureLastModified)> membership = [];
+            foreach (var s in structures)
+            {
+                if (idSet.Contains(s.ID))
+                    membership.Add((s.ID, s.ID, s.LastModified));
+                if (s.ParentID is long parentId && idSet.Contains(parentId))
+                    membership.Add((parentId, s.ID, s.LastModified));
+            }
+
+            HashSet<long> existingRoots = [.. structures.Where(s => idSet.Contains(s.ID)).Select(s => s.ID)];
+            List<long> allMemberIds = [.. membership.Select(m => m.MemberId).Distinct()];
+
+            Dictionary<long, (DateTime MaxLastModified, long Count)> locationByParent = [];
+            if (allMemberIds.Count > 0)
+            {
+                locationByParent = this.Locations.AsNoTracking()
+                    .Where(l => allMemberIds.Contains(l.ParentID))
+                    .GroupBy(l => l.ParentID)
+                    .Select(g => new { ParentID = g.Key, MaxLastModified = g.Max(l => l.LastModified), Count = g.LongCount() })
+                    .ToList()
+                    .ToDictionary(x => x.ParentID, x => (x.MaxLastModified, x.Count));
+            }
+
+            List<StructureFreshness> results = [];
+            foreach (long rootId in idList)
+            {
+                if (!existingRoots.Contains(rootId))
+                    continue;
+
+                IEnumerable<(long RootId, long MemberId, DateTime StructureLastModified)> rootMembers =
+                    membership.Where(m => m.RootId == rootId);
+
+                DateTime maxLastModified = DateTime.MinValue;
+                long annotationCount = 0;
+                foreach (var member in rootMembers)
+                {
+                    if (member.StructureLastModified > maxLastModified)
+                        maxLastModified = member.StructureLastModified;
+
+                    if (locationByParent.TryGetValue(member.MemberId, out var loc))
+                    {
+                        if (loc.MaxLastModified > maxLastModified)
+                            maxLastModified = loc.MaxLastModified;
+                        annotationCount += loc.Count;
+                    }
+                }
+
+                results.Add(new StructureFreshness
+                {
+                    StructureID = rootId,
+                    LastModified = maxLastModified,
+                    AnnotationCount = annotationCount
+                });
+            }
+
+            return results;
+        }
 
         /// <summary>
         /// Add the links to the locations in the dictionary

@@ -206,25 +206,27 @@ namespace Viking.Identity.Server.Extensions.Services
 
             if (entry.AnnotationEndpoint == null)
             {
+                // Image-only: keep any manually assigned annotation-server links.
                 result.Status = entry.EndpointError != null ? CatalogSyncStatus.InvalidAnnotationEndpoint : CatalogSyncStatus.ImageOnly;
                 notes.Insert(0, entry.EndpointError ?? "VikingXML has no VolumeToEndpoint; the volume shows images only.");
                 result.Message = string.Join(" ", notes);
+                result.AnnotationServerId = volume.AnnotationServerId;
                 await RecordAsync(volume, result, now, cancellationToken);
                 return result;
             }
 
-            var normalized = VikingXmlCatalog.NormalizeEndpoint(entry.AnnotationEndpoint);
-            if (!VikingXmlCatalog.FitsEndpointColumn(normalized))
+            var baseUrl = AnnotationServiceUrls.ToBaseUrl(entry.AnnotationEndpoint);
+            if (!AnnotationServiceUrls.FitsBaseUrlColumn(baseUrl))
             {
                 result.Status = CatalogSyncStatus.InvalidAnnotationEndpoint;
-                notes.Insert(0, $"Annotation endpoint is longer than {AnnotationServer.MaxEndpointLength} characters.");
+                notes.Insert(0, $"Annotation base URL is longer than {AnnotationServer.MaxEndpointLength} characters.");
                 result.Message = string.Join(" ", notes);
                 await RecordAsync(volume, result, now, cancellationToken);
                 return result;
             }
 
             var server = await _context.AnnotationServers
-                .FirstOrDefaultAsync(s => s.AnnotationEndpoint == normalized, cancellationToken);
+                .FirstOrDefaultAsync(s => s.BaseUrl == baseUrl, cancellationToken);
             if (server == null)
             {
                 server = new AnnotationServer
@@ -233,7 +235,7 @@ namespace Viking.Identity.Server.Extensions.Services
                     Description = $"Annotation database for {volume.Name}, created from its VikingXML.",
                     ParentID = volume.ParentID,
                     ResourceTypeId = nameof(AnnotationServer),
-                    AnnotationEndpoint = normalized,
+                    BaseUrl = baseUrl,
                     ConnectomeId = volume.ConnectomeId
                 };
                 _context.AnnotationServers.Add(server);
@@ -245,16 +247,27 @@ namespace Viking.Identity.Server.Extensions.Services
             }
 
             server.AnnotationDatabaseName ??= Truncate(entry.AnnotationDatabaseName, 128);
-            server.ExportUrl ??= entry.ExportUrl;
+            if (entry.ExportUrl != null && !AnnotationServiceUrls.IsDerivedExportUrl(baseUrl, entry.ExportUrl))
+                server.ExportUrl ??= entry.ExportUrl;
             server.AuthenticationUrl ??= entry.AuthenticationUrl;
 
-            if (volume.AnnotationServerId.HasValue && volume.AnnotationServerId != server.Id && server.Id != 0)
-                notes.Add("Volume moved to a different annotation database.");
+            bool hadDefault = volume.AnnotationServerId.HasValue;
+            await AnnotationContextServerLinks.EnsureLinkAsync(
+                _context,
+                volume,
+                server,
+                forceDefault: false,
+                cancellationToken);
 
-            volume.AnnotationServer = server;
+            if (hadDefault && volume.AnnotationServerId.HasValue
+                && volume.AnnotationServerId != server.Id && server.Id != 0
+                && !volume.AnnotationServerLinks.Any(l => l.IsDefault && (l.AnnotationServerId == server.Id || ReferenceEquals(l.AnnotationServer, server))))
+            {
+                notes.Add($"Also linked VikingXML server {server.Name}; default left unchanged.");
+            }
 
             result.Status = CatalogSyncStatus.Linked;
-            result.AnnotationServerName = server.Name;
+            result.AnnotationServerName = volume.AnnotationServer?.Name ?? server.Name;
             notes.Insert(0, result.CreatedAnnotationServer
                 ? $"Created annotation server {server.Name}."
                 : $"Linked to annotation server {server.Name}.");
@@ -268,7 +281,7 @@ namespace Viking.Identity.Server.Extensions.Services
             }
 
             await RecordAsync(volume, result, now, cancellationToken);
-            result.AnnotationServerId = server.Id;
+            result.AnnotationServerId = volume.AnnotationServerId ?? server.Id;
             return result;
         }
 

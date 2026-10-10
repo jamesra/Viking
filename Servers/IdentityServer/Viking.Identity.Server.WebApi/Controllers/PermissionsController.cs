@@ -199,6 +199,10 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                         AnnotationServerName = Meta(VolumeMetadata.AnnotationServerName),
                         AnnotationEndpoint = Meta(VolumeMetadata.AnnotationEndpoint),
                         Volume = Meta(VolumeMetadata.Volume),
+                        BaseUrl = Meta(VolumeMetadata.BaseUrl),
+                        ODataEndpoint = Meta(VolumeMetadata.ODataEndpoint),
+                        ExportEndpoint = Meta(VolumeMetadata.ExportEndpoint),
+                        AnnotationServers = Meta(VolumeMetadata.AnnotationServers),
                         Mirrors = Meta(VolumeMetadata.Mirrors),
                         RegistrationName = Meta(VolumeMetadata.RegistrationName),
                         permissions = v.Permissions

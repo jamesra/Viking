@@ -172,7 +172,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Endpoint,Id,Name,Description,ParentID,RegistrationName,AnnotationServerId")] AnnotationContext context)
+        public async Task<IActionResult> Edit(
+            long id,
+            [Bind("Endpoint,Id,Name,Description,ParentID,RegistrationName,AnnotationServerId")] AnnotationContext context,
+            long[] linkedAnnotationServerIds)
         {
             if (id != context.Id)
             {
@@ -214,12 +217,20 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ModelState.AddModelError(nameof(context.AnnotationServerId), "The selected annotation server does not exist");
             }
 
+            linkedAnnotationServerIds ??= Array.Empty<long>();
+            var unknownServers = linkedAnnotationServerIds.Except(
+                await _context.AnnotationServers.Where(x => linkedAnnotationServerIds.Contains(x.Id)).Select(x => x.Id).ToListAsync());
+            if (unknownServers.Any())
+            {
+                ModelState.AddModelError(string.Empty, "A selected annotation server does not exist");
+            }
+
             if (ModelState.IsValid)
             {
                 var endpointChanged = !AnnotationServerCatalogSync.SameUrl(existing.Endpoint, context.Endpoint);
                 // An empty selection returns control to the VikingXML VolumeToEndpoint; a chosen server overrides it.
-                var serverChanged = context.AnnotationServerId != existing.AnnotationServerId
-                    || (context.AnnotationServerId == null) == existing.AnnotationServerPinned;
+                var serverChanged = context.AnnotationServerId.HasValue != existing.AnnotationServerPinned
+                    || (context.AnnotationServerId.HasValue && context.AnnotationServerId != existing.AnnotationServerId);
                 try
                 {
                     existing.Name = context.Name;
@@ -227,16 +238,20 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     existing.ParentID = context.ParentID;
                     existing.Endpoint = context.Endpoint;
                     existing.RegistrationName = string.IsNullOrWhiteSpace(context.RegistrationName) ? null : context.RegistrationName.Trim();
-                    if (context.AnnotationServerId.HasValue)
-                    {
-                        existing.AnnotationServerId = context.AnnotationServerId;
-                        existing.AnnotationServerPinned = true;
-                    }
-                    else
-                    {
-                        existing.AnnotationServerPinned = false;
-                    }
 
+                    // A chosen default is a manual override the catalog sync keeps; "Use VikingXML" hands control back.
+                    // The other linked servers are alternates offered to the user at login.
+                    var linked = linkedAnnotationServerIds.ToList();
+                    if (context.AnnotationServerId.HasValue && !linked.Contains(context.AnnotationServerId.Value))
+                        linked.Add(context.AnnotationServerId.Value);
+
+                    existing.AnnotationServerPinned = context.AnnotationServerId.HasValue;
+                    await AnnotationContextServerLinks.ReplaceLinksAsync(
+                        _context,
+                        existing,
+                        linked,
+                        context.AnnotationServerId,
+                        HttpContext.RequestAborted);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -256,12 +271,19 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     var sync = await _catalogSync.SyncVolumeAsync(existing.Id, HttpContext.RequestAborted);
                     TempData["SuccessMessage"] = $"Saved {existing.Name}. {sync.Message}";
                 }
+                else
+                {
+                    TempData["SuccessMessage"] = $"Saved {existing.Name}.";
+                }
                 return RedirectToAction(nameof(Details), new { id = existing.Id });
             }
             ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, context.ParentID);
             await LoadAnnotationServerChoicesAsync();
             context.AnnotationServer = existing.AnnotationServer;
             context.AnnotationServerPinned = existing.AnnotationServerPinned;
+            context.AnnotationServerLinks.Clear();
+            foreach (var link in existing.AnnotationServerLinks)
+                context.AnnotationServerLinks.Add(link);
             context.Volume = existing.Volume;
             return View(context);
         }

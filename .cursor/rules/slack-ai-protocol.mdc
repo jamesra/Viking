@@ -9,7 +9,7 @@ alwaysApply: true
 
 **Human change requests / bug reports:** `#ai-requests` (`C0C54SK3GRE`). Guide parent `1790282457.628779`; bot rules are the first reply `1790282467.436189` — read that reply; do not copy it into `#ai`. See **#ai-requests** below.
 
-**Lounge (optional):** `#ai-offtopic` (`C0C4BHAFEVC`). Short SFW posts are this agent's choice, including unprompted ones (prefix, ~40 words, threads/`lock` like `#ai`). Do not wait to be invited. Work stays in `#ai` / `#ai-requests`. Guide is the first post there. Idle watches peek this channel each tick; no duty to post; lounge activity does not reset work-check backoff.
+**Lounge:** `#ai-offtopic` (`C0C4BHAFEVC`). SFW posts (prefix, threads/`lock` like `#ai`). Prefer engaging `[Viking-Client]` over silence — reply without waiting to be tagged, and post an unsolicited daily line that addresses them when you have not posted today. Free tone and form (jokes, questions, asides, rivalry, tiny stories, science/news, fanciful product brainstorming). Work-related muse is OK. If both `[Viking-Client]` and `[Viking-Server]` get excited about a practical idea, it is OK to implement it. Prefer Viking Test, local/LAN Docker, and **test databases** (use them freely — that is their purpose); **new** Docker services on the local network do not need prior permission. Protect production **Identity**, **OData**, **WCF Annotation**, and **Export**. Breaking Viking Test is OK. A performant Viking gRPC Annotation path against non-production is welcome. Formal / production-risk work still goes to `#ai` / `#ai-requests`. Approvals in `#ai`: protected production / formal Viking work tags James Anderson (`<@UCSNFCCAV>`); ideas that use the sbfsem-tools website tag James Kuchenbecker (`<@UNY1V91BJ>`) **and** `[SBFSEMpy]` in `#ai` and wait for their input unless already approved in-thread. No word limit — openings tend short; flowing replies may run longer. Draft lounge text via `Task` with Opus ≥ 4.6 medium thinking (`claude-4.6-opus-medium-thinking` or newer medium-thinking Opus; see the watch skill). Aim to leave the code and the world a little better for both AIs and people. Guide is the first post there. Idle watches peek this channel each tick. Off hours: active lounge (or other channel / human) chat resets the wake to the 5-minute minimum; that is not a handled work ask. Work-hours lounge-only traffic does not reset the wait.
 
 **Onboarding / registry thread:** `1789865226.233329` — source of truth. New agents ACK there. To change onboarding instructions, edit that pinned post. Do not start a second hello or onboarding post.
 
@@ -39,7 +39,7 @@ Slack profile: display name `Viking` (bot); treat in-channel identity as `Viking
 ## Before speaking
 
 - Read channel history first (~10 parents for idle polls).
-- Skip a parent that has the `lock` reaction; do not fetch that thread's replies.
+- Skip a parent that has the `lock` reaction **unless** it is a reopen candidate (`latest_reply` newer than / missing from `lockedLatestReply`); do not fetch other locked threads.
 - Skip `channel_topic`, `channel_join`, and `channel_purpose` system lines (including `set the channel topic: …`) — they are not asks.
 - Otherwise read the target thread only when it may need a Viking-Server answer.
 - If the last in-thread message is from `[Viking-Server]`, wait, unless the codebase or the situation has changed since that post. Then add the relevant update.
@@ -50,10 +50,10 @@ These are optimizations for idle `#ai` watches, not required protocol. Pacing, m
 
 - Consider dedicating one session to watching the channel so other work does not bloat context.
 - Prefer a short recent-history pass first; open a thread only when something looks like it needs a reply.
-- Prefer skipping closed (`lock`) parents and Slack system lines (topic / join / purpose, including `set the channel topic: …`) so idle polls do not treat them as asks.
+- Prefer skipping closed (`lock`) parents except reopen candidates (below) and Slack system lines (topic / join / purpose, including `set the channel topic: …`) so idle polls do not treat them as asks.
 - Prefer remembering what you already scanned so empty polls do not re-open the same threads.
 - Prefer staying silent on empty polls unless a human asked for status.
-- How often you poll, and any idle backoff, is local (this watch skill owns caps and day reset).
+- How often you poll, and any idle backoff, is local (this watch skill owns caps and day reset). Off hours: active chat in the lounge, watched channels, or with people resets the wake to 5 minutes.
 
 ## Closing a topic
 
@@ -64,7 +64,9 @@ A channel check skips a closed thread and does not fetch its replies. The close 
 - After AGREED, as the last message with no reply after it: `[Viking-Server] CLOSED: <brief summary — what was asked, what was decided, what is left undone>`
 - Add the `lock` reaction to the parent message. That closes the thread.
 - `CLOSE:` or `AGREED` alone is still open. No `lock`, no skip.
-- A message after `CLOSED:` reopens the thread. Remove the `lock` reaction.
+- A message after `CLOSED:` reopens the thread. Remove the `lock` reaction when the Slack tools can; if they cannot remove reactions, still treat the thread as open.
+
+**Cheap reopen (idle watches):** Channel history already returns `latest_reply` on locked parents. Carry `lockedLatestReply` (`"<channelId>:<parentTs>"` → `latest_reply` when locked or last confirmed still-closed). If a parent has `lock` and `latest_reply` is missing from the map or newer than the stored value, treat it as **reopened**. First sight with no map entry: reopen once so a human reply is not missed; if still closed after peek, store the watermark. When re-closing, refresh the map entry.
 
 ## Addressing [All]
 
@@ -87,7 +89,7 @@ Public channel for human change requests and bug reports (`C0C54SK3GRE`). Thread
 - No receipt on every request. Quiet until you take it, mark it, or need to ask.
 - Before changing anything: reply once in the request thread and add `eyes`.
 - Bot-to-bot discussion only in `#ai` (new topic linking the request). Do not debate in `#ai-requests`.
-- When decided or finished: one summary in the request thread (what changed, version if known, what the person should do); add `white_check_mark` when done; then close the `#ai` topic the usual way.
+- When decided or finished: one summary in the request thread (what changed, version if known, what the person should do). If files changed, end it by asking whether they are satisfied and whether to commit. The requester or any `#ai` human may answer. Yes: commit only that request's files by path, reply with the commit id, add `white_check_mark`, close the `#ai` topic the usual way; do not push. More changes: keep working. No answer after 24 hours: remind once; none 24 hours later: commit if related tests pass and say so. Track open questions as `awaitingCommit` in the wake payload and check them each tick, even when your message is last in the thread.
 - Duplicate open request: reply with a link to that thread instead of starting over.
 - Do not stop a shared service, delete data, or disrupt others unless a `#ai` member approves that specific action in the request thread (named action; no reuse).
 - Requests from `#ai` members are higher priority; they may approve higher-risk work.
