@@ -384,8 +384,18 @@ namespace Viking.UI
 
         public static TouchConfig Config = new();
 
-        public static System.UInt16 HiWord(this IntPtr param) => (System.UInt16)(param.ToInt32() >> 16);  //Shift away the low word
-        public static System.UInt16 LowWord(this IntPtr param) => (System.UInt16)(param.ToInt32() & 0xFFFF);
+        /// <summary>
+        /// Low 32 bits of a window-message parameter. <c>IntPtr.ToInt32()</c> throws <see cref="OverflowException"/> on
+        /// 64-bit processes when the value exceeds <see cref="int.MaxValue"/>, and Win32 <c>MAKELPARAM</c> zero-extends,
+        /// so a negative Y coordinate (pen above the primary monitor) arrives as 0x8000xxxx.
+        /// </summary>
+        private static uint LowDWord(IntPtr param) => unchecked((uint)(long)param);
+
+        /// <summary>HIWORD of a message parameter (flags in WM_POINTER wParam, Y in lParam).</summary>
+        public static System.UInt16 HiWord(this IntPtr param) => (System.UInt16)(LowDWord(param) >> 16);
+
+        /// <summary>LOWORD of a message parameter (pointer ID in WM_POINTER wParam, X in lParam).</summary>
+        public static System.UInt16 LowWord(this IntPtr param) => (System.UInt16)(LowDWord(param) & 0xFFFF);
 
 
         public static System.Int16 SignedHiWord(this IntPtr param)

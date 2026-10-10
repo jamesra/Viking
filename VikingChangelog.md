@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.78 — unreleased
 
+* Pen and touch input no longer throws an unhandled exception on 64-bit Windows when the pointer is above or left of the primary monitor (negative coordinates).
 * Choosing an Open Connectome Project server whose public-token list is valid JSON of the wrong shape (for example an error object) now shows the parser message in the volume list instead of throwing an unhandled exception.
 * The Merge Structures and Split Structures dialogs no longer throw an unhandled exception when an ID is typed or pasted that is too large for a 32-bit number, and they accept IDs above 2,147,483,647; typing a Location ID that does not exist in Split Structures now shows "No Location found" instead of crashing.
 * Go To Location no longer throws an unhandled exception when X, Y, Z, or downsample holds a number too large for its type (such as a pasted 20-digit value); the field reads as 0 like other invalid text.
