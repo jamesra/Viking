@@ -35,11 +35,7 @@ namespace gRPCAnnotationService
                 response.PermittedLinks.AddRange(rows.Select(p => p.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(GetPermittedStructureLinks));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(GetPermittedStructureLinks), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetPermittedStructureLinks), e); }
         }
 
         public override async Task<CreatePermittedStructureLinkResponse> CreatePermittedStructureLink(CreatePermittedStructureLinkRequest request, ServerCallContext context)
@@ -56,11 +52,7 @@ namespace gRPCAnnotationService
                     Result = ef_result.Entity.ToProtobufMessage()
                 };
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(CreatePermittedStructureLink));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(CreatePermittedStructureLink), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreatePermittedStructureLink), e); }
         }
 
         public override async Task<UpdatePermittedStructureLinksResponse> UpdatePermittedStructureLinks(UpdatePermittedStructureLinksRequest request, ServerCallContext context)
@@ -119,11 +111,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(UpdatePermittedStructureLinks));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(UpdatePermittedStructureLinks), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdatePermittedStructureLinks), e); }
         }
     }
 }

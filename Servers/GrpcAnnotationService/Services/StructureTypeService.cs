@@ -39,11 +39,7 @@ namespace gRPCAnnotationService
 
                 return new CreateStructureTypeResponse { Result = added.Entity.ToProtobufMessage() };
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(CreateStructureType));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(CreateStructureType), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureType), e); }
         }
 
         public override async Task<GetStructureTypeByIDResponse> GetStructureTypeByID(GetStructureTypeByIDRequest request, ServerCallContext context)
@@ -66,11 +62,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(rows.Select(t => t.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(GetStructureTypes));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(GetStructureTypes), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypes), e); }
         }
 
         public override async Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
@@ -88,11 +80,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(GetStructureTypesByIDs));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(GetStructureTypesByIDs), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypesByIDs), e); }
         }
 
         /// <summary>
@@ -161,11 +149,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(Update));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(Update), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e); }
         }
     }
 }

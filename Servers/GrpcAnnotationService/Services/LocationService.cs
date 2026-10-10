@@ -38,12 +38,6 @@ namespace gRPCAnnotationService
             _context = context;
         }
 
-        private RpcException Failure(string operation, Exception e)
-        {
-            _logger.LogError(e, "{Operation} failed", operation);
-            return new RpcException(new Status(StatusCode.Unknown, operation, e));
-        }
-
         #region Reads
 
         public override async Task<GetLocationByIDResponse> GetLocationByID(GetLocationByIDRequest request, ServerCallContext context)
@@ -78,7 +72,7 @@ namespace gRPCAnnotationService
                 await AttachLocationLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationsByID), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationsByID), e); }
         }
 
         /// <summary>
@@ -98,7 +92,7 @@ namespace gRPCAnnotationService
                 return new GetLastModifiedLocationResponse { Result = obj.ToProtobufMessage() };
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw Failure(nameof(GetLastModifiedLocation), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLastModifiedLocation), e); }
         }
 
         public override async Task<GetLinkedLocationsResponse> GetLinkedLocations(GetLinkedLocationsRequest request, ServerCallContext context)
@@ -109,7 +103,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(await LinkedIdsOf(request.Id, context.CancellationToken));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLinkedLocations), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLinkedLocations), e); }
         }
 
         public override async Task<GetLocationsForSectionResponse> GetLocationsForSection(GetLocationsForSectionRequest request, ServerCallContext context)
@@ -132,7 +126,7 @@ namespace gRPCAnnotationService
                 await AttachLocationLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationsForSection), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationsForSection), e); }
         }
 
         public override async Task<GetStructureLocationsResponse> GetStructureLocations(GetStructureLocationsRequest request, ServerCallContext context)
@@ -148,7 +142,7 @@ namespace gRPCAnnotationService
                 await AttachLocationLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetStructureLocations), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureLocations), e); }
         }
 
         /// <summary>
@@ -177,7 +171,7 @@ namespace gRPCAnnotationService
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Section, modifiedAfter, ct));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationChanges), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationChanges), e); }
         }
 
         /// <summary>
@@ -203,7 +197,7 @@ namespace gRPCAnnotationService
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter, ct));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationChangesInMosaicRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationChangesInMosaicRegion), e); }
         }
 
         /// <summary>
@@ -226,7 +220,7 @@ namespace gRPCAnnotationService
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter, ct));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetAnnotationsInMosaicRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetAnnotationsInMosaicRegion), e); }
         }
 
         /// <summary>
@@ -279,7 +273,7 @@ namespace gRPCAnnotationService
             }
             catch (OperationCanceledException) { throw; }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw Failure(nameof(StreamLocationChangesInMosaicRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(StreamLocationChangesInMosaicRegion), e); }
         }
 
         /// <summary>
@@ -343,7 +337,7 @@ namespace gRPCAnnotationService
             }
             catch (OperationCanceledException) { throw; }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw Failure(nameof(StreamAnnotationsInMosaicRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(StreamAnnotationsInMosaicRegion), e); }
         }
 
         public override async Task<GetLocationLinksForSectionResponse> GetLocationLinksForSection(GetLocationLinksForSectionRequest request, ServerCallContext context)
@@ -386,7 +380,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationLinksForSection), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationLinksForSection), e); }
         }
 
         public override async Task<GetLocationLinksForSectionInMosaicRegionResponse> GetLocationLinksForSectionInMosaicRegion(GetLocationLinksForSectionInMosaicRegionRequest request, ServerCallContext context)
@@ -411,7 +405,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(links.Select(ToProtobufMessage));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationLinksForSectionInMosaicRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationLinksForSectionInMosaicRegion), e); }
         }
 
         #endregion
@@ -446,7 +440,7 @@ namespace gRPCAnnotationService
                 await AttachLocationLinksAsync(new[] { result }, ct);
                 return new CreateLocationResponse { Result = result };
             }
-            catch (Exception e) { throw Failure(nameof(CreateLocation), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateLocation), e); }
         }
 
         public override async Task<UpdateLocationsResponse> Update(UpdateLocationsRequest request, ServerCallContext context)
@@ -561,7 +555,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(Update), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e); }
         }
 
         public override async Task<CreateLocationLinkResponse> CreateLocationLink(CreateLocationLinkRequest request, ServerCallContext context)
@@ -573,7 +567,7 @@ namespace gRPCAnnotationService
                 await _context.SaveChangesAsync(ct);
                 return new CreateLocationLinkResponse();
             }
-            catch (Exception e) { throw Failure(nameof(CreateLocationLink), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateLocationLink), e); }
         }
 
         public override async Task<DeleteLocationLinkResponse> DeleteLocationLink(DeleteLocationLinkRequest request, ServerCallContext context)
@@ -593,7 +587,7 @@ namespace gRPCAnnotationService
                 return new DeleteLocationLinkResponse();
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw Failure(nameof(DeleteLocationLink), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(DeleteLocationLink), e); }
         }
 
         #endregion

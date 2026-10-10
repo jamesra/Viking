@@ -23,4 +23,8 @@
     <ProjectReference Include="..\SectionCorrection\SectionCorrection.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ConnectomeDataModelCoreTests" />
+  </ItemGroup>
+
 </Project>

@@ -47,11 +47,7 @@ namespace gRPCAnnotationService
 
                 return new ScaleResponse { Scale = scale };
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Operation} failed", nameof(Scale));
-                throw new RpcException(new Status(StatusCode.Unknown, nameof(Scale), e));
-            }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Scale), e); }
         }
 
         private async Task<T> ScalarAsync<T>(string sql, System.Threading.CancellationToken ct)
