@@ -18,6 +18,17 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        [DataRow("99999999999999999999")]
+        [DataRow("1-99999999999999999999")]
+        [DataRow("٣")]
+        public void NumbersLongParseCannotReadAreReportedNotThrown(string text)
+        {
+            SectionRangeParse parsed = SectionRangeParser.Parse(text);
+            Assert.IsFalse(parsed.Success);
+            Assert.AreEqual(0, parsed.Sections.Count);
+        }
+
+        [TestMethod]
         public void SingleNumber()
         {
             SectionRangeParse parsed = SectionRangeParser.Parse("5");

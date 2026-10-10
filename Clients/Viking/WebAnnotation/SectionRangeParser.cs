@@ -177,22 +177,27 @@ namespace WebAnnotation
         private static SectionRangeParse Failed(string error)
             => new(success: false, isAllSections: false, interpretation: error, sections: []);
 
+        /// <summary>
+        /// Reads one token as a number or range. Fails (rather than throwing) on digits <c>long</c> cannot hold, such as a pasted 20-digit value,
+        /// and on non-ASCII digits that the <c>\d</c> patterns accept.
+        /// </summary>
         private static bool TryParseToken(string token, out long start, out long end, out string? error)
         {
             error = null;
             Match range = RangeToken.Match(token);
             if (range.Success)
             {
-                start = long.Parse(range.Groups[1].Value);
-                end = long.Parse(range.Groups[2].Value);
-                return true;
+                if (TryParseSection(range.Groups[1].Value, out start) & TryParseSection(range.Groups[2].Value, out end))
+                    return true;
             }
-
-            Match single = SingleToken.Match(token);
-            if (single.Success)
+            else
             {
-                start = end = long.Parse(single.Groups[1].Value);
-                return true;
+                Match single = SingleToken.Match(token);
+                if (single.Success && TryParseSection(single.Groups[1].Value, out start))
+                {
+                    end = start;
+                    return true;
+                }
             }
 
             start = 0;
@@ -200,5 +205,8 @@ namespace WebAnnotation
             error = $"Could not read \"{token}\" as a section or range.";
             return false;
         }
+
+        private static bool TryParseSection(string digits, out long value)
+            => long.TryParse(digits, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 }
