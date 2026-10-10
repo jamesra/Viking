@@ -564,18 +564,21 @@ namespace WebAnnotation
         public void Clear() => entries.Clear();
     }
 
+    /// <summary>
+    /// <c>ForEach</c> helpers for sequences. Arrays use the <see cref="IEnumerable{T}"/> overloads; the indexed overload passes a zero-based position. A null <c>source</c> or <c>action</c> throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     public static class LINQLikeExtensions
     {
         public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
             if (source is null)
             {
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
             }
 
             if (action is null)
             {
-                throw new ArgumentNullException("action");
+                throw new ArgumentNullException(nameof(action));
             }
 
             foreach (T item in source)
@@ -588,12 +591,12 @@ namespace WebAnnotation
         {
             if (source is null)
             {
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
             }
 
             if (action is null)
             {
-                throw new ArgumentNullException("action");
+                throw new ArgumentNullException(nameof(action));
             }
 
             int i = 0;
@@ -601,24 +604,6 @@ namespace WebAnnotation
             {
                 action(item, i);
                 i++;
-            }
-        }
-
-        public static void ForEach<T>(this T[] source, Action<T, int> action)
-        {
-            if (source is null)
-            {
-                throw new ArgumentNullException("source");
-            }
-
-            if (action is null)
-            {
-                throw new ArgumentNullException("action");
-            }
-
-            for (int i = 0; i < source.Length; i++)
-            {
-                action(source[i], i);
             }
         }
     }
