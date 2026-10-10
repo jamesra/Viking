@@ -171,7 +171,6 @@ namespace WebAnnotation.ViewModel
             //Add a grid line segment to each section the link intersects
             for (int iSection = minSection; iSection <= maxSection; iSection++)
             {
-                //TODO: Check for missing sections!
                 if (Viking.UI.State.volume.SectionViewModels.ContainsKey(iSection) == false)
                     continue;
 
@@ -179,13 +178,9 @@ namespace WebAnnotation.ViewModel
                 if (!linkView.LinksOverlap(iSection))
                 {
                     RTree.RTree<LocationLinkView> searchGrid = GetOrAddSearchGrid(iSection);
-                    //           Debug.WriteLine(iSection.ToString() + " add    : " + linkView.ToString() + " " + searchGrid.Count.ToString());
-
-                    //Debug.Assert(false == searchGrid.Contains(linkView));
 
                     bool sectionSuccess = searchGrid.TryAdd(linkView.BoundingBox.ToRTreeRect(iSection), linkView);
                     success |= sectionSuccess;  //I had this on one line, but short-circuit logic had me beating my head against the wall for too long
-                                                          //Debug.Assert(success); 
                 }
                 else
                 {
