@@ -1088,71 +1088,13 @@ namespace Viking.UI.Controls
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
 
-            //Image Dimensions
-            int RequestedWorldX = (int)Math.Floor(MyRect.Center.X);
-            int RequestedWorldY = (int)Math.Floor(MyRect.Center.Y);
-            int RequestedWorldWidth = (int)Math.Round(MyRect.Width);
-            int RequestedWorldHeight = (int)Math.Round(MyRect.Height);
-
-            //Image dimensions on screen
-            int CapturedTileSizeX = (int)(Math.Round(MyRect.Width / Downsample));
-            int CapturedTileSizeY = (int)(Math.Round(MyRect.Height / Downsample));
-
-            int FinalImageWidth = CapturedTileSizeX;
-            int FinalImageHeight = CapturedTileSizeY;
-
-            int AdjustedWorldX = RequestedWorldX;
-            int AdjustedWorldY = RequestedWorldY;
-            int AdjustedWorldWidth = RequestedWorldWidth;
-            int AdjustedWorldHeight = RequestedWorldHeight;
-
-            int WorldTileSizeX = RequestedWorldWidth;
-            int WorldTileSizeY = RequestedWorldHeight;
-
-            int numTilesX = 1;
-            int numTilesY = 1;
+            int TileCaptureMaxSize = Device.Adapter.IsProfileSupported(GraphicsProfile.HiDef) ? 4096 : 2048;
+            FrameExportPlan plan = new(MyRect.Center.X, MyRect.Center.Y, MyRect.Width, MyRect.Height, Downsample, TileCaptureMaxSize);
 
             Camera camera = new()
             {
                 Downsample = Downsample
             };
-
-            //Figure out if we can do the entire shot at once or have to divide it up
-            if (CapturedTileSizeX <= 2048 && CapturedTileSizeX <= 2048)
-            {
-
-            }
-            else
-            {
-                //The dimensions of a single cell in our captureg rid
-                int TileCaptureMaxSize = Device.Adapter.IsProfileSupported(GraphicsProfile.HiDef) ? 4096 : 2048;
-
-                //Find out how many tiles we'll have to capture using a buffer smaller than the current screen size
-                numTilesX = (int)Math.Ceiling((double)CapturedTileSizeX / (double)TileCaptureMaxSize);
-                numTilesY = (int)Math.Ceiling((double)CapturedTileSizeY / (double)TileCaptureMaxSize);
-
-                WorldTileSizeX = RequestedWorldWidth / numTilesX;
-                WorldTileSizeY = RequestedWorldHeight / numTilesY;
-
-                CapturedTileSizeX = (int)Math.Round(WorldTileSizeX / Downsample);
-                CapturedTileSizeY = (int)Math.Round(WorldTileSizeY / Downsample);
-
-                FinalImageWidth = CapturedTileSizeX * numTilesX;
-                FinalImageHeight = CapturedTileSizeY * numTilesY;
-
-                //CaptureWidth = TileSizeX * numTilesX;
-                //CaptureHeight = TileSizeY * numTilesY;                
-
-                AdjustedWorldWidth = WorldTileSizeX * numTilesX;
-                AdjustedWorldHeight = WorldTileSizeY * numTilesY;
-
-                int OffsetX = RequestedWorldWidth - AdjustedWorldWidth;
-                int OffsetY = RequestedWorldHeight - AdjustedWorldHeight;
-
-                AdjustedWorldX = RequestedWorldX + (OffsetX / 2);
-                AdjustedWorldY = RequestedWorldY + (OffsetY / 2);
-            }
-
 
             List<Task> listTasks = [];
             int MaxActiveExports = 2;
@@ -1160,16 +1102,14 @@ namespace Viking.UI.Controls
                 GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
 
                 //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
-                for (int iRow = 0; iRow < numTilesY; iRow++)
+                for (int iRow = 0; iRow < plan.NumTilesY; iRow++)
                 {
-                    double Y = AdjustedWorldY + (iRow * WorldTileSizeY);
-
-                    for (int iCol = 0; iCol < numTilesX; iCol++)
+                    for (int iCol = 0; iCol < plan.NumTilesX; iCol++)
                     {
                         //Figure out the rectangle we need to capture at this location
-                        double X = AdjustedWorldX + (iCol * WorldTileSizeX);
+                        (double X, double Y) = plan.TileCenter(iCol, iRow);
 
-                        VikingXNA.Scene TileScene = new(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera);
+                        VikingXNA.Scene TileScene = new(new Viewport(0, 0, plan.CapturedTileSizeX, plan.CapturedTileSizeY), camera);
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
                         string tile_filename = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Filename),
                             $"{System.IO.Path.GetFileNameWithoutExtension(Filename)}_Z{Z}_X{X}_Y{Y}_W{Width}_H{Height}_DS{Downsample}.png");
