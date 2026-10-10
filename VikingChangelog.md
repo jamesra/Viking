@@ -19,6 +19,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Image tiles no longer stay blank for the rest of the session after a quick section change. A tile whose image was decoded but not yet shown when the section changed was never requested again.
 * An image tile whose cached copy on disk cannot be read (for example, file permissions deny reading it) is downloaded from the server again instead of staying blank.
 * Polygon area centroids at large mosaic coordinates (hundreds of thousands of pixels) no longer drift by tens of millipixels when the ring is stored closed; labels and geometry that use the centroid match the vertex mean again.
+* The Review change feed structure/label filter no longer hides every row when the text is only separators such as a lone comma; it now shows all rows, as the server query already did.
 
 ## 1.2.77 — 2026-09-30
 
