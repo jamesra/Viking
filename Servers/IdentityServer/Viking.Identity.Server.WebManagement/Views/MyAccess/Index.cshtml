@@ -6,13 +6,13 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2><i class="bi bi-shield-check"></i> My Access</h2>
-    @if (Model.AccessibleVolumes.Any() || Model.AccessibleSegmentationServices.Any())
+    @if (Model.AccessibleAnnotationContexts.Any() || Model.AccessibleSegmentationServices.Any())
     {
         <div class="d-flex gap-2">
-            @if (Model.AccessibleVolumes.Any())
+            @if (Model.AccessibleAnnotationContexts.Any())
             {
                 <span class="badge bg-success">
-                    <i class="bi bi-hdd-stack"></i> @Model.AccessibleVolumes.Count volume(s)
+                    <i class="bi bi-hdd-stack"></i> @Model.AccessibleAnnotationContexts.Count volume(s)
                 </span>
             }
             @if (Model.AccessibleSegmentationServices.Any())
@@ -39,7 +39,7 @@ else
         </div>
 }
 
-@if (Model.AccessibleVolumes.Any())
+@if (Model.AccessibleAnnotationContexts.Any())
 {
     <!-- Search/Filter -->
     <div class="card card-modern mb-4">
@@ -54,7 +54,7 @@ else
                 <div class="col-md-6">
                     <select id="permissionFilter" class="form-select">
                         <option value="">All Permissions</option>
-                        @foreach (var perm in Model.AccessibleVolumes.SelectMany(v => v.Permissions).Distinct().OrderBy(p => p))
+                        @foreach (var perm in Model.AccessibleAnnotationContexts.SelectMany(v => v.Permissions).Distinct().OrderBy(p => p))
                         {
                             <option value="@perm">@perm</option>
                         }
@@ -67,7 +67,7 @@ else
 <!-- Volumes grouped by organization (if we had org info, for now just show all) -->
     <div id="volumesContainer">
         <div class="row">
-            @foreach (var volume in Model.AccessibleVolumes.OrderBy(v => v.Name))
+            @foreach (var volume in Model.AccessibleAnnotationContexts.OrderBy(v => v.Name))
             {
                 <div class="col-md-6 col-lg-4 mb-3 volume-item" data-volume-name="@volume.Name.ToLower()" data-permissions="@string.Join(" ", volume.Permissions).ToLower()">
                     <div class="card card-modern card-volume h-100">
@@ -257,7 +257,7 @@ else
     </div>
 }
 
-@if (Model.IsAuthenticated && (Model.AccessibleVolumes.Any() || Model.AccessibleSegmentationServices.Any()))
+@if (Model.IsAuthenticated && (Model.AccessibleAnnotationContexts.Any() || Model.AccessibleSegmentationServices.Any()))
 {
     <div class="card card-modern mt-4">
         <div class="card-header bg-info text-white">

@@ -41,7 +41,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var servers = await _context.AnnotationServers
                 .Include(s => s.Parent)
-                .Include(s => s.Volumes)
+                .Include(s => s.AnnotationContexts)
                 .Include(s => s.UsersWithPermissions)
                 .Include(s => s.GroupsWithPermissions)
                 .ToListAsync();
@@ -60,8 +60,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             var server = await _context.AnnotationServers
                 .Include(s => s.Parent)
-                .Include(s => s.Volumes)
-                    .ThenInclude(v => v.ImageSet)
+                .Include(s => s.AnnotationContexts)
+                    .ThenInclude(v => v.Volume)
                         .ThenInclude(i => i.Mirrors)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (server == null)
@@ -100,7 +100,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             var existing = await _context.AnnotationServers
                 .Include(s => s.Parent)
-                .Include(s => s.Volumes)
+                .Include(s => s.AnnotationContexts)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (existing == null)
                 return NotFound();
@@ -119,8 +119,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ModelState.AddModelError(nameof(input.Name), $"An annotation server named {input.Name} already exists");
 
             // A name shared with an unrelated volume would make {Name}.Annotate scopes ambiguous.
-            var linkedVolumeIds = existing.Volumes.Select(v => v.Id).ToList();
-            if (await _context.Volume.AnyAsync(v => v.Name == input.Name && !linkedVolumeIds.Contains(v.Id)))
+            var linkedVolumeIds = existing.AnnotationContexts.Select(v => v.Id).ToList();
+            if (await _context.AnnotationContexts.AnyAsync(v => v.Name == input.Name && !linkedVolumeIds.Contains(v.Id)))
                 ModelState.AddModelError(nameof(input.Name), $"A volume named {input.Name} uses a different annotation database");
 
             if (!ModelState.IsValid)
@@ -146,21 +146,21 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Resync(long id, CancellationToken cancellationToken)
         {
-            var server = await _context.AnnotationServers.Include(s => s.Parent).Include(s => s.Volumes).FirstOrDefaultAsync(s => s.Id == id);
+            var server = await _context.AnnotationServers.Include(s => s.Parent).Include(s => s.AnnotationContexts).FirstOrDefaultAsync(s => s.Id == id);
             if (server == null)
                 return NotFound();
 
             if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, server))
                 return Forbid();
 
-            var volumeIds = server.Volumes.Select(v => v.Id).ToList();
+            var volumeIds = server.AnnotationContexts.Select(v => v.Id).ToList();
             var results = new System.Collections.Generic.List<VolumeCatalogSyncResult>();
             foreach (var volumeId in volumeIds)
             {
                 var result = await _catalogSync.SyncVolumeAsync(volumeId, cancellationToken);
                 results.Add(result);
 
-                var imageSetId = await _context.Volume.Where(v => v.Id == volumeId).Select(v => v.ImageSetId).FirstOrDefaultAsync(cancellationToken);
+                var imageSetId = await _context.AnnotationContexts.Where(v => v.Id == volumeId).Select(v => v.VolumeId).FirstOrDefaultAsync(cancellationToken);
                 if (imageSetId.HasValue)
                     await _catalogSync.CheckMirrorsAsync(imageSetId.Value, cancellationToken);
             }

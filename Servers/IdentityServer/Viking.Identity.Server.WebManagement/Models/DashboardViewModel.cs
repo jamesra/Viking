@@ -12,7 +12,7 @@ namespace Viking.Identity.Server.WebManagement.Models
         public int TotalSegmentationServices { get; set; }
         
         public List<OrganizationalUnit> UserOrganizations { get; set; } = new List<OrganizationalUnit>();
-        public List<Volume> UserVolumes { get; set; } = new List<Volume>();
+        public List<AnnotationContext> UserVolumes { get; set; } = new List<AnnotationContext>();
         public List<SegmentationService> UserSegmentationServices { get; set; } = new List<SegmentationService>();
         public List<Group> UserGroups { get; set; } = new List<Group>();
         

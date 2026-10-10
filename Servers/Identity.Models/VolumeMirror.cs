@@ -5,10 +5,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Viking.Identity.Models
 {
     /// <summary>
-    /// One host serving an exact copy of an <see cref="ImageSet"/>. Clients may load-balance across
+    /// One host serving an exact copy of a <see cref="Volume"/>. Clients may load-balance across
     /// enabled mirrors; lower <see cref="Priority"/> values are preferred.
     /// </summary>
-    public class ImageSetMirror
+    public class VolumeMirror
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -16,12 +16,12 @@ namespace Viking.Identity.Models
         public long Id { get; set; }
 
         [Required]
-        [Display(Name = "Image Set", Description = "Image set this host serves")]
-        public long ImageSetId { get; set; }
+        [Display(Name = "Volume", Description = "Volume this host serves")]
+        public long VolumeId { get; set; }
 
-        [ForeignKey(nameof(ImageSetId))]
-        [Display(Name = "Image Set", Description = "Image set this host serves")]
-        public virtual ImageSet ImageSet { get; set; }
+        [ForeignKey(nameof(VolumeId))]
+        [Display(Name = "Volume", Description = "Volume this host serves")]
+        public virtual Volume Volume { get; set; }
 
         [Required]
         [Display(Name = "VikingXML URL", Description = "URL of the VikingXML on this host")]

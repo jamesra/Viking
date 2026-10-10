@@ -39,12 +39,14 @@ namespace Viking.Identity.Models
             /// <summary>
             /// Resource types that become Duende ApiResources with {Name}.{Permission} scopes.
             /// Order is the preference when one name matches several types: the annotation server
-            /// that holds the grants wins over a volume that points at it.
+            /// that holds the grants wins over an annotation context that points at it.
+            /// Connectome is intentionally excluded so a connectome named RC1 does not steal scopes
+            /// from the default annotation context / annotation server also named RC1.
             /// </summary>
             public static readonly string[] ApiFacing =
             {
                 nameof(Models.AnnotationServer),
-                nameof(Models.Volume),
+                nameof(Models.AnnotationContext),
                 nameof(Models.SegmentationService)
             };
         }
@@ -61,7 +63,11 @@ namespace Viking.Identity.Models
                 public const string Admin = "Administrator";
             }
 
-            public static class Volume
+            /// <summary>
+            /// Legacy annotation-context permission names. Same strings as <see cref="AnnotationServer"/> so
+            /// token scopes ({Name}.Annotate) keep their shape; new grants go on the annotation server.
+            /// </summary>
+            public static class AnnotationContext
             {
                 public const string Read = "Read";
                 public const string Annotate = "Annotate";
@@ -69,13 +75,13 @@ namespace Viking.Identity.Models
             }
 
             /// <summary>
-            /// Same names as <see cref="Volume"/> so token scopes ({Name}.Annotate) keep their shape.
+            /// Same names as <see cref="AnnotationContext"/> so token scopes ({Name}.Annotate) keep their shape.
             /// </summary>
             public static class AnnotationServer
             {
-                public const string Read = Volume.Read;
-                public const string Annotate = Volume.Annotate;
-                public const string Review = Volume.Review;
+                public const string Read = AnnotationContext.Read;
+                public const string Annotate = AnnotationContext.Annotate;
+                public const string Review = AnnotationContext.Review;
 
                 public static readonly string[] All = { Read, Annotate, Review };
             }

@@ -402,7 +402,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: GrantedPermissions/BulkEdit (Volumes)
         public Task<IActionResult> BulkEdit(string volumeIds)
         {
-            return BulkEditResources<Volume>(
+            return BulkEditResources<AnnotationContext>(
                 ParseIds(volumeIds),
                 "Volumes",
                 "Volumes",
@@ -415,7 +415,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [ValidateAntiForgeryToken]
         public Task<IActionResult> BulkEdit([Bind()] BulkPermissionsEditViewModel model)
         {
-            return ApplyBulkPermissions<Volume>(
+            return ApplyBulkPermissions<AnnotationContext>(
                 model,
                 "Volumes",
                 "Volumes");

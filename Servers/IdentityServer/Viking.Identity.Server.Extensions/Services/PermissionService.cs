@@ -28,8 +28,8 @@ namespace Viking.Identity.Server.Extensions.Services
             if (resourceTypeId != null)
                 resourceTypes = new string[] { resourceTypeId };
 
-            if (resourceTypeId == nameof(Volume))
-                return await VolumesWithPermissionsAsync(await _context.UserVolumePermissionsAsync(userId));
+            if (resourceTypeId == nameof(AnnotationContext))
+                return await VolumesWithPermissionsAsync(await _context.UserAnnotationContextPermissionsAsync(userId));
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypes);
             if (resourceTypeId == nameof(AnnotationServer))
@@ -66,7 +66,7 @@ namespace Viking.Identity.Server.Extensions.Services
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypeIds);
 
             // Volumes reached only through their annotation server are listed too.
-            foreach (var volume in await _context.UserVolumePermissionsAsync(userId))
+            foreach (var volume in await _context.UserAnnotationContextPermissionsAsync(userId))
                 userPermittedResources[volume.Key] = volume.Value;
 
             if (userPermittedResources.Count == 0)
@@ -132,16 +132,16 @@ namespace Viking.Identity.Server.Extensions.Services
             {
                 Id = v.Id,
                 Name = v.Name,
-                ResourceType = nameof(Volume),
+                ResourceType = nameof(AnnotationContext),
                 Permissions = volumePermissions[v.Id],
                 ParentId = v.ParentID,
                 Metadata = VolumeMetadata.Build(v)
             });
         }
 
-        public async Task<Dictionary<long, UserResourcePermissions>> GetUserAccessibleVolumesAsync(string userId)
+        public async Task<Dictionary<long, UserResourcePermissions>> GetUserAccessibleAnnotationContextsAsync(string userId)
         {
-            return await GetUserPermissionsByTypeAsync(userId, nameof(Volume));
+            return await GetUserPermissionsByTypeAsync(userId, nameof(AnnotationContext));
         }
 
         public async Task<Dictionary<long, UserResourcePermissions>> GetUserAccessibleSegmentationServicesAsync(string userId)
@@ -199,7 +199,7 @@ namespace Viking.Identity.Server.Extensions.Services
             return await GetUserAccessibleSegmentationServicesAsync(appUser.Id);
         }
 
-        public async Task<Dictionary<long, UserResourcePermissions>> GetUserAccessibleVolumesByUsernameAsync(string username)
+        public async Task<Dictionary<long, UserResourcePermissions>> GetUserAccessibleAnnotationContextsByUsernameAsync(string username)
         {
             var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
             if (appUser == null)
@@ -210,7 +210,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
             _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Permissions, "Found user '{Username}' with ID: {UserId}", username, appUser.Id);
 
-            var volumePermissions = await _context.UserVolumePermissionsAsync(appUser.Id);
+            var volumePermissions = await _context.UserAnnotationContextPermissionsAsync(appUser.Id);
             _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Permissions, "User {Username} has permissions for {Count} Volume resources", username, volumePermissions.Count);
 
             return await VolumesWithPermissionsAsync(volumePermissions);
@@ -237,7 +237,7 @@ namespace Viking.Identity.Server.Extensions.Services
         {
             if (volumes is null)
             {
-                volumes = await GetUserPermissionsByTypeAsync(userId, nameof(Volume));
+                volumes = await GetUserPermissionsByTypeAsync(userId, nameof(AnnotationContext));
                 if (volumes.Count == 0)
                 {
                     return new List<VolumeTreeNode>();

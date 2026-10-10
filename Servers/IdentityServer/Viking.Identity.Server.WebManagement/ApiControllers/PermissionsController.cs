@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -77,8 +77,8 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
             if (resourceTypeId != null)
                 resourceTypes = new string[] { resourceTypeId };
 
-            var userPermittedResources = resourceTypeId == nameof(Volume)
-                ? await _context.UserVolumePermissionsAsync(appUser.Id)
+            var userPermittedResources = resourceTypeId == nameof(AnnotationContext)
+                ? await _context.UserAnnotationContextPermissionsAsync(appUser.Id)
                 : await _context.UserResourcePermissionsByType(appUser.Id, resourceTypes);
 
             var resourceMap = from r in await _context.Resource.ToListAsync()
@@ -195,7 +195,7 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
 
             var userPermittedResources = await _context.UserResourcePermissions(appUser.Id, resourceTypes);
 
-            var resourceMap = from r in await _context.Resource.Include(nameof(Volume)).ToListAsync()
+            var resourceMap = from r in await _context.Resource.Include(nameof(AnnotationContext)).ToListAsync()
                 join upr in userPermittedResources.Keys on r.Id equals upr
                 select new { r.Id, r.Name, permissions = userPermittedResources[upr] };
 
@@ -211,11 +211,11 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
         /// </summary>
         /// <returns></returns>
         /// <param name="id"></param>
-        // GET: Resources/UserAccessibleVolumes/5/jamesan 
-        [HttpGet("AccessibleVolumes")]
-        public Task<Dictionary<long, object>> UserAccessibleVolumes()
+        // GET: Resources/UserAccessibleAnnotationContexts/5/jamesan 
+        [HttpGet("AccessibleAnnotationContexts")]
+        public Task<Dictionary<long, object>> UserAccessibleAnnotationContexts()
         {
-            return UserPermissionsByType(resourceTypeId: nameof(Volume));
+            return UserPermissionsByType(resourceTypeId: nameof(AnnotationContext));
             /*
             ApplicationUser appUser;
             try
@@ -228,9 +228,9 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
             }
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new string[]
-                {nameof(Volume)});
+                {nameof(AnnotationContext)});
 
-            var resourceMap = from r in await _context.Volume.ToListAsync()
+            var resourceMap = from r in await _context.AnnotationContexts.ToListAsync()
                 join upr in userPermittedResources on r.Id equals upr
                 select new { r.Id, r.Name, r.Description, r.Endpoint, permissions = userPermittedResources[upr] };
 

@@ -77,9 +77,9 @@ else
                         }
                     </td>
                     <td>
-                        @foreach (var volume in server.Volumes.OrderBy(v => v.Name))
+                        @foreach (var volume in server.AnnotationContexts.OrderBy(v => v.Name))
                         {
-                            <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="badge bg-success text-decoration-none me-1">@volume.Name</a>
+                            <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@volume.Id" class="badge bg-success text-decoration-none me-1">@volume.Name</a>
                         }
                     </td>
                     <td>@(server.UsersWithPermissions.Count + server.GroupsWithPermissions.Count)</td>

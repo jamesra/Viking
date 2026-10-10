@@ -1,4 +1,4 @@
-﻿@model Viking.Identity.Models.Volume
+@model Viking.Identity.Models.AnnotationContext
 
 @{
     ViewData["Title"] = "Edit Volume";
@@ -47,19 +47,30 @@
                 </small>
             </div>
             <div class="mb-3">
-                <label class="form-label">Annotation Server</label>
-                <div class="form-control-plaintext">
+                <label asp-for="AnnotationServerId" class="form-label">Annotation Server</label>
+                @{
+                    var servers = (IEnumerable<Viking.Identity.Models.AnnotationServer>)(ViewBag.AvailableAnnotationServers ?? Array.Empty<Viking.Identity.Models.AnnotationServer>());
+                    var selectedServerId = Model.AnnotationServerPinned ? Model.AnnotationServerId : null;
+                }
+                <select asp-for="AnnotationServerId" class="form-select">
+                    <option value="" selected="@(selectedServerId == null)">
+                        Use VikingXML@(Model.AnnotationServer != null && !Model.AnnotationServerPinned ? $" ({Model.AnnotationServer.Name})" : "")
+                    </option>
+                    @foreach (var server in servers)
+                    {
+                        <option value="@server.Id" selected="@(selectedServerId == server.Id)">@server.Name - @server.AnnotationEndpoint</option>
+                    }
+                </select>
+                <span asp-validation-for="AnnotationServerId" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    Choose a server to override the one named by VolumeToEndpoint in the VikingXML. The choice is kept when the
+                    catalog syncs. Select "Use VikingXML" to go back to the automatic link; images-only contexts then have no
+                    annotation server.
                     @if (Model.AnnotationServer != null)
                     {
-                        <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>
-                        <span class="text-muted small ms-2"><code>@Model.AnnotationServer.AnnotationEndpoint</code></span>
+                        <span>Currently: <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>@(Model.AnnotationServerPinned ? " (manual)" : " (from VikingXML)").</span>
                     }
-                    else
-                    {
-                        <em class="text-muted">None (images only, or not synced)</em>
-                    }
-                </div>
-                <small class="form-text text-muted">Set from VolumeToEndpoint in the VikingXML.</small>
+                </small>
             </div>
             <div class="mb-3">
                 <label asp-for="RegistrationName" class="form-label"></label>

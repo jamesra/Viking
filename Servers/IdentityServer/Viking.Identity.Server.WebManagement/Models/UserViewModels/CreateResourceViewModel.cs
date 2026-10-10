@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Viking.Identity.Models;
@@ -51,14 +51,14 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         public CreateGroupViewModel(CreateResourceViewModel template) : base(template) { }
     }
 
-    public class CreateVolumeViewModel : CreateResourceViewModel
+    public class CreateAnnotationContextViewModel : CreateResourceViewModel
     {
-        public override string ResourceTypeId => nameof(Volume);
+        public override string ResourceTypeId => nameof(AnnotationContext);
 
         [Display(Name = "URL of volume")]
         public virtual Uri URL { get; set; }
-        public CreateVolumeViewModel() : base() { }
-        public CreateVolumeViewModel(CreateResourceViewModel template) : base(template) { }
+        public CreateAnnotationContextViewModel() : base() { }
+        public CreateAnnotationContextViewModel(CreateResourceViewModel template) : base(template) { }
     }
 
     public class CreateSegmentationServiceViewModel : CreateResourceViewModel

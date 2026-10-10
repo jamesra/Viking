@@ -38,8 +38,8 @@
     </div>
 </div>
 
-<h4>Volumes without an annotation server (@Model.UnlinkedVolumes.Count)</h4>
-@if (!Model.UnlinkedVolumes.Any())
+<h4>Volumes without an annotation server (@Model.UnlinkedAnnotationContexts.Count)</h4>
+@if (!Model.UnlinkedAnnotationContexts.Any())
 {
     <p class="text-muted">Every volume is linked.</p>
 }
@@ -61,10 +61,10 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var volume in Model.UnlinkedVolumes)
+            @foreach (var volume in Model.UnlinkedAnnotationContexts)
             {
                 <tr>
-                    <td><a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id">@volume.Name</a></td>
+                    <td><a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@volume.Id">@volume.Name</a></td>
                     <td>@(volume.Parent?.Name ?? "-")</td>
                     <td class="small"><code>@volume.Endpoint</code></td>
                     <td class="small">@(volume.CatalogSyncedUtc?.ToString("u") ?? "never")</td>
@@ -84,7 +84,7 @@ else
 {
     <p class="text-muted small">
         These image sets have identical VikingXML apart from the host path. If they serve the same files, add the
-        other hosts as mirrors of one set (Volume &rarr; Mirrors) so clients can load-balance between them.
+        other hosts as mirrors of one set (AnnotationContext &rarr; Mirrors) so clients can load-balance between them.
     </p>
     @foreach (var suggestion in Model.CloneSuggestions)
     {
@@ -92,14 +92,14 @@ else
             <div class="card-body">
                 <div class="small text-muted mb-1">Hash <code>@suggestion.ContentHash.Substring(0, 12)</code></div>
                 <ul class="mb-0">
-                    @foreach (var imageSet in suggestion.ImageSets)
+                    @foreach (var imageSet in suggestion.Volumes)
                     {
                         <li>
                             <strong>@imageSet.Name</strong>
                             (@imageSet.Mirrors.Count mirror(s); volumes:
-                            @foreach (var volume in imageSet.Volumes)
+                            @foreach (var volume in imageSet.AnnotationContexts)
                             {
-                                <a asp-controller="Volumes" asp-action="Mirrors" asp-route-id="@volume.Id" class="me-1">@volume.Name</a>
+                                <a asp-controller="AnnotationContexts" asp-action="Mirrors" asp-route-id="@volume.Id" class="me-1">@volume.Name</a>
                             })
                         </li>
                     }

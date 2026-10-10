@@ -12,8 +12,8 @@ namespace Viking.Identity.Server.Extensions.Services
     {
         public long OrganizationalUnitId { get; set; }
         public string OrganizationalUnitName { get; set; }
-        public long VolumeId { get; set; }
-        public string VolumeName { get; set; }
+        public long AnnotationContextId { get; set; }
+        public string AnnotationContextName { get; set; }
         public string InviteToken { get; set; }
         public bool ExistingUserGranted { get; set; }
         public string CollaboratorEmail { get; set; }
@@ -24,7 +24,7 @@ namespace Viking.Identity.Server.Extensions.Services
         public string Token { get; set; }
         public string Email { get; set; }
         public string OrganizationalUnitName { get; set; }
-        public string VolumeName { get; set; }
+        public string AnnotationContextName { get; set; }
         public bool IsValid { get; set; }
         public string ErrorMessage { get; set; }
     }
@@ -72,7 +72,7 @@ namespace Viking.Identity.Server.Extensions.Services
             if (_context.IsResourceNameTaken(orgName, nameof(OrganizationalUnit)))
                 throw new InvalidOperationException($"An organizational unit named {orgName} already exists.");
 
-            if (_context.IsResourceNameTaken(volumeName, nameof(Volume)))
+            if (_context.IsResourceNameTaken(volumeName, nameof(AnnotationContext)))
                 throw new InvalidOperationException($"A volume named {volumeName} already exists.");
 
             // Network fetch happens before the transaction so no database locks are held while it runs.
@@ -115,7 +115,7 @@ namespace Viking.Identity.Server.Extensions.Services
             var org = await _provisioning.CreateOrganizationalUnitAsync(orgName, orgDescription, parentOrgId);
             await _provisioning.GrantSiteAdminsOrgUnitAdminAsync(org.Id);
 
-            var volume = await _provisioning.CreateVolumeAsync(volumeName, volumeDescription, org.Id, vikingXmlUrl);
+            var volume = await _provisioning.CreateAnnotationContextAsync(volumeName, volumeDescription, org.Id, vikingXmlUrl);
             if (catalog != null)
                 await _catalogSync.ApplyAsync(volume, catalog);
 
@@ -123,8 +123,8 @@ namespace Viking.Identity.Server.Extensions.Services
             {
                 OrganizationalUnitId = org.Id,
                 OrganizationalUnitName = org.Name,
-                VolumeId = volume.Id,
-                VolumeName = volume.Name,
+                AnnotationContextId = volume.Id,
+                AnnotationContextName = volume.Name,
                 CollaboratorEmail = collaboratorEmail.Trim()
             };
 
@@ -132,7 +132,7 @@ namespace Viking.Identity.Server.Extensions.Services
             if (existingUser != null)
             {
                 await _provisioning.GrantUserOrgUnitAdminAsync(existingUser.Id, org.Id);
-                await _provisioning.GrantUserVolumeFullAccessAsync(existingUser.Id, volume.Id);
+                await _provisioning.GrantUserAnnotationContextFullAccessAsync(existingUser.Id, volume.Id);
                 result.ExistingUserGranted = true;
                 return result;
             }
@@ -143,7 +143,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 Token = Guid.NewGuid().ToString("N"),
                 Email = result.CollaboratorEmail,
                 OrganizationalUnitId = org.Id,
-                VolumeId = volume.Id,
+                AnnotationContextId = volume.Id,
                 CreatedByUserId = createdByUserId,
                 CreatedAtUtc = now,
                 ExpiresAtUtc = now.Add(DefaultInviteLifetime)
@@ -169,7 +169,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
             var invite = await _context.CollaboratorInvites
                 .Include(i => i.OrganizationalUnit)
-                .Include(i => i.Volume)
+                .Include(i => i.AnnotationContext)
                 .FirstOrDefaultAsync(i => i.Token == token);
 
             if (invite == null)
@@ -208,7 +208,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 Token = invite.Token,
                 Email = invite.Email,
                 OrganizationalUnitName = invite.OrganizationalUnit?.Name,
-                VolumeName = invite.Volume?.Name,
+                AnnotationContextName = invite.AnnotationContext?.Name,
                 IsValid = true
             };
         }
@@ -260,7 +260,7 @@ namespace Viking.Identity.Server.Extensions.Services
             await _context.SaveChangesAsync();
 
             await _provisioning.GrantUserOrgUnitAdminAsync(userId, invite.OrganizationalUnitId);
-            await _provisioning.GrantUserVolumeFullAccessAsync(userId, invite.VolumeId);
+            await _provisioning.GrantUserAnnotationContextFullAccessAsync(userId, invite.AnnotationContextId);
         }
 
         /// <summary>
@@ -269,13 +269,13 @@ namespace Viking.Identity.Server.Extensions.Services
         /// </summary>
         public async Task DeleteInvitesForOrganizationalUnitAsync(long organizationalUnitId)
         {
-            var childVolumeIds = await _context.Volume
+            var childVolumeIds = await _context.AnnotationContexts
                 .Where(v => v.ParentID == organizationalUnitId)
                 .Select(v => v.Id)
                 .ToListAsync();
 
             var invites = await _context.CollaboratorInvites
-                .Where(i => i.OrganizationalUnitId == organizationalUnitId || childVolumeIds.Contains(i.VolumeId))
+                .Where(i => i.OrganizationalUnitId == organizationalUnitId || childVolumeIds.Contains(i.AnnotationContextId))
                 .ToListAsync();
 
             if (invites.Count == 0)
@@ -288,10 +288,10 @@ namespace Viking.Identity.Server.Extensions.Services
         /// <summary>
         /// Removes invites that reference a volume. Call before deleting the volume.
         /// </summary>
-        public async Task DeleteInvitesForVolumeAsync(long volumeId)
+        public async Task DeleteInvitesForAnnotationContextAsync(long volumeId)
         {
             var invites = await _context.CollaboratorInvites
-                .Where(i => i.VolumeId == volumeId)
+                .Where(i => i.AnnotationContextId == volumeId)
                 .ToListAsync();
 
             if (invites.Count == 0)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -78,7 +78,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            var volumes = await _context.Volume
+            var volumes = await _context.AnnotationContexts
                 .Where(v => userVolumeIds.Contains(v.Id))
                 .Include(v => v.Parent)
                 .Include(v => v.UsersWithPermissions.Where(gup => gup.UserId == id))
@@ -86,7 +86,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             ViewBag.RecursiveGroups = recursiveGroups;
             ViewBag.UserGroups = applicationUser.GroupAssignments?.Select(ga => ga.Group).ToList() ?? new List<Group>();
-            ViewBag.Volumes = volumes;
+            ViewBag.AnnotationContexts = volumes;
 
             return View(applicationUser);
         }

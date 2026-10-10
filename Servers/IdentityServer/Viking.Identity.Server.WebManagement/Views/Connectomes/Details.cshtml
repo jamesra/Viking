@@ -1,0 +1,84 @@
+@model Viking.Identity.Models.Connectome
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">@Model.Name</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">Back to list</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Description))
+{
+    <p class="text-muted">@Model.Description</p>
+}
+
+<dl class="row">
+    <dt class="col-sm-3">Organization</dt>
+    <dd class="col-sm-9">@(Model.Parent?.Name ?? "—")</dd>
+    <dt class="col-sm-3">Default annotation context</dt>
+    <dd class="col-sm-9">
+        @if (Model.DefaultAnnotationContext != null)
+        {
+            <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@Model.DefaultAnnotationContext.Id">
+                @Model.DefaultAnnotationContext.Name
+            </a>
+        }
+        else
+        {
+            <span class="text-muted">Not set</span>
+        }
+    </dd>
+</dl>
+
+<h2 class="h5 mt-4">Annotation contexts</h2>
+<ul>
+@foreach (var ctx in Model.AnnotationContexts.OrderBy(c => c.Name))
+{
+    <li>
+        <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@ctx.Id">@ctx.Name</a>
+        @if (Model.DefaultAnnotationContextId == ctx.Id)
+        {
+            <span class="badge bg-primary">Default</span>
+        }
+        @if (ctx.AnnotationServer != null)
+        {
+            <span class="text-muted">→ @ctx.AnnotationServer.Name</span>
+        }
+    </li>
+}
+</ul>
+
+<h2 class="h5 mt-4">Annotation servers</h2>
+<ul>
+@foreach (var server in Model.AnnotationServers.OrderBy(s => s.Name))
+{
+    <li>
+        <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@server.Id">@server.Name</a>
+        <span class="text-muted">@server.AnnotationEndpoint</span>
+    </li>
+}
+@if (!Model.AnnotationServers.Any())
+{
+    <li class="text-muted">None</li>
+}
+</ul>
+
+<h2 class="h5 mt-4">Volumes</h2>
+<ul>
+@foreach (var volume in Model.Volumes.OrderBy(v => v.Name))
+{
+    <li>
+        @volume.Name
+        @if (!string.IsNullOrEmpty(volume.VersionLabel))
+        {
+            <span class="badge bg-secondary">@volume.VersionLabel</span>
+        }
+        <span class="text-muted">(@volume.Mirrors.Count mirror(s))</span>
+    </li>
+}
+@if (!Model.Volumes.Any())
+{
+    <li class="text-muted">None</li>
+}
+</ul>

@@ -12,7 +12,7 @@ namespace Viking.Identity.Server.Authorization
     /// <summary>
     /// Index/Details visibility: grants (user, recursive groups, site admin via
     /// <see cref="ApplicationDBContextExtensions.UserResourcePermissionsByType"/>; for volumes also the
-    /// annotation server's grants via <see cref="ApplicationDBContextExtensions.UserVolumePermissionsAsync"/>)
+    /// annotation server's grants via <see cref="ApplicationDBContextExtensions.UserAnnotationContextPermissionsAsync"/>)
     /// or parent-org administration. Mutate actions must keep using
     /// <see cref="AuthorizationServiceExtensions.IsParentOrgUnitAdminAsync"/>.
     /// </summary>
@@ -72,8 +72,8 @@ namespace Viking.Identity.Server.Authorization
             HashSet<long> grantedIds;
             if (string.IsNullOrEmpty(userId))
                 grantedIds = new HashSet<long>();
-            else if (resourceTypeId == nameof(Volume))
-                grantedIds = (await context.UserVolumePermissionsAsync(userId)).Keys.ToHashSet();
+            else if (resourceTypeId == nameof(AnnotationContext))
+                grantedIds = (await context.UserAnnotationContextPermissionsAsync(userId)).Keys.ToHashSet();
             else
                 grantedIds = (await context.UserResourcePermissionsByType(userId, new[] { resourceTypeId })).Keys.ToHashSet();
 

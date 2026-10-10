@@ -1,4 +1,4 @@
-﻿@model Viking.Identity.Server.WebManagement.Models.DashboardViewModel
+@model Viking.Identity.Server.WebManagement.Models.DashboardViewModel
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -62,7 +62,7 @@
             </a>
         </div>
         <div class="col-md-3 col-sm-6 mb-3">
-            <a asp-controller="Volumes" asp-action="Index" class="text-decoration-none d-block stats-card-link">
+            <a asp-controller="AnnotationContexts" asp-action="Index" class="text-decoration-none d-block stats-card-link">
                 <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-volume) 0%, #0d5f3f 100%);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
@@ -129,7 +129,7 @@
                             </a>
                         </div>
                         <div class="col-md-3 col-sm-6 mb-2">
-                            <a asp-controller="Volumes" asp-action="Index" class="btn btn-outline-success btn-quick-action w-100">
+                            <a asp-controller="AnnotationContexts" asp-action="Index" class="btn btn-outline-success btn-quick-action w-100">
                                 <i class="bi bi-hdd-stack"></i> View Volumes
                             </a>
                         </div>
@@ -196,7 +196,7 @@
                                                 </a>
                                             }
                                             @await Html.PartialAsync("_VolumeSbfsemToolsLink", volume.Name)
-                                            <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-sm btn-outline-secondary">
+                                            <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-info-circle"></i> Details
                                             </a>
                                         </div>
@@ -205,7 +205,7 @@
                             }
                         </div>
                         <div class="mt-3">
-                            <a asp-controller="Volumes" asp-action="Index" class="btn btn-outline-success">
+                            <a asp-controller="AnnotationContexts" asp-action="Index" class="btn btn-outline-success">
                                 <i class="bi bi-arrow-right"></i> View All Volumes
                             </a>
                         </div>

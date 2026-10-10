@@ -9,9 +9,9 @@ using Viking.Identity.Models;
 namespace Viking.Identity.Server.Extensions.Services
 {
     /// <summary>
-    /// Shared create/grant helpers for organizational units and volumes.
+    /// Shared create/grant helpers for organizational units and annotation contexts.
     /// Controllers keep authorization; this service owns persistence.
-    /// Linking a new volume to its annotation server is <see cref="AnnotationServerCatalogSync"/>'s job.
+    /// Linking a new context to its annotation server is <see cref="AnnotationServerCatalogSync"/>'s job.
     /// </summary>
     public class ResourceProvisioningService
     {
@@ -48,20 +48,39 @@ namespace Viking.Identity.Server.Extensions.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<Volume> CreateVolumeAsync(string name, string description, long? parentId, Uri endpointUrl)
+        /// <summary>
+        /// Creates a Connectome and its default AnnotationContext (same name). Catalog sync attaches
+        /// Volume and AnnotationServer and sets ConnectomeId on them.
+        /// </summary>
+        public async Task<AnnotationContext> CreateAnnotationContextAsync(string name, string description, long? parentId, Uri endpointUrl)
         {
-            var volume = new Volume
+            var parent = parentId == 0 ? null : parentId;
+
+            var connectome = new Connectome
             {
                 Name = name,
                 Description = description,
-                ParentID = parentId == 0 ? null : parentId,
-                Endpoint = endpointUrl,
-                ResourceTypeId = nameof(Volume)
+                ParentID = parent,
+                ResourceTypeId = nameof(Connectome)
             };
-
-            _context.Volume.Add(volume);
+            _context.Connectomes.Add(connectome);
             await _context.SaveChangesAsync();
-            return volume;
+
+            var context = new AnnotationContext
+            {
+                Name = name,
+                Description = description,
+                ParentID = parent,
+                Endpoint = endpointUrl,
+                ResourceTypeId = nameof(AnnotationContext),
+                ConnectomeId = connectome.Id
+            };
+            _context.AnnotationContexts.Add(context);
+            await _context.SaveChangesAsync();
+
+            connectome.DefaultAnnotationContextId = context.Id;
+            await _context.SaveChangesAsync();
+            return context;
         }
 
         public async Task GrantUserOrgUnitAdminAsync(string userId, long orgId)
@@ -71,16 +90,16 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Grants Read, Annotate, and Review. The grant goes on the volume's annotation server so it covers
-        /// every copy of the images; a volume without one (images only) gets the grant directly.
+        /// Grants Read, Annotate, and Review. The grant goes on the context's annotation server so it covers
+        /// every copy of the images; a context without one (images only) gets the grant directly.
         /// </summary>
-        public async Task GrantUserVolumeFullAccessAsync(string userId, long volumeId)
+        public async Task GrantUserAnnotationContextFullAccessAsync(string userId, long annotationContextId)
         {
-            var annotationServerId = await _context.Volume
-                .Where(v => v.Id == volumeId)
+            var annotationServerId = await _context.AnnotationContexts
+                .Where(v => v.Id == annotationContextId)
                 .Select(v => v.AnnotationServerId)
                 .FirstOrDefaultAsync();
-            var resourceId = annotationServerId ?? volumeId;
+            var resourceId = annotationServerId ?? annotationContextId;
 
             foreach (var permissionId in Special.Permissions.AnnotationServer.All)
                 await GrantUserPermissionIfMissingAsync(userId, resourceId, permissionId);

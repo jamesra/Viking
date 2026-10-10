@@ -56,7 +56,7 @@ namespace Viking.Identity.Server.Extensions.Services
         {
             var report = new GrantCopyReport();
 
-            var volumes = await _context.Volume
+            var volumes = await _context.AnnotationContexts
                 .Select(v => new { v.Id, v.Name, v.AnnotationServerId })
                 .ToListAsync(cancellationToken);
             report.VolumesWithoutAnnotationServer = volumes.Count(v => v.AnnotationServerId == null);

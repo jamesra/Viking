@@ -50,7 +50,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var volumeKey = !string.IsNullOrWhiteSpace(volumeName) ? volumeName.Trim() : volume?.Trim();
-            Volume resolved = null;
+            AnnotationContext resolved = null;
 
             if (!string.IsNullOrWhiteSpace(volumeKey))
             {

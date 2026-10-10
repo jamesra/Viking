@@ -1,4 +1,4 @@
-﻿@using Viking.Identity.Server.Authorization
+@using Viking.Identity.Server.Authorization
 @model IList<Viking.Identity.Models.Resource>
 
 <dl class="dl-traditional">
@@ -14,7 +14,7 @@
             case nameof(Group):
                 detailsController = detailsDescription = "Groups";
                 break;
-            case nameof(Volume):
+            case nameof(AnnotationContext):
                 detailsController = detailsDescription = "Volumes";
                 break;
             case nameof(AnnotationServer):

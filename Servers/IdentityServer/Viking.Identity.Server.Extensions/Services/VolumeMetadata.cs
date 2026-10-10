@@ -14,7 +14,7 @@ namespace Viking.Identity.Server.Extensions.Services
         public int Priority { get; set; }
     }
 
-    public class VolumeImageSetInfo
+    public class VolumeInfo
     {
         public long Id { get; set; }
         public string Name { get; set; }
@@ -23,7 +23,7 @@ namespace Viking.Identity.Server.Extensions.Services
     }
 
     /// <summary>
-    /// Metadata attached to each volume in the accessible-volume APIs. <c>Endpoint</c> keeps its
+    /// Metadata attached to each connectome in the accessible-connectome APIs. <c>Endpoint</c> keeps its
     /// meaning (a VikingXML URL, the preferred mirror) so existing clients are unaffected; the other
     /// keys are additive.
     /// </summary>
@@ -33,49 +33,49 @@ namespace Viking.Identity.Server.Extensions.Services
         public const string Endpoint = "Endpoint";
         public const string AnnotationServerName = "AnnotationServerName";
         public const string AnnotationEndpoint = "AnnotationEndpoint";
-        public const string ImageSet = "ImageSet";
+        public const string Volume = "Volume";
         public const string Mirrors = "Mirrors";
         public const string RegistrationName = "RegistrationName";
 
-        /// <summary>Volumes with the navigation properties <see cref="Build"/> reads.</summary>
-        public static IQueryable<Volume> WithCatalog(this ApplicationDbContext context) =>
-            context.Volume
-                .Include(v => v.AnnotationServer)
-                .Include(v => v.ImageSet)
-                    .ThenInclude(i => i.Mirrors);
+        /// <summary>Connectomes with the navigation properties <see cref="Build"/> reads.</summary>
+        public static IQueryable<AnnotationContext> WithCatalog(this ApplicationDbContext context) =>
+            context.AnnotationContexts
+                .Include(c => c.AnnotationServer)
+                .Include(c => c.Volume)
+                    .ThenInclude(v => v.Mirrors);
 
-        public static Dictionary<string, object> Build(Volume volume)
+        public static Dictionary<string, object> Build(AnnotationContext connectome)
         {
             var metadata = new Dictionary<string, object>
             {
-                [Description] = volume.Description,
-                [Endpoint] = volume.Endpoint?.ToString(),
-                [AnnotationServerName] = volume.AnnotationServer?.Name,
-                [AnnotationEndpoint] = volume.AnnotationServer?.AnnotationEndpoint,
-                [RegistrationName] = volume.RegistrationName,
-                [Mirrors] = MirrorsOf(volume.ImageSet)
+                [Description] = connectome.Description,
+                [Endpoint] = connectome.Endpoint?.ToString(),
+                [AnnotationServerName] = connectome.AnnotationServer?.Name,
+                [AnnotationEndpoint] = connectome.AnnotationServer?.AnnotationEndpoint,
+                [RegistrationName] = connectome.RegistrationName,
+                [Mirrors] = MirrorsOf(connectome.Volume)
             };
 
-            if (volume.ImageSet != null)
+            if (connectome.Volume != null)
             {
-                metadata[ImageSet] = new VolumeImageSetInfo
+                metadata[Volume] = new VolumeInfo
                 {
-                    Id = volume.ImageSet.Id,
-                    Name = volume.ImageSet.Name,
-                    VersionLabel = volume.ImageSet.VersionLabel,
-                    PixelSpace = volume.ImageSet.PixelSpace.ToString()
+                    Id = connectome.Volume.Id,
+                    Name = connectome.Volume.Name,
+                    VersionLabel = connectome.Volume.VersionLabel,
+                    PixelSpace = connectome.Volume.PixelSpace.ToString()
                 };
             }
 
             return metadata;
         }
 
-        public static List<VolumeMirrorInfo> MirrorsOf(ImageSet imageSet)
+        public static List<VolumeMirrorInfo> MirrorsOf(Volume volume)
         {
-            if (imageSet == null)
+            if (volume == null)
                 return new List<VolumeMirrorInfo>();
 
-            return imageSet.Mirrors
+            return volume.Mirrors
                 .Where(m => m.Enabled && m.VikingXmlUrl != null)
                 .OrderBy(m => m.Priority)
                 .ThenBy(m => m.Id)

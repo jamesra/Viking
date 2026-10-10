@@ -6,7 +6,7 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
     {
         public string Username { get; set; }
         public bool IsAuthenticated { get; set; }
-        public List<VolumeAccessInfo> AccessibleVolumes { get; set; } = new List<VolumeAccessInfo>();
+        public List<VolumeAccessInfo> AccessibleAnnotationContexts { get; set; } = new List<VolumeAccessInfo>();
         public List<SegmentationServiceAccessInfo> AccessibleSegmentationServices { get; set; } = new List<SegmentationServiceAccessInfo>();
     }
 

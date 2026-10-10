@@ -98,7 +98,8 @@ namespace Viking.Identity.Data
             builder.Entity<Resource>()
                 .HasDiscriminator<string>(nameof(Models.Resource.ResourceTypeId))
                 .HasValue<Resource>(nameof(Models.Resource))
-                .HasValue<Volume>(nameof(Models.Volume))
+                .HasValue<Connectome>(nameof(Models.Connectome))
+                .HasValue<AnnotationContext>(nameof(Models.AnnotationContext))
                 .HasValue<OrganizationalUnit>(nameof(Models.OrganizationalUnit))
                 .HasValue<Group>(nameof(Models.Group))
                 .HasValue<SegmentationService>(nameof(Models.SegmentationService))
@@ -108,7 +109,7 @@ namespace Viking.Identity.Data
                 v => v == null ? null : v.ToString(),
                 v => string.IsNullOrWhiteSpace(v) ? null : new Uri(v));
 
-            builder.Entity<Volume>()
+            builder.Entity<AnnotationContext>()
                 .Property(v => v.Endpoint)
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
@@ -135,37 +136,70 @@ namespace Viking.Identity.Data
                 .Property(s => s.AuthenticationUrl)
                 .HasConversion(uriConverter);
 
-            // Self-reference inside the Resource table: SQL Server rejects cascade here, and deleting a
-            // server must not silently delete the volumes that point at it.
-            builder.Entity<Volume>()
-                .HasOne(v => v.AnnotationServer)
-                .WithMany(s => s.Volumes)
-                .HasForeignKey(v => v.AnnotationServerId)
+            // Self-reference inside the Resource table: SQL Server rejects cascade here.
+            builder.Entity<AnnotationContext>()
+                .HasOne(c => c.AnnotationServer)
+                .WithMany(s => s.AnnotationContexts)
+                .HasForeignKey(c => c.AnnotationServerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AnnotationContext>()
+                .HasOne(c => c.Volume)
+                .WithMany(v => v.AnnotationContexts)
+                .HasForeignKey(c => c.VolumeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // TPH: AnnotationContext and AnnotationServer both use ConnectomeId on Resource.
+            builder.Entity<AnnotationContext>()
+                .Property(c => c.ConnectomeId)
+                .HasColumnName(nameof(AnnotationContext.ConnectomeId));
+
+            builder.Entity<AnnotationServer>()
+                .Property(s => s.ConnectomeId)
+                .HasColumnName(nameof(AnnotationServer.ConnectomeId));
+
+            builder.Entity<AnnotationContext>()
+                .HasOne(c => c.Connectome)
+                .WithMany(conn => conn.AnnotationContexts)
+                .HasForeignKey(c => c.ConnectomeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Default context is a self-FK on Resource; Restrict avoids cascade cycles.
+            builder.Entity<Connectome>()
+                .HasOne(c => c.DefaultAnnotationContext)
+                .WithMany()
+                .HasForeignKey(c => c.DefaultAnnotationContextId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AnnotationServer>()
+                .HasOne(s => s.Connectome)
+                .WithMany(c => c.AnnotationServers)
+                .HasForeignKey(s => s.ConnectomeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Volume>()
-                .HasOne(v => v.ImageSet)
-                .WithMany(i => i.Volumes)
-                .HasForeignKey(v => v.ImageSetId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            builder.Entity<ImageSet>()
-                .ToTable("ImageSets")
-                .Property(i => i.PixelSpace)
+                .ToTable("Volumes")
+                .Property(v => v.PixelSpace)
                 .HasConversion<string>()
                 .HasMaxLength(16);
 
-            builder.Entity<ImageSet>()
-                .HasIndex(i => i.ContentHash);
+            builder.Entity<Volume>()
+                .HasIndex(v => v.ContentHash);
 
-            builder.Entity<ImageSetMirror>()
-                .ToTable("ImageSetMirrors")
-                .HasOne(m => m.ImageSet)
-                .WithMany(i => i.Mirrors)
-                .HasForeignKey(m => m.ImageSetId)
+            builder.Entity<Volume>()
+                .HasOne(v => v.Connectome)
+                .WithMany(c => c.Volumes)
+                .HasForeignKey(v => v.ConnectomeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<VolumeMirror>()
+                .ToTable("VolumeMirrors")
+                .HasOne(m => m.Volume)
+                .WithMany(v => v.Mirrors)
+                .HasForeignKey(m => m.VolumeId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<ImageSetMirror>()
+            builder.Entity<VolumeMirror>()
                 .Property(m => m.VikingXmlUrl)
                 .HasConversion(uriConverter)
                 .HasMaxLength(2048);
@@ -185,9 +219,9 @@ namespace Viking.Identity.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<CollaboratorInvite>()
-                .HasOne(c => c.Volume)
+                .HasOne(c => c.AnnotationContext)
                 .WithMany()
-                .HasForeignKey(c => c.VolumeId)
+                .HasForeignKey(c => c.AnnotationContextId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             InitialPopulationOfDatabase(builder);
@@ -218,10 +252,13 @@ namespace Viking.Identity.Data
                                                                                             PermissionId = Models.Special.Permissions.Group.AccessManager, 
                                                                                             Description = "Add/Remove group members" });
 
-            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Volume) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Read });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Annotate });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Review });
+            // Connectome is not ApiFacing; no annotate scopes.
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Connectome) });
+
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationContext) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Read });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Annotate });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Review });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationServer) });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Read, Description = "View annotations and the images of every linked volume" });
@@ -303,8 +340,10 @@ namespace Viking.Identity.Data
         public DbSet<Resource> Resource { get; set; }
 
         public DbSet<OrganizationalUnit> OrgUnit { get; set; }
+
+        public DbSet<Connectome> Connectomes { get; set; }
          
-        public DbSet<Volume> Volume { get; set; }
+        public DbSet<AnnotationContext> AnnotationContexts { get; set; }
 
         public DbSet<Group> Group { get; set; }
 
@@ -312,9 +351,9 @@ namespace Viking.Identity.Data
 
         public DbSet<AnnotationServer> AnnotationServers { get; set; }
 
-        public DbSet<ImageSet> ImageSets { get; set; }
+        public DbSet<Volume> Volumes { get; set; }
 
-        public DbSet<ImageSetMirror> ImageSetMirrors { get; set; }
+        public DbSet<VolumeMirror> VolumeMirrors { get; set; }
 
         public DbSet<UserToGroupAssignment> UserToGroupAssignments { get; set; }
 

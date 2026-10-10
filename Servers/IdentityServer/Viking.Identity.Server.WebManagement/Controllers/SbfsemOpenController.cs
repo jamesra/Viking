@@ -102,24 +102,24 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             return new RedirectResult(openBase + "?" + string.Join("&", query));
         }
 
-        private async Task<Volume> ResolveVolumeByNameAsync(string volumeName)
+        private async Task<AnnotationContext> ResolveVolumeByNameAsync(string volumeName)
         {
-            return await _context.Volume
+            return await _context.AnnotationContexts
                 .Include(v => v.Parent)
                 .Include(v => v.UsersWithPermissions)
                 .Include(v => v.GroupsWithPermissions)
                 .FirstOrDefaultAsync(v => v.Name == volumeName);
         }
 
-        private async Task<bool> UserCanAccessVolume(Volume volume, string userId)
+        private async Task<bool> UserCanAccessVolume(AnnotationContext connectome, string userId)
         {
             if (User.IsInRole(Special.Roles.Admin))
                 return true;
 
-            if (await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
+            if (await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, connectome))
                 return true;
 
-            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, volume);
+            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, connectome);
             return permissions.Length > 0;
         }
     }

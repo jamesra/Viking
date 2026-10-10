@@ -101,7 +101,7 @@ namespace Viking.Identity
         {
             var servers = sameName.OfType<AnnotationServer>().ToList();
             return servers.Count == 1
-                && sameName.All(r => r is AnnotationServer || (r is Volume v && v.AnnotationServerId == servers[0].Id));
+                && sameName.All(r => r is AnnotationServer || (r is AnnotationContext v && v.AnnotationServerId == servers[0].Id));
         }
 
         /// <summary>

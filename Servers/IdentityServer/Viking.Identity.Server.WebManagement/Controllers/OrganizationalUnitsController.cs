@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -73,7 +73,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             // Load volumes in this org
-            var volumes = await _context.Volume
+            var volumes = await _context.AnnotationContexts
                 .Where(v => v.ParentID == id)
                 .Include(v => v.Parent)
                 .Include(v => v.UsersWithPermissions)

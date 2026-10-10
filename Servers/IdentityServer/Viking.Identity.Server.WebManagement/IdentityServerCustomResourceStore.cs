@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -94,7 +94,7 @@ namespace Viking.Identity.Server.WebManagement
         {
             var servers = sameName.OfType<AnnotationServer>().ToList();
             return servers.Count == 1
-                && sameName.All(r => r is AnnotationServer || (r is Volume v && v.AnnotationServerId == servers[0].Id));
+                && sameName.All(r => r is AnnotationServer || (r is AnnotationContext v && v.AnnotationServerId == servers[0].Id));
         }
 
         private ApiResource ResourceToResourceApi(Resource r)

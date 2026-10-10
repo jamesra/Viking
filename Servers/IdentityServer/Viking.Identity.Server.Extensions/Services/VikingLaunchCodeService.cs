@@ -30,50 +30,50 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Resolves a volume by Identity name, numeric id, or endpoint URL.
-        /// Name wins over endpoint so AccessibleVolumes names are unambiguous.
+        /// Resolves a connectome by Identity name, numeric id, or endpoint URL.
+        /// Name wins over endpoint so AccessibleAnnotationContexts names are unambiguous.
         /// </summary>
-        public async Task<Volume> ResolveVolumeAsync(string volumeKey)
+        public async Task<AnnotationContext> ResolveVolumeAsync(string volumeKey)
         {
             if (string.IsNullOrWhiteSpace(volumeKey))
                 return null;
 
             var key = volumeKey.Trim();
-            var volumes = _context.Volume
+            var connectomes = _context.AnnotationContexts
                 .Include(v => v.Parent)
                 .Include(v => v.UsersWithPermissions)
                 .Include(v => v.GroupsWithPermissions);
 
             if (long.TryParse(key, out var id))
-                return await volumes.FirstOrDefaultAsync(v => v.Id == id);
+                return await connectomes.FirstOrDefaultAsync(v => v.Id == id);
 
-            return await volumes.FirstOrDefaultAsync(v => v.Name == key)
-                ?? await volumes.FirstOrDefaultAsync(v => v.Endpoint != null && v.Endpoint.ToString() == key);
+            return await connectomes.FirstOrDefaultAsync(v => v.Name == key)
+                ?? await connectomes.FirstOrDefaultAsync(v => v.Endpoint != null && v.Endpoint.ToString() == key);
         }
 
         /// <summary>
         /// Same access rule as the management CreateCode action: site admin, parent OrgUnit admin,
-        /// or any direct/group grant on the volume or on its annotation server.
+        /// or any direct/group grant on the connectome or on its annotation server.
         /// </summary>
-        public async Task<bool> UserCanAccessVolumeAsync(Volume volume, ClaimsPrincipal user, string userId)
+        public async Task<bool> UserCanAccessVolumeAsync(AnnotationContext connectome, ClaimsPrincipal user, string userId)
         {
-            if (volume == null || string.IsNullOrEmpty(userId))
+            if (connectome == null || string.IsNullOrEmpty(userId))
                 return false;
 
             if (user?.IsInRole(Special.Roles.Admin) == true
                 || await _context.GetUsersInAdminRole().AnyAsync(u => u.Id == userId))
                 return true;
 
-            if (user != null && await _authorization.IsParentOrgUnitAdminAsync(user, volume))
+            if (user != null && await _authorization.IsParentOrgUnitAdminAsync(user, connectome))
                 return true;
 
-            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, volume);
+            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, connectome);
             return permissions.Length > 0;
         }
 
         /// <summary>
-        /// Enabled mirror URLs of the volume's image set, preferred first. Empty when the volume
-        /// has no image set yet.
+        /// Enabled mirror URLs of the connectome's volume, preferred first. Empty when the connectome
+        /// has no volume yet.
         /// </summary>
         public async Task<List<string>> GetMirrorUrlsAsync(string volumeName)
         {
@@ -81,9 +81,9 @@ namespace Viking.Identity.Server.Extensions.Services
                 return new List<string>();
 
             var name = volumeName.Trim();
-            var mirrors = await _context.Volume
-                .Where(v => v.Name == name && v.ImageSetId != null)
-                .SelectMany(v => v.ImageSet.Mirrors)
+            var mirrors = await _context.AnnotationContexts
+                .Where(v => v.Name == name && v.VolumeId != null)
+                .SelectMany(v => v.Volume.Mirrors)
                 .Where(m => m.Enabled)
                 .OrderBy(m => m.Priority)
                 .ThenBy(m => m.Id)
@@ -93,8 +93,8 @@ namespace Viking.Identity.Server.Extensions.Services
             return mirrors.Where(u => u != null).Select(u => u.ToString()).ToList();
         }
 
-        /// <summary>Persists a one-use code bound to <paramref name="userId"/> and optional volume.</summary>
-        public async Task<VikingLaunchCode> CreateAsync(string userId, Volume volume)
+        /// <summary>Persists a one-use code bound to <paramref name="userId"/> and optional connectome.</summary>
+        public async Task<VikingLaunchCode> CreateAsync(string userId, AnnotationContext connectome)
         {
             ArgumentException.ThrowIfNullOrEmpty(userId);
 
@@ -102,8 +102,8 @@ namespace Viking.Identity.Server.Extensions.Services
             {
                 Code = Guid.NewGuid().ToString("N"),
                 UserId = userId,
-                VolumeUrl = volume?.Endpoint?.ToString(),
-                VolumeName = volume?.Name,
+                VolumeUrl = connectome?.Endpoint?.ToString(),
+                VolumeName = connectome?.Name,
                 ExpiresAtUtc = DateTime.UtcNow.Add(CodeLifetime)
             };
             _context.VikingLaunchCodes.Add(launchCode);

@@ -38,13 +38,13 @@ namespace Viking.Identity.Server.Extensions.Services
 
     public class VolumeCatalogSyncResult
     {
-        public long VolumeId { get; set; }
-        public string VolumeName { get; set; }
+        public long AnnotationContextId { get; set; }
+        public string AnnotationContextName { get; set; }
         public CatalogSyncStatus Status { get; set; }
         public long? AnnotationServerId { get; set; }
         public string AnnotationServerName { get; set; }
         public bool CreatedAnnotationServer { get; set; }
-        public bool CreatedImageSet { get; set; }
+        public bool CreatedVolume { get; set; }
         public string Message { get; set; }
     }
 
@@ -52,27 +52,27 @@ namespace Viking.Identity.Server.Extensions.Services
     {
         public long MirrorId { get; set; }
         public Uri Url { get; set; }
-        public bool MatchesImageSet { get; set; }
+        public bool MatchesVolume { get; set; }
         public string Status { get; set; }
     }
 
     public class CloneSuggestion
     {
         public string ContentHash { get; set; }
-        public List<ImageSet> ImageSets { get; set; } = new List<ImageSet>();
+        public List<Volume> Volumes { get; set; } = new List<Volume>();
     }
 
     public class CatalogReport
     {
         /// <summary>Volumes not linked to an annotation server, with the last sync message.</summary>
-        public List<Volume> UnlinkedVolumes { get; set; } = new List<Volume>();
+        public List<AnnotationContext> UnlinkedAnnotationContexts { get; set; } = new List<AnnotationContext>();
 
-        /// <summary>Image sets whose VikingXML hashes match; each group is probably one set with several mirrors.</summary>
+        /// <summary>Volumes whose VikingXML hashes match; each group is probably one set with several mirrors.</summary>
         public List<CloneSuggestion> CloneSuggestions { get; set; } = new List<CloneSuggestion>();
     }
 
     /// <summary>
-    /// Populates <see cref="AnnotationServer"/>, <see cref="ImageSet"/>, and <see cref="ImageSetMirror"/> rows
+    /// Populates <see cref="AnnotationServer"/>, <see cref="Volume"/>, and <see cref="VolumeMirror"/> rows
     /// from the VikingXML each volume references. Never merges image sets or volumes; it only links each
     /// volume to the annotation server named by its VolumeToEndpoint and reports likely clones.
     /// </summary>
@@ -137,7 +137,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
         public async Task<VolumeCatalogSyncResult> SyncVolumeAsync(long volumeId, CancellationToken cancellationToken = default)
         {
-            var volume = await _context.Volume.FirstOrDefaultAsync(v => v.Id == volumeId, cancellationToken)
+            var volume = await _context.AnnotationContexts.FirstOrDefaultAsync(v => v.Id == volumeId, cancellationToken)
                 ?? throw new InvalidOperationException($"Volume {volumeId} was not found.");
 
             var fetched = await FetchAsync(volume.Endpoint, cancellationToken);
@@ -150,7 +150,7 @@ namespace Viking.Identity.Server.Extensions.Services
         /// </summary>
         public async Task<List<VolumeCatalogSyncResult>> SyncAllVolumesAsync(CancellationToken cancellationToken = default)
         {
-            var ids = await _context.Volume.OrderBy(v => v.Id).Select(v => v.Id).ToListAsync(cancellationToken);
+            var ids = await _context.AnnotationContexts.OrderBy(v => v.Id).Select(v => v.Id).ToListAsync(cancellationToken);
             var results = new List<VolumeCatalogSyncResult>(ids.Count);
             foreach (var id in ids)
             {
@@ -165,7 +165,7 @@ namespace Viking.Identity.Server.Extensions.Services
         /// Applies a fetched VikingXML to <paramref name="volume"/> and saves. A failed fetch keeps any
         /// existing links and records the error on the volume.
         /// </summary>
-        public async Task<VolumeCatalogSyncResult> ApplyAsync(Volume volume, VikingXmlFetchResult fetched, CancellationToken cancellationToken = default)
+        public async Task<VolumeCatalogSyncResult> ApplyAsync(AnnotationContext volume, VikingXmlFetchResult fetched, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(volume);
             ArgumentNullException.ThrowIfNull(fetched);
@@ -173,8 +173,8 @@ namespace Viking.Identity.Server.Extensions.Services
             var now = DateTime.UtcNow;
             var result = new VolumeCatalogSyncResult
             {
-                VolumeId = volume.Id,
-                VolumeName = volume.Name,
+                AnnotationContextId = volume.Id,
+                AnnotationContextName = volume.Name,
                 AnnotationServerId = volume.AnnotationServerId
             };
 
@@ -189,7 +189,20 @@ namespace Viking.Identity.Server.Extensions.Services
             var entry = fetched.Entry;
             var notes = new List<string>();
 
-            result.CreatedImageSet = await EnsureImageSetAsync(volume, entry.ContentHash, now, notes, cancellationToken);
+            await EnsureConnectomeAsync(volume, cancellationToken);
+
+            result.CreatedVolume = await EnsureVolumeAsync(volume, entry.ContentHash, now, notes, cancellationToken);
+
+            if (volume.AnnotationServerPinned && volume.AnnotationServerId.HasValue)
+            {
+                await _context.Entry(volume).Reference(v => v.AnnotationServer).LoadAsync(cancellationToken);
+                result.Status = CatalogSyncStatus.Linked;
+                result.AnnotationServerName = volume.AnnotationServer?.Name;
+                notes.Insert(0, $"Annotation server {volume.AnnotationServer?.Name} was set manually; the VikingXML VolumeToEndpoint is ignored.");
+                result.Message = string.Join(" ", notes);
+                await RecordAsync(volume, result, now, cancellationToken);
+                return result;
+            }
 
             if (entry.AnnotationEndpoint == null)
             {
@@ -220,10 +233,15 @@ namespace Viking.Identity.Server.Extensions.Services
                     Description = $"Annotation database for {volume.Name}, created from its VikingXML.",
                     ParentID = volume.ParentID,
                     ResourceTypeId = nameof(AnnotationServer),
-                    AnnotationEndpoint = normalized
+                    AnnotationEndpoint = normalized,
+                    ConnectomeId = volume.ConnectomeId
                 };
                 _context.AnnotationServers.Add(server);
                 result.CreatedAnnotationServer = true;
+            }
+            else if (server.ConnectomeId == null && volume.ConnectomeId != null)
+            {
+                server.ConnectomeId = volume.ConnectomeId;
             }
 
             server.AnnotationDatabaseName ??= Truncate(entry.AnnotationDatabaseName, 128);
@@ -242,6 +260,13 @@ namespace Viking.Identity.Server.Extensions.Services
                 : $"Linked to annotation server {server.Name}.");
             result.Message = string.Join(" ", notes);
 
+            if (volume.Connectome != null
+                && volume.Connectome.DefaultAnnotationContextId == null
+                && volume.Id != 0)
+            {
+                volume.Connectome.DefaultAnnotationContextId = volume.Id;
+            }
+
             await RecordAsync(volume, result, now, cancellationToken);
             result.AnnotationServerId = server.Id;
             return result;
@@ -252,10 +277,10 @@ namespace Viking.Identity.Server.Extensions.Services
         /// </summary>
         public async Task<List<MirrorCheckResult>> CheckMirrorsAsync(long imageSetId, CancellationToken cancellationToken = default)
         {
-            var imageSet = await _context.ImageSets
+            var imageSet = await _context.Volumes
                 .Include(i => i.Mirrors)
                 .FirstOrDefaultAsync(i => i.Id == imageSetId, cancellationToken)
-                ?? throw new InvalidOperationException($"Image set {imageSetId} was not found.");
+                ?? throw new InvalidOperationException($"Volume {imageSetId} was not found.");
 
             var results = new List<MirrorCheckResult>();
             foreach (var mirror in imageSet.Mirrors.OrderBy(m => m.Priority).ThenBy(m => m.Id))
@@ -268,10 +293,10 @@ namespace Viking.Identity.Server.Extensions.Services
                 }
                 else
                 {
-                    check.MatchesImageSet = imageSet.ContentHash == null
+                    check.MatchesVolume = imageSet.ContentHash == null
                         || string.Equals(imageSet.ContentHash, fetched.Entry.ContentHash, StringComparison.OrdinalIgnoreCase);
                     imageSet.ContentHash ??= fetched.Entry.ContentHash;
-                    check.Status = check.MatchesImageSet ? MirrorOk : MirrorContentDiffers;
+                    check.Status = check.MatchesVolume ? MirrorOk : MirrorContentDiffers;
                 }
 
                 mirror.LastCheckUtc = DateTime.UtcNow;
@@ -284,10 +309,10 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Sets <see cref="Volume.Endpoint"/> of every volume using <paramref name="imageSet"/> to its
+        /// Sets <see cref="Connectome.Endpoint"/> of every connectome using <paramref name="imageSet"/> to its
         /// preferred enabled mirror, so clients that only read Endpoint follow mirror changes. Does not save.
         /// </summary>
-        public async Task ApplyPrimaryMirrorAsync(ImageSet imageSet, CancellationToken cancellationToken = default)
+        public async Task ApplyPrimaryMirrorAsync(Volume imageSet, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(imageSet);
 
@@ -299,12 +324,12 @@ namespace Viking.Identity.Server.Extensions.Services
             if (primary == null)
                 return;
 
-            var volumes = await _context.Volume.Where(v => v.ImageSetId == imageSet.Id).ToListAsync(cancellationToken);
+            var volumes = await _context.AnnotationContexts.Where(v => v.VolumeId == imageSet.Id).ToListAsync(cancellationToken);
             foreach (var volume in volumes)
                 volume.Endpoint = primary.VikingXmlUrl;
         }
 
-        public static ImageSetMirror PrimaryMirror(ImageSet imageSet) =>
+        public static VolumeMirror PrimaryMirror(Volume imageSet) =>
             imageSet?.Mirrors
                 .Where(m => m.Enabled)
                 .OrderBy(m => m.Priority)
@@ -315,47 +340,76 @@ namespace Viking.Identity.Server.Extensions.Services
         {
             var report = new CatalogReport
             {
-                UnlinkedVolumes = await _context.Volume
+                UnlinkedAnnotationContexts = await _context.AnnotationContexts
                     .Include(v => v.Parent)
                     .Where(v => v.AnnotationServerId == null)
                     .OrderBy(v => v.Name)
                     .ToListAsync(cancellationToken)
             };
 
-            var hashed = await _context.ImageSets
+            var hashed = await _context.Volumes
                 .Include(i => i.Mirrors)
-                .Include(i => i.Volumes)
+                .Include(i => i.AnnotationContexts)
                 .Where(i => i.ContentHash != null)
                 .ToListAsync(cancellationToken);
 
             report.CloneSuggestions = hashed
                 .GroupBy(i => i.ContentHash)
                 .Where(g => g.Count() > 1)
-                .Select(g => new CloneSuggestion { ContentHash = g.Key, ImageSets = g.OrderBy(i => i.Id).ToList() })
+                .Select(g => new CloneSuggestion { ContentHash = g.Key, Volumes = g.OrderBy(i => i.Id).ToList() })
                 .ToList();
 
             return report;
         }
 
-        private async Task<bool> EnsureImageSetAsync(Volume volume, string contentHash, DateTime now, List<string> notes, CancellationToken cancellationToken)
+        private async Task EnsureConnectomeAsync(AnnotationContext context, CancellationToken cancellationToken)
+        {
+            if (context.ConnectomeId.HasValue)
+            {
+                if (context.Connectome == null)
+                    await _context.Entry(context).Reference(c => c.Connectome).LoadAsync(cancellationToken);
+                return;
+            }
+
+            var connectome = new Connectome
+            {
+                Name = context.Name,
+                Description = context.Description,
+                ParentID = context.ParentID,
+                ResourceTypeId = nameof(Connectome),
+                DefaultAnnotationContextId = context.Id != 0 ? context.Id : null
+            };
+            _context.Connectomes.Add(connectome);
+            await _context.SaveChangesAsync(cancellationToken);
+            context.ConnectomeId = connectome.Id;
+            context.Connectome = connectome;
+            if (connectome.DefaultAnnotationContextId == null && context.Id != 0)
+            {
+                connectome.DefaultAnnotationContextId = context.Id;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        private async Task<bool> EnsureVolumeAsync(AnnotationContext volume, string contentHash, DateTime now, List<string> notes, CancellationToken cancellationToken)
         {
             if (volume.Endpoint == null)
                 return false;
 
-            if (volume.ImageSetId.HasValue && volume.ImageSet == null)
-                await _context.Entry(volume).Reference(v => v.ImageSet).LoadAsync(cancellationToken);
+            if (volume.VolumeId.HasValue && volume.Volume == null)
+                await _context.Entry(volume).Reference(v => v.Volume).LoadAsync(cancellationToken);
 
-            var imageSet = volume.ImageSet;
+            var imageSet = volume.Volume;
             if (imageSet == null)
             {
-                imageSet = new ImageSet
+                imageSet = new Volume
                 {
                     Name = volume.Name,
                     Description = volume.Description,
                     ContentHash = contentHash,
-                    CreatedUtc = now
+                    CreatedUtc = now,
+                    ConnectomeId = volume.ConnectomeId
                 };
-                imageSet.Mirrors.Add(new ImageSetMirror
+                imageSet.Mirrors.Add(new VolumeMirror
                 {
                     VikingXmlUrl = volume.Endpoint,
                     Priority = 0,
@@ -363,10 +417,13 @@ namespace Viking.Identity.Server.Extensions.Services
                     LastCheckUtc = now,
                     LastStatus = MirrorOk
                 });
-                _context.ImageSets.Add(imageSet);
-                volume.ImageSet = imageSet;
+                _context.Volumes.Add(imageSet);
+                volume.Volume = imageSet;
                 return true;
             }
+
+            if (imageSet.ConnectomeId == null && volume.ConnectomeId != null)
+                imageSet.ConnectomeId = volume.ConnectomeId;
 
             var mirrorsEntry = _context.Entry(imageSet).Collection(i => i.Mirrors);
             if (!mirrorsEntry.IsLoaded)
@@ -379,7 +436,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 foreach (var other in imageSet.Mirrors)
                     other.Priority += 1;
 
-                mirror = new ImageSetMirror
+                mirror = new VolumeMirror
                 {
                     VikingXmlUrl = volume.Endpoint,
                     Priority = 0,
@@ -391,7 +448,7 @@ namespace Viking.Identity.Server.Extensions.Services
             }
 
             if (imageSet.ContentHash != null && !string.Equals(imageSet.ContentHash, contentHash, StringComparison.OrdinalIgnoreCase))
-                notes.Add("VikingXML content changed since the image set was registered.");
+                notes.Add("VikingXML content changed since the volume was registered.");
 
             imageSet.ContentHash = contentHash;
             mirror.LastCheckUtc = now;
@@ -399,7 +456,7 @@ namespace Viking.Identity.Server.Extensions.Services
             return false;
         }
 
-        private async Task RecordAsync(Volume volume, VolumeCatalogSyncResult result, DateTime now, CancellationToken cancellationToken)
+        private async Task RecordAsync(AnnotationContext volume, VolumeCatalogSyncResult result, DateTime now, CancellationToken cancellationToken)
         {
             volume.CatalogSyncedUtc = now;
             volume.CatalogSyncMessage = Truncate(result.Message, MaxMessageLength);

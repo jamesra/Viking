@@ -12,7 +12,7 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 
         public CreateOrgUnitViewModel Org { get; set; } = new CreateOrgUnitViewModel();
 
-        public CreateVolumeViewModel Volume { get; set; } = new CreateVolumeViewModel();
+        public CreateAnnotationContextViewModel Volume { get; set; } = new CreateAnnotationContextViewModel();
 
         [Required]
         [EmailAddress]
@@ -24,8 +24,8 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
     {
         public long OrganizationalUnitId { get; set; }
         public string OrganizationalUnitName { get; set; }
-        public long VolumeId { get; set; }
-        public string VolumeName { get; set; }
+        public long AnnotationContextId { get; set; }
+        public string AnnotationContextName { get; set; }
         public string CollaboratorEmail { get; set; }
         public string InviteUrl { get; set; }
         public bool EmailSent { get; set; }

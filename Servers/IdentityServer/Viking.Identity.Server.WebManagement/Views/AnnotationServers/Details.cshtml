@@ -86,10 +86,10 @@
 
         <div class="card card-modern mb-4">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-hdd-stack"></i> Volumes using this database (@Model.Volumes.Count)</h5>
+                <h5 class="mb-0"><i class="bi bi-hdd-stack"></i> Volumes using this database (@Model.AnnotationContexts.Count)</h5>
             </div>
             <div class="card-body">
-                @if (!Model.Volumes.Any())
+                @if (!Model.AnnotationContexts.Any())
                 {
                     <p class="text-muted mb-0">No volumes are linked to this annotation server.</p>
                 }
@@ -106,18 +106,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var volume in Model.Volumes.OrderBy(v => v.Name))
+                            @foreach (var volume in Model.AnnotationContexts.OrderBy(v => v.Name))
                             {
-                                var mirrors = VolumeMetadata.MirrorsOf(volume.ImageSet);
+                                var mirrors = VolumeMetadata.MirrorsOf(volume.Volume);
                                 <tr>
-                                    <td><a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id">@volume.Name</a></td>
+                                    <td><a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@volume.Id">@volume.Name</a></td>
                                     <td>
-                                        @if (volume.ImageSet != null)
+                                        @if (volume.Volume != null)
                                         {
-                                            @volume.ImageSet.Name
-                                            @if (!string.IsNullOrEmpty(volume.ImageSet.VersionLabel))
+                                            @volume.Volume.Name
+                                            @if (!string.IsNullOrEmpty(volume.Volume.VersionLabel))
                                             {
-                                                <span class="badge bg-secondary ms-1">@volume.ImageSet.VersionLabel</span>
+                                                <span class="badge bg-secondary ms-1">@volume.Volume.VersionLabel</span>
                                             }
                                         }
                                         else

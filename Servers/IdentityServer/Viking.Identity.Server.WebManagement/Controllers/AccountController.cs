@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -236,7 +236,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     model.Email = inviteInfo.Email;
                     model.EmailLocked = true;
                     ViewData["InviteMessage"] =
-                        $"You are joining organization {inviteInfo.OrganizationalUnitName} for volume {inviteInfo.VolumeName}.";
+                        $"You are joining organization {inviteInfo.OrganizationalUnitName} for volume {inviteInfo.AnnotationContextName}.";
                 }
                 else
                 {
@@ -267,7 +267,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     model.Email = inviteInfo.Email;
                     model.EmailLocked = true;
                     ViewData["InviteMessage"] =
-                        $"You are joining organization {inviteInfo.OrganizationalUnitName} for volume {inviteInfo.VolumeName}.";
+                        $"You are joining organization {inviteInfo.OrganizationalUnitName} for volume {inviteInfo.AnnotationContextName}.";
                 }
             }
 

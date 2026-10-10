@@ -121,20 +121,20 @@ Experiment: Slice to volume</Notes>
             var userId = _dbContext.CreateUser($"voluser-{unique}", "None", $"voluser-{unique}@example.com");
             await _dbContext.SaveChangesAsync();
 
-            var volume = await service.CreateVolumeAsync(
+            var volume = await service.CreateAnnotationContextAsync(
                 $"Vol-{unique}",
                 "desc",
                 null,
                 new Uri("http://example.com/Test.VikingXML"));
 
-            await service.GrantUserVolumeFullAccessAsync(userId, volume.Id);
-            await service.GrantUserVolumeFullAccessAsync(userId, volume.Id);
+            await service.GrantUserAnnotationContextFullAccessAsync(userId, volume.Id);
+            await service.GrantUserAnnotationContextFullAccessAsync(userId, volume.Id);
 
             Assert.Equal(3, await _dbContext.GrantedUserPermissions.CountAsync(p =>
                 p.UserId == userId && p.ResourceId == volume.Id));
-            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.Volume.Read));
-            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.Volume.Annotate));
-            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.Volume.Review));
+            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.AnnotationContext.Annotate));
+            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.AnnotationContext.Review));
         }
     }
 
@@ -195,7 +195,7 @@ Experiment: Slice to volume</Notes>
             var invite = await _dbContext.CollaboratorInvites.FindAsync(result.InviteToken);
             Assert.NotNull(invite);
             Assert.Equal(result.OrganizationalUnitId, invite.OrganizationalUnitId);
-            Assert.Equal(result.VolumeId, invite.VolumeId);
+            Assert.Equal(result.AnnotationContextId, invite.AnnotationContextId);
         }
 
         [Fact]
@@ -220,7 +220,7 @@ Experiment: Slice to volume</Notes>
             Assert.True(result.ExistingUserGranted);
             Assert.Null(result.InviteToken);
             Assert.True(await _dbContext.IsUserPermitted(result.OrganizationalUnitId, userId, Special.Permissions.OrgUnit.Admin));
-            Assert.True(await _dbContext.IsUserPermitted(result.VolumeId, userId, Special.Permissions.Volume.Annotate));
+            Assert.True(await _dbContext.IsUserPermitted(result.AnnotationContextId, userId, Special.Permissions.AnnotationContext.Annotate));
         }
 
         [Fact]
@@ -269,9 +269,9 @@ Experiment: Slice to volume</Notes>
             await service.RedeemInviteAsync(created.InviteToken, userId, email);
 
             Assert.True(await _dbContext.IsUserPermitted(created.OrganizationalUnitId, userId, Special.Permissions.OrgUnit.Admin));
-            Assert.True(await _dbContext.IsUserPermitted(created.VolumeId, userId, Special.Permissions.Volume.Read));
-            Assert.True(await _dbContext.IsUserPermitted(created.VolumeId, userId, Special.Permissions.Volume.Annotate));
-            Assert.True(await _dbContext.IsUserPermitted(created.VolumeId, userId, Special.Permissions.Volume.Review));
+            Assert.True(await _dbContext.IsUserPermitted(created.AnnotationContextId, userId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(created.AnnotationContextId, userId, Special.Permissions.AnnotationContext.Annotate));
+            Assert.True(await _dbContext.IsUserPermitted(created.AnnotationContextId, userId, Special.Permissions.AnnotationContext.Review));
 
             var invite = await _dbContext.CollaboratorInvites.FindAsync(created.InviteToken);
             Assert.NotNull(invite.ClaimedAtUtc);

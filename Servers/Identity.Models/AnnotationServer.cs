@@ -7,8 +7,8 @@ namespace Viking.Identity.Models
 {
     /// <summary>
     /// One SQL annotation database, exposed at an annotation URL root. Read / Annotate / Review
-    /// grants live here; every <see cref="Volume"/> that points at this server inherits them.
-    /// Rows are created by the VikingXML catalog sync from each volume's VolumeToEndpoint element.
+    /// grants live here; every <see cref="AnnotationContext"/> that points at this server inherits them.
+    /// Rows are created by the VikingXML catalog sync from each context's VolumeToEndpoint element.
     /// </summary>
     public class AnnotationServer : Resource
     {
@@ -19,7 +19,7 @@ namespace Viking.Identity.Models
 
         /// <summary>
         /// Normalized annotation URL root (lower-case scheme and host, no default port, no trailing slash).
-        /// Unique across annotation servers; the catalog sync matches volumes to servers on this value.
+        /// Unique across annotation servers; the catalog sync matches contexts to servers on this value.
         /// </summary>
         [MaxLength(MaxEndpointLength)]
         [Display(Name = "Annotation Endpoint", Description = "Root URL of the annotation service for this database")]
@@ -35,8 +35,15 @@ namespace Viking.Identity.Models
         [Display(Name = "Authentication URL", Description = "Identity server the VikingXML names for this database")]
         public virtual Uri AuthenticationUrl { get; set; }
 
-        [InverseProperty(nameof(Volume.AnnotationServer))]
-        [Display(Name = "Volumes", Description = "Volumes whose annotations are stored in this database")]
-        public virtual List<Volume> Volumes { get; } = new List<Volume>();
+        [Display(Name = "Connectome", Description = "Connectome this annotation database belongs to")]
+        public virtual long? ConnectomeId { get; set; }
+
+        [ForeignKey(nameof(ConnectomeId))]
+        [Display(Name = "Connectome", Description = "Connectome this annotation database belongs to")]
+        public virtual Connectome Connectome { get; set; }
+
+        [InverseProperty(nameof(AnnotationContext.AnnotationServer))]
+        [Display(Name = "Annotation Contexts", Description = "Contexts whose annotations are stored in this database")]
+        public virtual List<AnnotationContext> AnnotationContexts { get; } = new List<AnnotationContext>();
     }
 }

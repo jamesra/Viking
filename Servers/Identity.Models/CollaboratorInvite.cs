@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Viking.Identity.Models
 {
     /// <summary>
-    /// One-time invite for a collaborator to register and receive org admin + full volume access.
+    /// One-time invite for a collaborator to register and receive org admin + full annotation-context access.
     /// </summary>
     public class CollaboratorInvite
     {
@@ -26,10 +26,10 @@ namespace Viking.Identity.Models
         public virtual OrganizationalUnit OrganizationalUnit { get; set; }
 
         [Required]
-        public long VolumeId { get; set; }
+        public long AnnotationContextId { get; set; }
 
-        [ForeignKey(nameof(VolumeId))]
-        public virtual Volume Volume { get; set; }
+        [ForeignKey(nameof(AnnotationContextId))]
+        public virtual AnnotationContext AnnotationContext { get; set; }
 
         [Required]
         [MaxLength(450)]

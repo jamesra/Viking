@@ -1,5 +1,5 @@
 @using Viking.Identity.Server.Authorization
-@model Viking.Identity.Models.Volume
+@model Viking.Identity.Models.AnnotationContext
 
 @{
     ViewData["Title"] = Model.Name;
@@ -89,7 +89,7 @@
         </div>
 
         @{
-            var primaryMirror = Viking.Identity.Server.Extensions.Services.AnnotationServerCatalogSync.PrimaryMirror(Model.ImageSet);
+            var primaryMirror = Viking.Identity.Server.Extensions.Services.AnnotationServerCatalogSync.PrimaryMirror(Model.Volume);
         }
         <div class="card card-modern mb-4">
             <div class="card-header bg-secondary text-white">
@@ -113,16 +113,16 @@
 
                     <dt class="col-sm-3">Image Set</dt>
                     <dd class="col-sm-9">
-                        @if (Model.ImageSet != null)
+                        @if (Model.Volume != null)
                         {
-                            @Model.ImageSet.Name
-                            @if (!string.IsNullOrEmpty(Model.ImageSet.VersionLabel))
+                            @Model.Volume.Name
+                            @if (!string.IsNullOrEmpty(Model.Volume.VersionLabel))
                             {
-                                <span class="badge bg-secondary ms-1">@Model.ImageSet.VersionLabel</span>
+                                <span class="badge bg-secondary ms-1">@Model.Volume.VersionLabel</span>
                             }
-                            <span class="badge bg-light text-dark ms-1">@Model.ImageSet.PixelSpace space</span>
+                            <span class="badge bg-light text-dark ms-1">@Model.Volume.PixelSpace space</span>
                             <div class="small text-muted">
-                                @Model.ImageSet.Mirrors.Count(m => m.Enabled) enabled mirror(s)@(primaryMirror?.RegionLabel != null ? $"; preferred: {primaryMirror.RegionLabel}" : "")
+                                @Model.Volume.Mirrors.Count(m => m.Enabled) enabled mirror(s)@(primaryMirror?.RegionLabel != null ? $"; preferred: {primaryMirror.RegionLabel}" : "")
                             </div>
                         }
                         else

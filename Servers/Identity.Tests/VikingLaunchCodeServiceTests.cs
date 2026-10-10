@@ -18,13 +18,13 @@ namespace TestIdentityModel
         {
             await using var db = CreateDb();
             var userId = db.CreateUser("launch-user", "x");
-            var volume = new Volume
+            var volume = new AnnotationContext
             {
                 Name = "RPC1",
-                ResourceTypeId = nameof(Volume),
+                ResourceTypeId = nameof(AnnotationContext),
                 Endpoint = new System.Uri("http://rogue1.example/RPC1/SliceToVolume.VikingXML")
             };
-            db.Volume.Add(volume);
+            db.AnnotationContexts.Add(volume);
             await db.SaveChangesAsync();
 
             var service = new VikingLaunchCodeService(db, new DenyAllAuthorization());
@@ -45,12 +45,12 @@ namespace TestIdentityModel
         {
             await using var db = CreateDb();
             var userId = db.CreateUser("granted", "x");
-            var volume = new Volume { Name = "RPC1", ResourceTypeId = nameof(Volume) };
-            db.Volume.Add(volume);
+            var volume = new AnnotationContext { Name = "RPC1", ResourceTypeId = nameof(AnnotationContext) };
+            db.AnnotationContexts.Add(volume);
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.Volume.Read,
+                PermissionId = Special.Permissions.AnnotationContext.Read,
                 ResourceId = volume.Id,
                 UserId = userId
             });
@@ -70,7 +70,7 @@ namespace TestIdentityModel
         {
             await using var db = CreateDb();
             var userId = db.CreateUser("denied", "x");
-            db.Volume.Add(new Volume { Name = "RPC1", ResourceTypeId = nameof(Volume) });
+            db.AnnotationContexts.Add(new AnnotationContext { Name = "RPC1", ResourceTypeId = nameof(AnnotationContext) });
             await db.SaveChangesAsync();
 
             var service = new VikingLaunchCodeService(db, new DenyAllAuthorization());

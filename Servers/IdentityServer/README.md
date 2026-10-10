@@ -121,7 +121,7 @@ The following patterns are already ignored by `.gitignore`:
 
 ## Annotation servers, image sets, and mirrors
 
-Since 1.1.0 a `Volume` links one **ImageSet** (VikingXML images, one or more mirrors) to one **AnnotationServer** (one annotation SQL database). Read / Annotate / Review are granted on the annotation server and apply to every volume that shares it; Annotate or Review also imply Read. Volume grants still count (image-only volumes, rollback), and volume-name scopes such as `RC1-Internal.Annotate` keep working.
+Since 1.1.0 a `Volume` links one **Volume** (VikingXML images, one or more mirrors) to one **AnnotationServer** (one annotation SQL database). Read / Annotate / Review are granted on the annotation server and apply to every volume that shares it; Annotate or Review also imply Read. Volume grants still count (image-only volumes, rollback), and volume-name scopes such as `RC1-Internal.Annotate` keep working.
 
 Mirrors of one image set must be exact clones; clients may load-balance across enabled mirrors (lower priority preferred). A different build of the images is a separate volume pointing at the same annotation server. `Volume.Endpoint` always holds the preferred mirror, so clients that read only `Endpoint` are unaffected.
 
@@ -134,7 +134,7 @@ Mirrors of one image set must be exact clones; clients may load-balance across e
 
 ### Upgrade order
 
-1. Deploy IdentityServerStandalone (applies the `AddAnnotationServersAndImageSets` migration), WebApi, and WebManagement on 1.1.0. Check `GET /version` or the `X-Service-Version` header on each. Older builds cannot read annotation server rows, so finish this step before step 2.
+1. Deploy IdentityServerStandalone (applies the `AddAnnotationServersAndVolumes` migration), WebApi, and WebManagement on 1.1.0. Check `GET /version` or the `X-Service-Version` header on each. Older builds cannot read annotation server rows, so finish this step before step 2.
 2. WebManagement → Administration → **Volume Catalog Sync** → *Sync all volumes*. Review volumes that did not link (fetch failures, image-only volumes).
 3. Same page → *Copy volume grants to annotation servers*. Review the widened-access report: anyone granted one volume now reaches the other volumes that share its annotation database.
 4. A later release removes the copied Volume grant rows (image-only volumes keep theirs).

@@ -69,7 +69,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 var metadata = await _xmlMetadata.FetchAsync(model.VikingXmlUrl.Trim());
                 model.VikingXmlUrl = metadata.SourceUrl ?? model.VikingXmlUrl.Trim();
                 model.Org ??= new CreateOrgUnitViewModel();
-                model.Volume ??= new CreateVolumeViewModel();
+                model.Volume ??= new CreateAnnotationContextViewModel();
 
                 // Only fill empty fields so Preview does not wipe admin edits.
                 if (string.IsNullOrWhiteSpace(model.Org.Name))
@@ -99,7 +99,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public async Task<IActionResult> Create(CollaboratorOnboardingViewModel model)
         {
             model.Org ??= new CreateOrgUnitViewModel();
-            model.Volume ??= new CreateVolumeViewModel();
+            model.Volume ??= new CreateAnnotationContextViewModel();
 
             if (string.IsNullOrWhiteSpace(model.VikingXmlUrl) ||
                 !Uri.TryCreate(model.VikingXmlUrl.Trim(), UriKind.Absolute, out var vikingXmlUri) ||
@@ -115,7 +115,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (_context.IsResourceNameTaken(model.Org.Name, nameof(OrganizationalUnit)))
                 ModelState.AddModelError("Org.Name", $"An organizational unit named {model.Org.Name} already exists");
 
-            if (_context.IsResourceNameTaken(model.Volume.Name, nameof(Volume)))
+            if (_context.IsResourceNameTaken(model.Volume.Name, nameof(AnnotationContext)))
                 ModelState.AddModelError("Volume.Name", $"A volume named {model.Volume.Name} already exists");
 
             if (!ModelState.IsValid)
@@ -150,8 +150,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 OrganizationalUnitId = result.OrganizationalUnitId,
                 OrganizationalUnitName = result.OrganizationalUnitName,
-                VolumeId = result.VolumeId,
-                VolumeName = result.VolumeName,
+                AnnotationContextId = result.AnnotationContextId,
+                AnnotationContextName = result.AnnotationContextName,
                 CollaboratorEmail = result.CollaboratorEmail,
                 ExistingUserGranted = result.ExistingUserGranted
             };
@@ -168,7 +168,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     await _emailSender.SendCollaboratorInviteAsync(
                         result.CollaboratorEmail,
                         result.OrganizationalUnitName,
-                        result.VolumeName,
+                        result.AnnotationContextName,
                         complete.InviteUrl);
                     complete.EmailSent = true;
                 }

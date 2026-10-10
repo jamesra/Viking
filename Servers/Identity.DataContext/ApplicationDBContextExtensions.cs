@@ -1,4 +1,4 @@
-﻿using Viking.Identity.Data;
+using Viking.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -94,20 +94,20 @@ namespace Viking.Identity.Data
         /// and image-only volumes) unioned with grants on the volume's annotation server, with Read implied.
         /// Site administrators get every permission on every volume.
         /// </summary>
-        public static async Task<Dictionary<long, string[]>> UserVolumePermissionsAsync(this ApplicationDbContext context, [NotNull] string userId)
+        public static async Task<Dictionary<long, string[]>> UserAnnotationContextPermissionsAsync(this ApplicationDbContext context, [NotNull] string userId)
         {
             var grants = await context.UserResourcePermissionsByType(userId,
-                new[] { nameof(Volume), nameof(AnnotationServer) });
+                new[] { nameof(AnnotationContext), nameof(AnnotationServer) });
             return await MergeVolumePermissionsAsync(context, grants);
         }
 
         /// <summary>
-        /// Same as <see cref="UserVolumePermissionsAsync"/> for callers without a session: Anonymous group grants only.
+        /// Same as <see cref="UserAnnotationContextPermissionsAsync"/> for callers without a session: Anonymous group grants only.
         /// </summary>
         public static async Task<Dictionary<long, string[]>> AnonymousVolumePermissionsAsync(this ApplicationDbContext context)
         {
             var grants = await context.UserResourcePermissionsByTypeForAnonymous(
-                new[] { nameof(Volume), nameof(AnnotationServer) });
+                new[] { nameof(AnnotationContext), nameof(AnnotationServer) });
             return await MergeVolumePermissionsAsync(context, grants);
         }
 
@@ -117,7 +117,7 @@ namespace Viking.Identity.Data
             if (grants.Count == 0)
                 return result;
 
-            var volumes = await context.Volume
+            var volumes = await context.AnnotationContexts
                 .Select(v => new { v.Id, v.AnnotationServerId })
                 .ToListAsync();
 
@@ -151,7 +151,7 @@ namespace Viking.Identity.Data
 
             var permissions = await (await context.UserResourcePermissions(userId, resourceIds)).Distinct().ToListAsync();
 
-            return resource.ResourceTypeId == nameof(Volume) || resource.ResourceTypeId == nameof(AnnotationServer)
+            return resource.ResourceTypeId == nameof(AnnotationContext) || resource.ResourceTypeId == nameof(AnnotationServer)
                 ? WithImpliedRead(permissions)
                 : permissions.ToArray();
         }
@@ -174,13 +174,13 @@ namespace Viking.Identity.Data
 
         private static async Task<long?> AnnotationServerIdOfAsync(ApplicationDbContext context, Resource resource)
         {
-            if (resource is Volume volume)
-                return volume.AnnotationServerId;
+            if (resource is AnnotationContext connectome)
+                return connectome.AnnotationServerId;
 
-            if (resource.ResourceTypeId != nameof(Volume))
+            if (resource.ResourceTypeId != nameof(AnnotationContext))
                 return null;
 
-            return await context.Volume
+            return await context.AnnotationContexts
                 .Where(v => v.Id == resource.Id)
                 .Select(v => v.AnnotationServerId)
                 .FirstOrDefaultAsync();

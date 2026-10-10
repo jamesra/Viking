@@ -1,0 +1,57 @@
+@model IEnumerable<Viking.Identity.Models.Connectome>
+@{
+    ViewData["Title"] = "Connectomes";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Connectomes</h1>
+    <a asp-controller="AnnotationContexts" asp-action="Create" class="btn btn-primary">
+        Create annotation context
+    </a>
+</div>
+
+<p class="text-muted">
+    A connectome groups annotation contexts, annotation databases, and image volumes.
+    Clients open the default annotation context.
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Organization</th>
+            <th>Default context</th>
+            <th>Contexts</th>
+            <th>Servers</th>
+            <th>Volumes</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Name</td>
+            <td>@(item.Parent?.Name ?? "—")</td>
+            <td>
+                @if (item.DefaultAnnotationContext != null)
+                {
+                    <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@item.DefaultAnnotationContext.Id">
+                        @item.DefaultAnnotationContext.Name
+                    </a>
+                }
+                else
+                {
+                    <span class="text-muted">—</span>
+                }
+            </td>
+            <td>@item.AnnotationContexts.Count</td>
+            <td>@item.AnnotationServers.Count</td>
+            <td>@item.Volumes.Count</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Details</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

@@ -120,14 +120,14 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return permissions;
         }
 
-        [HttpGet("AccessibleVolumes")]
-        public async Task<ActionResult<Dictionary<long, object>>> UserAccessibleVolumes()
+        [HttpGet("AccessibleAnnotationContexts")]
+        public async Task<ActionResult<Dictionary<long, object>>> UserAccessibleAnnotationContexts()
         {
             var caller = await GetAuthenticatedUserAsync();
             if (caller == null)
                 return Unauthorized();
 
-            var volumes = await _permissionService.GetUserAccessibleVolumesAsync(caller.Id);
+            var volumes = await _permissionService.GetUserAccessibleAnnotationContextsAsync(caller.Id);
             return ToVolumeObjectDictionary(volumes);
         }
 
@@ -198,7 +198,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                         Endpoint = Meta(VolumeMetadata.Endpoint),
                         AnnotationServerName = Meta(VolumeMetadata.AnnotationServerName),
                         AnnotationEndpoint = Meta(VolumeMetadata.AnnotationEndpoint),
-                        ImageSet = Meta(VolumeMetadata.ImageSet),
+                        Volume = Meta(VolumeMetadata.Volume),
                         Mirrors = Meta(VolumeMetadata.Mirrors),
                         RegistrationName = Meta(VolumeMetadata.RegistrationName),
                         permissions = v.Permissions

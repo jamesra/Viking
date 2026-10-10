@@ -39,17 +39,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return View(model);
             }
 
-            var volumePermissions = await _context.UserVolumePermissionsAsync(userId);
+            var volumePermissions = await _context.UserAnnotationContextPermissionsAsync(userId);
 
             if (volumePermissions.Count > 0)
             {
                 var volumeIds = volumePermissions.Keys.ToArray();
-                var volumes = await _context.Volume
+                var volumes = await _context.AnnotationContexts
                     .Include(v => v.AnnotationServer)
                     .Where(v => volumeIds.Contains(v.Id))
                     .ToListAsync();
 
-                model.AccessibleVolumes = volumes
+                model.AccessibleAnnotationContexts = volumes
                     .Select(v => new VolumeAccessInfo
                     {
                         Id = v.Id,

@@ -10,29 +10,30 @@ alwaysApply: false
 | Type | Role | Duende ApiResource / scopes? |
 |------|------|------------------------------|
 | `AnnotationServer` | One annotation SQL database; holds the grants | Yes — scopes `{Name}.Read\|Annotate\|Review` |
-| `Volume` | Links one `ImageSet` to one `AnnotationServer` | Yes — same scopes, kept so volume-name scopes still work |
+| `AnnotationContext` | Openable binding of Volume + AnnotationServer under a Connectome | Yes — same scopes; default context keeps today's client names |
+| `Connectome` | Groups contexts, servers, and volumes; has a default context | No — not ApiFacing (avoids name collisions with default context) |
 | `SegmentationService` | Segmentation backend | Yes — scopes `{Name}.User\|Access Manager` |
 | `Group` | User grouping / grants | No — management only |
 | `OrganizationalUnit` | Hierarchy / ownership | No — management only (`Administrator`) |
 
-API-facing types: `Special.ResourceTypes.ApiFacing` (`AnnotationServer`, `Volume`, `SegmentationService`, in preference order). Resource stores must filter to these when building ApiResources/ApiScopes.
+API-facing types: `Special.ResourceTypes.ApiFacing` (`AnnotationServer`, `AnnotationContext`, `SegmentationService`, in preference order). Resource stores must filter to these when building ApiResources/ApiScopes.
 
-`ImageSet` / `ImageSetMirror` are plain tables, not resources. Mirrors of one set are exact clones (clients may load-balance); a different build is a new set behind its own Volume.
+`Volume` / `VolumeMirror` are plain tables, not resources. They belong to a Connectome. Mirrors of one set are exact clones (clients may load-balance); a different build is a new Volume.
 
-## Volume access
+## Annotation context access
 
-- Effective volume permissions = grants on the volume ∪ grants on its annotation server, with Read implied by Annotate or Review. Use `UserVolumePermissionsAsync`, `UserEffectiveResourcePermissionsAsync`, or `IsUserPermittedEffectiveAsync`; do not check volume grant rows alone.
-- New grants go on the annotation server (`GrantUserVolumeFullAccessAsync` does this). Volume grants remain for image-only volumes and as the legacy rollback path.
-- `AnnotationServerCatalogSync` creates annotation servers from each volume's VikingXML `VolumeToEndpoint`; it never merges volumes or image sets.
+- Effective context permissions = grants on the context ∪ grants on its annotation server, with Read implied by Annotate or Review. Use `UserAnnotationContextPermissionsAsync`, `UserEffectiveResourcePermissionsAsync`, or `IsUserPermittedEffectiveAsync`; do not check context grant rows alone.
+- New grants go on the annotation server (`GrantUserAnnotationContextFullAccessAsync` does this). Context grants remain for image-only contexts and as the legacy rollback path.
+- `AnnotationServerCatalogSync` creates annotation servers from each context's VikingXML `VolumeToEndpoint`, ensures a Connectome parent, and sets `ConnectomeId` on server/volume; it never merges volumes or contexts.
 
 ## Names are unique per type, not globally
 
-`IsResourceNameTaken` is scoped by `ResourceTypeId`. A **Group** and a **Volume** may share the same name (e.g. both `"Yiu"`).
+`IsResourceNameTaken` is scoped by `ResourceTypeId`. A **Group** and an **AnnotationContext** may share the same name (e.g. both `"Yiu"`).
 
 When resolving permissions or token scopes **by name**:
 
-- Prefer AnnotationServer, then Volume, then SegmentationService (`FindApiFacingResourceAsync`). An annotation server is usually named after the oldest volume that uses it (e.g. both `"RC1"`).
-- Never use bare `Resource.FirstOrDefault(r => r.Name == name)` for volume login / scope checks — the Group row often wins by lower Id
+- Prefer AnnotationServer, then AnnotationContext, then SegmentationService (`FindApiFacingResourceAsync`). An annotation server is usually named after the oldest context that uses it (e.g. both `"RC1"`).
+- Never use bare `Resource.FirstOrDefault(r => r.Name == name)` for login / scope checks — the Group row often wins by lower Id
 
 ```csharp
 // BAD — may return Group "Yiu"
@@ -46,14 +47,14 @@ await context.FindApiFacingResourceAsync(name);
 
 - Explicit access: `GrantedUserPermissions` + `GrantedGroupPermissions` (via recursive group membership, including virtual Anonymous)
 - Site role `Administrator` (`Special.Roles.Admin`) has full access; list/token helpers short-circuit via `UserResourcePermissionsByType` / `IsUserPermitted`
-- OrgUnit `Administrator` manages children in the **management UI**; it does **not** by itself populate volume OAuth scopes
+- OrgUnit `Administrator` manages children in the **management UI**; it does **not** by itself populate annotation OAuth scopes
 
 ## OAuth scopes
 
 - Standard: `openid`, `profile`, `Viking.Annotation`
 - Per annotation server: `{ServerName}.Read`, `{ServerName}.Annotate`, `{ServerName}.Review`
-- Per volume (legacy, still accepted): `{VolumeName}.Read|Annotate|Review`, checked against the volume's annotation server too
-- Do not treat `Viking.Annotation` as a Volume named `Viking` when parsing `resource.permission` scopes
+- Per annotation context (legacy name shape, still accepted): `{ContextName}.Read|Annotate|Review`, checked against the context's annotation server too
+- Do not treat `Viking.Annotation` as a context named `Viking` when parsing `resource.permission` scopes
 
 ## Which process does what
 
@@ -63,8 +64,8 @@ await context.FindApiFacingResourceAsync(name);
 | WebManagement | `:4001` | MVC admin, MyAccess, `api/permissions/*` (cookie/bearer) |
 | WebApi | `:6001` | `/Permissions/*` (introspection / anonymous username endpoints) |
 
-MyAccess and management UIs should query `ApplicationDbContext` (or authenticated APIs) — never call WebApi `/Permissions/AccessibleVolumes` without a bearer token (returns `{}`).
+MyAccess and management UIs should query `ApplicationDbContext` (or authenticated APIs) — never call WebApi `/Permissions/AccessibleAnnotationContexts` without a bearer token (returns `{}`).
 
 ## Client AllowedScopes
 
-`IdentityServerVikingClientStore` must rebuild AllowedScopes from the live resource store. Do not permanently cache clients — new volumes would cause `invalid_scope` until restart.
+`IdentityServerVikingClientStore` must rebuild AllowedScopes from the live resource store. Do not permanently cache clients — new contexts would cause `invalid_scope` until restart.

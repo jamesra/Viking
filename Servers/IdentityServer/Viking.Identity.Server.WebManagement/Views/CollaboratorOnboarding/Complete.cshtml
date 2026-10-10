@@ -13,7 +13,7 @@
 <div class="alert alert-success" role="alert">
     <h4 class="alert-heading"><i class="bi bi-check-circle"></i> Lab resources created</h4>
     <p class="mb-0">
-        Organization <strong>@Model.OrganizationalUnitName</strong> and volume <strong>@Model.VolumeName</strong>
+        Organization <strong>@Model.OrganizationalUnitName</strong> and volume <strong>@Model.AnnotationContextName</strong>
         are ready.
     </p>
 </div>
@@ -29,8 +29,8 @@
             </dd>
             <dt class="col-sm-3">Volume</dt>
             <dd class="col-sm-9">
-                <a asp-controller="Volumes" asp-action="Details" asp-route-id="@Model.VolumeId">
-                    @Model.VolumeName
+                <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@Model.AnnotationContextId">
+                    @Model.AnnotationContextName
                 </a>
             </dd>
             <dt class="col-sm-3">Collaborator</dt>

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -45,7 +45,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 var userId = _userManager.GetUserId(User);
                 if (!string.IsNullOrEmpty(userId))
                 {
-                    var volumes = await GetAccessibleVolumesAsync();
+                    var volumes = await GetAccessibleAnnotationContextsAsync();
                     var segmentationServices = await GetAccessibleSegmentationServicesAsync();
                     var organizations = await GetAccessibleOrganizationsAsync(userId, volumes, segmentationServices);
                     var groups = await GetCallerGroupsAsync(userId);
@@ -92,11 +92,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         /// <summary>
         /// Volumes the caller may access via grants, group membership, site admin, or parent-org administration.
         /// </summary>
-        private async Task<List<Volume>> GetAccessibleVolumesAsync()
+        private async Task<List<AnnotationContext>> GetAccessibleAnnotationContextsAsync()
         {
-            var volumes = await _context.Volume.Include(v => v.Parent).ToListAsync();
+            var volumes = await _context.AnnotationContexts.Include(v => v.Parent).ToListAsync();
             var accessible = await _authorization.FilterAccessibleResourcesAsync(
-                _context, User, volumes, nameof(Volume));
+                _context, User, volumes, nameof(AnnotationContext));
             return accessible.OrderBy(v => v.Name).ToList();
         }
 
@@ -116,7 +116,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         /// </summary>
         private async Task<List<OrganizationalUnit>> GetAccessibleOrganizationsAsync(
             string userId,
-            IReadOnlyCollection<Volume> accessibleVolumes,
+            IReadOnlyCollection<AnnotationContext> accessibleVolumes,
             IReadOnlyCollection<SegmentationService> accessibleServices)
         {
             var grantedIds = (await _context.UserResourcePermissionsByType(userId, new[] { nameof(OrganizationalUnit) })).Keys.ToHashSet();

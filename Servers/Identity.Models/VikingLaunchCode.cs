@@ -25,7 +25,7 @@ namespace Viking.Identity.Models
         public string VolumeUrl { get; set; }
 
         /// <summary>
-        /// Optional Identity volume name (AccessibleVolumes name). Stored so launch-exchange
+        /// Optional Identity volume name (AccessibleConnectomes name). Stored so launch-exchange
         /// can mint volume-scoped tokens; location stays on the viking:// URL only.
         /// </summary>
         [MaxLength(128)]

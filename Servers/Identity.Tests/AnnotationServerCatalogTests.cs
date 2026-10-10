@@ -96,12 +96,12 @@ namespace TestIdentityModel
             Assert.Equal("RC1", server.Name);
             Assert.Equal("https://webann.example/RC1", server.AnnotationEndpoint);
             Assert.Equal("RC1db", server.AnnotationDatabaseName);
-            Assert.Equal(server.Id, (await db.Volume.FindAsync(rc1.Id)).AnnotationServerId);
-            Assert.Equal(server.Id, (await db.Volume.FindAsync(internalCopy.Id)).AnnotationServerId);
+            Assert.Equal(server.Id, (await db.AnnotationContexts.FindAsync(rc1.Id)).AnnotationServerId);
+            Assert.Equal(server.Id, (await db.AnnotationContexts.FindAsync(internalCopy.Id)).AnnotationServerId);
 
             // Volumes are never merged: each keeps its own image set with its URL as the first mirror.
-            Assert.Equal(2, await db.ImageSets.CountAsync());
-            var mirror = await db.ImageSetMirrors.SingleAsync(m => m.ImageSet.Volumes.Any(v => v.Id == rc1.Id));
+            Assert.Equal(2, await db.Volumes.CountAsync());
+            var mirror = await db.VolumeMirrors.SingleAsync(m => m.Volume.AnnotationContexts.Any(v => v.Id == rc1.Id));
             Assert.Equal(new Uri("http://rogue1/RABBIT/rogue1.vikingxml"), mirror.VikingXmlUrl);
             Assert.Equal(0, mirror.Priority);
         }
@@ -118,9 +118,9 @@ namespace TestIdentityModel
 
             Assert.Equal(CatalogSyncStatus.ImageOnly, result.Status);
             Assert.Empty(db.AnnotationServers.ToList());
-            var volume = await db.Volume.FindAsync(mosaics.Id);
+            var volume = await db.AnnotationContexts.FindAsync(mosaics.Id);
             Assert.Null(volume.AnnotationServerId);
-            Assert.NotNull(volume.ImageSetId);
+            Assert.NotNull(volume.VolumeId);
             Assert.NotNull(volume.CatalogSyncedUtc);
         }
 
@@ -134,13 +134,13 @@ namespace TestIdentityModel
             var source = new FakeXmlSource { ["http://rogue1/RC2/SliceToVolume.VikingXML"] = CatalogXml.WithEndpoint("RC2", "http://rogue1/RC2", "https://webann.example/RC2") };
             var sync = new AnnotationServerCatalogSync(db, source);
             await sync.SyncVolumeAsync(volume.Id);
-            var linkedTo = (await db.Volume.FindAsync(volume.Id)).AnnotationServerId;
+            var linkedTo = (await db.AnnotationContexts.FindAsync(volume.Id)).AnnotationServerId;
 
             source.Fail = true;
             var result = await sync.SyncVolumeAsync(volume.Id);
 
             Assert.Equal(CatalogSyncStatus.FetchFailed, result.Status);
-            var reloaded = await db.Volume.FindAsync(volume.Id);
+            var reloaded = await db.AnnotationContexts.FindAsync(volume.Id);
             Assert.Equal(linkedTo, reloaded.AnnotationServerId);
             Assert.Contains("Could not fetch", reloaded.CatalogSyncMessage);
         }
@@ -164,7 +164,7 @@ namespace TestIdentityModel
             await db.SaveChangesAsync();
             await sync.SyncVolumeAsync(volume.Id);
 
-            var imageSet = await db.ImageSets.Include(i => i.Mirrors).SingleAsync();
+            var imageSet = await db.Volumes.Include(i => i.Mirrors).SingleAsync();
             Assert.Equal(2, imageSet.Mirrors.Count);
             Assert.Equal(new Uri("https://mirror.eu/RPC1/SliceToVolume.VikingXML"), AnnotationServerCatalogSync.PrimaryMirror(imageSet).VikingXmlUrl);
         }
@@ -185,20 +185,20 @@ namespace TestIdentityModel
             var sync = new AnnotationServerCatalogSync(db, source);
             await sync.SyncVolumeAsync(volume.Id);
 
-            var imageSet = await db.ImageSets.Include(i => i.Mirrors).SingleAsync();
-            imageSet.Mirrors.Add(new ImageSetMirror { VikingXmlUrl = new Uri("https://clone/RPC2.VikingXML"), Priority = 1, Enabled = true });
-            imageSet.Mirrors.Add(new ImageSetMirror { VikingXmlUrl = new Uri("https://other-build/RPC2.VikingXML"), Priority = 2, Enabled = true });
+            var imageSet = await db.Volumes.Include(i => i.Mirrors).SingleAsync();
+            imageSet.Mirrors.Add(new VolumeMirror { VikingXmlUrl = new Uri("https://clone/RPC2.VikingXML"), Priority = 1, Enabled = true });
+            imageSet.Mirrors.Add(new VolumeMirror { VikingXmlUrl = new Uri("https://other-build/RPC2.VikingXML"), Priority = 2, Enabled = true });
             await db.SaveChangesAsync();
 
             var checks = await sync.CheckMirrorsAsync(imageSet.Id);
 
             Assert.Equal(3, checks.Count);
-            Assert.True(checks.Single(c => c.Url.Host == "clone").MatchesImageSet);
-            Assert.False(checks.Single(c => c.Url.Host == "other-build").MatchesImageSet);
+            Assert.True(checks.Single(c => c.Url.Host == "clone").MatchesVolume);
+            Assert.False(checks.Single(c => c.Url.Host == "other-build").MatchesVolume);
         }
 
         [Fact]
-        public async Task Report_ListsUnlinkedVolumesAndCloneSuggestions()
+        public async Task Report_ListsUnlinkedAnnotationContextsAndCloneSuggestions()
         {
             await using var db = CatalogDb.Create();
             var a = CatalogDb.AddVolume(db, "Copy-A", "http://host-a/Vol.VikingXML");
@@ -216,9 +216,9 @@ namespace TestIdentityModel
 
             var report = await sync.BuildReportAsync();
 
-            Assert.Equal(3, report.UnlinkedVolumes.Count);
+            Assert.Equal(3, report.UnlinkedAnnotationContexts.Count);
             var clones = Assert.Single(report.CloneSuggestions);
-            Assert.Equal(new[] { a.Id, b.Id }.OrderBy(i => i), clones.ImageSets.SelectMany(i => i.Volumes).Select(v => v.Id).OrderBy(i => i));
+            Assert.Equal(new[] { a.Id, b.Id }.OrderBy(i => i), clones.Volumes.SelectMany(i => i.AnnotationContexts).Select(v => v.Id).OrderBy(i => i));
         }
 
         [Fact]
@@ -231,13 +231,13 @@ namespace TestIdentityModel
             var sync = new AnnotationServerCatalogSync(db, source);
             await sync.SyncVolumeAsync(volume.Id);
 
-            var imageSet = await db.ImageSets.Include(i => i.Mirrors).SingleAsync();
+            var imageSet = await db.Volumes.Include(i => i.Mirrors).SingleAsync();
             imageSet.Mirrors.Single().Enabled = false;
-            imageSet.Mirrors.Add(new ImageSetMirror { VikingXmlUrl = new Uri("https://eu/RC2.VikingXML"), Priority = 5, Enabled = true });
+            imageSet.Mirrors.Add(new VolumeMirror { VikingXmlUrl = new Uri("https://eu/RC2.VikingXML"), Priority = 5, Enabled = true });
             await sync.ApplyPrimaryMirrorAsync(imageSet);
             await db.SaveChangesAsync();
 
-            Assert.Equal(new Uri("https://eu/RC2.VikingXML"), (await db.Volume.FindAsync(volume.Id)).Endpoint);
+            Assert.Equal(new Uri("https://eu/RC2.VikingXML"), (await db.AnnotationContexts.FindAsync(volume.Id)).Endpoint);
         }
     }
 
@@ -291,7 +291,7 @@ namespace TestIdentityModel
             db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Annotate", UserId = userId });
             await db.SaveChangesAsync();
 
-            var volumes = await db.UserVolumePermissionsAsync(userId);
+            var volumes = await db.UserAnnotationContextPermissionsAsync(userId);
 
             Assert.Equal(new[] { "Read", "Annotate" }, volumes[rc1.Id]);
             Assert.Equal(new[] { "Read", "Annotate" }, volumes[internalCopy.Id]);
@@ -308,7 +308,7 @@ namespace TestIdentityModel
             db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = mosaics.Id, PermissionId = "Read", UserId = userId });
             await db.SaveChangesAsync();
 
-            var volumes = await db.UserVolumePermissionsAsync(userId);
+            var volumes = await db.UserAnnotationContextPermissionsAsync(userId);
 
             Assert.Equal(new[] { "Read" }, volumes[mosaics.Id]);
             Assert.True(await db.IsUserPermittedEffectiveAsync(mosaics, userId, "Read"));
@@ -323,7 +323,7 @@ namespace TestIdentityModel
             var userId = db.CreateUser("nobody", "x");
             await db.SaveChangesAsync();
 
-            Assert.Empty(await db.UserVolumePermissionsAsync(userId));
+            Assert.Empty(await db.UserAnnotationContextPermissionsAsync(userId));
         }
 
         [Fact]
@@ -375,11 +375,11 @@ namespace TestIdentityModel
             var userId = db.CreateUser("collaborator", "x");
             await db.SaveChangesAsync();
 
-            await new ResourceProvisioningService(db).GrantUserVolumeFullAccessAsync(userId, internalCopy.Id);
+            await new ResourceProvisioningService(db).GrantUserAnnotationContextFullAccessAsync(userId, internalCopy.Id);
 
             Assert.Equal(3, await db.GrantedUserPermissions.CountAsync(g => g.UserId == userId && g.ResourceId == server.Id));
             Assert.False(await db.GrantedUserPermissions.AnyAsync(g => g.UserId == userId && g.ResourceId == internalCopy.Id));
-            Assert.Equal(new[] { "Read", "Annotate", "Review" }, (await db.UserVolumePermissionsAsync(userId))[rc1.Id]);
+            Assert.Equal(new[] { "Read", "Annotate", "Review" }, (await db.UserAnnotationContextPermissionsAsync(userId))[rc1.Id]);
         }
 
         [Fact]
@@ -387,18 +387,18 @@ namespace TestIdentityModel
         {
             await using var db = CatalogDb.Create();
             var (server, rc1, _) = await CatalogDb.AddSharedServerAsync(db);
-            var imageSet = new ImageSet { Name = "RC1 images", VersionLabel = "v2", CreatedUtc = DateTime.UtcNow };
-            imageSet.Mirrors.Add(new ImageSetMirror { VikingXmlUrl = new Uri("http://rogue1/RABBIT/rogue1.vikingxml"), Priority = 0, Enabled = true, RegionLabel = "US" });
-            imageSet.Mirrors.Add(new ImageSetMirror { VikingXmlUrl = new Uri("https://eu/RABBIT/rogue1.vikingxml"), Priority = 1, Enabled = true, RegionLabel = "EU" });
-            imageSet.Mirrors.Add(new ImageSetMirror { VikingXmlUrl = new Uri("https://off/RABBIT/rogue1.vikingxml"), Priority = 2, Enabled = false });
-            rc1.ImageSet = imageSet;
+            var imageSet = new Volume { Name = "RC1 images", VersionLabel = "v2", CreatedUtc = DateTime.UtcNow };
+            imageSet.Mirrors.Add(new VolumeMirror { VikingXmlUrl = new Uri("http://rogue1/RABBIT/rogue1.vikingxml"), Priority = 0, Enabled = true, RegionLabel = "US" });
+            imageSet.Mirrors.Add(new VolumeMirror { VikingXmlUrl = new Uri("https://eu/RABBIT/rogue1.vikingxml"), Priority = 1, Enabled = true, RegionLabel = "EU" });
+            imageSet.Mirrors.Add(new VolumeMirror { VikingXmlUrl = new Uri("https://off/RABBIT/rogue1.vikingxml"), Priority = 2, Enabled = false });
+            rc1.Volume = imageSet;
             var userId = db.CreateUser("reader", "x");
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Read", UserId = userId });
             await db.SaveChangesAsync();
 
             var service = new PermissionService(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<PermissionService>.Instance, new NoDebugLogging());
-            var volumes = await service.GetUserAccessibleVolumesAsync(userId);
+            var volumes = await service.GetUserAccessibleAnnotationContextsAsync(userId);
 
             var metadata = volumes[rc1.Id].Metadata;
             Assert.Equal("http://rogue1/RABBIT/rogue1.vikingxml", metadata[VolumeMetadata.Endpoint]);
@@ -406,7 +406,7 @@ namespace TestIdentityModel
             Assert.Equal("https://webann.example/RC1", metadata[VolumeMetadata.AnnotationEndpoint]);
             var mirrors = Assert.IsType<List<VolumeMirrorInfo>>(metadata[VolumeMetadata.Mirrors]);
             Assert.Equal(new[] { "US", "EU" }, mirrors.Select(m => m.Region));
-            Assert.Equal("v2", Assert.IsType<VolumeImageSetInfo>(metadata[VolumeMetadata.ImageSet]).VersionLabel);
+            Assert.Equal("v2", Assert.IsType<VolumeInfo>(metadata[VolumeMetadata.Volume]).VersionLabel);
         }
     }
 
@@ -478,15 +478,33 @@ namespace TestIdentityModel
             return db;
         }
 
-        public static Volume AddVolume(ApplicationDbContext db, string name, string url)
+        public static AnnotationContext AddVolume(ApplicationDbContext db, string name, string url)
         {
-            var volume = new Volume { Name = name, ResourceTypeId = nameof(Volume), Endpoint = new Uri(url) };
-            db.Volume.Add(volume);
-            return volume;
+            var connectome = new Connectome
+            {
+                Name = name,
+                ResourceTypeId = nameof(Connectome)
+            };
+            db.Connectomes.Add(connectome);
+            db.SaveChanges();
+
+            var context = new AnnotationContext
+            {
+                Name = name,
+                ResourceTypeId = nameof(AnnotationContext),
+                Endpoint = new Uri(url),
+                ConnectomeId = connectome.Id
+            };
+            db.AnnotationContexts.Add(context);
+            db.SaveChanges();
+
+            connectome.DefaultAnnotationContextId = context.Id;
+            db.SaveChanges();
+            return context;
         }
 
-        /// <summary>Volumes RC1 and RC1-Internal pointing at annotation server RC1, created in that order.</summary>
-        public static async Task<(AnnotationServer Server, Volume Rc1, Volume Internal)> AddSharedServerAsync(ApplicationDbContext db)
+        /// <summary>Contexts RC1 and RC1-Internal pointing at annotation server RC1, created in that order.</summary>
+        public static async Task<(AnnotationServer Server, AnnotationContext Rc1, AnnotationContext Internal)> AddSharedServerAsync(ApplicationDbContext db)
         {
             var rc1 = AddVolume(db, "RC1", "http://rogue1/RABBIT/rogue1.vikingxml");
             var internalCopy = AddVolume(db, "RC1-Internal", "https://storage1/RABBIT/VolumeV2.VikingXML");
@@ -496,7 +514,8 @@ namespace TestIdentityModel
             {
                 Name = "RC1",
                 ResourceTypeId = nameof(AnnotationServer),
-                AnnotationEndpoint = "https://webann.example/RC1"
+                AnnotationEndpoint = "https://webann.example/RC1",
+                ConnectomeId = rc1.ConnectomeId
             };
             db.AnnotationServers.Add(server);
             rc1.AnnotationServer = server;

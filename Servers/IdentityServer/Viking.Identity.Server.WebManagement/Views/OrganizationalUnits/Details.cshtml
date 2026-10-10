@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = Model.Name;
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var volumes = ViewData["Volumes"] as List<Viking.Identity.Models.Volume> ?? new List<Viking.Identity.Models.Volume>();
+    var volumes = ViewData["Volumes"] as List<Viking.Identity.Models.AnnotationContext> ?? new List<Viking.Identity.Models.AnnotationContext>();
     var segmentationServices = ViewData["SegmentationServices"] as List<Viking.Identity.Models.SegmentationService> ?? new List<Viking.Identity.Models.SegmentationService>();
     var childOrgs = ViewData["ChildOrganizations"] as List<Viking.Identity.Models.OrganizationalUnit> ?? new List<Viking.Identity.Models.OrganizationalUnit>();
     var groups = ViewData["Groups"] as List<Viking.Identity.Models.Group> ?? new List<Viking.Identity.Models.Group>();
@@ -215,7 +215,7 @@
         @if (canEdit)
         {
             <div class="mb-3">
-                <a asp-controller="Volumes" asp-action="Create" asp-route-parentOrgId="@Model.Id" class="btn btn-primary">
+                <a asp-controller="AnnotationContexts" asp-action="Create" asp-route-parentOrgId="@Model.Id" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Create Volume
                 </a>
             </div>
@@ -267,7 +267,7 @@
                                 }
                                 
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
+                                    <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
                                         <i class="bi bi-info-circle"></i> Details
                                     </a>
                                     @if (canManageVolume)
@@ -281,7 +281,7 @@
                                 @if (canManageVolume)
                                 {
                                     <div class="mt-auto pt-3 d-flex justify-content-end">
-                                        <a asp-controller="Volumes" asp-action="Delete" asp-route-id="@volume.Id"
+                                        <a asp-controller="AnnotationContexts" asp-action="Delete" asp-route-id="@volume.Id"
                                            class="btn btn-sm btn-outline-danger" title="Delete volume">
                                             <i class="bi bi-trash"></i>
                                         </a>
@@ -299,7 +299,7 @@
                 <i class="bi bi-info-circle"></i> This organization doesn't have any volumes yet.
                 @if (canEdit)
                 {
-                    <a asp-controller="Volumes" asp-action="Create" class="alert-link">Create a new volume</a>
+                    <a asp-controller="AnnotationContexts" asp-action="Create" class="alert-link">Create a new volume</a>
                 }
             </div>
         }
