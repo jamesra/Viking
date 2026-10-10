@@ -39,7 +39,7 @@ namespace gRPCAnnotationService
 
                 return new CreateStructureTypeResponse { Result = added.Entity.ToProtobufMessage() };
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureType), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureType), e, context); }
         }
 
         public override async Task<GetStructureTypeByIDResponse> GetStructureTypeByID(GetStructureTypeByIDRequest request, ServerCallContext context)
@@ -62,7 +62,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(rows.Select(t => t.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypes), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypes), e, context); }
         }
 
         public override async Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
@@ -80,7 +80,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypesByIDs), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypesByIDs), e, context); }
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e, context); }
         }
     }
 }

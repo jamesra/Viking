@@ -56,7 +56,7 @@ namespace ConnectomeDataModelCoreTests
             using var db = new AnnotationContext(options);
             var log = new RecordingLogger();
 
-            var ex = await Assert.ThrowsAsync<RpcException>(() => call(db, log, new CancelledCallContext(cts.Token)));
+            var ex = await Assert.ThrowsAsync<RpcException>(() => call(db, log, new FakeCallContext(cts.Token)));
 
             Assert.True(ex.StatusCode == StatusCode.Cancelled, $"{name}: expected Cancelled, got {ex.StatusCode}");
             Assert.DoesNotContain(LogLevel.Error, log.Levels);
@@ -67,11 +67,40 @@ namespace ConnectomeDataModelCoreTests
         {
             var log = new RecordingLogger();
 
-            var ex = AnnotationRpc.Failure(log.For<RpcCancellationStatusTests>(), "Op", new InvalidOperationException("boom"));
+            var ex = AnnotationRpc.Failure(log.For<RpcCancellationStatusTests>(), "Op", new InvalidOperationException("boom"), new FakeCallContext(CancellationToken.None));
 
             Assert.Equal(StatusCode.Unknown, ex.StatusCode);
             Assert.Equal("Op", ex.Status.Detail);
             Assert.Contains(LogLevel.Error, log.Levels);
+        }
+
+        /// <summary>
+        /// A cancellation the caller did not ask for is a server-side fault, not a benign cancel, so it
+        /// keeps the Unknown status and the error log instead of being downgraded to Cancelled at Debug.
+        /// </summary>
+        [Fact]
+        public void CancellationNotRequestedByCallerStillReportsUnknownAndLogsError()
+        {
+            var log = new RecordingLogger();
+
+            var ex = AnnotationRpc.Failure(log.For<RpcCancellationStatusTests>(), "Op", new OperationCanceledException(), new FakeCallContext(CancellationToken.None));
+
+            Assert.Equal(StatusCode.Unknown, ex.StatusCode);
+            Assert.Contains(LogLevel.Error, log.Levels);
+        }
+
+        [Fact]
+        public void CancellationRequestedByCallerReportsCancelledAtDebug()
+        {
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+            var log = new RecordingLogger();
+
+            var ex = AnnotationRpc.Failure(log.For<RpcCancellationStatusTests>(), "Op", new OperationCanceledException(), new FakeCallContext(cts.Token));
+
+            Assert.Equal(StatusCode.Cancelled, ex.StatusCode);
+            Assert.Equal("Op", ex.Status.Detail);
+            Assert.Equal(new[] { LogLevel.Debug }, log.Levels);
         }
 
         /// <summary>Collects the level of every log entry written through any logger it hands out.</summary>
@@ -93,7 +122,7 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>Minimal call context whose only meaningful member is the caller's cancellation token.</summary>
-        private sealed class CancelledCallContext(CancellationToken token) : ServerCallContext
+        private sealed class FakeCallContext(CancellationToken token) : ServerCallContext
         {
             protected override string MethodCore => "test";
             protected override string HostCore => "localhost";

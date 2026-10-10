@@ -35,7 +35,7 @@ namespace gRPCAnnotationService
                 response.PermittedLinks.AddRange(rows.Select(p => p.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetPermittedStructureLinks), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetPermittedStructureLinks), e, context); }
         }
 
         public override async Task<CreatePermittedStructureLinkResponse> CreatePermittedStructureLink(CreatePermittedStructureLinkRequest request, ServerCallContext context)
@@ -52,7 +52,7 @@ namespace gRPCAnnotationService
                     Result = ef_result.Entity.ToProtobufMessage()
                 };
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreatePermittedStructureLink), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreatePermittedStructureLink), e, context); }
         }
 
         public override async Task<UpdatePermittedStructureLinksResponse> UpdatePermittedStructureLinks(UpdatePermittedStructureLinksRequest request, ServerCallContext context)
@@ -111,7 +111,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdatePermittedStructureLinks), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdatePermittedStructureLinks), e, context); }
         }
     }
 }

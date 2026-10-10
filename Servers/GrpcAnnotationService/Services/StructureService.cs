@@ -52,7 +52,7 @@ namespace gRPCAnnotationService
                 return new GetStructureByIDResponse { Result = result };
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureByID), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureByID), e, context); }
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace gRPCAnnotationService
                 await AttachStructureLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresByID), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresByID), e, context); }
         }
 
         public override async Task<GetStructuresResponse> GetStructures(GetStructuresRequest request, ServerCallContext context)
@@ -88,7 +88,7 @@ namespace gRPCAnnotationService
                 await AttachStructureLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructures), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructures), e, context); }
         }
 
         /// <summary>
@@ -114,7 +114,7 @@ namespace gRPCAnnotationService
                 response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter, ct));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresForSection), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresForSection), e, context); }
         }
 
         public override async Task<GetStructuresInMosaicRegionResponse> GetStructuresInMosaicRegion(GetStructuresInMosaicRegionRequest request, ServerCallContext context)
@@ -136,7 +136,7 @@ namespace gRPCAnnotationService
                 response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter, ct));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresInMosaicRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresInMosaicRegion), e, context); }
         }
 
         public override async Task<GetStructuresInVolumeRegionResponse> GetStructuresInVolumeRegion(GetStructuresInVolumeRegionRequest request, ServerCallContext context)
@@ -158,7 +158,7 @@ namespace gRPCAnnotationService
                 response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter, ct));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresInVolumeRegion), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresInVolumeRegion), e, context); }
         }
 
         public override async Task<GetStructuresOfTypeResponse> GetStructuresOfType(GetStructuresOfTypeRequest request, ServerCallContext context)
@@ -174,7 +174,7 @@ namespace gRPCAnnotationService
                 await AttachStructureLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresOfType), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresOfType), e, context); }
         }
 
         public override async Task<GetChildStructuresResponse> GetChildStructures(GetChildStructuresRequest request, ServerCallContext context)
@@ -190,7 +190,7 @@ namespace gRPCAnnotationService
                 await AttachStructureLinksAsync(response.Results, ct);
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetChildStructures), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetChildStructures), e, context); }
         }
 
         public override async Task<GetLinkedStructuresResponse> GetLinkedStructures(GetLinkedStructuresRequest request, ServerCallContext context)
@@ -205,7 +205,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(links.Select(ToProtobufMessage));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLinkedStructures), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLinkedStructures), e, context); }
         }
 
         public override async Task<NumberOfLocationsResponse> NumberOfLocations(NumberOfLocationsRequest request, ServerCallContext context)
@@ -216,7 +216,7 @@ namespace gRPCAnnotationService
                     .CountAsync(l => l.ParentId == request.Id, context.CancellationToken);
                 return new NumberOfLocationsResponse { Result = count };
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(NumberOfLocations), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(NumberOfLocations), e, context); }
         }
 
         public override async Task<GetNetworkedStructuresResponse> GetNetworkedStructures(GetNetworkedStructuresRequest request, ServerCallContext context)
@@ -230,7 +230,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(rows.Select(r => r.ID));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetNetworkedStructures), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetNetworkedStructures), e, context); }
         }
 
         public override async Task<GetChildStructuresInNetworkResponse> GetChildStructuresInNetwork(GetChildStructuresInNetworkRequest request, ServerCallContext context)
@@ -267,7 +267,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetChildStructuresInNetwork), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetChildStructuresInNetwork), e, context); }
         }
 
         public override async Task<GetStructureLinksInNetworkResponse> GetStructureLinksInNetwork(GetStructureLinksInNetworkRequest request, ServerCallContext context)
@@ -288,7 +288,7 @@ namespace gRPCAnnotationService
                 }));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureLinksInNetwork), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureLinksInNetwork), e, context); }
         }
 
         public override async Task<GetUnfinishedLocationsResponse> GetUnfinishedLocations(GetUnfinishedLocationsRequest request, ServerCallContext context)
@@ -301,7 +301,7 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(rows.Select(r => r.ID));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetUnfinishedLocations), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetUnfinishedLocations), e, context); }
         }
 
         public override async Task<GetUnfinishedLocationsWithPositionResponse> GetUnfinishedLocationsWithPosition(GetUnfinishedLocationsWithPositionRequest request, ServerCallContext context)
@@ -319,7 +319,7 @@ namespace gRPCAnnotationService
                 }));
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetUnfinishedLocationsWithPosition), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetUnfinishedLocationsWithPosition), e, context); }
         }
 
         public override Task<GetStructureChangeLogResponse> GetStructureChangeLog(GetStructureChangeLogRequest request, ServerCallContext context)
@@ -387,7 +387,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructure), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructure), e, context); }
         }
 
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
@@ -454,7 +454,7 @@ namespace gRPCAnnotationService
 
                 return response;
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e, context); }
         }
 
         public override async Task<CreateStructureLinkResponse> CreateStructureLink(CreateStructureLinkRequest request, ServerCallContext context)
@@ -483,7 +483,7 @@ namespace gRPCAnnotationService
                 return new CreateStructureLinkResponse { Result = ToProtobufMessage(added.Entity) };
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureLink), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureLink), e, context); }
         }
 
         public override async Task<UpdateStructureLinksResponse> UpdateLinks(UpdateStructureLinksRequest request, ServerCallContext context)
@@ -523,7 +523,7 @@ namespace gRPCAnnotationService
                 await _context.SaveChangesAsync(ct);
                 return new UpdateStructureLinksResponse();
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdateLinks), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdateLinks), e, context); }
         }
 
         public override async Task<DeleteStructureLinkResponse> DeleteStructureLink(DeleteStructureLinkRequest request, ServerCallContext context)
@@ -542,7 +542,7 @@ namespace gRPCAnnotationService
                 return new DeleteStructureLinkResponse();
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(DeleteStructureLink), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(DeleteStructureLink), e, context); }
         }
 
         /// <summary>
@@ -556,7 +556,7 @@ namespace gRPCAnnotationService
                     request.KeepId, request.MergeId, cancellationToken: context.CancellationToken);
                 return new MergeResponse { KeptId = request.KeepId };
             }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Merge), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Merge), e, context); }
         }
 
         /// <summary>
@@ -577,7 +577,7 @@ namespace gRPCAnnotationService
                 return new SplitResponse { SplitStructureId = splitId.Value.Value };
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Split), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Split), e, context); }
         }
 
         /// <summary>
@@ -599,7 +599,7 @@ namespace gRPCAnnotationService
                 return new SplitAtLocationLinkResponse { SplitStructureId = splitId.Value.Value };
             }
             catch (RpcException) { throw; }
-            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(SplitAtLocationLink), e); }
+            catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(SplitAtLocationLink), e, context); }
         }
 
         #endregion

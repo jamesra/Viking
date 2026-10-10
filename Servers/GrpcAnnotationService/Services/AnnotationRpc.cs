@@ -37,15 +37,17 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Converts an exception caught by an RPC's catch-all into the <see cref="RpcException"/> to throw.
-        /// An <see cref="OperationCanceledException"/> (the caller cancelled, its deadline passed, or the
-        /// request was aborted) becomes <see cref="StatusCode.Cancelled"/> logged at Debug, since it is not a
-        /// server fault; anything else becomes <see cref="StatusCode.Unknown"/> logged at Error.
+        /// An <see cref="OperationCanceledException"/> while <paramref name="context"/>'s token is cancelled
+        /// (the caller cancelled, its deadline passed, or the request was aborted) becomes
+        /// <see cref="StatusCode.Cancelled"/> logged at Debug, since it is not a server fault. Anything else,
+        /// including a cancellation the caller did not request (an internal timeout or a library bug),
+        /// becomes <see cref="StatusCode.Unknown"/> logged at Error so the fault is not hidden.
         /// Called from the catch blocks of every annotation service; <paramref name="operation"/> is the
         /// RPC name and doubles as the status detail clients see.
         /// </summary>
-        public static RpcException Failure(ILogger logger, string operation, Exception e)
+        public static RpcException Failure(ILogger logger, string operation, Exception e, ServerCallContext context)
         {
-            if (e is OperationCanceledException)
+            if (e is OperationCanceledException && context.CancellationToken.IsCancellationRequested)
             {
                 logger.LogDebug("{Operation} cancelled", operation);
                 return new RpcException(new Status(StatusCode.Cancelled, operation, e));
