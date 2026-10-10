@@ -2537,13 +2537,6 @@ break;
         private double LastLoadDownsample;
 
         /// <summary>
-        /// Return true if we should reload our annotations for a scene movement
-        /// </summary>
-        /// <param name="scene"></param>
-        /// <returns></returns>
-        private bool ShouldLoadAnnotationsForSceneMovement(VikingXNA.Scene scene) => (LastVisibleWorldBounds != scene.VisibleWorldBounds);// &&//(LastCameraDownsample == scene.Camera.Downsample);
-
-        /// <summary>
         /// Return true if annotations should be loaded: never loaded yet, visible area changed, or magnification changed by a factor of 2 or more.
         /// </summary>
         private bool ShouldLoadAnnotationsForCameraChange()
@@ -2711,17 +2704,6 @@ break;
 
         private static BasicEffect basicEffect = null;
         private static BlendState defaultBlendState = null;
-
-        private static BasicEffect CreateBasicEffect(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
-        {
-            basicEffect = new BasicEffect(graphicsDevice)
-            {
-                Projection = scene.Projection,
-                View = scene.Camera.View,
-                World = scene.World
-            };
-            return basicEffect;
-        }
 
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                          VikingXNA.Scene scene,
@@ -2912,62 +2894,6 @@ break;
         private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene) => [.. locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene))];
 
         private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene) => [.. locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene))];
-        /*
-        /// <summary>
-        /// Return all locations which overlap the passed locations
-        /// </summary>
-        /// <param name="locations"></param>
-        /// <returns></returns>
-        private static List<LocationCanvasView> FindOverlappedAdjacentLocations(List<LocationCanvasView> locations)
-        {
-            return locations.SelectMany(l => l.OverlappingLinks).OrderBy(l => l.ID).ToList();
-        }
-
-        /// <summary>
-        /// Remove all locations from the collection which overlap locations on the specified section
-        /// </summary>
-        /// <param name="locations">The collection to remove overlapping locations from</param>
-        /// <returns>The removed locations which overlap</returns>
-        private static List<LocationCanvasView> FindNonOverlappedAdjacentLocations(List<LocationCanvasView> locations, List<LocationCanvasView> adjacentLocations, int section_number)
-        {
-            List<LocationCanvasView> listOverlappingLocations = FindOverlappedAdjacentLocations(locations);
-
-            adjacentLocations = adjacentLocations.OrderBy(l => l.ID).ToList();
-
-            locations = locations.OrderBy(l => l.ID).ToList();
-
-            int iOverlapping = listOverlappingLocations.Count - 1;
-            for (int i = adjacentLocations.Count - 1; i >= 0; i--)
-            {
-                LocationCanvasView loc = adjacentLocations.ElementAt(i);
-                while (iOverlapping >= 0)
-                {
-                    LocationCanvasView overlappingLoc = listOverlappingLocations[iOverlapping];
-                    if (overlappingLoc.ID < loc.ID)
-                    {
-                        break;
-                    }
-                    else if (overlappingLoc.ID == loc.ID)
-                    {
-                        adjacentLocations.RemoveAt(i);
-                        break;
-                    }
-                    else
-                    {
-                        iOverlapping--;
-                    }
-                }
-
-                if (iOverlapping < 0)
-                    break;
-            }
-
-            //List<LocationCanvasView> listOverlappingLocations = new List<LocationCanvasView>(locations.Count);
-            //return adjacentLocations.Where(l => !listOverlappingLocations.Contains(l)).ToList();
-            
-            return adjacentLocations;
-        }
-        */
         /// <summary>
         /// 
         /// </summary>
