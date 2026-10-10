@@ -134,10 +134,6 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs) => Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == PrimarySectionNumber);
-
-        private IEnumerable<LocationObj> LinkedLocationsOnAdjacent(ICollection<long> LinkedIDs) => Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == AdjacentSection.Number);
-
         /// <summary>
         /// Load 
         /// </summary>
@@ -322,21 +318,6 @@ namespace WebAnnotation.ViewModel
         {
             List<long> loc_IDs = LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
-            List<LocationCanvasView> locations = [];
-            foreach (long id in loc_IDs)
-            {
-                if (LocationViews.TryGetValue(id, out LocationCanvasView view))
-                {
-                    locations.Add(view);
-                }
-            }
-            return locations;
-        }
-
-        public ICollection<long> LocationIdsInRegion(Geometry.Rectangle worldRect) => LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
-
-        public ICollection<LocationCanvasView> LocationViewsForIds(ICollection<long> loc_IDs)
-        {
             List<LocationCanvasView> locations = [];
             foreach (long id in loc_IDs)
             {
@@ -1001,8 +982,6 @@ namespace WebAnnotation.ViewModel
 
             return null;
         }
-
-        public bool ContainsLocation(long ID) => LocationViews.ContainsKey(ID);
 
         public bool GetLocationsForStructure(long ID, out KeyTracker<long> child_locations)
         {
