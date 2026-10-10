@@ -1,6 +1,6 @@
 # gRPC store parity with the WCF client
 
-Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 24 done, 4 partial, 0 missing, 3 n/a.
+Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 25 done, 3 partial, 0 missing, 3 n/a.
 
 | WCF member | gRPC equivalent | Status | Test | Benchmark |
 |---|---|---|---|---|
@@ -22,7 +22,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | LocationStore.Create / AddObject / RemoveObject | `Create`, `Add`, `Remove` | done | | |
 | LocationStore.TryAddObject / TryRemoveObject | none | n/a: internal to WCF cache | | |
 | LocationLinkStore.CreateLink / DeleteLink | same names | done | | |
-| LocationLinkStore.GetLinksCrossingSection | `GetLinksForSectionAsync` | partial: crossing-section (both ends) semantics unverified | | |
+| LocationLinkStore.GetLinksCrossingSection | `GetLinksForSectionAsync` | done: WCF `GetLinksCrossingSection` only returns the per-section cache; which links belong to a section is decided server-side by the same section TVF in both services (`AnnotateService.GetLocationLinksForSection` vs `LocationService.GetLocationLinksForSection`). Read-through only, no paired test | | |
 | LocationLinkStore.ParseQuery / InternalAdd / InternalDelete | `MergeServerLinksAsync` | done | | |
 | StructureStore.Create | `Create` | done | | |
 | StructureStore.GetAllStructures | `GetAll` | done | | |
