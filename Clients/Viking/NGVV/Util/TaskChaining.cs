@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Viking.Common
@@ -18,6 +19,40 @@ namespace Viking.Common
         {
             T result = await first.ConfigureAwait(false);
             await next(result).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Awaits finished tasks, removing them from <paramref name="pending"/>, until at most <paramref name="maxPending"/> remain.
+        /// Used to throttle export loops. A task that faulted or was canceled rethrows here instead of vanishing from the list
+        /// (the old <c>Task.WhenAny</c> + <c>Remove</c> loops dropped the failure, so a PNG that could not be written went unreported).
+        /// On failure the remaining tasks are awaited first so none is still writing when the caller reports the error; their own
+        /// failures are not reported (the first failure wins).
+        /// </summary>
+        public static async Task DrainToAsync(List<Task> pending, int maxPending)
+        {
+            while (pending.Count > maxPending)
+            {
+                Task completed = await Task.WhenAny(pending).ConfigureAwait(false);
+                pending.Remove(completed);
+
+                if (completed.IsFaulted || completed.IsCanceled)
+                {
+                    try
+                    {
+                        await Task.WhenAll(pending).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Only the first failure is reported.
+                    }
+                    finally
+                    {
+                        pending.Clear();
+                    }
+
+                    await completed.ConfigureAwait(false);
+                }
+            }
         }
     }
 }

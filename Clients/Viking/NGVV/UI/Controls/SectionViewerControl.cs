@@ -1120,11 +1120,7 @@ namespace Viking.UI.Controls
                                 texture => texture.SaveAsync(tile_filename, System.Drawing.Imaging.ImageFormat.Png)));
                         }
 
-                        while (listTasks.Count > 0 && (listTasks.Count > MaxActiveExports))
-                        {
-                            var completedTask = await Task.WhenAny(listTasks);
-                            listTasks.Remove(completedTask);
-                        }
+                        await TaskChaining.DrainToAsync(listTasks, MaxActiveExports);
 
 
                     }
@@ -1132,11 +1128,7 @@ namespace Viking.UI.Controls
                     System.GC.Collect();
                 }
 
-                while (listTasks.Count > 0)
-                {
-                    var completedTask = await Task.WhenAny(listTasks);
-                    listTasks.Remove(completedTask);
-                }
+                await TaskChaining.DrainToAsync(listTasks, 0);
             }
         }
 
@@ -2955,6 +2947,18 @@ namespace Viking.UI.Controls
         private void menuSectionShowMesh_Click_1(object sender, EventArgs e) => State.ShowStosMesh = !State.ShowStosMesh;
 
         private async void menuExportFrames_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await ExportFramesFromDialogAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Could not export frames: " + ex.Message, "Export frames", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task ExportFramesFromDialogAsync()
         {
             using Viking.UI.Forms.FrameCapturesForm form = new();
             DialogResult result = form.ShowDialog();
