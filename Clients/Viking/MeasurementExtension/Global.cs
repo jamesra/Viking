@@ -76,7 +76,13 @@ namespace MeasurementExtension
             }
         }
 
-        private static bool GetScaleFromXML(XElement elem)
+        /// <summary>
+        /// Reads the volume scale from a Volume element's Scale child into <see cref="_UnitsPerPixel"/> and
+        /// <see cref="_UnitOfMeasure"/>. UnitsPerPixel is server XML, so it is parsed with the invariant
+        /// culture; a current culture that uses ',' as the decimal separator would otherwise misread '0.0025'.
+        /// </summary>
+        /// <returns>True when both attributes were present and the unit is a known SI length unit.</returns>
+        internal static bool GetScaleFromXML(XElement elem)
         {
 
             //Examine the XML document and determine the scale
@@ -96,7 +102,7 @@ namespace MeasurementExtension
                     if (EndpointAttribute is null)
                         break;
 
-                    Global._UnitsPerPixel = System.Convert.ToDouble(EndpointAttribute.Value);
+                    Global._UnitsPerPixel = double.Parse(EndpointAttribute.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
 
                     EndpointAttribute = MappingElement.Attribute("UnitsOfMeasure");
                     if (EndpointAttribute is null)
