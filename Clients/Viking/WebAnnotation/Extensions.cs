@@ -179,21 +179,6 @@ namespace WebAnnotation
         }
     }
 
-    public static class RectangleExtensions
-    {
-        public static Rectangle ToMosaicSpace(this in Rectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
-        {
-            Vector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
-
-            double MinX = MosaicCorners.Min(p => p.X);
-            double MaxX = MosaicCorners.Max(p => p.X);
-            double MinY = MosaicCorners.Min(p => p.Y);
-            double MaxY = MosaicCorners.Max(p => p.Y);
-
-            return new Rectangle(MinX, MaxX, MinY, MaxY);
-        }
-    }
-
     public static class AnnotationExtensions
     {
         private static Viking.AnnotationServiceTypes.Interfaces.LocationType StringToLocationType(string annotationType)
