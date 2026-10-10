@@ -49,42 +49,16 @@ namespace Viking.UI.Controls
             }
         }
 
-        public int IntValue
-        {
-            get
-            {
-                int val;
-                try
-                {
-                    val = int.Parse(this.Text);
-                }
-                catch (FormatException)
-                {
-                    val = 0;
-                }
+        /// <summary>
+        /// Text parsed as an <see cref="int"/> in the current culture, or 0 when it is empty, malformed, or out of
+        /// range. The key filter admits any run of digits, so overflow is reachable and must not throw.
+        /// </summary>
+        public int IntValue => int.TryParse(this.Text, out int val) ? val : 0;
 
-                return val;
-            }
-        }
-
-        public double DoubleValue
-        {
-            get
-            {
-                double val;
-                try
-                {
-                    val = Double.Parse(this.Text);
-                }
-                catch (FormatException)
-                {
-                    val = 0;
-                }
-
-                return val;
-
-            }
-        }
+        /// <summary>
+        /// Text parsed as a <see cref="double"/> in the current culture, or 0 when it is empty, malformed, or out of range.
+        /// </summary>
+        public double DoubleValue => double.TryParse(this.Text, out double val) ? val : 0;
 
         public decimal DecimalValue => Decimal.Parse(this.Text);
 
