@@ -30,7 +30,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | StructureStore.GetStructuresOfType, Merge | same names | done | | |
 | StructureStore.SplitAtLocationLink | `SplitStructureAtLocationLink` | done | | |
 | StructureStore.GetUnfinishedBranches(WithPosition), CheckForOrphan | same names | done | | |
-| StructureStore.GetObjectsInRegion(Async) | `GetLocalObjectsInRegion`, `GetServerObjectsInRegion` | done | | |
+| StructureStore.GetObjectsInRegion(Async) | `GetLocalObjectsInRegion` (mosaic bounding box intersects region, Radius >= MinRadius, as WCF `LocationRTree`), `GetServerObjectsInRegion` | done | `StructureStoreRegionQueryTests` (local only) | |
 | StructureTypeStore.LoadStructureTypes | `GetAll`, `Create` | done | | |
 | StructureLinkStore / PermittedStructureLinkStore (Create, sections) | `GetLinks`, `Save`, `MergeServerLinksAsync` / `Save` | done | | |
 | Interfaces.cs, IKeyGenerator, LongIndexGenerator (client-side keys) | server-assigned IDs | n/a: ID generation is server-side | | |

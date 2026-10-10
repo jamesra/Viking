@@ -253,10 +253,20 @@ namespace WebAnnotationModel.gRPC
             return changes.ObjectsInStore;
         }
 
+        /// <summary>
+        /// Distinct parent structures of cached locations on <paramref name="SectionNumber"/> whose mosaic
+        /// bounding box intersects <paramref name="bounds"/> (closed test, so a shared edge counts) and whose
+        /// radius is at least <paramref name="MinRadius"/>. Reads only the local location cache; no server call.
+        /// </summary>
+        /// <remarks>
+        /// Matches the WCF client, which answers this from an R-tree of each location's mosaic bounding box:
+        /// a location whose centre lies outside a region cell but whose shape reaches into it still yields
+        /// its structure. Locations without a mosaic shape or a cached parent are skipped.
+        /// </remarks>
         public Task<ICollection<StructureObj>> GetLocalObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius)
         {
             var structures = Store.Locations.GetLocalObjectsForSection(SectionNumber).Values
-                .Where(l => l.Radius >= MinRadius && bounds.Contains(l.Position) && l.Parent != null)
+                .Where(l => l.MosaicShape != null && l.Radius >= MinRadius && bounds.Intersects(l.MosaicShape.BoundingBox) && l.Parent != null)
                 .Select(l => l.Parent)
                 .Distinct()
                 .ToList();
