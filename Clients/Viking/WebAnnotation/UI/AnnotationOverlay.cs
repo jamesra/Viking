@@ -2709,53 +2709,6 @@ break;
                 RequestSectionAnnotationsLoad(current);
         }
 
-        /*
-        protected void LoadSectionAnnotations()
-        {
-            if (Parent.Scene == null)
-               return;
-            
-            int StartingSectionNumber = _Parent.Section.Number;
-            SectionAnnotationsView SectionAnnotations;
-            SectionAnnotationsView SectionAnnotationsAbove;
-            SectionAnnotationsView SectionAnnotationsBelow;
-            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
-            SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene);
-            //Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene));
-
-            int refSectionNumberAbove=0;
-            int refSectionNumberBelow=-1;
-            if (_Parent.Section.ReferenceSectionAbove != null)
-            {
-                refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
-                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent);
-                SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene);
-            //    Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations(false));
-                //Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene));
-            }
-
-            if (_Parent.Section.ReferenceSectionBelow != null)
-            {
-                refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
-                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent);
-                SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene);
-                //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations(false));
-                //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene));
-            }
-
-            int EndingSectionNumber = _Parent.Section.Number; 
-            Debug.Assert(refSectionNumberAbove != refSectionNumberBelow);
-            Debug.Assert(StartingSectionNumber == EndingSectionNumber);
-            Debug.Assert(SectionAnnotations.Section.Number == StartingSectionNumber); 
-            
-            linksView.LoadSection(_Parent.Section.Number);
-
-            //Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
-
-            //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
-        }
-        */
-
         private static BasicEffect basicEffect = null;
         private static BlendState defaultBlendState = null;
 
