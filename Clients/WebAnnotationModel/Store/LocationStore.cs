@@ -147,7 +147,6 @@ namespace WebAnnotationModel
             return null;
         }
 
-
         /// <summary>
         /// Create a new location on the server.  Add the location to the local store.
         /// </summary>

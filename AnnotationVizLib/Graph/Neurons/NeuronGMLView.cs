@@ -15,7 +15,7 @@ namespace AnnotationVizLib
             {
                 { "Label", NeuronGMLView.LabelForNode(node) },
 
-                { "StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key) }
+                { "StructureURL", ODataLinkBuilder.Structure(this.VolumeURL, node.Key) }
             };
 
             GMLnode.AddStandardizedAttributes(NodeAttribs);

@@ -1,5 +1,4 @@
 using Geometry;
-using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SqlGeometryUtils;
@@ -1181,7 +1180,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// One mask pixel-travel fit (<see cref="AutoPolygonizeSelection.SimplifyForCreatedShape"/>)
-        /// before the ring is drawn. <see cref="Execute"/> submits this polygon unchanged.
+        /// before the ring is drawn. Persist fits again in <see cref="LocationShapeUpdate"/>.
         /// </summary>
         private IReadOnlyList<Polygon> SimplifyPreviewRings(IReadOnlyList<Polygon> polygons)
         {
@@ -1409,8 +1408,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
-                // SimplifyPreviewRings already fit this ring. A second pass would move the boundary
-                // the user accepted, so the annotation store receives the polygon on screen.
+                // Preview rings are already fit for display. LocationShapeUpdate fits once more
+                // when persisting so mosaic control points stay CreatedShapeSimplify-sized after
+                // any path that handed us a denser ring.
                 this.Output = selectedPolygon;
                 placementFinished = true;
                 this?.success_callback(selectedPolygon);
@@ -1431,7 +1431,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Saves <paramref name="polygon"/> as a new polygon location. Called when Tab
-        /// segmentation accepts a mask. The polygon is the ring already shown; this method does not simplify it.
+        /// segmentation accepts a mask. Fits once and maps control points to mosaic via
+        /// <see cref="ViewModel.LocationShapeUpdate.AssignSimplifiedVolumePolygon"/>.
         /// <paramref name="type"/> null uses the structure selected in the list, or cell type 1.
         /// A type that requires a parent enqueues <see cref="LinkStructureToParentCommand"/> before the save.
         /// </summary>
@@ -1449,8 +1450,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
-                SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
-                newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, mosaicGeometry);
+                LocationShapeUpdate.AssignSimplifiedVolumePolygon(
+                    newLocation,
+                    polygon,
+                    Parent.Section.ActiveSectionToVolumeTransform,
+                    Parent.Downsample);
 
                 if (typeObj.ParentID.HasValue)
                 {

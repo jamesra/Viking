@@ -38,6 +38,24 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
             ?? throw new InvalidOperationException("AppSettings:VolumeURL not configured");
     }
 
+    /// <summary>
+    /// Host used for StructureURL and Export MorphologyURL links. Prefer the annotation
+    /// endpoint so OData/Export are derived by replacing Annotation; fall back to
+    /// the configured OData URL, then the volume service root.
+    /// </summary>
+    private string GetAnnotationUrlForLinks()
+    {
+        string annotation = _configuration["AppSettings:AnnotationURL"];
+        if (!string.IsNullOrWhiteSpace(annotation))
+            return annotation;
+
+        string odata = _configuration["AppSettings:ODataURL"];
+        if (!string.IsNullOrWhiteSpace(odata))
+            return odata;
+
+        return GetVolumeUrl();
+    }
+
     private static string GetOutputFilename(string ext) => $"{DefaultOutputFile}{NextFilenameID}{OutputNameGenerator.GetFileFriendlyDateString()}.{ext}";
 
     private string GetAndCreateOutputDirectory()
@@ -84,7 +102,7 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
 
         MotifGraph motifGraph = await GetMotifGraphAsync();
         motifGraph.AddEdgeStatistics();
-        MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, GetVolumeUrl());
+        MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, GetAnnotationUrlForLinks());
         TlpGraph.SaveTLP(userDotFileFullPath);
 
         return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);

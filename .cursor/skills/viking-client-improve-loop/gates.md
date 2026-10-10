@@ -13,7 +13,7 @@ Read by the implementer and the reviewer. Protected areas are in [protected.md](
 - **Same behavior.** A test pins the old behavior before the edit and passes after it. Bug fixes are the one exception; they follow Bug fixes.
 - **Reviewable size.** About 300 changed lines at most. Larger work goes to `deferred` with a one-line plan; do a smaller slice now if one exists.
 - **Builds everywhere it is used.** Shared-library edits build Viking (.NET Framework 4.8) and MonogameTestbed (.NET 9). `Span<T>` and `ArrayPool<T>` on .NET 4.8 need `System.Memory`/`System.Buffers`; do not add a package only to save a few allocations.
-- **Comments.** Keep comments that state a contract, threading rule, or edge case. Edited types and members keep or gain `///` docs.
+- **Documentation skills.** Edited code follows the `csharp-xml-docs` skill (and `python-comments` if any Python is touched): new or substantially changed types and members get language-standard API docs (`/// <summary>` / docstrings) that state purpose, callers, and hidden contracts; keep comments that state a contract, threading rule, or edge case; do not add play-by-play inline comments that only restate the next line.
 
 If no candidate passes, revert and add `{ path, category, reason }` to `rejected`. Skip rejected paths later unless the code around them changed.
 

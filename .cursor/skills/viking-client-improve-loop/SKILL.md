@@ -25,9 +25,20 @@ Files in this skill (each subagent reads only its own; see Each wake):
 
 `/viking-client-improve-loop [X] [Y]`
 
-- X is the run length; default 24 hours. Y is the sleep after each wake; default 10 minutes.
+- X is the run length; default 24 hours. Y is the sleep after each wake; default **15 minutes**.
 - Accept `30m`, `4h`, `1d`, or a bare number of minutes.
 - Deadline = launch time + X. Use America/Los_Angeles in messages to the user.
+
+## Session and context
+
+Prefer a **dedicated chat** for this loop so wake noise does not fill a human-work thread. Durable state lives in the ledger and `STEERING.md`, not in chat history.
+
+Keep the parent transcript thin:
+
+- One **orchestrator** `generalPurpose` Task per wake (Sync → scout → implement → high-risk review inside that Task). Do not stack separate scout/implement/review Tasks into the parent.
+- Act only on `AGENT_LOOP_WAKE_viking_client_improve` output. **Ignore** bare shell-completion notifications for the sleeper after that wake was handled — do not reply to the user for those.
+- User chat: one or two sentences only when a commit landed, a decision is new, a publish ran, or the loop stops. Empty/reject wakes: re-arm silently (no status line unless the user asked for status).
+- **Compactness hygiene:** increment `wakeCount` in the ledger when arming each sleeper. Every **25** wakes, write a one-paragraph `compactSummary` (deadline, interval, last outcome, open decisions count), tell the user **once** to `/summarize` or start a fresh chat re-armed from the ledger + that summary (same deadline / `intervalMinutes`), then reset `wakeCount` to 0. Between notices, stay silent on empty wakes.
 
 ## Scope
 
@@ -35,7 +46,7 @@ Edit `VikingClient` on branch `Legacy` only: `Clients/Viking`, `Clients/Monogame
 
 ## Sync from the remote
 
-At the start of every wake, before the scout runs, the main session brings both checkouts up to date with git; no subagent is needed.
+**Launch** runs Sync once in the main session. On **later wakes**, the **orchestrator** runs Sync first (not main), so fetch/merge output stays out of the long-lived chat context.
 
 - `d:\src\git\VikingSlackUsersAI\VikingClient` (`Legacy`) and `d:\src\git\VikingSlackUsersAI\VikingServers` (`dev`): `git fetch origin`, then `git merge --ff-only @{u}`. VikingServers is reference only; the loop never edits it.
 - Fast-forward only. If a repo cannot fast-forward (diverged history, or uncommitted local edits the incoming commits touch), leave it as it is, work from the current tree, and record `{repo, reason, date}` in `syncSkips`. Never stash, reset, rebase, force, or discard anything to make a pull succeed, and never push.
@@ -55,20 +66,39 @@ If a wake passes about 60 minutes of work without a candidate clearing the gates
 
 ## Each wake
 
-The main session only schedules, relays, and talks to the user. All work runs in fresh `generalPurpose` subagents (models per Model routing), in the foreground, one at a time, so the main session's context does not grow. Give each subagent only the files named here and the ledger path.
+The main session only launches one orchestrator, talks to the user when needed, and arms the next sleeper. Code work and Sync stay out of the parent context after launch.
 
-1. Read the payload. Do not re-read the `loop` skill. Record any decision answers the user gave in chat into the ledger. Run Sync from the remote and note it in `lastSync` and `syncSkips`.
-2. **Scout** (reads SKILL.md, protected.md, categories.md, the ledger, `STEERING.md`; reports.md and gates.md Test baseline only when a report or baseline is due). Prompt: "Run the scout step of skill viking-client-improve-loop. Skill folder: <path>. Ledger: <path>." In order, the scout:
-   1. reads `STEERING.md` and the ledger;
-   2. stops on `stop`, the deadline, or `emptyWakes` reaching 3, writing the `final` report;
-   3. when 24 hours have passed since `lastReportAt` (or `startedAt`), writes the `daily` report, rebuilds `hotspots`, re-runs the test baseline, and checks for reworked commits;
-   4. on `pause`, ends the wake;
-   5. otherwise picks one candidate and writes it to `candidate`: category, files, a one-paragraph plan, and a risk level (`low` or `high`, per Model routing). It edits no production code. A protected or unbenchmarkable candidate becomes a proposal or decision, and the wake ends.
-   It returns at most four lines: the candidate and its risk or why there is none; new decisions; report path if written; whether to stop.
-3. **Implementer** (reads SKILL.md Scope and Time box, protected.md, gates.md, the ledger). Prompt: "Run the implement step of skill viking-client-improve-loop for the candidate in the ledger. Skill folder: <path>. Ledger: <path>." It runs the candidate through the gates, tests, mutation check, and benchmark when needed; commits if green; publishes if due; clears `candidate`; and writes the ledger. If it finds the candidate riskier than the scout said, it stops without committing and sets the risk to `high`; the next wake re-runs it with the high-risk model. It returns at most four lines: commit sha and summary or why nothing passed, new decisions, whether a publish ran.
-4. **Reviewer, high risk only** (reads protected.md, gates.md). After a high-risk commit: "Review commit <sha> against the gates in <skill folder>. Report problems only." On a gate violation or likely defect, launch the implementer once more to fix it in a follow-up commit, or revert the commit when a fix is not clear. Record the outcome in the commit's ledger entry.
-5. Post a one- or two-sentence summary, post any new decision as a question, then arm one Y-minute sleep, or arm nothing when the scout said stop.
-6. When the user asks for a report, launch the scout model to write a `requested` report right away; the loop keeps running. When the user asks to stop, kill the tracked sleeper PID, launch the scout model to write the `final` report, and arm nothing.
+1. Read the payload. Do not re-read the `loop` skill. Record any decision answers the user gave in chat into the ledger. **Do not Sync in main** after launch.
+2. Launch **one** foreground `generalPurpose` Task (orchestrator). Prefer `composer-2.5` unless a listed model is available for the risk level; record substitutions. Prompt shape:
+
+   > You are the single orchestrator for one wake of viking-client-improve-loop. Run Sync first, then scout → implement → (high-risk review) in this Task; do not spawn further agents. Skill folder: \<path\>. Ledger: \<path\>. Follow SKILL.md Sync and Each-wake steps. Return only the six outcome lines.
+
+   Inside that Task, in order:
+
+   0. **Sync** (see Sync from the remote): write `lastSync` and `syncSkips`.
+   1. **Scout** (reads SKILL.md, protected.md, categories.md, the ledger, `STEERING.md`; reports.md and gates.md Test baseline only when a report or baseline is due):
+      - reads `STEERING.md` and the ledger;
+      - stops on `stop`, the deadline, or `emptyWakes` reaching 3, writing the `final` report;
+      - when 24 hours have passed since `lastReportAt` (or `startedAt`), writes the `daily` report, rebuilds `hotspots`, re-runs the test baseline, and checks for reworked commits;
+      - on `pause`, ends the wake;
+      - otherwise picks one candidate and writes it to `candidate`: category, files, a one-paragraph plan, and a risk level (`low` or `high`, per Model routing). It edits no production code. A protected or unbenchmarkable candidate becomes a proposal or decision, and the wake ends.
+   2. **Implement** (reads SKILL.md Scope and Time box, protected.md, gates.md, the ledger): run the candidate through the gates, tests, mutation check, and benchmark when needed; commit if green; publish if due; clear `candidate`; write the ledger. If the candidate is riskier than scouted, stop without committing and set risk to `high` for the next wake.
+   3. **Review (high risk only)** (reads protected.md, gates.md): after a high-risk commit, review against the gates. On a gate violation or likely defect, fix in a follow-up commit in the same Task, or revert when a fix is not clear. Record the outcome on the commit's ledger entry.
+
+   Orchestrator return (max six lines):
+
+   ```text
+   outcome: <sha + summary | why nothing passed>
+   risk/review: low | high accept | high revert
+   decisions: none new | <ids>
+   publish: no | <version>
+   stop: yes|no
+   viking_count: <N>/6
+   ```
+
+3. Parent: if `stop` is yes, do not arm a sleeper (and write/finalize report if the orchestrator did not). Else increment `wakeCount`, run compactness hygiene if due (see Session and context), arm one Y-minute sleep. Post to the user only when there is a commit, a new decision (as a question), a publish, a compact notice, or a stop — otherwise stay silent.
+4. When the user asks for a report, launch a scout-model Task to write a `requested` report; the loop keeps running. When the user asks to stop, kill the tracked sleeper PID, launch a scout-model Task for the `final` report, and arm nothing.
+5. If a bare sleeper **completion** notification arrives after the wake output was already handled, ignore it (no user reply, no second wake).
 
 ## Steering
 
@@ -91,9 +121,10 @@ When a candidate needs the user's call (two reasonable designs, a behavior chang
 
 ```json
 {
-  "startedAt": "", "deadline": "", "intervalMinutes": 10,
+  "startedAt": "", "deadline": "", "intervalMinutes": 15,
   "hotspots": [], "baselineFailures": [], "flaky": [],
   "lastCategory": 0, "emptyWakes": 0,
+  "wakeCount": 0, "compactSummary": "",
   "candidate": { "category": 0, "files": [], "plan": "", "risk": "low|high" },
   "commits": [{ "program": "", "sha": "", "category": 0, "summary": "", "lineDelta": 0,
                 "benchmark": "", "mutation": "", "risk": "", "models": {}, "review": "" }],
@@ -115,4 +146,4 @@ The user chose these models by writing them here. Pass them as the subagent's `m
 - **High-risk implementer:** `claude-opus-5-5-high`. Everything else, plus any low-risk category that touches a shared library, more than one program, a numeric type, or a file next to a protected area.
 - **Reviewer:** `gpt-5.5-medium`. Only after high-risk commits, so the second opinion comes from a different model family.
 
-The main session can run on Auto or any inexpensive model; it does no code work. Record the model used for each step in the commit's ledger entry.
+The main session can run on Auto or any inexpensive model; it does no code work. The orchestrator records the model used for each step in the commit's ledger entry. When the preferred implementer/reviewer slug is missing, the orchestrator uses the best available substitute and logs `modelSubstitutions`.

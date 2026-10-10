@@ -2,42 +2,56 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using Viking.Common;
 using Viking.UI;
 
 namespace WebAnnotation
 {
     /// <summary>
-    /// Volume JWT roles used for first-run Auto Polygonize defaults.
+    /// Volume JWT roles used for first-run Auto Polygonize defaults and Review UI.
     /// Review and admin default on; annotate (and everyone else) default off.
+    /// Login scopes use <see cref="IdentityEndpoints.ResolveScopeResourceName"/> — often
+    /// Identity <c>AnnotationServerName</c>, which can differ from the volume display name.
     /// </summary>
     internal static class VolumeAccessRoles
     {
         /// <summary>
         /// True when the current session token (or legacy Admin access level) is review-class.
-        /// Called by <see cref="Global.AnnotationSettings.AutoPolygonizeCircles"/> before the user has chosen.
+        /// Called by <see cref="Global.AnnotationSettings.AutoPolygonizeCircles"/> before the user has chosen,
+        /// and by the Review Changes tab before it keeps itself visible.
         /// </summary>
         public static bool HasReviewAccess()
         {
             string? token = State.UserBearerToken?.AccessToken;
             string? volumeName = State.IdentityVolumeName ?? State.volume?.Name;
-            if (TokenGrantsReviewAccess(token, volumeName))
+            string scopeResource = IdentityEndpoints.ResolveScopeResourceName(
+                volumeName ?? string.Empty,
+                AccessibleVolumeSession.AnnotationServerName);
+
+            if (TokenGrantsReviewAccess(token, scopeResource))
                 return true;
+
+            // Display name can differ from AnnotationServerName; try both prefixes.
+            if (!string.IsNullOrWhiteSpace(volumeName)
+                && !string.Equals(volumeName, scopeResource, StringComparison.OrdinalIgnoreCase)
+                && TokenGrantsReviewAccess(token, volumeName))
+            {
+                return true;
+            }
 
             return string.Equals(State.userAccessLevel, "Admin", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
-        /// Review or admin on the volume token. Login requests scopes as <c>{volume}.{permission}</c>.
+        /// Review or admin on the volume token. Login requests scopes as <c>{resource}.{permission}</c>
+        /// where resource is AnnotationServerName when Identity provides one.
         /// </summary>
         public static bool TokenGrantsReviewAccess(string? accessToken, string? volumeName)
         {
             foreach (string role in EnumerateTokenRoles(accessToken, volumeName))
             {
-                if (role.Equals("review", StringComparison.OrdinalIgnoreCase) ||
-                    role.Equals("admin", StringComparison.OrdinalIgnoreCase))
-                {
+                if (IsReviewClassRole(role))
                     return true;
-                }
             }
 
             return false;
@@ -59,6 +73,32 @@ namespace WebAnnotation
 
             foreach (string role in ReadClaimValues(payload, "role"))
                 yield return NormalizeVolumeRole(role, volumeName);
+        }
+
+        /// <summary>
+        /// Bare <c>review</c>/<c>admin</c>, or a still-prefixed <c>Resource.review</c> when the strip
+        /// name did not match the scope resource used at login.
+        /// </summary>
+        internal static bool IsReviewClassRole(string role)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                return false;
+
+            if (role.Equals("review", StringComparison.OrdinalIgnoreCase)
+                || role.Equals("admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            int sep = role.LastIndexOf('.');
+            if (sep < 0)
+                sep = role.LastIndexOf('/');
+            if (sep < 0 || sep >= role.Length - 1)
+                return false;
+
+            string suffix = role.Substring(sep + 1);
+            return suffix.Equals("review", StringComparison.OrdinalIgnoreCase)
+                || suffix.Equals("admin", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string NormalizeVolumeRole(string value, string? volumeName)

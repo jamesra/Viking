@@ -530,40 +530,26 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void SecondSimplifyProposalPassIsNotTheRingAlreadyShown()
+        public void PersistSimplifyCollapsesADensePostBooleanRing()
         {
+            // STDifference-style densification: many colinear samples along a rectangle.
             List<Vector2> ring = [];
-            const int samples = 80;
-            for (int i = 0; i < samples; i++)
-            {
-                double t = 2 * Math.PI * i / samples;
-                ring.Add(new Vector2(50 * Math.Cos(t), 30 * Math.Sin(t)));
-            }
+            for (int x = 0; x <= 40; x++)
+                ring.Add(new Vector2(x, 0));
+            for (int y = 1; y <= 20; y++)
+                ring.Add(new Vector2(40, y));
+            for (int x = 39; x >= 0; x--)
+                ring.Add(new Vector2(x, 20));
+            for (int y = 19; y >= 0; y--)
+                ring.Add(new Vector2(0, y));
 
-            ring.Add(ring[0]);
-            Polygon original = new(ring);
-            const double tolerance = 1.0;
-            Polygon once = AutoPolygonizeSelection.SimplifyProposal(original, tolerance);
-            Polygon twice = AutoPolygonizeSelection.SimplifyProposal(once, tolerance);
+            Polygon dense = new(ring);
+            Polygon simplified = AutoPolygonizeSelection.SimplifyForCreatedShape(dense, downsample: 1.0);
 
-            Assert.IsFalse(ExteriorRingsMatch(once, twice),
-                "Accept and segmentation submit must keep the ring already shown. A second simplify is a different polygon.");
-        }
-
-        private static bool ExteriorRingsMatch(Polygon left, Polygon right)
-        {
-            Vector2[] a = left.ExteriorRing;
-            Vector2[] b = right.ExteriorRing;
-            if (a.Length != b.Length)
-                return false;
-
-            for (int i = 0; i < a.Length; i++)
-            {
-                if (Math.Abs(a[i].X - b[i].X) > 1e-6 || Math.Abs(a[i].Y - b[i].Y) > 1e-6)
-                    return false;
-            }
-
-            return true;
+            Assert.IsTrue(dense.TotalUniqueVertices > 80);
+            Assert.IsTrue(simplified.TotalUniqueVertices < dense.TotalUniqueVertices / 4,
+                $"Persist fit should collapse densified rings {dense.TotalUniqueVertices} -> {simplified.TotalUniqueVertices}");
+            Assert.IsFalse(simplified.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
         }
 
         [TestMethod]
@@ -1322,6 +1308,18 @@ namespace WebAnnotationTests.Commands
             string admin = CreateUnsignedJwt("{\"scope\":\"openid Viking.Annotation RC2.admin\"}");
             Assert.IsTrue(VolumeAccessRoles.TokenGrantsReviewAccess(review, "RC2"));
             Assert.IsTrue(VolumeAccessRoles.TokenGrantsReviewAccess(admin, "RC2"));
+        }
+
+        [TestMethod]
+        public void AnnotationServerNameScopeStillGrantsReview_WhenDisplayNameDiffers()
+        {
+            // Login scopes use AnnotationServerName; HasReviewAccess used to strip only IdentityVolumeName.
+            string token = CreateUnsignedJwt(
+                "{\"scope\":\"openid Viking.Annotation RC1-Annotate.review\"}");
+            Assert.IsTrue(VolumeAccessRoles.TokenGrantsReviewAccess(token, "RC1-Annotate"));
+            Assert.IsTrue(VolumeAccessRoles.TokenGrantsReviewAccess(token, "Rabbit Retina"));
+            Assert.IsTrue(VolumeAccessRoles.IsReviewClassRole("RC1-Annotate.review"));
+            Assert.IsFalse(VolumeAccessRoles.IsReviewClassRole("RC1-Annotate.annotate"));
         }
 
         [TestMethod]

@@ -48,12 +48,16 @@ namespace WebAnnotation
 
         /// <summary>
         /// Static method called by ExtensionManager to determine if this extension should be loaded.
-        /// Returns false if the VolumeToEndpoint element with Endpoint attribute is not found in the VikingXML.
+        /// Loads when Identity supplied an annotation endpoint for the session, or when VikingXML
+        /// has a <c>VolumeToEndpoint</c> with an Endpoint attribute.
         /// </summary>
         /// <param name="context">The extension load context providing access to VikingXML</param>
         /// <returns>True if the extension should load, false otherwise</returns>
         public static bool ShouldLoad(Viking.Common.IExtensionLoadContext context)
         {
+            if (AccessibleVolumeSession.AnnotationServiceEndpoint != null)
+                return true;
+
             if (context is null)
             {
                 return false;
@@ -608,13 +612,14 @@ namespace WebAnnotation
             public static double AutoPolygonizeMaxDownsample
             {
                 get => MathUtils.Clamp(
-                    Properties.Settings.Default.AutoPolygonizeMaxDownsample,
+                    Math.Round(Properties.Settings.Default.AutoPolygonizeMaxDownsample * 4.0) / 4.0,
                     MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE,
                     MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE);
                 set
                 {
+                    // Preference slider steps by 0.25; keep stored values on those ticks.
                     double clamped = MathUtils.Clamp(
-                        value,
+                        Math.Round(value * 4.0) / 4.0,
                         MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE,
                         MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE);
                     if (Math.Abs(Properties.Settings.Default.AutoPolygonizeMaxDownsample - clamped) < 0.001)
@@ -1172,12 +1177,10 @@ namespace WebAnnotation
 
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
-                    if (MappingElements.Count() == 0)
-                    {
-                        break;
-                    }
-
-                    Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+                    if (MappingElements.Count() > 0)
+                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+                    else
+                        Global.ApplyIdentityAnnotationEndpointOnly();
 
                     break;
                 default:
@@ -1194,6 +1197,24 @@ namespace WebAnnotation
             return false;
         }
 
+        /// <summary>
+        /// Applies Identity session annotation / export URLs when VikingXML has no VolumeToEndpoint.
+        /// </summary>
+        private static void ApplyIdentityAnnotationEndpointOnly()
+        {
+            Uri? resolvedEndpoint = IdentityEndpoints.ResolveAnnotationServiceEndpoint(
+                null,
+                AccessibleVolumeSession.AnnotationServiceEndpoint?.ToString());
+            if (resolvedEndpoint != null)
+                WebAnnotationModel.State.Endpoint = resolvedEndpoint;
+
+            if (!string.IsNullOrWhiteSpace(AccessibleVolumeSession.AnnotationServerName))
+                Global.EndpointName = AccessibleVolumeSession.AnnotationServerName;
+
+            if (AccessibleVolumeSession.ExportEndpoint != null)
+                Global.Export = new WebAnnotation.Export(AccessibleVolumeSession.ExportEndpoint);
+        }
+
         private static void PopulateEndpointStateFromVolumeToEndpointElement(XElement MappingElement)
         {
             XAttribute NameAttribute = MappingElement.Attribute("Name");
@@ -1201,22 +1222,40 @@ namespace WebAnnotation
             {
                 Global.EndpointName = NameAttribute.Value;
             }
+            else if (!string.IsNullOrWhiteSpace(AccessibleVolumeSession.AnnotationServerName))
+            {
+                Global.EndpointName = AccessibleVolumeSession.AnnotationServerName;
+            }
 
+            Uri? volumeXmlEndpoint = null;
             XAttribute EndpointAttribute = MappingElement.Attribute("Endpoint");
             if (EndpointAttribute != null)
             {
 #if DEBUG
-                WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);
+                volumeXmlEndpoint = new Uri(EndpointAttribute.Value);
                 //                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/TestBinary/Annotate.svc");
 #else
-                WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);
+                volumeXmlEndpoint = new Uri(EndpointAttribute.Value);
 #endif
             }
 
-            XAttribute ExportURLAttribute = MappingElement.Attribute("ExportURL");
-            if (ExportURLAttribute != null)
+            Uri? resolvedEndpoint = IdentityEndpoints.ResolveAnnotationServiceEndpoint(
+                volumeXmlEndpoint,
+                AccessibleVolumeSession.AnnotationServiceEndpoint?.ToString());
+            if (resolvedEndpoint != null)
+                WebAnnotationModel.State.Endpoint = resolvedEndpoint;
+
+            if (AccessibleVolumeSession.ExportEndpoint != null)
             {
-                Global.Export = new WebAnnotation.Export(new Uri(ExportURLAttribute.Value));
+                Global.Export = new WebAnnotation.Export(AccessibleVolumeSession.ExportEndpoint);
+            }
+            else
+            {
+                XAttribute ExportURLAttribute = MappingElement.Attribute("ExportURL");
+                if (ExportURLAttribute != null)
+                {
+                    Global.Export = new WebAnnotation.Export(new Uri(ExportURLAttribute.Value));
+                }
             }
 
             /*

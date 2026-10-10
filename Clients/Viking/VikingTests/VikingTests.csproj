@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Common.csproj" />
+    <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
   </ItemGroup> 
   <ItemGroup>

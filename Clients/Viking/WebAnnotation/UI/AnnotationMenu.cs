@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Windows.Forms.Integration;
 using Viking.Common;
 using Viking.UI;
 using Viking.UI.WPF;
@@ -24,7 +23,6 @@ namespace WebAnnotation
     {
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
-        private static WebAnnotation.UI.Forms.GoToActionForm? _resolveLocationForm;
         private static ToolStripMenuItem menuPenMode;
         private static ToolStripMenuItem menuShowPenActionButtons;
         private static ToolStripMenuItem menuAutoPolygonizeCircles;
@@ -101,12 +99,6 @@ namespace WebAnnotation
             menuRoot.DropDownItems.Add(menuUpdateVolumePositionsSeparator);
             menuRoot.DropDownItems.Add(menuUpdateVolumePositions);
 
-            if (AnnotationResolveOptions.IsEnabled)
-            {
-                ToolStripMenuItem menuResolveLocation = new("Resolve Location (Test)…");
-                menuResolveLocation.Click += OnResolveLocationTest;
-                menuRoot.DropDownItems.Add(menuResolveLocation);
-            }
 
             return menuRoot;
         }
@@ -748,77 +740,6 @@ namespace WebAnnotation
             Debug.Print("Goto Location");
 
             WebAnnotation.AnnotationOverlay.CurrentOverlay.OpenGotoLocationForm();
-        }
-
-        /// <summary>
-        /// Opens the test-only resolve dialog (Annotation → Resolve Location (Test)…).
-        /// Gated by <see cref="AnnotationResolveOptions.IsEnabled"/> when the menu is built.
-        /// </summary>
-        public static void OnResolveLocationTest(object sender, EventArgs e)
-        {
-            if (!AnnotationResolveOptions.IsEnabled)
-                return;
-
-            if (_resolveLocationForm == null)
-            {
-                _resolveLocationForm = new WebAnnotation.UI.Forms.GoToActionForm
-                {
-                    Title = "Resolve Location (Test)",
-                    IsValidInput = id => id > 0,
-                    OnGo = id => _ = ResolveAndFlyAsync(id)
-                };
-                _resolveLocationForm.Closed += (_, _) => _resolveLocationForm = null;
-                ElementHost.EnableModelessKeyboardInterop(_resolveLocationForm);
-                _resolveLocationForm.Show();
-            }
-            else
-            {
-                _resolveLocationForm.Activate();
-            }
-        }
-
-        /// <summary>
-        /// GETs the AnnotationTest resolve URL, then flies the camera on the UI thread.
-        /// Called by the resolve dialog and by Backspace when resolve is enabled.
-        /// Accepts a bare id; <see cref="AnnotationResolveClient.TryParseAnnotationRef"/> covers <c>@annotation N</c> for other callers.
-        /// When <paramref name="fallbackToStoreOnFailure"/> is true (Backspace), a failed resolve uses the local store like production.
-        /// </summary>
-        public static async Task ResolveAndFlyAsync(long locationId, bool fallbackToStoreOnFailure = false)
-        {
-            try
-            {
-                AnnotationResolveResult resolved = await AnnotationResolveClient.ResolveLocationAsync(locationId).ConfigureAwait(false);
-                void fly() => AnnotationOverlay.GoToResolvedLocation(resolved);
-
-                if (State.ViewerForm != null && State.ViewerForm.InvokeRequired)
-                    State.ViewerForm.BeginInvoke((Action)fly);
-                else if (State.MainThreadDispatcher != null)
-                    State.MainThreadDispatcher.Invoke(fly);
-                else
-                    fly();
-            }
-            catch (Exception ex)
-            {
-                if (fallbackToStoreOnFailure)
-                {
-                    void fallback() => AnnotationOverlay.GoToLocationFromStoreOrWarn(locationId, ex);
-                    if (State.ViewerForm != null && State.ViewerForm.InvokeRequired)
-                        State.ViewerForm.BeginInvoke((Action)fallback);
-                    else if (State.MainThreadDispatcher != null)
-                        State.MainThreadDispatcher.Invoke(fallback);
-                    else
-                        fallback();
-                    return;
-                }
-
-                string message = $"Could not resolve location {locationId} via {AnnotationResolveOptions.BaseUrl}.\n\n{ex.Message}";
-                void show() => MessageBox.Show(message, "Resolve Location (Test)", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-                if (State.ViewerForm != null && State.ViewerForm.InvokeRequired)
-                    State.ViewerForm.BeginInvoke((Action)show);
-                else
-                    show();
-            }
         }
 
         [MenuItem("Merge Structures")]

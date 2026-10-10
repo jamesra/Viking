@@ -183,9 +183,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Single Catmull-Rom control-point fit at <see cref="CreatedShapeSimplifyWorld"/>.
-        /// Call once, when the mask contour becomes the ring drawn for the user.
-        /// Accept and segmentation submit persist that ring and must not call this again:
-        /// a second pass treats the control polygon as a new target and can move the boundary.
+        /// Run once on the final volume ring (after carve/union), then persist via
+        /// <see cref="ViewModel.LocationShapeUpdate"/> which maps those control points to mosaic.
+        /// Preview may use the same fit so the on-screen ring matches what will be saved.
         /// </summary>
         public static Polygon SimplifyForCreatedShape(Polygon polygon, double downsample) =>
             SimplifyProposal(polygon, CreatedShapeSimplifyWorld(downsample));

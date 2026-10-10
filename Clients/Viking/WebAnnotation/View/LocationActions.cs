@@ -12,6 +12,7 @@ using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation
@@ -565,7 +566,11 @@ namespace WebAnnotation
                                             loc.TypeCode);
                                         try
                                         {
-                                            newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, segmentedVolumePolygon.ToSqlGeometry());
+                                            LocationShapeUpdate.AssignSimplifiedVolumePolygon(
+                                                newLoc,
+                                                segmentedVolumePolygon,
+                                                Parent.Section.ActiveSectionToVolumeTransform,
+                                                Parent.Downsample);
                                             Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
                                         }
                                         catch (ArgumentException e)

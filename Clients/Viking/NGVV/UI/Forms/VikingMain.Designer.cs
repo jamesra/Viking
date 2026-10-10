@@ -36,6 +36,7 @@ namespace Viking
             this.vikingHomepageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.CacheCleaningTimer = new System.Windows.Forms.Timer(this.components);
             this.TabsModules = new Viking.UI.BaseClasses.ModuleTabControl();
+            this.splitterModules = new System.Windows.Forms.Splitter();
             this.menuViewer.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -85,11 +86,23 @@ namespace Viking
             this.TabsModules.Dock = System.Windows.Forms.DockStyle.Left;
             this.TabsModules.Location = new System.Drawing.Point(0, 24);
             this.TabsModules.Name = "TabsModules";
-            this.TabsModules.Size = new System.Drawing.Size(160, 628);
+            // Wide enough for Review Changes cards; users can drag the splitter to resize.
+            this.TabsModules.Size = new System.Drawing.Size(280, 628);
             this.TabsModules.TabIndex = 2;
             this.TabsModules.TabStop = false;
             this.TabsModules.Title = "Module Tabs";
             this.TabsModules.TitleVisible = false;
+            // 
+            // splitterModules
+            // 
+            this.splitterModules.Dock = System.Windows.Forms.DockStyle.Left;
+            this.splitterModules.Location = new System.Drawing.Point(280, 24);
+            this.splitterModules.MinExtra = 200;
+            this.splitterModules.MinSize = 120;
+            this.splitterModules.Name = "splitterModules";
+            this.splitterModules.Size = new System.Drawing.Size(5, 628);
+            this.splitterModules.TabIndex = 3;
+            this.splitterModules.TabStop = false;
             // 
             // VikingMain
             // 
@@ -97,6 +110,9 @@ namespace Viking
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(867, 652);
+            // Dock order: add splitter before TabsModules so TabsModules stays leftmost,
+            // then the splitter, then the MDI client fills the rest.
+            this.Controls.Add(this.splitterModules);
             this.Controls.Add(this.TabsModules);
             this.Controls.Add(this.menuViewer);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -117,6 +133,7 @@ namespace Viking
 
         private System.Windows.Forms.MenuStrip menuViewer;
         private Viking.UI.BaseClasses.ModuleTabControl TabsModules;
+        private System.Windows.Forms.Splitter splitterModules;
         private System.Windows.Forms.Timer CacheCleaningTimer;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem vikingHomepageToolStripMenuItem;

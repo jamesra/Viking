@@ -54,5 +54,34 @@ namespace VikingTests
             var resolved = IdentityEndpoints.FromIdentityServer(new Uri("http://localhost:5000/"));
             Assert.AreEqual("http://localhost:6000/", resolved.ToString());
         }
+
+        [TestMethod]
+        public void ResolveScopeResourceName_PrefersAnnotationServerName()
+        {
+            Assert.AreEqual("RC1-Annotate", IdentityEndpoints.ResolveScopeResourceName("Rabbit Retina", "RC1-Annotate"));
+        }
+
+        [TestMethod]
+        public void ResolveScopeResourceName_FallsBackToVolumeName()
+        {
+            Assert.AreEqual("RC2", IdentityEndpoints.ResolveScopeResourceName("RC2", null));
+        }
+
+        [TestMethod]
+        public void ResolveAnnotationServiceEndpoint_PrefersIdentityField()
+        {
+            var xml = new Uri("https://example.com/old/Annotate.svc");
+            var identity = "https://example.com/new/Annotate.svc";
+            var resolved = IdentityEndpoints.ResolveAnnotationServiceEndpoint(xml, identity);
+            Assert.AreEqual(identity, resolved!.ToString());
+        }
+
+        [TestMethod]
+        public void ResolveAnnotationServiceEndpoint_FallsBackToXml()
+        {
+            var xml = new Uri("https://example.com/old/Annotate.svc");
+            var resolved = IdentityEndpoints.ResolveAnnotationServiceEndpoint(xml, null);
+            Assert.AreEqual(xml, resolved);
+        }
     }
 }

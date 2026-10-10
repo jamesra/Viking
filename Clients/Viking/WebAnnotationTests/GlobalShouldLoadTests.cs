@@ -31,6 +31,25 @@ namespace WebAnnotationTests
             public string VolumeHost { get; }
         }
 
+        [TestInitialize]
+        [TestCleanup]
+        public void ClearIdentitySession() => AccessibleVolumeSession.Clear();
+
+        [TestMethod]
+        public void ShouldLoad_IdentityEndpointWithoutVolumeToEndpoint_ReturnsTrue()
+        {
+            AccessibleVolumeSession.SetAnnotationEndpointFromIdentity("https://example.test/RC2/Annotation/Service.svc");
+            var volume = new XElement("Volume", new XElement("Channels"));
+            Assert.IsTrue(Global.ShouldLoad(new StubExtensionLoadContext(volume)));
+        }
+
+        [TestMethod]
+        public void ShouldLoad_IdentityEndpointAndNullContext_ReturnsTrue()
+        {
+            AccessibleVolumeSession.SetAnnotationEndpointFromIdentity("https://example.test/RC2/Annotation/Service.svc");
+            Assert.IsTrue(Global.ShouldLoad(null!));
+        }
+
         [TestMethod]
         public void ShouldLoad_NullContext_ReturnsFalse()
         {

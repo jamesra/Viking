@@ -56,5 +56,40 @@ namespace Viking.Common
 
         static bool IsPermissionsApiPort(int port)
             => port == PermissionsApiHttpPort || port == PermissionsApiHttpsPort;
+
+        /// <summary>
+        /// OAuth scope resource key for Read/Annotate/Review: Identity <c>AnnotationServerName</c> when set,
+        /// otherwise the VikingXML or Identity volume display name.
+        /// </summary>
+        public static string ResolveScopeResourceName(string volumeName, string? annotationServerName)
+        {
+            if (!string.IsNullOrWhiteSpace(annotationServerName))
+                return annotationServerName.Trim();
+
+            return volumeName ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Parses Identity <c>AnnotationEndpoint</c> when it is an absolute URI.
+        /// </summary>
+        public static bool TryResolveAnnotationEndpointUri(string? annotationEndpointFromIdentity, out Uri endpoint)
+        {
+            endpoint = null!;
+            if (string.IsNullOrWhiteSpace(annotationEndpointFromIdentity))
+                return false;
+
+            return Uri.TryCreate(annotationEndpointFromIdentity.Trim(), UriKind.Absolute, out endpoint!);
+        }
+
+        /// <summary>
+        /// Annotation WCF base URL: Identity <c>AnnotationEndpoint</c> when present, else VikingXML <c>VolumeToEndpoint</c>.
+        /// </summary>
+        public static Uri? ResolveAnnotationServiceEndpoint(Uri? volumeXmlEndpoint, string? annotationEndpointFromIdentity)
+        {
+            if (TryResolveAnnotationEndpointUri(annotationEndpointFromIdentity, out Uri identityEndpoint))
+                return identityEndpoint;
+
+            return volumeXmlEndpoint;
+        }
     }
 }

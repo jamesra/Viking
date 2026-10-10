@@ -61,6 +61,122 @@ namespace Viking.Tokens
         /// Additional resource metadata - set as needed (optional)
         /// </summary>
         public Dictionary<string, object> Metadata { get; set; } = [];
+
+        /// <summary>
+        /// Identity 1.1.0: OAuth scope resource name for annotation permissions when it differs from <see cref="Name"/>.
+        /// </summary>
+        public string? AnnotationServerName { get; set; }
+
+        /// <summary>
+        /// Identity 1.1.0: resolved WCF annotation URL for the default (or chosen) server;
+        /// preferred over VikingXML <c>VolumeToEndpoint</c> when set.
+        /// </summary>
+        public string? AnnotationEndpoint { get; set; }
+
+        /// <summary>
+        /// Identity: service root used to derive Annotation / OData / Export URLs.
+        /// </summary>
+        public string? BaseUrl { get; set; }
+
+        /// <summary>Identity: derived or overridden OData service root.</summary>
+        public string? ODataEndpoint { get; set; }
+
+        /// <summary>Identity: derived or overridden Export URL.</summary>
+        public string? ExportEndpoint { get; set; }
+
+        /// <summary>
+        /// Identity: all annotation servers linked to this volume. Empty/null means VikingXML fallback.
+        /// </summary>
+        public List<AnnotationServerChoice>? AnnotationServers { get; set; }
+
+        /// <summary>
+        /// Identity 1.1.0: image set identifier for the volume (reserved for future client use).
+        /// </summary>
+        public string? ImageSet { get; set; }
+
+        /// <summary>
+        /// Identity 1.1.0: alternate volume endpoints (reserved; mirror selection not implemented yet).
+        /// </summary>
+        public List<string>? Mirrors { get; set; }
+
+        /// <summary>
+        /// Identity 1.1.0: registration label used to match VikingXML volume names when they differ from <see cref="Name"/>.
+        /// </summary>
+        public string? RegistrationName { get; set; }
+    }
+
+    /// <summary>
+    /// One annotation server linked to an accessible volume (Identity AccessibleVolumes payload).
+    /// </summary>
+    public class AnnotationServerChoice
+    {
+        public string? Name { get; set; }
+        public string? BaseUrl { get; set; }
+        public string? AnnotationEndpoint { get; set; }
+        public string? ODataEndpoint { get; set; }
+        public string? ExportEndpoint { get; set; }
+        public bool IsDefault { get; set; }
+    }
+
+    /// <summary>
+    /// Matches an open volume to a row from <c>GET /Permissions/AccessibleVolumes</c>.
+    /// </summary>
+    public static class AccessibleVolumeCatalog
+    {
+        /// <summary>
+        /// Finds the accessible-volume row for the names supplied at login (Identity name, launch-exchange name, VikingXML name).
+        /// </summary>
+        public static UserResourcePermissions FindMatch(
+            IEnumerable<UserResourcePermissions> volumes,
+            params string[] candidateNames)
+        {
+            if (volumes is null)
+                return null;
+
+            List<UserResourcePermissions> list = volumes.Where(v => v != null).ToList();
+            if (list.Count == 0)
+                return null;
+
+            string[] names = candidateNames
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (names.Length == 0)
+                return null;
+
+            foreach (string name in names)
+            {
+                UserResourcePermissions exact = list.FirstOrDefault(v =>
+                    string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (exact != null)
+                    return exact;
+            }
+
+            foreach (string name in names)
+            {
+                UserResourcePermissions byRegistration = list.FirstOrDefault(v =>
+                    !string.IsNullOrWhiteSpace(v.RegistrationName)
+                    && string.Equals(v.RegistrationName, name, StringComparison.OrdinalIgnoreCase));
+                if (byRegistration != null)
+                    return byRegistration;
+            }
+
+            foreach (string name in names)
+            {
+                UserResourcePermissions fuzzy = list.FirstOrDefault(v =>
+                    ResourceScopeNames.ScopePrefixesCollide(v.Name, name)
+                    || (!string.IsNullOrWhiteSpace(v.RegistrationName)
+                        && ResourceScopeNames.ScopePrefixesCollide(v.RegistrationName, name))
+                    || (!string.IsNullOrWhiteSpace(v.AnnotationServerName)
+                        && ResourceScopeNames.ScopePrefixesCollide(v.AnnotationServerName, name)));
+                if (fuzzy != null)
+                    return fuzzy;
+            }
+
+            return null;
+        }
     }
 }
 
@@ -383,7 +499,32 @@ namespace Viking.Tokens
         /// </summary>
         /// <param name="user_token">The user's bearer token</param>
         /// <returns>Dictionary mapping volume IDs to volume metadata objects</returns>
-        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleVolumes(TokenResponse user_token) => await GetAuthenticatedJsonAsync<System.Collections.Generic.Dictionary<long, object>>(user_token, "Permissions/AccessibleVolumes", "UserAccessibleVolumes");
+        public async Task<System.Collections.Generic.Dictionary<long, UserResourcePermissions>> RetrieveUserAccessibleVolumes(TokenResponse user_token) => await GetAuthenticatedJsonAsync<System.Collections.Generic.Dictionary<long, UserResourcePermissions>>(user_token, "Permissions/AccessibleVolumes", "UserAccessibleVolumes");
+
+        /// <summary>
+        /// Loads accessible volumes and returns the row matching any of the supplied volume names.
+        /// Called while requesting a volume token and from the login window.
+        /// Returns null when no row matches, or when Identity has no AccessibleVolumes route
+        /// (live servers answer 404). Callers then scope the token with the VikingXML volume name.
+        /// </summary>
+        public async Task<UserResourcePermissions> FindAccessibleVolumeAsync(TokenResponse user_token, params string[] candidateNames)
+        {
+            System.Collections.Generic.Dictionary<long, UserResourcePermissions> volumes;
+            try
+            {
+                volumes = await RetrieveUserAccessibleVolumes(user_token);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[IdentityApiHelper] AccessibleVolumes lookup skipped: {ex.Message}");
+                return null;
+            }
+
+            if (volumes is null || volumes.Count == 0)
+                return null;
+
+            return AccessibleVolumeCatalog.FindMatch(volumes.Values, candidateNames);
+        }
 
         /// <summary>
         /// Retrieves all segmentation services accessible to the authenticated user.
@@ -423,27 +564,30 @@ namespace Viking.Tokens
             Uri identityApiUrl,
             Uri identityServerUrl,
             bool requireReviewRights = false,
-            string clientSecret = null)
+            string clientSecret = null,
+            string annotationServerName = null)
         {
             var apiToken = await GetApiTokenAsync(username, password, identityServerUrl, clientSecret);
-            return await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret);
+            var (volumeToken, _) = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret, annotationServerName);
+            return volumeToken;
         }
 
         /// <summary>
         /// Requests both an API token and a volume-scoped bearer token. Used when the caller needs the API token for other operations (e.g. segmentation service selection).
         /// </summary>
-        public static async Task<(TokenResponse apiToken, TokenResponse volumeToken)> RequestVolumeBearerTokenWithApiTokenAsync(
+        public static async Task<(TokenResponse apiToken, TokenResponse volumeToken, UserResourcePermissions accessibleVolume)> RequestVolumeBearerTokenWithApiTokenAsync(
             string username,
             string password,
             string volumeName,
             Uri identityApiUrl,
             Uri identityServerUrl,
             bool requireReviewRights = false,
-            string clientSecret = null)
+            string clientSecret = null,
+            string annotationServerName = null)
         {
             var apiToken = await GetApiTokenAsync(username, password, identityServerUrl, clientSecret);
-            var volumeToken = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret);
-            return (apiToken, volumeToken);
+            var (volumeToken, accessibleVolume) = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret, annotationServerName);
+            return (apiToken, volumeToken, accessibleVolume);
         }
 
         private static async Task<TokenResponse> GetApiTokenAsync(string username, string password, Uri identityServerUrl, string clientSecret)
@@ -466,7 +610,7 @@ namespace Viking.Tokens
             return apiTokenResponse as TokenResponse;
         }
 
-        private static async Task<TokenResponse> GetVolumeTokenAsync(
+        private static async Task<(TokenResponse volumeToken, UserResourcePermissions accessibleVolume)> GetVolumeTokenAsync(
             string username,
             string password,
             string volumeName,
@@ -474,7 +618,8 @@ namespace Viking.Tokens
             Uri identityServerUrl,
             TokenResponse apiToken,
             bool requireReviewRights,
-            string clientSecret)
+            string clientSecret,
+            string annotationServerName)
         {
             identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
             var identityApiHelper = new IdentityApiHelper
@@ -482,7 +627,12 @@ namespace Viking.Tokens
                 IdentityApiURL = identityApiUrl
             };
 
-            var volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
+            UserResourcePermissions accessibleVolume = await identityApiHelper.FindAccessibleVolumeAsync(apiToken, volumeName);
+            string scopeResourceName = IdentityEndpoints.ResolveScopeResourceName(
+                volumeName,
+                annotationServerName ?? accessibleVolume?.AnnotationServerName ?? null);
+
+            var volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, scopeResourceName);
             if (volumePermissions is null || volumePermissions.Length == 0)
             {
                 throw new Exception("User does not have permissions in volume");
@@ -511,7 +661,7 @@ namespace Viking.Tokens
                 "openid",
                 "Viking.Annotation"
             };
-            permissionsList.AddRange(volumePermissions.Select(p => ResourceScopeNames.ToScope(volumeName, p)));
+            permissionsList.AddRange(volumePermissions.Select(p => ResourceScopeNames.ToScope(scopeResourceName, p)));
 
             var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(username, password, [.. permissionsList]);
             if (bearerTokenResponse is null || bearerTokenResponse.IsError)
@@ -519,7 +669,7 @@ namespace Viking.Tokens
                 throw new Exception("Failed to get bearer token: " + TokenErrorHelper.ToUserMessage(bearerTokenResponse));
             }
 
-            return bearerTokenResponse as TokenResponse;
+            return (bearerTokenResponse as TokenResponse, accessibleVolume);
         }
     }
 }

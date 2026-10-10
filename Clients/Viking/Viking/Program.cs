@@ -120,11 +120,6 @@ namespace Viking
             // Channel identity (production vs Viking Test) drives protocol, pipes, and update URL.
             VikingDeepLinkParser.ProtocolScheme = VikingChannelIdentity.ProtocolScheme;
 
-#if VIKING_TEST_CHANNEL
-            // AnnotationTest LAN resolve menu (Common.AnnotationResolveOptions); production stays off.
-            Viking.Common.AnnotationResolveOptions.ForceEnabled = true;
-#endif
-
             // Register this channel's URL protocol (viking:// or viking-test://)
             VikingProtocolRegistration.RegisterIfNeeded();
 

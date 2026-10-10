@@ -447,7 +447,8 @@ namespace WebAnnotation.WPF.Forms
             get => _autoPolygonizeMaxDownsample;
             set
             {
-                double clamped = MathUtils.Clamp(value, 1.0, 4.0);
+                // Preference slider steps by 0.25 over [1, 4]; snap so keyboard/bindings match ticks.
+                double clamped = MathUtils.Clamp(Math.Round(value * 4.0) / 4.0, 1.0, 4.0);
                 if (Math.Abs(_autoPolygonizeMaxDownsample - clamped) > 0.001)
                 {
                     _autoPolygonizeMaxDownsample = clamped;

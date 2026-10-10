@@ -42,7 +42,8 @@ namespace Viking.Tokens
 
         /// <summary>
         /// Converts an exception from token/login calls into a user-facing message.
-        /// Treats timeout and connection failures as a single friendly message; others use the exception message.
+        /// Timeouts and connection failures share one friendly message. HTTP status failures
+        /// (for example 404) keep the server status so they are not reported as a timeout.
         /// </summary>
         /// <returns>User-facing message; never null.</returns>
         public static string ToExceptionMessage(Exception ex)
@@ -50,19 +51,30 @@ namespace Viking.Tokens
             if (ex is null)
                 return "An unexpected error occurred.";
 
-            if (ex is TaskCanceledException or HttpRequestException)
+            if (ex is TaskCanceledException)
                 return TimeoutNetworkMessage;
+
+            if (ex is HttpRequestException)
+                return IsConnectivityFailure(ex.Message) ? TimeoutNetworkMessage : (ex.Message ?? TimeoutNetworkMessage);
 
             var msg = ex.InnerException?.Message ?? ex.Message;
             if (msg is null)
                 return ex.Message ?? "An unexpected error occurred.";
 
-            var lower = msg.ToLowerInvariant();
-            if (lower.Contains("timeout") || lower.Contains("canceled") || lower.Contains("cancelled") ||
-                lower.Contains("connection") || lower.Contains("refused") || lower.Contains("unable to connect"))
+            if (IsConnectivityFailure(msg))
                 return TimeoutNetworkMessage;
 
             return ex.Message;
+        }
+
+        private static bool IsConnectivityFailure(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return true;
+
+            var lower = message.ToLowerInvariant();
+            return lower.Contains("timeout") || lower.Contains("canceled") || lower.Contains("cancelled") ||
+                   lower.Contains("connection") || lower.Contains("refused") || lower.Contains("unable to connect");
         }
     }
 }

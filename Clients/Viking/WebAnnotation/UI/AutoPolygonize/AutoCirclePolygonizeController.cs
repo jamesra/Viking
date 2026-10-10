@@ -521,7 +521,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                         if (carved is null)
                             continue;
 
-                        proposal.ReplacePolygon(carved, parent.Downsample);
+                        proposal.ReplacePolygon(
+                            AutoPolygonizeSelection.SimplifyForCreatedShape(carved, parent.Downsample),
+                            parent.Downsample);
                         proposal.SetDisplayMask(display, parent.Device);
                         changed = true;
                     }
@@ -712,8 +714,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            // The overlay ring was simplified once when the mask was polygonized. Carving may clip
-            // that ring; simplifying again would move the boundary the user accepted.
+            // Carve/union densifies; LocationShapeUpdate fits once then maps control points to mosaic.
             bool dbgApplied = LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent);
             // #region agent log
             SegmentationDiag.Log($"DIAG H14 Accept ApplyVolumePolygon survivor={survivorId} applied={dbgApplied}");
@@ -1476,7 +1477,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 AutoPolygonizeMaskOverlay? mask = AutoPolygonizeMaskOverlay.TryCreate(session, response);
                 int verticesBefore = first.TotalUniqueVertices;
-                return (AutoPolygonizeSelection.SimplifyProposal(first, simplifyTolerance), mask, verticesBefore);
+                // Fit after carve on the UI thread so boolean densification is not what we draw or save.
+                return (first, mask, verticesBefore);
             }).ConfigureAwait(false);
             long polygonMs = polygonTimer.ElapsedMilliseconds;
 
@@ -1514,6 +1516,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
                 }
 
+                Polygon ready = AutoPolygonizeSelection.SimplifyProposal(carved, simplifyTolerance);
                 IReadOnlyList<Vector2> sourceKeepPoints = extraKeepPoints is { Count: > 0 }
                     ? [.. foreground, .. extraKeepPoints]
                     : foreground;
@@ -1526,9 +1529,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     sectionNumber,
                     circle.LastModified,
                     circle.Radius,
-                    carved,
+                    ready,
                     AutoPolygonizeProposal.CreateRingViews(
-                        carved,
+                        ready,
                         AutoPolygonizeProposal.ColorForLocation(circle.ID),
                         circle.Radius,
                         downsample),
@@ -1562,7 +1565,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Debug.WriteLine(
                     $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} ready-to-draw " +
                     $"prompts={promptMs}ms segmentRpc={segmentMs}ms polygonize={polygonMs}ms " +
-                    $"simplifyAndViews={renderPreparationMs}ms vertices={processed.VerticesBeforeSimplify}->{carved.TotalUniqueVertices} " +
+                    $"simplifyAndViews={renderPreparationMs}ms vertices={processed.VerticesBeforeSimplify}->{ready.TotalUniqueVertices} " +
                     $"proposal={proposalTimer.ElapsedMilliseconds}ms " +
                     $"batchElapsed={batchTimer.ElapsedMilliseconds}ms foreground={foreground.Count} background={background.Count}");
             }).Task.ConfigureAwait(false);
@@ -2545,7 +2548,11 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 if (!ReferenceEquals(carved, other.Polygon))
-                    other.ReplacePolygon(carved, downsample);
+                {
+                    other.ReplacePolygon(
+                        AutoPolygonizeSelection.SimplifyForCreatedShape(carved, downsample),
+                        downsample);
+                }
             }
         }
 
@@ -2745,6 +2752,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                                 locationIds,
                                 keepPoint,
                                 parentId);
+                            if (polygon is not null)
+                                polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
                         }
 
                         if (polygon is null)

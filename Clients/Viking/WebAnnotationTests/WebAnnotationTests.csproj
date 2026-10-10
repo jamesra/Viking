@@ -13,6 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
+    <ProjectReference Include="..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\..\GeometryTests\GeometryTests.csproj" />
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\..\RTree\RTree.csproj" />
@@ -55,6 +56,7 @@
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
     <Compile Include="RegionRefreshTimingTests.cs" />
     <Compile Include="SectionLocationPollPolicyTests.cs" />
+    <Compile Include="ReviewChangeFeedTests.cs" />
     <Compile Include="RegionLoaderInvalidateSectionTests.cs" />
     <Compile Include="SectionRangeParserTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />

@@ -21,6 +21,7 @@ namespace Viking.UI.WPF
     {
         Login,
         VolumeSelection,
+        AnnotationServerSelection,
         SegmentationServiceSelection
     }
 
@@ -29,11 +30,20 @@ namespace Viking.UI.WPF
         private LoginStage _currentStage = LoginStage.Login;
         private LoginViewModel _loginViewModel;
         private VolumeSelectionViewModel _volumeSelectionViewModel;
+        private AnnotationServerSelectionViewModel _annotationServerSelectionViewModel;
+        private string _pendingAnnotationVolumeName;
+        private Uri _pendingAnnotationIdentityApiUrl;
+        private Uri _pendingAnnotationIdentityServerUrl;
         private SegmentationServiceSelectionViewModel _segmentationServiceSelectionViewModel;
         private string _savedUsername;
         private string _savedPassword;
         private bool _isAnonymous;
         private bool _launchVolumeAutoSelectStarted;
+        private string _pendingVolumeName;
+        private string _pendingVolumeUrl;
+        private Uri _pendingIdentityApiUrl;
+        private Uri _pendingIdentityServerUrl;
+        private UserResourcePermissions _pendingAccessibleVolume;
 
         public LoginWindow()
         {
@@ -157,6 +167,7 @@ namespace Viking.UI.WPF
             ICommand cancelCommand = CurrentStage switch
             {
                 LoginStage.VolumeSelection => _volumeSelectionViewModel?.CancelCommand,
+                LoginStage.AnnotationServerSelection => _annotationServerSelectionViewModel?.CancelCommand,
                 LoginStage.SegmentationServiceSelection => _segmentationServiceSelectionViewModel?.CancelCommand,
                 _ => null
             };
@@ -179,6 +190,7 @@ namespace Viking.UI.WPF
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ShowLoginStage));
                     OnPropertyChanged(nameof(ShowVolumeSelectionStage));
+                    OnPropertyChanged(nameof(ShowAnnotationServerStage));
                     OnPropertyChanged(nameof(ShowSegmentationServiceStage));
                 }
             }
@@ -187,6 +199,7 @@ namespace Viking.UI.WPF
         // Computed properties for backward compatibility with XAML bindings
         public bool ShowLoginStage => CurrentStage == LoginStage.Login;
         public bool ShowVolumeSelectionStage => CurrentStage == LoginStage.VolumeSelection;
+        public bool ShowAnnotationServerStage => CurrentStage == LoginStage.AnnotationServerSelection;
         public bool ShowSegmentationServiceStage => CurrentStage == LoginStage.SegmentationServiceSelection;
 
         public string VolumeURL { get; private set; }
@@ -410,8 +423,11 @@ namespace Viking.UI.WPF
                     throw new Exception("Invalid Identity Server URL");
                 }
 
+                AccessibleVolumeSession.Clear();
+
                 TokenResponse apiToken;
                 TokenResponse volumeToken;
+                UserResourcePermissions accessibleVolume = null;
                 bool launchCodePath = !string.IsNullOrWhiteSpace(InitialApiToken)
                     && ApiToken != null
                     && !string.IsNullOrEmpty(ApiToken.AccessToken)
@@ -424,12 +440,19 @@ namespace Viking.UI.WPF
                     Trace.WriteLine("[LoginWindow] Using launch API token as volume bearer token (no password for ROPC).");
                     apiToken = ApiToken;
                     volumeToken = ApiToken;
+                    accessibleVolume = await LookupAccessibleVolumeAsync(
+                        apiToken,
+                        identityApiUrl,
+                        identityServerUrl,
+                        InitialVolumeName,
+                        volumeName,
+                        parsedVolumeName);
                 }
                 else
                 {
                     SetViewModelStatusMessage($"Authenticating to volume '{volumeName}'...");
 
-                    (apiToken, volumeToken) = await VolumeAuthHelper.RequestVolumeBearerTokenWithApiTokenAsync(
+                    (apiToken, volumeToken, accessibleVolume) = await VolumeAuthHelper.RequestVolumeBearerTokenWithApiTokenAsync(
                         _savedUsername,
                         _savedPassword,
                         volumeName,
@@ -441,46 +464,20 @@ namespace Viking.UI.WPF
                     ApiToken = apiToken;
                 }
 
-                Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
+                ApplyAccessibleVolumeSession(accessibleVolume);
 
-                BearerToken = volumeToken;
-                Credentials ??= new NetworkCredential(_savedUsername ?? "anonymous", _savedPassword ?? "connectome");
-                // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
-                if (volumeToken == null || string.IsNullOrEmpty(volumeToken.AccessToken))
+                List<AnnotationServerChoice> serverChoices = GetSelectableAnnotationServers(accessibleVolume);
+                bool interactive = !launchCodePath
+                    && string.IsNullOrWhiteSpace(InitialApiToken)
+                    && !AutoAdvanceFromDeepLink;
+                if (interactive && serverChoices.Count > 1)
                 {
-                    throw new Exception(
-                        "Volume authentication returned an empty access token. Annotation service calls will be denied. " +
-                        "If you opened Viking from SBFSEM-Tools, sign in with username and password, or update Viking.");
-                }
-
-                TokenInjector.BearerToken = volumeToken;
-                TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
-
-                if (!string.IsNullOrWhiteSpace(volumeName))
-                    TraceLaunchTokenReadScope(volumeName, volumeToken.AccessToken);
-
-                if (!string.IsNullOrWhiteSpace(volumeName))
-                    VolumeName = volumeName;
-
-                UpdateViewModelStatus(false, "Authentication successful!");
-
-                Dictionary<long, object> servicesDict = await segmentationTask;
-
-                CleanupSegmentationServiceViewModel();
-                var preselectedEndpoint = SegmentationServiceUrl ?? InitialSegmentationServiceUrl;
-                _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(apiToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint, servicesDict);
-                _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
-                _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
-                _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
-
-                // Launch-code path: auto-complete without showing the segmentation picker.
-                if (!string.IsNullOrWhiteSpace(InitialApiToken) || AutoAdvanceFromDeepLink)
-                {
-                    await AutoCompleteSegmentationForLaunchAsync(preselectedEndpoint, servicesDict);
+                    ShowAnnotationServerPicker(serverChoices, volumeName, identityApiUrl, identityServerUrl);
+                    UpdateViewModelStatus(false, string.Empty);
                     return;
                 }
 
-                ShowSegmentationStageWithViewModel(_segmentationServiceSelectionViewModel, preselectedEndpoint);
+                await ContinueAfterVolumeAuthAsync(apiToken, volumeToken, accessibleVolume, volumeName, identityApiUrl, identityServerUrl);
             }
             catch (Exception ex)
             {
@@ -493,6 +490,65 @@ namespace Viking.UI.WPF
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// Finishes volume login once the annotation server is settled: installs the volume token,
+        /// then shows (or auto-completes) the segmentation service stage.
+        /// </summary>
+        private async Task ContinueAfterVolumeAuthAsync(
+            TokenResponse apiToken,
+            TokenResponse volumeToken,
+            UserResourcePermissions accessibleVolume,
+            string volumeName,
+            Uri identityApiUrl,
+            Uri identityServerUrl)
+        {
+            Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
+
+            BearerToken = volumeToken;
+            Credentials ??= new NetworkCredential(_savedUsername ?? "anonymous", _savedPassword ?? "connectome");
+            // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
+            if (volumeToken == null || string.IsNullOrEmpty(volumeToken.AccessToken))
+            {
+                throw new Exception(
+                    "Volume authentication returned an empty access token. Annotation service calls will be denied. " +
+                    "If you opened Viking from SBFSEM-Tools, sign in with username and password, or update Viking.");
+            }
+
+            TokenInjector.BearerToken = volumeToken;
+            TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
+
+            if (!string.IsNullOrWhiteSpace(volumeName))
+            {
+                string scopeResourceName = IdentityEndpoints.ResolveScopeResourceName(
+                    volumeName,
+                    AccessibleVolumeSession.AnnotationServerName ?? accessibleVolume?.AnnotationServerName);
+                TraceLaunchTokenReadScope(scopeResourceName, volumeToken.AccessToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(volumeName))
+                VolumeName = volumeName;
+
+            UpdateViewModelStatus(false, "Authentication successful!");
+
+            Dictionary<long, object> servicesDict = await segmentationTask;
+
+            CleanupSegmentationServiceViewModel();
+            var preselectedEndpoint = SegmentationServiceUrl ?? InitialSegmentationServiceUrl;
+            _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(apiToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint, servicesDict);
+            _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
+            _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
+            _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
+
+            // Launch-code path: auto-complete without showing the segmentation picker.
+            if (!string.IsNullOrWhiteSpace(InitialApiToken) || AutoAdvanceFromDeepLink)
+            {
+                await AutoCompleteSegmentationForLaunchAsync(preselectedEndpoint, servicesDict);
+                return;
+            }
+
+            ShowSegmentationStageWithViewModel(_segmentationServiceSelectionViewModel, preselectedEndpoint);
         }
 
         /// <summary>
@@ -772,6 +828,137 @@ namespace Viking.UI.WPF
             Title = "Viking - Select Volume";
         }
 
+        private static List<AnnotationServerChoice> GetSelectableAnnotationServers(UserResourcePermissions accessibleVolume) =>
+            (accessibleVolume?.AnnotationServers ?? [])
+                .Where(s => s != null && !string.IsNullOrWhiteSpace(s.AnnotationEndpoint))
+                .ToList();
+
+        private void ShowAnnotationServerPicker(
+            List<AnnotationServerChoice> choices,
+            string volumeName,
+            Uri identityApiUrl,
+            Uri identityServerUrl)
+        {
+            CleanupAnnotationServerViewModel();
+
+            _pendingAnnotationVolumeName = volumeName;
+            _pendingAnnotationIdentityApiUrl = identityApiUrl;
+            _pendingAnnotationIdentityServerUrl = identityServerUrl;
+
+            _annotationServerSelectionViewModel = new AnnotationServerSelectionViewModel(choices);
+            _annotationServerSelectionViewModel.ServerSelected += OnAnnotationServerSelected;
+            _annotationServerSelectionViewModel.SelectionCancelled += OnAnnotationServerSelectionCancelled;
+
+            annotationServerSelectionControl.DataContext = _annotationServerSelectionViewModel;
+            CurrentStage = LoginStage.AnnotationServerSelection;
+            Title = "Viking - Select Annotation Server";
+        }
+
+        private void CleanupAnnotationServerViewModel()
+        {
+            if (_annotationServerSelectionViewModel != null)
+            {
+                _annotationServerSelectionViewModel.ServerSelected -= OnAnnotationServerSelected;
+                _annotationServerSelectionViewModel.SelectionCancelled -= OnAnnotationServerSelectionCancelled;
+            }
+        }
+
+        private async void OnAnnotationServerSelected(object sender, AnnotationServerChoice choice)
+        {
+            try
+            {
+                UpdateViewModelStatus(true, $"Authenticating to annotation server '{choice.Name}'...");
+
+                // Volume JWT scopes are minted from the annotation server name, so re-mint for the choice.
+                var (apiToken, volumeToken, accessibleVolume) = await VolumeAuthHelper.RequestVolumeBearerTokenWithApiTokenAsync(
+                    _savedUsername,
+                    _savedPassword,
+                    _pendingAnnotationVolumeName,
+                    _pendingAnnotationIdentityApiUrl,
+                    _pendingAnnotationIdentityServerUrl,
+                    requireReviewRights: false,
+                    clientSecret: IdentityAppSettings.ClientSecret,
+                    annotationServerName: choice.Name);
+
+                ApiToken = apiToken;
+                ApplyAccessibleVolumeSession(accessibleVolume, choice);
+
+                await ContinueAfterVolumeAuthAsync(
+                    apiToken,
+                    volumeToken,
+                    accessibleVolume,
+                    _pendingAnnotationVolumeName,
+                    _pendingAnnotationIdentityApiUrl,
+                    _pendingAnnotationIdentityServerUrl);
+            }
+            catch (Exception ex)
+            {
+                var message = TokenErrorHelper.ToExceptionMessage(ex);
+                UpdateViewModelStatus(false, $"Error: {message}");
+                Trace.WriteLine($"Annotation server authentication error: {ex}");
+                System.Windows.MessageBox.Show(
+                    $"Failed to authenticate to annotation server:\n\n{message}",
+                    "Authentication Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void OnAnnotationServerSelectionCancelled(object sender, EventArgs e)
+        {
+            AccessibleVolumeSession.Clear();
+            CurrentStage = LoginStage.VolumeSelection;
+            Title = "Viking - Select Volume";
+        }
+
+        private static async Task<UserResourcePermissions> LookupAccessibleVolumeAsync(
+            TokenResponse apiToken,
+            Uri identityApiUrl,
+            Uri identityServerUrl,
+            params string[] candidateNames)
+        {
+            if (apiToken is null || string.IsNullOrEmpty(apiToken.AccessToken))
+                return null;
+
+            identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
+            var helper = new IdentityApiHelper { IdentityApiURL = identityApiUrl };
+            try
+            {
+                return await helper.FindAccessibleVolumeAsync(apiToken, candidateNames);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[LoginWindow] AccessibleVolumes lookup failed (legacy servers OK): {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Applies the volume's default annotation server, or <paramref name="choice"/> when the user picked another.
+        /// </summary>
+        private static void ApplyAccessibleVolumeSession(UserResourcePermissions accessibleVolume, AnnotationServerChoice choice = null)
+        {
+            if (accessibleVolume is null)
+                return;
+
+            AccessibleVolumeSession.SetAnnotationEndpointFromIdentity(choice?.AnnotationEndpoint ?? accessibleVolume.AnnotationEndpoint);
+            AccessibleVolumeSession.SetAnnotationServerNameFromIdentity(choice?.Name ?? accessibleVolume.AnnotationServerName);
+            AccessibleVolumeSession.SetServiceUrlsFromIdentity(
+                choice?.ExportEndpoint ?? accessibleVolume.ExportEndpoint,
+                choice?.ODataEndpoint ?? accessibleVolume.ODataEndpoint);
+            if (AccessibleVolumeSession.AnnotationServiceEndpoint != null)
+            {
+                Trace.WriteLine(
+                    $"[LoginWindow] Using Identity AnnotationEndpoint: {AccessibleVolumeSession.AnnotationServiceEndpoint}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(AccessibleVolumeSession.AnnotationServerName))
+            {
+                Trace.WriteLine(
+                    $"[LoginWindow] Identity AnnotationServerName (scope resource): {AccessibleVolumeSession.AnnotationServerName}");
+            }
+        }
+
         private async Task<(string volumeName, Uri identityApiUrl)> LoadAndParseVolumeXml(string volumeUrl)
         {
             try
@@ -849,7 +1036,7 @@ namespace Viking.UI.WPF
         {
             try
             {
-                return await VolumeAuthHelper.RequestVolumeBearerTokenWithApiTokenAsync(
+                var (apiToken, volumeToken, accessibleVolume) = await VolumeAuthHelper.RequestVolumeBearerTokenWithApiTokenAsync(
                     _savedUsername,
                     _savedPassword,
                     volumeName,
@@ -857,6 +1044,8 @@ namespace Viking.UI.WPF
                     identityServerUrl,
                     requireReviewRights: false,
                     clientSecret: IdentityAppSettings.ClientSecret);
+                ApplyAccessibleVolumeSession(accessibleVolume);
+                return (apiToken, volumeToken);
             }
             catch (Exception ex)
             {
