@@ -12,7 +12,7 @@
     <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.96.0</ApplicationVersion>
+    <ApplicationVersion>1.2.97.0</ApplicationVersion>
     <FileVersion>1.2.95.0</FileVersion>
     <AssemblyVersion>1.2.95.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
