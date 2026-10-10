@@ -2123,26 +2123,6 @@ namespace Viking.UI.Controls
             return tiles;
         }
 
-        private bool AllTileViewsHaveTexture(IList<TileView> listTiles)
-        {
-            listTiles = [.. listTiles.Where(t => t.TextureReadComplete == false)];
-            if (listTiles.All(t => t.TextureReadComplete) || listTiles.Count == 0)
-                return true;
-
-            /*
-            foreach(var t in listTiles)
-            {
-                if(t.TextureIsLoading == false && t.TextureNeedsLoading)
-                {
-                    t.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice)
-                }
-            }
-            */
-            //listTiles.Where(t => t.TextureNeedsLoading).Select(t => t.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice)).ToList();
-            return false;
-        }
-
-
         /// <summary>
         /// Viewport-sized render target that single channel <see cref="DrawSection"/> calls draw into, kept between frames.
         /// Created and used only on the UI thread. Owned by this control: <see cref="Draw(Scene)"/> must not dispose it,
