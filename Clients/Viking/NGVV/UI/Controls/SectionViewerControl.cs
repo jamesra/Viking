@@ -1176,8 +1176,8 @@ namespace Viking.UI.Controls
 
                         if (!System.IO.File.Exists(tile_filename))
                         {
-                            listTasks.Add(RenderSceneToTexture(TileScene, (float)X, (float)Y, Z, IncludeOverlays, false, CancellationToken.None).ContinueWith(
-                                task => task.Result.SaveAsync(tile_filename, System.Drawing.Imaging.ImageFormat.Png)));
+                            listTasks.Add(RenderSceneToTexture(TileScene, (float)X, (float)Y, Z, IncludeOverlays, false, CancellationToken.None).ThenAsync(
+                                texture => texture.SaveAsync(tile_filename, System.Drawing.Imaging.ImageFormat.Png)));
                         }
 
                         while (listTasks.Count > 0 && (listTasks.Count > MaxActiveExports))
@@ -1289,7 +1289,7 @@ namespace Viking.UI.Controls
                         if (false == await SceneHasTextures(TileScene, S.Number, token))
                             continue;
 
-                        Task T = RenderSceneToTexture(TileScene, (float)X, (float)Y, S.Number, false, false, token).ContinueWith(t => t.Result.SaveAsync(Filename, System.Drawing.Imaging.ImageFormat.Png), token);
+                        Task T = RenderSceneToTexture(TileScene, (float)X, (float)Y, S.Number, false, false, token).ThenAsync(texture => texture.SaveAsync(Filename, System.Drawing.Imaging.ImageFormat.Png));
                         listTasks.Add(T);
 
                         //Throttle tile creation so we don't exceed our memory limits
