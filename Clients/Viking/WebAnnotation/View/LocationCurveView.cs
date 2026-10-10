@@ -29,13 +29,6 @@ namespace WebAnnotation.View
             }
         }
 
-        protected override bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
-        {
-            //TODO: This could be optimized considerably
-            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(VolumeCurveControlPoints);
-            //Find the line segment the NewControlPoint intersects
-            int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
-            return MinDistance < LineWidth / 2.0f;
-        }
+        protected override Geometry.Vector2[] HitTestPoints => VolumeCurveControlPoints;
     }
 }

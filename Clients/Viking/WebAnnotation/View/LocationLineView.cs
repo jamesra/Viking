@@ -200,10 +200,16 @@ namespace WebAnnotation.View
             return VolumeControlPoints.Any(p => testCircle.Covers(p));
         }
 
-        protected virtual bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
+        /// <summary>
+        /// The polyline hit-tested by <see cref="PointIntersectsAnyLineSegment"/>: the control points here,
+        /// the interpolated curve for <see cref="LocationCurveView"/>.
+        /// </summary>
+        protected virtual Geometry.Vector2[] HitTestPoints => VolumeControlPoints;
+
+        protected bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
         {
             //TODO: This could be optimized considerably
-            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
+            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(HitTestPoints);
             //Find the line segment the NewControlPoint intersects
             int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
             return MinDistance < LineWidth / 2.0f;
