@@ -330,6 +330,27 @@ namespace ConnectomeODataV4.Controllers
 
         }
 
+        /// <summary>
+        /// Batched freshness for mesh caches: max LastModified and location count over each
+        /// structure and its direct children. GET StructureFreshness(IDs=[…]).
+        /// </summary>
+        [HttpGet]
+        [ODataRoute("StructureFreshness(IDs={IDs})")]
+        public IHttpActionResult GetStructureFreshness([FromODataUri] ICollection<long> IDs)
+        {
+            try
+            {
+                _logger.LogInformation("StructureFreshness for {Count} ids", IDs?.Count ?? 0);
+                _db.ConfigureAsReadOnly();
+                return Ok(_db.SelectStructureFreshness(IDs));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in StructureFreshness");
+                throw;
+            }
+        }
+
         [HttpGet]
         [EnableQuery()]
         public IQueryable<string> DistinctLabels(ODataActionParameters parameters)

@@ -39,19 +39,22 @@
                     <dt class="col-sm-4">Description</dt>
                     <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Description) ? "No description" : Model.Description)</dd>
 
-                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.AnnotationEndpoint)</dt>
-                    <dd class="col-sm-8"><code>@Model.AnnotationEndpoint</code></dd>
+                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.BaseUrl)</dt>
+                    <dd class="col-sm-8"><code>@Model.BaseUrl</code></dd>
+
+                    <dt class="col-sm-4">Annotation URL</dt>
+                    <dd class="col-sm-8"><code>@Viking.Identity.Server.Extensions.Services.AnnotationServiceUrls.AnnotationUrl(Model)</code></dd>
+
+                    <dt class="col-sm-4">OData URL</dt>
+                    <dd class="col-sm-8"><code>@Viking.Identity.Server.Extensions.Services.AnnotationServiceUrls.ODataUrl(Model)</code></dd>
+
+                    <dt class="col-sm-4">Export URL</dt>
+                    <dd class="col-sm-8"><code>@Viking.Identity.Server.Extensions.Services.AnnotationServiceUrls.ExportUrl(Model)</code></dd>
 
                     @if (!string.IsNullOrEmpty(Model.AnnotationDatabaseName))
                     {
                         <dt class="col-sm-4">@Html.DisplayNameFor(m => m.AnnotationDatabaseName)</dt>
                         <dd class="col-sm-8">@Model.AnnotationDatabaseName</dd>
-                    }
-
-                    @if (Model.ExportUrl != null)
-                    {
-                        <dt class="col-sm-4">@Html.DisplayNameFor(m => m.ExportUrl)</dt>
-                        <dd class="col-sm-8"><code>@Model.ExportUrl</code></dd>
                     }
 
                     @if (Model.AuthenticationUrl != null)

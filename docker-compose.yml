@@ -31,10 +31,8 @@ services:
     ports:
       # 5000/5001 are already used by the identity-server stack on this host.
       # :5010 h2c for tests / modern .NET. :5011 HTTPS for Viking (.NET 4.8 WinHttpHandler).
-      # :5012 HTTP/1.1 test-only resolve (TestResolve:Enabled on annotation-db override).
       - "5010:80"
       - "5011:443"
-      - "5012:8080"
     volumes:
       - ./Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro
       - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro

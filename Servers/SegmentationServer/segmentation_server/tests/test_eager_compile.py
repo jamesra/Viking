@@ -166,6 +166,13 @@ def test_compile_failure_keeps_eager_model(monkeypatch) -> None:
     assert model.sam2_model.overrides == []
 
 
+def test_cuda_enables_cudnn_benchmark(monkeypatch) -> None:
+    torch = sys.modules["torch"]
+    _patch_builders(monkeypatch, lambda *_args, **_kwargs: MagicMock())
+    SegmentationModel(compile_image_encoder=False)
+    assert torch.backends.cudnn.benchmark is True
+
+
 def test_compile_disabled_does_not_start_background_thread(monkeypatch) -> None:
     builds: list[list[str]] = []
 

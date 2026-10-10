@@ -18,6 +18,28 @@ using Xunit;
 
 namespace TestIdentityModel
 {
+    public class AnnotationServiceUrlsTests
+    {
+        [Theory]
+        [InlineData("https://webann.example/RC1/", "https://webann.example/RC1")]
+        [InlineData("https://webann.example/RC1/Annotation/Service.svc", "https://webann.example/RC1")]
+        [InlineData("https://webann.example/RC1/OData/", "https://webann.example/RC1")]
+        [InlineData("https://webann.example/RC1/Export", "https://webann.example/RC1")]
+        public void ToBaseUrl_StripsServiceSuffixes(string input, string expected)
+        {
+            Assert.Equal(expected, AnnotationServiceUrls.ToBaseUrl(new Uri(input)));
+        }
+
+        [Fact]
+        public void DerivedUrls_FollowConnectomeLayout()
+        {
+            var server = new AnnotationServer { BaseUrl = "https://webann.example/RC1" };
+            Assert.Equal("https://webann.example/RC1/Annotation/Service.svc", AnnotationServiceUrls.AnnotationUrl(server));
+            Assert.Equal("https://webann.example/RC1/OData/", AnnotationServiceUrls.ODataUrl(server));
+            Assert.Equal("https://webann.example/RC1/Export/", AnnotationServiceUrls.ExportUrl(server));
+        }
+    }
+
     public class VikingXmlCatalogTests
     {
         [Fact]
@@ -94,7 +116,7 @@ namespace TestIdentityModel
             Assert.All(results, r => Assert.Equal(CatalogSyncStatus.Linked, r.Status));
             var server = Assert.Single(db.AnnotationServers.ToList());
             Assert.Equal("RC1", server.Name);
-            Assert.Equal("https://webann.example/RC1", server.AnnotationEndpoint);
+            Assert.Equal("https://webann.example/RC1", server.BaseUrl);
             Assert.Equal("RC1db", server.AnnotationDatabaseName);
             Assert.Equal(server.Id, (await db.Volume.FindAsync(rc1.Id)).AnnotationServerId);
             Assert.Equal(server.Id, (await db.Volume.FindAsync(internalCopy.Id)).AnnotationServerId);
@@ -122,6 +144,34 @@ namespace TestIdentityModel
             Assert.Null(volume.AnnotationServerId);
             Assert.NotNull(volume.ImageSetId);
             Assert.NotNull(volume.CatalogSyncedUtc);
+        }
+
+        [Fact]
+        public async Task Sync_ImageOnlyVolume_KeepsManualAnnotationServerLink()
+        {
+            await using var db = CatalogDb.Create();
+            var volume = CatalogDb.AddVolume(db, "RC2-Pitt", "http://storage/RC2/SliceToVolume.VikingXML");
+            var server = new AnnotationServer
+            {
+                Name = "RC2",
+                ResourceTypeId = nameof(AnnotationServer),
+                BaseUrl = "https://webann.example/RC2"
+            };
+            db.AnnotationServers.Add(server);
+            await db.SaveChangesAsync();
+            await VolumeAnnotationServerLinks.ReplaceLinksAsync(db, volume, new[] { server.Id }, server.Id);
+            await db.SaveChangesAsync();
+
+            var source = new FakeXmlSource
+            {
+                ["http://storage/RC2/SliceToVolume.VikingXML"] = CatalogXml.ImageOnly("RC2-Pitt", "http://storage/RC2")
+            };
+            var result = await new AnnotationServerCatalogSync(db, source).SyncVolumeAsync(volume.Id);
+
+            Assert.Equal(CatalogSyncStatus.ImageOnly, result.Status);
+            var reloaded = await db.Volume.Include(v => v.AnnotationServerLinks).FirstAsync(v => v.Id == volume.Id);
+            Assert.Equal(server.Id, reloaded.AnnotationServerId);
+            Assert.Single(reloaded.AnnotationServerLinks);
         }
 
         [Fact]
@@ -403,7 +453,12 @@ namespace TestIdentityModel
             var metadata = volumes[rc1.Id].Metadata;
             Assert.Equal("http://rogue1/RABBIT/rogue1.vikingxml", metadata[VolumeMetadata.Endpoint]);
             Assert.Equal("RC1", metadata[VolumeMetadata.AnnotationServerName]);
-            Assert.Equal("https://webann.example/RC1", metadata[VolumeMetadata.AnnotationEndpoint]);
+            Assert.Equal("https://webann.example/RC1", metadata[VolumeMetadata.BaseUrl]);
+            Assert.Equal("https://webann.example/RC1/Annotation/Service.svc", metadata[VolumeMetadata.AnnotationEndpoint]);
+            Assert.Equal("https://webann.example/RC1/OData/", metadata[VolumeMetadata.ODataEndpoint]);
+            var annotationServers = Assert.IsType<List<VolumeAnnotationServerInfo>>(metadata[VolumeMetadata.AnnotationServers]);
+            Assert.Single(annotationServers);
+            Assert.True(annotationServers[0].IsDefault);
             var mirrors = Assert.IsType<List<VolumeMirrorInfo>>(metadata[VolumeMetadata.Mirrors]);
             Assert.Equal(new[] { "US", "EU" }, mirrors.Select(m => m.Region));
             Assert.Equal("v2", Assert.IsType<VolumeImageSetInfo>(metadata[VolumeMetadata.ImageSet]).VersionLabel);
@@ -496,11 +551,24 @@ namespace TestIdentityModel
             {
                 Name = "RC1",
                 ResourceTypeId = nameof(AnnotationServer),
-                AnnotationEndpoint = "https://webann.example/RC1"
+                BaseUrl = "https://webann.example/RC1"
             };
             db.AnnotationServers.Add(server);
             rc1.AnnotationServer = server;
             internalCopy.AnnotationServer = server;
+            await db.SaveChangesAsync();
+            db.VolumeAnnotationServers.Add(new VolumeAnnotationServer
+            {
+                VolumeId = rc1.Id,
+                AnnotationServerId = server.Id,
+                IsDefault = true
+            });
+            db.VolumeAnnotationServers.Add(new VolumeAnnotationServer
+            {
+                VolumeId = internalCopy.Id,
+                AnnotationServerId = server.Id,
+                IsDefault = true
+            });
             await db.SaveChangesAsync();
             return (server, rc1, internalCopy);
         }

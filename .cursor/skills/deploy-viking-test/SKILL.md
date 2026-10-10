@@ -111,8 +111,9 @@ Prefix: `[Viking-Client]`.
 3. **How to run beside production**: Start menu **Viking Test**; Windows may warn that the app is unsigned; pre-open Test so SBFSEM `viking://` handoff uses the shared pipes.
 4. **Concise changes since the previous Viking Test (or previous announced) version**, written for **end users**, not developers:
    - Prefer bullets. Lead with behavior they can see or use.
-   - Always call out **new or changed hotkeys**, menu paths, toolbar/button labels, dialogs, defaults, and other UX.
-   - Name the action and the key (e.g. `Ctrl+Shift+P` — open …).
+   - Call out **new or changed** hotkeys, menu paths, toolbar/button labels, dialogs, defaults, and other UX when they exist.
+   - For a new/changed hotkey, name the action and the key (e.g. `Ctrl+Shift+P` — open …).
+   - Do **not** add a “No new hotkeys” (or similar) line when nothing changed — omit hotkeys entirely unless there is something to report.
    - Skip internal refactors, build-script churn, and pure plumbing unless it changes what users do.
    - If there is no prior test release to diff, say so and summarize the user-visible delta from the current signed production build instead.
 5. If this release skipped incompatible remote commits, say so in one line and that James was notified.

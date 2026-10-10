@@ -26,18 +26,13 @@ namespace gRPCAnnotationService
                         // UseDockerPorts is set in the container. Local launch uses launchSettings endpoints.
                         if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
                         {
-                            // :80 stays h2c-only for gRPC. Test resolve uses a separate HTTP/1.1
-                            // listener so curl / HttpClient do not force prior-knowledge HTTP/2.
+                            // :80 stays h2c-only for gRPC. :443 serves gRPC over HTTPS.
                             options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);
                             options.ListenAnyIP(443, listen =>
                             {
                                 listen.Protocols = HttpProtocols.Http1AndHttp2;
                                 listen.UseHttps();
                             });
-                            if (context.Configuration.GetValue("TestResolve:Enabled", false))
-                            {
-                                options.ListenAnyIP(8080, listen => listen.Protocols = HttpProtocols.Http1);
-                            }
                             return;
                         }
 

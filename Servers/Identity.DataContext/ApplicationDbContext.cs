@@ -119,13 +119,13 @@ namespace Viking.Identity.Data
                 .HasConversion(uriConverter);
 
             builder.Entity<AnnotationServer>()
-                .Property(s => s.AnnotationEndpoint)
-                .HasColumnName(nameof(AnnotationServer.AnnotationEndpoint));
+                .Property(s => s.BaseUrl)
+                .HasColumnName(nameof(AnnotationServer.BaseUrl));
 
             builder.Entity<AnnotationServer>()
-                .HasIndex(s => s.AnnotationEndpoint)
+                .HasIndex(s => s.BaseUrl)
                 .IsUnique()
-                .HasFilter("[AnnotationEndpoint] IS NOT NULL");
+                .HasFilter("[BaseUrl] IS NOT NULL");
 
             builder.Entity<AnnotationServer>()
                 .Property(s => s.ExportUrl)
@@ -142,6 +142,29 @@ namespace Viking.Identity.Data
                 .WithMany(s => s.Volumes)
                 .HasForeignKey(v => v.AnnotationServerId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<VolumeAnnotationServer>()
+                .ToTable("VolumeAnnotationServers")
+                .HasKey(l => new { l.VolumeId, l.AnnotationServerId });
+
+            builder.Entity<VolumeAnnotationServer>()
+                .HasOne(l => l.Volume)
+                .WithMany(v => v.AnnotationServerLinks)
+                .HasForeignKey(l => l.VolumeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<VolumeAnnotationServer>()
+                .HasOne(l => l.AnnotationServer)
+                .WithMany(s => s.VolumeLinks)
+                .HasForeignKey(l => l.AnnotationServerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // At most one default annotation server per volume.
+            builder.Entity<VolumeAnnotationServer>()
+                .HasIndex(l => l.VolumeId)
+                .IsUnique()
+                .HasFilter("[IsDefault] = 1")
+                .HasDatabaseName("IX_VolumeAnnotationServers_VolumeId_Default");
 
             builder.Entity<Volume>()
                 .HasOne(v => v.ImageSet)
@@ -311,6 +334,8 @@ namespace Viking.Identity.Data
         public DbSet<SegmentationService> SegmentationServices { get; set; }
 
         public DbSet<AnnotationServer> AnnotationServers { get; set; }
+
+        public DbSet<VolumeAnnotationServer> VolumeAnnotationServers { get; set; }
 
         public DbSet<ImageSet> ImageSets { get; set; }
 

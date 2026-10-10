@@ -1,4 +1,6 @@
 ﻿@model Viking.Identity.Models.Volume
+@using Viking.Identity.Models
+@using Viking.Identity.Server.Extensions.Services
 
 @{
     ViewData["Title"] = "Edit Volume";
@@ -9,6 +11,13 @@
         (Model.Name, Url.Action("Details", "Volumes", new { id = Model.Id })),
         ("Edit", null)
     };
+    var allServers = (IEnumerable<AnnotationServer>)(ViewBag.AvailableAnnotationServers ?? Array.Empty<AnnotationServer>());
+    var linkedIds = new HashSet<long>(
+        (Model.AnnotationServerLinks ?? new List<VolumeAnnotationServer>())
+            .Select(l => l.AnnotationServerId)
+            .Concat(Model.AnnotationServerId.HasValue ? new[] { Model.AnnotationServerId.Value } : Array.Empty<long>()));
+    var defaultId = Model.AnnotationServerLinks?.FirstOrDefault(l => l.IsDefault)?.AnnotationServerId
+        ?? Model.AnnotationServerId;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -47,19 +56,54 @@
                 </small>
             </div>
             <div class="mb-3">
-                <label class="form-label">Annotation Server</label>
-                <div class="form-control-plaintext">
-                    @if (Model.AnnotationServer != null)
+                <label class="form-label">Annotation Servers</label>
+                <div class="border rounded p-3">
+                    @if (!allServers.Any())
                     {
-                        <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.AnnotationServer.Id">@Model.AnnotationServer.Name</a>
-                        <span class="text-muted small ms-2"><code>@Model.AnnotationServer.AnnotationEndpoint</code></span>
+                        <em class="text-muted">No annotation servers exist yet. Create one under Annotation Servers, or sync a volume whose VikingXML has VolumeToEndpoint.</em>
                     }
                     else
                     {
-                        <em class="text-muted">None (images only, or not synced)</em>
+                        <p class="small text-muted mb-2">
+                            Select one or more servers. The default is used when Viking opens this volume; if more than one
+                            is linked, the user can pick another at login. With none selected, Viking uses VikingXML
+                            <code>VolumeToEndpoint</code>.
+                        </p>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:3rem">Link</th>
+                                    <th style="width:5rem">Default</th>
+                                    <th>Server</th>
+                                    <th>Base URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var server in allServers.OrderBy(s => s.Name))
+                            {
+                                var isLinked = linkedIds.Contains(server.Id);
+                                var isDefault = defaultId == server.Id;
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="linkedAnnotationServerIds" value="@server.Id"
+                                               class="form-check-input annotation-server-link"
+                                               @(isLinked ? "checked" : null) />
+                                    </td>
+                                    <td>
+                                        <input type="radio" name="defaultAnnotationServerId" value="@server.Id"
+                                               class="form-check-input"
+                                               @(isDefault ? "checked" : null) />
+                                    </td>
+                                    <td>
+                                        <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@server.Id">@server.Name</a>
+                                    </td>
+                                    <td class="small"><code>@server.BaseUrl</code></td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
                     }
                 </div>
-                <small class="form-text text-muted">Set from VolumeToEndpoint in the VikingXML.</small>
             </div>
             <div class="mb-3">
                 <label asp-for="RegistrationName" class="form-label"></label>

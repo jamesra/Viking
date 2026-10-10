@@ -155,6 +155,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
             ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, volume.ParentID);
+            ViewBag.AvailableAnnotationServers = await _context.AnnotationServers.OrderBy(s => s.Name).ToListAsync();
             return View(volume);
         }
 
@@ -163,7 +164,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Endpoint,Id,Name,Description,ParentID,RegistrationName")] Volume volume)
+        public async Task<IActionResult> Edit(
+            long id,
+            [Bind("Endpoint,Id,Name,Description,ParentID,RegistrationName")] Volume volume,
+            long[] linkedAnnotationServerIds,
+            long? defaultAnnotationServerId)
         {
             if (id != volume.Id)
             {
@@ -199,6 +204,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ModelState.AddModelError(nameof(volume.Name), $"A volume named {volume.Name} already exists");
             }
 
+            linkedAnnotationServerIds ??= Array.Empty<long>();
+            if (defaultAnnotationServerId.HasValue && !linkedAnnotationServerIds.Contains(defaultAnnotationServerId.Value))
+            {
+                ModelState.AddModelError(string.Empty, "The default annotation server must be one of the linked servers.");
+            }
+
             if (ModelState.IsValid)
             {
                 var endpointChanged = !AnnotationServerCatalogSync.SameUrl(existing.Endpoint, volume.Endpoint);
@@ -209,6 +220,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     existing.ParentID = volume.ParentID;
                     existing.Endpoint = volume.Endpoint;
                     existing.RegistrationName = string.IsNullOrWhiteSpace(volume.RegistrationName) ? null : volume.RegistrationName.Trim();
+                    await VolumeAnnotationServerLinks.ReplaceLinksAsync(
+                        _context,
+                        existing,
+                        linkedAnnotationServerIds,
+                        defaultAnnotationServerId,
+                        HttpContext.RequestAborted);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -228,10 +245,18 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     var sync = await _catalogSync.SyncVolumeAsync(existing.Id, HttpContext.RequestAborted);
                     TempData["SuccessMessage"] = $"Saved {existing.Name}. {sync.Message}";
                 }
+                else
+                {
+                    TempData["SuccessMessage"] = $"Saved {existing.Name}.";
+                }
                 return RedirectToAction(nameof(Details), new { id = existing.Id });
             }
             ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, volume.ParentID);
+            ViewBag.AvailableAnnotationServers = await _context.AnnotationServers.OrderBy(s => s.Name).ToListAsync();
             volume.AnnotationServer = existing.AnnotationServer;
+            volume.AnnotationServerLinks.Clear();
+            foreach (var link in existing.AnnotationServerLinks)
+                volume.AnnotationServerLinks.Add(link);
             volume.ImageSet = existing.ImageSet;
             return View(volume);
         }
