@@ -5,9 +5,9 @@ using SIMeasurement;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using VikingXNA;
-using VikingXNAGraphics;
+using VikingXNAGraphics;
+
 using Vector2 = Microsoft.Xna.Framework.Vector2;
-using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MeasurementExtension
 {
@@ -120,18 +120,12 @@ namespace MeasurementExtension
             Color lineColor = Color.Yellow.SetAlpha(0.9f);//new Color(Color.YellowGreen.R, Color.YellowGreen.G, Color.YellowGreen.B, 0.75f));
 
             //Retrieve the mouse position from the last update, the base class records this for us
-            Vector3 target = new((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
-            if ((Control.ModifierKeys == Keys.Shift))
-            {
-                target.Y = (float)Origin.Y;
-            }
-            else if ((Control.ModifierKeys == Keys.Control))
-            {
-                target.X = (float)Origin.X;
-            }
+            Geometry.Vector2 target = MeasureAxisLock.Apply(Origin, this.oldWorldPosition,
+                horizontal: Control.ModifierKeys == Keys.Shift,
+                vertical: Control.ModifierKeys == Keys.Control);
 
-            LengthMeasurement volumeDistance = GetVolumeDistance(target.ToVector2XY());
-            var mosaicDistance = GetMosaicDistance(target.ToVector2XY());
+            LengthMeasurement volumeDistance = GetVolumeDistance(target);
+            var mosaicDistance = GetMosaicDistance(target);
 
             RoundLineCode.RoundLine lineToParent = new((float)Origin.X,
                                                    (float)Origin.Y,
@@ -148,8 +142,8 @@ namespace MeasurementExtension
             //Draw the distance near the cursor
             string distanceLabelString = DistanceLabel(volumeDistance, mosaicDistance);
             Geometry.Vector2 DrawPosition = Parent.WorldToScreen(target.X, target.Y);
-            var _alignment = FindTextAlignment(Origin, target.ToVector2XY());
-            var anchor = FindTextAnchor(Origin, target.ToVector2XY());
+            var _alignment = FindTextAlignment(Origin, target);
+            var anchor = FindTextAnchor(Origin, target);
             var fontSize = 40.0f;
             float fontScaleForVolume = (float)(fontSize / (double)VikingXNAGraphics.Global.DefaultFont.LineSpacing);
             //distanceLabel = new LabelView(distanceLabelString, target.ToVector2XY(),  lineColor, alignment,
