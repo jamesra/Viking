@@ -114,7 +114,7 @@ namespace VolumeModelTests
                     }
 
                     var list = cursor.GetRootToElementList();
-                    if (list.Count != depth + 1 || !ReferenceEquals(list[^1], cursor))
+                    if (list.Count != depth + 1 || !ReferenceEquals(list[list.Count - 1], cursor))
                         return false;
 
                     for (int i = 0; i < list.Count - 1; i++)
