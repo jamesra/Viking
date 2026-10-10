@@ -18,15 +18,8 @@ namespace WebAnnotation.UI
         private bool VerifyTypeMatch(out string Reason)
         {
             Reason = null;
-            int KeepID;
-            int MergeID;
 
-            try
-            {
-                KeepID = int.Parse(textKeepID.Text);
-                MergeID = int.Parse(textMergeID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textMergeID.Text, out long MergeID))
             {
                 Reason = "Could not parse ID number";
                 return false;
@@ -64,15 +57,7 @@ namespace WebAnnotation.UI
 
         private void btnMerge_Click(object sender, EventArgs e)
         {
-            int KeepID;
-            int MergeID;
-
-            try
-            {
-                KeepID = int.Parse(textKeepID.Text);
-                MergeID = int.Parse(textMergeID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textMergeID.Text, out long MergeID))
             {
                 return;
             }
@@ -107,45 +92,35 @@ namespace WebAnnotation.UI
         private bool IsIDValid(string Input, out string Reason)
         {
             Reason = null;
-            try
+
+            //Check if the string is empty, that is OK
+            if (Input.Length == 0)
             {
-                //Check if the string is empty, that is OK
-                if (Input.Length == 0)
-                {
-                    return true;
-                }
-
-                //If string is not empty it needs to be a number
-                int ID = int.Parse(Input);
-
-                StructureObj obj = Store.Structures.GetObjectByID(ID, true);
-                if (obj is null)
-                {
-                    Reason = "No structure found";
-                    return false;
-                }
-
-                Reason = obj.Label;
                 return true;
             }
-            catch (FormatException)
+
+            //If string is not empty it needs to be a number
+            if (!StructureIdText.TryParse(Input, out long ID))
             {
                 return false;
             }
+
+            StructureObj obj = Store.Structures.GetObjectByID(ID, true);
+            if (obj is null)
+            {
+                Reason = "No structure found";
+                return false;
+            }
+
+            Reason = obj.Label;
+            return true;
         }
 
         private bool IsAllInputValid(out string Reason)
         {
             Reason = null;
-            long KeepID;
-            long SplitID;
 
-            try
-            {
-                KeepID = long.Parse(textKeepID.Text);
-                SplitID = long.Parse(textMergeID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textMergeID.Text, out long SplitID))
             {
                 Reason = "Input ID is not a number";
                 return false;

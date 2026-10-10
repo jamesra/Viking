@@ -9,17 +9,7 @@ namespace WebAnnotation.UI
     {
         public long KeepID
         {
-            get
-            {
-                try
-                {
-                    return long.Parse(textKeepID.Text);
-                }
-                catch (FormatException)
-                {
-                    return -1;
-                }
-            }
+            get => StructureIdText.TryParse(textKeepID.Text, out long id) ? id : -1;
             set
             {
                 textKeepID.Text = value > 0 ? value.ToString() : "";
@@ -28,17 +18,7 @@ namespace WebAnnotation.UI
 
         public long SplitID
         {
-            get
-            {
-                try
-                {
-                    return long.Parse(textSplitID.Text);
-                }
-                catch (FormatException)
-                {
-                    return -1;
-                }
-            }
+            get => StructureIdText.TryParse(textSplitID.Text, out long id) ? id : -1;
             set
             {
                 if (value > 0)
@@ -60,44 +40,35 @@ namespace WebAnnotation.UI
         private bool IsIDValid(string Input, out string Reason)
         {
             Reason = null;
-            try
+
+            //Check if the string is empty, that is OK
+            if (Input.Length == 0)
             {
-                //Check if the string is empty, that is OK
-                if (Input.Length == 0)
-                {
-                    return true;
-                }
-
-                //If string is not empty it needs to be a number
-                int ID = int.Parse(Input);
-
-                LocationObj obj = Store.Locations.GetObjectByID(ID);
-                if (obj is null)
-                {
-                    Reason = "No Location found";
-                }
-
-                Reason = obj.Parent.Label;
                 return true;
             }
-            catch (FormatException)
+
+            //If string is not empty it needs to be a number
+            if (!StructureIdText.TryParse(Input, out long ID))
             {
                 return false;
             }
+
+            LocationObj obj = Store.Locations.GetObjectByID(ID);
+            if (obj is null)
+            {
+                Reason = "No Location found";
+                return false;
+            }
+
+            Reason = obj.Parent.Label;
+            return true;
         }
 
         private bool IsAllInputValid(out string Reason)
         {
             Reason = null;
-            long KeepID;
-            long SplitID;
 
-            try
-            {
-                KeepID = long.Parse(textKeepID.Text);
-                SplitID = long.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textSplitID.Text, out long SplitID))
             {
                 Reason = "Input ID is not a number";
                 return false;
@@ -120,14 +91,7 @@ namespace WebAnnotation.UI
         {
             Reason = null;
 
-            long KeepID;
-            long SplitID;
-            try
-            {
-                KeepID = int.Parse(textKeepID.Text);
-                SplitID = int.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textSplitID.Text, out long SplitID))
             {
                 Reason = "Input ID must be a number";
                 return false;
@@ -196,15 +160,7 @@ namespace WebAnnotation.UI
 
         private void btnSplit_Click(object sender, EventArgs e)
         {
-            int KeepLocID;
-            int MergeLocID;
-
-            try
-            {
-                KeepLocID = int.Parse(textKeepID.Text);
-                MergeLocID = int.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepLocID) || !StructureIdText.TryParse(textSplitID.Text, out long MergeLocID))
             {
                 return;
             }
