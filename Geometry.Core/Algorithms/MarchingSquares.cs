@@ -4,8 +4,9 @@ using System.Collections.Generic;
 namespace Geometry
 {
     /// <summary>
-    /// Traces closed half-pixel contours around a binary raster.
-    /// Used by auto-polygonize to turn a segmentation mask into rings.
+    /// Traces closed iso-contours on a raster whose samples sit on integer pixel coordinates.
+    /// Binary masks are the 0/1 field at iso 0.5, which places vertices on pixel-edge midpoints.
+    /// Soft fields (SAM2 probabilities) place each vertex where the edge crosses the iso level.
     /// </summary>
     public static class MarchingSquares
     {
@@ -16,7 +17,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Closed rings in half-pixel coordinates. Vertices sit on cell edges so adjacent pixels share endpoints.
+        /// Closed rings for a binary mask. Equivalent to <see cref="FindContours(float[], int, int, float)"/>
+        /// with true = 1, false = 0, and iso level 0.5.
         /// </summary>
         public static IReadOnlyList<Vector2[]> FindContours(bool[] mask, int width, int height)
         {
@@ -25,32 +27,66 @@ namespace Geometry
             if (width <= 0 || height <= 0 || mask.Length != width * height)
                 throw new ArgumentException("Mask dimensions do not match its data.", nameof(mask));
 
+            float[] field = new float[mask.Length];
+            for (int i = 0; i < mask.Length; i++)
+                field[i] = mask[i] ? 1f : 0f;
+
+            return FindContours(field, width, height, 0.5f);
+        }
+
+        /// <summary>
+        /// Closed rings where each vertex is the linear crossing of <paramref name="isoLevel"/> on a cell edge.
+        /// Samples outside the array are 0, so a probability field should use an iso level above 0.
+        /// Shared edges are interpolated in a fixed direction so adjacent cells meet at one vertex.
+        /// </summary>
+        public static IReadOnlyList<Vector2[]> FindContours(float[] field, int width, int height, float isoLevel)
+        {
+            if (field is null)
+                throw new ArgumentNullException(nameof(field));
+            if (width <= 0 || height <= 0 || field.Length != width * height)
+                throw new ArgumentException("Field dimensions do not match its data.", nameof(field));
+
             List<Segment> segments = [];
             for (int y = -1; y < height; y++)
             {
                 for (int x = -1; x < width; x++)
                 {
-                    int cell = (IsSet(mask, width, height, x, y) ? 1 : 0)
-                             | (IsSet(mask, width, height, x + 1, y) ? 2 : 0)
-                             | (IsSet(mask, width, height, x + 1, y + 1) ? 4 : 0)
-                             | (IsSet(mask, width, height, x, y + 1) ? 8 : 0);
+                    float v00 = Sample(field, width, height, x, y);
+                    float v10 = Sample(field, width, height, x + 1, y);
+                    float v11 = Sample(field, width, height, x + 1, y + 1);
+                    float v01 = Sample(field, width, height, x, y + 1);
+                    int cell = (Inside(v00, isoLevel) ? 1 : 0)
+                             | (Inside(v10, isoLevel) ? 2 : 0)
+                             | (Inside(v11, isoLevel) ? 4 : 0)
+                             | (Inside(v01, isoLevel) ? 8 : 0);
 
-                    AddCellSegments(segments, cell, x, y);
+                    AddCellSegments(segments, cell, x, y, v00, v10, v11, v01, isoLevel);
                 }
             }
 
             return JoinSegments(segments);
         }
 
-        private static bool IsSet(bool[] mask, int width, int height, int x, int y) =>
-            x >= 0 && x < width && y >= 0 && y < height && mask[(y * width) + x];
+        private static float Sample(float[] field, int width, int height, int x, int y) =>
+            x >= 0 && x < width && y >= 0 && y < height ? field[(y * width) + x] : 0f;
 
-        private static void AddCellSegments(List<Segment> segments, int cell, int x, int y)
+        private static bool Inside(float value, float isoLevel) => value >= isoLevel;
+
+        private static void AddCellSegments(
+            List<Segment> segments,
+            int cell,
+            int x,
+            int y,
+            float v00,
+            float v10,
+            float v11,
+            float v01,
+            float isoLevel)
         {
-            Vector2 top = new(x + 0.5, y);
-            Vector2 right = new(x + 1, y + 0.5);
-            Vector2 bottom = new(x + 0.5, y + 1);
-            Vector2 left = new(x, y + 0.5);
+            Vector2 top = Interpolate(x, y, v00, x + 1, y, v10, isoLevel);
+            Vector2 right = Interpolate(x + 1, y, v10, x + 1, y + 1, v11, isoLevel);
+            Vector2 bottom = Interpolate(x, y + 1, v01, x + 1, y + 1, v11, isoLevel);
+            Vector2 left = Interpolate(x, y, v00, x, y + 1, v01, isoLevel);
 
             switch (cell)
             {
@@ -78,6 +114,36 @@ namespace Geometry
                 case 13: Add(segments, right, top); return;
                 case 14: Add(segments, top, left); return;
             }
+        }
+
+        /// <summary>
+        /// Linear iso crossing. Endpoints are ordered so both cells that share the edge
+        /// produce the same rounded coordinate.
+        /// </summary>
+        private static Vector2 Interpolate(
+            int ax,
+            int ay,
+            float av,
+            int bx,
+            int by,
+            float bv,
+            float isoLevel)
+        {
+            if (bx < ax || (bx == ax && by < ay))
+                return Interpolate(bx, by, bv, ax, ay, av, isoLevel);
+
+            float a = av == isoLevel ? isoLevel + 1e-4f : av;
+            float b = bv == isoLevel ? isoLevel + 1e-4f : bv;
+            double denom = b - a;
+            double t = Math.Abs(denom) < 1e-20 ? 0.5 : (isoLevel - a) / denom;
+            if (t < 0)
+                t = 0;
+            else if (t > 1)
+                t = 1;
+
+            double x = ax + ((bx - ax) * t);
+            double y = ay + ((by - ay) * t);
+            return new Vector2(Tolerance.Round(x), Tolerance.Round(y));
         }
 
         private static void Add(List<Segment> segments, Vector2 a, Vector2 b) =>

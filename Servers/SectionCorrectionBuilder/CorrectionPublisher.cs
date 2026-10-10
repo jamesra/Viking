@@ -65,7 +65,7 @@ namespace Viking.SectionCorrectionBuilder
             string cache = options.CachePath ?? Path.Combine(Path.GetTempPath(), "SectionCorrectionBuilder");
             Directory.CreateDirectory(cache);
             Log(options, $"Loading volume {volumeUrl}");
-            Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
+            Connectome connectome = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
 
             List<string> groups = ParseGroups(options.StosGroups, volume);
@@ -94,7 +94,7 @@ namespace Viking.SectionCorrectionBuilder
 
         internal static async Task<CorrectionPublishResult> PublishGroupAsync(
             CorrectionPublishOptions options,
-            Volume volume,
+            Connectome connectome,
             UnitsAndScale.IScale scale,
             string stosGroup,
             DateTime watermark,
@@ -239,7 +239,7 @@ namespace Viking.SectionCorrectionBuilder
         /// Stos groups to publish. Mosaic-only volumes (no DefaultVolumeTransform, or "None"),
         /// such as NM, publish under "None" so VolumeTransformProvider uses an identity map.
         /// </summary>
-        public static List<string> ParseGroups(string raw, Volume volume)
+        public static List<string> ParseGroups(string raw, Connectome connectome)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -253,7 +253,7 @@ namespace Viking.SectionCorrectionBuilder
         }
 
         static Dictionary<long, Geometry.Rectangle> SectionBoundsNm(
-            Volume volume,
+            Connectome connectome,
             UnitsAndScale.IScale scale,
             string stosGroup,
             IEnumerable<long> sectionZ)

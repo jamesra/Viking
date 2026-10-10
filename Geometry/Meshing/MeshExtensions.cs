@@ -187,6 +187,15 @@ namespace Geometry.Meshing
         /// "Constrained Delaunay triangulations," Algorithmica 4:97–108 (1989).
         /// </remarks>
         public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this Polygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
+            => TriangulateCore(poly, iPoly, OnProgress, useFaceWalkCleanup: true);
+
+        /// <summary>
+        /// <see cref="Triangulate(Polygon, int, TriangulationMesh{IVertex2D{PolygonIndex}}.ProgressUpdate)"/> with the
+        /// outside-face cleanup selectable, so tests can require the linear face walk to agree with the original
+        /// per-edge midpoint test.
+        /// </summary>
+        internal static TriangulationMesh<IVertex2D<PolygonIndex>> TriangulateCore(Polygon poly, int iPoly,
+            TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress, bool useFaceWalkCleanup)
         {
             //var polyCopy = (Polygon)poly.Clone();
 
@@ -227,18 +236,15 @@ namespace Geometry.Meshing
                 }
             }
 
-            //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
-            var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
-            foreach (IEdgeKey key in EdgesToCheck)
+            //Remove faces that are not contained in the polygon.  The parity walk is linear in the face count; the
+            //per-edge midpoint test it replaces scanned every ring segment for every diagonal (quadratic).
+            if (useFaceWalkCleanup && TryRemoveFacesOutsidePolygon(mesh, constrainedEdges))
             {
-                LineSegment line = mesh.ToLineSegment(key);
-
-                if (ShapeRelation.None == centeredPoly.GetRelation(line.Bisect()))
-                {
-                    mesh.RemoveEdge(key);
-
-                    OnProgress?.Invoke(mesh);
-                }
+                OnProgress?.Invoke(mesh);
+            }
+            else
+            {
+                RemoveEdgesOutsidePolygonByMidpoint(mesh, constrainedEdges, centeredPoly, OnProgress);
             }
 
             //If there are three constrained edges that form an interior polygon that is a triangle the face won't be removed.  This results
@@ -267,6 +273,139 @@ namespace Geometry.Meshing
             //System.Diagnostics.Debug.Assert(mesh.Faces.Count > 0, "Triangulation of polygon should create at least one face");
             //System.Diagnostics.Debug.Assert(constrainedEdges.All(e => mesh[e].Faces.Count == 1), "All constrained edges should have one face");
             return mesh;
+        }
+
+        /// <summary>Identity comparer so faces can be looked up without hashing their vertex lists.</summary>
+        private sealed class FaceReferenceComparer : IEqualityComparer<IFace>
+        {
+            public static readonly FaceReferenceComparer Instance = new();
+
+            public bool Equals(IFace x, IFace y) => ReferenceEquals(x, y);
+
+            public int GetHashCode(IFace obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+        }
+
+        /// <summary>
+        /// Removes every face outside the polygon (and inside its holes) from a mesh whose constrained ring edges
+        /// have all been inserted. Walks face adjacency from the hull: a face reached across a non-constrained edge
+        /// has the same inside/outside parity as the face it came from, and crossing a constrained ring edge flips it.
+        /// The unbounded region is outside, so a hull edge that is not constrained borders an outside face and a
+        /// hull edge that is constrained borders an inside face.
+        /// </summary>
+        /// <returns>
+        /// True when every face was classified consistently and the outside faces were removed. False, with the mesh
+        /// untouched, when the parity walk contradicts itself or leaves a face unreached (an edge with more than two
+        /// faces, ring edges that do not close, self-touching input); the caller then uses the per-edge midpoint test.
+        /// </returns>
+        /// <remarks>
+        /// Linear in the number of faces. Matches <see cref="RemoveEdgesOutsidePolygonByMidpoint"/> for simple polygons
+        /// with properly nested holes, including a hole that is itself a single triangle.
+        /// </remarks>
+        private static bool TryRemoveFacesOutsidePolygon(TriangulationMesh<IVertex2D<PolygonIndex>> mesh, ISet<IEdgeKey> constrainedEdges)
+        {
+            List<IFace> faces = [.. mesh.Faces];
+            Dictionary<IFace, int> parity = new(faces.Count, FaceReferenceComparer.Instance);
+            Queue<IFace> pending = new();
+
+            bool IsConstrained(IEdge edge) => edge is ConstrainedEdge || constrainedEdges.Contains(edge.Key);
+
+            bool Assign(IFace face, int value)
+            {
+                if (parity.TryGetValue(face, out int existing))
+                {
+                    return existing == value;
+                }
+
+                parity.Add(face, value);
+                pending.Enqueue(face);
+                return true;
+            }
+
+            foreach (IFace face in faces)
+            {
+                foreach (IEdgeKey key in face.Edges)
+                {
+                    IEdge edge = mesh.Edges[key];
+                    int count = edge.Faces.Count;
+                    if (count > 2)
+                    {
+                        return false;
+                    }
+
+                    if (count == 1 && !Assign(face, IsConstrained(edge) ? 1 : 0))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            while (pending.Count > 0)
+            {
+                IFace face = pending.Dequeue();
+                int faceParity = parity[face];
+                foreach (IEdgeKey key in face.Edges)
+                {
+                    IEdge edge = mesh.Edges[key];
+                    int neighborParity = IsConstrained(edge) ? faceParity ^ 1 : faceParity;
+                    foreach (IFace neighbor in edge.Faces)
+                    {
+                        if (!ReferenceEquals(neighbor, face) && !Assign(neighbor, neighborParity))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            if (parity.Count != faces.Count)
+            {
+                return false;
+            }
+
+            List<IEdgeKey> touchedEdges = [];
+            foreach (IFace face in faces)
+            {
+                if (parity[face] != 0)
+                {
+                    continue;
+                }
+
+                touchedEdges.AddRange(face.Edges);
+                mesh.RemoveFace(face);
+            }
+
+            foreach (IEdgeKey key in touchedEdges)
+            {
+                if (mesh.Edges.TryGetValue(key, out IEdge edge) && edge.Faces.Count == 0 && !IsConstrained(edge))
+                {
+                    mesh.RemoveEdge(key);
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Original cleanup: removes each same-ring, non-constrained edge whose midpoint is not inside the polygon
+        /// (which removes the faces on both sides). Quadratic, because every test scans all ring segments, so it
+        /// is only the fallback for input <see cref="TryRemoveFacesOutsidePolygon"/> cannot classify.
+        /// </summary>
+        private static void RemoveEdgesOutsidePolygonByMidpoint(TriangulationMesh<IVertex2D<PolygonIndex>> mesh, ISet<IEdgeKey> constrainedEdges,
+            Polygon centeredPoly, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress)
+        {
+            //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
+            var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
+            foreach (IEdgeKey key in EdgesToCheck)
+            {
+                LineSegment line = mesh.ToLineSegment(key);
+
+                if (ShapeRelation.None == centeredPoly.GetRelation(line.Bisect()))
+                {
+                    mesh.RemoveEdge(key);
+
+                    OnProgress?.Invoke(mesh);
+                }
+            }
         }
 
         /// <summary>

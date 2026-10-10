@@ -135,9 +135,7 @@ namespace AnnotationVizLib
         public string StructureLabelUrl(MotifNode node)
         {
             if (this.VolumeURL != null)
-            {
-                return string.Format("{0}/OData/ConnectomeData.svc/Structures?$filter=startswith(Label,'{1}') eq true", VolumeURL, node.Key);
-            }
+                return ODataLinkBuilder.StructuresByLabelPrefix(VolumeURL, node.Key);
 
             return null;
         }
@@ -146,7 +144,10 @@ namespace AnnotationVizLib
         {
             if (VolumeURL != null)
             {
-                return string.Format("{0}/Export/Morphology/Tlp?id={1}", VolumeURL, MotifTLPView.SourceStructures(node));
+                return string.Format(
+                    "{0}/Morphology/Tlp?id={1}",
+                    ODataLinkBuilder.ExportServiceRoot(VolumeURL),
+                    MotifTLPView.SourceStructures(node));
             }
 
             return null;

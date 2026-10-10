@@ -37,6 +37,24 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
             ?? throw new InvalidOperationException("AppSettings:VolumeURL not configured");
     }
 
+    /// <summary>
+    /// Host used for StructureURL links in exported graphs. Prefer the annotation
+    /// endpoint so OData is derived by replacing Annotation with OData; fall back to
+    /// the configured OData URL, then the volume service root.
+    /// </summary>
+    private string GetAnnotationUrlForLinks()
+    {
+        string annotation = _configuration["AppSettings:AnnotationURL"];
+        if (!string.IsNullOrWhiteSpace(annotation))
+            return annotation;
+
+        string odata = _configuration["AppSettings:ODataURL"];
+        if (!string.IsNullOrWhiteSpace(odata))
+            return odata;
+
+        return GetVolumeUrl();
+    }
+
     private string GetOutputFilename(ICollection<long> requestIDs, string ext)
     {
         string idList = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
@@ -95,7 +113,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-        NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetVolumeUrl());
+        NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetAnnotationUrlForLinks());
         TlpGraph.SaveTLP(outputFileFullPath);
         return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }
@@ -118,7 +136,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-        NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetVolumeUrl());
+        NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetAnnotationUrlForLinks());
         GmlGraph.SaveGML(outputFileFullPath);
         return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }
@@ -180,7 +198,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         // OData spatial data append here if needed
-        NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetVolumeUrl());
+        NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetAnnotationUrlForLinks());
         TlpGraph.SaveTLP(outputFileFullPath);
         return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }
@@ -199,7 +217,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-        NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetVolumeUrl());
+        NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetAnnotationUrlForLinks());
         GmlGraph.SaveGML(outputFileFullPath);
         return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }

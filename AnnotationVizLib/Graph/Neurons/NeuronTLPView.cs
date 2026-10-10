@@ -24,7 +24,7 @@ namespace AnnotationVizLib
             if (!NodeAttribs.ContainsKey("viewLabel"))
                 NodeAttribs.Add("viewLabel", NeuronTLPView.LabelForNode(node));
 
-            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
+            NodeAttribs.Add("StructureURL", ODataLinkBuilder.Structure(this.VolumeURL, node.Key));
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
             NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Structure.TagsXML));
 

@@ -217,7 +217,7 @@ namespace WebAnnotation.UI.Commands
             "Escape Key: Cancel command",
             "Page up/down key: Change Magnification",
             "Arrow key: Move view",
-            "Home key: Round magnification to whole number"
+            "Home key: Round magnification to nearest power of 2"
             ];
 
         //protected List<Vector2> vert_stack = new List<Vector2>();

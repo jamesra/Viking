@@ -77,7 +77,7 @@ namespace Viking.SectionCorrectionBuilder
         /// </summary>
         public static async Task<LoadResult> LoadAsync(
             AnnotationContext db,
-            Volume volume,
+            Connectome connectome,
             IScale scale,
             string stosGroup,
             int minLocations)
@@ -137,7 +137,7 @@ AND LK.B IN (
             };
         }
 
-        public static Task<LoadResult> RemapAsync(LoadResult source, Volume volume, IScale scale, string stosGroup)
+        public static Task<LoadResult> RemapAsync(LoadResult source, Connectome connectome, IScale scale, string stosGroup)
         {
             List<MorphologyGraph> cells = BuildCells(source.Candidates, source.Links, volume, scale, stosGroup);
             return Task.FromResult(new LoadResult
@@ -152,7 +152,7 @@ AND LK.B IN (
         static List<MorphologyGraph> BuildCells(
             List<CandidateRow> candidates,
             List<LinkRow> links,
-            Volume volume,
+            Connectome connectome,
             IScale scale,
             string stosGroup)
         {
@@ -287,7 +287,7 @@ WHERE L.ParentID IN ({idList})")
             UnitsAndScale.Scale scale = await LoadScaleAsync(db).ConfigureAwait(false);
             string cache = cachePath ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "SectionCorrectionBuilder");
             Directory.CreateDirectory(cache);
-            Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
+            Connectome connectome = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
             return BuildCells(candidates, links, volume, scale, stosGroup);
         }

@@ -1790,6 +1790,12 @@ namespace Geometry
             if (anyContained)
                 return ShapeRelation.Intersecting;
 
+            // Axis-aligned rings can overlap in area while every vertex sits on an edge
+            // (no proper crossing). The overlap-box center is then interior to both.
+            // A zero-area shared edge stays Touching.
+            if (OverlapBoxCenterIsInteriorToBoth(overlap.Value, other))
+                return ShapeRelation.Intersecting;
+
             if (anyTouching || boundaryContact)
                 return ShapeRelation.Touching;
 
@@ -1797,6 +1803,21 @@ namespace Geometry
                 return ShapeRelation.Intersecting;
 
             return ShapeRelation.None;
+        }
+
+        /// <summary>
+        /// True when the bbox-overlap center lies in both interiors.
+        /// Used by <see cref="GetRelation(in Polygon)"/> so area overlap is Intersecting even if
+        /// every vertex sits on an edge. A shared edge (zero-area overlap) returns false.
+        /// </summary>
+        private bool OverlapBoxCenterIsInteriorToBoth(in Rectangle overlap, in Polygon other)
+        {
+            if (overlap.Width <= Tolerance.Epsilon || overlap.Height <= Tolerance.Epsilon)
+                return false;
+
+            Vector2 sample = overlap.Center;
+            return GetRelation((IPoint2D)sample) == ShapeRelation.Contained
+                && other.GetRelation((IPoint2D)sample) == ShapeRelation.Contained;
         }
 
         public bool InteriorPolygonContains(in Vector2 p) => InteriorPolygonContains(p, out Polygon intersectedPoly);
@@ -1945,9 +1966,6 @@ namespace Geometry
         private static ShapeRelation IsPointInsidePolygonByWindingTest(IReadOnlyList<LineSegment> polygonSegments, Line test_line)
         {
             Vector2 test_point = test_line.Origin;
-#if DEBUG
-            List<LineSegment> OriginalSegments = [.. polygonSegments]; //Create a copy so we can examine the debugger
-#endif
             //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
             //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
 
@@ -3187,37 +3205,33 @@ namespace Geometry
 
             walkedPoints.Add(end_index.Point(originPolygon));
 
-            //Add the intersection point of where we crossed the boundary 
-            //List<Vector2> SimplifiedPath = CurveSimplificationExtensions.DouglasPeuckerReduction(cutLine, Global.PenSimplifyThreshold);
-            //Since we start walking the polygon from the first intersection point we always add the cutline in reverse order to return to the cirst intersection point.
+            // Since we start walking the polygon from the first intersection point we always add the cutline in reverse order to return to the first intersection point.
             List<Vector2> SimplifiedPath = [.. cutLine.Reverse()];
+            Vector2 startPoint = start_index.Point(originPolygon);
 
-            //The intersection point marks where we enter the polygon.  The first point in the path is not added because it indicates where the line exited the cut region. 
-            //Add the PenInput.Path 
-
-            //Temp for debugging ///////////////
+            // Pen free-draw often places a cut vertex on (or within epsilon of) a ring vertex already on the walked arc,
+            // especially corners. Skip duplicates of the exit/entry endpoints; reject coincidence with an intermediate arc vertex.
             for (int iCut = 0; iCut < SimplifiedPath.Count; iCut++)
             {
-                Debug.Assert(walkedPoints.Contains(SimplifiedPath[iCut]) == false);
-                if (Vector2.DistanceSquared(SimplifiedPath[iCut], walkedPoints.Last()) <= Tolerance.EpsilonSquared)
-                {
-                    //int i = 5; //Temp for debugging
+                Vector2 cutPoint = SimplifiedPath[iCut];
+                if (Vector2.DistanceSquared(cutPoint, walkedPoints.Last()) <= Tolerance.EpsilonSquared)
                     continue;
+
+                // About to close onto start_index; a cut vertex that lands on the entry point is not a new ring vertex.
+                if (Vector2.DistanceSquared(cutPoint, startPoint) <= Tolerance.EpsilonSquared)
+                    continue;
+
+                if (walkedPoints.Contains(cutPoint))
+                {
+                    throw new ArgumentException(
+                        "Cut line coincides with a vertex already on the walked polygon arc. (Does the cutting line graze a corner?)");
                 }
 
-                walkedPoints.Add(SimplifiedPath[iCut]);
+                walkedPoints.Add(cutPoint);
             }
-            /////////////////////////////////////
-            //
-            //walkedPoints.AddRange(cutLine);
-#if DEBUG
-            //Ensure we do not have duplicates in our list
-            Vector2[] walkedPoints_noduplicates = walkedPoints.RemoveDuplicates();
-            Debug.Assert(walkedPoints_noduplicates.Length == walkedPoints.Count);
-#endif
 
             //Close the ring
-            walkedPoints.Add(start_index.Point(originPolygon));
+            walkedPoints.Add(startPoint);
 
             /*
             Debug.Assert(walkedPoints.ToArray().AreClockwise() == (direction == RotationDirection.Clockwise));
