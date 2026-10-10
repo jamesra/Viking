@@ -66,6 +66,31 @@ namespace VikingCoreTests
             CollectionAssert.AreEqual(new[] { expected }, OCPVolumes.ReadServer(Tokens(server)));
         }
 
+        /// <summary>
+        /// Valid JSON of the wrong shape (an error object, or an array holding a non-string) is a
+        /// <see cref="JsonSerializationException"/>, not a <see cref="JsonReaderException"/>; it must still
+        /// come back as a message rather than escape into the volume list's selection handler.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("{\"error\":\"not found\"}")]
+        [DataRow("[\"ac4\",{\"token\":\"bock11\"}]")]
+        public void ValidJsonOfWrongShape_ReturnsParserMessage(string body)
+        {
+            string expected = "";
+            try
+            {
+                JsonConvert.DeserializeObject<string[]>(body);
+                Assert.Fail("Body was expected to fail deserialization.");
+            }
+            catch (JsonException e)
+            {
+                expected = e.Message;
+            }
+
+            using LoopbackHttpServer server = new() { Body = body };
+            CollectionAssert.AreEqual(new[] { expected }, OCPVolumes.ReadServer(Tokens(server)));
+        }
+
         [TestMethod]
         public void HttpError_ReturnsOneMessageNamingTheStatus()
         {

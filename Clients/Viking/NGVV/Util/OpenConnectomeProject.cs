@@ -43,8 +43,10 @@ namespace Viking.Common
                 // A user-added server URL with an ftp: or file: scheme, which WebClient accepted and HttpClient rejects.
                 return [e.Message];
             }
-            catch (Newtonsoft.Json.JsonReaderException e)
+            catch (Newtonsoft.Json.JsonException e)
             {
+                // Malformed JSON (JsonReaderException) or valid JSON of the wrong shape, such as an error
+                // object where the token array was expected (JsonSerializationException).
                 return [e.Message];
             }
         }

@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.78 — unreleased
 
+* Choosing an Open Connectome Project server whose public-token list is valid JSON of the wrong shape (for example an error object) now shows the parser message in the volume list instead of throwing an unhandled exception.
 * Go To Location no longer throws an unhandled exception when X, Y, Z, or downsample holds a number too large for its type (such as a pasted 20-digit value); the field reads as 0 like other invalid text.
 * Typing a section range with a number too large for a section (such as a pasted 20-digit value) in the volume-position dialog now shows "Could not read ..." instead of throwing an unhandled exception.
 * The Measurement extension reads the volume's UnitsPerPixel with the invariant culture. On a PC set to a comma-decimal locale (for example German), a scale of 2.5 was read as 25, so measure-tool and scale-bar lengths were wrong by orders of magnitude.
