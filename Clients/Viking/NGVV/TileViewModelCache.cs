@@ -46,21 +46,15 @@ namespace Viking
         }
 
         /// <summary>
-        /// Creates a TileView if it does not exist in the cache
+        /// Creates a <see cref="TileView"/> for <paramref name="tileViewModel"/> and adds it to the cache.
+        /// Texture size comes from <see cref="TileViewModel.TextureSize"/>.
         /// </summary>
-        /// <param name="tileViewModel"></param>
-        /// <param name="textureFileName"></param>
-        /// <param name="cachedTextureFileName"></param>
-        /// <param name="TransformName"></param>
-        /// <param name="MipMapLevels"></param>
-        /// <param name="TextureSize"></param>
-        /// <returns>null if TileView is in cache, otherwise true</returns>
+        /// <returns>The new view, or null when another thread added the same key first (the loser is disposed).</returns>
         protected TileView? ConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,
-                                int MipMapLevels, //Should be one, unless it is the minimum downsample level
-                                int TextureSize)
+                                int MipMapLevels) //Should be one, unless it is the minimum downsample level
         {
             TileUniqueKey key = tileViewModel.UniqueKey;
 
@@ -72,7 +66,7 @@ namespace Viking
                     textureFileName,
                     cachedTextureFileName,
                     MipMapLevels,
-                    TextureSize,
+                    tileViewModel.TextureSize,
                     TransformName);
 
                 added = Add(key, tileView);
@@ -88,8 +82,6 @@ namespace Viking
                 tileView = null;
                 throw;
             }
-
-
 
             return tileView;
         }
@@ -117,7 +109,7 @@ namespace Viking
             if (tileView != null)
                 return tileView;
 
-            tileView = ConstructTile(tileViewModel, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tileViewModel.TextureSize);
+            tileView = ConstructTile(tileViewModel, textureFileName, cachedTextureFileName, TransformName, MipMapLevels);
             if (tileView != null)
                 return tileView;
 
@@ -171,25 +163,12 @@ namespace Viking
         /// <param name="SafeTiles"></param>
         protected override void OnCheckpointFailed(TileViewModelCacheEntry entry)
         {
-            //return; 
-            //RemoveEntry(entry); 
-
             if (dictEntries.ContainsKey(entry.Key))
             {
                 //Nobody is using it, abort the request
                 entry.TileView.AbortRequest();
 
                 RemoveEntry(entry);
-                //if (entry.TileViewModel.HasTexture == false)
-                //{
-                //    RemoveEntry(entry);
-                //}
-                //else
-                //{
-                //    //This tile has a texture, so lets keep it around until we reduce the memory footprint
-                //    //Can't use yet because nothing sets CheckpointExempt to false
-                //    //entry.CheckpointExempt = true; 
-                //}
             }
         }
 
