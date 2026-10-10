@@ -70,12 +70,9 @@ namespace Viking.UI.BaseClasses
             OnObjectValueChangedHandler = new System.ComponentModel.PropertyChangedEventHandler(this.OnObjectValueChanged);
             OnContextColumnMenuHandler = new EventHandler(this.OnContextMenuColumnVisibility);
 
-            //			this.SmallImageList = SharedResources.SmallIconImageList; 
-
             // This call is required by the Windows.Forms Form Designer.
             InitializeComponent();
 
-            // TODO: Add any initialization after the InitForm call
             this.View = System.Windows.Forms.View.Details;
             this.FullRowSelect = true;
             this.AllowColumnReorder = true;

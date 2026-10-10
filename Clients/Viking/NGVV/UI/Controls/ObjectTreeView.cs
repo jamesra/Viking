@@ -15,9 +15,7 @@ namespace Viking.UI.Controls
         {
             InitializeComponent();
 
-            // TODO: Add any initialization after the InitForm call
             this.Sorted = true;
-            //            this.ImageList = PlantMap.UI.SharedResources.SmallIconImageList;
             this.AllowDrop = true;
         }
 
