@@ -54,7 +54,7 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Assuming an array of length 4, with order (LowerLeft, LowerRight, UpperLeft, UpperLeft) with true values where points are mapped.
+        /// Assuming an array of length 4, with order (LowerLeft, LowerRight, UpperLeft, UpperRight) with true values where points are mapped.
         /// Find or approximate the lower-left point
         /// </summary>
         /// <param name="mappedCorners"></param>
@@ -63,10 +63,6 @@ namespace Viking.VolumeModel
         {
             //If we map at least three corners we know we can construct a reasonable approximation of the correct rectangle in mosaic space
             Vector2[] ValidPoints = [.. points.Where((p, i) => IsMapped[i])];
-            double MinX = ValidPoints.Min(p => p.X);
-            double MaxX = ValidPoints.Max(p => p.X);
-            double MaxY = ValidPoints.Max(p => p.Y);
-            double MinY = ValidPoints.Min(p => p.Y);
 
             //We don't know the rotation of the rectangle.  We assume the worst case of a 45 degree angle so we multiply width or height by 1.44
             //So we create a grid circle at the point with the radius of Max(Width,Height).  Then we return the bounding box of the Circle
@@ -79,13 +75,13 @@ namespace Viking.VolumeModel
             if (OppositeCornersMapped(IsMapped))
             {
                 //Find the center of the opposite corners and the distance.  Create a circle and return the bounding box.
-                if (IsMapped[0] && IsMapped[2])
+                if (IsMapped[0] && IsMapped[3])
                 {
-                    return CircleFromTwoPoints(points[0], points[2]).BoundingBox;
+                    return CircleFromTwoPoints(points[0], points[3]).BoundingBox;
                 }
                 else
                 {
-                    return CircleFromTwoPoints(points[1], points[3]).BoundingBox;
+                    return CircleFromTwoPoints(points[1], points[2]).BoundingBox;
                 }
             }
 
@@ -118,11 +114,11 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Assuming an array of length 4, with order (LowerLeft, LowerRight, UpperLeft, UpperLeft) returns true if opposite corners are true
+        /// Assuming an array of length 4, with order (LowerLeft, LowerRight, UpperLeft, UpperRight) returns true if opposite (diagonal) corners are true
         /// </summary>
         /// <param name="mappedCorners"></param>
         /// <returns></returns>
-        private static bool OppositeCornersMapped(bool[] mappedCorners) => (mappedCorners[0] && mappedCorners[2]) || (mappedCorners[1] && mappedCorners[3]);
+        private static bool OppositeCornersMapped(bool[] mappedCorners) => (mappedCorners[0] && mappedCorners[3]) || (mappedCorners[1] && mappedCorners[2]);
     }
 
     public static class VolumeToSectionMappingExtensions
