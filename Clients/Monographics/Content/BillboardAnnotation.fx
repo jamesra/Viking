@@ -13,6 +13,18 @@ uniform const float borderStartSquared = 0.475 * 0.475;
 uniform const float borderBlendStartRadius = 0.45;
 uniform const float borderBlendStartSquared = 0.45 * 0.45;
 
+//Ring effect (CircleRingOverlayEffect). Radii are fractions of the circle radius (0 = center, 1 = rim).
+//The outer band [ringSolidStart, 1] is fully opaque; the fade band [ringFadeStart, ringSolidStart] ramps to clear;
+//everything inside ringFadeStart is clipped so the image underneath stays visible.
+uniform const float ringSolidStart = 0.75;
+uniform const float ringFadeStart = 0.625;
+//How far (in luma, 0..1) the ring sits from the average background luma: darker over bright tissue, lighter over dark.
+uniform const float ringContrast = 0.30;
+//Average background luma above which the ring goes darker than the background, otherwise lighter.
+uniform const float ringAdaptMid = 0.5;
+//Overall ring opacity (0..1), multiplied with the annotation color's alpha.
+uniform const float ringOpacity = 0.85;
+
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.
 //The verticies contain an RGB color which is converted to HSL space. 
@@ -293,6 +305,82 @@ PixelShaderOutput CircleGrayscaleTexturePixelShaderFunction(LumaTexturePixelShad
 	return output;
 }
 
+
+//Output of the ring vertex shader. ScreenCenterAxes holds the circle center and its half-radius
+//x/y axes, in render-target pixels, so the pixel shader can sample the background under the whole circle.
+struct RingVertexShaderOutput
+{
+	float4 Position : POSITION0;
+	float4 HSLColor : COLOR0;
+	float2 CenterDistance : TEXCOORD0;
+	float4 ScreenCenterAxes : TEXCOORD1;
+	float2 ScreenAxisY : TEXCOORD2;
+};
+
+//Converts a clip-space position to render-target pixels (y down), matching how the other luma shaders address the background.
+float2 ClipToPixel(float4 clip)
+{
+	float2 ndc = clip.xy / clip.w;
+	return float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * RenderTargetSize;
+}
+
+RingVertexShaderOutput RingVertexShaderFunction(VertexShaderInput input)
+{
+	RingVertexShaderOutput output;
+	output.CenterDistance = input.Position.xy;
+	output.Position = mul(input.Position, mWorldViewProj);
+	output.HSLColor = AnnotationHSLColor;
+
+	float2 center = ClipToPixel(mul(float4(0, 0, 0, 1), mWorldViewProj));
+	output.ScreenCenterAxes = float4(center, ClipToPixel(mul(float4(0.5, 0, 0, 1), mWorldViewProj)) - center);
+	output.ScreenAxisY = ClipToPixel(mul(float4(0, 0.5, 0, 1), mWorldViewProj)) - center;
+	return output;
+}
+
+float BackgroundLumaAtPixel(float2 pixel)
+{
+	return CalculatePerceptualLumaFromRGB(tex2D(BackgroundTextureSampler, pixel / RenderTargetSize));
+}
+
+//Draws a procedural ring whose luma adapts to the image underneath: ringContrast darker than bright tissue, ringContrast lighter than dark tissue.
+//No texture. CenterDistance is in unit-circle space (-1..1) so the rim is at distance 1.
+//The background is averaged at the center and at half radius along both axes (the area the ring encloses) so the
+//ring color is constant around a circle instead of flickering with per-pixel texture noise.
+//The rim is anti-aliased with the screen-space derivative so it stays crisp at any zoom.
+//Uses the graphics device alpha blend settings
+PixelShaderOutput CircleRingPixelShaderFunction(RingVertexShaderOutput input)
+{
+	PixelShaderOutput output;
+	float dist = length(input.CenterDistance);
+	float rimCoverage = saturate((1.0 - dist) / max(fwidth(dist), 0.0001));
+	float ring = smoothstep(ringFadeStart, ringSolidStart, dist);
+	float alpha = ring * rimCoverage;
+	clip(alpha <= 0.002 ? -1 : 1);
+
+	float2 center = input.ScreenCenterAxes.xy;
+	float2 axisX = input.ScreenCenterAxes.zw;
+	float2 axisY = input.ScreenAxisY;
+	float backgroundLuma = (BackgroundLumaAtPixel(center)
+		+ BackgroundLumaAtPixel(center + axisX) + BackgroundLumaAtPixel(center - axisX)
+		+ BackgroundLumaAtPixel(center + axisY) + BackgroundLumaAtPixel(center - axisY)) * 0.2;
+
+	float ringLuma = backgroundLuma > ringAdaptMid ? backgroundLuma - ringContrast : backgroundLuma + ringContrast;
+	ringLuma = clamp(ringLuma, 0.05, 0.95);
+
+	float chroma = input.HSLColor.g;
+	if (chroma > 0.0)
+	{
+		chroma = min(chroma, GetMaxChromaAtLuma(input.HSLColor.r, ringLuma));
+	}
+
+	float4 hcl = { input.HSLColor.r, chroma, ringLuma, 1.0 };
+	output.Color = HCLToRGB(hcl);
+	output.Color.a = alpha * ringOpacity * input.HSLColor.a;
+	//Deliberately the full 0..1 range (not the textured circles' 0..0.25): rings lose the depth test to the polygon fill and draw behind it.
+	//Vertex clicks are hit-tested geometrically, so this does not affect selection.
+	output.Depth = dist * dist;
+	return output;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //The pixel shaders below this point blend with the background texture by using my HSL blending technique
@@ -615,5 +703,19 @@ technique CircleVertexColorTextureLumaOverlayEffect
 	{
 		VertexShader = compile vs_4_0 VertexColorLumaTextureVertexShaderFunction();
 		PixelShader = compile ps_4_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+////////////////////////////////////////
+// Ring circle effect
+////////////////////////////////////////
+
+technique CircleRingOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_4_0 RingVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleRingPixelShaderFunction();
 	}
 }

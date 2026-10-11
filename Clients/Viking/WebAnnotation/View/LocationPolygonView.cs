@@ -210,7 +210,8 @@ namespace WebAnnotation.View
 
             ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
             {
-                Points = GetAllPolygonVertices(VolumePolygon)
+                Points = GetAllPolygonVertices(VolumePolygon),
+                UseBorderedCircles = true
             };
             ControlPointView.UpdateViews();
 

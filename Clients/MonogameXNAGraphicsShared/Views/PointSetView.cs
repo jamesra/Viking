@@ -83,6 +83,13 @@ namespace VikingXNAGraphics
             }
         }
 
+        /// <summary>
+        /// When true each point is a <see cref="RingCircleView"/>: a dark ring over the outer quarter of the radius
+        /// fading to clear, drawn by a procedural shader instead of a flat disc. Needs no texture, but the host must
+        /// have loaded <see cref="OverlayShaderEffect"/>. Takes effect on the next <see cref="UpdateViews"/>.
+        /// </summary>
+        public bool UseBorderedCircles { get; set; }
+
         public PointSetView(double defaultRadius = 1.0) : this(Color.Gold, defaultRadius)
         {
         }
@@ -102,7 +109,9 @@ namespace VikingXNAGraphics
                 return;
             }
 
-            PointViews = [.. Points.Select(p => new CircleView(new Circle(p, PointRadius), Color))];
+            PointViews = UseBorderedCircles
+                ? [.. Points.Select(p => (CircleView)new RingCircleView(new Circle(p, PointRadius), Color))]
+                : [.. Points.Select(p => new CircleView(new Circle(p, PointRadius), Color))];
             Geometry.Vector2[] point_array = [.. Points];
 
             if (!LabelIndex && !LabelPosition)
