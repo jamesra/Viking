@@ -183,6 +183,10 @@ namespace Viking.Common
             {
                 ChangeCacheSize(entry.Size);
             }
+            else
+            {
+                entry?.Dispose();
+            }
 
             return Fetch(dictEntry);
         }
@@ -209,6 +213,10 @@ namespace Viking.Common
             if (object.ReferenceEquals(dictEntry, entry))
             {
                 ChangeCacheSize(entry.Size);
+            }
+            else
+            {
+                entry?.Dispose();
             }
 
             return Fetch(dictEntry);
@@ -268,9 +276,9 @@ namespace Viking.Common
         }
 
         /// <summary>
-        /// This tracks if there is a current cleaning task.
+        /// 0 when no cleaner is running. CompareExchange so two callers cannot start two cleaners.
         /// </summary>
-        private Task CleaningTask = null;
+        private int cleaningGate;
 
         /// <summary>
         /// This should be called periodically to reduce the disk footprint
@@ -280,11 +288,20 @@ namespace Viking.Common
             if (TotalCacheSize <= MaxCacheSize)
                 return;
 
-            //If there is another cleaning task already running do nothing
-            if (CleaningTask is not null && !(CleaningTask.IsCompleted || CleaningTask.IsCanceled || CleaningTask.IsFaulted))
+            if (System.Threading.Interlocked.CompareExchange(ref cleaningGate, 1, 0) != 0)
                 return;
 
-            this.CleaningTask = Task.Run(() => ReduceCacheFootprintAsync(state));
+            Task.Run(() =>
+            {
+                try
+                {
+                    ReduceCacheFootprintAsync(state).GetAwaiter().GetResult();
+                }
+                finally
+                {
+                    System.Threading.Interlocked.Exchange(ref cleaningGate, 0);
+                }
+            });
         }
 
         private async Task ReduceCacheFootprintAsync(object state)
