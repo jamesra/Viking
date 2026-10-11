@@ -1,6 +1,6 @@
 # gRPC store parity with the WCF client
 
-Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 25 done, 3 partial, 0 missing, 3 n/a.
+Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 26 done, 2 partial, 0 missing, 3 n/a.
 
 | WCF member | gRPC equivalent | Status | Test | Benchmark |
 |---|---|---|---|---|
@@ -12,7 +12,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | ProxyGetBySection / Begin/Callback | `LocationsClient` `GetLocationChanges*` (async) | done | | |
 | ProxyGetBySectionRegion (+ Begin/Callback) | `LocationRegionLoader.GetObjectsInRegionAsync`, `GetLocationChangesInMosaicRegion` | partial: region cell cache semantics differ; unverified vs WCF MinRadius filtering | | |
 | ProxyUpdate (batched save) | `Save` on stores and updaters | done | | |
-| RestoreChangedObjects | none found | partial: confirm whether undo-on-failed-save is needed | | |
+| RestoreChangedObjects | `StoreBaseWithKey.RestoreChangedObjects` (called when the update RPC fails) | done: failed `Save` requeues objects, as in WCF | `StoreSaveFailureTests` | |
 | IsProxyBroken, CreateProxy, GetProxy | client factory / channel reuse | n/a: WCF proxy lifecycle | | |
 | TraceQueryDetails | `QueryLogger` | done | | |
 | LocationStore.GetObjectsInRegion(Async) | `LocationRegionLoader` | done | | |

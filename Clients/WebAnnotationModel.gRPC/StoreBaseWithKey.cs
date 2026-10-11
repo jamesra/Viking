@@ -718,6 +718,21 @@ namespace WebAnnotationModel.gRPC
 
         #endregion
          
+        /// <summary>
+        /// Puts objects whose save failed back on the dirty set so a later <see cref="Save(CancellationToken)"/>
+        /// retries them. Objects whose <c>DBAction</c> is already NONE are left out. Matches the WCF store's
+        /// RestoreChangedObjects; <see cref="Save(CancellationToken)"/> drains the set before the server call,
+        /// so without this a failed update would silently drop the user's edits.
+        /// </summary>
+        protected void RestoreChangedObjects(IEnumerable<OBJECT> objects)
+        {
+            foreach (OBJECT obj in objects)
+            {
+                if (obj.DBAction != DBACTION.NONE)
+                    ChangedObjects.TryAdd(obj.ID, obj);
+            }
+        }
+
         public override async Task<bool> Save(CancellationToken token)
         {
             List<OBJECT> changed = new List<OBJECT>(ChangedObjects.Count);
@@ -771,6 +786,7 @@ namespace WebAnnotationModel.gRPC
                 catch (Exception e)
                 {
                     Trace.WriteLine($"An error occurred during the update:\n{e.Message}");
+                    RestoreChangedObjects(changedObjects);
                     return false;
                 }
                 finally
