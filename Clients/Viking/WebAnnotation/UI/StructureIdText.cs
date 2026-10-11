@@ -18,10 +18,19 @@ namespace WebAnnotation.UI
 
         /// <summary>
         /// Parses a persisted structure type ID, which the favorites list keeps as <see cref="ulong"/>. Surrounding white space is
-        /// accepted; blank, malformed, negative, or out-of-range text returns false. Called by <c>Global.UserFavoriteStructureTypes</c>
-        /// for every stored entry so one bad entry is skipped instead of throwing out of the getter.
+        /// accepted; blank, malformed, negative, or out-of-range text returns false. Values above <see cref="long.MaxValue"/> are
+        /// rejected too: the store keys IDs as <see cref="long"/>, and the annotation menu converts each favorite with
+        /// <c>Convert.ToInt64</c>, which throws on a larger value. Called by <c>Global.UserFavoriteStructureTypes</c>
+        /// for every stored entry so one bad entry is skipped instead of throwing out of the getter or the menu.
         /// </summary>
-        public static bool TryParseUnsigned(string? text, out ulong id) =>
-            ulong.TryParse(text, NumberStyles.None | NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite, CultureInfo.InvariantCulture, out id);
+        public static bool TryParseUnsigned(string? text, out ulong id)
+        {
+            if (ulong.TryParse(text, NumberStyles.None | NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite, CultureInfo.InvariantCulture, out id)
+                && id <= long.MaxValue)
+                return true;
+
+            id = 0;
+            return false;
+        }
     }
 }

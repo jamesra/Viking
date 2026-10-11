@@ -38,7 +38,7 @@ namespace WebAnnotationTests
         [TestMethod]
         [DataRow("0", 0UL)]
         [DataRow(" 42 ", 42UL)]
-        [DataRow("18446744073709551615", ulong.MaxValue)]
+        [DataRow("9223372036854775807", (ulong)long.MaxValue)]
         public void ReadsPersistedUnsignedIds(string text, ulong expected)
         {
             Assert.IsTrue(StructureIdText.TryParseUnsigned(text, out ulong id));
@@ -51,6 +51,8 @@ namespace WebAnnotationTests
         [DataRow("-1")]
         [DataRow("+1")]
         [DataRow("12a")]
+        [DataRow("9223372036854775808")]
+        [DataRow("18446744073709551615")]
         [DataRow("18446744073709551616")]
         public void DamagedPersistedIdsAreReportedNotThrown(string? text)
         {
