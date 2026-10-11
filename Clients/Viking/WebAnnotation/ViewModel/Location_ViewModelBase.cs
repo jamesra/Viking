@@ -666,31 +666,6 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        private void UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
-        {
-            try
-            {
-                // Convert location type to POLYGON
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
-                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
-
-                modelObj.SetShapeFromGeometryInSection(parent.Section.ActiveSectionToVolumeTransform, mosaic_poly.ToSqlGeometry());
-                // Save the location
-                Store.Locations.Save();
-
-                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error updating location shape: {ex.Message}");
-                MessageBox.Show($"Failed to update location shape: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Update the location's shape from the segmented polygon and save
-        /// </summary>
         private void UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
             LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, AnnotationOverlay.CurrentOverlay.Parent);

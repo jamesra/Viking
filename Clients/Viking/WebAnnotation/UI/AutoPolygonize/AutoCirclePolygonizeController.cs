@@ -1572,19 +1572,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Queues <see cref="PublishProposalOnUiThread"/> on the UI dispatcher. For callers that are not already
-        /// on the UI thread and do not need to know whether the proposal was accepted.
-        /// </summary>
-        private void PublishProposal(AutoPolygonizeProposal proposal, Action? onPublished = null)
-        {
-            var dispatcher = Viking.UI.State.MainThreadDispatcher;
-            if (dispatcher is null)
-                return;
-
-            dispatcher.BeginInvoke(new Action(() => PublishProposalOnUiThread(proposal, onPublished)));
-        }
-
-        /// <summary>
         /// UI-thread insert into <see cref="proposals"/>. Creates the optional mask
         /// overlay here because Texture2D must be allocated on the graphics thread.
         /// Returns false, after disposing the overlay, when auto-segment is off, a member is no longer valid, or
