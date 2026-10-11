@@ -1299,12 +1299,11 @@ namespace MorphologyMesh
         /// is <c>GetRelation != None</c>, so it accepts tangency, and a tangent pair yields the near-coincident
         /// correspondence verticies that crash divide-and-conquer Delaunay.  Asking the relation directly is what
         /// removes the need to guess a safety margin on top of a first-contact answer.
+        /// Boundary-only contact is <see cref="ShapeRelation.Touching"/> whether nestled or from outside
+        /// (<c>Touching | Exterior</c>), so the test is on the Contained and Intersecting bits rather than on bare Touching.
         /// </summary>
-        private static bool OverlapsInterior(IShape2D a, IShape2D b)
-        {
-            ShapeRelation relation = a.GetRelation(b);
-            return relation != ShapeRelation.None && relation != ShapeRelation.Touching;
-        }
+        internal static bool OverlapsInterior(IShape2D a, IShape2D b) =>
+            (a.GetRelation(b) & (ShapeRelation.Contained | ShapeRelation.Intersecting)) != 0;
 
         /// <summary>
         /// Polyline–polyline placement succeeds when the lines cross/touch or their boxes overlap on both axes.

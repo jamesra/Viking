@@ -74,9 +74,9 @@ namespace GeometryTests
                 new Vector2(10, 0)
             ]);
 
-            Assert.AreEqual(ShapeRelation.Touching, left.GetRelation(right));
+            Assert.AreEqual(ShapeRelation.Touching | ShapeRelation.Exterior, left.GetRelation(right));
             Assert.IsFalse(left.Contains(right));
-            Assert.IsTrue(left.Covers(right));
+            Assert.IsFalse(left.Covers(right));
             Assert.IsTrue(left.Intersects(right));
         }
 
@@ -108,7 +108,7 @@ namespace GeometryTests
             Assert.AreEqual(ShapeRelation.None, box.GetRelation(outside));
 
             Circle tangent = new(new Vector2(15, 0), 5);
-            Assert.AreEqual(ShapeRelation.Touching, box.GetRelation(tangent));
+            Assert.AreEqual(ShapeRelation.Touching | ShapeRelation.Exterior, box.GetRelation(tangent));
 
             Circle crossing = new(new Vector2(10, 0), 3);
             Assert.AreEqual(ShapeRelation.Intersecting, box.GetRelation(crossing));

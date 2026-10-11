@@ -113,14 +113,8 @@ namespace MorphologyMeshTest
             Assert.IsNotNull(offsetsB);
             Assert.AreEqual(offsetsA[0], offsetsB[0]);
             Assert.AreEqual(offsetsA[1], offsetsB[1]);
-            Assert.IsTrue(shapesA[0].Intersects(shapesA[1]) || OverlapsInterior(shapesA[0], shapesA[1]),
+            Assert.IsTrue(shapesA[0].Intersects(shapesA[1]) || SliceTopology.OverlapsInterior(shapesA[0], shapesA[1]),
                 "A successful virtual-overlap pass must leave the pair intersecting.");
-        }
-
-        static bool OverlapsInterior(IShape2D a, IShape2D b)
-        {
-            ShapeRelation relation = a.GetRelation(b);
-            return relation != ShapeRelation.None && relation != ShapeRelation.Touching;
         }
 
         /// <summary>

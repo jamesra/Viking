@@ -8,11 +8,17 @@ namespace Geometry
     /// </summary>
     internal static class ShapeRelationHelpers
     {
+        /// <summary>
+        /// One relation for a multi-part shape. A part touching from outside next to a part inside is Intersecting;
+        /// parts that are all boundary contact keep <see cref="ShapeRelation.Exterior"/> if any part had it.
+        /// </summary>
         public static ShapeRelation CombineParts(IEnumerable<ShapeRelation> parts)
         {
             ShapeRelation combined = ShapeRelation.Contained;
             bool anyHit = false;
             bool anyMiss = false;
+            bool anyContained = false;
+            bool anyExterior = false;
             foreach (ShapeRelation rel in parts)
             {
                 if (rel == ShapeRelation.None)
@@ -24,15 +30,18 @@ namespace Geometry
                 anyHit = true;
                 if (rel == ShapeRelation.Intersecting)
                     return ShapeRelation.Intersecting;
-                if (rel == ShapeRelation.Touching)
+                if ((rel & ~ShapeRelation.Exterior) == ShapeRelation.Touching)
                     combined = ShapeRelation.Touching;
+                else
+                    anyContained = true;
+                anyExterior |= rel.HasFlag(ShapeRelation.Exterior);
             }
 
             if (!anyHit)
                 return ShapeRelation.None;
-            if (anyMiss)
+            if (anyMiss || (anyExterior && anyContained))
                 return ShapeRelation.Intersecting;
-            return combined;
+            return anyExterior ? combined | ShapeRelation.Exterior : combined;
         }
 
         public static ShapeRelation RelationToCollection(IShape2D self, IShapeCollection2D collection)

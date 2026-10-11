@@ -267,7 +267,7 @@ namespace Geometry
                                    (Direction.Y * (other.Center.X - Origin.X)));
             double radius = other.Radius;
             if (Math.Abs(dist - radius) <= Tolerance.Epsilon)
-                return ShapeRelation.Touching;
+                return ShapeRelation.Touching | ShapeRelation.Exterior;
             if (dist < radius)
                 return ShapeRelation.Intersecting;
             return ShapeRelation.None;
@@ -301,7 +301,7 @@ namespace Geometry
             if (aOn && bOn)
                 return ShapeRelation.Contained;
             if (Intersects(seg, out _))
-                return aOn || bOn ? ShapeRelation.Touching : ShapeRelation.Intersecting;
+                return aOn || bOn ? ShapeRelation.Touching | ShapeRelation.Exterior : ShapeRelation.Intersecting;
             return ShapeRelation.None;
         }
 
