@@ -7,16 +7,19 @@ using System.Linq;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// Converts a SAM2 probability mask to world-space <see cref="Polygon"/>s.
-    /// Each byte is a probability in 0–255. The contour is the logit-zero crossing
-    /// at <see cref="SoftMaskIsoLevel"/>, interpolated between pixels.
+    /// Converts a soft SAM2 field to world-space <see cref="Polygon"/>s.
+    /// Each byte is 0–255 with <see cref="SoftMaskIsoLevel"/> as the object boundary, interpolated between samples.
+    /// The field is either a full-resolution mask (a hard 0/255 PNG, so vertices land on pixel-edge midpoints) or
+    /// SAM2's native logits at one sample per four pixels, turned into bytes by <see cref="SegmentationLogitField"/>.
+    /// The second keeps the real values, so the contour sits where the logit crosses the iso level; the world
+    /// transform scales the finished ring up (see <see cref="CenterSampleBounds"/>).
     /// Callers reduce vertex count with CreatedShapeSimplify (mask pixel-travel).
     /// This type does not simplify.
     /// </summary>
     internal static class SegmentationMaskPolygonizer
     {
         /// <summary>
-        /// Contour level for a uint8 probability mask. Probability 0.5, SAM2's logit zero, encodes as 127.5.
+        /// Contour level for a soft uint8 field: the object boundary, halfway between 0 and 255 at 127.5.
         /// </summary>
         internal const float SoftMaskIsoLevel = 127.5f;
 
@@ -25,6 +28,42 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Rounded probability 0.5 is 128. Binary masks of 0 and 255 still count 255 as inside.
         /// </summary>
         internal const byte SoftMaskForeground = 128;
+        /// <summary>
+        /// The world rectangle to trace a field against when each sample is wider than a pixel.
+        /// </summary>
+        /// <remarks>
+        /// Marching squares places a vertex at a sample's integer coordinate, and the world transform in
+        /// <see cref="TransformRing"/> reads coordinate <c>x</c> as <c>x / imageWidth</c> of the rectangle.
+        /// That treats a sample as a point at the left edge of its footprint. For a one-pixel sample the half-pixel
+        /// bias is invisible, but for a four-pixel logit sample it is two pixels, so the rectangle is moved half a
+        /// sample right and down (world Y is up): afterwards sample <c>i</c> sits at the centre of its footprint.
+        /// A full-resolution mask (<paramref name="pixelScale"/> 1) is returned as it is.
+        /// </remarks>
+        /// <param name="bounds">World rectangle the whole frame covers.</param>
+        /// <param name="frameWidth">Samples across the frame the polygonizer is told about.</param>
+        /// <param name="frameHeight">Samples down that frame.</param>
+        /// <param name="pixelScale">Image pixels per sample.</param>
+        internal static Rectangle CenterSampleBounds(Rectangle bounds, int frameWidth, int frameHeight, int pixelScale)
+        {
+            if (pixelScale <= 1 || frameWidth <= 0 || frameHeight <= 0)
+                return bounds;
+
+            double dx = 0.5 * bounds.Width / frameWidth;
+            double dy = 0.5 * bounds.Height / frameHeight;
+            return new Rectangle(
+                new Vector2(bounds.Left + dx, bounds.Bottom - dy),
+                new Vector2(bounds.Right + dx, bounds.Top - dy));
+        }
+
+        /// <summary>
+        /// The edge-cleanup radius, set in image pixels, as a radius in samples of a field that has
+        /// <paramref name="pixelScale"/> pixels per sample. Never less than one sample while cleanup is on.
+        /// </summary>
+        internal static int ScaleCleanupRadius(int radiusPixels, int pixelScale) =>
+            radiusPixels <= 0 || pixelScale <= 1
+                ? radiusPixels
+                : Math.Max(1, (int)Math.Round(radiusPixels / (double)pixelScale));
+
         /// <summary>
         /// Timing and pixel counts from optional morphological cleanup, used by segmentation profile logs.
         /// </summary>

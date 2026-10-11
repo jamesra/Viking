@@ -725,8 +725,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 mosaicOriginX = response.OriginX;
                 mosaicOriginY = response.OriginY;
                 uploadedImageBounds = MosaicWorldBounds(response, DownsampleFor(response));
-                uploadedImageWidth = Math.Max(1, response.Width);
-                uploadedImageHeight = Math.Max(1, response.Height);
+                int responseScale = response.PixelScale();
+                uploadedImageWidth = Math.Max(1, response.Width) * responseScale;
+                uploadedImageHeight = Math.Max(1, response.Height) * responseScale;
                 ClearSkip();
                 return response;
             }
@@ -765,8 +766,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Decodes each segment mask and polygonizes in score order. Near-full-frame masks are skipped.
-        /// Cleanup and marching squares run at mask resolution. Callers apply pen-threshold simplification.
+        /// Decodes each segment and polygonizes in score order. Near-full-frame masks are skipped.
+        /// Cleanup and marching squares run at the field's own resolution: a segment that carries SAM2's logits is
+        /// traced on that native grid (one sample per four pixels) and the world transform scales the ring up; a
+        /// segment that only has a mask PNG is traced at pixel resolution. Callers apply pen-threshold simplification.
         /// <paramref name="cancellationToken"/> is checked between segments so a newer click can abort.
         /// <paramref name="keepComponentsContainingWorldPoints"/>, when given, hit-tests the mask at those
         /// world points and polygonizes only the connected pieces they land on.
@@ -795,30 +798,36 @@ namespace WebAnnotation.UI.Commands.Segmentation
             foreach (var segment in response.GetSegmentsByDescendingScore())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                maskBytes += segment.Mask.Length;
+                maskBytes += segment.Mask.Length + segment.Logits.Length;
                 Stopwatch decodeTimer = Stopwatch.StartNew();
-                var (decodedMaskData, decodedWidth, decodedHeight) = DecodeSegmentMask(segment);
+                SegmentField field = DecodeSegmentField(segment);
                 decodeMs += decodeTimer.ElapsedMilliseconds;
-                if (decodedMaskData is null)
+                if (field.Data is null)
                     continue;
 
-                int captureWidth = Math.Max(1, response.Width > 0 ? response.Width : uploadedImageWidth);
-                int captureHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight);
-                Geometry.Rectangle mosaicBounds = MosaicWorldBounds(response, DownsampleFor(response));
+                // The frame is counted in samples, like the field: response.Width is already reduced when the
+                // server did not upscale, and the field's offset is a whole number of samples.
+                int captureWidth = Math.Max(1, response.Width > 0 ? response.Width : uploadedImageWidth / field.Scale);
+                int captureHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight / field.Scale);
+                Geometry.Rectangle mosaicBounds = SegmentationMaskPolygonizer.CenterSampleBounds(
+                    MosaicWorldBounds(response, DownsampleFor(response)),
+                    captureWidth,
+                    captureHeight,
+                    field.Scale);
 
                 Stopwatch polygonizeTimer = Stopwatch.StartNew();
                 polygons.AddRange(SegmentationMaskPolygonizer.CreatePolygons(
-                    decodedMaskData,
-                    decodedWidth,
-                    decodedHeight,
-                    segment.X,
-                    segment.Y,
+                    field.Data,
+                    field.Width,
+                    field.Height,
+                    field.X / field.Scale,
+                    field.Y / field.Scale,
                     captureWidth,
                     captureHeight,
                     mosaicBounds,
                     dropFraction,
                     preserveHolesContainingWorldPoints,
-                    cleanupRadius,
+                    SegmentationMaskPolygonizer.ScaleCleanupRadius(cleanupRadius, field.Scale),
                     out SegmentationMaskPolygonizer.CleanupStats cleanupStats,
                     keepComponentsContainingWorldPoints));
                 cleanupMs += cleanupStats.ElapsedMilliseconds;
@@ -837,29 +846,36 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return polygons;
         }
 
-        /// <summary>Decoded mask of one segment, kept for the segment's lifetime.</summary>
-        private sealed class DecodedMask(byte[]? data, int width, int height)
-        {
-            public byte[]? Data { get; } = data;
-            public int Width { get; } = width;
-            public int Height { get; } = height;
-        }
-
-        private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, DecodedMask> decodedMasks = new();
+        private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, SegmentField> decodedFields = new();
 
         /// <summary>
-        /// <see cref="DecodePngMask"/> of <paramref name="segment"/>, decoded once. Polygonizing and the mask
-        /// overlay both need the same pixels, and the decode is the costly part of a large mask. The returned array
-        /// is shared: callers must not write to it (the polygonizer and overlay only read).
+        /// The soft field of <paramref name="segment"/>, decoded once. Polygonizing and the mask overlay both need the
+        /// same samples, and the decode is the costly part of a large mask. The returned array is shared: callers
+        /// must not write to it (the polygonizer and overlay only read).
+        /// </summary>
+        /// <remarks>
+        /// A segment with logits becomes a field at the logits' native resolution, with the boundary at the mask
+        /// threshold the request used. Otherwise its mask PNG is decoded at pixel resolution (a server that does
+        /// not know the response flags, or one that had no logits to send). Field X and Y are image pixels in the
+        /// frame <see cref="SegmentationServiceTypes.SegmentResult.X"/> uses.
+        /// </remarks>
+        public SegmentField DecodeSegmentField(SegmentationServiceTypes.SegmentResult segment) =>
+            decodedFields.GetValue(segment, s =>
+            {
+                if (SegmentationLogitField.HasLogits(s))
+                    return SegmentationLogitField.Decode(s, WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold);
+
+                (byte[]? data, int width, int height) = DecodePngMask(s.Mask.ToByteArray());
+                return new SegmentField(data, width, height, 1, s.X, s.Y);
+            });
+
+        /// <summary>
+        /// <see cref="DecodeSegmentField"/> without the placement, for callers that only need the samples.
         /// </summary>
         public (byte[]? maskData, int width, int height) DecodeSegmentMask(SegmentationServiceTypes.SegmentResult segment)
         {
-            DecodedMask decoded = decodedMasks.GetValue(segment, s =>
-            {
-                (byte[]? data, int width, int height) = DecodePngMask(s.Mask.ToByteArray());
-                return new DecodedMask(data, width, height);
-            });
-            return (decoded.Data, decoded.Width, decoded.Height);
+            SegmentField field = DecodeSegmentField(segment);
+            return (field.Data, field.Width, field.Height);
         }
 
         /// <summary>
@@ -921,7 +937,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// World rectangle of a SAM2 segment on the fused mosaic.
+        /// World rectangle of a SAM2 segment on the fused mosaic. <paramref name="segmentX"/>, <paramref name="segmentY"/>,
+        /// <paramref name="maskWidth"/> and <paramref name="maskHeight"/> are image pixels, so a reduced field passes its
+        /// size times its scale (<see cref="SegmentField.PixelWidth"/>).
         /// Mask Y is top-origin; MosaicPixelToWorld flips into Viking world-up.
         /// The mosaic origin comes from <paramref name="response"/>, not session state: the session is shared by
         /// concurrent requests and growth rounds, so its origin may already belong to a different response.
@@ -933,7 +951,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int maskWidth,
             int maskHeight)
         {
-            int imageHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight);
+            int imageHeight = Math.Max(1, response.Height > 0 ? response.Height * response.PixelScale() : uploadedImageHeight);
             int downsample = Math.Max(1, DownsampleFor(response));
             Geometry.Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(
                 response.OriginX,

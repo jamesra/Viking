@@ -1247,8 +1247,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            byte[] pngBytes = bestSegment.Mask.ToByteArray();
-            var (decodedMaskData, decodedWidth, decodedHeight) = viewportSession.DecodePngMask(pngBytes);
+            SegmentField field = viewportSession.DecodeSegmentField(bestSegment);
+            byte[]? decodedMaskData = field.Data;
+            int decodedWidth = field.Width;
+            int decodedHeight = field.Height;
             if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
             {
                 maskOverlayView = null;
@@ -1262,7 +1264,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     decodedMaskData,
                     decodedWidth,
                     decodedHeight,
-                    radius);
+                    SegmentationMaskPolygonizer.ScaleCleanupRadius(radius, field.Scale));
             }
 
             currentMaskData = decodedMaskData;
@@ -1279,10 +1281,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             Geometry.Rectangle segmentBounds = viewportSession.GetSegmentWorldBounds(
                 response,
-                bestSegment.X,
-                bestSegment.Y,
-                decodedWidth,
-                decodedHeight);
+                field.X,
+                field.Y,
+                field.PixelWidth,
+                field.PixelHeight);
             maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
         }
 #endif

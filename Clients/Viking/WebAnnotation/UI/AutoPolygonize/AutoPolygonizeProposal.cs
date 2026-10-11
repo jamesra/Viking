@@ -27,17 +27,36 @@ namespace WebAnnotation.UI.AutoPolygonize
         public int Height { get; }
         public Geometry.Rectangle WorldBounds { get; }
 
-        public AutoPolygonizeMaskOverlay(byte[] maskData, int width, int height, Geometry.Rectangle worldBounds)
+        /// <summary>
+        /// Image pixels per sample: 4 for SAM2's native logit grid, 1 for a pixel-resolution mask.
+        /// The texture is drawn over <see cref="WorldBounds"/> whatever this is, so it is only upscaled by the GPU.
+        /// </summary>
+        public int PixelScale { get; }
+
+        /// <summary>
+        /// The rectangle to trace <see cref="MaskData"/> against: <see cref="WorldBounds"/>, moved half a sample when
+        /// samples are wider than a pixel (see <see cref="SegmentationMaskPolygonizer.CenterSampleBounds"/>).
+        /// </summary>
+        public Geometry.Rectangle TraceBounds =>
+            SegmentationMaskPolygonizer.CenterSampleBounds(WorldBounds, Width, Height, PixelScale);
+
+        public AutoPolygonizeMaskOverlay(
+            byte[] maskData,
+            int width,
+            int height,
+            Geometry.Rectangle worldBounds,
+            int pixelScale = 1)
         {
             MaskData = maskData;
             Width = width;
             Height = height;
             WorldBounds = worldBounds;
+            PixelScale = Math.Max(1, pixelScale);
         }
 
         /// <summary>
-        /// Builds overlay data from the highest-scoring segment. The server PNG is a probability
-        /// image of the SAM2 logits (128 is the decision boundary), not a 1-bit mask.
+        /// Builds overlay data from the highest-scoring segment: the soft field of its SAM2 logits at their native
+        /// resolution (128 is the decision boundary), or its mask PNG from a server that sent no logits.
         /// Returns null when decode fails. Called off the UI thread; does not create a <see cref="Texture2D"/>.
         /// </summary>
         public static AutoPolygonizeMaskOverlay? TryCreate(
@@ -48,7 +67,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return null;
 
             var bestSegment = response.GetHighestScoringSegment()!;
-            var (decodedMaskData, decodedWidth, decodedHeight) = session.DecodeSegmentMask(bestSegment);
+            SegmentField field = session.DecodeSegmentField(bestSegment);
+            byte[]? decodedMaskData = field.Data;
+            int decodedWidth = field.Width;
+            int decodedHeight = field.Height;
             if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
                 return null;
 
@@ -60,15 +82,16 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             System.Diagnostics.Debug.WriteLine(
-                $"[SegmentationProfile] Mask overlay {decodedWidth}x{decodedHeight} pngBytes={bestSegment.Mask.Length} inside={inside}");
+                $"[SegmentationProfile] Mask overlay {decodedWidth}x{decodedHeight}@{field.Scale} " +
+                $"pngBytes={bestSegment.Mask.Length} logitBytes={bestSegment.Logits.Length} inside={inside}");
 
             Geometry.Rectangle worldBounds = session.GetSegmentWorldBounds(
                 response,
-                bestSegment.X,
-                bestSegment.Y,
-                decodedWidth,
-                decodedHeight);
-            return new AutoPolygonizeMaskOverlay(decodedMaskData, decodedWidth, decodedHeight, worldBounds);
+                field.X,
+                field.Y,
+                field.PixelWidth,
+                field.PixelHeight);
+            return new AutoPolygonizeMaskOverlay(decodedMaskData, decodedWidth, decodedHeight, worldBounds, field.Scale);
         }
 
         /// <summary>
@@ -196,10 +219,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 0,
                 Mask.Width,
                 Mask.Height,
-                Mask.WorldBounds,
+                Mask.TraceBounds,
                 holeDropFraction,
                 PreserveHoles,
-                edgeCleanupRadius,
+                SegmentationMaskPolygonizer.ScaleCleanupRadius(edgeCleanupRadius, Mask.PixelScale),
                 out _,
                 KeepPoints);
             return polygons.FirstOrDefault();
@@ -249,13 +272,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                         source.Mask.MaskData,
                         source.Mask.Width,
                         source.Mask.Height,
-                        edgeCleanupRadius)
+                        SegmentationMaskPolygonizer.ScaleCleanupRadius(edgeCleanupRadius, source.Mask.PixelScale))
                     : source.Mask.MaskData;
                 cleaned.Add(new AutoPolygonizeMaskOverlay(
                     displayBytes,
                     source.Mask.Width,
                     source.Mask.Height,
-                    source.Mask.WorldBounds));
+                    source.Mask.WorldBounds,
+                    source.Mask.PixelScale));
             }
 
             if (fixedPolygons is not null)

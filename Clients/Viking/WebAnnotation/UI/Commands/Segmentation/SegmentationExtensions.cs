@@ -34,6 +34,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
             => response.GetSegmentsByDescendingScore().FirstOrDefault();
 
         /// <summary>
+        /// Image pixels per sample of the frame <paramref name="response"/> describes: 4 when the server sent SAM2's
+        /// native logits (<c>Width</c>, <c>Height</c>, mask and logit sizes are then in samples), 1 otherwise.
+        /// </summary>
+        internal static int PixelScale(this SegmentationServiceTypes.SegmentationResponse? response)
+        {
+            if (response?.Segments is null)
+                return 1;
+
+            foreach (SegmentationServiceTypes.SegmentResult segment in response.Segments)
+            {
+                if (SegmentationLogitField.HasLogits(segment))
+                    return SegmentationLogitField.PixelScale(segment);
+            }
+
+            return 1;
+        }
+
+        /// <summary>
         /// Maps world coordinates to capture-pixel space without a Y flip. SAM2 mask Y is flipped elsewhere.
         /// </summary>
         internal static Vector2 MapWorldToViewportPixel(

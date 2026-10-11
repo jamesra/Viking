@@ -98,16 +98,32 @@ namespace Geometry
                 case 3: Add(segments, left, right); return;
                 case 4: Add(segments, right, bottom); return;
                 case 5:
-                    Add(segments, left, bottom);
-                    Add(segments, top, right);
+                    if (SaddleConnects(v00, v10, v11, v01, isoLevel))
+                    {
+                        Add(segments, left, bottom);
+                        Add(segments, top, right);
+                    }
+                    else
+                    {
+                        Add(segments, left, top);
+                        Add(segments, right, bottom);
+                    }
                     return;
                 case 6: Add(segments, top, bottom); return;
                 case 7: Add(segments, left, bottom); return;
                 case 8: Add(segments, bottom, left); return;
                 case 9: Add(segments, bottom, top); return;
                 case 10:
-                    Add(segments, top, left);
-                    Add(segments, right, bottom);
+                    if (SaddleConnects(v00, v10, v11, v01, isoLevel))
+                    {
+                        Add(segments, top, left);
+                        Add(segments, right, bottom);
+                    }
+                    else
+                    {
+                        Add(segments, top, right);
+                        Add(segments, bottom, left);
+                    }
                     return;
                 case 11: Add(segments, bottom, right); return;
                 case 12: Add(segments, right, left); return;
@@ -115,6 +131,15 @@ namespace Geometry
                 case 14: Add(segments, top, left); return;
             }
         }
+
+        /// <summary>
+        /// Resolves an ambiguous saddle cell (two diagonal corners inside) with the asymptotic decider:
+        /// the mean of the four corners stands in for the cell centre. True joins the two inside corners
+        /// through the cell; false keeps them as separate islands. A binary mask averages exactly to the
+        /// iso level, so it keeps joining diagonal pixels (8-connected foreground).
+        /// </summary>
+        private static bool SaddleConnects(float v00, float v10, float v11, float v01, float isoLevel) =>
+            Inside((v00 + v10 + v11 + v01) * 0.25f, isoLevel);
 
         /// <summary>
         /// Linear iso crossing. Endpoints are ordered so both cells that share the edge

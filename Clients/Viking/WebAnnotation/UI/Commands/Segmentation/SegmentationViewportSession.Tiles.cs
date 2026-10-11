@@ -188,7 +188,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 MultimaskOutput = false,
                 OmitLabeledImage = true,
                 MaskThreshold = (float)WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
-                UseMaskInput = WebAnnotation.Global.AnnotationSettings.SegmentationUseMaskInput
+                UseMaskInput = WebAnnotation.Global.AnnotationSettings.SegmentationUseMaskInput,
+                ResponseContent = (uint)RequestedContent
             };
             foreach (TileCell cell in cells)
             {
@@ -270,7 +271,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             string requestedTiles = string.Join(";", requestedTileList);
             string segmentSizes = string.Join(
                 ",",
-                response.Segments.Select(segment => $"{segment.X},{segment.Y}:{CapturedPng.DescribeDimensions(segment.Mask.ToByteArray())}"));
+                response.Segments.Select(segment => SegmentationLogitField.HasLogits(segment)
+                    ? $"{segment.LogitsX},{segment.LogitsY}:logits {segment.LogitsWidth}x{segment.LogitsHeight}@{segment.LogitsScale}"
+                    : $"{segment.X},{segment.Y}:{CapturedPng.DescribeDimensions(segment.Mask.ToByteArray())}"));
             SegmentationDiag.Log(
                 $"SegmentTiles response req={requestId}{(response.RequestId == requestId ? string.Empty : $" MISMATCH echoed={response.RequestId}")} mosaic={response.Width}x{response.Height} " +
                 $"origin=({response.OriginX},{response.OriginY}) submittedTiles=[{submittedTiles}] " +
@@ -421,13 +424,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// What a tile request asks the server to send back: the fused SAM2 logits at their native resolution.
+        /// </summary>
+        /// <remarks>
+        /// <c>NoUpscale</c> means the server does not upscale (see <c>RESPONSE_CONTENT_NO_UPSCALE</c> in the proto), so
+        /// the logit grid comes back at one sample per four image pixels. This client polygonizes it at that
+        /// resolution and the world transform scales the ring up afterwards. The mask overlay the user can turn
+        /// on in preferences is drawn from the same logits (<see cref="SegmentationLogitField"/>) and only upscaled by the
+        /// GPU when it is drawn, so no mask PNG is requested. A server that predates the flag ignores it and sends
+        /// masks, which the client still reads.
+        /// </remarks>
+        private const SegmentationServiceTypes.ResponseContent RequestedContent =
+            SegmentationServiceTypes.ResponseContent.Logits | SegmentationServiceTypes.ResponseContent.NoUpscale;
+
+        /// <summary>
         /// World rectangle of the mosaic for a response sent at <paramref name="requestedDownsample"/>.
+        /// <c>Width</c> and <c>Height</c> of a no-upscale response count samples, so they are scaled to image pixels.
         /// </summary>
         internal static Geometry.Rectangle MosaicWorldBounds(SegmentationResponse response, int requestedDownsample)
         {
             int downsample = Math.Max(1, requestedDownsample);
-            int width = Math.Max(1, response.Width);
-            int height = Math.Max(1, response.Height);
+            int pixelScale = response.PixelScale();
+            int width = Math.Max(1, response.Width) * pixelScale;
+            int height = Math.Max(1, response.Height) * pixelScale;
             int originX = response.OriginX;
             int originY = response.OriginY;
             Geometry.Vector2 lowerLeft = new(
