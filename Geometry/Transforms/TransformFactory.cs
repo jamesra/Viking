@@ -51,7 +51,7 @@ namespace Geometry.Transforms
             /*
             Parallel.For(iStart, iStart + number_of_params, i =>
             {
-                double val = Convert.ToDouble(parts[i]);
+                double val = Convert.ToDouble(parts[i], System.Globalization.CultureInfo.InvariantCulture);
                 parameter_values[i - iStart] = val;
 
                 Debug.Assert(!(double.IsInfinity(val) || double.IsNaN(val)));
@@ -62,7 +62,7 @@ namespace Geometry.Transforms
 
             for (long i = iStart; i < iStart + number_of_params; i++)
             {
-                double val = Convert.ToDouble(parts[i]);
+                double val = Convert.ToDouble(parts[i], System.Globalization.CultureInfo.InvariantCulture);
                 parameter_values[i - iStart] = val;
 
                 Debug.Assert(!(double.IsInfinity(val) || double.IsNaN(val)));
@@ -240,15 +240,15 @@ namespace Geometry.Transforms
             string[] controlDims = lines[4].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
 
-            double ControlLeft = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
-            double ControlBottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
-            double ControlRight = ControlLeft + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
-            double ControlTop = ControlBottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
+            double ControlLeft = (System.Convert.ToDouble(controlDims[0], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            double ControlBottom = (System.Convert.ToDouble(controlDims[1], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            double ControlRight = ControlLeft + (System.Convert.ToDouble(controlDims[2], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            double ControlTop = ControlBottom + (System.Convert.ToDouble(controlDims[3], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
 
-            double MappedLeft = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
-            double MappedBottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
-            double MappedRight = MappedLeft + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
-            double MappedTop = MappedBottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
+            double MappedLeft = (int)(System.Convert.ToDouble(mappedDims[0], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            double MappedBottom = (int)(System.Convert.ToDouble(mappedDims[1], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            double MappedRight = MappedLeft + (int)(System.Convert.ToDouble(mappedDims[2], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            double MappedTop = MappedBottom + (int)(System.Convert.ToDouble(mappedDims[3], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
 
             Rectangle ControlBounds = new(ControlLeft, ControlRight, ControlBottom, ControlTop);
             Rectangle MappedBounds = new(MappedLeft, MappedRight, MappedBottom, MappedTop);
@@ -316,10 +316,10 @@ namespace Geometry.Transforms
             ctrlPoints[3] = new Vector2(ControlBounds.Width, ControlBounds.Height);
 
             Matrix mat = Matrix.Identity;
-            mat.M11 = System.Convert.ToSingle(parts[iVariableParameters + 2]);
-            mat.M12 = System.Convert.ToSingle(parts[iVariableParameters + 3]);
-            mat.M21 = System.Convert.ToSingle(parts[iVariableParameters + 4]);
-            mat.M22 = System.Convert.ToSingle(parts[iVariableParameters + 5]); 
+            mat.M11 = System.Convert.ToSingle(parts[iVariableParameters + 2], System.Globalization.CultureInfo.InvariantCulture);
+            mat.M12 = System.Convert.ToSingle(parts[iVariableParameters + 3], System.Globalization.CultureInfo.InvariantCulture);
+            mat.M21 = System.Convert.ToSingle(parts[iVariableParameters + 4], System.Globalization.CultureInfo.InvariantCulture);
+            mat.M22 = System.Convert.ToSingle(parts[iVariableParameters + 5], System.Globalization.CultureInfo.InvariantCulture); 
             
             //Cheating: since the rotation matrix is
             //[cos(t) -sin(t)]
@@ -369,7 +369,7 @@ namespace Geometry.Transforms
             {
                 try
                 {
-                    gridWidth = (int)System.Convert.ToDouble(transform.FixedParameters[2]) + 1;
+                    gridWidth = (int)System.Convert.ToDouble(transform.FixedParameters[2], System.Globalization.CultureInfo.InvariantCulture) + 1;
                 }
                 catch (System.OverflowException e)
                 {
@@ -386,7 +386,7 @@ namespace Geometry.Transforms
             {
                 try
                 {
-                    gridHeight = (int)System.Convert.ToDouble(transform.FixedParameters[1]) + 1;
+                    gridHeight = (int)System.Convert.ToDouble(transform.FixedParameters[1], System.Globalization.CultureInfo.InvariantCulture) + 1;
                 }
                 catch (System.OverflowException e)
                 {

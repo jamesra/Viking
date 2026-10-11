@@ -50,6 +50,28 @@ namespace GeometryTests
         //
         #endregion
 
+        /// <summary>
+        /// Transform strings from stos files always use '.' as the decimal separator, so parsing must not
+        /// depend on the user's culture (de-DE would read "1.5" as 15 or throw).
+        /// </summary>
+        [TestMethod]
+        public void TransformParametersParseIsCultureInvariant()
+        {
+            System.Globalization.CultureInfo saved = System.Threading.Thread.CurrentThread.CurrentCulture;
+            try
+            {
+                System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+                var p = Geometry.Transforms.TransformParameters.Parse("TestTransform_double_2_2 vp 2 1.5 -2.25 fp 2 3.5 4");
+                Assert.AreEqual(1.5, p.VariableParameters[0]);
+                Assert.AreEqual(-2.25, p.VariableParameters[1]);
+                Assert.AreEqual(3.5, p.FixedParameters[0]);
+            }
+            finally
+            {
+                System.Threading.Thread.CurrentThread.CurrentCulture = saved;
+            }
+        }
+
         private static void TestRegex(string expression, string input)
         {
             Regex regex = new(expression);

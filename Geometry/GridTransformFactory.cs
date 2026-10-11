@@ -43,17 +43,17 @@ namespace Geometry.Transforms
             Rectangle MappedBounds = new Rectangle();
 
             double left, right, bottom, top;
-            left = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
-            right = left + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
-            bottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
-            top = bottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
+            left = (System.Convert.ToDouble(controlDims[0], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            right = left + (System.Convert.ToDouble(controlDims[2], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            bottom = (System.Convert.ToDouble(controlDims[1], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            top = bottom + (System.Convert.ToDouble(controlDims[3], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
               
             Rectangle ControlBounds = new Rectangle(left, right, bottom, top);
 
-            left = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
-            right = left + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
-            bottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
-            top = bottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
+            left = (int)(System.Convert.ToDouble(mappedDims[0], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            right = left + (int)(System.Convert.ToDouble(mappedDims[2], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            bottom = (int)(System.Convert.ToDouble(mappedDims[1], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
+            top = bottom + (int)(System.Convert.ToDouble(mappedDims[3], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
 
             MappedBounds = new Rectangle(left, right, bottom, top);
             
@@ -126,10 +126,10 @@ namespace Geometry.Transforms
     ctrlPoints[3] = new Vector2(ControlBounds.Width, ControlBounds.Height);
 
     Matrix mat = Matrix.Identity;
-    mat.M11 = System.Convert.ToSingle(parts[iVariableParameters + 2]);
-    mat.M12 = System.Convert.ToSingle(parts[iVariableParameters + 3]);
-    mat.M21 = System.Convert.ToSingle(parts[iVariableParameters + 4]);
-    mat.M22 = System.Convert.ToSingle(parts[iVariableParameters + 5]); 
+    mat.M11 = System.Convert.ToSingle(parts[iVariableParameters + 2], System.Globalization.CultureInfo.InvariantCulture);
+    mat.M12 = System.Convert.ToSingle(parts[iVariableParameters + 3], System.Globalization.CultureInfo.InvariantCulture);
+    mat.M21 = System.Convert.ToSingle(parts[iVariableParameters + 4], System.Globalization.CultureInfo.InvariantCulture);
+    mat.M22 = System.Convert.ToSingle(parts[iVariableParameters + 5], System.Globalization.CultureInfo.InvariantCulture); 
 
     //Cheating: since the rotation matrix is
     //[cos(t) -sin(t)]
@@ -165,8 +165,8 @@ private static List<MappingVector2> ParseGridTransform(string[] parts, float pix
     float MappedWidth = (float)MappedBounds.Width;
     float MappedHeight = (float)MappedBounds.Height; 
 
-    int gridWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 4]) + 1.0);
-    int gridHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 3]) + 1.0);
+    int gridWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 4], System.Globalization.CultureInfo.InvariantCulture) + 1.0);
+    int gridHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 3], System.Globalization.CultureInfo.InvariantCulture) + 1.0);
     double NumPts = gridHeight * gridWidth;
 
     Vector2[] Points = new Vector2[System.Convert.ToInt32(NumPts)];
@@ -175,8 +175,8 @@ private static List<MappingVector2> ParseGridTransform(string[] parts, float pix
 
     for (int i = 0; i < NumPts; i++)
     {
-        Vector2 P = new Vector2(System.Convert.ToDouble(parts[iPoints + (i * 2)]) * pixelSpacing,
-                                        System.Convert.ToDouble(parts[iPoints + (i * 2) + 1]) * pixelSpacing);
+        Vector2 P = new Vector2(System.Convert.ToDouble(parts[iPoints + (i * 2)], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing,
+                                        System.Convert.ToDouble(parts[iPoints + (i * 2) + 1], System.Globalization.CultureInfo.InvariantCulture) * pixelSpacing);
         Points[i] = P;  
     }
 
@@ -231,10 +231,10 @@ private static List<MappingVector2> ParsePolyTransform(string[] parts, float pix
     iFixedParameters += 2; 
     iVariableParameters += 2;
 
-    double uc = System.Convert.ToDouble(parts[iFixedParameters]);
-    double vc = System.Convert.ToDouble(parts[iFixedParameters + 1]);
-    double xmax = System.Convert.ToDouble(parts[iFixedParameters + 2]);
-    double ymax = System.Convert.ToDouble(parts[iFixedParameters + 3]);
+    double uc = System.Convert.ToDouble(parts[iFixedParameters], System.Globalization.CultureInfo.InvariantCulture);
+    double vc = System.Convert.ToDouble(parts[iFixedParameters + 1], System.Globalization.CultureInfo.InvariantCulture);
+    double xmax = System.Convert.ToDouble(parts[iFixedParameters + 2], System.Globalization.CultureInfo.InvariantCulture);
+    double ymax = System.Convert.ToDouble(parts[iFixedParameters + 3], System.Globalization.CultureInfo.InvariantCulture);
 
     uc = xmax / 2;
     vc = ymax / 2; 
@@ -242,7 +242,7 @@ private static List<MappingVector2> ParsePolyTransform(string[] parts, float pix
     double[] parameters = new double[numParams]; 
     for(int iVP = 0; iVP < numParams; iVP++)
     {
-        parameters[iVP] = System.Convert.ToDouble(parts[iVariableParameters + iVP]); 
+        parameters[iVP] = System.Convert.ToDouble(parts[iVariableParameters + iVP], System.Globalization.CultureInfo.InvariantCulture); 
     }
 
     int gridHeight = 5;
