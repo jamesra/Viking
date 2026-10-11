@@ -89,6 +89,23 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void CoordinatesToURI_CommaDecimalCulture_StillUsesInvariantNumbers()
+        {
+            State.volume = CreateVolumeWithHost("connectomes.utah.edu/kasthuri11");
+            System.Globalization.CultureInfo saved = System.Globalization.CultureInfo.CurrentCulture;
+            try
+            {
+                System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+                string uri = Util.CoordinatesToURI(123456.789, 89012.345, 42, 16);
+                StringAssert.EndsWith(uri, "X=123456.8&Y=89012.3&Z=42&DS=16.00");
+            }
+            finally
+            {
+                System.Globalization.CultureInfo.CurrentCulture = saved;
+            }
+        }
+
+        [TestMethod]
         public void GetAttribute_SinglePropertyPage_ReturnsInstance()
         {
             Attribute? attrib = Util.GetAttribute(typeof(TypeWithOnePropertyPage), typeof(PropertyPageAttribute));
