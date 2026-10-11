@@ -8,26 +8,58 @@ using LocationLinkKey = Viking.AnnotationServiceTypes.LocationLinkKey;
 
 namespace WebAnnotation
 {
+    /// <summary>
+    /// A view that can be marked as selected on the canvas. Implemented by <see cref="LocationCircleView"/>.
+    /// Set on the UI thread by selection commands; the view decides how a selected state is drawn.
+    /// </summary>
     public interface ISelectable
     {
+        /// <summary>True while the view is the user's current selection.</summary>
         bool Selected { get; set; }
     }
 
+    /// <summary>
+    /// A location view that draws a text label using the shared <see cref="SpriteBatch"/>.
+    /// <c>AnnotationOverlay</c> filters visible views with <see cref="IsLabelVisible"/>, then calls
+    /// <see cref="DrawLabel"/> for all of them inside one batch it has already begun, so implementations
+    /// must not call <c>Begin</c> or <c>End</c>. Views that must render to their own target use
+    /// <see cref="IRenderedLabelView"/> instead.
+    /// </summary>
     public interface ILabelView
     {
+        /// <summary>Draws the label into the caller's open sprite batch.</summary>
+        /// <param name="spriteBatch">Batch begun by the overlay; do not begin or end it.</param>
+        /// <param name="font">Font the overlay uses for all labels.</param>
+        /// <param name="scene">Current camera and viewport.</param>
         void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene);
 
+        /// <summary>True if the label would be on screen and large enough to read in <paramref name="scene"/>.</summary>
         bool IsLabelVisible(Scene scene);
     }
 
+    /// <summary>
+    /// A location view whose label is drawn with its own graphics device state (for example through a
+    /// render target), unlike <see cref="ILabelView"/>. <c>AnnotationOverlay</c> calls it after the plain
+    /// label pass, so the implementation owns its sprite batch lifetime.
+    /// </summary>
     public interface IRenderedLabelView
     {
+        /// <summary>Draws the label; the caller has not begun <paramref name="spriteBatch"/>.</summary>
+        /// <param name="device">Device to render with.</param>
+        /// <param name="spriteBatch">Shared batch, not yet begun.</param>
+        /// <param name="font">Font the overlay uses for all labels.</param>
+        /// <param name="scene">Current camera and viewport.</param>
         void DrawLabel(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene);
 
+        /// <summary>True if the label should be drawn in <paramref name="scene"/>.</summary>
         bool IsLabelVisible(Scene scene);
     }
 
 
+    /// <summary>
+    /// An annotation view that can say what a mouse click on it means. Implemented by location views;
+    /// the pen counterpart is <see cref="IPenActionSupport"/>. Queried on the UI thread during hit testing.
+    /// </summary>
     public interface IMouseActionSupport
     {
         /// <summary>
@@ -40,8 +72,19 @@ namespace WebAnnotation
         LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
     }
 
+    /// <summary>
+    /// An annotation view that can say what a pen contact or a pen-drawn shape means for it.
+    /// The mouse counterpart is <see cref="IMouseActionSupport"/>. Queried on the UI thread.
+    /// </summary>
     public interface IPenActionSupport
     {
+        /// <summary>
+        /// Returns the action for a pen touching the annotation at a given position.
+        /// </summary>
+        /// <param name="WorldPosition">Where the pen is, in volume space.</param>
+        /// <param name="VisibleSectionNumber">Which section is being viewed.</param>
+        /// <param name="ModifierKeys">Keyboard modifiers held during the contact.</param>
+        /// <param name="LocationID">The location ID the action applies to.</param>
         LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
 
         /// <summary>
@@ -66,23 +109,31 @@ namespace WebAnnotation
         long ID { get; }
     }
 
+    /// <summary>An interface for views that represent a LocationLink model.</summary>
     public interface IViewLocationLink
     {
+        /// <summary>The key (both location IDs) of the LocationLink model the view represents.</summary>
         LocationLinkKey Key { get; }
     }
 
+    /// <summary>An interface for views that represent a Structure model.</summary>
     public interface IViewStructure
     {
+        /// <summary>The ID of the Structure model the view represents.</summary>
         long ID { get; }
     }
 
+    /// <summary>An interface for views that represent a StructureLink model.</summary>
     public interface IViewStructureLink
     {
+        /// <summary>The key of the StructureLink model the view represents.</summary>
         StructureLinkKey Key { get; }
     }
 
+    /// <summary>An interface for views that represent a StructureType model.</summary>
     public interface IViewStructureType
     {
+        /// <summary>The ID of the StructureType model the view represents.</summary>
         long ID { get; }
     }
 
@@ -143,11 +194,13 @@ namespace WebAnnotation
     /// </summary>
     public interface IPolygonShape
     {
-        /// <summary>
-        /// The 
-        /// </summary>
+        /// <summary>The shape in mosaic space, the coordinate space the annotation is stored in.</summary>
         Polygon MosaicPolygon { get; }
+
+        /// <summary>The shape in volume space, after the section transform is applied.</summary>
         Polygon VolumePolygon { get; }
+
+        /// <summary>The volume-space shape after curve smoothing.</summary>
         Polygon SmoothedVolumePolygon { get; }
     }
 
