@@ -303,7 +303,7 @@ namespace WebAnnotation.WPF.Forms
         public const double DefaultSegmentationMaskThreshold = 0.5;
 
         /// <summary>Smallest allowed <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
-        public const double MinSegmentationMaskThreshold = -5.0;
+        public const double MinSegmentationMaskThreshold = -2.5;
 
         /// <summary>Largest allowed <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
         public const double MaxSegmentationMaskThreshold = 5.0;

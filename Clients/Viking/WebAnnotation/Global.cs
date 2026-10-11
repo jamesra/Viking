@@ -550,7 +550,7 @@ namespace WebAnnotation
             }
 
             /// <summary>Smallest accepted <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
-            public const double MIN_SEGMENTATION_MASK_THRESHOLD = -5.0;
+            public const double MIN_SEGMENTATION_MASK_THRESHOLD = -2.5;
 
             /// <summary>Largest accepted <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
             public const double MAX_SEGMENTATION_MASK_THRESHOLD = 5.0;
