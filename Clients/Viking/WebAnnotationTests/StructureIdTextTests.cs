@@ -34,5 +34,28 @@ namespace WebAnnotationTests
             Assert.IsFalse(StructureIdText.TryParse(text, out long id));
             Assert.AreEqual(0L, id);
         }
+
+        [TestMethod]
+        [DataRow("0", 0UL)]
+        [DataRow(" 42 ", 42UL)]
+        [DataRow("18446744073709551615", ulong.MaxValue)]
+        public void ReadsPersistedUnsignedIds(string text, ulong expected)
+        {
+            Assert.IsTrue(StructureIdText.TryParseUnsigned(text, out ulong id));
+            Assert.AreEqual(expected, id);
+        }
+
+        [TestMethod]
+        [DataRow(null)]
+        [DataRow("")]
+        [DataRow("-1")]
+        [DataRow("+1")]
+        [DataRow("12a")]
+        [DataRow("18446744073709551616")]
+        public void DamagedPersistedIdsAreReportedNotThrown(string? text)
+        {
+            Assert.IsFalse(StructureIdText.TryParseUnsigned(text, out ulong id));
+            Assert.AreEqual(0UL, id);
+        }
     }
 }

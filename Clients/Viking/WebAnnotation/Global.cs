@@ -970,17 +970,16 @@ namespace WebAnnotation
                     _UserFavoriteStructureTypes = [];
                     foreach (string ID_str in Properties.Settings.Default.FavoriteStructureIDs)
                     {
-                        try
+                        if (WebAnnotation.UI.StructureIdText.TryParseUnsigned(ID_str, out ulong ID))
                         {
-                            ulong ID = System.Convert.ToUInt64(ID_str);
                             if (_UserFavoriteStructureTypes.Contains(ID) == false) //Do not add accidental duplicates
                             {
                                 _UserFavoriteStructureTypes.Add(ID);
                             }
                         }
-                        catch (ArgumentException)
+                        else
                         {
-                            Trace.WriteLine($"Unable to convert Favorite StructureID to long {ID_str}");
+                            Trace.WriteLine($"Unable to convert Favorite StructureID to ulong {ID_str}");
                         }
                     }
 
