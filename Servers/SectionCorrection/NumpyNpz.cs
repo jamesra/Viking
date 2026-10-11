@@ -12,6 +12,9 @@ namespace Viking.SectionCorrection
     /// </summary>
     public static class NumpyNpz
     {
+        /// <summary>Upper bound on the header size accepted by the reader; real headers are well under 1 KiB.</summary>
+        const int MaxHeaderBytes = 1 << 20;
+
         static readonly byte[] Magic = [0x93, (byte)'N', (byte)'U', (byte)'M', (byte)'P', (byte)'Y'];
 
         public static void Write(string path, IReadOnlyDictionary<string, NumpyArray> arrays)
@@ -86,10 +89,21 @@ namespace Viking.SectionCorrection
             stream.Write(array.Data, 0, array.Data.Length);
         }
 
+        /// <summary>
+        /// Parses one .npy payload. Called by <see cref="Read(Stream)"/> for every zip entry, including files
+        /// written by Python, so malformed input is reported as <see cref="InvalidDataException"/> (or
+        /// <see cref="EndOfStreamException"/> when truncated) rather than an index or format exception.
+        /// </summary>
         static NumpyArray ReadNpy(Stream stream)
         {
             byte[] magic = new byte[6];
             ReadExact(stream, magic, 6);
+            for (int m = 0; m < Magic.Length; m++)
+            {
+                if (magic[m] != Magic[m])
+                    throw new InvalidDataException("Not an npy array: bad magic bytes.");
+            }
+
             int major = stream.ReadByte();
             int minor = stream.ReadByte();
             if (major < 0)
@@ -108,6 +122,9 @@ namespace Viking.SectionCorrection
                 ReadExact(stream, hl, 4);
                 headerLen = hl[0] | (hl[1] << 8) | (hl[2] << 16) | (hl[3] << 24);
             }
+
+            if (headerLen < 0 || headerLen > MaxHeaderBytes)
+                throw new InvalidDataException("npy header length is out of range.");
 
             byte[] headerBytes = new byte[headerLen];
             ReadExact(stream, headerBytes, headerLen);
@@ -167,15 +184,22 @@ namespace Viking.SectionCorrection
         static int[] ParseShape(string header)
         {
             int i = header.IndexOf("'shape':", StringComparison.Ordinal);
+            if (i < 0)
+                throw new InvalidDataException("npy header missing 'shape':");
             int open = header.IndexOf('(', i);
-            int close = header.IndexOf(')', open);
+            int close = open < 0 ? -1 : header.IndexOf(')', open);
+            if (close < 0)
+                throw new InvalidDataException("npy header has a malformed shape tuple.");
             string inner = header.Substring(open + 1, close - open - 1).Trim();
             if (inner.Length == 0)
                 return [];
             string[] parts = inner.Split([','], StringSplitOptions.RemoveEmptyEntries);
             int[] shape = new int[parts.Length];
             for (int p = 0; p < parts.Length; p++)
-                shape[p] = int.Parse(parts[p].Trim(), CultureInfo.InvariantCulture);
+            {
+                if (!int.TryParse(parts[p].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out shape[p]) || shape[p] < 0)
+                    throw new InvalidDataException("npy header has an invalid shape dimension: " + parts[p].Trim());
+            }
             return shape;
         }
 
