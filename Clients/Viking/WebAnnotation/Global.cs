@@ -1140,12 +1140,6 @@ namespace WebAnnotation
             return false;
         }
 
-        private static XDocument GetAboutXML(Uri AboutURI)
-        {
-            // Use Task.Run to avoid blocking the thread pool when called from synchronous context
-            return Task.Run(async () => await GetAboutXMLAsync(AboutURI).ConfigureAwait(false)).GetAwaiter().GetResult();
-        }
-
         private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
         {
             using HttpClient httpClient = HttpClientFactory.CreateClient(AboutURI, Viking.UI.State.UserCredentials);
@@ -1386,8 +1380,6 @@ namespace WebAnnotation
         /// <param name="CacheFilename"></param>
         /// <param name="textureUri"></param>
         /// <returns></returns>
-        private static Task<bool> CachedResourceIsValid(string CacheFilename, Uri uri) => CachedResourceIsValidAsync(CacheFilename, uri);
-
         private static async Task<bool> CachedResourceIsValidAsync(string CacheFilename, Uri uri, CancellationToken cancellationToken = default)
         {
             if (uri is null)
@@ -1415,8 +1407,6 @@ namespace WebAnnotation
                 return false;
             }
         }
-
-        private static Task<bool> LoadServerUserSettings() => LoadServerUserSettingsAsync();
 
         private static async Task<bool> LoadServerUserSettingsAsync(CancellationToken cancellationToken = default)
         {
@@ -1456,12 +1446,6 @@ namespace WebAnnotation
             }
 
 
-        }
-
-        private static void CreateNewUserSettingsFile()
-        {
-            Global._userSettingsDoc = new XRoot(new UserSettings());
-            SaveUserSettings();
         }
 
         public static void SaveUserSettings() => Global._userSettingsDoc.Save(UserSettingsFilePath);
