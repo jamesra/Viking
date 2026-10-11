@@ -19,6 +19,8 @@ namespace VikingXNA
 
         private double _Downsample = 1;
 
+        private Vector2 _Shim = Vector2.Zero;
+
         /// <summary>
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
@@ -32,13 +34,37 @@ namespace VikingXNA
 
         private void UpdateViewMatrix()
         {
-            Vector3 CameraPos = Vector3.Backward;
-            Vector3 transformedPos = CameraPos;
+            Vector3 target = new(_LookAt.X - _Shim.X, _LookAt.Y - _Shim.Y, _LookAt.Z);
+            Vector3 transformedPos = Vector3.Backward + target;
 
-            transformedPos += _LookAt;
-
-            _View = Matrix.CreateLookAt(transformedPos, _LookAt, Vector3.UnitY);
+            _View = Matrix.CreateLookAt(transformedPos, target, Vector3.UnitY);
         }
+
+        /// <summary>
+        /// View-only translation in volume units. Everything drawn through <see cref="View"/> (tiles, annotations,
+        /// labels) appears displaced by +Shim relative to <see cref="LookAt"/>, so the content under the screen centre
+        /// has true volume position <see cref="EffectiveLookAt"/>. Scene.ScreenToWorld undoes it, so pointer input and
+        /// saved annotation coordinates stay in true volume space. Set by the section-correction shim; zero when no
+        /// correction applies.
+        /// </summary>
+        public Vector2 Shim
+        {
+            get => _Shim;
+            set
+            {
+                if (_Shim == value)
+                    return;
+
+                _Shim = value;
+                UpdateViewMatrix();
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Shim)));
+            }
+        }
+
+        /// <summary>
+        /// True volume position of the content at the screen centre: <see cref="LookAt"/> minus <see cref="Shim"/>.
+        /// </summary>
+        public Vector2 EffectiveLookAt => new(_LookAt.X - _Shim.X, _LookAt.Y - _Shim.Y);
 
 
         public float Pan

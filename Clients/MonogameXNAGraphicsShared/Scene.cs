@@ -5,7 +5,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
+using System.Threading;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -187,7 +187,7 @@ namespace VikingXNA
             }
             set
             {
-                Camera.LookAt = new Vector2((float)value.Center.X, (float)value.Center.Y);
+                Camera.LookAt = new Vector2((float)value.Center.X, (float)value.Center.Y) + Camera.Shim;
                 Camera.Downsample = Math.Max(value.Height, value.Width) / Math.Min(Viewport.Height, Viewport.Width);
                 try
                 {
@@ -235,8 +235,10 @@ namespace VikingXNA
         public Geometry.Vector2 ScreenToWorld(double X, double Y)
         {
             //The screen coordinates used by Windows and XNA put the Y origin at the top and bottom of the screen
-            double XPos = ((X - ((double)_Viewport.Width / 2)) * Camera.Downsample) + Camera.LookAt.X;
-            double YPos = -((Y - ((double)_Viewport.Height / 2)) * Camera.Downsample) + Camera.LookAt.Y;
+            // EffectiveLookAt removes the view-only Camera.Shim so the result is always a true volume position.
+            Vector2 center = Camera.EffectiveLookAt;
+            double XPos = ((X - ((double)_Viewport.Width / 2)) * Camera.Downsample) + center.X;
+            double YPos = -((Y - ((double)_Viewport.Height / 2)) * Camera.Downsample) + center.Y;
 
             return new Geometry.Vector2(XPos, YPos);
         }

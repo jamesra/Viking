@@ -491,6 +491,12 @@ namespace Viking
             UI.State.IdentityVolumeName = string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeName)
                 ? null
                 : wpfLoginWindow.VolumeName;
+            UI.State.CorrectionServiceUrl = string.IsNullOrWhiteSpace(wpfLoginWindow.CorrectionServiceUrl)
+                ? null
+                : wpfLoginWindow.CorrectionServiceUrl;
+            UI.State.CorrectionDatabaseName = string.IsNullOrWhiteSpace(wpfLoginWindow.CorrectionDatabaseName)
+                ? null
+                : wpfLoginWindow.CorrectionDatabaseName;
             if (!string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeURL))
                 UI.State.VolumeUrl = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(wpfLoginWindow.VolumeURL);
             UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)

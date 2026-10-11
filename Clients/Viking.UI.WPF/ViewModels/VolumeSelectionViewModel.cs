@@ -447,6 +447,12 @@ namespace Viking.UI.WPF.ViewModels
                         volumeInfo.Description = descObj.ToString();
                     }
                 }
+
+                // Present only when Identity assigned a correction service to the context.
+                if (resourcePermissions.Metadata.TryGetValue("CorrectionServiceUrl", out object correctionObj) && correctionObj != null)
+                    volumeInfo.CorrectionServiceUrl = correctionObj.ToString();
+                if (resourcePermissions.Metadata.TryGetValue("AnnotationDatabaseName", out object databaseObj) && databaseObj != null)
+                    volumeInfo.AnnotationDatabaseName = databaseObj.ToString();
             }
 
             System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Converted VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}, Description={volumeInfo.Description ?? "(null)"}");
@@ -480,6 +486,8 @@ namespace Viking.UI.WPF.ViewModels
         {
             string selectedUrl = null;
             string selectedName = null;
+            string correctionServiceUrl = null;
+            string annotationDatabaseName = null;
 
             // Prioritize manual entry if provided
             if (!string.IsNullOrWhiteSpace(ManualVolumeUrl))
@@ -492,6 +500,8 @@ namespace Viking.UI.WPF.ViewModels
             {
                 selectedUrl = SelectedVolume.Volume.VolumeXmlUrl;
                 selectedName = SelectedVolume.Volume.Name;
+                correctionServiceUrl = SelectedVolume.Volume.CorrectionServiceUrl;
+                annotationDatabaseName = SelectedVolume.Volume.AnnotationDatabaseName;
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] SelectedVolume.Volume exists - VolumeXmlUrl={selectedUrl ?? "(null)"}, Name={selectedName ?? "(null)"}");
             }
             else
@@ -505,7 +515,13 @@ namespace Viking.UI.WPF.ViewModels
                 selectedUrl = AppendDefaultVolumeFilenameIfMissing(selectedUrl);
 
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final volume URL: {selectedUrl}, Name: {selectedName ?? "(null - will load from XML)"}");
-                VolumeSelected?.Invoke(this, new VolumeSelectedEventArgs { Url = selectedUrl, Name = selectedName });
+                VolumeSelected?.Invoke(this, new VolumeSelectedEventArgs
+                {
+                    Url = selectedUrl,
+                    Name = selectedName,
+                    CorrectionServiceUrl = correctionServiceUrl,
+                    AnnotationDatabaseName = annotationDatabaseName
+                });
             }
             else
             {
@@ -633,6 +649,12 @@ namespace Viking.UI.WPF.ViewModels
         public string Url { get; set; }
 
         public string Name { get; set; }
+
+        /// <summary>Correction service URL Identity sent for the chosen context; null for manual entry or no service.</summary>
+        public string CorrectionServiceUrl { get; set; }
+
+        /// <summary>Annotation database of the chosen context, used with the StosGroup to key corrections.</summary>
+        public string AnnotationDatabaseName { get; set; }
     }
 }
 

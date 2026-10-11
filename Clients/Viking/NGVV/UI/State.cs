@@ -181,6 +181,18 @@ namespace Viking.UI
         public static string? IdentityVolumeName { get; set; }
 
         /// <summary>
+        /// URL of the correction service Identity assigned to the open annotation context, or null when none is
+        /// assigned (or the volume was opened by URL). Set by the login flow; the server-tree viewer uses it to apply section-correction shims.
+        /// </summary>
+        public static string? CorrectionServiceUrl { get; set; }
+
+        /// <summary>
+        /// Annotation database of the open context; with the active StosGroup it names the correction set to request
+        /// from <see cref="CorrectionServiceUrl"/>.
+        /// </summary>
+        public static string? CorrectionDatabaseName { get; set; }
+
+        /// <summary>
         /// Identity Server URL from this login (launch-exchange or login view). Used to reload
         /// accessible segmentation services mid-session without another login.
         /// </summary>
