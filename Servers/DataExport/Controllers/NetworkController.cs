@@ -251,13 +251,5 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
             GetODataUrl());
     }
 
-    private uint GetNumHops()
-    {
-        if (Request.Query.ContainsKey("hops") &&
-            uint.TryParse(Request.Query["hops"], out uint hops))
-        {
-            return hops;
-        }
-        return 1;
-    }
+    private uint GetNumHops() => RequestVariables.GetNumHops(Request.Query);
 }

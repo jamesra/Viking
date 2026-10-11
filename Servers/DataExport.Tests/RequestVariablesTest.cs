@@ -81,4 +81,26 @@ public class RequestVariablesTest
 
         CollectionAssert.AreEqual(new long[] { long.MaxValue, 7, 8 }, ids.ToArray());
     }
+
+    /// <summary>Missing, malformed and negative hops fall back to 1; huge values cap at Int32.MaxValue.</summary>
+    [TestMethod]
+    [DataRow(null, 1u)]
+    [DataRow("abc", 1u)]
+    [DataRow("-1", 1u)]
+    [DataRow("0", 0u)]
+    [DataRow("3", 3u)]
+    [DataRow("3000000000", 2147483647u)]
+    public void GetNumHopsParsesAndCaps(string? value, uint expected)
+    {
+        Dictionary<string, StringValues> values = [];
+        if (value is not null)
+        {
+            values["hops"] = value;
+        }
+
+        uint hops = RequestVariables.GetNumHops(new Microsoft.AspNetCore.Http.QueryCollection(values));
+
+        Assert.AreEqual(expected, hops);
+        Assert.IsTrue((int)hops >= 0);
+    }
 }

@@ -342,6 +342,24 @@ public static class RequestVariables
     }
 
     /// <summary>
+    /// Reads the <c>hops</c> query parameter (network expansion depth), defaulting to 1 when absent or not a number.
+    /// </summary>
+    /// <param name="queryData">The query collection from the HTTP request.</param>
+    /// <returns>
+    /// The hop count, capped at <see cref="int.MaxValue"/>. The OData client casts the value to <c>int</c>, so an
+    /// uncapped value above that wrapped negative and silently expanded zero hops.
+    /// </returns>
+    public static uint GetNumHops(IQueryCollection queryData)
+    {
+        if (queryData.ContainsKey("hops") && uint.TryParse(queryData["hops"], out uint hops))
+        {
+            return Math.Min(hops, (uint)int.MaxValue);
+        }
+
+        return 1;
+    }
+
+    /// <summary>
     /// Retrieves IDs from an OData query string.
     /// </summary>
     /// <param name="odataUri">The OData service URI.</param>
