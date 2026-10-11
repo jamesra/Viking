@@ -112,6 +112,7 @@
 		<ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
+		<ProjectReference Include="..\..\Viking.SectionCorrectionClient\Viking.SectionCorrectionClient.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationWPFControls\WebAnnotationWPFControls.csproj" />
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
 		<ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />

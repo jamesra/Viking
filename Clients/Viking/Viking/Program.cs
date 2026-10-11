@@ -467,6 +467,23 @@ namespace Viking
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
+        /// <summary>
+        /// Builds the source that asks the correction service for section offsets. Uses Grpc.Core, like the
+        /// segmentation client, with one channel per service address kept for the life of the process.
+        /// </summary>
+        private static Viking.SectionCorrectionClient.ISectionShimSource CreateCorrectionShimSource()
+        {
+            var channels = new System.Collections.Concurrent.ConcurrentDictionary<string, Grpc.Core.Channel>();
+            return new Viking.SectionCorrectionClient.GrpcSectionShimSource(uri =>
+            {
+                Grpc.Core.Channel channel = channels.GetOrAdd(uri.Authority, _ => new Grpc.Core.Channel(
+                    uri.Host,
+                    uri.Port,
+                    uri.Scheme == Uri.UriSchemeHttps ? new Grpc.Core.SslCredentials() : Grpc.Core.ChannelCredentials.Insecure));
+                return new Grpc.Core.DefaultCallInvoker(channel);
+            });
+        }
+
         private static ApplicationSettings? ShowLoginWindowFromDialog(LoginWindow wpfLoginWindow)
         {
             ApplicationSettings appSettings = new();
@@ -497,6 +514,7 @@ namespace Viking
             UI.State.CorrectionDatabaseName = string.IsNullOrWhiteSpace(wpfLoginWindow.CorrectionDatabaseName)
                 ? null
                 : wpfLoginWindow.CorrectionDatabaseName;
+            Viking.SectionCorrectionClient.SectionShimContext.Source = CreateCorrectionShimSource();
             if (!string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeURL))
                 UI.State.VolumeUrl = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(wpfLoginWindow.VolumeURL);
             UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)

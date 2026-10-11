@@ -292,6 +292,7 @@ namespace Viking.UI.Controls
                 }
 
                 _Section = value;
+                UpdateCorrectionShim();
                 if (_Section != null)
                 {
                     //NOTE: We have to update the section before we ask for the reference section
@@ -492,6 +493,7 @@ namespace Viking.UI.Controls
             StatusBar.Items.Add(tsPosition);
             StatusBar.Items.Add(tsMagnification);
             StatusBar.Items.Add(tsChannels);
+            InitializeCorrectionStatus(StatusBar);
             ObjectSelectedHandler = new Viking.Common.ObjectSelectedEventHandler(this.OnSelectedItemChanged);
             InternalReferenceSectionChanged = new ReferenceSectionChangedEventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
@@ -3069,8 +3071,9 @@ namespace Viking.UI.Controls
                 }
             }
 
-            this.Camera.LookAt = new Vector2(location.X, location.Y);
+            // Downsample first: it changes the shim fade, and LookAt must include the shim that will be showing.
             this.Downsample = (float)newDownsample;
+            this.Camera.LookAt = new Vector2(location.X, location.Y) + this.Camera.Shim;
             this.StatusPosition = new Geometry.Vector2(location.X, location.Y);
             this.StatusSection = this.Section.Number;
             this.StatusMagnification = newDownsample;
@@ -3110,9 +3113,12 @@ namespace Viking.UI.Controls
             Volume.ActiveVolumeTransform = menuItem.Text.ToLower() == "none" ? null : menuItem.Text;
         }
 
-        private void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e) =>
+        private void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
+        {
             //TODO: Cancel the active command
+            UpdateCorrectionShim();
             this.Invalidate();
+        }
 
         private void OnSectionTransformChanged(object sender, TransformChangedEventArgs e) =>
             //TODO: Cancel the active command

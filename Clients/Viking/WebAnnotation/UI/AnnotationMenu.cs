@@ -159,7 +159,10 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeOverlayPrompts,
                 Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings,
                 Global.AnnotationSettings.SegmentationMaskThreshold,
-                Global.AnnotationSettings.SegmentationUseMaskInput
+                Global.AnnotationSettings.SegmentationUseMaskInput,
+                Global.AnnotationSettings.CorrectionShimEnabled,
+                Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
+                Global.AnnotationSettings.CorrectionShimFadeEndDownsample
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -312,6 +315,10 @@ namespace WebAnnotation
             Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
             Global.AnnotationSettings.AutoPolygonizeOverlayPrompts = viewModel.AutoPolygonizeOverlayPrompts;
             Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings = viewModel.AutoPolygonizeHideSegmentationRings;
+            Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;
+            Global.AnnotationSettings.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
+            Global.AnnotationSettings.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;
+            Viking.UI.State.ViewerControl?.RefreshCorrectionShim();
             // Setter no-ops when the value is unchanged (e.g. already live-applied from the slider).
             // Always re-arm idle so a view that is now in range starts without a camera nudge.
             if (Global.AnnotationSettings.AutoPolygonizeCircles)

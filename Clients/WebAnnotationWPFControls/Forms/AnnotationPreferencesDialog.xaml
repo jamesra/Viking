@@ -169,6 +169,45 @@
                 </Expander>
 
                 <!-- Advanced Settings -->
+                <Expander Header="Section Corrections" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                   Text="When the open annotation context has a correction service, each section's image is shifted to line up with its neighbors. The shift is not accurate when zoomed out, so it fades in as you zoom in: none at or above the start downsample, full at or below the end downsample. Annotations move with the image and are always saved at their true position. The status bar shows whether a correction service is present and lets you turn it on or off."/>
+                        <CheckBox Margin="0,0,0,10"
+                                  IsChecked="{Binding CorrectionShimEnabled, Mode=TwoWay}"
+                                  Content="Apply section corrections"
+                                  VerticalContentAlignment="Center"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Start fading in at downsample:"/>
+                            <xctk:DoubleUpDown Grid.Column="1"
+                                               Value="{Binding CorrectionShimFadeStartDownsample}"
+                                               Minimum="0.25"
+                                               Maximum="256"
+                                               Increment="1.0"
+                                               FormatString="F1"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Fully applied at downsample:"/>
+                            <xctk:DoubleUpDown Grid.Column="1"
+                                               Value="{Binding CorrectionShimFadeEndDownsample}"
+                                               Minimum="0.25"
+                                               Maximum="256"
+                                               Increment="1.0"
+                                               FormatString="F1"/>
+                        </Grid>
+                        <TextBlock Margin="10,0,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                   Text="The start must be larger than the end. Defaults: 8 and 4."/>
+                    </StackPanel>
+                </Expander>
+
                 <Expander Header="Advanced Settings" IsExpanded="False" Margin="10">
                     <StackPanel Margin="10">
                         <!-- Default Location Jump Downsample -->

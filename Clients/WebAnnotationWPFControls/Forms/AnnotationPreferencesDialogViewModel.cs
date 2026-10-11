@@ -37,6 +37,9 @@ namespace WebAnnotation.WPF.Forms
         private bool _originalAutoPolygonizeOverlayMasks;
         private bool _originalAutoPolygonizeOverlayPrompts;
         private bool _originalAutoPolygonizeHideSegmentationRings;
+        private bool _originalCorrectionShimEnabled;
+        private double _originalCorrectionShimFadeStartDownsample;
+        private double _originalCorrectionShimFadeEndDownsample;
         private double _originalAutoPolygonizeMaxDownsample;
         private double _originalPolygonPointRadius;
         private double _originalSmallestRenderedSize;
@@ -411,6 +414,62 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        /// <summary>Lowest and highest downsample the correction shim range accepts.</summary>
+        public const double MinCorrectionShimDownsample = 0.25;
+        public const double MaxCorrectionShimDownsample = 256;
+
+        private bool _correctionShimEnabled = true;
+
+        /// <summary>
+        /// Whether the section-correction shim is on. Has an effect only for annotation contexts that have a correction service.
+        /// </summary>
+        public bool CorrectionShimEnabled
+        {
+            get => _correctionShimEnabled;
+            set
+            {
+                if (_correctionShimEnabled != value)
+                {
+                    _correctionShimEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _correctionShimFadeStartDownsample = 8;
+
+        /// <summary>Downsample at and above which the correction shim has no effect.</summary>
+        public double CorrectionShimFadeStartDownsample
+        {
+            get => _correctionShimFadeStartDownsample;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, MinCorrectionShimDownsample, MaxCorrectionShimDownsample);
+                if (Math.Abs(_correctionShimFadeStartDownsample - clamped) > 0.001)
+                {
+                    _correctionShimFadeStartDownsample = clamped;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _correctionShimFadeEndDownsample = 4;
+
+        /// <summary>Downsample at and below which the correction shim is fully applied. Should be below the start.</summary>
+        public double CorrectionShimFadeEndDownsample
+        {
+            get => _correctionShimFadeEndDownsample;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, MinCorrectionShimDownsample, MaxCorrectionShimDownsample);
+                if (Math.Abs(_correctionShimFadeEndDownsample - clamped) > 0.001)
+                {
+                    _correctionShimFadeEndDownsample = clamped;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         /// <summary>
         /// Factory default for <see cref="AutoPolygonizeMinRadiusNanometers"/>.
         /// Keep in step with WebAnnotation.Properties.Settings.
@@ -555,7 +614,10 @@ namespace WebAnnotation.WPF.Forms
             bool autoPolygonizeOverlayPrompts = false,
             bool autoPolygonizeHideSegmentationRings = false,
             double segmentationMaskThreshold = DefaultSegmentationMaskThreshold,
-            bool segmentationUseMaskInput = false)
+            bool segmentationUseMaskInput = false,
+            bool correctionShimEnabled = true,
+            double correctionShimFadeStartDownsample = 8,
+            double correctionShimFadeEndDownsample = 4)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -608,6 +670,9 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             _originalAutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             _originalAutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
+            _originalCorrectionShimEnabled = correctionShimEnabled;
+            _originalCorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
+            _originalCorrectionShimFadeEndDownsample = correctionShimFadeEndDownsample;
             _originalPolygonPointRadius = polygonPointRadius;
             _originalSmallestRenderedSize = smallestRenderedSize;
 
@@ -636,6 +701,9 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             AutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             AutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
+            CorrectionShimEnabled = correctionShimEnabled;
+            CorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
+            CorrectionShimFadeEndDownsample = correctionShimFadeEndDownsample;
             PolygonPointRadius = polygonPointRadius;
             SmallestRenderedSize = smallestRenderedSize;
 
@@ -671,6 +739,9 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeOverlayMasks = _autoPolygonizeOverlayMasks;
             _originalAutoPolygonizeOverlayPrompts = _autoPolygonizeOverlayPrompts;
             _originalAutoPolygonizeHideSegmentationRings = _autoPolygonizeHideSegmentationRings;
+            _originalCorrectionShimEnabled = _correctionShimEnabled;
+            _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
+            _originalCorrectionShimFadeEndDownsample = _correctionShimFadeEndDownsample;
             _originalPolygonPointRadius = _polygonPointRadius;
             _originalSmallestRenderedSize = _smallestRenderedSize;
         }
@@ -702,6 +773,9 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayMasks = _originalAutoPolygonizeOverlayMasks;
             _autoPolygonizeOverlayPrompts = _originalAutoPolygonizeOverlayPrompts;
             _autoPolygonizeHideSegmentationRings = _originalAutoPolygonizeHideSegmentationRings;
+            _correctionShimEnabled = _originalCorrectionShimEnabled;
+            _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
+            _correctionShimFadeEndDownsample = _originalCorrectionShimFadeEndDownsample;
             _polygonPointRadius = _originalPolygonPointRadius;
             _smallestRenderedSize = _originalSmallestRenderedSize;
 
@@ -740,6 +814,9 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayPrompts = false;
 #endif
             _autoPolygonizeHideSegmentationRings = false;
+            _correctionShimEnabled = true;
+            _correctionShimFadeStartDownsample = 8;
+            _correctionShimFadeEndDownsample = 4;
             _polygonPointRadius = 6.0;
             _smallestRenderedSize = 0.5;
 

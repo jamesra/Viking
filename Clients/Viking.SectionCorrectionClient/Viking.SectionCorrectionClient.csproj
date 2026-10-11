@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure client logic (no Monogame): the corrections shim service and its gRPC source. Usable from net48 and net10. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Viking.SectionCorrectionClient</RootNamespace>
+    <AssemblyName>Viking.SectionCorrectionClient</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\SectionCorrectionServiceTypes.gRPC\SectionCorrectionServiceTypes.gRPC.csproj" />
+  </ItemGroup>
+
+</Project>

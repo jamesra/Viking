@@ -274,6 +274,81 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Lowest and highest downsample accepted for the correction shim fade range.</summary>
+            const double MIN_CORRECTION_DOWNSAMPLE = 0.25;
+            const double MAX_CORRECTION_DOWNSAMPLE = 256;
+
+            /// <summary>
+            /// Whether the section-correction shim shifts the view when the open context has a correction service.
+            /// Saved across restarts; also toggled from the viewer's status bar.
+            /// </summary>
+            public static bool CorrectionShimEnabled
+            {
+                get => Properties.Settings.Default.CorrectionShimEnabled;
+                set
+                {
+                    Properties.Settings.Default.CorrectionShimEnabled = value;
+                    Properties.Settings.Default.Save();
+                    Viking.SectionCorrectionClient.SectionShimContext.Settings.Enabled = value;
+                }
+            }
+
+            /// <summary>
+            /// Downsample at and above which the correction shim has no effect. The shim fades in from here, reaching
+            /// full effect at <see cref="CorrectionShimFadeEndDownsample"/>.
+            /// </summary>
+            public static double CorrectionShimFadeStartDownsample
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.CorrectionShimFadeStartDownsample, MIN_CORRECTION_DOWNSAMPLE, MAX_CORRECTION_DOWNSAMPLE);
+                set
+                {
+                    value = MathUtils.Clamp(value, MIN_CORRECTION_DOWNSAMPLE, MAX_CORRECTION_DOWNSAMPLE);
+                    Properties.Settings.Default.CorrectionShimFadeStartDownsample = value;
+                    Properties.Settings.Default.Save();
+                    Viking.SectionCorrectionClient.SectionShimContext.Settings.FadeStartDownsample = value;
+                }
+            }
+
+            /// <summary>Downsample at and below which the correction shim is fully applied.</summary>
+            public static double CorrectionShimFadeEndDownsample
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.CorrectionShimFadeEndDownsample, MIN_CORRECTION_DOWNSAMPLE, MAX_CORRECTION_DOWNSAMPLE);
+                set
+                {
+                    value = MathUtils.Clamp(value, MIN_CORRECTION_DOWNSAMPLE, MAX_CORRECTION_DOWNSAMPLE);
+                    Properties.Settings.Default.CorrectionShimFadeEndDownsample = value;
+                    Properties.Settings.Default.Save();
+                    Viking.SectionCorrectionClient.SectionShimContext.Settings.FadeEndDownsample = value;
+                }
+            }
+
+            static bool _correctionShimPersistenceHooked;
+
+            /// <summary>
+            /// Copies the saved correction preferences into the settings the viewers read, and saves the on/off
+            /// state when a viewer's status-bar item changes it. Safe to call more than once.
+            /// </summary>
+            public static void ApplyCorrectionShimSettings()
+            {
+                var shim = Viking.SectionCorrectionClient.SectionShimContext.Settings;
+                shim.Enabled = Properties.Settings.Default.CorrectionShimEnabled;
+                shim.FadeStartDownsample = CorrectionShimFadeStartDownsample;
+                shim.FadeEndDownsample = CorrectionShimFadeEndDownsample;
+
+                if (!_correctionShimPersistenceHooked)
+                {
+                    _correctionShimPersistenceHooked = true;
+                    Viking.SectionCorrectionClient.SectionShimContext.SettingsChanged += () =>
+                    {
+                        Properties.Settings.Default.CorrectionShimEnabled = Viking.SectionCorrectionClient.SectionShimContext.Settings.Enabled;
+                        Properties.Settings.Default.Save();
+                    };
+                }
+
+                // Viewers created before the module loaded re-read the settings now.
+                Viking.SectionCorrectionClient.SectionShimContext.NotifySettingsChanged();
+            }
+
             public static double AdjacentLocationRadiusScalar
             {
                 get => MathUtils.Clamp(Properties.Settings.Default.AdjacentLocationRadiusScalar, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
@@ -743,6 +818,9 @@ namespace WebAnnotation
                 Properties.Settings.Default.ReferenceLocationTextScaleFactor = 2.5f;
                 Properties.Settings.Default.DefaultClosedLineWidth = 24.0;
                 Properties.Settings.Default.DefaultLocationJumpDownsample = 4.0;
+                CorrectionShimEnabled = true;
+                CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeStartDownsample;
+                CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeEndDownsample;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 4;
                 Properties.Settings.Default.PenSimplifyThreshold = 4;
@@ -1101,6 +1179,7 @@ namespace WebAnnotation
 
             //Section Thickness is hard-coded, should be pulled from server.
             Scale = new Geometry.Vector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
+            AnnotationSettings.ApplyCorrectionShimSettings();
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 

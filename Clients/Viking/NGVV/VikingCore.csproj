@@ -73,6 +73,7 @@
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
     <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+    <ProjectReference Include="..\..\Viking.SectionCorrectionClient\Viking.SectionCorrectionClient.csproj" />
   </ItemGroup>
   
   <!-- Include Windows Forms resource files with correct logical names -->
