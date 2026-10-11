@@ -2,6 +2,14 @@
 
 namespace WebAnnotation
 {
+    /// <summary>
+    /// One candidate returned by annotation hit testing: the hit object plus the keys used to rank it against other candidates.
+    /// Immutable; instances are created per query and ranked with one of the sorters below. Not thread-safe to enumerate while the source list is modified.
+    /// </summary>
+    /// <param name="o">The object that was hit.</param>
+    /// <param name="z">Z-order of the hit object; lower sorts first.</param>
+    /// <param name="visual_height">Visual height of the object; taller objects are treated as nearer the user.</param>
+    /// <param name="dist">Distance from the query point; 0 means the point is inside the object.</param>
     public class HitTestResult(VikingXNAGraphics.IHitTesting o, int z, int visual_height, double dist)
     {
         /// <summary>
@@ -10,11 +18,15 @@ namespace WebAnnotation
         /// where any other annotation that returns contains == true would have a distance == 0
         /// </summary>
         public readonly double Distance = dist;
+        /// <summary>Z-order of the hit object.</summary>
         public readonly int Z = z;
+        /// <summary>Visual height of the hit object, used to break ties between overlapping annotations.</summary>
         public readonly int VisualHeight = visual_height;
+        /// <summary>The object that was hit.</summary>
         public readonly VikingXNAGraphics.IHitTesting obj = o;
     }
 
+    /// <summary>Orders hits by Z, then by nearest distance. Used for structure links.</summary>
     public class HitTest_Z_Distance_Sorter : IComparer<HitTestResult>
     {
         public int Compare(HitTestResult x, HitTestResult y)
@@ -29,6 +41,7 @@ namespace WebAnnotation
         }
     }
 
+    /// <summary>Orders hits by Z, then tallest <see cref="HitTestResult.VisualHeight"/> first, then by nearest distance. Used for locations on the current section.</summary>
     public class HitTest_Z_Depth_Distance_Sorter : IComparer<HitTestResult>
     {
         public int Compare(HitTestResult x, HitTestResult y)
@@ -50,6 +63,7 @@ namespace WebAnnotation
         }
     }
 
+    /// <summary>Orders hits by nearest distance, then tallest <see cref="HitTestResult.VisualHeight"/> first. Used for objects on adjacent sections and for links.</summary>
     public class HitTest_Distance_Sorter : IComparer<HitTestResult>
     {
         public int Compare(HitTestResult x, HitTestResult y)
