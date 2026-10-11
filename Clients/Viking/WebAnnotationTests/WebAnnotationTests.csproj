@@ -30,6 +30,7 @@
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="LINQLikeExtensionsTests.cs" />
         <Compile Include="StructureIdTextTests.cs" />
+        <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="View\PolygonViewTimingLogTests.cs" />
         <Compile Include="Commands\PolygonHoleFillTests.cs" />
         <Compile Include="Commands\PolygonCutMeshBuilderTests.cs" />
