@@ -56,8 +56,11 @@ namespace Geometry
 
         /// <summary>
         /// Circumcircle of three non-collinear points (intersection of perpendicular bisectors).
-        /// Collinear triples throw.
+        /// Collinear triples throw, including triples collinear only to within rounding: the returned circle
+        /// always has all three points <see cref="ShapeRelation.Touching"/> it.
         /// </summary>
+        /// <exception cref="ArgumentException">The points are collinear, or so nearly collinear that no circle
+        /// through them can be represented to within <see cref="Tolerance.Epsilon"/>.</exception>
         public static Circle CircleFromThreePoints(Vector2 One, Vector2 Two, Vector2 Three)
         {
             if (One.X == Two.X && Two.X == Three.X)
@@ -85,7 +88,18 @@ namespace Geometry
                 y: (A * F - C * E) / G
             );
 
-            return new Circle(Center, Vector2.Distance(in Center, in One));
+            Circle circle = new(Center, Vector2.Distance(in Center, in One));
+
+            //A triple collinear to within rounding (e.g. a vertex on a straight edge at volume coordinates) passes the
+            //G test with a noise-sized G and a center ~1e17 px away, whose own ULP is many pixels. No threshold on G
+            //separates that from a real sliver at every magnitude, so check the result instead: the circle must pass
+            //through Two and Three at the same resolution GetRelation uses for points on the circumference.
+            if (circle.GetRelation(Two) != ShapeRelation.Touching || circle.GetRelation(Three) != ShapeRelation.Touching)
+            {
+                throw new ArgumentException("Circle from three points with three points numerically on a line");
+            }
+
+            return circle;
         }
 
         /*
