@@ -200,8 +200,6 @@ namespace Viking.UI.Controls
             }
         }
 
-        private string encryptString(string content, string passkey) => throw new NotImplementedException();
-
         async void Handle_Anonymmous(object sender, System.EventArgs e)
         {
             try

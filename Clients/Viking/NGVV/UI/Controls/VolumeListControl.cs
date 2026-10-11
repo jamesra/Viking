@@ -57,16 +57,6 @@ namespace Viking.UI.Controls
             listServers.Items.Add(Server);
         }
 
-        private string EnsureServerFormattingCorrect(string server)
-        {
-            Uri serverURI = new(server);
-            server = serverURI.ToString();
-            if (server[server.Length - 1] != '/')
-                server += '/';
-
-            return server;
-        }
-
         private void btnRemove_Click(object sender, EventArgs e)
         {
             if (this.listServers.SelectedItem != null)

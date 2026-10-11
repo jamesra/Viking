@@ -22,11 +22,5 @@ namespace WebAnnotation.View
                 BackgroundBox.Position = value;
             }
         }
-
-        private void CreateVisuals(Vector2 position)
-        {
-            Label = new LabelView(model.Name, position);
-            BackgroundBox = new RectangleView(Label.BoundingRect, model.Color.ToXNAColor());
-        }
     }
 }

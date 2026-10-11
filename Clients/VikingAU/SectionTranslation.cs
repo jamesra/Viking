@@ -51,8 +51,6 @@ namespace Viking.AU
     class SectionTranslations : IReadOnlyDictionary<long, SectionTranslation>
     {
         readonly SortedList<long, SectionTranslation> _offsetTable = [];
-        private static long ConvertKey(string str) => System.Convert.ToInt64(str);
-
         public void Add(long key, SectionTranslation color) => _offsetTable.Add(key, color);
 
         public bool ContainsKey(long key) => _offsetTable.ContainsKey(key);
