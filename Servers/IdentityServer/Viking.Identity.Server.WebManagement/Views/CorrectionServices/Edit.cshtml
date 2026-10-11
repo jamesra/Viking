@@ -54,6 +54,54 @@
                 <span asp-validation-for="Endpoint" class="text-danger"></span>
             </div>
 
+            @{
+                var rows = ViewBag.ContextRows as List<Viking.Identity.Server.WebManagement.Controllers.CorrectionServicesController.ContextAssignmentRow>
+                    ?? new List<Viking.Identity.Server.WebManagement.Controllers.CorrectionServicesController.ContextAssignmentRow>();
+            }
+            <div class="mb-3">
+                <label class="form-label">Annotation contexts corrected by this service</label>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <input type="search" id="contextFilter" class="form-control" style="max-width: 20rem" placeholder="Filter contexts" aria-label="Filter contexts" />
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="checkVisible">Check shown</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="uncheckVisible">Uncheck shown</button>
+                    <span class="align-self-center text-muted small" id="contextCount"></span>
+                </div>
+                <div class="border rounded" style="max-height: 24rem; overflow-y: auto">
+                    <table class="table table-sm table-hover mb-0" id="contextTable">
+                        <thead class="table-light" style="position: sticky; top: 0">
+                            <tr><th style="width: 2.5rem"></th><th>Context</th><th>Connectome</th><th>Currently</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in rows)
+                            {
+                                <tr data-name="@((row.Name + " " + row.Connectome).ToLowerInvariant())">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input context-box" name="assignedContextIds" value="@row.Id"
+                                               id="ctx-@row.Id" checked="@row.Assigned" disabled="@(!row.CanChange)" />
+                                    </td>
+                                    <td><label for="ctx-@row.Id" class="mb-0">@row.Name</label></td>
+                                    <td>@row.Connectome</td>
+                                    <td>
+                                        @if (row.OtherService != null)
+                                        {
+                                            <span class="badge bg-warning text-dark" title="Checking this context moves it to this service">@row.OtherService</span>
+                                        }
+                                        @if (!row.CanChange)
+                                        {
+                                            <span class="badge bg-secondary" title="You do not administer this context's organizational unit">read only</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <small class="form-text text-muted">
+                    Ticked contexts get this service's URL when they are opened in Viking. Unticking releases a context.
+                    A context shown with another service's name moves here if you tick it.
+                </small>
+            </div>
+
             <div class="form-group mt-4">
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i class="bi bi-save"></i> Save Changes
@@ -70,6 +118,23 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
         $(document).ready(function () {
+            function visibleBoxes() {
+                return $('#contextTable tbody tr:visible .context-box:not(:disabled)');
+            }
+            function updateCount() {
+                $('#contextCount').text($('#contextTable .context-box:checked').length + ' selected');
+            }
+            $('#contextFilter').on('input', function () {
+                var q = $(this).val().toLowerCase();
+                $('#contextTable tbody tr').each(function () {
+                    $(this).toggle($(this).data('name').indexOf(q) !== -1);
+                });
+            });
+            $('#checkVisible').on('click', function () { visibleBoxes().prop('checked', true); updateCount(); });
+            $('#uncheckVisible').on('click', function () { visibleBoxes().prop('checked', false); updateCount(); });
+            $('.context-box').on('change', updateCount);
+            updateCount();
+
             $('#editCorrectionServiceForm').on('submit', function () {
                 var $submitBtn = $(this).find('button[type=\"submit\"]');
                 $submitBtn.prop('disabled', true).html('<span class=\"spinner-border spinner-border-sm me-2\" role=\"status\" aria-hidden=\"true\"></span>Saving...');

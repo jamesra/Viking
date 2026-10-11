@@ -233,6 +233,7 @@ namespace Viking.Identity.Server.WebManagement
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
             services.AddScoped<ResourceProvisioningService>();
+            services.AddScoped<HelpAccess>();
             services.AddScoped<CollaboratorOnboardingService>();
             services.AddScoped<VikingLaunchCodeService>();
             services.Configure<VikingXmlCatalogOptions>(configuration.GetSection(VikingXmlCatalogOptions.SectionName));

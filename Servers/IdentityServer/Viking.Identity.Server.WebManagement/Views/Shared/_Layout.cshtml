@@ -89,6 +89,14 @@
                                 <i class="bi bi-rulers"></i> Correction Services
                             </a>
                         </li>
+                        @if (await HelpAccess.CanViewAsync(User))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Help" asp-action="Index">
+                                    <i class="bi bi-question-circle"></i> Help
+                                </a>
+                            </li>
+                        }
                         @if (this.User.IsInRole(Special.Roles.Admin))
                         {
                             <li class="nav-item dropdown">
