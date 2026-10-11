@@ -307,6 +307,7 @@ public static class RequestVariables
     /// <param name="idListStr">The string containing IDs to parse.</param>
     /// <param name="odataUrl">The OData service URL for query resolution.</param>
     /// <returns>A collection of parsed IDs.</returns>
+    /// <exception cref="IdRequestException">An entry is a negative number or larger than <see cref="long.MaxValue"/> (HTTP 400).</exception>
     public static ICollection<long> ParseIDString(string? idListStr, Uri odataUrl)
     {
         if (string.IsNullOrEmpty(idListStr))
@@ -328,6 +329,12 @@ public static class RequestVariables
             {
                 ICollection<long> queryIds = GetIDsFromQuery(odataUrl, idStr);
                 ids.AddRange(queryIds);
+            }
+            catch (OverflowException)
+            {
+                // A negative number, or one beyond Int64, is a malformed ID. Left uncaught it surfaced as a 500.
+                throw new IdRequestException(StatusCodes.Status400BadRequest,
+                    $"'{(idStr.Length > 32 ? idStr[..32] + "..." : idStr)}' is not a valid structure ID. IDs are non-negative whole numbers.");
             }
         }
 

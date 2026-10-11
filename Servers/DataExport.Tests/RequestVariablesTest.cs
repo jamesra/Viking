@@ -55,4 +55,30 @@ public class RequestVariablesTest
         Assert.IsTrue(ids.Contains(180));
         Assert.IsTrue(ids.Contains(476));
     }
+
+    /// <summary>A negative or Int64-overflowing ID is a 400 for the caller, not an unhandled OverflowException.</summary>
+    [TestMethod]
+    [DataRow("-5")]
+    [DataRow("180;-1")]
+    [DataRow("9223372036854775808")]
+    [DataRow("99999999999999999999999")]
+    public void ParseIDStringRejectsOutOfRangeIdsWith400(string text)
+    {
+        Uri endpoint = new("http://localhost/OData", UriKind.Absolute);
+
+        IdRequestException ex = Assert.ThrowsExactly<IdRequestException>(() => RequestVariables.ParseIDString(text, endpoint));
+
+        Assert.AreEqual(StatusCodes.Status400BadRequest, ex.StatusCode);
+    }
+
+    /// <summary>The largest valid ID and ordinary lists still parse.</summary>
+    [TestMethod]
+    public void ParseIDStringAcceptsLargestInt64()
+    {
+        Uri endpoint = new("http://localhost/OData", UriKind.Absolute);
+
+        ICollection<long> ids = RequestVariables.ParseIDString("9223372036854775807;7\n8", endpoint);
+
+        CollectionAssert.AreEqual(new long[] { long.MaxValue, 7, 8 }, ids.ToArray());
+    }
 }
