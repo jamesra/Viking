@@ -297,7 +297,12 @@ namespace Geometry
         /// <summary>
         /// OGC Covers: <paramref name="rect"/> lies in this closed rectangle.
         /// </summary>
-        public bool Covers(in Rectangle rect) => GetRelation(rect).IsCovers();
+        /// <remarks>
+        /// Not <see cref="ShapeRelationExtensions.IsCovers"/>: <see cref="GetRelation(in Rectangle)"/> reports a
+        /// rectangle touching from outside as Touching, which IsCovers would accept. QuadTree range queries rely on
+        /// this returning false for a neighboring quadrant that shares only an edge with the request.
+        /// </remarks>
+        public bool Covers(in Rectangle rect) => GetRelation(rect) == ShapeRelation.Contained;
 
         public bool Contains(in IPoint2D pos) => GetRelation(pos).IsContains();
 
@@ -456,15 +461,8 @@ namespace Geometry
                rect.Bottom >= this.Bottom)
                 return ShapeRelation.Contained;
 
-            bool LRIntersect = (this.Left < rect.Left && this.Right > rect.Left) ||
-                               (this.Right > rect.Left && this.Right < rect.Right) ||
-                               (this.Left > rect.Left && this.Right < rect.Right) ||
-                               (this.Left > rect.Left && this.Left < rect.Right);
-
-            bool UDIntersect = (this.Bottom < rect.Bottom && this.Top > rect.Bottom) ||
-                               (this.Top > rect.Bottom && this.Top < rect.Top) ||
-                               (this.Bottom > rect.Bottom && this.Top < rect.Top) ||
-                               (this.Bottom > rect.Bottom && this.Bottom < rect.Top);
+            bool LRIntersect = InteriorsOverlap(this.Left, this.Right, rect.Left, rect.Right);
+            bool UDIntersect = InteriorsOverlap(this.Bottom, this.Top, rect.Bottom, rect.Top);
 
             if (LRIntersect && UDIntersect)
                 return ShapeRelation.Intersecting;
@@ -493,6 +491,26 @@ namespace Geometry
             }
 
             return ShapeRelation.None;
+        }
+
+        /// <summary>
+        /// True when the interiors of the closed intervals [aMin, aMax] and [bMin, bMax] meet along one axis.
+        /// A zero-length interval's interior is its single point, so it overlaps only when that point lies
+        /// strictly inside the other interval; two zero-length intervals never overlap, which leaves collinear
+        /// degenerate rectangles to the touch tests in <see cref="GetRelation(in Rectangle)"/>.
+        /// Exact comparisons: equal endpoints are a shared edge, not an overlap.
+        /// </summary>
+        private static bool InteriorsOverlap(double aMin, double aMax, double bMin, double bMax)
+        {
+            bool aIsPoint = aMin == aMax;
+            bool bIsPoint = bMin == bMax;
+            if (aIsPoint && bIsPoint)
+                return false;
+            if (aIsPoint)
+                return bMin < aMin && aMin < bMax;
+            if (bIsPoint)
+                return aMin < bMin && bMin < aMax;
+            return Math.Max(aMin, bMin) < Math.Min(aMax, bMax);
         }
 
         private readonly int _HashCode;

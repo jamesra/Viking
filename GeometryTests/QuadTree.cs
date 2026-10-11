@@ -198,6 +198,26 @@ namespace GeometryTests
 
         }
 
+        /// <summary>
+        /// A request rectangle that only touches a subdivided quadrant along its outer edge must not
+        /// return that quadrant's points wholesale; each point still has to fall inside the request.
+        /// </summary>
+        [TestMethod]
+        public void QuadTreeIntersectSkipsQuadrantTouchingRequestFromOutside()
+        {
+            QuadTreeWithUniqueValues<int> tree = new(new Rectangle(-10, 10, -10, 10));
+            tree.Add(new Vector2(-7.5, 2.5), 0);
+            tree.Add(new Vector2(-2.5, 7.5), 1);
+            tree.Add(new Vector2(5, 5), 2);
+
+            Rectangle request = new(0, 15, 1, 15);
+            tree.Intersect(request, out List<Vector2> points, out List<int> values);
+
+            CollectionAssert.AreEquivalent(new[] { 2 }, values);
+            foreach (Vector2 p in points)
+                Assert.IsTrue(request.Covers(p), $"{p} is outside {request}");
+        }
+
         [TestMethod]
         public void QuadTreeTestTwo()
         {
