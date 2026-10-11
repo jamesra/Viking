@@ -281,7 +281,7 @@ namespace ConnectomeODataV4.Controllers
         {
             _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return _db.SelectNetworkStructures(IDs, Hops);
+            return _db.SelectNetworkStructures(IDs, NetworkHops.Clamp(Hops));
         }
 
         /*
@@ -324,7 +324,7 @@ namespace ConnectomeODataV4.Controllers
         {
             _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return _db.SelectNetworkChildStructures(IDs, Hops);
+            return _db.SelectNetworkChildStructures(IDs, NetworkHops.Clamp(Hops));
 
             // https://github.com/OData/WebApi/issues/255 
 

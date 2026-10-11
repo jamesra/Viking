@@ -223,7 +223,7 @@ namespace ConnectomeODataV4.Controllers
             _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
 
-            return _db.SelectNetworkStructureLinks(IDs, Hops);
+            return _db.SelectNetworkStructureLinks(IDs, NetworkHops.Clamp(Hops));
 
 
             /* https://github.com/OData/WebApi/issues/255 */

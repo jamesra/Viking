@@ -173,7 +173,7 @@ namespace ConnectomeODataV4.Controllers
         {
             _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return _db.SelectNetworkStructureSpatialData(IDs, Hops);
+            return _db.SelectNetworkStructureSpatialData(IDs, NetworkHops.Clamp(Hops));
         }
 
         [HttpGet]
@@ -227,7 +227,7 @@ namespace ConnectomeODataV4.Controllers
         {
             _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return _db.SelectNetworkChildStructureSpatialData(IDs, Hops);
+            return _db.SelectNetworkChildStructureSpatialData(IDs, NetworkHops.Clamp(Hops));
 
             // https://github.com/OData/WebApi/issues/255 
         }

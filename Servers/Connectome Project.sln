@@ -86,6 +86,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityServer", "IdentityS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationInterfaces", "..\AnnotationInterfaces\AnnotationInterfaces.csproj", "{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeODataV4.Tests", "ConnectomeODataV4.Tests\ConnectomeODataV4.Tests.csproj", "{2A78A785-27C2-41EE-A61B-B729C17FCA35}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -300,6 +302,12 @@ Global
 		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{2A78A785-27C2-41EE-A61B-B729C17FCA35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A78A785-27C2-41EE-A61B-B729C17FCA35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A78A785-27C2-41EE-A61B-B729C17FCA35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A78A785-27C2-41EE-A61B-B729C17FCA35}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A78A785-27C2-41EE-A61B-B729C17FCA35}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{2A78A785-27C2-41EE-A61B-B729C17FCA35}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
