@@ -7,10 +7,18 @@ using Viking.VolumeModel;
 
 namespace Viking
 {
+    /// <summary>
+    /// Cache entry holding one <see cref="TileView"/> and its key. <see cref="CacheEntry{TKey}.Size"/> is taken from the view
+    /// at construction so the owning <see cref="TileViewModelCache"/> can bound memory use.
+    /// </summary>
     internal class TileViewModelCacheEntry : CacheEntry<TileUniqueKey>
     {
+        /// <summary>The cached view; owned by the cache, which disposes it in <see cref="TileViewModelCache"/>.OnRemoveEntry.</summary>
         public TileView TileView;
 
+        /// <summary>Wraps <paramref name="T"/> and stamps the access time.</summary>
+        /// <param name="Key">Unique identity of the tile.</param>
+        /// <param name="T">The view to cache; must not be null (its <c>Size</c> is read).</param>
         public TileViewModelCacheEntry(TileUniqueKey Key, TileView T)
             : base(Key)
         {
@@ -21,6 +29,7 @@ namespace Viking
 
         public override string ToString() => $"{LastAccessed} - {TileView.TextureFileName}";
 
+        /// <summary>No-op: the <see cref="TileView"/> is disposed by <see cref="TileViewModelCache"/>.OnRemoveEntry, which marshals to the UI thread.</summary>
         public override void Dispose()
         {
         }
@@ -32,13 +41,16 @@ namespace Viking
     internal class TileViewModelCache : TimeQueueCache<TileUniqueKey, TileViewModelCacheEntry, TileView, TileView>
     {
 
+        /// <summary>Creates an empty cache limited to 256 MiB (<c>1 &lt;&lt; 28</c>).</summary>
         public TileViewModelCache() : base()
         {
             this.MaxCacheSize = 1 << 28;
         }
 
+        /// <summary>Returns the cached view for <paramref name="key"/> and marks it used for the current checkpoint, or null when absent.</summary>
         public TileView GetTile(TileUniqueKey key) => this.Fetch(key);
 
+        /// <summary>Marks <paramref name="key"/> as used since the last checkpoint so it survives the next cleanup, and returns its view.</summary>
         protected override TileView Fetch(TileViewModelCacheEntry key)
         {
             key.WasUsedSinceLastCheckpoint = true;
@@ -87,15 +99,15 @@ namespace Viking
         }
 
         /// <summary>
-        /// Retrieve existing tile if it exists, otherwise create a new one
+        /// Retrieve existing tile if it exists, otherwise create a new one. Safe to call from several threads for the same key;
+        /// the loser of a creation race receives the winner's view.
         /// </summary>
-        /// <param name="tileViewModel"></param>
-        /// <param name="textureFileName"></param>
-        /// <param name="cachedTextureFileName"></param>
-        /// <param name="TransformName"></param>
-        /// <param name="MipMapLevels"></param>
-        /// <param name="size"></param>
-        /// <returns></returns>
+        /// <param name="tileViewModel">Supplies the unique key and texture size.</param>
+        /// <param name="textureFileName">Source texture file name.</param>
+        /// <param name="cachedTextureFileName">Local cache file name for the texture.</param>
+        /// <param name="TransformName">Name of the section transform the tile is drawn with.</param>
+        /// <param name="MipMapLevels">Mip levels to build; one unless this is the minimum downsample level.</param>
+        /// <returns>The cached or new view; null only if the winning entry was evicted again before the retry fetch.</returns>
         public TileView FetchOrConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
@@ -118,14 +130,17 @@ namespace Viking
             return Fetch(key);
         }
 
+        /// <summary>Wraps an existing view in a cache entry.</summary>
         protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, TileView value)
         {
             TileViewModelCacheEntry entry = new(key, value);
             return entry;
         }
 
+        /// <summary>Builds the view with <paramref name="valueFactory"/> and wraps it in a cache entry.</summary>
         protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, Func<TileUniqueKey, TileView> valueFactory) => new TileViewModelCacheEntry(key, valueFactory(key));
 
+        /// <summary>Synchronous wrapper: the view already exists, so no real async work is needed.</summary>
         protected override Task<TileViewModelCacheEntry> CreateEntryAsync(TileUniqueKey key, TileView value) => Task.FromResult(CreateEntry(key, value));
 
         /// <summary>
@@ -160,7 +175,7 @@ namespace Viking
         /// If the tile does not have a texture loaded it is removed.
         /// Only one of these methods should be running at a time or much of the cache could be deleted
         /// </summary>
-        /// <param name="SafeTiles"></param>
+        /// <param name="entry">The entry that was not used since the last checkpoint.</param>
         protected override void OnCheckpointFailed(TileViewModelCacheEntry entry)
         {
             if (dictEntries.ContainsKey(entry.Key))
