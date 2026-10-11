@@ -13,6 +13,11 @@ namespace Viking.GrpcSectionCorrectionService
         readonly Dictionary<string, string> _map;
         readonly string _template;
 
+        /// <summary>
+        /// Creates a resolver from an explicit map and an optional template.
+        /// </summary>
+        /// <param name="map">Volume or database name to connection string; matched case-insensitively. Entries with a blank key or value are dropped. May be null.</param>
+        /// <param name="template">Fallback connection string containing <c>{VolumeName}</c>, or null for none.</param>
         public AnnotationConnectionResolver(IReadOnlyDictionary<string, string> map, string template)
         {
             _map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -28,6 +33,11 @@ namespace Viking.GrpcSectionCorrectionService
             _template = template;
         }
 
+        /// <summary>
+        /// Builds the resolver from the <c>AnnotationConnections</c> section and the <c>AnnotationConnectionTemplate</c> key.
+        /// Called once from Startup; the result is a singleton.
+        /// </summary>
+        /// <param name="configuration">Service configuration.</param>
         public static AnnotationConnectionResolver FromConfiguration(IConfiguration configuration)
         {
             Dictionary<string, string> map = [];
@@ -63,6 +73,11 @@ namespace Viking.GrpcSectionCorrectionService
             return null;
         }
 
+        /// <summary>
+        /// Resolves one name: the named map first, then the template with <c>{VolumeName}</c> replaced.
+        /// </summary>
+        /// <param name="volumeName">Volume, context, or database name.</param>
+        /// <returns>A connection string, or null when the name is blank or nothing is configured.</returns>
         public string Resolve(string volumeName)
         {
             if (string.IsNullOrWhiteSpace(volumeName))

@@ -9,6 +9,11 @@ namespace Viking.GrpcSectionCorrectionService
     /// <summary>
     /// Process-wide last rebuild snapshot for GetRebuildStatus.
     /// </summary>
+    /// <remarks>
+    /// Registered as a singleton. <see cref="CorrectionRebuildRunner"/> writes it with <see cref="Begin"/> and
+    /// <see cref="Complete"/>; <see cref="SectionCorrectionsService"/> reads it with <see cref="Snapshot"/>.
+    /// All instance members are thread safe (one internal lock); nothing is persisted, so a restart clears it.
+    /// </remarks>
     public sealed class RebuildStatusStore
     {
         readonly object _gate = new();
@@ -35,6 +40,10 @@ namespace Viking.GrpcSectionCorrectionService
             return version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
         }
 
+        /// <summary>
+        /// Marks a rebuild as running, stamps the start time, and clears the previous error.
+        /// </summary>
+        /// <param name="volumeNames">Annotation database names this rebuild covers; copied, must not be null.</param>
         public void Begin(IReadOnlyList<string> volumeNames)
         {
             lock (_gate)
@@ -46,6 +55,11 @@ namespace Viking.GrpcSectionCorrectionService
             }
         }
 
+        /// <summary>
+        /// Marks the running rebuild as finished and stamps the completion time. Call from a <c>finally</c> so a
+        /// failed rebuild does not leave <c>InProgress</c> set.
+        /// </summary>
+        /// <param name="error">Failure text to report from GetRebuildStatus; null or empty means success.</param>
         public void Complete(string error)
         {
             lock (_gate)
@@ -56,6 +70,10 @@ namespace Viking.GrpcSectionCorrectionService
             }
         }
 
+        /// <summary>
+        /// Copies the current state into a new protobuf message, so callers can return it without further locking.
+        /// </summary>
+        /// <returns>A status whose timestamps are unset until a rebuild has started or completed.</returns>
         public RebuildStatus Snapshot()
         {
             lock (_gate)
