@@ -15,6 +15,12 @@ namespace Viking.SectionCorrectionClient
         /// <summary>Default <see cref="FadeEndDownsample"/>.</summary>
         public const double DefaultFadeEndDownsample = 4;
 
+        /// <summary>
+        /// Master switch. When false no offsets are requested and the view is not shifted, even at full magnification.
+        /// Toggled from the status bar and saved with the annotation preferences.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
         /// <summary>Downsample (volume units per screen pixel) at and above which the shim is not applied.</summary>
         public double FadeStartDownsample { get; set; } = DefaultFadeStartDownsample;
 

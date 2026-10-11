@@ -43,10 +43,10 @@ namespace Jotunn
             SegmentationServiceUrl = login.SegmentationServiceUrl;
             Viking.SectionCorrectionClient.SectionShimContext.CorrectionServiceUrl = string.IsNullOrWhiteSpace(login.CorrectionServiceUrl) ? null : login.CorrectionServiceUrl;
             Viking.SectionCorrectionClient.SectionShimContext.DatabaseName = string.IsNullOrWhiteSpace(login.CorrectionDatabaseName) ? null : login.CorrectionDatabaseName;
-            Viking.SectionCorrectionClient.SectionShimContext.Source = Viking.SectionCorrectionClient.GrpcSectionShimSource.CreateDefault();
-            Viking.SectionCorrectionClient.SectionShimPreferences.Load(
-                Viking.SectionCorrectionClient.SectionShimContext.PreferencesPath,
-                Viking.SectionCorrectionClient.SectionShimContext.Settings);
+            var shimChannels = new System.Collections.Concurrent.ConcurrentDictionary<Uri, Grpc.Net.Client.GrpcChannel>();
+            Viking.SectionCorrectionClient.SectionShimContext.Source = new Viking.SectionCorrectionClient.GrpcSectionShimSource(
+                uri => shimChannels.GetOrAdd(uri, u => Grpc.Net.Client.GrpcChannel.ForAddress(u)).CreateCallInvoker());
+            WebAnnotation.Global.AnnotationSettings.ApplyCorrectionShimSettings();
             if (login.BearerToken != null)
             {
                 TokenStore.BearerToken = login.BearerToken;

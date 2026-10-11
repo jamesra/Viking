@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
-using Grpc.Net.Client;
 using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
 
 namespace Viking.SectionCorrectionClient
@@ -26,16 +24,6 @@ namespace Viking.SectionCorrectionClient
         public GrpcSectionShimSource(Func<Uri, CallInvoker> invokerFactory)
         {
             _invokerFactory = invokerFactory ?? throw new ArgumentNullException(nameof(invokerFactory));
-        }
-
-        /// <summary>
-        /// A source that opens one plain <see cref="GrpcChannel"/> per service URL and reuses it. The service's gRPC
-        /// endpoint is anonymous, so no token handler is needed. Use where no shared channel manager exists (net10 hosts).
-        /// </summary>
-        public static GrpcSectionShimSource CreateDefault()
-        {
-            var channels = new ConcurrentDictionary<Uri, GrpcChannel>();
-            return new GrpcSectionShimSource(uri => channels.GetOrAdd(uri, u => GrpcChannel.ForAddress(u)).CreateCallInvoker());
         }
 
         /// <inheritdoc/>
@@ -65,7 +53,7 @@ namespace Viking.SectionCorrectionClient
             CorrectPointsResponse response;
             try
             {
-                response = await client.CorrectPointsAsync(request, cancellationToken: cancellationToken).ConfigureAwait(false);
+                response = await client.CorrectPointsAsync(request, cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
             {

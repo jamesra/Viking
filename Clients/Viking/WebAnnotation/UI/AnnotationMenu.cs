@@ -132,7 +132,10 @@ namespace WebAnnotation
                 Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
                 Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
                 sceneWidth,
-                sceneDownsample
+                sceneDownsample,
+                Global.AnnotationSettings.CorrectionShimEnabled,
+                Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
+                Global.AnnotationSettings.CorrectionShimFadeEndDownsample
             );
 
             // Initialize static accessor properties
@@ -242,7 +245,10 @@ namespace WebAnnotation
                     Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
                     Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
                     sceneWidth,
-                    sceneDownsample
+                    sceneDownsample,
+                    Global.AnnotationSettings.CorrectionShimEnabled,
+                    Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
+                    Global.AnnotationSettings.CorrectionShimFadeEndDownsample
                 );
             };
 
@@ -266,6 +272,10 @@ namespace WebAnnotation
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
             Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction = viewModel.PolygonVertexPointsVisibleAtWidthFraction;
             Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction = viewModel.PolygonVertexPointsHiddenAtWidthFraction;
+            Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;
+            Global.AnnotationSettings.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
+            Global.AnnotationSettings.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;
+            Viking.UI.State.ViewerControl?.RefreshCorrectionShim();
 
             // Update static accessor properties
             VikingXNAGraphics.CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;

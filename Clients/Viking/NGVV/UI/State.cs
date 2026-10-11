@@ -192,12 +192,6 @@ namespace Viking.UI
         public static string? CorrectionDatabaseName { get; set; }
 
         /// <summary>
-        /// How viewers ask the correction service for a shim. Set by the annotation module once its gRPC channels
-        /// exist; null leaves the shim disabled.
-        /// </summary>
-        public static Viking.SectionCorrectionClient.ISectionShimSource? SectionShimSource { get; set; }
-
-        /// <summary>
         /// Base URL for opening a cell in SBFSEM-tools (default https://sbfsem-tools.com/open).
         /// Used by Identity bounce after auth; the menu opens the bounce URL, not this directly.
         /// </summary>

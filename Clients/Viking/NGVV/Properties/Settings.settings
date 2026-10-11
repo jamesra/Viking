@@ -145,11 +145,5 @@
     <Setting Name="LoadAdjacentSectionTextures" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="CorrectionShimFadeStartDownsample" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">8</Value>
-    </Setting>
-    <Setting Name="CorrectionShimFadeEndDownsample" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">4</Value>
-    </Setting>
   </Settings>
 </SettingsFile>

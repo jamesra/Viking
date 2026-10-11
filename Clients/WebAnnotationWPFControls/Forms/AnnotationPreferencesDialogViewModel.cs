@@ -32,6 +32,9 @@ namespace WebAnnotation.WPF.Forms
         private double _originalSmallestRenderedSize;
         private double _originalPolygonVertexPointsVisibleAtWidthFraction;
         private double _originalPolygonVertexPointsHiddenAtWidthFraction;
+        private bool _originalCorrectionShimEnabled;
+        private double _originalCorrectionShimFadeStartDownsample;
+        private double _originalCorrectionShimFadeEndDownsample;
         #endregion
 
         #region Basic Settings Properties
@@ -101,6 +104,66 @@ namespace WebAnnotation.WPF.Forms
                 if (Math.Abs(_defaultClosedLineWidth - value) > 0.01)
                 {
                     _defaultClosedLineWidth = MathUtils.Clamp(value, 1.0, 100.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Section Correction Properties
+
+        /// <summary>Lowest and highest downsample the correction shim range accepts.</summary>
+        public const double MinCorrectionShimDownsample = 0.25;
+        public const double MaxCorrectionShimDownsample = 256;
+
+        private bool _correctionShimEnabled = true;
+
+        /// <summary>
+        /// Whether the section-correction shim is on. Has an effect only for annotation contexts that have a correction service.
+        /// </summary>
+        public bool CorrectionShimEnabled
+        {
+            get => _correctionShimEnabled;
+            set
+            {
+                if (_correctionShimEnabled != value)
+                {
+                    _correctionShimEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _correctionShimFadeStartDownsample = 8;
+
+        /// <summary>Downsample at and above which the correction shim has no effect.</summary>
+        public double CorrectionShimFadeStartDownsample
+        {
+            get => _correctionShimFadeStartDownsample;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, MinCorrectionShimDownsample, MaxCorrectionShimDownsample);
+                if (Math.Abs(_correctionShimFadeStartDownsample - clamped) > 0.001)
+                {
+                    _correctionShimFadeStartDownsample = clamped;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _correctionShimFadeEndDownsample = 4;
+
+        /// <summary>Downsample at and below which the correction shim is fully applied. Should be below the start.</summary>
+        public double CorrectionShimFadeEndDownsample
+        {
+            get => _correctionShimFadeEndDownsample;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, MinCorrectionShimDownsample, MaxCorrectionShimDownsample);
+                if (Math.Abs(_correctionShimFadeEndDownsample - clamped) > 0.001)
+                {
+                    _correctionShimFadeEndDownsample = clamped;
                     OnPropertyChanged();
                 }
             }
@@ -413,7 +476,10 @@ namespace WebAnnotation.WPF.Forms
             double polygonVertexPointsVisibleAtWidthFraction,
             double polygonVertexPointsHiddenAtWidthFraction,
             int? sceneWidthPixels = null,
-            double? sceneDownsample = null)
+            double? sceneDownsample = null,
+            bool correctionShimEnabled = true,
+            double correctionShimFadeStartDownsample = 8,
+            double correctionShimFadeEndDownsample = 4)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -433,6 +499,9 @@ namespace WebAnnotation.WPF.Forms
             _polygonVertexPointsVisibleAtWidthFraction = polygonVertexPointsVisibleAtWidthFraction;
             _polygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
             _sceneWidthPixels = sceneWidthPixels ?? 1920;
+            _correctionShimEnabled = correctionShimEnabled;
+            _correctionShimFadeStartDownsample = correctionShimFadeStartDownsample;
+            _correctionShimFadeEndDownsample = correctionShimFadeEndDownsample;
 
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -454,6 +523,9 @@ namespace WebAnnotation.WPF.Forms
             _originalSmallestRenderedSize = smallestRenderedSize;
             _originalPolygonVertexPointsVisibleAtWidthFraction = polygonVertexPointsVisibleAtWidthFraction;
             _originalPolygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
+            _originalCorrectionShimEnabled = correctionShimEnabled;
+            _originalCorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
+            _originalCorrectionShimFadeEndDownsample = correctionShimFadeEndDownsample;
 
             // Use property setters to ensure bindings are established correctly
             // Temporarily disable preview updates during initial load
@@ -501,6 +573,9 @@ namespace WebAnnotation.WPF.Forms
             _originalSmallestRenderedSize = _smallestRenderedSize;
             _originalPolygonVertexPointsVisibleAtWidthFraction = _polygonVertexPointsVisibleAtWidthFraction;
             _originalPolygonVertexPointsHiddenAtWidthFraction = _polygonVertexPointsHiddenAtWidthFraction;
+            _originalCorrectionShimEnabled = _correctionShimEnabled;
+            _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
+            _originalCorrectionShimFadeEndDownsample = _correctionShimFadeEndDownsample;
         }
 
         public void RevertToOriginal()
@@ -524,6 +599,9 @@ namespace WebAnnotation.WPF.Forms
             _smallestRenderedSize = _originalSmallestRenderedSize;
             _polygonVertexPointsVisibleAtWidthFraction = _originalPolygonVertexPointsVisibleAtWidthFraction;
             _polygonVertexPointsHiddenAtWidthFraction = _originalPolygonVertexPointsHiddenAtWidthFraction;
+            _correctionShimEnabled = _originalCorrectionShimEnabled;
+            _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
+            _correctionShimFadeEndDownsample = _originalCorrectionShimFadeEndDownsample;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -549,6 +627,9 @@ namespace WebAnnotation.WPF.Forms
             _smallestRenderedSize = 10.0;
             _polygonVertexPointsVisibleAtWidthFraction = 0.0025;
             _polygonVertexPointsHiddenAtWidthFraction = 0.002;
+            _correctionShimEnabled = true;
+            _correctionShimFadeStartDownsample = 8;
+            _correctionShimFadeEndDownsample = 4;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }

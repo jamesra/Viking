@@ -63,8 +63,8 @@ namespace Viking.SectionCorrectionClient
         /// <summary>Fade preferences. Takes effect on the next <see cref="SceneChanged"/>.</summary>
         public SectionShimSettings Settings { get; }
 
-        /// <summary>True when a correction service is configured for the open annotation context.</summary>
-        public bool IsEnabled
+        /// <summary>True when a correction service is configured for the open annotation context, whether or not the shim is switched on.</summary>
+        public bool IsAvailable
         {
             get
             {
@@ -111,7 +111,8 @@ namespace Viking.SectionCorrectionClient
         /// <param name="downsample">Camera downsample.</param>
         public void SceneChanged(string stosGroup, long z, double centerX, double centerY, double halfWidth, double halfHeight, double downsample)
         {
-            double weight = Settings.Weight(downsample);
+            // A switched-off shim behaves as a zero weight: nothing is requested and the view is not shifted.
+            double weight = Settings.Enabled ? Settings.Weight(downsample) : 0;
             ShimSample? raw = null;
             bool needRequest = false;
             lock (_lock)
@@ -208,7 +209,7 @@ namespace Viking.SectionCorrectionClient
             {
                 if (_view == null || _disposed)
                     return;
-                weight = Settings.Weight(_view.Downsample);
+                weight = Settings.Enabled ? Settings.Weight(_view.Downsample) : 0;
                 raw = (FindLocked(_view) ?? NearestLocked(_view))?.Sample;
             }
 

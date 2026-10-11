@@ -17,11 +17,16 @@ namespace Viking.SectionCorrectionClient
         /// <summary>Source used to ask the service for offsets. Null disables the shim.</summary>
         public static ISectionShimSource Source { get; set; }
 
-        /// <summary>Where hosts without a settings system persist <see cref="Settings"/> (<c>%LOCALAPPDATA%\Jotunn\correction-shim.txt</c>).</summary>
-        public static string PreferencesPath { get; } = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Jotunn", "correction-shim.txt");
-
         /// <summary>Fade preferences shared by every viewer in the process.</summary>
         public static SectionShimSettings Settings { get; } = new SectionShimSettings();
+
+        /// <summary>
+        /// Raised after a viewer changes <see cref="Settings"/> (the status-bar toggle), so the host can save them.
+        /// Handlers run on the caller's thread, normally the UI thread.
+        /// </summary>
+        public static event Action SettingsChanged;
+
+        /// <summary>Raises <see cref="SettingsChanged"/>. Called by whoever changed <see cref="Settings"/>.</summary>
+        public static void NotifySettingsChanged() => SettingsChanged?.Invoke();
     }
 }

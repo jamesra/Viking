@@ -118,6 +118,31 @@ namespace Viking.SectionCorrectionClient.Tests
         }
 
         [TestMethod]
+        public async Task SwitchedOff_AsksNothingAndClearsTheShim_ThenResumesWhenSwitchedOn()
+        {
+            var source = new FakeSource();
+            var applied = new List<(double X, double Y)>();
+            var settings = new SectionShimSettings();
+            var service = new SectionShimService(source, (x, y) => { lock (applied) applied.Add((x, y)); }, settings,
+                debounce: TimeSpan.FromMilliseconds(5));
+            service.Configure("https://corr.example/", "RC1db", NmPerPixel);
+            service.SceneChanged("grid", 10, 5000, 6000, 400, 300, downsample: 4);
+            await WaitFor(() => Last(applied) != (0.0, 0.0));
+
+            settings.Enabled = false;
+            service.SceneChanged("grid", 10, 5000, 6000, 400, 300, downsample: 4);
+            Assert.AreEqual((0.0, 0.0), Last(applied));
+            service.SceneChanged("grid", 11, 5000, 6000, 400, 300, downsample: 4);
+            await Task.Delay(60);
+            Assert.AreEqual(1, source.Calls.Count, "no request while switched off");
+            Assert.IsTrue(service.IsAvailable, "the service is still present, only switched off");
+
+            settings.Enabled = true;
+            service.SceneChanged("grid", 10, 5000, 6000, 400, 300, downsample: 4);
+            Assert.AreEqual((50.0, -20.0), Last(applied), "the cached answer returns without a new request");
+        }
+
+        [TestMethod]
         public async Task SectionChange_DropsShimUntilThatSectionIsAnswered()
         {
             var source = new FakeSource();
@@ -170,7 +195,7 @@ namespace Viking.SectionCorrectionClient.Tests
             service.Configure(null, null, NmPerPixel);
 
             service.SceneChanged("grid", 10, 5000, 6000, 400, 300, downsample: 4);
-            Assert.IsFalse(service.IsEnabled);
+            Assert.IsFalse(service.IsAvailable);
             Assert.AreEqual(0, source.Calls.Count);
             Assert.AreEqual((0.0, 0.0), Last(applied));
 

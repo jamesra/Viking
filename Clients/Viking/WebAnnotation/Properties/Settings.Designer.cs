@@ -142,6 +142,42 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool CorrectionShimEnabled {
+            get {
+                return ((bool)(this["CorrectionShimEnabled"]));
+            }
+            set {
+                this["CorrectionShimEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("8")]
+        public double CorrectionShimFadeStartDownsample {
+            get {
+                return ((double)(this["CorrectionShimFadeStartDownsample"]));
+            }
+            set {
+                this["CorrectionShimFadeStartDownsample"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public double CorrectionShimFadeEndDownsample {
+            get {
+                return ((double)(this["CorrectionShimFadeEndDownsample"]));
+            }
+            set {
+                this["CorrectionShimFadeEndDownsample"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
         public double AdjacentLocationRadiusScalar {
             get {

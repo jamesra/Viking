@@ -298,7 +298,10 @@ namespace Jotunn
                 WebAnnotation.Global.AnnotationSettings.PolygonPointDiameter,
                 WebAnnotation.Global.AnnotationSettings.SmallestRenderedSize,
                 WebAnnotation.Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
-                WebAnnotation.Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction);
+                WebAnnotation.Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
+                correctionShimEnabled: WebAnnotation.Global.AnnotationSettings.CorrectionShimEnabled,
+                correctionShimFadeStartDownsample: WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
+                correctionShimFadeEndDownsample: WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeEndDownsample);
             AnnotationPreferencesDialog dialog = new(vm) { Owner = this };
             dialog.OkClicked += (_, _) => ApplyAnnotationPreferences(vm);
             dialog.ApplyClicked += (_, _) => ApplyAnnotationPreferences(vm);
@@ -331,31 +334,15 @@ namespace Jotunn
             WebAnnotation.Global.AnnotationSettings.PolygonOpacityWithParent = (float)vm.PolygonOpacityWithParent;
             WebAnnotation.Global.AnnotationSettings.CircleOpacityParentless = (float)vm.CircleOpacityParentless;
             WebAnnotation.Global.AnnotationSettings.CircleOpacityWithParent = (float)vm.CircleOpacityWithParent;
+            WebAnnotation.Global.AnnotationSettings.CorrectionShimEnabled = vm.CorrectionShimEnabled;
+            WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeStartDownsample = vm.CorrectionShimFadeStartDownsample;
+            WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeEndDownsample = vm.CorrectionShimFadeEndDownsample;
             vm.Apply();
         }
 
         void OnViewerPreferences(object sender, ExecutedRoutedEventArgs e)
         {
-            // Only the section-correction fade is persisted for Jotunn; the dialog's other settings are display-only here.
-            var vm = new Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel();
-            vm.ResetToDefaults();
-            vm.CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimContext.Settings.FadeStartDownsample;
-            vm.CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimContext.Settings.FadeEndDownsample;
-            vm.Apply();
-
-            void SaveShim()
-            {
-                var settings = Viking.SectionCorrectionClient.SectionShimContext.Settings;
-                settings.FadeStartDownsample = vm.CorrectionShimFadeStartDownsample;
-                settings.FadeEndDownsample = vm.CorrectionShimFadeEndDownsample;
-                Viking.SectionCorrectionClient.SectionShimPreferences.Save(
-                    Viking.SectionCorrectionClient.SectionShimContext.PreferencesPath, settings);
-                vm.Apply();
-            }
-
-            ViewerPreferencesDialog dialog = new(vm) { Owner = this };
-            dialog.OkClicked += (_, _) => SaveShim();
-            dialog.ApplyClicked += (_, _) => SaveShim();
+            ViewerPreferencesDialog dialog = new() { Owner = this };
             dialog.Show();
         }
 

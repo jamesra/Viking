@@ -1,7 +1,9 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.Xna.Framework;
+using System.Drawing;
+using System.Windows.Forms;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Viking.SectionCorrectionClient;
 
 #nullable enable
@@ -10,17 +12,93 @@ namespace Viking.UI.Controls
 {
     /// <summary>
     /// Section-correction shim: a view-only translation of the section on screen, supplied by the correction
-    /// service Identity assigned to the open annotation context.
+    /// service Identity assigned to the open annotation context, and the status-bar item that shows and toggles it.
     /// </summary>
     /// <remarks>
     /// The shim lives in <see cref="VikingXNA.Camera.Shim"/>. Tiles and annotations are drawn through the same
     /// camera, so both move together, while <see cref="VikingXNA.Scene.ScreenToWorld(Geometry.Vector2)"/> maps the
     /// pointer back to true volume coordinates. Annotation saving therefore needs no shim handling.
+    /// The fade range and the on/off switch are <see cref="SectionShimContext.Settings"/>, edited in the annotation
+    /// preferences.
     /// </remarks>
     public partial class SectionViewerControl
     {
+        static readonly System.Drawing.Color CorrectionOnColor = System.Drawing.Color.FromArgb(0, 140, 0);
+        static readonly System.Drawing.Color CorrectionOffColor = System.Drawing.Color.FromArgb(200, 0, 0);
+
         SectionShimService? _correctionShim;
         bool _correctionShimCreated;
+        ToolStripLabel? _tsCorrection;
+
+        /// <summary>
+        /// Adds the "Corrections" item to <paramref name="statusBar"/>. Called once from the constructor.
+        /// </summary>
+        /// <param name="statusBar">The viewer's status strip.</param>
+        void InitializeCorrectionStatus(StatusStrip statusBar)
+        {
+            _tsCorrection = new ToolStripLabel { AutoToolTip = false };
+            _tsCorrection.Click += (_, _) => ToggleCorrectionShim();
+            statusBar.Items.Add(_tsCorrection);
+            SectionShimContext.SettingsChanged += OnCorrectionSettingsChanged;
+            UpdateCorrectionStatus();
+        }
+
+        /// <summary>
+        /// Turns the correction shim on or off. Does nothing when the open context has no correction service.
+        /// </summary>
+        void ToggleCorrectionShim()
+        {
+            if (_correctionShim is null || !_correctionShim.IsAvailable)
+                return;
+
+            SectionShimContext.Settings.Enabled = !SectionShimContext.Settings.Enabled;
+            SectionShimContext.NotifySettingsChanged();
+        }
+
+        /// <summary>
+        /// Re-reads <see cref="SectionShimContext.Settings"/> after the preferences dialog or the status-bar toggle
+        /// changed them: re-evaluates the shim for the current view and redraws the status item.
+        /// </summary>
+        public void RefreshCorrectionShim()
+        {
+            UpdateCorrectionShim();
+            UpdateCorrectionStatus();
+        }
+
+        void OnCorrectionSettingsChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            if (InvokeRequired)
+                BeginInvoke(new Action(RefreshCorrectionShim));
+            else
+                RefreshCorrectionShim();
+        }
+
+        /// <summary>
+        /// Shows None (grey) when the context has no correction service, otherwise On (green) or Off (red).
+        /// </summary>
+        void UpdateCorrectionStatus()
+        {
+            if (_tsCorrection is null)
+                return;
+
+            if (_correctionShim is null || !_correctionShim.IsAvailable)
+            {
+                _tsCorrection.Text = "Corrections: None";
+                _tsCorrection.ForeColor = System.Drawing.SystemColors.GrayText;
+                _tsCorrection.ToolTipText = "This annotation context has no correction service.";
+                return;
+            }
+
+            bool on = SectionShimContext.Settings.Enabled;
+            _tsCorrection.Text = on ? "Corrections: On" : "Corrections: Off";
+            _tsCorrection.ForeColor = on ? CorrectionOnColor : CorrectionOffColor;
+            _tsCorrection.ToolTipText = on
+                ? "Section corrections are shifting the view. Click to turn them off."
+                : "Section corrections are off. Click to turn them on.";
+        }
 
         /// <summary>
         /// Creates the shim service the first time a section is shown for a context that has a correction service.
@@ -31,31 +109,17 @@ namespace Viking.UI.Controls
             if (_correctionShimCreated || _Section is null)
                 return;
 
-            ISectionShimSource? source = State.SectionShimSource;
+            ISectionShimSource? source = SectionShimContext.Source;
             string? url = State.CorrectionServiceUrl;
             string? database = State.CorrectionDatabaseName;
             if (source is null || string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(database))
                 return;
 
             _correctionShimCreated = true;
-            var settings = new SectionShimSettings();
-            _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, settings,
+            _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, SectionShimContext.Settings,
                 message => Trace.WriteLine(message, "CorrectionShim"));
-            ApplyCorrectionShimSettings();
             _correctionShim.Configure(url, database, _Section.VolumeViewModel.DefaultXYScale.Value);
-        }
-
-        /// <summary>
-        /// Copies the fade preferences into the running service. Called after the preferences dialog saves.
-        /// </summary>
-        void ApplyCorrectionShimSettings()
-        {
-            if (_correctionShim is null)
-                return;
-
-            _correctionShim.Settings.FadeStartDownsample = Viking.Properties.Settings.Default.CorrectionShimFadeStartDownsample;
-            _correctionShim.Settings.FadeEndDownsample = Viking.Properties.Settings.Default.CorrectionShimFadeEndDownsample;
-            UpdateCorrectionShim();
+            UpdateCorrectionStatus();
         }
 
         /// <summary>
@@ -118,6 +182,7 @@ namespace Viking.UI.Controls
 
         void DisposeCorrectionShim()
         {
+            SectionShimContext.SettingsChanged -= OnCorrectionSettingsChanged;
             _correctionShim?.Dispose();
             _correctionShim = null;
         }
