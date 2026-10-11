@@ -12,6 +12,7 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 
+import cv2
 import numpy as np
 import torch
 from numpy.typing import NDArray
@@ -36,7 +37,7 @@ from segmentation_server.mask_utils import (
     SegmentInfo,
     combined_mask_to_segments,
     count_covered_points,
-    mask_grows_past_box,
+    mask_touches_box,
     prepare_image_for_sam2,
     process_masks,
     select_mask,
@@ -48,6 +49,10 @@ DEFAULT_MODEL_CFG = "configs/sam2.1/sam2.1_hiera_l.yaml"
 DEFAULT_CHECKPOINT_NAME = "sam2.1_hiera_large.pt"
 
 _GENERATION_ATTR = "_viking_encoder_generation"
+# SAM2's mask decoder works at 1/4 of its 1024 input, and its prompt encoder takes a mask prompt at that size.
+_SAM2_LOW_RES = 256
+# Logits handed to SAM2 as a mask prompt are kept within this magnitude.
+_MASK_INPUT_LIMIT = 20.0
 # Layout of a disk embedding blob. It touches private SAM2 predictor state (_features, _orig_hw),
 # so a blob carries this number and one with another value is discarded instead of installed.
 # Bump it when the payload or the SAM2 pin changes what those fields mean.
@@ -455,6 +460,7 @@ class SegmentationModel:
         box: Optional[Sequence[int]] = None,
         mask_threshold: float = DEFAULT_MASK_THRESHOLD,
         use_mask_input: bool = False,
+        mask_logits: Optional[NDArray] = None,
     ) -> Tuple[NDArray[np.bool_], NDArray[np.float32], Optional[NDArray]]:
         """Run predict() and keep logits, highest score first.
 
@@ -469,10 +475,18 @@ class SegmentationModel:
         ``use_mask_input`` runs predict() a second time with the first pass's best
         low-resolution logits as SAM2's ``mask_input`` and the same prompts. Single-mask
         output only: with ``multimask_output`` the flag is ignored, because mask_input is one mask.
+
+        ``mask_logits`` is a 2-D logit map over the image (Y-down, any size, resized to SAM2's
+        256x256) given to the first pass as ``mask_input``: what is already known about the object
+        in this window, with 0 (neutral) where nothing is known. It is how a continuation window
+        is told what the neighboring windows found. Single-mask output only, like ``use_mask_input``.
         """
         point_coords: Optional[NDArray[np.int_]] = np.array(coordinates) if len(coordinates) else None
         point_labels: Optional[NDArray[np.int_]] = np.array(labels) if len(coordinates) else None
         box_xyxy = None if box is None else np.array(box, dtype=np.float32)
+        first_mask_input = None
+        if mask_logits is not None and not multimask_output:
+            first_mask_input = _as_sam2_mask_input(mask_logits)
 
         try:
             with self._gpu_lock, torch.inference_mode(), self._autocast():
@@ -480,6 +494,7 @@ class SegmentationModel:
                     point_coords=point_coords,
                     point_labels=point_labels,
                     box=box_xyxy,
+                    mask_input=first_mask_input,
                     multimask_output=multimask_output,
                     return_logits=True,
                 )
@@ -540,6 +555,7 @@ class SegmentationModel:
         box: Optional[Sequence[int]] = None,
         mask_threshold: float = DEFAULT_MASK_THRESHOLD,
         use_mask_input: bool = False,
+        mask_logits: Optional[NDArray] = None,
     ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
         """set_image() and predict() on a throwaway predictor.
 
@@ -567,6 +583,7 @@ class SegmentationModel:
                 box,
                 mask_threshold,
                 use_mask_input,
+                mask_logits,
             )
         finally:
             self.release_predictor(predictor)
@@ -581,12 +598,13 @@ class SegmentationModel:
         box: Optional[Sequence[int]] = None,
         mask_threshold: float = DEFAULT_MASK_THRESHOLD,
         use_mask_input: bool = False,
+        mask_logits: Optional[NDArray] = None,
     ) -> Tuple[NDArray[np.bool_], Optional[NDArray], float]:
         """One tile predict: the one mask the selection rule picks, its logits, and its score.
 
-        ``box``, ``mask_threshold`` and ``use_mask_input`` are described on
+        ``box``, ``mask_threshold``, ``use_mask_input`` and ``mask_logits`` are described on
         ``_predict_with_logits``. The mask is chosen by :func:`select_mask`, the same rule every
-        RPC uses: with a box, the highest-scoring candidate that covers at least 95% of the box and extends past it; without
+        RPC uses: with a box, the highest-scoring candidate that has a pixel inside it; without
         one, the candidate that covers the most foreground points. Nothing is combined and no
         looser prompt is tried.
 
@@ -612,6 +630,7 @@ class SegmentationModel:
             box,
             mask_threshold,
             use_mask_input,
+            mask_logits,
         )
         positives = [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
         if box_multimask:
@@ -622,7 +641,7 @@ class SegmentationModel:
 
     @staticmethod
     def _log_box_candidates(masks: NDArray, scores: NDArray, box: Sequence[int]) -> None:
-        """One line naming each candidate for a box prompt: score, pixels, and whether it answers the box.
+        """One line naming each candidate for a box prompt: score, pixels, and whether it touches the box.
 
         This is how the multimask trial is judged from real requests: the line shows what SAM2
         offered, and the rule's choice follows from it.
@@ -632,7 +651,7 @@ class SegmentationModel:
             mask = masks[index]
             parts.append(
                 f"#{index} score={float(scores[index]):.3f} px={int(np.count_nonzero(mask))} "
-                f"answers_box={mask_grows_past_box(mask, box)}"
+                f"touches_box={mask_touches_box(mask, box)}"
             )
         logger.info("Box prompt %s candidates: %s", tuple(int(v) for v in box), "; ".join(parts))
 
@@ -727,6 +746,26 @@ class SegmentationModel:
                 multimask_output,
                 (height, width),
             )
+
+
+def _as_sam2_mask_input(mask_logits: NDArray) -> NDArray[np.float32]:
+    """A 2-D logit map as SAM2's ``mask_input``: ``1 x 256 x 256`` float32.
+
+    SAM2's prompt encoder takes the low-resolution logits of a previous prediction, 256x256 for its
+    1024 input. A map of another size is resized bilinearly (area when shrinking), and values are
+    clipped to a sane logit range so one stray sample cannot dominate the embedding.
+    """
+    array = np.asarray(mask_logits, dtype=np.float32)
+    if array.ndim != 2 or array.size == 0:
+        raise ValueError(f"mask_logits must be a non-empty 2-D map, got shape {array.shape}")
+    if array.shape != (_SAM2_LOW_RES, _SAM2_LOW_RES):
+        shrinking = array.shape[0] > _SAM2_LOW_RES or array.shape[1] > _SAM2_LOW_RES
+        array = cv2.resize(
+            array,
+            (_SAM2_LOW_RES, _SAM2_LOW_RES),
+            interpolation=cv2.INTER_AREA if shrinking else cv2.INTER_LINEAR,
+        )
+    return np.clip(array, -_MASK_INPUT_LIMIT, _MASK_INPUT_LIMIT)[None, :, :]
 
 
 def _image_digest(image: NDArray) -> str:

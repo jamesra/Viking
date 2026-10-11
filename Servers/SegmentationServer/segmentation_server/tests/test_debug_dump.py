@@ -39,7 +39,7 @@ def _call(directory):
         background=[(30, 40)],
         score=0.7,
         directory=directory,
-        margin_logit_min=1.5,
+        logit_iso=1.0,
     )
 
 
@@ -66,7 +66,7 @@ def test_enabled_round_trips_masks_and_prompts(tmp_path, monkeypatch) -> None:
         assert data["logits_r45_c41"].tolist() == [[-1.0, 0.0], [1.0, 2.0]]
         assert "logits_r45_c42" not in data.files
         meta = json.loads(str(data["meta"]))
-    assert meta["margin_logit_min"] == 1.5
+    assert meta["logit_iso"] == 1.0
     assert meta["origin"] == [100, 200]
     assert meta["requested"] == [[46, 41]]
     assert meta["foreground"] == [[10, 20]]

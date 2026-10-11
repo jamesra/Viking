@@ -25,13 +25,6 @@ Point = Tuple[int, int]
 # value, including an explicit 0, override it.
 DEFAULT_MASK_THRESHOLD = 1.0
 
-# Share of the starting rectangle a candidate mask must cover to answer it. A mask rarely sets
-# every pixel of an object's interior (a dark organelle or a membrane leaves holes), so demanding
-# all of them rejected about 63% of box prompts in live logs, nearly half of those at 95% or
-# better. Candidates covering under half the box are SAM2 choosing another object and stay out.
-MIN_BOX_COVERAGE = 0.95
-
-
 class SegmentInfo(TypedDict):
     index: int
     score: float
@@ -240,50 +233,20 @@ class NoMatchingMask(Exception):
     """
 
 
-def mask_covers_box(mask: MaskArray, box: Sequence[int]) -> bool:
-    """True when every pixel of the inclusive ``(x0, y0, x1, y1)`` box is set in ``mask``.
+def mask_touches_box(mask: MaskArray, box: Sequence[int]) -> bool:
+    """True when at least one pixel of the inclusive ``(x0, y0, x1, y1)`` box is set in ``mask``.
 
-    The box is in the mask's own pixel frame (Y down). A box that reaches outside the mask can
-    never be covered, because the pixels outside it are not set.
+    The box is in the mask's own pixel frame (Y down). The part of the box outside the frame is
+    not set. An empty or inverted box touches nothing.
     """
     x0, y0, x1, y1 = (int(value) for value in box)
     if x1 < x0 or y1 < y0:
         return False
     height, width = mask.shape[-2], mask.shape[-1]
-    if x0 < 0 or y0 < 0 or x1 >= width or y1 >= height:
-        return False
-    return bool(mask[y0:y1 + 1, x0:x1 + 1].all())
-
-
-def box_coverage(mask: MaskArray, box: Sequence[int]) -> float:
-    """Share of the inclusive ``(x0, y0, x1, y1)`` box's pixels that are set in ``mask``.
-
-    The part of the box outside the mask's frame counts as not set, so a box that reaches past
-    the frame can never score 1.0. An empty or inverted box scores 0.
-    """
-    x0, y0, x1, y1 = (int(value) for value in box)
-    if x1 < x0 or y1 < y0:
-        return 0.0
-    height, width = mask.shape[-2], mask.shape[-1]
-    box_area = (x1 - x0 + 1) * (y1 - y0 + 1)
     cx0, cy0, cx1, cy1 = max(x0, 0), max(y0, 0), min(x1, width - 1), min(y1, height - 1)
     if cx1 < cx0 or cy1 < cy0:
-        return 0.0
-    return int(np.count_nonzero(mask[cy0:cy1 + 1, cx0:cx1 + 1])) / box_area
-
-
-def mask_grows_past_box(mask: MaskArray, box: Sequence[int]) -> bool:
-    """True when ``mask`` covers at least ``MIN_BOX_COVERAGE`` of ``box`` and has more pixels than the box.
-
-    The pixel-count condition turns away a mask that is exactly the rectangle: SAM2 echoing the
-    prompt back, which is not an object. The rectangle is where a mask starts; an answer must
-    extend beyond it.
-    """
-    if box_coverage(mask, box) < MIN_BOX_COVERAGE:
         return False
-    x0, y0, x1, y1 = (int(value) for value in box)
-    box_area = (x1 - x0 + 1) * (y1 - y0 + 1)
-    return int(np.count_nonzero(mask)) > box_area
+    return bool(mask[cy0:cy1 + 1, cx0:cx1 + 1].any())
 
 
 def count_covered_points(mask: MaskArray, points: Sequence[Point]) -> int:
@@ -299,10 +262,11 @@ def select_mask(
 ) -> int:
     """Index of the one candidate mask that answers the prompt. The same rule for every RPC.
 
-    With a ``box`` (the starting rectangle): of the masks that cover at least ``MIN_BOX_COVERAGE``
-    of it and have more pixels than it does (:func:`mask_grows_past_box`), the one with the
-    highest score. Auto-segmentation masks grow past their rectangle, so a mask that does not
-    cover it, or is only the rectangle itself, is not an answer to it.
+    With a ``box`` (the starting rectangle): of the masks that have a pixel inside it, the one with
+    the highest score. How much of the rectangle a mask fills is not asked: SAM2's mask for an
+    object rarely sets every pixel of its interior (a dark organelle or a membrane leaves holes),
+    and next to an image border it stops short of a box that reaches there. A mask that touches
+    none of the rectangle is SAM2 choosing another object.
 
     Without a box: the mask that covers the most ``positives`` (foreground points), ties broken by
     score. A mask must cover at least one.
@@ -320,11 +284,11 @@ def select_mask(
         raise NoMatchingMask("SAM2 returned no candidate masks.")
 
     if box is not None:
-        eligible = [i for i in range(count) if mask_grows_past_box(batch[i], box)]
+        eligible = [i for i in range(count) if mask_touches_box(batch[i], box)]
         if not eligible:
             raise NoMatchingMask(
-                f"None of the {count} candidate mask(s) covers at least {MIN_BOX_COVERAGE:.0%} of the "
-                f"starting rectangle {tuple(int(v) for v in box)} and extends past it."
+                f"None of the {count} candidate mask(s) has a pixel inside the starting rectangle "
+                f"{tuple(int(v) for v in box)}."
             )
         return max(eligible, key=lambda i: (float(score_vec[i]), -i))
 

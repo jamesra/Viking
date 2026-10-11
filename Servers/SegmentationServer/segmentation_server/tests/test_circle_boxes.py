@@ -124,9 +124,9 @@ class _BoxWorld(World):
         super().__init__(truth_up)
         self.boxes: list = []
 
-    def predict(self, row, col, points, labels, box=None):
+    def predict(self, row, col, points, labels, box=None, mask_logits=None):
         self.boxes.append((Cell(row, col), box))
-        return super().predict(row, col, points, labels, box=box)
+        return super().predict(row, col, points, labels, box=box, mask_logits=mask_logits)
 
 
 def test_growth_hands_the_cell_its_box_only_when_boxes_are_given() -> None:

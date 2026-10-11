@@ -1,4 +1,4 @@
-"""Box prompts can ask SAM2 for its three candidates and pick the best one that answers the box."""
+"""Box prompts can ask SAM2 for its three candidates and pick the best-scoring one that touches the box."""
 
 from __future__ import annotations
 
@@ -16,6 +16,10 @@ from test_eager_compile import svc  # the service module, imported with torch an
 
 SIDE = 64
 BOX = (10, 10, 30, 30)
+# A box the sub-part misses (it ends at 28) but the part and the whole reach.
+FAR_BOX = (35, 35, 50, 50)
+# A box none of the single-mask answer reaches.
+MISS_BOX = (40, 40, 50, 50)
 
 
 def _field(rect) -> np.ndarray:
@@ -72,20 +76,31 @@ def test_the_trial_is_off_unless_the_environment_turns_it_on(monkeypatch) -> Non
     assert env_box_multimask_enabled() is False
 
 
-def test_with_the_trial_off_a_box_gets_one_candidate_and_a_miss_is_refused(monkeypatch) -> None:
+def test_with_the_trial_off_a_box_gets_one_candidate_and_it_answers_the_box_it_touches(monkeypatch) -> None:
+    monkeypatch.delenv(BOX_MULTIMASK_ENV, raising=False)
+    predictor = FakePredictor()
+
+    mask, _logits, score = _model().predict_tile(
+        predictor, [(20, 20)], [1], False, (SIDE, SIDE), box=BOX, mask_threshold=0.0
+    )
+
+    assert predictor.calls[0]["multimask_output"] is False
+    assert score == pytest.approx(0.95)
+    assert int(np.count_nonzero(mask)) == 17 * 17, "the sub-part fills two thirds of the box and is still the answer"
+
+
+def test_with_the_trial_off_a_box_the_single_candidate_misses_is_refused(monkeypatch) -> None:
     monkeypatch.delenv(BOX_MULTIMASK_ENV, raising=False)
     predictor = FakePredictor()
 
     with pytest.raises(NoMatchingMask):
-        _model().predict_tile(predictor, [(20, 20)], [1], False, (SIDE, SIDE), box=BOX, mask_threshold=0.0)
-
-    assert predictor.calls[0]["multimask_output"] is False
+        _model().predict_tile(predictor, [(20, 20)], [1], False, (SIDE, SIDE), box=MISS_BOX, mask_threshold=0.0)
 
 
 def test_with_the_trial_on_a_box_asks_for_three_and_takes_the_best_that_answers_it(monkeypatch) -> None:
     monkeypatch.setenv(BOX_MULTIMASK_ENV, "1")
 
-    predictor, (mask, _logits, score) = _predict(BOX)
+    predictor, (mask, _logits, score) = _predict(FAR_BOX)
 
     assert predictor.calls[0]["multimask_output"] is True
     assert score == pytest.approx(0.80), "the 0.95 sub-part misses the box, so the 0.80 part wins over the 0.70 whole"
@@ -124,9 +139,9 @@ def test_each_candidate_is_logged_so_the_trial_can_be_judged_from_real_requests(
     monkeypatch.setenv(BOX_MULTIMASK_ENV, "1")
 
     with caplog.at_level(logging.INFO, logger=svc.logger.name):
-        _predict(BOX)
+        _predict(FAR_BOX)
 
     line = next(record.getMessage() for record in caplog.records if "Box prompt" in record.getMessage())
-    assert "#0 score=0.950" in line and "answers_box=False" in line
-    assert "#1 score=0.800" in line and "answers_box=True" in line
+    assert "#0 score=0.950" in line and "touches_box=False" in line
+    assert "#1 score=0.800" in line and "touches_box=True" in line
     assert "#2 score=0.700" in line

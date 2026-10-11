@@ -140,6 +140,31 @@ namespace GeometryTests.Algorithms
         }
 
         [TestMethod]
+        public void FindContours_SoftSaddleWithLowCentre_SeparatesDiagonalPixels()
+        {
+            // Inside corners are barely above iso, outside corners far below: the centre average is outside.
+            float[] field = [0.6f, 0f, 0f, 0.6f];
+
+            IReadOnlyList<Vector2[]> contours = MarchingSquares.FindContours(field, 2, 2, 0.5f);
+
+            Assert.AreEqual(2, contours.Count);
+            Assert.IsTrue(EvenOddContains(contours, new Vector2(0, 0)));
+            Assert.IsTrue(EvenOddContains(contours, new Vector2(1, 1)));
+            Assert.IsFalse(EvenOddContains(contours, new Vector2(1, 0)));
+            Assert.IsFalse(EvenOddContains(contours, new Vector2(0, 1)));
+        }
+
+        [TestMethod]
+        public void FindContours_SoftSaddleWithHighCentre_JoinsDiagonalPixels()
+        {
+            float[] field = [1f, 0.4f, 0.4f, 1f];
+
+            IReadOnlyList<Vector2[]> contours = MarchingSquares.FindContours(field, 2, 2, 0.5f);
+
+            Assert.AreEqual(1, contours.Count);
+        }
+
+        [TestMethod]
         public void FindContours_CShape_ConcaveBayIsOutside()
         {
             bool[] mask = FilledRectangle(20, 20, 2, 2, 17, 17);

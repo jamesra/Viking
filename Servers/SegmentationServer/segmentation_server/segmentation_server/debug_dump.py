@@ -5,17 +5,18 @@ Set SEGMENTATION_DEBUG_DUMP=1 to write one .npz per call under SEGMENTATION_DEBU
 never touches because its folder names are not checkpoint stamps). Only the newest
 MAX_DUMPS files are kept. Failures are logged and swallowed so a debug aid never breaks a request.
 
-Each file holds the fused mask, the 512 core mask of every cell the growth walk wrote, and a JSON
+Each file holds the fused mask, the fused logit grid (``fused_logits``, what the client contours), the 512 core mask of every cell the growth walk wrote, and a JSON
 ``meta`` entry with the prompts, uploaded and requested tiles, and the mosaic origin, so a
 straight edge in a mask can be tied to a cell core border. When the prediction is available it also
 holds ``raw_r{row}_c{col}`` (the whole 1024 SAM2 answer) and ``kept_r{row}_c{col}`` (the pieces that
 held a positive click), so ``raw & ~kept`` shows what the server discarded and ``raw`` alone shows
 where SAM2 itself stopped. ``logits_r{row}_c{col}`` is SAM2's logit map for that prediction
 (float16, usually 256x256, Y-down over the same 1024 window; upsample to compare with ``raw``).
-A margin pixel was accepted only where its logit reached ``meta["margin_logit_min"]``. A neighbor's margin pixel was removed from a core where
-the owning cell's own logit was below ``meta["owner_veto_logit"]``.
+Each cell's logits are blended into the fused result with a weight that falls to zero at the
+window border (see ``cell_grid.window_feather``); a fused pixel is object where its logit is above
+``meta["logit_iso"]``.
 
-``meta["seams"]`` lists every prediction in the order it ran: ``kind`` (``user`` or ``edge``), the
+``meta["seams"]`` lists every prediction in the order it ran: ``kind`` (``user``, ``edge`` or ``frontier``), the
 ``cell``, and for an edge the ``parent`` cell, its ``side`` facing the cell, the ``runs`` crossed
 (inclusive mosaic coordinates along the shared edge), the mosaic ``box`` sent (x_min, y_min, x_max,
 y_max, Y up) and extra ``clicks``, and the ``outcome`` (``accepted`` or ``rejected``, meaning no mask
@@ -63,16 +64,18 @@ def dump_growth(
     background: Sequence[Tuple[int, int]],
     score: float,
     directory: Optional[Path] = None,
-    margin_logit_min: Optional[float] = None,
-    owner_veto_logit: Optional[float] = None,
+    logit_iso: Optional[float] = None,
     request_id: int = 0,
     seams: Sequence[Any] = (),
     edges: Optional[Mapping[Any, Any]] = None,
+    fused_logits: Optional[np.ndarray] = None,
 ) -> Optional[Path]:
     """Write one growth result. Returns the file path, or None when disabled or on failure.
 
     ``cells`` maps a cell (with ``row`` and ``col``) to a prediction (with ``core`` and
     ``score``). Cores are stored as bool arrays under ``cell_r{row}_c{col}``.
+    ``fused_logits`` is the grid the client receives with ``LOGITS | NO_UPSCALE`` (Y-down, one
+    sample per 4 px over the same extent as ``fused``), stored as float32 under ``fused_logits``.
     """
     if not dump_enabled():
         return None
@@ -82,6 +85,8 @@ def dump_growth(
         stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
         path = target / f"dump-{stamp}-{int(time.time() * 1000) % 1000:03d}-{session}.npz"
         arrays = {"fused": np.asarray(fused_mask, dtype=np.bool_)}
+        if fused_logits is not None:
+            arrays["fused_logits"] = np.asarray(fused_logits, dtype=np.float32)
         cell_scores = {}
         for cell, pred in cells.items():
             name = f"cell_r{int(cell.row)}_c{int(cell.col)}"
@@ -106,8 +111,7 @@ def dump_growth(
             "foreground": [[int(x), int(y)] for x, y in foreground],
             "background": [[int(x), int(y)] for x, y in background],
             "cell_scores": cell_scores,
-            "margin_logit_min": None if margin_logit_min is None else float(margin_logit_min),
-            "owner_veto_logit": None if owner_veto_logit is None else float(owner_veto_logit),
+            "logit_iso": None if logit_iso is None else float(logit_iso),
             "seams": [_seam_json(seam) for seam in seams],
             "edges": [
                 {"cells": [int(a), int(b), int(c), int(d)], "runs": [[int(lo), int(hi)] for lo, hi in runs]}

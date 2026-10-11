@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -10,6 +11,10 @@ from segmentation_server.cell_grid import (
     CELL_SIZE,
     CORE_MARGIN,
     CORE_SIZE,
+    LOGIT_CORE,
+    LOGIT_CORE_MARGIN,
+    LOGIT_WINDOW,
+    UNSEEN_LOGIT,
     Canvas,
     Cell,
     TileIndex,
@@ -140,60 +145,114 @@ def test_canvas_read_assembles_blocks_across_cores() -> None:
     assert not canvas.read(lx - 10, ly, 5, 5).any()
 
 
-def test_or_window_splits_a_window_across_the_cores_it_overlaps_and_never_clears() -> None:
+def test_blend_window_fills_the_cores_it_overlaps_and_reports_what_each_gained() -> None:
     canvas = Canvas()
     cell = Cell(2, 2)
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    window[:] = True
 
-    added = canvas.or_window(cell, window)
+    added = canvas.blend_window(cell, np.full((LOGIT_WINDOW, LOGIT_WINDOW), 5.0, dtype=np.float32), 1.0)
 
     assert set(added) == {cell} | set(neighbor_cells(cell))
     assert added[cell] == CORE_SIZE * CORE_SIZE
-    assert sum(added.values()) == CELL_SIZE * CELL_SIZE
-    assert canvas.or_window(cell, np.zeros_like(window)) == {}
-    assert canvas.or_window(cell, window) == {}
+    assert canvas.decided_core(cell).all()
+    assert canvas.core(cell).all()
+    assert canvas.blend_window(cell, np.full((LOGIT_WINDOW, LOGIT_WINDOW), 5.0, dtype=np.float32), 1.0) == {}
+    # The outer pixels of the window blend with an unseen neighbor sample and fall below the iso.
+    # The walk's control view also leaves out the unreliable outer 64 px of the window.
     x0, y0 = window_origin(cell)
-    assert canvas.read(x0, y0, CELL_SIZE, CELL_SIZE).all()
+    window = canvas.read(x0, y0, CELL_SIZE, CELL_SIZE)
+    assert window[64:-64, 64:-64].all()
+    assert not window[:60, :].any()
+
+
+def test_blend_window_rejects_logits_that_are_not_the_native_window() -> None:
+    with pytest.raises(ValueError):
+        Canvas().blend_window(Cell(1, 1), np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.float32), 1.0)
 
 
 @settings(max_examples=25, deadline=None)
 @given(
-    x=st.integers(0, CELL_SIZE - 60),
-    y=st.integers(0, CELL_SIZE - 60),
-    size=st.integers(1, 60),
+    x=st.integers(20, LOGIT_WINDOW - 60),
+    y=st.integers(20, LOGIT_WINDOW - 60),
+    size=st.integers(6, 40),
 )
-def test_or_window_places_pixels_at_their_mosaic_position(x: int, y: int, size: int) -> None:
+def test_blend_window_places_pixels_at_their_mosaic_position(x: int, y: int, size: int) -> None:
     canvas = Canvas()
     cell = Cell(3, 5)
-    window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    window[y:y + size, x:x + size] = True
+    logits = np.full((LOGIT_WINDOW, LOGIT_WINDOW), -6.0, dtype=np.float32)
+    logits[y:y + size, x:x + size] = 6.0
 
-    canvas.or_window(cell, window)
+    canvas.blend_window(cell, logits, 1.0)
 
     x0, y0 = window_origin(cell)
-    assert np.array_equal(canvas.read(x0, y0, CELL_SIZE, CELL_SIZE), window)
+    window = canvas.read(x0, y0, CELL_SIZE, CELL_SIZE)
+    scale = CELL_SIZE // LOGIT_WINDOW
+    inside = window[(y + 1) * scale:(y + size - 1) * scale, (x + 1) * scale:(x + size - 1) * scale]
+    assert inside.all()
+    assert not window[:(y - 1) * scale, :].any() and not window[(y + size + 1) * scale:, :].any()
+    assert not window[:, :(x - 1) * scale].any() and not window[:, (x + size + 1) * scale:].any()
 
 
-def test_set_veto_removes_a_neighbors_pixels_but_not_the_owners_own() -> None:
+def test_a_window_decides_least_at_its_border_so_the_cell_that_sees_a_pixel_centred_wins() -> None:
     canvas = Canvas()
-    owner = Cell(2, 2)
-    neighbor = Cell(2, 1)
-    owner_window = np.zeros((CELL_SIZE, CELL_SIZE), dtype=bool)
-    owner_window[CORE_MARGIN:CORE_MARGIN + 100, CORE_MARGIN:CORE_MARGIN + 100] = True
-    canvas.or_window(owner, owner_window)
-    neighbor_window = np.ones((CELL_SIZE, CELL_SIZE), dtype=bool)
-    canvas.or_window(neighbor, neighbor_window)
+    left, right = Cell(2, 2), Cell(2, 3)
+    canvas.blend_window(left, np.full((LOGIT_WINDOW, LOGIT_WINDOW), 6.0, dtype=np.float32), 1.0)
 
-    veto = np.ones((CORE_SIZE, CORE_SIZE), dtype=bool)
-    removed = canvas.set_veto(owner, veto)
+    canvas.blend_window(right, np.full((LOGIT_WINDOW, LOGIT_WINDOW), -6.0, dtype=np.float32), 1.0)
 
-    after = canvas.core(owner)
-    assert removed == CORE_MARGIN * CORE_SIZE - 100 * 100
-    assert np.array_equal(after, owner_window[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE])
+    # The right window starts 256 px into the left core. Just inside its border it barely counts,
+    # a full margin in it counts as much as the left window, which cancels it out.
+    core = canvas.decided_core(left)
+    assert core[:, 256:262].all()
+    assert not core[:, CORE_SIZE - 40:].any()
+    assert core[:, :256].all()
 
 
-def test_assume_box_fills_the_box_across_cores_and_a_veto_cannot_take_it_back() -> None:
+def test_blending_can_remove_pixels_a_weaker_window_added() -> None:
+    canvas = Canvas()
+    cell = Cell(2, 2)
+    canvas.blend_window(cell, np.full((LOGIT_WINDOW, LOGIT_WINDOW), 2.0, dtype=np.float32), 1.0)
+    assert canvas.core(cell).all()
+
+    canvas.blend_window(cell, np.full((LOGIT_WINDOW, LOGIT_WINDOW), -8.0, dtype=np.float32), 1.0)
+
+    assert not canvas.core(cell).any()
+
+
+def test_pixels_from_a_prediction_without_logits_and_assumed_pixels_survive_blending() -> None:
+    canvas = Canvas()
+    cell = Cell(2, 2)
+    own = np.zeros((CORE_SIZE, CORE_SIZE), dtype=bool)
+    own[:10, :10] = True
+    canvas.or_core(cell, own)
+    bx, by = core_origin(cell)
+    canvas.assume_box((bx + 100, by + 100, bx + 120, by + 120))
+
+    canvas.blend_window(cell, np.full((LOGIT_WINDOW, LOGIT_WINDOW), -8.0, dtype=np.float32), 1.0)
+
+    core = canvas.core(cell)
+    assert core[:10, :10].all()
+    assert core[100:121, 100:121].all()
+    assert int(core.sum()) == 100 + 21 * 21
+
+
+def test_fused_mosaic_is_y_down_marks_unseen_and_raises_assumed_pixels_to_the_pin_level() -> None:
+    canvas = Canvas()
+    low, high = Cell(2, 2), Cell(3, 2)
+    logits = np.full((LOGIT_WINDOW, LOGIT_WINDOW), 3.0, dtype=np.float32)
+    canvas.blend_window(high, logits, 1.0)
+    canvas.assume_core(low)
+
+    mosaic = canvas.fused_mosaic(2, 3, 2, 2, pin_level=7.5)
+
+    assert mosaic.shape == (2 * LOGIT_CORE, LOGIT_CORE)
+    assert np.allclose(mosaic[:LOGIT_CORE], 3.0)  # row 3 is Y-up above row 2, so it is the top block
+    assert np.allclose(mosaic[LOGIT_CORE:], 7.5)
+    assert np.allclose(canvas.fused_block(Cell(9, 9)), UNSEEN_LOGIT)
+    assert canvas.has_logits()
+    assert not Canvas().has_logits()
+
+
+def test_assume_box_fills_the_box_across_cores_and_blending_cannot_take_it_back() -> None:
     canvas = Canvas()
     first = Cell(2, 2)
     bx, by = core_origin(first)
@@ -207,33 +266,80 @@ def test_assume_box_fills_the_box_across_cores_and_a_veto_cannot_take_it_back() 
     assert canvas.core(Cell(2, 3))[:, :89].any()
     assert canvas.assume_box(box) == {}
 
-    for cell in added:
-        canvas.set_veto(cell, np.ones((CORE_SIZE, CORE_SIZE), dtype=bool))
+    canvas.blend_window(first, np.full((LOGIT_WINDOW, LOGIT_WINDOW), -8.0, dtype=np.float32), 1.0)
     assert sum(int(canvas.core(cell).sum()) for cell in added) == 201 * 111
 
-
-def test_a_vetoed_pixel_cannot_be_added_by_a_neighbor_later_and_none_clears_the_veto() -> None:
-    canvas = Canvas()
-    owner = Cell(2, 2)
-    neighbor = Cell(2, 1)
-    veto = np.zeros((CORE_SIZE, CORE_SIZE), dtype=bool)
-    veto[:, :50] = True
-    canvas.set_veto(owner, veto)
-    window = np.ones((CELL_SIZE, CELL_SIZE), dtype=bool)
-    reach = CORE_MARGIN
-
-    added = canvas.or_window(neighbor, window)
-
-    core = canvas.core(owner)
-    assert not core[:, :50].any()
-    assert core[:, 50:reach].all()
-    assert not core[:, reach:].any()
-    assert added[owner] == (reach - 50) * CORE_SIZE
-
-    canvas.set_veto(owner, None)
-    canvas.or_window(neighbor, window)
-    assert canvas.core(owner)[:, :reach].all()
 
 def _blob(window: np.ndarray, cx: int, cy: int, radius: int) -> None:
     ys, xs = np.ogrid[:CELL_SIZE, :CELL_SIZE]
     window |= (xs - cx) ** 2 + (ys - cy) ** 2 <= radius ** 2
+
+
+def test_a_sample_only_silent_predictions_cover_stays_unseen_not_background() -> None:
+    canvas = Canvas()
+    cell = Cell(2, 2)
+    logits = np.full((LOGIT_WINDOW, LOGIT_WINDOW), 4.0, dtype=np.float32)
+    silent = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=bool)
+    silent[100:104, 100:104] = True
+
+    canvas.blend_window(cell, logits, 1.0, ignore_up=silent)
+
+    block = canvas.fused_block(cell)
+    oy = ox = LOGIT_CORE_MARGIN
+    assert np.all(block[100 - oy:104 - oy, 100 - ox:104 - ox] == UNSEEN_LOGIT)
+    assert block[90 - oy, 90 - ox] == pytest.approx(4.0, abs=0.01), "what the prediction is not silent about is kept"
+
+
+def test_a_silent_sample_loses_to_a_window_that_saw_it() -> None:
+    canvas = Canvas()
+    first, second = Cell(2, 2), Cell(2, 3)
+    silent = np.ones((LOGIT_WINDOW, LOGIT_WINDOW), dtype=bool)
+    canvas.blend_window(first, np.full((LOGIT_WINDOW, LOGIT_WINDOW), -6.0, dtype=np.float32), 1.0, ignore_up=silent)
+
+    canvas.blend_window(second, np.full((LOGIT_WINDOW, LOGIT_WINDOW), 6.0, dtype=np.float32), 1.0)
+
+    core = canvas.decided_core(first)
+    assert core[:, 300:480].all(), "where the second window saw the pixel, it decides"
+
+
+def _object_in_covered_background() -> Canvas:
+    """A 40x40 sample object well inside one window, background all round, nothing past the window."""
+    canvas = Canvas()
+    logits = np.full((LOGIT_WINDOW, LOGIT_WINDOW), -6.0, dtype=np.float32)
+    logits[100:140, 100:140] = 6.0
+    canvas.blend_window(Cell(2, 2), logits, 1.0)
+    return canvas
+
+
+def test_an_object_inside_covered_background_has_no_frontier() -> None:
+    assert _object_in_covered_background().frontier_points(Cell(2, 2), 1.0) == []
+
+
+def test_an_object_that_meets_unseen_area_has_a_frontier_at_its_strongest_sample_there() -> None:
+    canvas = Canvas()
+    logits = np.full((LOGIT_WINDOW, LOGIT_WINDOW), -6.0, dtype=np.float32)
+    logits[100:140, 100:140] = 6.0
+    logits[139, 100:140] = 9.0   # the strongest samples are the ones on the uncovered side
+    silent = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=bool)
+    silent[140:, :] = True       # nothing above the object was seen
+    canvas.blend_window(Cell(2, 2), logits, 1.0, ignore_up=silent)
+
+    points = canvas.frontier_points(Cell(2, 2), 1.0)
+
+    assert len(points) == 1
+    x, y, logit = points[0]
+    assert logit == pytest.approx(9.0, abs=0.05)
+    # Sample row 139 of the window is mosaic y = (2 * 128 + 139) * 4, and the strip spans samples 100..139 in x.
+    assert (2 * 128 + 139) * 4 <= y <= (2 * 128 + 139) * 4 + 4
+    assert (2 * 128 + 100) * 4 <= x <= (2 * 128 + 140) * 4
+
+
+def test_a_speck_touching_unseen_area_is_not_a_frontier() -> None:
+    canvas = Canvas()
+    logits = np.full((LOGIT_WINDOW, LOGIT_WINDOW), -6.0, dtype=np.float32)
+    logits[100:102, 100:102] = 6.0
+    silent = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=bool)
+    silent[102:, :] = True
+    canvas.blend_window(Cell(2, 2), logits, 1.0, ignore_up=silent)
+
+    assert canvas.frontier_points(Cell(2, 2), 1.0) == []

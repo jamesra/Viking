@@ -53,7 +53,7 @@ from segmentation_server.image_cache import (
 from segmentation_server.debug_dump import dump_enabled, dump_growth
 from segmentation_server.circle_boxes import find_circles, outer_ring_box_enabled
 from segmentation_server.healthcheck import forget_listening_port, record_listening_port
-from segmentation_server.responses import build_segmentation_response
+from segmentation_server.responses import ResponseOptions, build_segmentation_response, choose_frame
 from segmentation_server.prompt_log import describe_prompts
 from segmentation_server.mask_utils import (
     DEFAULT_MASK_THRESHOLD,
@@ -69,6 +69,7 @@ from segmentation_server.tile_work import (
     tile_work,
 )
 from segmentation_server.cell_grid import (
+    LOGIT_SCALE,
     TILE_SIZE,
     Cell,
     TileIndex,
@@ -82,8 +83,6 @@ from segmentation_server.tile_growth import (
     GrowthCancelled,
     GrowthWalk,
     PredictUnavailable,
-    margin_logit_min_from_env,
-    owner_veto_logit_from_env,
     max_requested_tiles_from_env,
 )
 
@@ -642,9 +641,21 @@ class SegmentationServicer(SegmentationServiceServicer):
         width: int,
         height: int,
         omit_labeled_image: bool = False,
+        options: Optional[ResponseOptions] = None,
+        mask_scale: int = 1,
+        logits: Optional[NDArray] = None,
     ) -> SegmentationResponse:
-        """Encode labeled PNG plus per-segment cropped masks and polygons (see :mod:`responses`)."""
-        return build_segmentation_response(labeled_image, segments, width, height, omit_labeled_image)
+        """Encode labeled PNG plus per-segment cropped masks, polygons and logits (see :mod:`responses`)."""
+        return build_segmentation_response(
+            labeled_image,
+            segments,
+            width,
+            height,
+            omit_labeled_image,
+            options=options,
+            mask_scale=mask_scale,
+            logits=logits,
+        )
 
     async def _build_response_off_loop(
         self,
@@ -653,6 +664,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         width: int,
         height: int,
         omit_labeled_image: bool = False,
+        options: Optional[ResponseOptions] = None,
+        mask_scale: int = 1,
+        logits: Optional[NDArray] = None,
     ) -> SegmentationResponse:
         """:meth:`_build_segmentation_response` on a worker thread.
 
@@ -669,6 +683,9 @@ class SegmentationServicer(SegmentationServiceServicer):
                 width,
                 height,
                 omit_labeled_image=omit_labeled_image,
+                options=options,
+                mask_scale=mask_scale,
+                logits=logits,
             ),
         )
 
@@ -1269,6 +1286,11 @@ class SegmentationServicer(SegmentationServiceServicer):
             if not await self._pin_start_tiles(session, request, foreground, context):
                 return
             settings = _PredictSettings.from_request(request)
+            try:
+                options = ResponseOptions.from_flags(request.response_content)
+            except ValueError as e:
+                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+                return
             boxes, omit_with_box, client_chose_boxes = _resolve_boxes(request, foreground)
             tag = _session_tag(identity, foreground, background)
             logger.info(
@@ -1284,6 +1306,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 self._cell_predictor(session, settings),
                 max_requested=self._max_requested_tiles,
                 should_stop=stop_growth.is_set,
+                logit_iso=settings.mask_threshold,
                 boxes=boxes,
                 omit_with_box=omit_with_box,
                 assume_boxes=client_chose_boxes,
@@ -1358,7 +1381,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                     pass
 
             response = await self._stream_result(
-                request, result, session, foreground, background, tag, walk.predictions, rounds, start_time
+                request, result, session, foreground, background, tag, walk.predictions, rounds, start_time,
+                options, settings.mask_threshold,
             )
             yield SegmentTilesStreamResponse(result=response)
         finally:
@@ -1468,8 +1492,12 @@ class SegmentationServicer(SegmentationServiceServicer):
             points: List[Tuple[int, int]],
             labels: List[int],
             box: Optional[Tuple[int, int, int, int]] = None,
+            mask_logits: Optional[NDArray] = None,
         ):
-            """One 1024 window. An aligned cell reuses its pinned tile embedding."""
+            """One 1024 window. An aligned cell reuses its pinned tile embedding.
+
+            ``mask_logits`` is what the neighboring windows found, given to SAM2 as its mask prompt.
+            """
             cell = Cell(row=row, col=col)
             if is_aligned(cell):
                 found = session.predictors.get((tiles_for_cell(cell)[0].row, tiles_for_cell(cell)[0].col))
@@ -1486,6 +1514,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                                 box,
                                 settings.mask_threshold,
                                 settings.use_mask_input,
+                                mask_logits=mask_logits,
                             )
 
             window = crop_window(cell, session.images)
@@ -1504,6 +1533,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                     box,
                     settings.mask_threshold,
                     settings.use_mask_input,
+                    mask_logits=mask_logits,
                 )
 
         return predict_cell
@@ -1519,12 +1549,24 @@ class SegmentationServicer(SegmentationServiceServicer):
         predictions: int,
         rounds: int,
         start_time: float,
+        options: Optional[ResponseOptions] = None,
+        logit_iso: float = DEFAULT_MASK_THRESHOLD,
     ) -> SegmentationResponse:
-        """Encode a finished walk as the response, write the debug dump, and log the summary line."""
+        """Encode a finished walk as the response, write the debug dump, and log the summary line.
+
+        ``options`` says which payloads to build. With ``no_upscale`` and fused logits available the
+        mask frame is the logit grid itself (``fused logit > logit_iso``), ``LOGIT_SCALE`` image
+        pixels per sample, and the client upscales. Otherwise the frame is the full-resolution mask
+        and any requested logits are upsampled bilinearly to it, so ``logits_scale`` is 1.
+        """
+        options = options if options is not None else ResponseOptions()
         identity = session.identity
-        height, width = (result.mask.shape[0], result.mask.shape[1]) if result.mask.ndim == 2 else (0, 0)
+        frame_mask, frame_logits, mask_scale = choose_frame(
+            result.mask, result.logits, options, logit_iso, LOGIT_SCALE
+        )
+        height, width = (frame_mask.shape[0], frame_mask.shape[1]) if frame_mask.ndim == 2 else (0, 0)
         labeled_image, segments = combined_mask_to_segments(
-            result.mask,
+            frame_mask,
             result.score,
             empty_shape=(height, width),
         )
@@ -1534,6 +1576,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             width,
             height,
             omit_labeled_image=request.omit_labeled_image,
+            options=options,
+            mask_scale=mask_scale,
+            logits=frame_logits,
         )
         response.origin_x = result.origin_x
         response.origin_y = result.origin_y
@@ -1542,6 +1587,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             dump_growth(
                 tag,
                 fused_mask=result.mask,
+                fused_logits=result.logits,
                 origin=(result.origin_x, result.origin_y),
                 cells=result.cells,
                 uploaded=session.uploaded,
@@ -1549,8 +1595,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 foreground=foreground,
                 background=background,
                 score=result.score,
-                margin_logit_min=margin_logit_min_from_env(),
-                owner_veto_logit=owner_veto_logit_from_env(),
+                logit_iso=logit_iso,
                 request_id=request.request_id,
                 seams=result.seams,
                 edges=result.edges,
@@ -1558,7 +1603,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         logger.info(
             "SegmentTiles ok req=%s key=vol=%s|sec=%s|ch=%s|xf=%s|ds=%s "
             "tiles=%s fg=%s segments=%s requested=%s rounds=%s predicted=%s in %.3fs session=%s "
-            "mask=%sx%s origin=(%s,%s) requested_tiles=%s %s",
+            "mask=%sx%s origin=(%s,%s) requested_tiles=%s content=%s %s",
             request.request_id,
             identity.volume,
             identity.section,
@@ -1578,6 +1623,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             result.origin_x,
             result.origin_y,
             [(tile.row, tile.col) for tile in result.requested],
+            options,
             describe_prompts(foreground, background),
         )
         return response

@@ -16,9 +16,9 @@ class _RecordingWorld(World):
         super().__init__(truth)
         self.given = []
 
-    def predict(self, row, col, points, labels, box=None):
+    def predict(self, row, col, points, labels, box=None, mask_logits=None):
         self.given.append((Cell(row, col), list(points), list(labels), box))
-        return super().predict(row, col, points, labels, box=box)
+        return super().predict(row, col, points, labels, box=box, mask_logits=mask_logits)
 
 
 def client_prompt(cx: int, cy: int, radius: int):
@@ -34,7 +34,7 @@ def _first_call(world, cell):
     return next(call for call in world.given if call[0] == cell)
 
 
-def test_every_core_the_box_touches_is_started_with_the_whole_box() -> None:
+def test_every_core_the_box_touches_is_started_with_the_box_or_continued_from_its_neighbors() -> None:
     # A 400 px disc centred on the corner shared by four cores (their boundaries meet at 2304, 2304).
     world = _RecordingWorld(ellipse(2304, 2304, 300, 300, 0.0))
     box, points = client_prompt(2304, 2304, 300)
@@ -43,9 +43,15 @@ def test_every_core_the_box_touches_is_started_with_the_whole_box() -> None:
 
     touched = {cell_of_point(x, y) for x in (box[0], box[2]) for y in (box[1], box[3])}
     assert len(touched) == 4
+    boxed_starts = 0
     for cell in touched:
-        _cell, _points, _labels, given_box = _first_call(world, cell)
-        assert given_box is not None, cell
+        index = next(i for i, call in enumerate(world.given) if call[0] == cell)
+        given_box = world.given[index][3]
+        if given_box is not None:
+            boxed_starts += 1
+        else:
+            assert world.mask_prompts[index] is not None, f"{cell} got neither the box nor a mask prompt"
+    assert boxed_starts >= 1, "the cell the user's box starts in is prompted with the box"
 
 
 def _world_with_a_hole_in_the_box():
@@ -62,7 +68,8 @@ def test_a_client_box_is_taken_as_object_so_a_hole_inside_it_is_filled() -> None
     plain = world.to_truth_frame(grow_segmentation(points, [], world.predict, boxes=[box]))
     assumed = world.to_truth_frame(grow_segmentation(points, [], world.predict, boxes=[box], assume_boxes=True))
 
-    assert not plain[hole].any(), "SAM2 leaves the hole out, as it does in the field"
+    interior = (slice(hole[0].start + 4, hole[0].stop - 4), slice(hole[1].start + 4, hole[1].stop - 4))
+    assert not plain[interior].any(), "SAM2 leaves the hole out, as it does in the field"
     assert assumed[hole].all()
     assert iou(assumed, ellipse(2304, 2304, 300, 300, 0.0)) >= 0.97
 
@@ -98,7 +105,7 @@ def test_reserve_cells_still_start_when_a_box_taken_as_object_is_all_the_canvas_
     box, points = client_prompt(2304, 2304, 100)
     refused = []
 
-    def refuse_the_first_window(row, col, pts, lbls, box=None):
+    def refuse_the_first_window(row, col, pts, lbls, box=None, mask_logits=None):
         if not refused:
             refused.append(Cell(row, col))
             raise NoMatchingMask("the best window finds nothing")
@@ -144,7 +151,7 @@ def test_cells_the_best_window_did_not_need_start_when_it_finds_nothing() -> Non
     box, points = client_prompt(2304, 2304, 100)
     refused = []
 
-    def refuse_the_first_window(row, col, pts, lbls, box=None):
+    def refuse_the_first_window(row, col, pts, lbls, box=None, mask_logits=None):
         if not refused:
             refused.append(Cell(row, col))
             raise NoMatchingMask("the best window finds nothing")
@@ -229,7 +236,7 @@ def test_one_start_cell_succeeding_is_enough() -> None:
     box, points = client_prompt(2304, 2304, 300)
     first = {"seen": False}
 
-    def refuse_the_first_cell(row, col, pts, lbls, box=None):
+    def refuse_the_first_cell(row, col, pts, lbls, box=None, mask_logits=None):
         if not first["seen"]:
             first["seen"] = True
             raise NoMatchingMask("the first cell finds nothing")

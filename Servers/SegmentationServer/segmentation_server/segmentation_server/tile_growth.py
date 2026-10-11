@@ -1,15 +1,15 @@
 """Grow a segmentation across overlapping cells.
 
 A cell is a 1024 window at a 512 stride (see ``cell_grid``). SAM2 predicts a whole
-window. Pieces of the answer that hold no positive click are dropped, then the central 512
-core is ORed into the result ``G``, and so is every outer-256 px margin pixel whose SAM2
-logit is at least ``DEFAULT_MARGIN_LOGIT_MIN`` (a graded trust: the margin counts only where
-the model is clearly sure). Each pixel is stored in the core of the cell that owns it.
-Because windows overlap, a confident margin pixel lets a neighbor that sees more of the
-object add to the cell centered on it. A neighbor's margin does not override the owner:
-once a cell has predicted, core pixels where its own logit is below
-``DEFAULT_OWNER_VETO_LOGIT`` are removed from ``G`` if a neighbor put them there, and later
-neighbors cannot add them. Pixels the owner itself accepted are never removed.
+window. Pieces of the answer that hold no positive click are dropped, then the window's SAM2
+logits (native 256x256, four pixels per sample) are blended into the result ``G``. Each pixel is
+stored in the core of the cell that owns it, as a weighted mean of the logits every window that
+saw it predicted, the weight falling to nothing at a window's border (``cell_grid.window_feather``).
+``G`` is where that fused logit is above the request's ``mask_threshold``. Because windows overlap,
+the cell that sees a pixel most centred decides it, and a neighbor's unsure answer near its own
+window edge weighs little, so there is no margin gate and no owner veto: a pixel can be added or
+removed as more windows report. A prediction that returns no logits can only say object / not
+object, so its core is added outright.
 
 The walk:
 
@@ -56,7 +56,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from segmentation_server.mask_utils import NoMatchingMask
+from segmentation_server.mask_utils import DEFAULT_MASK_THRESHOLD, NoMatchingMask
 from segmentation_server.seams import (
     MAX_EXTRA_CLICKS,
     PixelRange,
@@ -78,6 +78,8 @@ from segmentation_server.cell_grid import (
     CELL_STRIDE,
     CORE_MARGIN,
     CORE_SIZE,
+    LOGIT_SCALE,
+    LOGIT_WINDOW,
     TILE_SIZE,
     Box,
     Canvas,
@@ -121,25 +123,22 @@ MAX_PREDICTIONS_PER_CELL = 4
 DEFAULT_MAX_PREDICTIONS = 96
 # Hard stop for the walk, in distinct cells. 48 cores cover about 3.5k x 3.5k pixels.
 DEFAULT_MAX_CELLS = 48
-# SAM2 decides a pixel is object when its logit is above 0. A pixel in the outer 256 px
-# margin of a window is accepted only when its logit is at least this, so a weak or
-# edge-affected margin answer is left to the neighbor cell that sees the pixel centered.
-# Core pixels need only the mask. Override with SEGMENT_MARGIN_LOGIT.
-DEFAULT_MARGIN_LOGIT_MIN = 1.5
-# A neighbor's window ends in a straight line, and SAM2 tends to carry a mask right up to
-# the image border, so a margin pixel can be confidently wrong there. The cell whose core
-# holds the pixel sees it centered; when that cell has predicted and its logit is below this
-# value the pixel is vetoed. Override with SEGMENT_OWNER_VETO_LOGIT.
-DEFAULT_OWNER_VETO_LOGIT = -1.0
 # A box prompt clipped to less than this on a side says nothing useful about the object.
 MIN_BOX_SIDE = 16
+# A frontier is tried once per square of this many mosaic pixels, so one that stays uncovered cannot loop.
+FRONTIER_TRY_PX = 64
+# How far from the object it found, in logit samples (4 px each), a prediction's "not object"
+# still counts as evidence. See ``_kept_logits``.
+SUPPORT_RADIUS = 16
 
 class CellPredict(Protocol):
     """What the walk calls to predict one cell.
 
     ``points`` are window-local Y-down click positions with ``labels`` (1 foreground, 0
     background). ``box`` is passed only when the prompt has one: a window-local Y-down inclusive
-    ``(x0, y0, x1, y1)``, and the answer must cover at least 95% of it (see ``mask_utils.select_mask``).
+    ``(x0, y0, x1, y1)``, and the answer must have a pixel inside it (see ``mask_utils.select_mask``).
+    ``mask_logits`` is passed only for a continuation window: a ``LOGIT_WINDOW`` square, Y-down map of
+    what the neighboring windows already found, 0 where nothing is known, for SAM2's ``mask_input``.
     Returns the chosen mask of the window, its logits or None, and its score. May raise
     ``PredictUnavailable`` (tiles missing) or ``NoMatchingMask`` (no candidate fits the prompt).
     """
@@ -151,6 +150,7 @@ class CellPredict(Protocol):
         points: Sequence[Point],
         labels: Sequence[int],
         box: Optional[Tuple[int, int, int, int]] = None,
+        mask_logits: Optional[NDArray] = None,
     ) -> Tuple[MaskArray, Optional[NDArray], float]: ...
 
 
@@ -232,6 +232,10 @@ class GrowthResult:
     cells: Dict[Cell, CellPrediction] = field(default_factory=dict)
     seams: List[SeamRecord] = field(default_factory=list)
     edges: Dict[Tuple[int, int, int, int], List[PixelRange]] = field(default_factory=dict)
+    logits: Optional[NDArray] = None
+    """Fused logits over the same extent as ``mask`` at ``1 / LOGIT_SCALE`` of its size (Y-down), or
+    None when no prediction returned logits. Samples nobody predicted read ``UNSEEN_LOGIT``; boxes
+    taken as object read at least ``logit_iso + 1``."""
 
 
 @dataclass
@@ -242,6 +246,7 @@ class _Attempt:
     parent: Optional[Cell] = None
     side: Optional[Side] = None
     seeds: List[RunSeed] = field(default_factory=list)
+    points: List[Point] = field(default_factory=list)
 
 
 @dataclass
@@ -264,28 +269,6 @@ def max_requested_tiles_from_env() -> int:
         return DEFAULT_MAX_REQUESTED_TILES
 
 
-def margin_logit_min_from_env() -> float:
-    """Read SEGMENT_MARGIN_LOGIT. Missing or invalid values use the default."""
-    raw = os.environ.get("SEGMENT_MARGIN_LOGIT")
-    if raw is None or raw.strip() == "":
-        return DEFAULT_MARGIN_LOGIT_MIN
-    try:
-        return float(raw)
-    except ValueError:
-        return DEFAULT_MARGIN_LOGIT_MIN
-
-
-def owner_veto_logit_from_env() -> float:
-    """Read SEGMENT_OWNER_VETO_LOGIT. Missing or invalid values use the default."""
-    raw = os.environ.get("SEGMENT_OWNER_VETO_LOGIT")
-    if raw is None or raw.strip() == "":
-        return DEFAULT_OWNER_VETO_LOGIT
-    try:
-        return float(raw)
-    except ValueError:
-        return DEFAULT_OWNER_VETO_LOGIT
-
-
 def grow_segmentation(
     foreground: Sequence[Point],
     background: Sequence[Point],
@@ -294,8 +277,7 @@ def grow_segmentation(
     max_cells: int = DEFAULT_MAX_CELLS,
     should_stop: Optional[Callable[[], bool]] = None,
     max_predictions: int = DEFAULT_MAX_PREDICTIONS,
-    margin_logit_min: Optional[float] = None,
-    owner_veto_logit: Optional[float] = None,
+    logit_iso: float = DEFAULT_MASK_THRESHOLD,
     boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     omit_with_box: Optional[Sequence[Point]] = None,
     assume_boxes: bool = False,
@@ -314,8 +296,7 @@ def grow_segmentation(
         max_cells=max_cells,
         should_stop=should_stop,
         max_predictions=max_predictions,
-        margin_logit_min=margin_logit_min,
-        owner_veto_logit=owner_veto_logit,
+        logit_iso=logit_iso,
         boxes=boxes,
         omit_with_box=omit_with_box,
         assume_boxes=assume_boxes,
@@ -335,12 +316,10 @@ class GrowthWalk:
 
     ``foreground`` and ``background`` are mosaic points. ``predict`` receives window-local
     Y-down points and may raise ``PredictUnavailable``. ``should_stop`` returning true
-    raises ``GrowthCancelled`` before the next SAM2 call. ``margin_logit_min`` is the logit
-    a margin pixel must reach to be accepted (default: ``SEGMENT_MARGIN_LOGIT`` or 1.5); a
-    prediction that returns no logits contributes its core only. ``owner_veto_logit``
-    (default: ``SEGMENT_OWNER_VETO_LOGIT`` or -1.0) is the logit below which a predicted
-    cell vetoes a neighbor's margin pixel inside its own core; a prediction with no logits
-    vetoes nothing. ``max_requested`` caps how many tiles one ``advance`` asks for.
+    raises ``GrowthCancelled`` before the next SAM2 call. ``logit_iso`` is the logit a fused
+    pixel must exceed to be object, normally the same ``mask_threshold`` the predictions were
+    thresholded with; a prediction that returns no logits contributes its core only.
+    ``max_requested`` caps how many tiles one ``advance`` asks for.
     ``boxes`` are mosaic ``(x_min, y_min, x_max, y_max)`` SAM2 box prompts, Y up. A cell
     whose window overlaps one passes the largest clipped box to ``predict`` as the keyword
     ``box`` (window-local, Y-down, XYXY); with no boxes ``predict`` is called without it.
@@ -360,8 +339,7 @@ class GrowthWalk:
         max_cells: int = DEFAULT_MAX_CELLS,
         should_stop: Optional[Callable[[], bool]] = None,
         max_predictions: int = DEFAULT_MAX_PREDICTIONS,
-        margin_logit_min: Optional[float] = None,
-        owner_veto_logit: Optional[float] = None,
+        logit_iso: float = DEFAULT_MASK_THRESHOLD,
         boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         omit_with_box: Optional[Sequence[Point]] = None,
         assume_boxes: bool = False,
@@ -384,12 +362,7 @@ class GrowthWalk:
         self._unavailable: Set[TileIndex] = set()
         self._boxes = [(int(a), int(b), int(c), int(d)) for a, b, c, d in boxes or ()]
         self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
-        self._margin_logit_min = (
-            margin_logit_min_from_env() if margin_logit_min is None else float(margin_logit_min)
-        )
-        self._owner_veto_logit = (
-            owner_veto_logit_from_env() if owner_veto_logit is None else float(owner_veto_logit)
-        )
+        self._logit_iso = float(logit_iso)
         self._fg = [(int(x), int(y)) for x, y in foreground]
         self._bg = [(int(x), int(y)) for x, y in background]
         self._predict = predict
@@ -406,6 +379,10 @@ class GrowthWalk:
         self._assumed: Set[Cell] = set()
         self._fg_set = set(self._fg)
         self._attempted_owners: Set[Cell] = set()
+        # Object that ends at area no window has covered: the points to continue from, by the cell that
+        # centers on them, and the places already tried so the same stretch is not queued twice.
+        self._frontiers: Dict[Cell, List[Point]] = {}
+        self._frontier_tried: Set[Tuple[Cell, int, int]] = set()
         self._requested: List[TileIndex] = []
         self._queue: Deque[Cell] = deque()
         self._queued: Set[Cell] = set()
@@ -685,6 +662,9 @@ class GrowthWalk:
             seeds = self._edge_seeds(parent, side, cell)
             if seeds:
                 yield _Attempt(kind="edge", parent=parent, side=side, seeds=seeds)
+        pending = self._frontiers.pop(cell, [])
+        if pending:
+            yield _Attempt(kind="frontier", points=pending[: 1 + MAX_EXTRA_CLICKS])
 
     def _edge_seeds(self, parent: Cell, side: Side, cell: Cell) -> List[RunSeed]:
         """Seeds for the ranges on ``parent``'s edge toward ``cell`` that have not been crossed.
@@ -737,10 +717,22 @@ class GrowthWalk:
             box = window_box(cell, [mosaic_box]) if mosaic_box is not None else None
             points, labels, positives = self._start_prompts(cell, mosaic_box, boxed=box is not None)
             clicks: List[Point] = []
+        elif attempt.kind == "frontier":
+            # The object ran into area no window had covered here. This is the cell centered on that spot:
+            # a click on the object where it meets the uncovered area, the user's own clicks that fall in
+            # this window, and the mask prompt. No box.
+            mosaic_box = None
+            box = None
+            clicks = list(attempt.points)
+            points, labels, positives = self._build_prompts(cell, set(), extra_positives=clicks)
         else:
             primary = attempt.seeds[0]
+            # The seed rectangle is recorded (and tells the walk what the window has already seen), but it
+            # is not sent to SAM2: a box reaching toward the window border makes SAM2 stop at the border,
+            # which is the straight cut a continuation exists to avoid. The window gets the clicks and
+            # the mask prompt instead.
             mosaic_box = primary.box
-            box = window_box(cell, [mosaic_box]) if mosaic_box is not None else None
+            box = None
             clicks = [seed.click for seed in attempt.seeds[: 1 + MAX_EXTRA_CLICKS]]
             points, labels, positives = self._build_prompts(cell, set(), extra_positives=clicks)
         runs = [seed.coordinates for seed in attempt.seeds]
@@ -750,7 +742,10 @@ class GrowthWalk:
                 self._user_attempted.add(cell)
             return True
 
-        outcome = self._call_predict(cell, points, labels, box)
+        # A continuation window is told what the windows around it have found, so it continues that
+        # object instead of choosing one from its prompt alone. A start window has nothing to be told.
+        mask_logits = self._canvas.window_logits(cell) if attempt.kind in ("edge", "frontier") else None
+        outcome = self._call_predict(cell, points, labels, box, mask_logits)
         if outcome is None:
             return False
         if attempt.kind == "user":
@@ -778,9 +773,17 @@ class GrowthWalk:
         kept_down = _components_with_positives(raw_down, positives)
         kept_up = np.flipud(kept_down)
         core_up = kept_up[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE]
-        accepted_down = _gate_margin(kept_down, logits, self._margin_logit_min)
-        self._canvas.set_veto(cell, _owner_veto(logits, self._owner_veto_logit))
-        added = self._canvas.or_window(cell, np.flipud(accepted_down))
+        if logits is None:
+            added = self._or_own_core(cell, core_up)
+        else:
+            native, ignored = _kept_logits(logits, kept_down, self._logit_iso)
+            added = self._canvas.blend_window(
+                cell,
+                np.flipud(native),
+                self._logit_iso,
+                ignore_up=np.flipud(ignored),
+                reach_up=kept_up,
+            )
 
         state = self._states.setdefault(cell, _CellState())
         state.predictions += 1
@@ -791,7 +794,39 @@ class GrowthWalk:
             state.score = score
 
         self._spread(cell, added)
+        self._queue_frontiers(cell)
         return True
+
+    def _queue_frontiers(self, cell: Cell) -> None:
+        """Queue the cells that must look where the object runs into area nobody has covered.
+
+        A prediction stops at its window's border, and a neighbor window that was silent there (it did not
+        see this object) leaves the area unseen. An object edge that is really a window border is invisible
+        to the edge-following above, because it sits inside a core, not on its edge. So after each
+        prediction the canvas is asked where the object meets unseen samples, and the cell whose core
+        holds each such spot, whose window is centered on it, is queued with a click there. A spot is tried
+        once, by 64 px cell of the mosaic, so a border that stays uncovered does not loop.
+        """
+        for x, y, _logit in self._canvas.frontier_points(cell, self._logit_iso):
+            target = cell_of_point(x, y)
+            key = (target, x // FRONTIER_TRY_PX, y // FRONTIER_TRY_PX)
+            if key in self._frontier_tried or target in self._blocked:
+                continue
+            self._frontier_tried.add(key)
+            self._frontiers.setdefault(target, []).append((x, y))
+            logger.info(
+                "SegmentTiles frontier at (%s, %s): the object meets uncovered area, continuing in cell row=%s col=%s",
+                x,
+                y,
+                target.row,
+                target.col,
+            )
+            self._enqueue(target)
+
+    def _or_own_core(self, cell: Cell, core_up: MaskArray) -> Dict[Cell, int]:
+        """Add a prediction that has no logits: only its core, which is all it can vouch for."""
+        new = self._canvas.or_core(cell, core_up)
+        return {cell: new} if new else {}
 
     def _start_prompts(
         self, cell: Cell, mosaic_box: Optional[Box], boxed: bool
@@ -867,6 +902,7 @@ class GrowthWalk:
         points: Sequence[Point],
         labels: Sequence[int],
         box: Optional[Tuple[int, int, int, int]] = None,
+        mask_logits: Optional[NDArray] = None,
     ):
         """One SAM2 call. Returns ``(score, mask, logits)``, ``_REJECTED``, or None when the cell is deferred.
 
@@ -875,10 +911,11 @@ class GrowthWalk:
         """
         self._check_stop()
         try:
+            extra = {} if mask_logits is None else {"mask_logits": mask_logits}
             if box is None:
-                mask, logits, score = self._predict(cell.row, cell.col, points, labels)
+                mask, logits, score = self._predict(cell.row, cell.col, points, labels, **extra)
             else:
-                mask, logits, score = self._predict(cell.row, cell.col, points, labels, box=box)
+                mask, logits, score = self._predict(cell.row, cell.col, points, labels, box=box, **extra)
         except PredictUnavailable as unavailable:
             self._deferred.add(cell)
             for tile in unavailable.tiles:
@@ -943,7 +980,7 @@ class GrowthWalk:
                 self._enqueue(owner)
 
     def _finish(self) -> GrowthResult:
-        if not self._canvas.cells():
+        if not self._canvas.decided_cells():
             return GrowthResult(
                 mask=np.zeros((0, 0), dtype=np.bool_),
                 origin_x=0,
@@ -961,7 +998,7 @@ class GrowthWalk:
             for box in self._boxes:
                 if cores_under_box(box) is not None:
                     canvas.assume_box(box)
-        owners = canvas.cells()
+        owners = canvas.decided_cells()
 
         min_row = min(cell.row for cell in owners)
         max_row = max(cell.row for cell in owners)
@@ -973,7 +1010,7 @@ class GrowthWalk:
         )
         cells: Dict[Cell, CellPrediction] = {}
         for cell in owners:
-            core_down = np.flipud(canvas.core(cell))
+            core_down = np.flipud(canvas.decided_core(cell))
             top = (max_row - cell.row) * CORE_SIZE
             left = (cell.col - min_col) * CORE_SIZE
             mosaic[top:top + CORE_SIZE, left:left + CORE_SIZE] = core_down
@@ -989,6 +1026,9 @@ class GrowthWalk:
             )
 
         scores = [pred.score for pred in cells.values() if pred.score > 0.0]
+        logits = None
+        if canvas.has_logits():
+            logits = canvas.fused_mosaic(min_row, max_row, min_col, max_col, self._logit_iso + 1.0)
         return GrowthResult(
             mask=mosaic,
             origin_x=min_col * CELL_STRIDE + CORE_MARGIN,
@@ -998,6 +1038,7 @@ class GrowthWalk:
             cells=cells,
             seams=list(self._seams),
             edges={key: list(runs) for key, runs in self._graph.edges.items()},
+            logits=logits,
         )
 
 
@@ -1077,52 +1118,42 @@ def _window_logits(logits: Optional[NDArray]) -> Optional[NDArray]:
     return array.astype(np.float32, copy=False)
 
 
-def _make_margin_mask() -> MaskArray:
-    """True on the outer 256 px band of a window, False on its core. Built once; it never changes."""
-    mask = np.ones((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
-    mask[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE] = False
-    mask.setflags(write=False)
-    return mask
-
-
-_MARGIN_MASK = _make_margin_mask()
-
-
-def _gate_margin(kept_down: MaskArray, logits: Optional[NDArray], margin_logit_min: float) -> MaskArray:
-    """The part of a kept window mask to write: its core, plus margin pixels the model is sure of.
-
-    The core (central 512) is accepted as the mask says. A pixel in the outer 256 px margin
-    is accepted only when its logit, upsampled to window size, is at least
-    ``margin_logit_min``. Without logits the margin is dropped, so the walk degrades to the
-    old core-only rule rather than trusting an unmeasured margin.
-    """
-    accepted = np.zeros_like(kept_down)
-    core = slice(CORE_MARGIN, CORE_MARGIN + CORE_SIZE)
-    accepted[core, core] = kept_down[core, core]
-    if logits is None or not kept_down.any():
-        return accepted
-
-    confident = kept_down & (_full_res(logits) >= margin_logit_min)
-    return accepted | (confident & _MARGIN_MASK)
-
-
-def _full_res(logits: NDArray) -> NDArray:
-    """Logits bilinearly upsampled to window size (a no-op when already 1024x1024)."""
-    if logits.shape == (CELL_SIZE, CELL_SIZE):
+def _native_logits(logits: NDArray) -> NDArray:
+    """Logits resampled to the native ``LOGIT_WINDOW`` square the canvas blends (a no-op when already that size)."""
+    if logits.shape == (LOGIT_WINDOW, LOGIT_WINDOW):
         return logits
-    return cv2.resize(logits, (CELL_SIZE, CELL_SIZE), interpolation=cv2.INTER_LINEAR)
+    shrinking = logits.shape[0] > LOGIT_WINDOW or logits.shape[1] > LOGIT_WINDOW
+    return cv2.resize(
+        logits,
+        (LOGIT_WINDOW, LOGIT_WINDOW),
+        interpolation=cv2.INTER_AREA if shrinking else cv2.INTER_LINEAR,
+    )
 
 
-def _owner_veto(logits: Optional[NDArray], owner_veto_logit: float) -> Optional[MaskArray]:
-    """Core-sized Y-up mask of the core pixels this prediction is sure are not object.
+def _kept_logits(logits: NDArray, kept_down: MaskArray, iso: float) -> Tuple[NDArray, NDArray]:
+    """A prediction's logits at native size, and which samples it has no evidence about.
 
-    None when the prediction has no logits, which clears any earlier veto for the cell.
+    ``kept_down`` is the full-resolution Y-down answer that held a positive click. A native
+    sample is kept when at least half of its ``LOGIT_SCALE`` square is. A prediction answers for
+    the object its clicks picked, so it speaks only within ``SUPPORT_RADIUS`` samples of that
+    object: farther away, "not object" says nothing about a separate piece of the same structure
+    (the other arm of a hairpin, which this window may not see joined to the first). A connected
+    piece the model calls object (above ``iso``) that holds no kept sample is a piece nobody clicked
+    and is silent too; a piece that touches the kept object is part of it, whatever its edge samples
+    say about the full-resolution mask. Silent samples are the second array. The canvas gives them
+    weight 0, so a sample only silent predictions cover stays unseen, which is not the same as
+    background: the walk continues from an object that runs into it.
     """
-    if logits is None:
-        return None
-    core = slice(CORE_MARGIN, CORE_MARGIN + CORE_SIZE)
-    veto_down = _full_res(logits)[core, core] < owner_veto_logit
-    return np.flipud(veto_down)
+    native = _native_logits(logits)
+    side = CELL_SIZE // LOGIT_SCALE
+    kept_low = kept_down.reshape(side, LOGIT_SCALE, side, LOGIT_SCALE).mean(axis=(1, 3)) >= 0.5
+    size = 2 * SUPPORT_RADIUS + 1
+    support = cv2.dilate(kept_low.astype(np.uint8), np.ones((size, size), np.uint8)) > 0
+    above = native > iso
+    count, labels = cv2.connectedComponents(above.astype(np.uint8), connectivity=8)
+    touching_kept = np.unique(labels[kept_low & above])
+    clicked_piece = np.isin(labels, touching_kept[touching_kept > 0])
+    return native, ~support | (above & ~clicked_piece)
 
 
 def _components_with_positives(mask_down: MaskArray, positives: Sequence[Point]) -> MaskArray:

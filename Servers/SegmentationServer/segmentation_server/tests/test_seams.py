@@ -391,9 +391,9 @@ class _RecordingWorld(World):
         super().__init__(truth_up, **kwargs)
         self.given = []
 
-    def predict(self, row, col, points, labels, box=None):
+    def predict(self, row, col, points, labels, box=None, mask_logits=None):
         self.given.append((Cell(row, col), list(points), list(labels), box))
-        return super().predict(row, col, points, labels, box=box)
+        return super().predict(row, col, points, labels, box=box, mask_logits=mask_logits)
 
 
 def test_every_continuation_is_given_a_box_that_lies_inside_the_object_and_its_center_click() -> None:

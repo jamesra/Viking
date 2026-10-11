@@ -21,6 +21,7 @@ from segmentation_grpc import (
     TilesAnswer,
     TilesNeeded,
 )
+from segmentation_grpc.segmentation_pb2 import RESPONSE_CONTENT_LOGITS, RESPONSE_CONTENT_MASKS, RESPONSE_CONTENT_NO_UPSCALE
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.server import SegmentationServicer
 
@@ -595,3 +596,77 @@ async def test_an_offset_cell_decodes_each_tile_it_is_cropped_from_once() -> Non
 
     assert servicer.model.predict_ephemeral.call_count >= 1
     assert seen, "the offset cell was never cropped"
+
+
+def _logit_servicer(cache: ImageCache) -> SegmentationServicer:
+    """A model that answers a 224 px square around mosaic (512, 300), with SAM2's native 256x256 logits."""
+    model = MagicMock()
+    mask = np.zeros((1024, 1024), dtype=np.bool_)
+    mask[400:624, 400:624] = True
+    logits = np.full((256, 256), -5.0, dtype=np.float32)
+    logits[100:156, 100:156] = 5.0
+    model.predict_tile.return_value = (mask, logits, 0.8)
+    model.predict_ephemeral.return_value = (mask, logits, 0.8)
+    return SegmentationServicer(model=model, image_cache=cache, server_start_time=0.0)
+
+
+async def _logit_response(response_content: int):
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _logit_servicer(cache)
+    request = SegmentTilesRequest(
+        tiles=[_tile(0, 0)],
+        foreground=[Point(x=512, y=512)],
+        response_content=response_content,
+    )
+    return _result(await _converse(servicer, request))
+
+
+@pytest.mark.asyncio
+async def test_a_request_without_response_content_still_gets_masks_and_polygons_and_no_logits() -> None:
+    response = await _logit_response(0)
+
+    segment = response.segments[0]
+    assert segment.mask and segment.polygons
+    assert not segment.logits and segment.logits_scale == 0
+    assert response.width == 512 and response.height == 512
+
+
+@pytest.mark.asyncio
+async def test_logits_without_upscale_come_back_at_the_native_grid_with_the_client_scale() -> None:
+    response = await _logit_response(RESPONSE_CONTENT_LOGITS | RESPONSE_CONTENT_NO_UPSCALE)
+
+    segment = response.segments[0]
+    assert response.width == 128 and response.height == 128, "the frame is counted in samples"
+    assert segment.logits_scale == 4.0
+    assert not segment.mask and not segment.polygons
+    decoded = np.frombuffer(segment.logits, dtype="<f2").reshape(segment.logits_height, segment.logits_width)
+    assert float(decoded.max()) > 1.0 and float(decoded.min()) <= -5.0 + 0.01
+    inside = decoded > 1.0
+    assert 40 <= int(inside.sum()) ** 0.5 <= 60, "a 224 px square is 56 samples across"
+    assert (segment.logits_x % 4, segment.logits_y % 4) == (0, 0)
+
+
+@pytest.mark.asyncio
+async def test_logits_with_an_upscaled_frame_are_in_image_pixels() -> None:
+    response = await _logit_response(RESPONSE_CONTENT_LOGITS | RESPONSE_CONTENT_MASKS)
+
+    segment = response.segments[0]
+    assert response.width == 512 and response.height == 512
+    assert segment.logits_scale == 1.0 and segment.mask and not segment.polygons
+    decoded = np.frombuffer(segment.logits, dtype="<f2").reshape(segment.logits_height, segment.logits_width)
+    assert abs(int((decoded > 1.0).sum()) - 224 * 224) < 0.05 * 224 * 224
+
+
+@pytest.mark.asyncio
+async def test_unknown_response_content_bits_are_refused_before_any_prediction() -> None:
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _logit_servicer(cache)
+    context = _context()
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=512, y=512)], response_content=64)
+
+    await _converse(servicer, request, context)
+
+    assert context.abort.await_args.args[0] == grpc.StatusCode.INVALID_ARGUMENT
+    servicer.model.predict_tile.assert_not_called()

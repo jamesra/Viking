@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 
 from segmentation_server.cell_grid import CELL_SIZE, Cell, Point, tiles_for_cell, window_origin
-from segmentation_server.mask_utils import NoMatchingMask, count_covered_points, mask_grows_past_box
+from segmentation_server.mask_utils import NoMatchingMask, count_covered_points, mask_touches_box
 from segmentation_server.tile_growth import GrowthResult, PredictUnavailable
 
 DOMAIN = 4096
@@ -74,8 +74,10 @@ class World:
         self.edge_px = edge_px
         self.available: Optional[Set[Tuple[int, int]]] = None if available is None else set(available)
         self.calls: List[Tuple[Cell, List[Point], List[int]]] = []
+        # The mask prompt each continuation call was given, keyed in call order (None for a start window).
+        self.mask_prompts: List[Optional[np.ndarray]] = []
 
-    def predict(self, row: int, col: int, points: Sequence[Point], labels: Sequence[int], box=None):
+    def predict(self, row: int, col: int, points: Sequence[Point], labels: Sequence[int], box=None, mask_logits=None):
         """Stand in for the server's per-cell predict, selection rule included.
 
         With a ``box`` (window-local, Y-down, inclusive) the answer must cover all of it; without
@@ -89,6 +91,7 @@ class World:
                 raise PredictUnavailable("tiles not held", missing)
 
         self.calls.append((cell, list(points), list(labels)))
+        self.mask_prompts.append(None if mask_logits is None else np.array(mask_logits, copy=True))
         window = np.flipud(self._window_up(cell))
         edge = self.edge_px
         if edge:
@@ -107,8 +110,8 @@ class World:
         mask = np.isin(pieces, list(keep)) if keep else np.zeros_like(window)
         positives = [(x, y) for (x, y), label in zip(points, labels) if label == 1]
         if box is not None:
-            if not mask_grows_past_box(mask, box):
-                raise NoMatchingMask(f"mask does not cover and extend past box {tuple(box)} in cell {row},{col}")
+            if not mask_touches_box(mask, box):
+                raise NoMatchingMask(f"mask has no pixel inside box {tuple(box)} in cell {row},{col}")
         elif positives and count_covered_points(mask, positives) == 0:
             raise NoMatchingMask(f"mask covers none of the {len(positives)} click(s) in cell {row},{col}")
         return mask, self.logits_for(mask), 0.9

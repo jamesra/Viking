@@ -85,9 +85,10 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    server inferred from nine-click circles are not added.
 
    The mask that answers a prompt is chosen by one rule for every RPC, with no combining of
-   masks: with a box, the highest-scoring candidate that covers **at least 95%** of the box's pixels and
-   has more pixels than it (auto-segment masks grow past their rectangle, so one that does not,
-   or that is only the rectangle, is not an answer to it); without a box, the candidate that
+   masks: with a box, the highest-scoring candidate that has a pixel inside it (how much of the
+   rectangle it fills is not asked: SAM2 leaves holes in an object's interior and stops short of a
+   box beside an image border, and a mask that touches none of the rectangle is another object);
+   without a box, the candidate that
    covers the most foreground points, ties broken by score. A start cell with no matching
    mask is logged and skipped; the call fails with `FAILED_PRECONDITION` and a `NO_MATCHING_MASK`
    detail only when every start cell, reserve cells included, was rejected and nothing else was
@@ -105,17 +106,19 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    rotated 45 degrees, four at 0.8 on the axes) and no box. The server infers the inscribed box
    from them (`circle_boxes.find_circles`) and leaves the ring clicks out of the SAM2 prompt. That
    inference exists only for that client and is deleted when it is retired.
-2. Drop any piece of the answer that holds no positive click, then OR the core into the result.
-   Pixels in the outer 256 px margin are ORed in only where SAM2's logit is at least
-   `SEGMENT_MARGIN_LOGIT` (default 1.5; a pixel is object above 0), so the margin counts only
-   where the model is clearly sure. A prediction that returns no logits contributes its core
-   only. Each pixel is stored in the core of the cell that owns it, so a neighbor that sees more
-   of the object can add to the cell centered on it. The owner has the last word: once a cell
-   has predicted, core pixels where its own logit is below `SEGMENT_OWNER_VETO_LOGIT` (default
-   -1.0) are removed if a neighbor's margin put them there, and later neighbors cannot add
-   them. This stops a neighbor's window border (where SAM2 tends to run a mask to the image
-   edge) from leaving a straight cut. Pixels the owner accepted itself are never removed. The
-   logits are SAM2's low-resolution map for its best mask, upsampled to the window.
+2. Blend the answer into the result as logits. SAM2's mask decoder emits logits at 1/4 of the
+   window, 256x256 samples (four pixels each) for a 1024 window, and each core owns 128x128 of
+   them. A prediction speaks only for the piece of its answer that holds a positive click and
+   for the samples within 16 samples (64 px) of that piece; farther away, "not object" says
+   nothing about a separate piece of the same structure (the other arm of a hairpin). Its logits
+   are added to every core its window overlaps, weighted by distance from the window border
+   (0 at the border, 1 across the core), so the cell that sees a pixel most centred decides it
+   and a neighbor's unsure edge answer barely counts. A cell's later prediction replaces its
+   earlier one. The result is where the fused logit is above the request's `mask_threshold`
+   (bilinearly upsampled, as SAM2 does). There is no margin gate and no owner veto. The walk
+   itself follows a separate control view, every pixel any one window answered as object away
+   from its border, so a window with more context can reveal object a blind neighbor denied.
+   A prediction that returns no logits contributes its core only.
 3. When the result in a core touches an edge it shares with a neighbor, that stretch of set
    pixels along the edge is a **range** (a range under 16 px is noise and is ignored; only the
    outermost pixel counts, so a mask that stops one pixel short is not a crossing). The
@@ -124,10 +127,25 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    position along the range; the largest rectangle under those depths, with one side on the edge,
    is the neighbor's **box prompt** (no inset; it stops `SEGMENT_SEED_EDGE_CLEARANCE`, default 8,
    px short of the window border, because SAM2 treats an image border as an object boundary).
-   The prompt is that box, a click at its center, the foreground and background clicks in the
+   The rectangle is recorded and tells the walk what the window has already seen, but it is **not
+   sent to SAM2**: a box reaching toward the window border makes SAM2 stop at the border. The
+   prompt is a click at its center, the foreground and background clicks in the
    window, and one click per other range on the edge (longest first, at most 24). One prediction
    is made per edge. A cell that was started by a user click (the first, or a click the walk had
    not reached) is prompted by the clicks and boxes, not by an edge. Corners are not followed.
+   A continuation window is also given **what its neighbors found** as SAM2's mask prompt
+   (`mask_input`): the fused logits over the window, 256x256, with 0 (neutral) wherever no window
+   has predicted. The window therefore continues the same object instead of choosing one from its
+   box and clicks alone, and it is not discarded for stopping short of the box.
+
+   A prediction speaks only for the object its clicks found, and for background within 64 px of
+   it; a sample that only such silent predictions cover stays **unseen** (`-20` in the fused logits),
+   which is not "looked and found background". An object that runs into unseen samples has not been
+   followed to its end, typically because a window ended in the middle of a core where no core edge
+   shows it. After every prediction the walk finds those **frontiers** (at least 4 connected samples)
+   and queues the cell whose core holds each, so its window is centered there, with a click on the
+   object at the frontier and the mask prompt. A spot is tried once per 64 px square. The debug
+   dump labels these predictions `frontier`.
 4. A graph of cells whose edges hold the merged ranges already crossed prevents loops. A range
    that overlaps one already crossed is crossed again only if it is at least twice as long or it
    joins two stored ranges, so the return arm of a C or hairpin (a new range) is followed and a
@@ -158,6 +176,16 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
 
 The response mask is the fused cores with `origin_x`/`origin_y` at the mosaic pixel of its
 lower-left corner, always a multiple of 512 wide and tall.
+
+### Response content
+
+`SegmentTilesRequest.response_content` is a bit field (`ResponseContent`) saying what the client wants back.
+Zero keeps the old answer, masks and polygons. `LOGITS` adds the fused logits as float16 with their size,
+origin and scale. `NO_UPSCALE` is a modifier: the server does not upscale. Logits and any `MASKS` payload come
+back at the native resolution (`logits_scale` image pixels per sample, normally 4), `width`/`height` count
+samples, and the client scales the ring up after it has contoured the logits, which finds the real iso
+crossing instead of the midpoint of a thresholded pixel. Without `NO_UPSCALE`, requested logits are upsampled
+to image pixels. Only `SegmentTilesStream` fuses logits across cells, so only it honours the field.
 
 Set `SEGMENTATION_DEBUG_DUMP=1` to write one `.npz` per call (fused mask, every cell core, each
 cell's raw answer, kept pieces and SAM2 logits, and the prompts) under the embedding cache mount

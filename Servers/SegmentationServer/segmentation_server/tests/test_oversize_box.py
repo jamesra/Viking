@@ -27,9 +27,9 @@ class _RecordingWorld(World):
         super().__init__(truth)
         self.given = []
 
-    def predict(self, row, col, points, labels, box=None):
+    def predict(self, row, col, points, labels, box=None, mask_logits=None):
         self.given.append((Cell(row, col), list(points), list(labels), box))
-        return super().predict(row, col, points, labels, box=box)
+        return super().predict(row, col, points, labels, box=box, mask_logits=mask_logits)
 
 
 def _disc_world() -> _RecordingWorld:
