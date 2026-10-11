@@ -486,10 +486,11 @@ IF TYPE_ID(N'dbo.integer_list') IS NULL
         PRIMARY KEY CLUSTERED ([ID] ASC));
 GO
 
-IF OBJECT_ID(N'dbo.NetworkStructureIDs', N'TF') IS NULL
+-- CREATE OR ALTER (not create-if-missing) so re-applying the script also fixes test databases
+-- created before the empty-frontier early exit was added.
 BEGIN
     EXEC(N'
-    CREATE FUNCTION dbo.NetworkStructureIDs
+    CREATE OR ALTER FUNCTION dbo.NetworkStructureIDs
     (
         @IDs integer_list READONLY,
         @Hops int
@@ -505,7 +506,8 @@ BEGIN
         INSERT INTO @HopSeedCells SELECT ID FROM @IDs;
         INSERT INTO @CellsInNetwork SELECT ID FROM @IDs;
 
-        WHILE @Hops > 0
+        -- Stop early on an empty frontier: @Hops is request input up to Int32.MaxValue.
+        WHILE @Hops > 0 AND EXISTS (SELECT 1 FROM @HopSeedCells)
         BEGIN
             DECLARE @HopSeedCellsChildStructures integer_list;
             DECLARE @ChildStructurePartners integer_list;

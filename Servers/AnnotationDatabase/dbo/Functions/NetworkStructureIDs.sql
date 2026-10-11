@@ -1,4 +1,12 @@
-﻿CREATE FUNCTION NetworkStructureIDs
+﻿-- NetworkStructureIDs: IDs of the structures (cells) reachable from @IDs within @Hops hops,
+-- where one hop goes seed -> child structure -> StructureLink partner -> that partner's parent.
+-- @IDs are always included; @Hops <= 0 returns only @IDs.
+-- Callers: NetworkChildStructureIDs, SelectNetworkStructureIDs, SelectNetworkStructures,
+-- SelectNetworkStructureSpatialData, SelectNetworkDetails (DataExport, OData, gRPC StructureService).
+-- @Hops comes straight from request input (up to Int32.MaxValue), so the loop also stops once a
+-- hop finds no new cells: @HopSeedCellsChildStructures is never cleared, so an empty frontier
+-- re-scans only children whose partners' parents are already in @CellsInNetwork.
+CREATE FUNCTION NetworkStructureIDs
 			(
 				-- Add the parameters for the function here
 				@IDs integer_list READONLY,
@@ -18,7 +26,7 @@
 				insert into @HopSeedCells select ID from @IDs 
 				insert into @CellsInNetwork select ID from @IDs 
 
-				while @Hops > 0
+				while @Hops > 0 AND EXISTS (SELECT 1 FROM @HopSeedCells)
 				BEGIN
 					DECLARE @HopSeedCellsChildStructures integer_list
 					DECLARE @ChildStructurePartners integer_list

@@ -48,6 +48,10 @@ It skips SSDT extras (spatial indexes, morphology UDFs, `StructureSpatialCache`
 triggers, stored procedures). Geometry columns use SQL Server `geometry` so
 EF Core + NetTopologySuite still work.
 
+SQL tests for objects in the minimal schema are in
+`Servers/AnnotationDatabase/scripts/tests/`; each file's header gives its
+`sqlcmd` run command, and each rolls back everything it adds.
+
 ### Option B — Full AnnotationDatabase SSDT / sqlproj
 
 `Servers/AnnotationDatabase/AnnotationDatabase.sqlproj` is the full SSDT project
