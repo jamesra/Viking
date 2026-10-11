@@ -10,6 +10,10 @@ using VikingXNAWinForms;
 
 namespace Viking.UI
 {
+    /// <summary>
+    /// The edit <see cref="PenInputHelper.ApplyVertexAction"/> applies to the path being drawn.
+    /// <see cref="PenInputHelper.GetActionForFullResolutionPath"/> chooses ADD, REPLACE or NONE for a pen move.
+    /// </summary>
     public enum PathVertexAction
     {
         REMOVE, //Remove the newest vertex
@@ -28,6 +32,10 @@ namespace Viking.UI
     }
 
 
+    /// <summary>
+    /// Collection-changed arguments for a pen path edit that also carry the pen state at the time of the change.
+    /// Mirrors every <see cref="NotifyCollectionChangedEventArgs"/> constructor with a leading <c>penState</c>.
+    /// </summary>
     public class PenPathChangedEventArgs : NotifyCollectionChangedEventArgs
     {
         readonly PenEventArgs PenState;
@@ -91,6 +99,15 @@ namespace Viking.UI
     public delegate void PenPathChangedEventHandler(object sender, PenPathChangedEventArgs e);
 
 
+    /// <summary>
+    /// Builds a freehand path in world coordinates from mouse and pen events on a <see cref="Viking.UI.Controls.SectionViewerControl"/>.
+    /// Raises collection-changed, loop and completion events as the path grows, is erased, or is finished.
+    /// </summary>
+    /// <remarks>
+    /// Not thread safe: all members must be used on the UI thread that raises the viewer's input events.
+    /// The live constructor subscribes to the viewer's events; the owner must call <see cref="UnsubscribeEvents"/>
+    /// when done or the viewer keeps this helper alive.
+    /// </remarks>
     public class PenInputHelper : System.Collections.Specialized.INotifyCollectionChanged
     {
         /// <summary>
@@ -333,6 +350,9 @@ namespace Viking.UI
                 System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Subscribed to events", this.ID));
         }
 
+        /// <summary>
+        /// Detaches this helper from the viewer's mouse, camera and pen events. Call when the owning command ends.
+        /// </summary>
         public void UnsubscribeEvents()
         {
             Parent.MouseMove -= this.OnMouseMove;
@@ -427,8 +447,11 @@ namespace Viking.UI
         /// </summary>
         /// <param name="action">ADD: Adds the input to the currrent path
         ///                      REPLACE: Replaces the newest vertex in the path with the input
-        ///                      REMOVE: If there is input, finds the nearest path vertex and removes all verticies in the path placed after that vertex.  If there is no input, removes the most recently placed vertex/param>
-        /// <param name="input"></param>
+        ///                      REMOVE: Removes the most recently placed vertex; input is ignored
+        ///                      CUT_ERASE: Removes the path vertices placed after the point nearest the input
+        ///                      NONE: Does nothing</param>
+        /// <param name="input">World position for ADD, REPLACE and CUT_ERASE; required (null throws) for those actions.</param>
+        /// <exception cref="ArgumentException">The action is not a defined <see cref="PathVertexAction"/>.</exception>
         public void ApplyVertexAction(PathVertexAction action, Vector2? input)
         {
             switch (action)
