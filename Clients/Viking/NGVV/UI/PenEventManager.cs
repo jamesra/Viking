@@ -3,6 +3,10 @@ using System.Windows.Forms;
 
 namespace Viking.UI
 {
+    /// <summary>
+    /// Snapshot of a pen (stylus) at one instant: position, pressure, and which parts of the pen are active.
+    /// Implemented by <see cref="PenEventArgs"/>; consumers of <see cref="IPenEvents"/> receive it per event.
+    /// </summary>
     public interface IPenState
     {
         /// <summary>
@@ -46,11 +50,21 @@ namespace Viking.UI
         bool InRange { get; }
     }
 
+    /// <summary>
+    /// Event data for <see cref="IPenEvents"/>, built by <see cref="PenEventManager"/> from the raw Windows pointer
+    /// message. The flag properties are derived from <see cref="Pen"/> on each read, so the instance is a
+    /// snapshot and never changes after it is raised.
+    /// </summary>
     public class PenEventArgs : EventArgs, IPenState
     {
+        /// <summary>
+        /// Pen position in client coordinates of the control that hosts the <see cref="PenEventManager"/>.
+        /// </summary>
         public System.Drawing.Point Location { get; internal set; }
 
+        /// <summary>Client X coordinate; same as <see cref="Location"/>.X.</summary>
         public int X => Location.X;
+        /// <summary>Client Y coordinate; same as <see cref="Location"/>.Y.</summary>
         public int Y => Location.Y;
 
         /// <summary>
@@ -58,6 +72,9 @@ namespace Viking.UI
         /// </summary>
         public PointerPenInfo Pen { get; internal set; }
 
+        /// <summary>
+        /// Pressure scaled by the configured stylus calibration, or 0 when the device did not report pressure.
+        /// </summary>
         public double NormalizedPressure
         {
             get
@@ -71,16 +88,29 @@ namespace Viking.UI
             }
         }
 
+        /// <inheritdoc/>
         public bool Erase => (Pen.flags & PenFlags.Eraser) > 0;
+        /// <inheritdoc/>
         public bool Inverted => (Pen.flags & PenFlags.Inverted) > 0;
+        /// <inheritdoc/>
         public bool Barrel => (Pen.flags & PenFlags.Barrel) > 0;
 
+        /// <inheritdoc/>
         public bool InContact => (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0;
+        /// <inheritdoc/>
         public bool InRange => (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0;
     }
 
+    /// <summary>
+    /// Handler for pen events raised by <see cref="PenEventManager"/>. <paramref name="sender"/> is the host
+    /// control, not the manager.
+    /// </summary>
     public delegate void PenEventHandler(object sender, PenEventArgs e);
 
+    /// <summary>
+    /// The pen events a control exposes once it forwards its window messages to a <see cref="PenEventManager"/>.
+    /// Handlers run on the host control's UI thread.
+    /// </summary>
     public interface IPenEvents
     {
         /// <summary>
@@ -115,14 +145,26 @@ namespace Viking.UI
 
 
     /// <summary>
-    /// This class can be used by a control to support Pen Input Events
+    /// This class can be used by a control to support Pen Input Events.
     /// </summary>
+    /// <remarks>
+    /// The host control passes its window messages to <see cref="ProcessPenMessages"/>. Events are posted with
+    /// <c>BeginInvoke</c> on that control, so they are asynchronous and arrive on its UI thread after the
+    /// message handler returns. Non-pen pointers (touch, mouse) are ignored.
+    /// </remarks>
+    /// <param name="parent">The control whose window messages are processed; also the event sender and the
+    /// coordinate space for <see cref="PenEventArgs.Location"/>.</param>
     public class PenEventManager(Control parent) : IPenEvents
     {
+        /// <inheritdoc/>
         public event PenEventHandler OnPenEnterRange;
+        /// <inheritdoc/>
         public event PenEventHandler OnPenLeaveRange;
+        /// <inheritdoc/>
         public event PenEventHandler OnPenContact;
+        /// <inheritdoc/>
         public event PenEventHandler OnPenLeaveContact;
+        /// <inheritdoc/>
         public event PenEventHandler OnPenMove;
         /// <summary>
         /// A button on the pen has been depressed
@@ -143,7 +185,7 @@ namespace Viking.UI
         /// <summary>
         /// This function must be called by the host controls WndProc function to process Pen related input events
         /// </summary>
-        /// <param name="msg"></param>
+        /// <param name="msg">The window message from the host control's WndProc; not modified.</param>
         /// <returns>True if a pen message was processed</returns>
         public bool ProcessPenMessages(ref Message msg)
         {
