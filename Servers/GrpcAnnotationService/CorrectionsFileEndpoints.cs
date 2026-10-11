@@ -7,8 +7,19 @@ using Viking.SectionCorrection;
 
 namespace gRPCAnnotationService
 {
+    /// <summary>
+    /// HTTP endpoints that stream the published correction files (manifest, volume archive, other group
+    /// files, and preview images) from <see cref="CorrectionCatalog.RootDirectory"/>.
+    /// </summary>
+    /// <remarks>
+    /// Every route requires the caller-supplied authorization policy. Files are only served from beneath
+    /// the catalog root: <see cref="SendFile"/> answers 404 for anything missing or resolving outside it.
+    /// </remarks>
     static class CorrectionsFileEndpoints
     {
+        /// <summary>Maps the <c>/corrections/{group}/...</c> routes onto <paramref name="endpoints"/>.</summary>
+        /// <param name="endpoints">Route builder to extend.</param>
+        /// <param name="policy">Authorization policy name applied to every route.</param>
         public static void Map(IEndpointRouteBuilder endpoints, string policy)
         {
             endpoints.MapGet("/corrections/{group}/manifest.json", async context =>
@@ -54,6 +65,7 @@ namespace gRPCAnnotationService
             }).RequireAuthorization(policy);
         }
 
+        /// <summary>Maps a preview file extension to its content type, defaulting to a binary stream.</summary>
         static string PreviewContentType(string file)
         {
             if (file.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
@@ -63,6 +75,7 @@ namespace gRPCAnnotationService
             return "application/octet-stream";
         }
 
+        /// <summary>Builds the path of a file inside the requested group's folder under the catalog root.</summary>
         static string groupFile(HttpContext context, string fileName)
         {
             CorrectionCatalog catalog = context.RequestServices.GetService(typeof(CorrectionCatalog)) as CorrectionCatalog;
@@ -70,6 +83,9 @@ namespace gRPCAnnotationService
             return Path.Combine(catalog?.RootDirectory ?? "", group, fileName);
         }
 
+        /// <summary>
+        /// Streams the file at <paramref name="path"/>, or sets 404 when it is missing or resolves outside the catalog root.
+        /// </summary>
         static async System.Threading.Tasks.Task SendFile(HttpContext context, string path, string contentType)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
