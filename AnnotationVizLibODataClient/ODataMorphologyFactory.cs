@@ -28,7 +28,7 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Asynchronously retrieves the scale from the OData service
         /// </summary>
-        private static async Task<UnitsAndScale.Scale> GetScaleAsync(
+        public static async Task<UnitsAndScale.Scale> GetScaleAsync(
             Container container,
             CancellationToken cancellationToken = default)
         {
@@ -696,7 +696,16 @@ namespace AnnotationVizLib.OData
             return all;
         }
 
-        static List<T> ExecuteAllPagesWithRetry<T>(
+        /// <summary>
+        /// Runs <paramref name="query"/> to completion, following every nextLink and retrying transient failures
+        /// (HTTP 5xx, timeouts) with backoff. Blocks the calling thread; run it on a worker thread.
+        /// </summary>
+        /// <param name="container">Client context the query belongs to.</param>
+        /// <param name="query">Query to drain.</param>
+        /// <param name="cancellationToken">Checked between pages and attempts.</param>
+        /// <param name="onEntry">Optional per-entity callback, see <see cref="ExecuteAllPages{T}"/>.</param>
+        /// <param name="maxAttempts">Attempts before the last transient failure is thrown.</param>
+        public static List<T> ExecuteAllPagesWithRetry<T>(
             Container container,
             DataServiceQuery<T> query,
             CancellationToken cancellationToken,

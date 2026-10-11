@@ -446,6 +446,12 @@ namespace Viking
             UI.State.IdentityVolumeName = string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeName)
                 ? null
                 : wpfLoginWindow.VolumeName;
+            UI.State.CorrectionServiceUrl = string.IsNullOrWhiteSpace(wpfLoginWindow.CorrectionServiceUrl)
+                ? null
+                : wpfLoginWindow.CorrectionServiceUrl;
+            UI.State.CorrectionDatabaseName = string.IsNullOrWhiteSpace(wpfLoginWindow.CorrectionDatabaseName)
+                ? null
+                : wpfLoginWindow.CorrectionDatabaseName;
             UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)
                 ? "https://sbfsem-tools.com/open"
                 : settings.SbfsemToolsOpenUrl;

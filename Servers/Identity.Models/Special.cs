@@ -91,6 +91,12 @@ namespace Viking.Identity.Models
                 public const string AccessManager = "Access Manager";
                 public const string User = "User";
             }
+
+            public static class CorrectionService
+            {
+                public const string AccessManager = "Access Manager";
+                public const string User = "User";
+            }
         }
 
     }

@@ -62,7 +62,7 @@ namespace AnnotationVizLib
             NodeAttribs.Add("Untraceable", node.Location.IsUntraceable ? "true" : "false");
             NodeAttribs.Add("Vericosity Cap", node.Location.IsVericosityCap ? "true" : "false");
             NodeAttribs.Add("StructureTags", ObjAttribute.AttributesToString(node.Graph.structure.TagsXML));
-            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.TagsXml));
+            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.TagsXml()));
 
             NodeAttribs.Add("StructureURL", ODataLinkBuilder.Location(this.VolumeURL, node.Location.ID));
 
@@ -95,13 +95,13 @@ namespace AnnotationVizLib
 
         public static string NodeVikingLocation(MorphologyNode node)
         {
-            Vector2 pos = node.Location.Geometry.Centroid();
+            Vector2 pos = node.Location.Geometry().Centroid();
             return string.Format("X:{0} Y:{1} Z:{2}", pos.X / node.Graph.scale.X.Value, pos.Y / node.Graph.scale.Y.Value, node.UnscaledZ);
         }
 
         public static string NodeLayout(MorphologyNode node)
         {
-            Vector2 pos = node.Location.Geometry.Centroid();
+            Vector2 pos = node.Location.Geometry().Centroid();
             return string.Format("({0},{1},{2})", pos.X, pos.Y, node.Z);
         }
 

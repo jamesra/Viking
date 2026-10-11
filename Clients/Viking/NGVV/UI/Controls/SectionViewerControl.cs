@@ -286,6 +286,7 @@ namespace Viking.UI.Controls
 
                 _Section = value;
                 InvalidateSectionTextureCache();
+                UpdateCorrectionShim();
                 if (_Section != null)
                 {
                     //NOTE: We have to update the section before we ask for the reference section
@@ -568,6 +569,7 @@ namespace Viking.UI.Controls
         private void UnsubscribeAndCancelTokens()
         {
             State.ItemSelected -= ObjectSelectedHandler;
+            DisposeCorrectionShim();
             CommandQueue.OnCommandInjected -= this.OnCommandInjected;
             CommandQueue.OnQueueChanged -= this.OnCommandQueueChanged;
             PendingTextureQueue.QueueBecameEmpty -= this.OnPendingTextureQueueBecameEmpty;
@@ -3196,8 +3198,9 @@ namespace Viking.UI.Controls
                 }
             }
 
-            this.Camera.LookAt = new Vector2(location.X, location.Y);
+            // Downsample first: it changes the shim fade, and LookAt must include the shim that will be showing.
             this.Downsample = (float)newDownsample;
+            this.Camera.LookAt = new Vector2(location.X, location.Y) + this.Camera.Shim;
             this.StatusPosition = new Geometry.Vector2(location.X, location.Y);
             this.StatusSection = this.Section.Number;
             this.StatusMagnification = newDownsample;
@@ -3243,6 +3246,7 @@ namespace Viking.UI.Controls
         {
             //TODO: Cancel the active command
             InvalidateSectionTextureCache();
+            UpdateCorrectionShim();
             this.Invalidate();
         }
 
@@ -3513,7 +3517,9 @@ namespace Viking.UI.Controls
                 Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue,
                 Viking.Properties.Settings.Default.VisibleTileSortIntervalMs,
                 Viking.Properties.Settings.Default.MaxConcurrentTextureRequests,
-                Viking.Properties.Settings.Default.LoadAdjacentSectionTextures
+                Viking.Properties.Settings.Default.LoadAdjacentSectionTextures,
+                Viking.Properties.Settings.Default.CorrectionShimFadeStartDownsample,
+                Viking.Properties.Settings.Default.CorrectionShimFadeEndDownsample
             );
 
             // Wire up real-time preview for settings changes
@@ -3525,8 +3531,16 @@ namespace Viking.UI.Controls
             _viewerPreferencesDialog = new Viking.UI.WPF.Forms.ViewerPreferencesDialog(viewModel);
 
             // Wire up event handlers to save settings
-            _viewerPreferencesDialog.ApplyClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
-            _viewerPreferencesDialog.OkClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
+            _viewerPreferencesDialog.ApplyClicked += (s, args) =>
+            {
+                SaveViewerPreferencesFromViewModel(viewModel);
+                ApplyCorrectionShimSettings();
+            };
+            _viewerPreferencesDialog.OkClicked += (s, args) =>
+            {
+                SaveViewerPreferencesFromViewModel(viewModel);
+                ApplyCorrectionShimSettings();
+            };
 
             _viewerPreferencesDialog.Show(); // Modeless dialog
         }
@@ -3579,6 +3593,8 @@ namespace Viking.UI.Controls
             Viking.Properties.Settings.Default.VisibleTileSortIntervalMs = viewModel.VisibleTileSortIntervalMs;
             Viking.Properties.Settings.Default.MaxConcurrentTextureRequests = viewModel.MaxConcurrentTextureRequests;
             Viking.Properties.Settings.Default.LoadAdjacentSectionTextures = viewModel.LoadAdjacentSectionTextures;
+            Viking.Properties.Settings.Default.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
+            Viking.Properties.Settings.Default.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;
             Viking.Properties.Settings.Default.Save();
             Viking.PendingTextureQueue.UpdateSortInterval(viewModel.VisibleTileSortIntervalMs);
             Viking.TextureReaderV2.ApplyMaxConcurrentRequestPreference(

@@ -170,6 +170,8 @@ The system defines several OAuth2/OIDC clients for different use cases:
     - ``mvc`` and ``web`` use ``IDENTITY_SERVER_MVC_SECRET``
     - ``ro.viking`` uses ``IDENTITY_SERVER_RO_VIKING_SECRET``
     - ``sbfsem-tools`` uses ``SBFSEM_TOOLS_CLIENT_SECRET``
+    - ``correction`` (correction service containers, client credentials, ``Viking.Annotation`` scope only) uses
+      ``CORRECTION_SERVICE_CLIENT_SECRET``. When it is empty the client is not served at all.
 
     **Important:** Store these outside the repository and rotate any value that has been committed.
 

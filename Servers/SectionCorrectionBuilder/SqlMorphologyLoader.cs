@@ -77,7 +77,7 @@ namespace Viking.SectionCorrectionBuilder
         /// </summary>
         public static async Task<LoadResult> LoadAsync(
             AnnotationContext db,
-            Connectome connectome,
+            Volume volume,
             IScale scale,
             string stosGroup,
             int minLocations)
@@ -137,7 +137,29 @@ AND LK.B IN (
             };
         }
 
-        public static Task<LoadResult> RemapAsync(LoadResult source, Connectome connectome, IScale scale, string stosGroup)
+        /// <summary>
+        /// Builds the result from rows fetched elsewhere (the OData loader), mapping them into volume space.
+        /// </summary>
+        /// <param name="candidates">Candidate locations.</param>
+        /// <param name="links">Links among the candidates.</param>
+        /// <param name="volume">Volume whose stos transforms map mosaic positions.</param>
+        /// <param name="scale">Annotation database scale.</param>
+        /// <param name="stosGroup">Transform group.</param>
+        public static LoadResult FromRows(
+            List<CandidateRow> candidates,
+            List<LinkRow> links,
+            Volume volume,
+            IScale scale,
+            string stosGroup) =>
+            new()
+            {
+                StosGroup = stosGroup,
+                Candidates = candidates,
+                Links = links,
+                Cells = BuildCells(candidates, links, volume, scale, stosGroup)
+            };
+
+        public static Task<LoadResult> RemapAsync(LoadResult source, Volume volume, IScale scale, string stosGroup)
         {
             List<MorphologyGraph> cells = BuildCells(source.Candidates, source.Links, volume, scale, stosGroup);
             return Task.FromResult(new LoadResult
@@ -152,7 +174,7 @@ AND LK.B IN (
         static List<MorphologyGraph> BuildCells(
             List<CandidateRow> candidates,
             List<LinkRow> links,
-            Connectome connectome,
+            Volume volume,
             IScale scale,
             string stosGroup)
         {
@@ -287,7 +309,7 @@ WHERE L.ParentID IN ({idList})")
             UnitsAndScale.Scale scale = await LoadScaleAsync(db).ConfigureAwait(false);
             string cache = cachePath ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "SectionCorrectionBuilder");
             Directory.CreateDirectory(cache);
-            Connectome connectome = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
+            Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
             return BuildCells(candidates, links, volume, scale, stosGroup);
         }

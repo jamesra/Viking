@@ -106,6 +106,20 @@
                 </small>
             </div>
             <div class="mb-3">
+                <label asp-for="CorrectionServiceId" class="form-label"></label>
+                <select asp-for="CorrectionServiceId" class="form-select">
+                    <option value="">None</option>
+                    @foreach (var service in (IEnumerable<Viking.Identity.Models.CorrectionService>)ViewBag.AvailableCorrectionServices)
+                    {
+                        <option value="@service.Id" selected="@(Model.CorrectionServiceId == service.Id)">@service.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="CorrectionServiceId" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    Section correction service for this context. Viking is sent its endpoint when the context is opened.
+                </small>
+            </div>
+            <div class="mb-3">
                 <label asp-for="Parent" class="form-label"></label>
                 <select asp-for="ParentID" asp-items="@ViewBag.AvailableParents" class="form-select">
                     <option value="">None</option>

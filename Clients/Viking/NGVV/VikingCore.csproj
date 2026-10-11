@@ -48,6 +48,7 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\Viking.Scene\Viking.Scene.csproj" />
+    <ProjectReference Include="..\..\Viking.SectionCorrectionClient\Viking.SectionCorrectionClient.csproj" />
     <ProjectReference Include="..\..\Viking.Input\Viking.Input.csproj" />
     <ProjectReference Include="..\..\Viking.Tokens\Viking.Tokens.csproj" />
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />

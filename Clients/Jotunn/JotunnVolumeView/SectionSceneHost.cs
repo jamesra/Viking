@@ -13,6 +13,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Viking;
 using Viking.Input;
 using Viking.Rendering;
+using Viking.SectionCorrectionClient;
 using Viking.VolumeModel;
 using WebAnnotation;
 using WebAnnotation.Tools;
@@ -44,6 +45,8 @@ namespace Viking.VolumeView
         Geometry.Rectangle? _lastReportedBounds;
         double _lastReportedDownsample;
         int _lastReportedSection = int.MinValue;
+        SectionShimService _correctionShim;
+        bool _correctionShimConfigured;
 
         public SectionSceneHost()
         {
@@ -274,6 +277,7 @@ namespace Viking.VolumeView
             if (Scene != null)
                 Scene.Viewport = originalViewport;
             TileLoadEnvironment.GetSectionNumber = () => SectionNumber;
+            UpdateCorrectionShim(volumeVm);
             RaiseViewportChangedIfNeeded();
             _drawSinceCheckpoint = true;
         }
@@ -366,6 +370,71 @@ namespace Viking.VolumeView
                 cache.Checkpoint();
                 Viking.VolumeModel.Global.TileCache.Checkpoint();
             });
+        }
+
+        /// <summary>
+        /// Reports the active section's view to the section-correction shim, creating the service on first use when
+        /// the open context has a correction service. Runs on the render thread after each draw; the work is cheap and
+        /// the camera is only touched, on the UI thread, when the faded shim actually changes.
+        /// </summary>
+        /// <remarks>
+        /// With several grid cells the shim follows the active cell's section and applies to every cell, because the
+        /// cells share one camera.
+        /// </remarks>
+        void UpdateCorrectionShim(VolumeVM volumeVm)
+        {
+            if (Scene == null || volumeVm == null)
+                return;
+
+            if (!_correctionShimConfigured)
+            {
+                _correctionShimConfigured = true;
+                if (SectionShimContext.Source == null
+                    || string.IsNullOrWhiteSpace(SectionShimContext.CorrectionServiceUrl)
+                    || string.IsNullOrWhiteSpace(SectionShimContext.DatabaseName)
+                    || volumeVm.Volume?.DefaultXYScale == null)
+                {
+                    return;
+                }
+
+                _correctionShim = new SectionShimService(SectionShimContext.Source, ApplyCorrectionShim,
+                    SectionShimContext.Settings, message => Trace.WriteLine(message, "CorrectionShim"));
+                _correctionShim.Configure(
+                    SectionShimContext.CorrectionServiceUrl,
+                    SectionShimContext.DatabaseName,
+                    volumeVm.Volume.DefaultXYScale.Value);
+            }
+
+            if (_correctionShim == null)
+                return;
+
+            Microsoft.Xna.Framework.Vector2 lookAt = Scene.Camera.LookAt;
+            double ds = Scene.Camera.Downsample;
+            // LookAt, not EffectiveLookAt: the request describes the view before the shim so it cannot feed back on itself.
+            _correctionShim.SceneChanged(
+                volumeVm.ActiveVolumeTransform,
+                SectionNumber,
+                lookAt.X,
+                lookAt.Y,
+                Scene.Viewport.Width * ds / 2.0,
+                Scene.Viewport.Height * ds / 2.0,
+                ds);
+        }
+
+        void ApplyCorrectionShim(double dx, double dy)
+        {
+            void Apply()
+            {
+                if (Scene == null)
+                    return;
+                Scene.Camera.Shim = new Microsoft.Xna.Framework.Vector2((float)dx, (float)dy);
+                RequestRender();
+            }
+
+            if (Dispatcher.CheckAccess())
+                Apply();
+            else
+                Dispatcher.BeginInvoke(new Action(Apply));
         }
 
         void RaiseViewportChangedIfNeeded()

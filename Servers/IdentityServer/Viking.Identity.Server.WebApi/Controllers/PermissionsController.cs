@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mime;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -153,6 +154,31 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return ToObjectDictionary(services);
         }
 
+        /// <summary>
+        /// Lists the annotation contexts assigned to a correction service. Called by the correction container at
+        /// startup and on refresh with a client-credentials token, so there is no user: access is limited to the
+        /// "correction" OAuth client.
+        /// </summary>
+        /// <param name="service">Name of the CorrectionService resource the container is configured with.</param>
+        /// <param name="cancellationToken">Request abort.</param>
+        [HttpGet("AssignedAnnotationContexts")]
+        public async Task<ActionResult<List<AssignedAnnotationContext>>> AssignedAnnotationContexts(
+            [FromQuery] string service, CancellationToken cancellationToken)
+        {
+            if (User.FindFirst("client_id")?.Value != CorrectionClientId)
+                return Forbid();
+            if (string.IsNullOrWhiteSpace(service))
+                return BadRequest("service is required");
+
+            var assigned = await CorrectionServiceAssignments.ListAsync(_context, service, cancellationToken);
+            if (assigned == null)
+                return NotFound();
+            return assigned;
+        }
+
+        /// <summary>OAuth client id issued to correction service containers (see IdentityServerVikingClientStore).</summary>
+        private const string CorrectionClientId = "correction";
+
         private async Task<ApplicationUser> GetAuthenticatedUserAsync()
         {
             return await _authService.GetApplicationUserAsync(User, HttpContext);
@@ -200,11 +226,13 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                         AnnotationEndpoint = Meta(VolumeMetadata.AnnotationEndpoint),
                         Volume = Meta(VolumeMetadata.Volume),
                         BaseUrl = Meta(VolumeMetadata.BaseUrl),
+                        AnnotationDatabaseName = Meta(VolumeMetadata.AnnotationDatabaseName),
                         ODataEndpoint = Meta(VolumeMetadata.ODataEndpoint),
                         ExportEndpoint = Meta(VolumeMetadata.ExportEndpoint),
                         AnnotationServers = Meta(VolumeMetadata.AnnotationServers),
                         Mirrors = Meta(VolumeMetadata.Mirrors),
                         RegistrationName = Meta(VolumeMetadata.RegistrationName),
+                        CorrectionServiceUrl = Meta(VolumeMetadata.CorrectionServiceUrl),
                         permissions = v.Permissions
                     };
                 });

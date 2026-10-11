@@ -60,12 +60,67 @@ namespace Viking.SectionCorrectionBuilder
 
             await using AnnotationContext db = new(dbOptions);
             UnitsAndScale.Scale scale = await SqlMorphologyLoader.LoadScaleAsync(db).ConfigureAwait(false);
+
+            return await PublishCoreAsync(
+                options,
+                volumeUrl,
+                scale,
+                () => SqlMorphologyLoader.LoadWatermarkAsync(db),
+                (volume, group) => SqlMorphologyLoader.LoadAsync(db, volume, scale, group, options.MinLocations),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Same as <see cref="PublishVolumeAsync"/>, reading the annotations through the database's OData endpoint
+        /// instead of SQL. Used when the correction service has no SQL connection for the database.
+        /// </summary>
+        /// <param name="odataEndpoint">Annotation OData root, e.g. <c>https://host/RC1/OData/</c>.</param>
+        /// <param name="volumeUrl">VikingXML the stos transforms are loaded from.</param>
+        /// <param name="options">Publish options.</param>
+        /// <param name="cancellationToken">Cancels loading and publishing.</param>
+        /// <returns>0 on success.</returns>
+        public static async Task<int> PublishVolumeFromODataAsync(
+            Uri odataEndpoint,
+            string volumeUrl,
+            CorrectionPublishOptions options,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(odataEndpoint);
+            ArgumentException.ThrowIfNullOrWhiteSpace(volumeUrl);
+            ArgumentNullException.ThrowIfNull(options);
+            ArgumentException.ThrowIfNullOrWhiteSpace(options.OutputDirectory);
+
+            ODataMorphologyLoader loader = new(odataEndpoint);
+            UnitsAndScale.Scale scale = await loader.LoadScaleAsync(cancellationToken).ConfigureAwait(false);
+
+            return await PublishCoreAsync(
+                options,
+                volumeUrl,
+                scale,
+                () => loader.LoadWatermarkAsync(cancellationToken),
+                async (volume, group) =>
+                {
+                    (List<SqlMorphologyLoader.CandidateRow> candidates, List<SqlMorphologyLoader.LinkRow> links) =
+                        await loader.LoadRowsAsync(options.MinLocations, cancellationToken).ConfigureAwait(false);
+                    return SqlMorphologyLoader.FromRows(candidates, links, volume, scale, group);
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        static async Task<int> PublishCoreAsync(
+            CorrectionPublishOptions options,
+            string volumeUrl,
+            UnitsAndScale.Scale scale,
+            Func<Task<DateTime>> loadWatermark,
+            Func<Volume, string, Task<SqlMorphologyLoader.LoadResult>> loadMorphology,
+            CancellationToken cancellationToken)
+        {
             Log(options, $"Scale XY={scale.X.Value} {scale.X.Units}  Z={scale.Z.Value} {scale.Z.Units}");
 
             string cache = options.CachePath ?? Path.Combine(Path.GetTempPath(), "SectionCorrectionBuilder");
             Directory.CreateDirectory(cache);
             Log(options, $"Loading volume {volumeUrl}");
-            Connectome connectome = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
+            Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
 
             List<string> groups = ParseGroups(options.StosGroups, volume);
@@ -75,11 +130,10 @@ namespace Viking.SectionCorrectionBuilder
                 Log(options, $"{volume.Name}: mosaic-only; publishing section corrections through the identity transform.");
             }
 
-            DateTime watermark = await SqlMorphologyLoader.LoadWatermarkAsync(db).ConfigureAwait(false);
+            DateTime watermark = await loadWatermark().ConfigureAwait(false);
             Log(options, $"Annotation watermark {watermark:u}");
 
-            SqlMorphologyLoader.LoadResult morphology = await SqlMorphologyLoader.LoadAsync(
-                db, volume, scale, groups[0], options.MinLocations).ConfigureAwait(false);
+            SqlMorphologyLoader.LoadResult morphology = await loadMorphology(volume, groups[0]).ConfigureAwait(false);
 
             foreach (string group in groups)
             {
@@ -94,7 +148,7 @@ namespace Viking.SectionCorrectionBuilder
 
         internal static async Task<CorrectionPublishResult> PublishGroupAsync(
             CorrectionPublishOptions options,
-            Connectome connectome,
+            Volume volume,
             UnitsAndScale.IScale scale,
             string stosGroup,
             DateTime watermark,
@@ -239,7 +293,7 @@ namespace Viking.SectionCorrectionBuilder
         /// Stos groups to publish. Mosaic-only volumes (no DefaultVolumeTransform, or "None"),
         /// such as NM, publish under "None" so VolumeTransformProvider uses an identity map.
         /// </summary>
-        public static List<string> ParseGroups(string raw, Connectome connectome)
+        public static List<string> ParseGroups(string raw, Volume volume)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -253,7 +307,7 @@ namespace Viking.SectionCorrectionBuilder
         }
 
         static Dictionary<long, Geometry.Rectangle> SectionBoundsNm(
-            Connectome connectome,
+            Volume volume,
             UnitsAndScale.IScale scale,
             string stosGroup,
             IEnumerable<long> sectionZ)

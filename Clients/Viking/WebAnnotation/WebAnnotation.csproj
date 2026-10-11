@@ -113,6 +113,7 @@
 		<ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel.gRPC\WebAnnotationModel.gRPC.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
+		<ProjectReference Include="..\..\Viking.SectionCorrectionClient\Viking.SectionCorrectionClient.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationWPFControls\WebAnnotationWPFControls.csproj" />
 		<ProjectReference Include="..\..\Viking.Input\Viking.Input.csproj" />
 		<ProjectReference Include="..\..\Viking.Scene\Viking.Scene.csproj" />

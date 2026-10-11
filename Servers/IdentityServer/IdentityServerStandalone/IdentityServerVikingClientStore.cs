@@ -21,6 +21,12 @@ namespace Viking.Identity
         /// <summary>Client id issued to the third-party sbfsem-tools web application.</summary>
         public const string SbfsemToolsClientId = VikingOAuthClients.SbfsemTools;
 
+        /// <summary>
+        /// Client id shared by correction service containers. It carries only the Viking.Annotation scope so the
+        /// Permissions API can introspect its token; the endpoint it may call checks this client id explicitly.
+        /// </summary>
+        public const string CorrectionClientId = "correction";
+
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
         private readonly VikingIdentityServerOptions _options;
@@ -37,12 +43,14 @@ namespace Viking.Identity
         public async Task<Client> FindClientByIdAsync(string clientId)
         {
             if (clientId != "ro.viking" && clientId != "mvc" && clientId != "Viking" && clientId != "api" &&
-                clientId != SbfsemToolsClientId)
+                clientId != SbfsemToolsClientId && clientId != CorrectionClientId)
                 return null;
 
             // GetClientSecret throws when a secret is unconfigured. For the third-party client that
             // would surface as a 500 on every lookup, so treat "not configured" as "not registered".
             if (clientId == SbfsemToolsClientId && string.IsNullOrWhiteSpace(_options.SbfsemToolsClientSecret))
+                return null;
+            if (clientId == CorrectionClientId && string.IsNullOrWhiteSpace(_options.CorrectionServiceClientSecret))
                 return null;
 
             // Rebuild AllowedScopes from the live resource store on every lookup so newly
@@ -94,6 +102,18 @@ namespace Viking.Identity
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
                     AllowedScopes = scopes,
                     AllowOfflineAccess = true,
+                    AccessTokenType = AccessTokenType.Reference
+                };
+            }
+            else if (clientId == CorrectionClientId) /* Correction service containers (machine to machine) */
+            {
+                return new Client
+                {
+                    ClientId = clientId,
+                    ClientName = "Correction Service",
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    ClientSecrets = { clientSecret },
+                    AllowedScopes = IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name).ToList(),
                     AccessTokenType = AccessTokenType.Reference
                 };
             }

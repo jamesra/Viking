@@ -33,6 +33,12 @@ namespace Viking.Identity.Server
         /// </summary>
         public string SbfsemToolsClientSecret { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Confidential secret for the "correction" client used by correction service containers to list their
+        /// assigned annotation contexts. When empty the client is not served at all.
+        /// </summary>
+        public string CorrectionServiceClientSecret { get; set; } = string.Empty;
+
         /// <summary>Redirect URIs accepted for the sbfsem-tools authorization code flow.</summary>
         public string[] SbfsemToolsRedirectUris { get; set; } = new[]
         {
@@ -102,6 +108,7 @@ namespace Viking.Identity.Server
                 "mvc" or "web" => (MvcSecret, nameof(MvcSecret)),
                 "ro.viking" => (RoVikingSecret, nameof(RoVikingSecret)),
                 "sbfsem-tools" => (SbfsemToolsClientSecret, nameof(SbfsemToolsClientSecret)),
+                "correction" => (CorrectionServiceClientSecret, nameof(CorrectionServiceClientSecret)),
                 _ => throw new InvalidOperationException($"Unknown OAuth client id '{clientId}'.")
             };
 

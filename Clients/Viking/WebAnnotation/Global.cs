@@ -868,6 +868,15 @@ namespace WebAnnotation
             //Section Thickness is hard-coded, should be pulled from server.
             Scale = new Geometry.Vector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
 
+#if NETFRAMEWORK
+            // The section-correction shim reuses the annotation channels (WinHttp handler, https rewrite, bearer token).
+            if (serviceProvider?.GetService<WebAnnotationModel.gRPC.IGrpcChannelManager>() is WebAnnotationModel.gRPC.IGrpcChannelManager correctionChannels)
+            {
+                Viking.UI.State.SectionShimSource = new Viking.SectionCorrectionClient.GrpcSectionShimSource(
+                    uri => correctionChannels.GetOrCreate(uri).CreateCallInvoker());
+            }
+#endif
+
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
             if (serviceProvider?.GetService<ApplicationSettings>() is ApplicationSettings applicationSettings)

@@ -79,6 +79,17 @@ namespace Viking.UI.WPF.Models
             }
         }
 
+        /// <summary>
+        /// URL of the correction service Identity assigned to this annotation context, or null when none is assigned.
+        /// </summary>
+        public string CorrectionServiceUrl { get; set; }
+
+        /// <summary>
+        /// Annotation database of the context's default server. With the active StosGroup it identifies the
+        /// correction set to request from <see cref="CorrectionServiceUrl"/>.
+        /// </summary>
+        public string AnnotationDatabaseName { get; set; }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

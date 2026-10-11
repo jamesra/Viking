@@ -336,7 +336,26 @@ namespace Jotunn
 
         void OnViewerPreferences(object sender, ExecutedRoutedEventArgs e)
         {
-            ViewerPreferencesDialog dialog = new() { Owner = this };
+            // Only the section-correction fade is persisted for Jotunn; the dialog's other settings are display-only here.
+            var vm = new Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel();
+            vm.ResetToDefaults();
+            vm.CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimContext.Settings.FadeStartDownsample;
+            vm.CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimContext.Settings.FadeEndDownsample;
+            vm.Apply();
+
+            void SaveShim()
+            {
+                var settings = Viking.SectionCorrectionClient.SectionShimContext.Settings;
+                settings.FadeStartDownsample = vm.CorrectionShimFadeStartDownsample;
+                settings.FadeEndDownsample = vm.CorrectionShimFadeEndDownsample;
+                Viking.SectionCorrectionClient.SectionShimPreferences.Save(
+                    Viking.SectionCorrectionClient.SectionShimContext.PreferencesPath, settings);
+                vm.Apply();
+            }
+
+            ViewerPreferencesDialog dialog = new(vm) { Owner = this };
+            dialog.OkClicked += (_, _) => SaveShim();
+            dialog.ApplyClicked += (_, _) => SaveShim();
             dialog.Show();
         }
 

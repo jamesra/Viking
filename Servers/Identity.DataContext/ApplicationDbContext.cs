@@ -103,6 +103,7 @@ namespace Viking.Identity.Data
                 .HasValue<OrganizationalUnit>(nameof(Models.OrganizationalUnit))
                 .HasValue<Group>(nameof(Models.Group))
                 .HasValue<SegmentationService>(nameof(Models.SegmentationService))
+                .HasValue<CorrectionService>(nameof(Models.CorrectionService))
                 .HasValue<AnnotationServer>(nameof(Models.AnnotationServer));
 
             var uriConverter = new ValueConverter<Uri, string>(
@@ -118,6 +119,18 @@ namespace Viking.Identity.Data
                 .Property(s => s.Endpoint)
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
+
+            builder.Entity<CorrectionService>()
+                .Property(s => s.Endpoint)
+                .HasColumnName("Endpoint")
+                .HasConversion(uriConverter);
+
+            // Resource-table self FK: SQL Server rejects SetNull/Cascade here; the management controller unassigns contexts before deleting a service.
+            builder.Entity<AnnotationContext>()
+                .HasOne(c => c.CorrectionService)
+                .WithMany(s => s.AnnotationContexts)
+                .HasForeignKey(c => c.CorrectionServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<AnnotationServer>()
                 .Property(s => s.BaseUrl)
@@ -291,9 +304,13 @@ namespace Viking.Identity.Data
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.SegmentationService) });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.AccessManager});
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.User});
-             
+
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.CorrectionService) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.CorrectionService), PermissionId = Models.Special.Permissions.CorrectionService.AccessManager, Description = "Manage access to correction service resources" });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.CorrectionService), PermissionId = Models.Special.Permissions.CorrectionService.User, Description = "Use the correction service" });
+
             //////////////////////////
-            /// Create standard groups 
+            /// Create standard groups
             var EveryoneGroup = new Group { Id = Special.Groups.Everyone, Name = Special.Groups.Everyone };
             var AnonymousGroup = new Group { Id = Special.Groups.Anonymous, Name = Special.Groups.Anonymous };
             builder.Entity<Group>().HasData(new Group[] {
@@ -371,6 +388,8 @@ namespace Viking.Identity.Data
         public DbSet<Group> Group { get; set; }
 
         public DbSet<SegmentationService> SegmentationServices { get; set; }
+
+        public DbSet<CorrectionService> CorrectionServices { get; set; }
 
         public DbSet<AnnotationServer> AnnotationServers { get; set; }
 

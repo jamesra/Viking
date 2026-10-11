@@ -58,11 +58,12 @@ namespace Viking.GrpcSectionCorrectionService
             {
                 foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
                 {
-                    if (string.IsNullOrWhiteSpace(row.Name))
+                    if (string.IsNullOrWhiteSpace(row.CorrectionDatabase))
                         continue;
-                    byName[row.Name] = new VolumeInfo
+                    // volume_name is the correction-set key, which is the annotation database when Identity supplies one.
+                    byName[row.CorrectionDatabase] = new VolumeInfo
                     {
-                        VolumeName = row.Name,
+                        VolumeName = row.CorrectionDatabase,
                         VikingxmlEndpoint = row.VikingXmlEndpoint ?? "",
                         AnnotationEndpoint = row.AnnotationEndpoint ?? ""
                     };

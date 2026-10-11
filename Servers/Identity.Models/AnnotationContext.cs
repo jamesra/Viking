@@ -58,7 +58,18 @@ namespace Viking.Identity.Models
         [Display(Name = "Registration", Description = "StosGroup name. Empty uses the VikingXML default; None means no slice-to-slice warp")]
         public virtual string RegistrationName { get; set; }
 
-        [Display(Name = "Catalog Synced", Description = "When the VikingXML was last read by the catalog sync (UTC)")]
+        /// <summary>
+        /// Correction service that computes section corrections for this context, or null when none is assigned.
+        /// Surfaced to clients as the CorrectionServiceUrl metadata value.
+        /// </summary>
+        [Display(Name = "Correction Service", Description = "Service that provides section corrections for this context")]
+        public virtual long? CorrectionServiceId { get; set; }
+
+        [ForeignKey(nameof(CorrectionServiceId))]
+        [Display(Name = "Correction Service", Description = "Service that provides section corrections for this context")]
+        public virtual CorrectionService CorrectionService { get; set; }
+
+        [Display(Name = "Catalog Synced",Description = "When the VikingXML was last read by the catalog sync (UTC)")]
         public virtual DateTime? CatalogSyncedUtc { get; set; }
 
         [MaxLength(1024)]

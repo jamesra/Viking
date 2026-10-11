@@ -459,6 +459,10 @@ namespace Viking.Identity.Data.Migrations
                         new
                         {
                             Id = "SegmentationService"
+                        },
+                        new
+                        {
+                            Id = "CorrectionService"
                         });
                 });
 
@@ -533,6 +537,18 @@ namespace Viking.Identity.Data.Migrations
                         {
                             ResourceTypeId = "SegmentationService",
                             PermissionId = "User"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "CorrectionService",
+                            PermissionId = "Access Manager",
+                            Description = "Manage access to correction service resources"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "CorrectionService",
+                            PermissionId = "User",
+                            Description = "Use the correction service"
                         });
                 });
 
@@ -705,6 +721,9 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("ConnectomeId");
 
+                    b.Property<long?>("CorrectionServiceId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Endpoint")
                         .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("nvarchar(max)")
@@ -720,6 +739,8 @@ namespace Viking.Identity.Data.Migrations
                     b.HasIndex("AnnotationServerId");
 
                     b.HasIndex("ConnectomeId");
+
+                    b.HasIndex("CorrectionServiceId");
 
                     b.HasIndex("VolumeId");
 
@@ -769,6 +790,18 @@ namespace Viking.Identity.Data.Migrations
                     b.HasIndex("DefaultAnnotationContextId");
 
                     b.HasDiscriminator().HasValue("Connectome");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.CorrectionService", b =>
+                {
+                    b.HasBaseType("Viking.Identity.Models.Resource");
+
+                    b.Property<string>("Endpoint")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Endpoint");
+
+                    b.HasDiscriminator().HasValue("CorrectionService");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Group", b =>
@@ -1035,6 +1068,11 @@ namespace Viking.Identity.Data.Migrations
                         .HasForeignKey("ConnectomeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Viking.Identity.Models.CorrectionService", "CorrectionService")
+                        .WithMany("AnnotationContexts")
+                        .HasForeignKey("CorrectionServiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Viking.Identity.Models.Volume", "Volume")
                         .WithMany("AnnotationContexts")
                         .HasForeignKey("VolumeId")
@@ -1043,6 +1081,8 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("AnnotationServer");
 
                     b.Navigation("Connectome");
+
+                    b.Navigation("CorrectionService");
 
                     b.Navigation("Volume");
                 });
@@ -1112,6 +1152,11 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("AnnotationServers");
 
                     b.Navigation("Volumes");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.CorrectionService", b =>
+                {
+                    b.Navigation("AnnotationContexts");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Group", b =>

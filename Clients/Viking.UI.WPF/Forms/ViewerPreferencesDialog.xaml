@@ -415,6 +415,34 @@
                     </StackPanel>
                 </Expander>
 
+                <!-- Section correction shim -->
+                <Expander Header="Section Corrections" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                   Text="When the volume has a correction service, each section's image is shifted to line up with its neighbors. The shift is not accurate when zoomed out, so it fades in as you zoom in: none at or above the start downsample, full at or below the end downsample. Annotations move with the image and are always saved at their true position. The start must be larger than the end."/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Start fading in at downsample:"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding CorrectionShimFadeStartDownsample, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Fully applied at downsample:"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding CorrectionShimFadeEndDownsample, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
                 <!-- PID Controller Settings -->
                 <Expander Header="Animation PID Controller (Advanced)" IsExpanded="False" Margin="10">
                     <StackPanel Margin="10">

@@ -81,6 +81,14 @@ namespace Viking.UI.WPF.Forms
         /// Stored preference default. 0 means Auto (tile-size formula) at runtime.
         /// </summary>
         public const int DefaultMaxConcurrentTextureRequests = 0;
+
+        /// <summary>Downsample at and above which the section-correction shim has no effect.</summary>
+        public const double DefaultCorrectionShimFadeStartDownsample = 8;
+
+        /// <summary>Downsample at and below which the section-correction shim is fully applied.</summary>
+        public const double DefaultCorrectionShimFadeEndDownsample = 4;
+        public const double MinCorrectionShimFadeDownsample = 0.25;
+        public const double MaxCorrectionShimFadeDownsample = 256;
         public const int MinMaxConcurrentTextureRequests = 0;
         public const int MaxMaxConcurrentTextureRequests = 256;
         #endregion
@@ -103,6 +111,8 @@ namespace Viking.UI.WPF.Forms
         private int _originalVisibleTileSortIntervalMs;
         private int _originalMaxConcurrentTextureRequests;
         private bool _originalLoadAdjacentSectionTextures;
+        private double _originalCorrectionShimFadeStartDownsample;
+        private double _originalCorrectionShimFadeEndDownsample;
         #endregion
 
         #region Section Number Overlay Properties
@@ -433,6 +443,46 @@ namespace Viking.UI.WPF.Forms
             }
         }
 
+        private double _correctionShimFadeStartDownsample = DefaultCorrectionShimFadeStartDownsample;
+
+        /// <summary>
+        /// Downsample where the section-correction shim begins to fade in while zooming in. At or above it the
+        /// image is not shifted.
+        /// </summary>
+        public double CorrectionShimFadeStartDownsample
+        {
+            get => _correctionShimFadeStartDownsample;
+            set
+            {
+                double clamped = Clamp(value, MinCorrectionShimFadeDownsample, MaxCorrectionShimFadeDownsample);
+                if (_correctionShimFadeStartDownsample != clamped)
+                {
+                    _correctionShimFadeStartDownsample = clamped;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _correctionShimFadeEndDownsample = DefaultCorrectionShimFadeEndDownsample;
+
+        /// <summary>
+        /// Downsample where the section-correction shim is fully applied. Should be below
+        /// <see cref="CorrectionShimFadeStartDownsample"/>; otherwise the shim switches on at this value.
+        /// </summary>
+        public double CorrectionShimFadeEndDownsample
+        {
+            get => _correctionShimFadeEndDownsample;
+            set
+            {
+                double clamped = Clamp(value, MinCorrectionShimFadeDownsample, MaxCorrectionShimFadeDownsample);
+                if (_correctionShimFadeEndDownsample != clamped)
+                {
+                    _correctionShimFadeEndDownsample = clamped;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public int TextureLoadingWindowMinimum => MinTextureLoadingWindow;
         public int TextureLoadingWindowMaximum => MaxTextureLoadingWindow;
         public int MinTexturesToLoadFromQueueMinimum => MinMinTexturesToLoadFromQueue;
@@ -491,8 +541,13 @@ namespace Viking.UI.WPF.Forms
             int minTexturesToLoadFromQueue,
             int visibleTileSortIntervalMs,
             int maxConcurrentTextureRequests,
-            bool loadAdjacentSectionTextures)
+            bool loadAdjacentSectionTextures,
+            double correctionShimFadeStartDownsample = DefaultCorrectionShimFadeStartDownsample,
+            double correctionShimFadeEndDownsample = DefaultCorrectionShimFadeEndDownsample)
         {
+            double clampedShimStart = Clamp(correctionShimFadeStartDownsample, MinCorrectionShimFadeDownsample, MaxCorrectionShimFadeDownsample);
+            double clampedShimEnd = Clamp(correctionShimFadeEndDownsample, MinCorrectionShimFadeDownsample, MaxCorrectionShimFadeDownsample);
+
             // Clamp values to valid ranges (in case saved value is from old settings)
             double clampedAcceleration = Clamp(sectionNumberOverlayAcceleration, MinAcceleration, MaxAcceleration);
             double clampedOpacity = Clamp(sectionNumberOverlayOpacity, 0.0, 1.0);
@@ -525,6 +580,8 @@ namespace Viking.UI.WPF.Forms
             _originalVisibleTileSortIntervalMs = clampedVisibleTileSortIntervalMs;
             _originalMaxConcurrentTextureRequests = clampedMaxConcurrentTextureRequests;
             _originalLoadAdjacentSectionTextures = loadAdjacentSectionTextures;
+            _originalCorrectionShimFadeStartDownsample = clampedShimStart;
+            _originalCorrectionShimFadeEndDownsample = clampedShimEnd;
 
             // Set current values (without triggering change events during load)
             var tempHandler = SectionNumberOverlaySettingsChanged;
@@ -547,6 +604,8 @@ namespace Viking.UI.WPF.Forms
             _visibleTileSortIntervalMs = clampedVisibleTileSortIntervalMs;
             _maxConcurrentTextureRequests = clampedMaxConcurrentTextureRequests;
             _loadAdjacentSectionTextures = loadAdjacentSectionTextures;
+            _correctionShimFadeStartDownsample = clampedShimStart;
+            _correctionShimFadeEndDownsample = clampedShimEnd;
 
             SectionNumberOverlaySettingsChanged = tempHandler;
 
@@ -575,6 +634,8 @@ namespace Viking.UI.WPF.Forms
             _originalVisibleTileSortIntervalMs = _visibleTileSortIntervalMs;
             _originalMaxConcurrentTextureRequests = _maxConcurrentTextureRequests;
             _originalLoadAdjacentSectionTextures = _loadAdjacentSectionTextures;
+            _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
+            _originalCorrectionShimFadeEndDownsample = _correctionShimFadeEndDownsample;
         }
 
         /// <summary>
@@ -599,6 +660,8 @@ namespace Viking.UI.WPF.Forms
             _visibleTileSortIntervalMs = _originalVisibleTileSortIntervalMs;
             _maxConcurrentTextureRequests = _originalMaxConcurrentTextureRequests;
             _loadAdjacentSectionTextures = _originalLoadAdjacentSectionTextures;
+            _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
+            _correctionShimFadeEndDownsample = _originalCorrectionShimFadeEndDownsample;
 
             OnPropertyChanged(string.Empty);
         }
@@ -625,6 +688,8 @@ namespace Viking.UI.WPF.Forms
             VisibleTileSortIntervalMs = DefaultVisibleTileSortIntervalMs;
             MaxConcurrentTextureRequests = DefaultMaxConcurrentTextureRequests;
             LoadAdjacentSectionTextures = true;
+            CorrectionShimFadeStartDownsample = DefaultCorrectionShimFadeStartDownsample;
+            CorrectionShimFadeEndDownsample = DefaultCorrectionShimFadeEndDownsample;
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)

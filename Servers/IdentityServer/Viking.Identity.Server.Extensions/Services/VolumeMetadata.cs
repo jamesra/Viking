@@ -47,6 +47,12 @@ namespace Viking.Identity.Server.Extensions.Services
         public const string AnnotationServerName = "AnnotationServerName";
         public const string AnnotationEndpoint = "AnnotationEndpoint";
         public const string BaseUrl = "BaseUrl";
+
+        /// <summary>
+        /// Annotation database of the default server (see <see cref="CorrectionDatabaseName"/>). Together with the
+        /// StosGroup (<see cref="RegistrationName"/>) it identifies a published correction set.
+        /// </summary>
+        public const string AnnotationDatabaseName = "AnnotationDatabaseName";
         public const string ODataEndpoint = "ODataEndpoint";
         public const string ExportEndpoint = "ExportEndpoint";
         public const string AnnotationServers = "AnnotationServers";
@@ -54,10 +60,14 @@ namespace Viking.Identity.Server.Extensions.Services
         public const string Mirrors = "Mirrors";
         public const string RegistrationName = "RegistrationName";
 
+        /// <summary>URL of the correction service assigned to the context, or null when none is assigned.</summary>
+        public const string CorrectionServiceUrl = "CorrectionServiceUrl";
+
         /// <summary>Annotation contexts with the navigation properties <see cref="Build"/> reads.</summary>
         public static IQueryable<AnnotationContext> WithCatalog(this ApplicationDbContext context) =>
             context.AnnotationContexts
                 .Include(c => c.AnnotationServer)
+                .Include(c => c.CorrectionService)
                 .Include(c => c.AnnotationServerLinks)
                     .ThenInclude(l => l.AnnotationServer)
                 .Include(c => c.Volume)
@@ -75,10 +85,12 @@ namespace Viking.Identity.Server.Extensions.Services
                 [AnnotationServerName] = defaultServer?.Name,
                 [AnnotationEndpoint] = AnnotationServiceUrls.AnnotationUrl(defaultServer),
                 [BaseUrl] = defaultServer?.BaseUrl,
+                [AnnotationDatabaseName] = CorrectionDatabaseName(defaultServer),
                 [ODataEndpoint] = AnnotationServiceUrls.ODataUrl(defaultServer),
                 [ExportEndpoint] = AnnotationServiceUrls.ExportUrl(defaultServer),
                 [AnnotationServers] = servers,
                 [RegistrationName] = annotationContext.RegistrationName,
+                [CorrectionServiceUrl] = annotationContext.CorrectionService?.Endpoint?.ToString(),
                 [Mirrors] = MirrorsOf(annotationContext.Volume)
             };
 
@@ -114,7 +126,15 @@ namespace Viking.Identity.Server.Extensions.Services
                 .ToList();
         }
 
-        private static AnnotationServer DefaultServer(AnnotationContext annotationContext)
+        /// <summary>
+        /// Name of the annotation database that keys a server's correction sets: the database name reported by the
+        /// VikingXML, or the server name when the server was assigned by hand and has none. Null for no server.
+        /// </summary>
+        public static string CorrectionDatabaseName(AnnotationServer server) =>
+            string.IsNullOrWhiteSpace(server?.AnnotationDatabaseName) ? server?.Name : server.AnnotationDatabaseName;
+
+        /// <summary>The default annotation server of a context (default link first, then the legacy single server), or null.</summary>
+        public static AnnotationServer DefaultServer(AnnotationContext annotationContext)
         {
             if (annotationContext == null)
                 return null;

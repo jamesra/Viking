@@ -3,11 +3,24 @@
 # Corrections and stos cache live under D:\Docker\mounted-configs\SectionCorrectionService\
 # (compose bind-mounts those folders; this file only names the in-container paths).
 
-# Identity SQL (lists Resource rows with ResourceTypeId Volume).
-# Database name must match Identity Server SQL_SERVER_IDENTITY_DB (IdentityViking).
+# Identity server. At startup (and on every rebuild) the service signs in as the Identity "correction" client
+# and lists the annotation contexts assigned to the CorrectionService resource named below.
+# Create that resource in the Identity management site (Correction Services) and assign contexts on each
+# context's Edit page. The secret must equal CORRECTION_SERVICE_CLIENT_SECRET on the Identity server.
+IdentityServer__Endpoint=https://identity.codepharm.net:5001/
+# Permissions WebApi base URL (serves Permissions/AssignedAnnotationContexts). Defaults to the Endpoint above.
+IdentityServer__ApiEndpoint=https://identity.codepharm.net:6001/
+IdentityServer__ClientId=correction
+IdentityServer__ClientSecret=REPLACE_WITH_CORRECTION_SERVICE_CLIENT_SECRET
+CorrectionService__Name=REPLACE_WITH_CORRECTION_SERVICE_NAME
+
+# Fallback when IdentityServer__* is not set: read the Identity SQL directly (lists Resource rows with
+# ResourceTypeId AnnotationContext). Database name must match Identity Server SQL_SERVER_IDENTITY_DB (IdentityViking).
 ConnectionStrings__IdentityConnection=Server=192.168.0.110,1433;Database=IdentityViking;User ID=VikingDirect;Password=REPLACE_WITH_SQL_PASSWORD;TrustServerCertificate=True
 
-# Annotation SQL per Identity volume Name. Volumes not listed are skipped.
+# Annotation SQL per annotation database name (the Identity annotation server's database name; the context name
+# is tried second). A database not listed here is read through the OData endpoint Identity reports for
+# its annotation server (slower: links are paged in full); with neither, it is skipped. Contexts that share a database and StosGroup are built once.
 # AnnotationConnections__RPC1=Server=host.docker.internal,1433;Database=RPC1;User ID=sa;Password=REPLACE;TrustServerCertificate=True;MultipleActiveResultSets=true
 # AnnotationConnections__RC1=Server=host.docker.internal,1433;Database=RC1;User ID=sa;Password=REPLACE;TrustServerCertificate=True;MultipleActiveResultSets=true
 

@@ -153,6 +153,15 @@ namespace Viking.UI.WPF
 
         public string VolumeURL { get; private set; }
         public string VolumeName { get; private set; }
+
+        /// <summary>
+        /// Correction service URL Identity sent with the chosen annotation context, or null when the context has no
+        /// service or was entered by URL. Valid after the dialog returns true.
+        /// </summary>
+        public string CorrectionServiceUrl { get; private set; }
+
+        /// <summary>Annotation database of the chosen context; the volume-name part of the correction key.</summary>
+        public string CorrectionDatabaseName { get; private set; }
         public string SegmentationServiceUrl { get; private set; }
         public NetworkCredential Credentials { get; private set; }
         public TokenResponse BearerToken { get; private set; }
@@ -301,6 +310,8 @@ namespace Viking.UI.WPF
             try
             {
                 VolumeURL = e.Url;
+                CorrectionServiceUrl = e.CorrectionServiceUrl;
+                CorrectionDatabaseName = e.AnnotationDatabaseName;
                 VolumeName = !string.IsNullOrWhiteSpace(InitialVolumeName) ? InitialVolumeName : e.Name;
 
                 bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);

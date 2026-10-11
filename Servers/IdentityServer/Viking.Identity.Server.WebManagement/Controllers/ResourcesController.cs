@@ -298,6 +298,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     return RedirectToAction(ActionName, "Groups", RouteValues);
                 case nameof(Identity.Models.SegmentationService):
                     return RedirectToAction(ActionName, "SegmentationServices", RouteValues);
+                case nameof(Identity.Models.CorrectionService):
+                    return RedirectToAction(ActionName, "CorrectionServices", RouteValues);
                 case nameof(Identity.Models.Resource):
                     if (IsResourceAction != null)
                         return IsResourceAction(); 

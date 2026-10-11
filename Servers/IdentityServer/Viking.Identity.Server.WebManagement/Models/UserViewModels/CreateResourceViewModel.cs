@@ -61,6 +61,19 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         public CreateAnnotationContextViewModel(CreateResourceViewModel template) : base(template) { }
     }
 
+    public class CreateCorrectionServiceViewModel : CreateResourceViewModel
+    {
+        public override string ResourceTypeId => nameof(CorrectionService);
+
+        [Display(Name = "Endpoint URL")]
+        public virtual Uri Endpoint { get; set; }
+
+        public CreateCorrectionServiceViewModel() : base() { }
+        public CreateCorrectionServiceViewModel(CreateResourceViewModel template) : base(template)
+        {
+        }
+    }
+
     public class CreateSegmentationServiceViewModel : CreateResourceViewModel
     {
         public override string ResourceTypeId => nameof(SegmentationService);

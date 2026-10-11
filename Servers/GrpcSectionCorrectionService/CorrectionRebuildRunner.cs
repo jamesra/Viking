@@ -12,8 +12,9 @@ using Viking.SectionCorrectionBuilder;
 namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
-    /// One-volume-at-a-time rebuild of every Identity volume that has a VikingXML Endpoint and
-    /// an annotation SQL mapping. Used by the hosted service and by unit tests with mocks.
+    /// Rebuilds the correction set of every (annotation database, StosGroup) pair the assigned contexts need, one pair
+    /// at a time. Contexts that share a database and StosGroup are built once into
+    /// <c>{Corrections:RootDirectory}/{database}/{stosGroup}</c>. Used by the hosted service and by unit tests with mocks.
     /// </summary>
     public sealed class CorrectionRebuildRunner
     {
@@ -44,27 +45,36 @@ namespace Viking.GrpcSectionCorrectionService
             _logger = logger;
         }
 
+        /// <summary>
+        /// Lists the assigned contexts, groups them by (annotation database, StosGroup) and rebuilds each group.
+        /// A group that fails is logged and reported in the rebuild status; the others still run. Only one run
+        /// executes at a time; a second caller waits for the first.
+        /// </summary>
+        /// <param name="cancellationToken">Stops between groups and inside the publisher.</param>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                IReadOnlyList<IdentityVolumeRow> volumes = await _volumes.ListAsync(cancellationToken).ConfigureAwait(false);
-                _status.Begin([.. volumes.Select(v => v.Name)]);
+                IReadOnlyList<IdentityVolumeRow> rows = await _volumes.ListAsync(cancellationToken).ConfigureAwait(false);
+                List<IGrouping<(string Database, string StosGroup), IdentityVolumeRow>> groups = GroupByCorrectionKey(rows);
+                _status.Begin([.. groups.Select(g => g.Key.Database).Distinct(StringComparer.OrdinalIgnoreCase)]);
                 string error = "";
                 try
                 {
                     List<string> failures = [];
-                    foreach (IdentityVolumeRow volume in volumes)
+                    foreach (IGrouping<(string Database, string StosGroup), IdentityVolumeRow> group in groups)
                     {
                         try
                         {
-                            await RebuildVolumeAsync(volume, cancellationToken).ConfigureAwait(false);
+                            await RebuildGroupAsync(group.Key.Database, group.Key.StosGroup, [.. group], cancellationToken)
+                                .ConfigureAwait(false);
                         }
                         catch (Exception ex) when (ex is not OperationCanceledException)
                         {
-                            _logger.LogError(ex, "Section-correction rebuild failed for volume {Volume}.", volume.Name);
-                            failures.Add($"{volume.Name}: {ex.Message}");
+                            _logger.LogError(ex, "Section-correction rebuild failed for {Database} / {StosGroup}.",
+                                group.Key.Database, DisplayStos(group.Key.StosGroup));
+                            failures.Add($"{group.Key.Database}/{DisplayStos(group.Key.StosGroup)}: {ex.Message}");
                         }
                     }
 
@@ -90,33 +100,53 @@ namespace Viking.GrpcSectionCorrectionService
             }
         }
 
-        async Task RebuildVolumeAsync(IdentityVolumeRow volume, CancellationToken cancellationToken)
+        /// <summary>
+        /// Groups rows that share an annotation database and StosGroup (both compared case-insensitively; a null
+        /// StosGroup is the VikingXML default). Rows with no usable name are dropped.
+        /// </summary>
+        /// <param name="rows">Assigned contexts.</param>
+        /// <returns>One group per correction set, in first-seen order.</returns>
+        internal static List<IGrouping<(string Database, string StosGroup), IdentityVolumeRow>> GroupByCorrectionKey(
+            IEnumerable<IdentityVolumeRow> rows) =>
+            [.. rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.CorrectionDatabase))
+                .GroupBy(r => (Database: r.CorrectionDatabase.Trim(), StosGroup: r.StosGroup?.Trim() ?? ""),
+                    CorrectionKeyComparer.Instance)];
+
+        static string DisplayStos(string stosGroup) => string.IsNullOrEmpty(stosGroup) ? "(default)" : stosGroup;
+
+        async Task RebuildGroupAsync(
+            string database,
+            string stosGroup,
+            IReadOnlyList<IdentityVolumeRow> contexts,
+            CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(volume.Name))
+            // Contexts in a group share the database and StosGroup, so any one VikingXML supplies the transforms.
+            IdentityVolumeRow source = contexts.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.VikingXmlEndpoint));
+            if (source is null)
             {
-                _logger.LogWarning("Skipping Identity volume with empty name.");
+                _logger.LogWarning("Skipping {Database}: no assigned context has a VikingXML Endpoint.", database);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(volume.VikingXmlEndpoint))
-            {
-                _logger.LogWarning("Skipping volume {Volume}: missing VikingXML Endpoint.", volume.Name);
-                return;
-            }
-
-            string connection = _connections.Resolve(volume.Name);
+            string connection = _connections.Resolve(database, contexts.Select(c => c.Name));
+            Uri odata = null;
             if (string.IsNullOrWhiteSpace(connection))
             {
-                _logger.LogWarning("Skipping volume {Volume}: no annotation SQL mapping.", volume.Name);
-                return;
+                // No SQL mapping: read the annotations through OData when Identity knows the endpoint.
+                string odataText = contexts.Select(c => c.ODataEndpoint).FirstOrDefault(e => !string.IsNullOrWhiteSpace(e));
+                if (odataText is null || !Uri.TryCreate(odataText, UriKind.Absolute, out odata))
+                {
+                    _logger.LogWarning("Skipping {Database}: no annotation SQL mapping and no OData endpoint.", database);
+                    return;
+                }
             }
 
-            string folder = VolumeCorrectionCatalog.SanitizeVolumeName(volume.Name);
             string root = _configuration["Corrections:RootDirectory"];
             if (string.IsNullOrWhiteSpace(root))
                 throw new InvalidOperationException("Corrections:RootDirectory is not configured.");
 
-            string output = Path.Combine(root, folder);
+            string output = Path.Combine(root, VolumeCorrectionCatalog.SanitizeVolumeName(database));
             Directory.CreateDirectory(output);
 
             IConfigurationSection rebuild = _configuration.GetSection("Rebuild");
@@ -127,16 +157,33 @@ namespace Viking.GrpcSectionCorrectionService
                 Force = rebuild.GetValue("Force", false),
                 SkipQuiver = rebuild.GetValue("SkipQuiver", false),
                 MinLocations = rebuild.GetValue("MinLocations", 3),
-                StosGroups = rebuild["StosGroups"],
-                PublicVolumeUrl = volume.VikingXmlEndpoint,
+                // An unset group follows the global setting, then the VikingXML default.
+                StosGroups = string.IsNullOrEmpty(stosGroup) ? rebuild["StosGroups"] : stosGroup,
+                PublicVolumeUrl = source.VikingXmlEndpoint,
                 Log = message => _logger.LogInformation("{Message}", message)
             };
 
-            _logger.LogInformation("Rebuilding corrections for {Volume} into {Output}", volume.Name, output);
-            int code = await _publisher.PublishVolumeAsync(
-                connection, volume.VikingXmlEndpoint, options, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Rebuilding corrections for {Database} / {StosGroup} ({Count} context(s)) into {Output}",
+                database, DisplayStos(stosGroup), contexts.Count, output);
+            int code = odata is null
+                ? await _publisher.PublishVolumeAsync(connection, source.VikingXmlEndpoint, options, cancellationToken).ConfigureAwait(false)
+                : await _publisher.PublishVolumeFromODataAsync(odata, source.VikingXmlEndpoint, options, cancellationToken).ConfigureAwait(false);
             if (code != 0)
-                throw new InvalidOperationException($"Publisher exited {code} for volume {volume.Name}.");
+                throw new InvalidOperationException($"Publisher exited {code} for {database} / {DisplayStos(stosGroup)}.");
+        }
+
+        sealed class CorrectionKeyComparer : IEqualityComparer<(string Database, string StosGroup)>
+        {
+            public static readonly CorrectionKeyComparer Instance = new();
+
+            public bool Equals((string Database, string StosGroup) x, (string Database, string StosGroup) y) =>
+                string.Equals(x.Database, y.Database, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.StosGroup, y.StosGroup, StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode((string Database, string StosGroup) key) =>
+                HashCode.Combine(
+                    StringComparer.OrdinalIgnoreCase.GetHashCode(key.Database),
+                    StringComparer.OrdinalIgnoreCase.GetHashCode(key.StosGroup));
         }
     }
 }

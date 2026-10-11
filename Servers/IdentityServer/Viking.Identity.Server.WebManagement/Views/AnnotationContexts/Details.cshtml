@@ -159,6 +159,18 @@
                     <dt class="col-sm-3">Registration</dt>
                     <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.RegistrationName) ? "VikingXML default" : Model.RegistrationName)</dd>
 
+                    <dt class="col-sm-3">Correction Service</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.CorrectionService != null)
+                        {
+                            <a asp-controller="CorrectionServices" asp-action="Details" asp-route-id="@Model.CorrectionService.Id">@Model.CorrectionService.Name</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">None</span>
+                        }
+                    </dd>
+
                     <dt class="col-sm-3">Last Catalog Sync</dt>
                     <dd class="col-sm-9">
                         @(Model.CatalogSyncedUtc?.ToString("u") ?? "never")

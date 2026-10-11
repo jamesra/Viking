@@ -41,6 +41,28 @@ namespace Viking.GrpcSectionCorrectionService
             return new AnnotationConnectionResolver(map, configuration["AnnotationConnectionTemplate"]);
         }
 
+        /// <summary>
+        /// Resolves the connection for a correction set: the annotation database name first, then each context name
+        /// that maps to it, so existing per-volume configuration keeps working.
+        /// </summary>
+        /// <param name="database">Annotation database name (the correction-set key).</param>
+        /// <param name="contextNames">Names of the contexts that share the database.</param>
+        /// <returns>A connection string, or null when nothing is configured.</returns>
+        public string Resolve(string database, IEnumerable<string> contextNames)
+        {
+            string connection = Resolve(database);
+            if (!string.IsNullOrWhiteSpace(connection))
+                return connection;
+            foreach (string name in contextNames)
+            {
+                connection = Resolve(name);
+                if (!string.IsNullOrWhiteSpace(connection))
+                    return connection;
+            }
+
+            return null;
+        }
+
         public string Resolve(string volumeName)
         {
             if (string.IsNullOrWhiteSpace(volumeName))

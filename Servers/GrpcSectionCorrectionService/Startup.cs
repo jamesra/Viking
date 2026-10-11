@@ -10,8 +10,9 @@ using Viking.SectionCorrection;
 namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
-    /// Volume catalog, rebuild hosted service, and AnnotateSectionCorrections. Auth is optional:
-    /// when IdentityServer:Endpoint is empty, gRPC is anonymous so in-process tests and local Docker work.
+    /// Correction catalog, rebuild hosted service, and AnnotateSectionCorrections. The contexts to correct come from
+    /// Identity (<see cref="IdentityAssignmentClient"/>) when IdentityServer settings and CorrectionService:Name are
+    /// configured, else from the Identity database directly. gRPC itself is anonymous; callers are not authenticated.
     /// </summary>
     public class Startup
     {
@@ -42,11 +43,26 @@ namespace Viking.GrpcSectionCorrectionService
             });
 
             services.AddSingleton(AnnotationConnectionResolver.FromConfiguration(Configuration));
-            services.AddSingleton<IIdentityVolumeSource>(sp =>
+            // Identity is the source of truth for the contexts assigned to this service. Without Identity settings
+            // (local runs, tests) fall back to reading the Identity database directly.
+            IdentityAssignmentOptions identityOptions = IdentityAssignmentOptions.FromConfiguration(Configuration);
+            services.AddSingleton(identityOptions);
+            if (identityOptions.IsConfigured)
             {
-                string identity = Configuration.GetConnectionString("IdentityConnection");
-                return new SqlIdentityVolumeSource(identity);
-            });
+                services.AddHttpClient<IIdentityVolumeSource, IdentityAssignmentClient>((http, sp) =>
+                    new IdentityAssignmentClient(
+                        http,
+                        identityOptions,
+                        sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<IdentityAssignmentClient>>()));
+            }
+            else
+            {
+                services.AddSingleton<IIdentityVolumeSource>(sp =>
+                {
+                    string identity = Configuration.GetConnectionString("IdentityConnection");
+                    return new SqlIdentityVolumeSource(identity);
+                });
+            }
             services.AddSingleton<IVolumeCorrectionPublisher, VolumeCorrectionPublisherAdapter>();
             services.AddSingleton<RebuildStatusStore>();
             services.AddSingleton<CorrectionRebuildRunner>();
