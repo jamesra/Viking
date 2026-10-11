@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -89,8 +90,8 @@ namespace Geometry
             if (m.Success == false)
                 throw new FormatException($"Cannot parse WKT to point {coords}");
 
-            double X = System.Convert.ToDouble(m.Groups["X"].Value);
-            double Y = System.Convert.ToDouble(m.Groups["Y"].Value);
+            double X = double.Parse(m.Groups["X"].Value, NumberStyles.Float, CultureInfo.InvariantCulture);
+            double Y = double.Parse(m.Groups["Y"].Value, NumberStyles.Float, CultureInfo.InvariantCulture);
             return new Vector2(X, Y);
         }
 
