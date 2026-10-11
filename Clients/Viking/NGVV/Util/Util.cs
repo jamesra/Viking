@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 
@@ -13,14 +14,19 @@ namespace Viking.Common
 
     public class Util
     {
+        /// <summary>
+        /// Builds the viking.application deep-link URL for a position in the open volume.
+        /// Called by <c>BookmarkUIObj.URI</c> on the UI thread; reads <c>State.volume</c>.
+        /// </summary>
+        /// <remarks>Numbers use <see cref="CultureInfo.InvariantCulture"/> because the URL is machine-read; a comma decimal separator would corrupt the query string.</remarks>
         public static string CoordinatesToURI(double X, double Y, int Z, double Downsample)
         {
             string URI = "http://connectomes.utah.edu/software/viking.application?" +
                              "Volume=" + Viking.UI.State.volume.Host + "&" +
-                             "X=" + X.ToString("F1") + "&" +
-                             "Y=" + Y.ToString("F1") + "&" +
-                             "Z=" + Z.ToString() + "&" +
-                             "DS=" + Downsample.ToString("F2");
+                             "X=" + X.ToString("F1", CultureInfo.InvariantCulture) + "&" +
+                             "Y=" + Y.ToString("F1", CultureInfo.InvariantCulture) + "&" +
+                             "Z=" + Z.ToString(CultureInfo.InvariantCulture) + "&" +
+                             "DS=" + Downsample.ToString("F2", CultureInfo.InvariantCulture);
             return URI;
         }
 
