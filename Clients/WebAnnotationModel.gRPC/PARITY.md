@@ -12,7 +12,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | ProxyGetBySection / Begin/Callback | `LocationsClient` `GetLocationChanges*` (async) | done | | |
 | ProxyGetBySectionRegion (+ Begin/Callback) | `LocationRegionLoader.GetObjectsInRegionAsync`, `GetLocationChangesInMosaicRegion` | partial: region cell cache semantics differ; unverified vs WCF MinRadius filtering | | |
 | ProxyUpdate (batched save) | `Save` on stores and updaters | done | | |
-| RestoreChangedObjects | `StoreBaseWithKey.RestoreChangedObjects` (called when the update RPC fails) | done: a failed update RPC requeues objects and `Save` returns false (WCF rethrows and rolls back INSERTs). Not yet parity when conversion or `GetOrCreate` throws before the RPC: that outer catch still resets every `DBAction` to NONE | `StoreSaveFailureTests` | |
+| RestoreChangedObjects | `StoreBaseWithKey.RestoreChangedObjects` (called when the update RPC fails) | done: a failed update RPC requeues objects and `Save` returns false (WCF rethrows and rolls back INSERTs). When `GetOrCreate` throws, objects are requeued unchanged and the exception is rethrown (WCF `CreateProxy` parity). Not yet parity when conversion throws before the RPC: that outer catch still resets every `DBAction` to NONE (decision D-SaveOuterCatch) | `StoreSaveFailureTests` | |
 | IsProxyBroken, CreateProxy, GetProxy | client factory / channel reuse | n/a: WCF proxy lifecycle | | |
 | TraceQueryDetails | `QueryLogger` | done | | |
 | LocationStore.GetObjectsInRegion(Async) | `LocationRegionLoader` | done | | |

@@ -758,6 +758,9 @@ namespace WebAnnotationModel.gRPC
         /// Save all changes to locations, returns true if the method completed without errors, otherwise false
         /// This implementation assumes that the user/programmer provides a key which is either unique in the database
         /// or repeatable and that the database does not update the key value on insert.
+        /// If the server client cannot be created, the objects go back on the dirty set unchanged and the
+        /// exception is rethrown, matching the WCF store's CreateProxy failure path. A failed update RPC
+        /// also requeues the objects but returns false.
         /// </summary>
         /// <exception cref="FaultException"></exception>
         protected virtual async Task<bool> Save(List<OBJECT> changedObjects, CancellationToken token)
@@ -768,7 +771,21 @@ namespace WebAnnotationModel.gRPC
             if (changedObjects.Count == 0)
                 return true;
 
-            List<SERVER_OBJECT> changedDBObj = new List<SERVER_OBJECT>(changedObjects.Count); 
+            // Created before conversion and outside the outer try: its catch resets DBAction to NONE and
+            // drops INSERTs, which would discard edits that only failed for lack of a connection.
+            IServerAnnotationsClient<KEY, SERVER_OBJECT, CREATION_DATA_TYPE, CREATION_RESULT> client;
+            try
+            {
+                client = ClientFactory.GetOrCreate();
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine($"Could not create the annotation client for save:\n{e.Message}");
+                RestoreChangedObjects(changedObjects);
+                throw;
+            }
+
+            List<SERVER_OBJECT> changedDBObj = new List<SERVER_OBJECT>(changedObjects.Count);
 
             try
             {
@@ -777,7 +794,6 @@ namespace WebAnnotationModel.gRPC
                     changedDBObj.Add(ClientObjConverter.Convert(dbObj));
                 }
 
-                var client = ClientFactory.GetOrCreate();
                 UpdateResults<KEY, SERVER_OBJECT> updateResults;
                 try
                 { 

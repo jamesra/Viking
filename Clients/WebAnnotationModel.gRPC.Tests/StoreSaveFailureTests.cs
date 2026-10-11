@@ -56,5 +56,36 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(ok, Is.False);
             Assert.That(_changed.Values, Is.EquivalentTo(new[] { updated, deleted }));
         }
+
+        /// <summary>
+        /// Client creation fails before any RPC (bad endpoint, channel setup): the exception still reaches the
+        /// caller, as in the WCF store's CreateProxy path, but every edit stays queued with its DBAction.
+        /// </summary>
+        [Test]
+        public void ClientCreationFailure_RethrowsAndKeepsChangesQueued()
+        {
+            var factory = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>>
+                .Create("GetOrCreate", _ => throw new InvalidOperationException("no channel"));
+            var toServer = StructureStoreRegionQueryTests.FakeInterface<IObjectConverter<StructureObj, IStructure>>
+                .Create("Convert", _ => null);
+            var structures = new StructureStore(factory, null, toServer, null, null, null, null);
+            var changed = (ConcurrentDictionary<long, StructureObj>)typeof(StructureStore)
+                .GetField("ChangedObjects", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(structures);
+
+            var inserted = new StructureObj(4, 1) { DBAction = DBACTION.INSERT };
+            var updated = new StructureObj(5, 1) { DBAction = DBACTION.UPDATE };
+            var deleted = new StructureObj(6, 1) { DBAction = DBACTION.DELETE };
+            changed[4] = inserted;
+            changed[5] = updated;
+            changed[6] = deleted;
+
+            Assert.ThrowsAsync<InvalidOperationException>(() => structures.Save(CancellationToken.None));
+
+            Assert.That(changed.Values, Is.EquivalentTo(new[] { inserted, updated, deleted }));
+            Assert.That(inserted.DBAction, Is.EqualTo(DBACTION.INSERT));
+            Assert.That(updated.DBAction, Is.EqualTo(DBACTION.UPDATE));
+            Assert.That(deleted.DBAction, Is.EqualTo(DBACTION.DELETE));
+        }
     }
 }
