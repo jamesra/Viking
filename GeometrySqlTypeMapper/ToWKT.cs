@@ -1,12 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Writes <see cref="IShape2D"/> values as WKT for SQL Server geometry columns.
+    /// Numbers are always formatted with the invariant culture: WKT requires '.' as the decimal
+    /// separator, and a comma-decimal current culture (de-DE, fr-FR) would otherwise corrupt the text.
+    /// </summary>
     public static class WKTEncoder
     {
+        private static string Invariant(FormattableString text) => text.ToString(CultureInfo.InvariantCulture);
+
         public static string ToWKT(this IShape2D shape)
         {
             if (shape is IPoint2D point)
@@ -23,9 +31,9 @@ namespace Geometry
             throw new ArgumentException($"Unexpected shape {shape} cannot be converted to WKT");
         }
 
-        public static string ToWKT(IPoint2D point) => $"Point ({point.X} {point.Y})";
+        public static string ToWKT(IPoint2D point) => Invariant($"Point ({point.X} {point.Y})");
 
-        public static string ToWKT(ILineSegment2D line) => $"LINESTRING ({line.A.X} {line.A.Y}, {line.B.X} {line.B.Y})";
+        public static string ToWKT(ILineSegment2D line) => Invariant($"LINESTRING ({line.A.X} {line.A.Y}, {line.B.X} {line.B.Y})");
 
         public static string ToWKT(IPolyLine2D line) => $"LINESTRING {ToSqlCoordinateList(line.Points, false)}";
 
@@ -55,11 +63,11 @@ namespace Geometry
                 if (i != 0)
                     sb.AppendFormat(", ");
 
-                sb.Append($"{points[i].X:F2} {points[i].Y:F2}");
+                sb.Append(Invariant($"{points[i].X:F2} {points[i].Y:F2}"));
             }
 
             if (closed && points[0] != points[points.Length - 1])
-                sb.Append($", {points[0].X:F2} {points[0].Y:F2}");
+                sb.Append(Invariant($", {points[0].X:F2} {points[0].Y:F2}"));
 
             sb.Append(")");
 
@@ -87,14 +95,14 @@ namespace Geometry
                     first = p;
                 }
 
-                sb.Append($"{p.X:F2} {p.Y:F2}");
+                sb.Append(Invariant($"{p.X:F2} {p.Y:F2}"));
             }
 
             if (first is null)
                 throw new ArgumentException("points parameter must not be empty");
 
             if (closed && first.Equals(last) == false)
-                sb.Append($", {first.X:F2} {first.Y:F2}");
+                sb.Append(Invariant($", {first.X:F2} {first.Y:F2}"));
 
             sb.Append(")");
 
