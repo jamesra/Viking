@@ -17,6 +17,10 @@
 !Servers/ConnectomeDataModelCore/**
 !AnnotationVizLib/
 !AnnotationVizLib/**
+!AnnotationVizLibODataClient/
+!AnnotationVizLibODataClient/**
+!ODataClient/
+!ODataClient/**
 !AnnotationInterfaces/
 !AnnotationInterfaces/**
 !Clients/VolumeModel/
