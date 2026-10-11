@@ -30,6 +30,10 @@ namespace Viking.UI.Controls
         bool _correctionShimCreated;
         ToolStripLabel? _tsCorrection;
 
+        /// <summary>The shim currently applied to the camera, in nanometres.</summary>
+        double _correctionOffsetXNm;
+        double _correctionOffsetYNm;
+
         /// <summary>
         /// Adds the "Corrections" item to <paramref name="statusBar"/>. Called once from the constructor.
         /// </summary>
@@ -93,11 +97,23 @@ namespace Viking.UI.Controls
             }
 
             bool on = SectionShimContext.Settings.Enabled;
-            _tsCorrection.Text = on ? "Corrections: On" : "Corrections: Off";
+            _tsCorrection.Text = on ? "Corrections: On" + CorrectionOffsetText() : "Corrections: Off";
             _tsCorrection.ForeColor = on ? CorrectionOnColor : CorrectionOffColor;
             _tsCorrection.ToolTipText = on
                 ? "Section corrections are shifting the view. Click to turn them off."
                 : "Section corrections are off. Click to turn them on.";
+        }
+
+        /// <summary>
+        /// " - 2.4x, 16.8y nm" when the offset preference is on, otherwise empty.
+        /// </summary>
+        string CorrectionOffsetText()
+        {
+            if (!SectionShimContext.Settings.ShowOffset)
+                return string.Empty;
+
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, " - {0:0.0}x, {1:0.0}y nm",
+                _correctionOffsetXNm, _correctionOffsetYNm);
         }
 
         /// <summary>
@@ -167,6 +183,16 @@ namespace Viking.UI.Controls
             }
 
             Camera.Shim = new Vector2((float)dx, (float)dy);
+
+            if (_Section is not null)
+            {
+                double nmPerPixel = _Section.VolumeViewModel.DefaultXYScale.Value;
+                _correctionOffsetXNm = dx * nmPerPixel;
+                _correctionOffsetYNm = dy * nmPerPixel;
+                if (SectionShimContext.Settings.ShowOffset)
+                    UpdateCorrectionStatus();
+            }
+
             Invalidate();
         }
 

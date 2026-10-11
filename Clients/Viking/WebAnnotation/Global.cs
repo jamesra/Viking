@@ -309,6 +309,20 @@ namespace WebAnnotation
             }
 
             /// <summary>
+            /// Whether the viewer's status bar shows the correction offset after "Corrections: On". Saved across restarts.
+            /// </summary>
+            public static bool CorrectionShimShowOffset
+            {
+                get => Properties.Settings.Default.CorrectionShimShowOffset;
+                set
+                {
+                    Properties.Settings.Default.CorrectionShimShowOffset = value;
+                    Properties.Settings.Default.Save();
+                    Viking.SectionCorrectionClient.SectionShimContext.Settings.ShowOffset = value;
+                }
+            }
+
+            /// <summary>
             /// Downsample at and above which the correction shim has no effect. The shim fades in from here, reaching
             /// full effect at <see cref="CorrectionShimFadeEndDownsample"/>.
             /// </summary>
@@ -347,6 +361,7 @@ namespace WebAnnotation
             {
                 var shim = Viking.SectionCorrectionClient.SectionShimContext.Settings;
                 shim.Enabled = Properties.Settings.Default.CorrectionShimEnabled;
+                shim.ShowOffset = Properties.Settings.Default.CorrectionShimShowOffset;
                 shim.FadeStartDownsample = CorrectionShimFadeStartDownsample;
                 shim.FadeEndDownsample = CorrectionShimFadeEndDownsample;
 
@@ -585,6 +600,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.DefaultClosedLineWidth = DEFAULT_CLOSED_LINE_WIDTH;
                 Properties.Settings.Default.DefaultLocationJumpDownsample = DEFAULT_LOCATION_JUMP_DOWNSAMPLE;
                 CorrectionShimEnabled = true;
+                CorrectionShimShowOffset = false;
                 CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeStartDownsample;
                 CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeEndDownsample;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR;

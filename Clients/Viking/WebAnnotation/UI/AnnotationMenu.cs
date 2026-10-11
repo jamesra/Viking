@@ -135,7 +135,8 @@ namespace WebAnnotation
                 sceneDownsample,
                 Global.AnnotationSettings.CorrectionShimEnabled,
                 Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
-                Global.AnnotationSettings.CorrectionShimFadeEndDownsample
+                Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
+                Global.AnnotationSettings.CorrectionShimShowOffset
             );
 
             // Initialize static accessor properties
@@ -248,7 +249,8 @@ namespace WebAnnotation
                     sceneDownsample,
                     Global.AnnotationSettings.CorrectionShimEnabled,
                     Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
-                    Global.AnnotationSettings.CorrectionShimFadeEndDownsample
+                    Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
+                    Global.AnnotationSettings.CorrectionShimShowOffset
                 );
             };
 
@@ -275,6 +277,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;
             Global.AnnotationSettings.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
             Global.AnnotationSettings.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;
+            Global.AnnotationSettings.CorrectionShimShowOffset = viewModel.CorrectionShimShowOffset;
             Viking.UI.State.ViewerControl?.RefreshCorrectionShim();
 
             // Update static accessor properties
