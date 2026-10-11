@@ -154,6 +154,18 @@ namespace WebAnnotation.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool CorrectionShimShowOffset {
+            get {
+                return ((bool)(this["CorrectionShimShowOffset"]));
+            }
+            set {
+                this["CorrectionShimShowOffset"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("8")]
         public double CorrectionShimFadeStartDownsample {
             get {

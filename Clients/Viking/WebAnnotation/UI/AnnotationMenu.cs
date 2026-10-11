@@ -162,7 +162,8 @@ namespace WebAnnotation
                 Global.AnnotationSettings.SegmentationUseMaskInput,
                 Global.AnnotationSettings.CorrectionShimEnabled,
                 Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
-                Global.AnnotationSettings.CorrectionShimFadeEndDownsample
+                Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
+                Global.AnnotationSettings.CorrectionShimShowOffset
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -318,6 +319,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;
             Global.AnnotationSettings.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
             Global.AnnotationSettings.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;
+            Global.AnnotationSettings.CorrectionShimShowOffset = viewModel.CorrectionShimShowOffset;
             Viking.UI.State.ViewerControl?.RefreshCorrectionShim();
             // Setter no-ops when the value is unchanged (e.g. already live-applied from the slider).
             // Always re-arm idle so a view that is now in range starts without a camera nudge.

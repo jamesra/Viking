@@ -294,6 +294,20 @@ namespace WebAnnotation
             }
 
             /// <summary>
+            /// Whether the viewer's status bar shows the correction offset after "Corrections: On". Saved across restarts.
+            /// </summary>
+            public static bool CorrectionShimShowOffset
+            {
+                get => Properties.Settings.Default.CorrectionShimShowOffset;
+                set
+                {
+                    Properties.Settings.Default.CorrectionShimShowOffset = value;
+                    Properties.Settings.Default.Save();
+                    Viking.SectionCorrectionClient.SectionShimContext.Settings.ShowOffset = value;
+                }
+            }
+
+            /// <summary>
             /// Downsample at and above which the correction shim has no effect. The shim fades in from here, reaching
             /// full effect at <see cref="CorrectionShimFadeEndDownsample"/>.
             /// </summary>
@@ -332,6 +346,7 @@ namespace WebAnnotation
             {
                 var shim = Viking.SectionCorrectionClient.SectionShimContext.Settings;
                 shim.Enabled = Properties.Settings.Default.CorrectionShimEnabled;
+                shim.ShowOffset = Properties.Settings.Default.CorrectionShimShowOffset;
                 shim.FadeStartDownsample = CorrectionShimFadeStartDownsample;
                 shim.FadeEndDownsample = CorrectionShimFadeEndDownsample;
 
@@ -819,6 +834,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.DefaultClosedLineWidth = 24.0;
                 Properties.Settings.Default.DefaultLocationJumpDownsample = 4.0;
                 CorrectionShimEnabled = true;
+                CorrectionShimShowOffset = false;
                 CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeStartDownsample;
                 CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeEndDownsample;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;

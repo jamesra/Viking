@@ -177,6 +177,10 @@
                                   IsChecked="{Binding CorrectionShimEnabled, Mode=TwoWay}"
                                   Content="Apply section corrections"
                                   VerticalContentAlignment="Center"/>
+                        <CheckBox Margin="0,0,0,10"
+                                  IsChecked="{Binding CorrectionShimShowOffset, Mode=TwoWay}"
+                                  Content="Show the correction offset (nm) in the status bar"
+                                  VerticalContentAlignment="Center"/>
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
