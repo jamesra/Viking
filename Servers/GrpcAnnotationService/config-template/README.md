@@ -36,6 +36,39 @@ the filled-in copy.
      uncomment the production block, filling in a confidential introspection
      client registered there for the `Viking.Annotation` scope.
 
+## Deploy one annotation database (in progress)
+
+`scripts/Deploy-AnnotationGrpc.ps1` prepares a deployment per annotation
+database as compose project `viking-annotation-<database>`. It does not start
+containers yet: `docker-compose.yml` still fixes host ports 5010/5011, the
+`.env.Docker` path and the `viking-annotation-sql` container name, so a second
+project would clash with the running stack. It also does not choose an Identity
+Server; the env file keeps the template's identity values.
+
+1. Preview (writes nothing):
+
+   ```powershell
+   .\Servers\GrpcAnnotationService\scripts\Deploy-AnnotationGrpc.ps1 -Database RC3 -SqlServer "192.168.0.110,1433" -WhatIf
+   ```
+
+2. Run it without `-WhatIf`. The first run creates
+   **D:\Docker\Builds\GrpcAnnotationService\RC3.env** from
+   `build/docker-env-template.txt` with `Database=` (and `Server=` if given)
+   filled in, then lists the keys still holding `REPLACE_WITH_` values. Fill
+   them in; never copy the file into the repo.
+3. `-Status` lists `viking-annotation-*` projects; `-Database RC3 -Remove`
+   runs `docker compose down` for that project (volumes kept).
+
+`-Port` sets the h2c host port (HTTPS is Port + 1, the Viking endpoint); the
+default is the first free pair from 5010, skipping 5020. `-Environment
+Production` is refused without `-Confirm`.
+
+| Error | Fix |
+|---|---|
+| `Refusing a Production deployment without -Confirm` | Add `-Confirm`. |
+| `EnvFile must be outside the repo` | Point `-EnvFile` under `D:\Docker\Builds\`. |
+| `Port N or N+1 is already in use` | Pick another `-Port` or omit it. |
+
 ## Why an external env file?
 
 `Servers/GrpcAnnotationService/appsettings.json` only contains safe local
