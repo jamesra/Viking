@@ -1,3 +1,4 @@
+#nullable enable
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -6,6 +7,8 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
+using WebAnnotation.View;
+using WebAnnotationModel;
 using Viking.UI.Controls;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -51,6 +54,16 @@ namespace WebAnnotation.UI.Commands
 
         public PathAnnotationInteractionLog InteractionsLog => InteractionsLogger.Log;
 
+        private HashSet<long>? _HiddenStructureIDs;
+
+        /// <summary>
+        /// Structures the overlay must not draw or hit-test while this stroke is in progress: every descendant of the
+        /// first cell the stroke touches, plus structures linked to those descendants. Null until the target cell is known.
+        /// Computed once per stroke and never modified afterwards, so it is safe to read each frame on the UI thread.
+        /// It disappears with the command when the stroke ends or is cancelled, which restores the annotations.
+        /// </summary>
+        public ISet<long>? HiddenStructureIDs => _HiddenStructureIDs;
+
         private readonly PathInteractionLogger InteractionsLogger;
 
         /// <summary>
@@ -63,15 +76,21 @@ namespace WebAnnotation.UI.Commands
 
         public AnnotationOverlayPenFreeDrawCommandV2(SectionViewerControl parent, Color color, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, LineWidth, success_callback)
         {
-            InteractionsLogger = new PathInteractionLogger(base.PenInput.path, AnnotationOverlay.CurrentOverlay);
+            InteractionsLogger = CreateInteractionsLogger();
             InteractionsLogger.Log.OnLogChanged += OnInteractionLogChanged;
         }
 
         public AnnotationOverlayPenFreeDrawCommandV2(SectionViewerControl parent, Color color, Geometry.Vector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
         {
-            InteractionsLogger = new PathInteractionLogger(base.PenInput.path, AnnotationOverlay.CurrentOverlay);
+            InteractionsLogger = CreateInteractionsLogger();
             InteractionsLogger.Log.OnLogChanged += OnInteractionLogChanged;
         }
+
+        /// <summary>
+        /// Creates the logger over a hit-test filter so annotations that are hidden during the stroke are never logged.
+        /// </summary>
+        private PathInteractionLogger CreateInteractionsLogger() =>
+            new(base.PenInput.path, new HiddenStructureHitTestFilter(AnnotationOverlay.CurrentOverlay, () => _HiddenStructureIDs));
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
 
@@ -116,6 +135,7 @@ namespace WebAnnotation.UI.Commands
             {
                 case NotifyCollectionChangedAction.Add:
                     //OnInteractionAdded(e.NewItems.OfType<InteractionLogEvent>());
+                    TryHideChildrenOfTargetCell(e.NewItems?.OfType<InteractionLogEvent>() ?? []);
                     break;
                 case NotifyCollectionChangedAction.Move:
                     throw new NotImplementedException("Move is not implemented for PathInteractionLogger");
@@ -127,6 +147,50 @@ namespace WebAnnotation.UI.Commands
                 case NotifyCollectionChangedAction.Reset:
                     break;
             }
+        }
+
+        /// <summary>
+        /// Picks the cell being retraced and hides its descendants. The target is the first annotation the stroke
+        /// starts inside (PENDOWN) or later crosses into (ENTER) that has descendants, so the stroke may begin over a
+        /// child or in empty space. Does nothing once a target has been chosen: the first cell wins for the whole stroke.
+        /// Called on the UI thread from the interaction log.
+        /// </summary>
+        /// <param name="added">Log entries that were just added.</param>
+        private void TryHideChildrenOfTargetCell(IEnumerable<InteractionLogEvent> added)
+        {
+            if (_HiddenStructureIDs is not null)
+                return;
+
+            foreach (InteractionLogEvent entry in added)
+            {
+                if (entry.Interaction is not (AnnotationRegionInteraction.ENTER or AnnotationRegionInteraction.PENDOWN) ||
+                    entry.Annotation is not LocationCanvasView { ParentID: long structureId })
+                {
+                    continue;
+                }
+
+                HashSet<long> hidden = HiddenStructures.Compute(
+                    structureId,
+                    id => Store.Structures.GetObjectByID(id, false)?.Children.Select(c => c.ID) ?? [],
+                    id => LinkedStructureIDs(id),
+                    id => Store.Structures.GetObjectByID(id, false)?.ParentID);
+
+                if (hidden.Count == 0)
+                    continue;
+
+                _HiddenStructureIDs = hidden;
+                Parent.Invalidate();
+                return;
+            }
+        }
+
+        private static IEnumerable<long> LinkedStructureIDs(long structureId)
+        {
+            StructureObj? structure = Store.Structures.GetObjectByID(structureId, false);
+            if (structure is null)
+                return [];
+
+            return structure.LinksCopy?.Select(link => link.SourceID == structureId ? link.TargetID : link.SourceID) ?? [];
         }
 
         /// <summary>

@@ -2772,9 +2772,12 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
+            List<LocationCanvasView> listLocationsToDraw = HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures);
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); //Find the locations on the adjacent sections
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures); //Find the locations on the adjacent sections
+            // While a pen stroke retraces a cell its child structures are hidden so they do not obscure the contour.
+            ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
+
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
@@ -2789,7 +2792,10 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds));
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, HiddenStructures.ExcludeLocationLinks(
+                currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
+                hiddenStructures,
+                locationId => Store.Locations.GetObjectByID(locationId, false)?.ParentID));
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, 1, 0);
 
@@ -2814,7 +2820,7 @@ break;
             //Draw structure links over any annotations
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(scene);
+            List<StructureLinkViewModelBase> VisibleStructureLinks = HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures);
             StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>()]);
             StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>()]);
 
