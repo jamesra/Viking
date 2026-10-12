@@ -56,6 +56,16 @@ namespace Viking.GrpcSectionCorrectionService
         }
 
         /// <summary>
+        /// Replaces the database names reported for the running rebuild, once Identity has listed them.
+        /// </summary>
+        /// <param name="volumeNames">Annotation database names; copied, must not be null.</param>
+        public void SetVolumes(IReadOnlyList<string> volumeNames)
+        {
+            lock (_gate)
+                _lastVolumes = [.. volumeNames];
+        }
+
+        /// <summary>
         /// Marks the running rebuild as finished and stamps the completion time. Call from a <c>finally</c> so a
         /// failed rebuild does not leave <c>InProgress</c> set.
         /// </summary>

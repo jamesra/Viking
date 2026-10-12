@@ -48,7 +48,8 @@ namespace Viking.GrpcSectionCorrectionService
         /// <summary>
         /// Lists the assigned contexts, groups them by (annotation database, StosGroup) and rebuilds each group.
         /// A group that fails is logged and reported in the rebuild status; the others still run. Only one run
-        /// executes at a time; a second caller waits for the first.
+        /// executes at a time; a second caller waits for the first. The status shows the run as started even when
+        /// listing the contexts fails; a listing failure or cancellation is recorded as the status error and rethrown.
         /// </summary>
         /// <param name="cancellationToken">Stops between groups and inside the publisher.</param>
         public async Task RunAsync(CancellationToken cancellationToken)
@@ -56,13 +57,15 @@ namespace Viking.GrpcSectionCorrectionService
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                IReadOnlyList<IdentityVolumeRow> rows = await _volumes.ListAsync(cancellationToken).ConfigureAwait(false);
-                List<IGrouping<(string Database, string StosGroup), IdentityVolumeRow>> groups = GroupByCorrectionKey(rows);
-                _status.Begin([.. groups.Select(g => g.Key.Database).Distinct(StringComparer.OrdinalIgnoreCase)]);
+                // Begin first so an Identity outage still shows a start time and an error in GetRebuildStatus.
+                _status.Begin([]);
                 string error = "";
+                List<string> failures = [];
                 try
                 {
-                    List<string> failures = [];
+                    IReadOnlyList<IdentityVolumeRow> rows = await _volumes.ListAsync(cancellationToken).ConfigureAwait(false);
+                    List<IGrouping<(string Database, string StosGroup), IdentityVolumeRow>> groups = GroupByCorrectionKey(rows);
+                    _status.SetVolumes([.. groups.Select(g => g.Key.Database).Distinct(StringComparer.OrdinalIgnoreCase)]);
                     foreach (IGrouping<(string Database, string StosGroup), IdentityVolumeRow> group in groups)
                     {
                         try
@@ -80,6 +83,18 @@ namespace Viking.GrpcSectionCorrectionService
 
                     if (failures.Count > 0)
                         error = string.Join("; ", failures);
+                }
+                catch (OperationCanceledException)
+                {
+                    failures.Add("Rebuild cancelled before it finished.");
+                    error = string.Join("; ", failures);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    // Identity listing failed (group failures are handled above); the hosted service logs the rethrow.
+                    error = $"Rebuild could not start: {ex.Message}";
+                    throw;
                 }
                 finally
                 {

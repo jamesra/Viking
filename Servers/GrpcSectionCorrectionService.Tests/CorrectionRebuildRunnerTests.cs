@@ -193,5 +193,64 @@ namespace GrpcSectionCorrectionService.Tests
                 Directory.Delete(root, true);
             }
         }
+
+        /// <summary>Identity source that fails or cancels instead of listing, for runner error-path tests.</summary>
+        sealed class FailingVolumeSource(Exception toThrow) : IIdentityVolumeSource
+        {
+            public Task<IReadOnlyList<IdentityVolumeRow>> ListAsync(CancellationToken cancellationToken) =>
+                Task.FromException<IReadOnlyList<IdentityVolumeRow>>(toThrow);
+        }
+
+        static CorrectionRebuildRunner MakeRunner(IIdentityVolumeSource volumes, RebuildStatusStore status, VolumeCorrectionCatalog catalog) =>
+            new(volumes, new AnnotationConnectionResolver(null, template: null), new RecordingPublisher(), catalog, status,
+                new ConfigurationBuilder().Build(), NullLogger<CorrectionRebuildRunner>.Instance);
+
+        [TestMethod]
+        public async Task RunAsync_IdentityListFails_RecordsStartAndErrorAndRethrows()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "rebuild-ident-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                using VolumeCorrectionCatalog catalog = new(root);
+                var status = new RebuildStatusStore();
+                var runner = MakeRunner(new FailingVolumeSource(new InvalidOperationException("identity down")), status, catalog);
+
+                await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => runner.RunAsync(CancellationToken.None));
+
+                var snapshot = status.Snapshot();
+                Assert.IsNotNull(snapshot.LastStartedUtc);
+                Assert.IsNotNull(snapshot.LastCompletedUtc);
+                Assert.IsFalse(snapshot.InProgress);
+                StringAssert.Contains(snapshot.LastError, "identity down");
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        [TestMethod]
+        public async Task RunAsync_Cancelled_RecordsNonEmptyErrorAndRethrows()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "rebuild-cancel-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                using VolumeCorrectionCatalog catalog = new(root);
+                var status = new RebuildStatusStore();
+                var runner = MakeRunner(new FailingVolumeSource(new OperationCanceledException()), status, catalog);
+
+                await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => runner.RunAsync(CancellationToken.None));
+
+                var snapshot = status.Snapshot();
+                Assert.IsFalse(snapshot.InProgress);
+                StringAssert.Contains(snapshot.LastError, "cancelled");
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
     }
 }
