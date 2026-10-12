@@ -74,7 +74,7 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    box hint; no box is ever taken as object, and a foreground mask replaces the boxes. A background `Feature` adds background clicks, a
    background mask (strongly negative in every window's `mask_input`, and cleared from the
    answer) and a background rectangle (weakly negative in `mask_input` where nothing positive is
-   known, never cleared). A background mask may carry a PNG shape over its bounds (`Mask.png`); the client sends one mask per side. The candidates are the cells the prompt touches (each whose core holds part of a
+   known, never cleared). Every mask, foreground or background, is a bitmap of any shape (`Mask.png`, 1-bit, at most 1024 x 1024) over its bounds; the client sums its shapes into one mask per side. Every pixel of a foreground mask is returned as object, and a core wholly inside it is taken as object without a prediction (a bitmap that leaves part of a core out is predicted, then its pixels are pinned). The candidates are the cells the prompt touches (each whose core holds part of a
    box, each that owns a point). The candidate whose window holds the most of the prompt starts
    first, with ties going to the window with the most room round it; that repeats for what is
    still unseen. A window holds a box only when the whole box reaches its core and sits clear of

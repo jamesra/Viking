@@ -205,6 +205,31 @@ class MaskShape:
     box: Box
     bitmap_up: Optional[MaskArray] = None
 
+    def covers_core(self, cell: "Cell") -> bool:
+        """True when every pixel of ``cell``'s core is in the mask."""
+        x0, y0, x1, y1 = self.box
+        bx, by = core_origin(cell)
+        if x0 > bx or y0 > by or x1 < bx + CORE_SIZE - 1 or y1 < by + CORE_SIZE - 1:
+            return False
+        if self.bitmap_up is None:
+            return True
+        return bool(self.bitmap_up[by - y0:by - y0 + CORE_SIZE, bx - x0:bx - x0 + CORE_SIZE].all())
+
+    def interior_point(self) -> Point:
+        """A mosaic pixel that is in the mask, near its centre: the box centre for a filled rectangle.
+
+        For a bitmap it is the set pixel nearest the centroid of the set pixels, so a ring or a crescent still
+        yields a click that is on the mask.
+        """
+        x0, y0, x1, y1 = self.box
+        if self.bitmap_up is None:
+            return (x0 + x1) // 2, (y0 + y1) // 2
+        rows, cols = np.nonzero(self.bitmap_up)
+        if rows.size == 0:
+            return (x0 + x1) // 2, (y0 + y1) // 2
+        nearest = int(np.argmin((rows - rows.mean()) ** 2 + (cols - cols.mean()) ** 2))
+        return x0 + int(cols[nearest]), y0 + int(rows[nearest])
+
     def window_samples(self, cell: "Cell") -> Optional[NDArray[np.bool_]]:
         """The mask over ``cell``'s window as a ``LOGIT_WINDOW`` square (Y-down), or None when it misses the window.
 
@@ -386,6 +411,35 @@ class Canvas:
                     held = store.get(cell)
                     if held is not None:
                         held[piece] = False
+
+    def assume_mask(self, shape: MaskShape) -> dict[Cell, int]:
+        """Like :meth:`assume_box` for a :class:`MaskShape`: only the pixels inside the shape are marked object."""
+        if shape.bitmap_up is None:
+            return self.assume_box(shape.box)
+        x0, y0, x1, y1 = shape.box
+        added: dict[Cell, int] = {}
+        first = cell_of_point(x0, y0)
+        last = cell_of_point(x1, y1)
+        for row in range(first.row, last.row + 1):
+            for col in range(first.col, last.col + 1):
+                cell = Cell(row, col)
+                bx, by = core_origin(cell)
+                xa, xb = max(x0, bx), min(x1, bx + CORE_SIZE - 1)
+                ya, yb = max(y0, by), min(y1, by + CORE_SIZE - 1)
+                if xa > xb or ya > yb:
+                    continue
+                piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
+                inside = shape.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+                if not inside.any():
+                    continue
+                block = self._blocks.setdefault(cell, np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_))
+                new = int(np.count_nonzero(inside & ~block[piece]))
+                block[piece] |= inside
+                self._decided.setdefault(cell, np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_))[piece] |= inside
+                self._pinned.setdefault(cell, np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_))[piece] |= inside
+                if new:
+                    added[cell] = new
+        return added
 
     def deny_mask(self, shape: MaskShape) -> None:
         """Like :meth:`deny_box` for a :class:`MaskShape`: only the pixels inside the shape are cleared."""

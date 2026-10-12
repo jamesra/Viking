@@ -301,7 +301,7 @@ def test_features_merge_with_the_legacy_prompt_fields() -> None:
 
     assert prompts.foreground == [(1, 2), (3, 4)] and prompts.background == [(9, 9)]
     assert prompts.hint_boxes == [] and prompts.boxes == [], "a foreground mask replaces the boxes"
-    assert prompts.masks == [(20, 20, 40, 60)]
+    assert [shape.box for shape in prompts.masks] == [(20, 20, 40, 60)]
     assert prompts.background_rects == [(100, 100, 110, 110)] and [shape.box for shape in prompts.background_masks] == [(200, 200, 220, 220)]
     assert prompts.client_chose is True
 
@@ -408,3 +408,70 @@ def test_a_png_that_does_not_match_its_bounds_or_a_foreground_png_is_refused() -
         _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
     with pytest.raises(ValueError):
         _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
+
+
+def _one_bit_png(rows) -> bytes:
+    """A 1-bit greyscale PNG built by hand, the way the client sends a mask."""
+    import struct
+    import zlib
+
+    height, width = len(rows), len(rows[0])
+    raw = b"".join(bytes(1) + np.packbits(np.array(row, dtype=np.uint8)).tobytes() for row in rows)
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    return (
+        bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 1, 0, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw))
+        + chunk(b"IEND", b"")
+    )
+
+
+def test_a_one_bit_png_foreground_mask_decodes_and_a_png_over_the_sam2_window_is_refused() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    rows = [[1, 0, 0, 0], [1, 1, 0, 0]]  # 4 wide, 2 high; row 0 is y_max
+    bounds = pb.BoundingBox(x_min=10, y_min=20, x_max=13, y_max=21)
+    prompts = _prompts_from(_request(
+        foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=_one_bit_png(rows)))
+    ))
+    assert prompts.masks[0].bitmap_up.tolist() == [[True, True, False, False], [True, False, False, False]]
+    assert prompts.foreground == [prompts.masks[0].interior_point()], "the click lands on the mask"
+
+    big = pb.BoundingBox(x_min=0, y_min=0, x_max=1024, y_max=0)
+    with pytest.raises(ValueError):
+        _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=big, png=b"x"))))
+
+
+def test_every_pixel_of_a_foreground_bitmap_mask_is_returned_as_object_even_where_sam2_left_a_hole() -> None:
+    from segmentation_server.cell_grid import MaskShape
+
+    world, hole = _world_with_a_hole_in_the_box()
+    # A disc-shaped mask (an inscribed circle, not a rectangle) around the hole.
+    x0, y0, x1, y1 = 2204, 2204, 2403, 2403
+    yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1]
+    disc = (xx - 2303.5) ** 2 + (yy - 2303.5) ** 2 <= 99.5 ** 2
+    shape = MaskShape((x0, y0, x1, y1), disc)
+    _box, points = client_prompt(2304, 2304, 300)
+
+    answer = world.to_truth_frame(grow_segmentation(points, [], world.predict, masks=[shape]))
+
+    assert answer[y0:y1 + 1, x0:x1 + 1][disc].all(), "everything inside the mask is foreground"
+    assert world.mask_prompts[0] is not None and world.mask_prompts[0].max() > 0
+
+
+def test_a_mask_that_wholly_covers_a_core_takes_it_as_object_without_predicting_it() -> None:
+    from segmentation_server.cell_grid import MaskShape, core_origin
+
+    cell = cell_of_point(2304, 2304)
+    bx, by = core_origin(cell)
+    box = (bx, by, bx + 511, by + 511)
+    full = MaskShape(box, np.ones((512, 512), dtype=bool))
+    partial_bitmap = np.ones((512, 512), dtype=bool)
+    partial_bitmap[100, 100] = False
+    partial = MaskShape(box, partial_bitmap)
+    assert full.covers_core(cell) and not partial.covers_core(cell)

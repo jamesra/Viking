@@ -1947,7 +1947,7 @@ class _Prompts:
     background: List[Tuple[int, int]]
     boxes: List[Tuple[int, int, int, int]]
     hint_boxes: List[Tuple[int, int, int, int]]
-    masks: List[Tuple[int, int, int, int]]
+    masks: List[MaskShape]
     background_masks: List[MaskShape]
     background_rects: List[Tuple[int, int, int, int]]
     client_chose: bool
@@ -1966,30 +1966,31 @@ def _prompts_from(request: Any) -> _Prompts:
     background = [(point.x, point.y) for point in request.background]
     boxes = _client_boxes(request.foreground_boxes)
     hint_boxes: List[Tuple[int, int, int, int]] = []
-    masks: List[Tuple[int, int, int, int]] = []
+    masks: List[MaskShape] = []
     background_masks: List[MaskShape] = []
     background_rects: List[Tuple[int, int, int, int]] = []
     feature_sent = False
 
-    def shapes(feature: Any, allow_png: bool) -> Tuple[List[Tuple[int, int, int, int]], List[MaskShape]]:
+    def shapes(feature: Any) -> Tuple[List[Tuple[int, int, int, int]], List[MaskShape]]:
         rectangles = _client_boxes(feature.rectangles)
-        return rectangles, [_mask_shape(feature.mask, allow_png)] if feature.HasField("mask") else []
+        return rectangles, [_mask_shape(feature.mask)] if feature.HasField("mask") else []
 
     if request.HasField("foreground_feature"):
         feature_sent = True
         foreground.extend((point.x, point.y) for point in request.foreground_feature.points)
-        hint_boxes, foreground_shapes = shapes(request.foreground_feature, allow_png=False)
-        masks = [shape.box for shape in foreground_shapes]
+        hint_boxes, masks = shapes(request.foreground_feature)
         if masks:
             # A foreground mask is the prompt; boxes (legacy or a Feature's rectangle) add nothing to it.
             boxes, hint_boxes = [], []
     if request.HasField("background_feature"):
         feature_sent = True
         background.extend((point.x, point.y) for point in request.background_feature.points)
-        background_rects, background_masks = shapes(request.background_feature, allow_png=True)
+        background_rects, background_masks = shapes(request.background_feature)
     if not foreground:
-        anchor = (masks or hint_boxes or boxes or [None])[0]
-        if anchor is not None:
+        if masks:
+            foreground.append(masks[0].interior_point())
+        elif hint_boxes or boxes:
+            anchor = (hint_boxes or boxes)[0]
             foreground.append(((anchor[0] + anchor[2]) // 2, (anchor[1] + anchor[3]) // 2))
     return _Prompts(
         foreground=foreground,
@@ -2004,14 +2005,16 @@ def _prompts_from(request: Any) -> _Prompts:
 
 
 MAX_MASK_PIXELS = 1 << 26
+# A mask bitmap covers at most one SAM2 window.
+MAX_MASK_PNG_SIDE = 1024
 
 
-def _mask_shape(mask: Any, allow_png: bool) -> MaskShape:
+def _mask_shape(mask: Any) -> MaskShape:
     """One ``Mask`` message as a :class:`MaskShape`.
 
     Raises:
-        ValueError: The bounds are inverted or larger than ``MAX_MASK_PIXELS``, ``png`` is sent where
-            it is not allowed, or the PNG does not decode to exactly the bounds' size.
+        ValueError: The bounds are larger than ``MAX_MASK_PIXELS``, a ``png`` is larger than
+            ``MAX_MASK_PNG_SIDE`` square, or the PNG does not decode to exactly the bounds' size.
     """
     x0, x1 = sorted((int(mask.bounds.x_min), int(mask.bounds.x_max)))
     y0, y1 = sorted((int(mask.bounds.y_min), int(mask.bounds.y_max)))
@@ -2020,8 +2023,8 @@ def _mask_shape(mask: Any, allow_png: bool) -> MaskShape:
         raise ValueError(f"Mask bounds {width}x{height} exceed {MAX_MASK_PIXELS} pixels.")
     if not mask.png:
         return MaskShape((x0, y0, x1, y1))
-    if not allow_png:
-        raise ValueError("Mask.png is only supported in a background Feature; send Mask.bounds only.")
+    if width > MAX_MASK_PNG_SIDE or height > MAX_MASK_PNG_SIDE:
+        raise ValueError(f"Mask.png bounds {width}x{height} exceed {MAX_MASK_PNG_SIDE}x{MAX_MASK_PNG_SIDE}, the SAM2 input size.")
     image = cv2.imdecode(np.frombuffer(mask.png, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
     if image is None or image.shape != (height, width):
         got = None if image is None else f"{image.shape[1]}x{image.shape[0]}"
