@@ -20,8 +20,11 @@ namespace WebAnnotation.UI
         private static TrackBar? trackMaskThreshold;
         private static bool syncingMaskThreshold;
 
-        /// <summary>Slider steps per logit unit, so one tick is 0.1.</summary>
-        private const int MaskThresholdTicksPerUnit = 10;
+        /// <summary>Slider steps per logit unit, so one tick is 0.05.</summary>
+        private const int MaskThresholdTicksPerUnit = 20;
+
+        /// <summary>Ticks per page-style jump (click on the track, Page Up/Down): 5 ticks = 0.25.</summary>
+        private const int MaskThresholdLargeChangeTicks = 5;
 
         /// <summary>Pixel width of the threshold track bar and its toolbar host; both must match or the host clips the bar.</summary>
         private const int MaskThresholdSliderWidth = 300;
@@ -85,7 +88,7 @@ namespace WebAnnotation.UI
                 TickFrequency = MaskThresholdTicksPerUnit,
                 TickStyle = TickStyle.None,
                 SmallChange = 1,
-                LargeChange = 5,
+                LargeChange = MaskThresholdLargeChangeTicks,
                 AutoSize = false,
                 Width = MaskThresholdSliderWidth,
                 Height = 28
@@ -119,7 +122,7 @@ namespace WebAnnotation.UI
         {
             if (labelMaskThreshold is { IsDisposed: false })
                 labelMaskThreshold.Text =
-                    $"SAM2 threshold {WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold:0.0}";
+                    $"SAM2 threshold {WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold:0.00}";
         }
 
         /// <summary>
