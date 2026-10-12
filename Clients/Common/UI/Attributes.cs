@@ -42,13 +42,6 @@ namespace Viking.Common.UI
         { }
     }
 
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public sealed class ChildRelationshipAttribute : System.Attribute
-    {
-        public ChildRelationshipAttribute()
-        { }
-    }
-
     /// <summary>
     /// When placed on an object it indicates that the object should be included in the DataObjectTreeView
     /// </summary>
