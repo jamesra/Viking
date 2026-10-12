@@ -241,14 +241,17 @@ class MaskShape:
         ya, yb = max(y0, wy0), min(y1, wy0 + CELL_SIZE - 1)
         if xa > xb or ya > yb:
             return None
-        pixels = np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
         # Window row 0 is the highest mosaic y of the window, so rows run in the opposite direction.
         rows = slice(wy0 + CELL_SIZE - 1 - yb, wy0 + CELL_SIZE - 1 - ya + 1)
         cols = slice(xa - wx0, xb - wx0 + 1)
         if self.bitmap_up is None:
-            pixels[rows, cols] = True
-        else:
-            pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
+            # A filled rectangle sets every sample it touches: no need to build the pixel grid.
+            samples = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=np.bool_)
+            samples[rows.start // LOGIT_SCALE:(rows.stop - 1) // LOGIT_SCALE + 1,
+                    cols.start // LOGIT_SCALE:(cols.stop - 1) // LOGIT_SCALE + 1] = True
+            return samples
+        pixels = np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
+        pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
         samples = pixels.reshape(LOGIT_WINDOW, LOGIT_SCALE, LOGIT_WINDOW, LOGIT_SCALE).any(axis=(1, 3))
         return samples if samples.any() else None
 
@@ -289,6 +292,8 @@ class Canvas:
         self._windows: dict[Cell, Tuple[NDArray, NDArray]] = {}
         self._reach: dict[Cell, MaskArray] = {}
         self._decided: dict[Cell, MaskArray] = {}
+        # fused_block results, read only; an owner's entry is dropped whenever a window changes its sums.
+        self._fused: dict[Cell, NDArray] = {}
 
     def fork_for_pins(self) -> "Canvas":
         """A canvas that can take :meth:`assume_core`, :meth:`assume_box`, :meth:`assume_mask` and :meth:`deny_mask` without touching this one.
@@ -307,6 +312,7 @@ class Canvas:
         fork._weight = self._weight
         fork._windows = self._windows
         fork._reach = self._reach
+        fork._fused = {}
         return fork
 
     def cells(self) -> List[Cell]:
@@ -598,19 +604,29 @@ class Canvas:
                 dst = (slice(ya - oy, yb - oy), slice(xa - ox, xb - ox))
                 total[dst] += np.float32(sign) * weighted[src]
                 self._weight[owner][dst] += np.float32(sign) * weights[src]
+                self._fused.pop(owner, None)
                 touched.append(owner)
         return touched
 
     def fused_block(self, cell: Cell) -> NDArray:
-        """The cell's fused logits, ``LOGIT_CORE`` square, Y-up; ``UNSEEN_LOGIT`` where nothing predicted."""
-        out = np.full((LOGIT_CORE, LOGIT_CORE), UNSEEN_LOGIT, dtype=np.float32)
+        """The cell's fused logits, ``LOGIT_CORE`` square, Y-up; ``UNSEEN_LOGIT`` where nothing predicted.
+
+        The array is cached until a window changes the cell's sums, and is read only: callers that need to change it
+        copy it (stacking, slicing into :func:`numpy.where` and assigning into another array all do).
+        """
+        cached = self._fused.get(cell)
+        if cached is not None:
+            return cached
         total = self._sum.get(cell)
         if total is None:
-            return out
+            return _unseen_block()
+        out = np.full((LOGIT_CORE, LOGIT_CORE), UNSEEN_LOGIT, dtype=np.float32)
         weight = self._weight[cell]
         # Taking a contribution back leaves float residue instead of an exact zero.
         seen = weight > SEEN_MIN_WEIGHT
         out[seen] = total[seen] / weight[seen]
+        out.flags.writeable = False
+        self._fused[cell] = out
         return out
 
     def window_logits(self, cell: Cell) -> Optional[NDArray]:
@@ -774,6 +790,19 @@ class Canvas:
                     continue
                 out[ya - y0:yb - y0, xa - x0:xb - x0] |= block[ya - by:yb - by, xa - bx:xb - bx]
         return out
+
+
+_UNSEEN_BLOCK: Optional[NDArray] = None
+
+
+def _unseen_block() -> NDArray:
+    """One shared, read-only ``LOGIT_CORE`` square of ``UNSEEN_LOGIT``, for cells nothing has predicted."""
+    global _UNSEEN_BLOCK
+    if _UNSEEN_BLOCK is None:
+        block = np.full((LOGIT_CORE, LOGIT_CORE), UNSEEN_LOGIT, dtype=np.float32)
+        block.flags.writeable = False
+        _UNSEEN_BLOCK = block
+    return _UNSEEN_BLOCK
 
 
 _FEATHER: Optional[NDArray] = None

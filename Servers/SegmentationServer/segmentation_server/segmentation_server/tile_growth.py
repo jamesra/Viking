@@ -401,6 +401,7 @@ class GrowthWalk:
             for item in background_masks or ()
         ]
         self._background_rects = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_rects or ()]
+        self._background_patches: Dict[Cell, Optional[Tuple[Optional[NDArray], Optional[NDArray]]]] = {}
         self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
         self._logit_iso = float(logit_iso)
         self._fg = [(int(x), int(y)) for x, y in foreground]
@@ -907,21 +908,39 @@ class GrowthWalk:
         background is likely there, not certain. The input is not modified. Returns it unchanged when no
         background shape reaches the window.
         """
-        if not self._background_rects and not self._background_masks:
+        patch = self._background_patch(cell)
+        if patch is None:
             return mask_logits
+        weak, strong = patch
         out = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=np.float32) if mask_logits is None else mask_logits.copy()
+        if weak is not None:
+            free = weak & (out <= 0)
+            out[free] = np.minimum(out[free], -BACKGROUND_RECT_LOGIT)
+        if strong is not None:
+            out[strong] = -MASK_PROMPT_LOGIT
+        return out
+
+    def _background_patch(self, cell: Cell) -> Optional[Tuple[Optional[NDArray], Optional[NDArray]]]:
+        """Where the background rectangles (weak) and masks (strong) fall in ``cell``'s window, or None when neither does.
+
+        Both are ``LOGIT_WINDOW`` square boolean maps, None when that kind misses the window. They depend only on the
+        request, so each cell's is worked out once and reused by every attempt on it.
+        """
+        if cell in self._background_patches:
+            return self._background_patches[cell]
+        weak: Optional[NDArray] = None
         for rect in self._background_rects:
-            paint_box(out, cell, rect, -BACKGROUND_RECT_LOGIT, only_unset_or_negative=True)
+            samples = MaskShape(rect).window_samples(cell)
+            if samples is not None:
+                weak = samples if weak is None else weak | samples
+        strong: Optional[NDArray] = None
         for mask in self._background_masks:
-            if mask.bitmap_up is None:
-                paint_box(out, cell, mask.box, -MASK_PROMPT_LOGIT)
-                continue
             samples = mask.window_samples(cell)
             if samples is not None:
-                out[samples] = -MASK_PROMPT_LOGIT
-        if mask_logits is None and not out.any():
-            return None
-        return out
+                strong = samples if strong is None else strong | samples
+        patch = None if weak is None and strong is None else (weak, strong)
+        self._background_patches[cell] = patch
+        return patch
 
     def _start_prompts(
         self, cell: Cell, mosaic_box: Optional[Box], boxed: bool, send_center: bool = False,
@@ -1202,25 +1221,6 @@ def mask_prompt_logits(cell: Cell, shape: MaskShape) -> NDArray[np.float32]:
     if samples is not None:
         out[samples] = MASK_PROMPT_LOGIT
     return out
-
-
-def paint_box(
-    out: NDArray[np.float32], cell: Cell, box: Box, value: float, only_unset_or_negative: bool = False
-) -> None:
-    """Write ``value`` into ``out`` (a ``LOGIT_WINDOW`` square, Y-down) over the part of ``box`` in ``cell``'s window.
-
-    With ``only_unset_or_negative`` a sample that is already positive is left alone.
-    """
-    clipped = clip_box_to_window(cell, box)
-    if clipped is None:
-        return
-    left, top, right, bottom = clipped
-    region = out[top // LOGIT_SCALE:bottom // LOGIT_SCALE + 1, left // LOGIT_SCALE:right // LOGIT_SCALE + 1]
-    if only_unset_or_negative:
-        free = region <= 0
-        region[free] = np.minimum(region[free], value)
-    else:
-        region[:] = value
 
 
 def clip_box_to_window(
