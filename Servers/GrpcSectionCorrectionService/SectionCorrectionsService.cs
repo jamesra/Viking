@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using AnnotationVizLib;
 using Viking.SectionCorrection;
@@ -355,16 +357,50 @@ namespace Viking.GrpcSectionCorrectionService
             return NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
         }
 
+        /// <summary>
+        /// Looks up the VikingXML endpoint Identity lists for <paramref name="volumeName"/>; returns "" when the
+        /// volume is not listed. Called only by <see cref="CorrectStructures"/>.
+        /// </summary>
+        /// <exception cref="RpcException">
+        /// <see cref="StatusCode.Unavailable"/> when the Identity listing fails in transport (HTTP or SQL Identity
+        /// source unreachable, no access token, or an HTTP timeout), matching how the sibling volume-load failure is
+        /// mapped so callers can retry instead of seeing UNKNOWN.
+        /// </exception>
+        /// <exception cref="OperationCanceledException">Rethrown unchanged when the call itself was cancelled.</exception>
         async Task<string> VolumeUrlAsync(string volumeName, ServerCallContext context)
         {
-            foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
+            try
             {
-                if (string.Equals(row.Name, volumeName, StringComparison.OrdinalIgnoreCase))
-                    return row.VikingXmlEndpoint;
-            }
+                foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
+                {
+                    if (string.Equals(row.Name, volumeName, StringComparison.OrdinalIgnoreCase))
+                        return row.VikingXmlEndpoint;
+                }
 
-            return "";
+                return "";
+            }
+            catch (Exception ex) when (IsIdentityTransportFailure(ex, context.CancellationToken))
+            {
+                _logger.LogWarning(ex, "Identity volume list failed for CorrectStructures '{Volume}'.", volumeName);
+                throw new RpcException(new Status(
+                    StatusCode.Unavailable,
+                    $"Identity volume list temporarily unavailable for '{volumeName}': {ex.Message}"));
+            }
         }
+
+        /// <summary>
+        /// True for failures of an <see cref="IIdentityVolumeSource"/> that mean Identity is unreachable rather than
+        /// a bug: HTTP and I/O errors, SQL errors from <see cref="SqlIdentityVolumeSource"/>, the missing-token
+        /// <see cref="InvalidOperationException"/> from <see cref="IdentityAssignmentClient"/>, and an HTTP timeout
+        /// (an <see cref="OperationCanceledException"/> while <paramref name="callCancellation"/> is not cancelled).
+        /// Caller cancellation is excluded so it surfaces as CANCELLED.
+        /// </summary>
+        static bool IsIdentityTransportFailure(Exception ex, CancellationToken callCancellation) => ex switch
+        {
+            OperationCanceledException => !callCancellation.IsCancellationRequested,
+            HttpRequestException or IOException or DbException or InvalidOperationException => true,
+            _ => false
+        };
 
         PublishedCorrectionSet RequireSet(string volumeName, string stosGroup)
         {
