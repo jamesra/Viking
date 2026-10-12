@@ -54,3 +54,9 @@ TestResults
 
 # Slack/MCP tokens and other local MCP secrets
 .cursor/mcp.json
+
+# Mutation-testing scratch: Stryker temp solutions, configs and run logs
+.loop/
+StrykerTemp/
+StrykerOutput/
+Clients/Viking/VikingCoreTests/stryker-util-coords-config.json
