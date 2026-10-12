@@ -94,6 +94,31 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>
+        /// Called by <see cref="ParentID"/> setters after the stored value changes. Removes this object from the
+        /// cached parent's <see cref="Children"/> and clears the cache when that parent no longer matches
+        /// <see cref="ParentID"/>; a matching cache (the <see cref="Parent"/> setter assigns ParentID after
+        /// caching the new parent) is kept.
+        /// </summary>
+        /// <remarks>
+        /// Unlike <c>Parent = null</c> this never writes <see cref="ParentID"/> or <see cref="AnnotationModelObjBase{SERVER_INTERFACE}.DBAction"/>,
+        /// so the value just assigned (for example by the gRPC server-to-client updaters) survives. The store re-attaches
+        /// the object to its new parent or to RootObjects when it wires the batch.
+        /// </remarks>
+        protected void DropCachedParentIfStale()
+        {
+            if (_Parent == null)
+                return;
+
+            if (ParentID.HasValue && _Parent.ID.Equals(ParentID.Value))
+                return;
+
+            OnPropertyChanging(nameof(Parent));
+            _Parent.RemoveChild(this as THISTYPE);
+            _Parent = null;
+            OnPropertyChanged(nameof(Parent));
+        }
+
         readonly ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
 
         public THISTYPE[] Children => _Children.ToArray();

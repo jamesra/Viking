@@ -1,6 +1,6 @@
 # gRPC store parity with the WCF client
 
-Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 26 done, 2 partial, 0 missing, 3 n/a.
+Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 27 done, 2 partial, 0 missing, 3 n/a.
 
 | WCF member | gRPC equivalent | Status | Test | Benchmark |
 |---|---|---|---|---|
@@ -31,6 +31,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | StructureStore.SplitAtLocationLink | `SplitStructureAtLocationLink` | done | | |
 | StructureStore.GetUnfinishedBranches(WithPosition), CheckForOrphan | same names | done | | |
 | StructureStore.GetObjectsInRegion(Async) | `GetLocalObjectsInRegion` (mosaic bounding box intersects region, Radius >= MinRadius, as WCF `LocationRTree`), `GetServerObjectsInRegion` | done | `StructureStoreRegionQueryTests` (local only) | |
+| StoreBaseWithKeyAndParent.InternalUpdate (ParentID changed by the server) | `StoreBaseWithKeyAndParent.CallOnCollectionChanged` re-wires `UpdatedObjects` (RootObjects, parent `Children`); `ParentID` setters keep the assigned value | done: server batches only; structure types are loaded once and never updated | `StructureReparentTests` | |
 | StructureTypeStore.LoadStructureTypes | `GetAll`, `Create` | done | | |
 | StructureLinkStore / PermittedStructureLinkStore (Create, sections) | `GetLinks`, `Save`, `MergeServerLinksAsync` / `Save` | done | | |
 | Interfaces.cs, IKeyGenerator, LongIndexGenerator (client-side keys) | server-assigned IDs | n/a: ID generation is server-side | | |

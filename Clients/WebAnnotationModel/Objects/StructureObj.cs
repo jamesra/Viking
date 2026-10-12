@@ -21,6 +21,12 @@ namespace WebAnnotationModel.Objects
         public override long ID => _ID;
 
         private long? _ParentID;
+
+        /// <summary>
+        /// Parent structure ID, or null for a top-level structure. A change marks DBAction UPDATE and drops a cached
+        /// <see cref="AnnotationModelObjBaseWithParent{KEY,SERVER_INTERFACE,THISTYPE}.Parent"/> that no longer matches;
+        /// the assigned value is never rewritten. Set by the gRPC server-to-client updater and by UI reparenting.
+        /// </summary>
         public override long? ParentID
         {
             get => _ParentID; 
@@ -31,7 +37,7 @@ namespace WebAnnotationModel.Objects
                     OnPropertyChanging(nameof(ParentID));
 
                     _ParentID = value;
-                    Parent = null; // Drop the cached object so the next Parent get re-resolves.
+                    DropCachedParentIfStale();
 
                     SetDBActionForChange();
                     OnPropertyChanged(nameof(ParentID));

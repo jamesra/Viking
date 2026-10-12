@@ -49,13 +49,32 @@ namespace WebAnnotationModel.gRPC
         /// <summary>
         /// gRPC GetAll uses IStoreEditor.GetOrAdd, which never called the old InternalAdd
         /// that populated RootObjects and Parent.Children. Wire that here when the batch is applied.
+        /// Updated objects are re-wired too, because a server update can change ParentID (the WCF InternalUpdate did the same).
         /// </summary>
         internal override async Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
         {
             if (inventory?.AddedObjects != null && inventory.AddedObjects.Count > 0)
                 WireParentsAndRoots(inventory.AddedObjects);
 
+            if (inventory?.UpdatedObjects != null && inventory.UpdatedObjects.Count > 0)
+                RewireUpdated(inventory.UpdatedObjects);
+
             await base.CallOnCollectionChanged(inventory).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Moves updated objects that gained a ParentID out of RootObjects, then wires them like added objects.
+        /// The ParentID setter has already detached each object from a parent that no longer matches.
+        /// </summary>
+        void RewireUpdated(IEnumerable<OBJECT> objects)
+        {
+            foreach (OBJECT obj in objects)
+            {
+                if (obj != null && obj.ParentID.HasValue)
+                    TryRemoveRootObject(obj.ID);
+            }
+
+            WireParentsAndRoots(objects);
         }
 
         /// <summary>
