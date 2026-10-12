@@ -136,13 +136,17 @@ namespace Viking
         protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+            // Opened outside the try so a missing directory still surfaces as DirectoryNotFoundException to the caller's retry.
+            FileStream output = new(filename, FileMode.Create, FileAccess.Write);
             try
             {
-                output.Write(textureBuffer, 0, textureBuffer.Length);
+                using (output)
+                {
+                    output.Write(textureBuffer, 0, textureBuffer.Length);
+                }
 
-                LocalTextureCacheEntry entry = new(filename);
-                return entry;
+                // The stream must be disposed first: the entry reads the file length, which excludes buffered bytes.
+                return new LocalTextureCacheEntry(filename);
             }
             catch (System.IO.IOException ioexception)
             {
@@ -168,13 +172,17 @@ namespace Viking
         protected override async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+            // Opened outside the try so a missing directory still surfaces as DirectoryNotFoundException to the caller's retry.
+            FileStream output = new(filename, FileMode.Create, FileAccess.Write);
             try
             {
-                await output.WriteAsync(textureBuffer, 0, textureBuffer.Length);
+                using (output)
+                {
+                    await output.WriteAsync(textureBuffer, 0, textureBuffer.Length);
+                }
 
-                LocalTextureCacheEntry entry = new(filename);
-                return entry;
+                // The stream must be disposed first: the entry reads the file length, which excludes buffered bytes.
+                return new LocalTextureCacheEntry(filename);
             }
             catch (System.IO.IOException ioexception)
             {
@@ -210,10 +218,16 @@ namespace Viking
         private async Task<LocalTextureCacheEntry> CreateEntryAssumeDirectoryExistsAsync(string filename,
             Stream textureBuffer)
         {
-            using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+            // Opened outside the try so a missing directory still surfaces as DirectoryNotFoundException to the caller's retry.
+            FileStream output = new(filename, FileMode.Create, FileAccess.Write);
             try
             {
-                await textureBuffer.CopyToAsync(output);
+                using (output)
+                {
+                    await textureBuffer.CopyToAsync(output);
+                }
+
+                // The stream must be disposed first: the entry reads the file length, which excludes buffered bytes.
                 return new LocalTextureCacheEntry(filename);
             }
             catch (System.IO.IOException ioexception)
