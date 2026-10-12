@@ -207,5 +207,40 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(changing, Does.Contain(nameof(StructureTypeObj.ParentID)));
             Assert.That(changed, Does.Contain(nameof(StructureTypeObj.ParentID)));
         }
+
+        /// <summary>
+        /// UI unlink (<c>Parent = null</c>) makes the structure a root: ParentID must be null, never 0, because the
+        /// Structure table's ParentID is a foreign key and 0 matches no row. The save request must omit ParentId.
+        /// </summary>
+        [Test]
+        public async Task DetachingParentObject_LeavesNullParentIdAndSendsNoParent()
+        {
+            var child = await LoadChildUnder(OldParentId);
+
+            child.Parent = null;
+
+            Assert.That(child.ParentID, Is.Null);
+            Assert.That(child.Parent, Is.Null);
+            Assert.That(_oldParent.Children, Does.Not.Contain(child));
+            Assert.That(child.DBAction, Is.EqualTo(DBACTION.UPDATE));
+            Assert.That(new StructureClientToServerConverter().Convert(child).HasParentId, Is.False);
+        }
+
+        /// <summary>Same contract for structure types, which share the base Parent setter and a nullable ParentID.</summary>
+        [Test]
+        public void DetachingStructureTypeParentObject_LeavesNullParentIdAndSendsNoParent()
+        {
+            var oldParent = new StructureTypeObj(OldParentId) { DBAction = DBACTION.NONE };
+            var child = new StructureTypeObj(ChildId) { ParentID = OldParentId };
+            child.Parent = oldParent;
+            child.DBAction = DBACTION.NONE;
+
+            child.Parent = null;
+
+            Assert.That(child.ParentID, Is.Null);
+            Assert.That(oldParent.Children, Does.Not.Contain(child));
+            Assert.That(child.DBAction, Is.EqualTo(DBACTION.UPDATE));
+            Assert.That(new StructureTypeClientToServerConverter().Convert(child).HasParentId, Is.False);
+        }
     }
 }

@@ -29,6 +29,12 @@ namespace WebAnnotationModel.Objects
         private THISTYPE _Parent = null;
         public abstract KEY? ParentID { get; set; }
 
+        /// <summary>
+        /// Cached parent object, kept in step with <see cref="ParentID"/>. Assigning an object sets ParentID to its ID and
+        /// joins its <see cref="Children"/>; assigning null leaves the old parent's Children and sets ParentID to null
+        /// (a root). Either marks DBAction UPDATE when ParentID changes. Used by UI reparent/unlink and the store's update path.
+        /// </summary>
+        /// <exception cref="ArgumentException">The new parent has DBAction INSERT (not yet saved, so it has no database ID).</exception>
         public THISTYPE Parent
         {
             get => _Parent;
@@ -84,7 +90,8 @@ namespace WebAnnotationModel.Objects
                     if (ParentID.HasValue)
                         SetUpdateFlag = true;
 
-                    ParentID = default(KEY);
+                    // Null, not default(KEY): ParentID is a SQL foreign key, so 0 would be saved as a parent that does not exist.
+                    ParentID = null;
                 }
 
                 if (SetUpdateFlag)
