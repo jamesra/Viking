@@ -95,7 +95,7 @@ flowchart TD
 - Structure types, markup types (point/line/poly), permitted link types, and
   parent/child hierarchies (`PermittedStructureLinkObj`, `StructureTypeObj`).
 - Spatial geometry columns (`MosaicShape`, `VolumeShape`) and the August 2015
-  migration; schema versioning via the `DBVersion` table (currently 83).
+  migration; schema versioning via the `DBVersion` table (currently 86).
 - Change Data Capture and the bounds stored procedures (e.g.
   `SelectSectionLocationsAndLinksInMosaicBounds`).
 

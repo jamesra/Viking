@@ -258,7 +258,7 @@ section" using a spatial index rather than a full scan.
 
 The database is created and upgraded by a single idempotent script that applies
 numbered migrations and records each in a `DBVersion` table; the script currently
-reaches version 83. Change Data Capture is enabled on annotation tables, which
+reaches version 86. Change Data Capture is enabled on annotation tables, which
 supports auditing and downstream replication. Region queries are served by
 stored procedures such as `SelectSectionLocationsAndLinksInMosaicBounds`, which
 returns the locations and links within a bounding box on a section as of a given
