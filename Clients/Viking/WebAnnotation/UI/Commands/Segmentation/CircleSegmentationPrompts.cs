@@ -177,7 +177,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Parent structure id from the local annotation store without a server fetch.
         /// Null when the structure has no parent or is not cached.
         /// </summary>
-        private static long? StoreStructureParent(long structureId) =>
+        internal static long? StoreStructureParent(long structureId) =>
             Store.Structures.GetObjectByID(structureId, false)?.ParentID;
 
         /// <summary>

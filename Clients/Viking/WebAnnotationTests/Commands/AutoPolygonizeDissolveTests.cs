@@ -115,6 +115,30 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void CirclesOfChildAndParentStructuresAreNotSubtractedButUnrelatedOnesAre()
+        {
+            static long? Parent(long id) => id == 5 ? 9 : null;
+
+            // Proposal in structure 9: circle 1 is a child (5), circle 2 is unrelated (7).
+            List<Polygon> disks = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
+                [Circle(1, 5, 50, 50, 10), Circle(2, 7, 60, 60, 10)],
+                Box(0, 0, 100),
+                excludeParentId: 9,
+                ownCenter: new Vector2(10, 10),
+                structureParentLookup: Parent);
+            Assert.AreEqual(1, disks.Count, "the child structure circle sits inside the parent; the unrelated circle is carved");
+
+            // Proposal in structure 5 (the child): circle 3 is in its parent (9), which contains it.
+            List<Polygon> fromParent = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
+                [Circle(3, 9, 50, 50, 10)],
+                Box(0, 0, 100),
+                excludeParentId: 5,
+                ownCenter: new Vector2(10, 10),
+                structureParentLookup: Parent);
+            Assert.AreEqual(0, fromParent.Count, "the parent circle is not subtracted from its child");
+        }
+
+        [TestMethod]
         public void ACircleSmallerOrLargerStillWinsOverTheProposal()
         {
             Polygon proposed = Box(0, 0, 100);
@@ -151,7 +175,7 @@ namespace WebAnnotationTests.Commands
             ];
 
             List<Polygon> disks = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
-                circles, proposed, excludeLocationIds: [2], sectionNumber: 1, excludeParentId: 5, ownCenter: new Vector2(10, 10));
+                circles, proposed, excludeLocationIds: [2], sectionNumber: 1, excludeParentId: 5, ownCenter: new Vector2(10, 10), structureParentLookup: _ => null);
 
             Assert.AreEqual(0, disks.Count);
         }

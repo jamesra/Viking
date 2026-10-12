@@ -430,17 +430,39 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// True when <paramref name="candidateStructureId"/> is <paramref name="structureId"/>, a descendant of it
+        /// (child, grandchild, ...) or an ancestor of it (parent, grandparent, ...). A child sits inside its parent, so
+        /// subtracting the child would cut holes in the parent and subtracting the parent would erase the child.
+        /// </summary>
+        /// <param name="structureParentLookup">Defaults to the local annotation store; a structure it cannot resolve has no ancestors.</param>
+        internal static bool IsRelatedStructure(long? candidateStructureId, long structureId, Func<long, long?>? structureParentLookup = null)
+        {
+            if (!candidateStructureId.HasValue)
+                return false;
+            if (candidateStructureId.Value == structureId)
+                return true;
+
+            Func<long, long?> lookup = structureParentLookup ?? CircleSegmentationPrompts.StoreStructureParent;
+            return CircleSegmentationPrompts.IsDescendantStructure(candidateStructureId.Value, structureId, lookup) ||
+                   CircleSegmentationPrompts.IsDescendantStructure(structureId, candidateStructureId.Value, lookup);
+        }
+
+        /// <summary>
         /// Same-section POLYGON/CURVEPOLYGON annotations whose area overlaps
         /// <paramref name="proposed"/>. Used before publishing or accepting a proposal.
-        /// Pass <paramref name="excludeParentId"/> so same-cell siblings are merged, not carved.
+        /// Pass <paramref name="excludeParentId"/> so same-cell siblings are merged, not carved, and so annotations of
+        /// its child structures (an organelle inside the cell) and of its parent structures (the cell around an
+        /// organelle) are left alone.
         /// </summary>
+        /// <param name="structureParentLookup">Maps a structure id to its parent's id; defaults to the local annotation store.</param>
         public static List<Polygon> CollectOverlappingExistingPolygons(
             IEnumerable<LocationObj>? annotations,
             Polygon proposed,
             IReadOnlyCollection<long>? excludeLocationIds = null,
             IVolumeToSectionTransform? transform = null,
             int? sectionNumber = null,
-            long? excludeParentId = null)
+            long? excludeParentId = null,
+            Func<long, long?>? structureParentLookup = null)
         {
             List<Polygon> result = [];
             if (proposed is null || annotations is null)
@@ -452,7 +474,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     continue;
                 if (excludeLocationIds is not null && excludeLocationIds.Contains(location.ID))
                     continue;
-                if (excludeParentId.HasValue && location.ParentID == excludeParentId)
+                if (excludeParentId.HasValue && IsRelatedStructure(location.ParentID, excludeParentId.Value, structureParentLookup))
                     continue;
                 if (sectionNumber.HasValue && location.Section != sectionNumber.Value)
                     continue;
@@ -503,7 +525,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <param name="proposed">The outline being proposed or accepted.</param>
         /// <param name="excludeLocationIds">The locations the proposal stands for.</param>
         /// <param name="sectionNumber">Only circles on this section count.</param>
-        /// <param name="excludeParentId">Circles of this structure are siblings of the proposal, not other cells.</param>
+        /// <param name="excludeParentId">Circles of this structure are siblings of the proposal, and circles of its child or parent structures contain or sit inside it, not other cells.</param>
+        /// <param name="structureParentLookup">Maps a structure id to its parent's id; defaults to the local annotation store.</param>
         /// <param name="ownCenter">
         /// The proposal's own seed center. A circle that encloses it belongs to a larger cell around this one, so it is
         /// left alone: subtracting it would delete the proposal for being inside something.
@@ -514,7 +537,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             IReadOnlyCollection<long>? excludeLocationIds = null,
             int? sectionNumber = null,
             long? excludeParentId = null,
-            Vector2? ownCenter = null)
+            Vector2? ownCenter = null,
+            Func<long, long?>? structureParentLookup = null)
         {
             List<Polygon> result = [];
             if (proposed is null || circles is null)
@@ -526,7 +550,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     continue;
                 if (excludeLocationIds is not null && excludeLocationIds.Contains(circle.Id))
                     continue;
-                if (excludeParentId.HasValue && circle.ParentId == excludeParentId)
+                if (excludeParentId.HasValue && IsRelatedStructure(circle.ParentId, excludeParentId.Value, structureParentLookup))
                     continue;
                 if (sectionNumber.HasValue && circle.Section != sectionNumber.Value)
                     continue;

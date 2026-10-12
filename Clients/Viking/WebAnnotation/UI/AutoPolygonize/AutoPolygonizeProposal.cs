@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -383,6 +384,18 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Texels per stripe of the refining hatch. Texels are 1 to 4 image pixels, so stripes scale with zoom.</summary>
         private const int RefiningHatchStripeTexels = 2;
 
+        /// <summary>How long the one-shot shimmer wash takes to cross a newly shown proposal.</summary>
+        private const int ShimmerDurationMs = 750;
+
+        /// <summary>Peak alpha of the white lines at the centre of the shimmer band.</summary>
+        private const float ShimmerAlpha = 0.6f;
+
+        /// <summary>Width of the shimmer band as a fraction of the mask's diagonal extent (width + height).</summary>
+        private const float ShimmerBandFraction = 0.3f;
+
+        /// <summary>Texels per line of the shimmer. Lines run perpendicular to the sweep direction.</summary>
+        private const int ShimmerLineTexels = 2;
+
         /// <summary>
         /// Depth test always passes and stencil is off. <see cref="DepthStencilState.None"/> drops
         /// the draw: the texture shader writes SV_Depth, and a disabled depth buffer discards those pixels.
@@ -415,6 +428,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         private bool ringsDrawnAsRefining;
         private Texture2D? hatchTexture;
         private TextureOverlayView? hatchView;
+
+        private long shimmerStartTimestamp;
+        private bool shimmerDone;
+        private Texture2D? shimmerTexture;
+        private TextureOverlayView? shimmerView;
+        private Color[]? shimmerPixels;
 
         public AutoPolygonizeProposal(
             AutoCirclePolygonizeController controller,
@@ -705,9 +724,14 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             if (refining)
+            {
                 DrawRefiningHatch(graphicsDevice, scene);
+            }
             else
+            {
                 DisposeRefiningHatch();
+                DrawShimmer(graphicsDevice, scene);
+            }
 
             if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
             {
@@ -768,6 +792,113 @@ namespace WebAnnotation.UI.AutoPolygonize
             finally
             {
                 graphicsDevice.DepthStencilState = previous;
+            }
+        }
+
+        /// <summary>
+        /// True while the one-shot shimmer is animating. The controller keeps invalidating the view while any
+        /// proposal reports this, since nothing else would redraw an otherwise idle viewer.
+        /// </summary>
+        public bool IsShimmering => shimmerStartTimestamp != 0 && !shimmerDone;
+
+        /// <summary>
+        /// Sweeps a band of white lines across the mask once, <see cref="ShimmerDurationMs"/> after the first
+        /// frame this proposal is drawn in its final (non-refining) form. Never replays for the same proposal,
+        /// including after a mask rebuild. Needs the decoded mask bytes; without them it is skipped.
+        /// Must run on the graphics thread.
+        /// </summary>
+        private void DrawShimmer(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
+        {
+            if (shimmerDone)
+                return;
+
+            AutoPolygonizeMaskOverlay? shown = displayMask ?? maskOverlayData;
+            if (graphicsDevice is null || shown?.MaskData is null || shown.MaskData.Length != shown.Width * shown.Height)
+            {
+                shimmerDone = true;
+                return;
+            }
+
+            if (shimmerStartTimestamp == 0)
+                shimmerStartTimestamp = Stopwatch.GetTimestamp();
+
+            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / ShimmerDurationMs;
+            if (progress >= 1.0)
+            {
+                shimmerDone = true;
+                DisposeShimmer();
+                return;
+            }
+
+            try
+            {
+                if (shimmerTexture is null || shimmerTexture.Width != shown.Width || shimmerTexture.Height != shown.Height)
+                {
+                    shimmerTexture?.Dispose();
+                    shimmerTexture = new Texture2D(graphicsDevice, shown.Width, shown.Height);
+                    shimmerPixels = new Color[shown.MaskData.Length];
+                    shimmerView = new TextureOverlayView(shimmerTexture, shown.WorldBounds, Color.White);
+                }
+
+                ShimmerPixels(shown, progress, shimmerPixels!);
+                shimmerTexture.SetData(shimmerPixels);
+            }
+            catch (Exception)
+            {
+                shimmerDone = true;
+                DisposeShimmer();
+                return;
+            }
+
+            DepthStencilState previous = graphicsDevice.DepthStencilState;
+            graphicsDevice.DepthStencilState = MaskOverlayDepthState;
+            try
+            {
+                shimmerView!.Draw(graphicsDevice, scene, OverlayStyle.Alpha, MaskOverlayDepthState);
+            }
+            finally
+            {
+                graphicsDevice.DepthStencilState = previous;
+            }
+        }
+
+        /// <summary>Releases the shimmer texture. Does not rearm the shimmer.</summary>
+        private void DisposeShimmer()
+        {
+            shimmerView = null;
+            shimmerTexture?.Dispose();
+            shimmerTexture = null;
+            shimmerPixels = null;
+        }
+
+        /// <summary>
+        /// Fills <paramref name="pixels"/> with one frame of the shimmer: lines along the x-y diagonal, visible only
+        /// inside the mask and only within a band centred on the x+y diagonal that moves from the lower-left
+        /// corner (<paramref name="progress"/> 0) to the upper-right (1). Separate from the draw so it needs no GPU.
+        /// </summary>
+        internal static void ShimmerPixels(AutoPolygonizeMaskOverlay overlay, double progress, Color[] pixels)
+        {
+            double span = overlay.Width + overlay.Height;
+            double halfBand = span * ShimmerBandFraction / 2.0;
+            double center = -halfBand + (progress * (span + (2.0 * halfBand)));
+
+            for (int y = 0; y < overlay.Height; y++)
+            {
+                for (int x = 0; x < overlay.Width; x++)
+                {
+                    int index = (y * overlay.Width) + x;
+                    double distance = Math.Abs(x + y - center);
+                    bool inside = overlay.MaskData[index] >= SegmentationMaskPolygonizer.SoftMaskForeground;
+                    bool line = (((x - y + overlay.Height) / ShimmerLineTexels) & 1) == 0;
+                    if (!inside || !line || distance >= halfBand)
+                    {
+                        pixels[index] = Color.Transparent;
+                        continue;
+                    }
+
+                    double falloff = 1.0 - (distance / halfBand);
+                    pixels[index] = Color.White.SetAlpha((float)(ShimmerAlpha * falloff * falloff * (3.0 - (2.0 * falloff))));
+                }
             }
         }
 
@@ -910,6 +1041,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             maskTexture?.Dispose();
             maskTexture = null;
             DisposeRefiningHatch();
+            DisposeShimmer();
         }
 
         /// <summary>

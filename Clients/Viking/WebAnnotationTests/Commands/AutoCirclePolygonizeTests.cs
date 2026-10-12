@@ -1548,8 +1548,47 @@ namespace WebAnnotationTests.Commands
             List<Polygon> otherCell = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 [sibling],
                 Square(0, 0, 10),
-                excludeParentId: 9);
+                excludeParentId: 9,
+                structureParentLookup: _ => null);
             Assert.AreEqual(1, otherCell.Count);
+        }
+
+        [TestMethod]
+        public void CollectOverlappingExistingPolygonsSkipsChildAndParentStructuresButKeepsOtherCells()
+        {
+            // The annotation is in structure 0 (LocationObj.ParentID is read only and defaults to 0).
+            LocationObj annotation = new() { TypeCode = LocationType.POLYGON };
+            annotation.VolumeShape = Square(5, 0, 10).ToSqlGeometry();
+            Polygon proposed = Square(0, 0, 10);
+
+            static long? Child(long id) => id == 0 ? 9 : null;
+            static long? Grandchild(long id) => id switch { 0 => 5, 5 => 9, _ => null };
+
+            Assert.AreEqual(0, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
+                [annotation], proposed, excludeParentId: 9, structureParentLookup: Child).Count, "a child of the proposal's structure");
+            Assert.AreEqual(0, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
+                [annotation], proposed, excludeParentId: 9, structureParentLookup: Grandchild).Count, "a grandchild of it");
+            Assert.AreEqual(1, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
+                [annotation], proposed, excludeParentId: 7, structureParentLookup: Child).Count, "an unrelated structure is still subtracted");
+
+            // Now the annotation is the parent: the proposal is in structure 3, whose parent is 0.
+            static long? ProposalIsChildOfAnnotation(long id) => id == 3 ? 0 : null;
+            Assert.AreEqual(0, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
+                [annotation], proposed, excludeParentId: 3, structureParentLookup: ProposalIsChildOfAnnotation).Count, "the parent is not subtracted from its child");
+        }
+
+        [TestMethod]
+        public void IsRelatedStructureWalksTheParentChainBothWays()
+        {
+            static long? Parent(long id) => id switch { 5 => 9, 6 => 5, _ => null };
+
+            Assert.IsTrue(AutoPolygonizeSelection.IsRelatedStructure(9, 9, Parent));
+            Assert.IsTrue(AutoPolygonizeSelection.IsRelatedStructure(5, 9, Parent), "a child");
+            Assert.IsTrue(AutoPolygonizeSelection.IsRelatedStructure(6, 9, Parent), "a grandchild");
+            Assert.IsTrue(AutoPolygonizeSelection.IsRelatedStructure(9, 5, Parent), "a parent");
+            Assert.IsTrue(AutoPolygonizeSelection.IsRelatedStructure(9, 6, Parent), "a grandparent");
+            Assert.IsFalse(AutoPolygonizeSelection.IsRelatedStructure(7, 9, Parent));
+            Assert.IsFalse(AutoPolygonizeSelection.IsRelatedStructure(null, 9, Parent));
         }
 
         [TestMethod]

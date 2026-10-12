@@ -594,14 +594,22 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             RemoveProposalsThatAreNoLongerCircles();
             int sectionNumber = parent.Section.Number;
+            bool shimmering = false;
             lock (proposalLock)
             {
                 foreach (AutoPolygonizeProposal proposal in DistinctProposalsUnlocked())
                 {
-                    if (proposal.SectionNumber == sectionNumber)
-                        proposal.Draw(graphicsDevice, scene);
+                    if (proposal.SectionNumber != sectionNumber)
+                        continue;
+
+                    proposal.Draw(graphicsDevice, scene);
+                    shimmering |= proposal.IsShimmering;
                 }
             }
+
+            // The shimmer animates by time, not by input, so ask for the next frame until it finishes.
+            if (shimmering)
+                parent.Invalidate();
         }
 
         /// <summary>
