@@ -542,7 +542,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         public IReadOnlyList<Geometry.Vector2> BackgroundPrompts { get; }
 
         /// <summary>
-        /// Volume-space <c>foreground_boxes</c> from the same SegmentImage (inscribed circle square or
+        /// Volume-space seed rectangles, sent as <c>foreground_feature.mask</c>, from the same SegmentImage (inscribed circle square or
         /// group seed box). Empty when the request had none. Kept so Add points can reopen
         /// <see cref="SegmentationCommand"/> without remasking clicks alone.
         /// </summary>

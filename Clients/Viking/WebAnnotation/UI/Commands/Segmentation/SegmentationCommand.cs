@@ -251,7 +251,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Constructor that accepts initial foreground and background points for automated segmentation.
         /// <paramref name="placementFallback"/> is the dragged volume polygon Escape saves when the mask has not arrived.
-        /// <paramref name="startingBoxes"/> are volume-space boxes sent as <c>foreground_boxes</c> with every request,
+        /// <paramref name="startingBoxes"/> are volume-space boxes sent as the foreground Feature's mask (<c>foreground_feature.mask</c>) with every request,
         /// for example the square inscribed in a circle (see <see cref="CircleSegmentationPrompts.TryCreateStartingPrompt"/>).
         /// <paramref name="onAbandoned"/> runs when the command deactivates without accepting a mask.
         /// </summary>

@@ -293,7 +293,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Prompt for several overlapping polygons of one structure: SAM2 takes one box per call.
         /// <paramref name="Box"/> is the largest rectangle that lies entirely inside the polygons
-        /// (<see cref="InscribedRectangle"/>). The server takes a client's box as inside the object and marks
+        /// (<see cref="InscribedRectangle"/>). The server takes the rectangle as a mask prompt (foreground Feature mask), which it marks
         /// all of it as object, so it must never reach outside the polygons: a square sized from a bounding box
         /// does for a round polygon, but covers background for a bent or elongated one.
         /// <paramref name="Foreground"/> holds one interior click per polygon.

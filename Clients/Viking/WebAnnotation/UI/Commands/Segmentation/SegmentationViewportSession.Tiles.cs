@@ -216,20 +216,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            if (foregroundBoxes is not null)
+            // The seed rectangle is a mask prompt ("everything inside is object, grow beyond it"), not a box.
+            // A Feature holds one mask, so with several seeds the largest is sent.
+            if (foregroundBoxes is { Count: > 0 })
             {
-                foreach (Geometry.Rectangle box in foregroundBoxes)
+                Geometry.Rectangle seed = foregroundBoxes.OrderByDescending(box => box.Width * box.Height).First();
+                (int xA, int yA) = SegmentationTileGrid.WorldToMosaicPixel(seed.Left, seed.Bottom, signature.Downsample);
+                (int xB, int yB) = SegmentationTileGrid.WorldToMosaicPixel(seed.Right, seed.Top, signature.Downsample);
+                request.ForegroundFeature = new SegmentationServiceTypes.Feature
                 {
-                    (int xA, int yA) = SegmentationTileGrid.WorldToMosaicPixel(box.Left, box.Bottom, signature.Downsample);
-                    (int xB, int yB) = SegmentationTileGrid.WorldToMosaicPixel(box.Right, box.Top, signature.Downsample);
-                    request.ForegroundBoxes.Add(new SegmentationServiceTypes.BoundingBox
+                    Mask = new SegmentationServiceTypes.Mask
                     {
-                        XMin = Math.Min(xA, xB),
-                        YMin = Math.Min(yA, yB),
-                        XMax = Math.Max(xA, xB),
-                        YMax = Math.Max(yA, yB)
-                    });
-                }
+                        Bounds = new SegmentationServiceTypes.BoundingBox
+                        {
+                            XMin = Math.Min(xA, xB),
+                            YMin = Math.Min(yA, yB),
+                            XMax = Math.Max(xA, xB),
+                            YMax = Math.Max(yA, yB)
+                        }
+                    }
+                };
             }
 
             if (backgroundPoints is not null)
