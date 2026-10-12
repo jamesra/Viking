@@ -51,6 +51,12 @@
     <Compile Include="Commands\CapturedPngTests.cs" />
     <Compile Include="Commands\SegmentationCameraPolicyTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
+    <Compile Include="Commands\SegmentationLogitFieldTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeRefiningTests.cs" />
+    <Compile Include="Commands\SegmentationEdgeSnapTests.cs" />
+    <Compile Include="Commands\SegmentationTileImagesTests.cs" />
+    <Compile Include="Commands\SegmentationThinFeatureCutTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeDissolveTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
     <Compile Include="Properties\AutoPolygonizeMinRadiusSettingsTests.cs" />
     <Compile Include="Commands\AnnotationStatusChipsTests.cs" />

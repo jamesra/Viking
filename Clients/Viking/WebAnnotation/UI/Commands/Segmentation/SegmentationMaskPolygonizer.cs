@@ -25,7 +25,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// First uint8 value on the inside of <see cref="SoftMaskIsoLevel"/>.
-        /// Rounded probability 0.5 is 128. Binary masks of 0 and 255 still count 255 as inside.
+        /// The iso level 127.5 rounds up to 128. A thresholded mask of 0 and 255 still counts 255 as inside.
         /// </summary>
         internal const byte SoftMaskForeground = 128;
         /// <summary>
@@ -84,6 +84,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Polygonizes a decoded mask. Returns empty when the mask is missing.
         /// If cleanup produces an unusable ring, retries on the original mask.
+        /// <paramref name="refine"/>, when given, is applied to the finished world-space polygon (the edge snap moves it onto
+        /// image edges); a refiner that throws or returns null leaves the traced polygon as it was.
+        /// <paramref name="minFeatureWorld"/>, when positive, first cuts the parts of the mask narrower than that many world
+        /// units (<see cref="SegmentationThinFeatureCut"/>), so a thin bridge no longer joins the cell to a neighbor.
         /// </summary>
         public static IReadOnlyList<Polygon> CreatePolygons(
             byte[] maskData,
@@ -98,11 +102,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
             int edgeCleanupRadius,
             out CleanupStats cleanupStats,
-            IReadOnlyList<Vector2> keepComponentsContainingWorldPoints = null)
+            IReadOnlyList<Vector2> keepComponentsContainingWorldPoints = null,
+            Func<Polygon, Polygon> refine = null,
+            double minFeatureWorld = 0)
         {
             cleanupStats = new CleanupStats(0, 0, 0);
             if (maskData is null || maskData.Length != maskWidth * maskHeight)
                 return [];
+
+            if (minFeatureWorld > 0 && imageWidth > 0 && viewportBounds.Width > 0)
+            {
+                // Before the clicked component is chosen, so a lobe that was only joined by a thin bridge is dropped with it.
+                double worldPerSample = viewportBounds.Width / imageWidth;
+                List<(double X, double Y)> clickSamples = [];
+                foreach (Vector2 click in ToPixelPoints(keepComponentsContainingWorldPoints, imageWidth, imageHeight, viewportBounds))
+                    clickSamples.Add((click.X - offsetX, click.Y - offsetY));
+
+                maskData = SegmentationThinFeatureCut.Cut(
+                    maskData,
+                    maskWidth,
+                    maskHeight,
+                    minFeatureWorld / worldPerSample,
+                    clickSamples,
+                    out _);
+            }
 
             if (keepComponentsContainingWorldPoints is { Count: > 0 })
             {
@@ -145,7 +168,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 imageHeight,
                 viewportBounds,
                 holeDropFraction,
-                preserveHolesContainingWorldPoints);
+                preserveHolesContainingWorldPoints,
+                refine);
 
             if (IsUsable(cleanedPolygons))
                 return cleanedPolygons;
@@ -162,7 +186,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     imageHeight,
                     viewportBounds,
                     holeDropFraction,
-                    preserveHolesContainingWorldPoints);
+                    preserveHolesContainingWorldPoints,
+                    refine);
                 if (IsUsable(originalPolygons))
                     return originalPolygons;
             }
@@ -274,7 +299,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Fills notches on the decision boundary, then writes those edits back onto the
-        /// probability field. Pixels that stay inside keep their original soft values so the
+        /// soft field. Pixels that stay inside keep their original soft values so the
         /// contour still interpolates the SAM2 edge. There is no opening: eroding first would
         /// pull a curved membrane inward by about the kernel radius.
         /// </summary>
@@ -340,7 +365,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Interpolates the probability iso-contour, keeps the largest exterior, then maps to world.
+        /// Interpolates the iso-contour of the soft field, keeps the largest exterior, then maps to world.
         /// </summary>
         private static IReadOnlyList<Polygon> PolygonizeMask(
             byte[] maskData,
@@ -352,7 +377,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int imageHeight,
             Rectangle viewportBounds,
             double holeDropFraction,
-            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints)
+            IReadOnlyList<Vector2> preserveHolesContainingWorldPoints,
+            Func<Polygon, Polygon> refine)
         {
             float[] field = new float[maskData.Length];
             for (int i = 0; i < maskData.Length; i++)
@@ -425,7 +451,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 imageHeight,
                 viewportBounds);
 
-            return [worldPolygon];
+            return [Refined(worldPolygon, refine)];
+        }
+
+        /// <summary>
+        /// <paramref name="polygon"/> after <paramref name="refine"/> (the edge snap), or unchanged when there is no refiner,
+        /// when it returns nothing, or when it fails: a refinement is an improvement, never a reason to lose the polygon.
+        /// </summary>
+        private static Polygon Refined(Polygon polygon, Func<Polygon, Polygon> refine)
+        {
+            if (refine is null)
+                return polygon;
+
+            try
+            {
+                return refine(polygon) ?? polygon;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Contour refinement failed, keeping the traced contour: {ex.Message}");
+                return polygon;
+            }
         }
 
         private static bool IsUsable(IReadOnlyList<Polygon> polygons) =>

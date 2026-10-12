@@ -1,10 +1,12 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Viking.SectionCorrectionClient;
+using Viking.ViewModels;
 
 #nullable enable
 
@@ -28,6 +30,7 @@ namespace Viking.UI.Controls
 
         SectionShimService? _correctionShim;
         bool _correctionShimCreated;
+        string? _lastCorrectionUnavailableReason;
         ToolStripLabel? _tsCorrection;
 
         /// <summary>The shim currently applied to the camera, in nanometres.</summary>
@@ -40,7 +43,7 @@ namespace Viking.UI.Controls
         /// <param name="statusBar">The viewer's status strip.</param>
         void InitializeCorrectionStatus(StatusStrip statusBar)
         {
-            _tsCorrection = new ToolStripLabel { AutoToolTip = false };
+            _tsCorrection = new ToolStripLabel { AutoToolTip = false, Alignment = ToolStripItemAlignment.Right };
             _tsCorrection.Click += (_, _) => ToggleCorrectionShim();
             statusBar.Items.Add(_tsCorrection);
             SectionShimContext.SettingsChanged += OnCorrectionSettingsChanged;
@@ -129,12 +132,23 @@ namespace Viking.UI.Controls
             string? url = State.CorrectionServiceUrl;
             string? database = State.CorrectionDatabaseName;
             if (source is null || string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(database))
+            {
+                string reason = $"Corrections unavailable: source {(source is null ? "missing" : "set")}, "
+                    + $"service URL '{url ?? "(none)"}', database '{database ?? "(none)"}'.";
+                if (reason != _lastCorrectionUnavailableReason)
+                {
+                    _lastCorrectionUnavailableReason = reason;
+                    Trace.WriteLine(reason, "CorrectionShim");
+                }
+
                 return;
+            }
 
             _correctionShimCreated = true;
             _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, SectionShimContext.Settings,
                 message => Trace.WriteLine(message, "CorrectionShim"));
             _correctionShim.Configure(url, database, _Section.VolumeViewModel.DefaultXYScale.Value);
+            Trace.WriteLine($"Corrections available: service URL '{url}', database '{database}', IsAvailable={_correctionShim.IsAvailable}.", "CorrectionShim");
             UpdateCorrectionStatus();
         }
 
@@ -157,8 +171,47 @@ namespace Viking.UI.Controls
                 camera.LookAt.Y,
                 Scene.Viewport.Width * downsample / 2.0,
                 Scene.Viewport.Height * downsample / 2.0,
-                downsample);
+                downsample,
+                AdjacentShimSectionNumbers(_Section.Number));
         }
+
+        /// <summary>How many sections on each side of the one on screen have their correction lattice prefetched.</summary>
+        const int ShimPrefetchSections = 3;
+
+        /// <summary>
+        /// The section numbers within <see cref="ShimPrefetchSections"/> steps below and above
+        /// <paramref name="sectionNumber"/> in the volume's own order (section numbers may have gaps), nearest first and
+        /// alternating below/above. Empty when the volume or the section is unknown.
+        /// </summary>
+        static long[] AdjacentShimSectionNumbers(int sectionNumber)
+        {
+            SortedList<int, SectionViewModel>? sections = State.volume?.SectionViewModels;
+            int index = sections?.IndexOfKey(sectionNumber) ?? -1;
+            if (sections is null || index < 0)
+                return [];
+
+            var neighbors = new List<long>(2 * ShimPrefetchSections);
+            for (int step = 1; step <= ShimPrefetchSections; step++)
+            {
+                if (index - step >= 0)
+                    neighbors.Add(sections.Keys[index - step]);
+                if (index + step < sections.Count)
+                    neighbors.Add(sections.Keys[index + step]);
+            }
+
+            return [.. neighbors];
+        }
+
+        /// <summary>
+        /// How long every shim glide takes: toggling corrections, changing the correction preferences, and a correction
+        /// that arrives after the view was shown.
+        /// </summary>
+        const int ShimTweenMilliseconds = 250;
+
+        System.Windows.Forms.Timer? _shimTweenTimer;
+        readonly Stopwatch _shimTweenClock = new();
+        Vector2 _shimTweenFrom;
+        Vector2 _shimTweenTo;
 
         /// <summary>
         /// Receives the faded shim in volume units on whatever thread produced it and moves it to the UI thread.
@@ -182,8 +235,6 @@ namespace Viking.UI.Controls
                 return;
             }
 
-            Camera.Shim = new Vector2((float)dx, (float)dy);
-
             if (_Section is not null)
             {
                 double nmPerPixel = _Section.VolumeViewModel.DefaultXYScale.Value;
@@ -192,6 +243,82 @@ namespace Viking.UI.Controls
                 if (SectionShimContext.Settings.ShowOffset)
                     UpdateCorrectionStatus();
             }
+
+            var target = new Vector2((float)dx, (float)dy);
+            Trace.WriteLine($"Apply shim {dx:0.00},{dy:0.00} volume units from {Camera.Shim.X:0.00},{Camera.Shim.Y:0.00}, {(_snapShim ? "snap" : "glide")}.", "CorrectionShim");
+            if (_snapShim)
+            {
+                _shimTweenTimer?.Stop();
+                Camera.Shim = target;
+                Invalidate();
+                return;
+            }
+
+            StartShimTween(target);
+        }
+
+        /// <summary>
+        /// True while <see cref="UpdateCorrectionShimSnapped"/> is running on the UI thread, so a value sampled from an
+        /// already cached lattice is applied at once instead of glided.
+        /// </summary>
+        bool _snapShim;
+
+        /// <summary>
+        /// Reports a camera or section change to the shim service. The shim sampled from a cached lattice follows the
+        /// camera smoothly by itself, and a section change replaces the whole image, so gliding either would only
+        /// make the correction lag the view. Only toggles and answers that arrive later glide.
+        /// </summary>
+        void UpdateCorrectionShimSnapped()
+        {
+            _snapShim = true;
+            try
+            {
+                UpdateCorrectionShim();
+            }
+            finally
+            {
+                _snapShim = false;
+            }
+        }
+
+        /// <summary>
+        /// Glides <see cref="VikingXNA.Camera.Shim"/> from where it is now to <paramref name="target"/> so a late
+        /// correction answer slides the image instead of snapping it. A new target mid-glide restarts from the
+        /// current position. UI thread only.
+        /// </summary>
+        void StartShimTween(Vector2 target)
+        {
+            _shimTweenFrom = Camera.Shim;
+            _shimTweenTo = target;
+            if (Vector2.DistanceSquared(_shimTweenFrom, target) < 1e-8f)
+            {
+                _shimTweenTimer?.Stop();
+                return;
+            }
+
+            if (_shimTweenTimer is null)
+            {
+                _shimTweenTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                _shimTweenTimer.Tick += (_, _) => StepShimTween();
+            }
+
+            _shimTweenClock.Restart();
+            _shimTweenTimer.Start();
+        }
+
+        void StepShimTween()
+        {
+            if (IsDisposed)
+            {
+                _shimTweenTimer?.Stop();
+                return;
+            }
+
+            float t = Math.Min(1f, (float)(_shimTweenClock.ElapsedMilliseconds / (double)ShimTweenMilliseconds));
+            float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+            Camera.Shim = Vector2.Lerp(_shimTweenFrom, _shimTweenTo, eased);
+            if (t >= 1f)
+                _shimTweenTimer?.Stop();
 
             Invalidate();
         }
@@ -203,12 +330,14 @@ namespace Viking.UI.Controls
 
             // Camera.Shim is excluded: applying the shim raises it, and it must not trigger another report.
             if (e.PropertyName == "Camera.LookAt" || e.PropertyName == "Camera.Downsample" || e.PropertyName == "Viewport")
-                UpdateCorrectionShim();
+                UpdateCorrectionShimSnapped();
         }
 
         void DisposeCorrectionShim()
         {
             SectionShimContext.SettingsChanged -= OnCorrectionSettingsChanged;
+            _shimTweenTimer?.Dispose();
+            _shimTweenTimer = null;
             _correctionShim?.Dispose();
             _correctionShim = null;
         }

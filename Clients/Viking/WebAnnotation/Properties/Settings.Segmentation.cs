@@ -53,6 +53,46 @@ namespace WebAnnotation.Properties
             set => this[nameof(SegmentationUseMaskInput)] = value;
         }
 
+        /// <summary>
+        /// Narrowest part of a SAM2 mask Viking keeps, in nanometers. Anything thinner is cut before the outline is traced,
+        /// because no cytoplasm connection can be narrower than a membrane (about 7 to 10 nm). 0 keeps everything.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public double SegmentationMinFeatureNanometers
+        {
+            get => (double)this[nameof(SegmentationMinFeatureNanometers)];
+            set => this[nameof(SegmentationMinFeatureNanometers)] = value;
+        }
+
+        /// <summary>
+        /// Standard deviation, in logit samples (four pixels each), of the smoothing applied to the logits before they are
+        /// traced. 0 traces them as sent. Read when a response is decoded, so it applies to the next segmentation.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double SegmentationSmoothingSigma
+        {
+            get => (double)this[nameof(SegmentationSmoothingSigma)];
+            set => this[nameof(SegmentationSmoothingSigma)] = value;
+        }
+
+        /// <summary>
+        /// When true Viking moves each traced SAM2 contour onto the nearest strong bright-to-dark edge of the captured
+        /// image (<c>SegmentationEdgeSnap</c>). Client-side only: nothing is sent to the server, and a change retraces
+        /// the proposals already on screen from their stored masks.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SegmentationEdgeSnapEnabled
+        {
+            get => (bool)this[nameof(SegmentationEdgeSnapEnabled)];
+            set => this[nameof(SegmentationEdgeSnapEnabled)] = value;
+        }
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]

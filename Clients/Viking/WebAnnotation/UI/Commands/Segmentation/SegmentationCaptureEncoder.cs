@@ -49,6 +49,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// The luminance SAM2 receives for a capture: the same luma and percentile stretch as <see cref="EncodeToPng"/>.
+        /// </summary>
+        public static byte[] StretchedLuma(Color[] pixels, bool grayscale)
+        {
+            if (pixels is null)
+                throw new ArgumentNullException(nameof(pixels));
+
+            byte[] luma = new byte[pixels.Length];
+            for (int i = 0; i < pixels.Length; i++)
+                luma[i] = grayscale ? pixels[i].R : Luminance(pixels[i]);
+
+            (byte lo, byte hi) = ComputeStretchRange(luma);
+            for (int i = 0; i < luma.Length; i++)
+                luma[i] = Stretch(luma[i], lo, hi);
+
+            return luma;
+        }
+
+        /// <summary>
         /// Inclusive 1st/99th percentile of an 8-bit histogram. Flat images return the same lo/hi
         /// so <see cref="Stretch"/> leaves values unchanged.
         /// </summary>
@@ -93,9 +112,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Debug-only: writes latest.png plus a timestamped copy, then deletes captures older than 24 hours.
+        /// <paramref name="label"/> (section, downsample, row, column of the tile) goes in the file name so a capture
+        /// can be matched to a debug dump.
         /// Release builds return immediately so %TEMP% is not filled in production.
         /// </summary>
-        public static void SaveCaptureForReview(byte[] pngData, int width, int height)
+        public static void SaveCaptureForReview(byte[] pngData, int width, int height, string? label = null)
         {
             if (pngData is null || pngData.Length == 0)
                 return;
@@ -112,7 +133,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 string stamped = Path.Combine(
                     CaptureDirectory,
-                    $"segmentation_capture_{DateTime.Now:yyyyMMdd_HHmmss}_{width}x{height}.png");
+                    $"segmentation_capture_{DateTime.Now:yyyyMMdd_HHmmss}{(string.IsNullOrEmpty(label) ? string.Empty : "_" + label)}_{width}x{height}.png");
                 File.WriteAllBytes(stamped, pngData);
 #endif
             }

@@ -32,6 +32,9 @@ namespace WebAnnotation.WPF.Forms
         private int _originalSegmentationEdgeCleanupRadius;
         private double _originalSegmentationMaskThreshold;
         private bool _originalSegmentationUseMaskInput;
+        private bool _originalSegmentationEdgeSnapEnabled;
+        private double _originalSegmentationSmoothingSigma;
+        private double _originalSegmentationMinFeatureNanometers;
         private bool _originalAutoPolygonizeCircles;
         private double _originalAutoPolygonizeMinRadiusNanometers;
         private bool _originalAutoPolygonizeOverlayMasks;
@@ -348,6 +351,80 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        /// <summary>Starting <see cref="SegmentationMinFeatureNanometers"/>; matches WebAnnotation's stored default.</summary>
+        public const double DefaultSegmentationMinFeatureNanometers = 10;
+
+        /// <summary>Largest allowed <see cref="SegmentationMinFeatureNanometers"/>.</summary>
+        public const double MaxSegmentationMinFeatureNanometers = 100;
+
+        private double _segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers;
+
+        /// <summary>
+        /// Narrowest part of a SAM2 mask that is kept, in nanometers. Thinner bridges and specks are cut before the outline
+        /// is traced without moving the edge of anything wider. A membrane is at least 7 to 10 nm thick, so no
+        /// cytoplasm connection is narrower than that. 0 keeps everything. Changing it retraces what is on screen.
+        /// </summary>
+        public double SegmentationMinFeatureNanometers
+        {
+            get => _segmentationMinFeatureNanometers;
+            set
+            {
+                double clampedValue = MathUtils.Clamp(value, 0, MaxSegmentationMinFeatureNanometers);
+                if (Math.Abs(_segmentationMinFeatureNanometers - clampedValue) > 0.0001)
+                {
+                    _segmentationMinFeatureNanometers = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="SegmentationSmoothingSigma"/>; matches WebAnnotation's stored default.</summary>
+        public const double DefaultSegmentationSmoothingSigma = 0.5;
+
+        /// <summary>Largest allowed <see cref="SegmentationSmoothingSigma"/>, in logit samples.</summary>
+        public const double MaxSegmentationSmoothingSigma = 2.0;
+
+        private double _segmentationSmoothingSigma = DefaultSegmentationSmoothingSigma;
+
+        /// <summary>
+        /// Smoothing, in logit samples (four pixels each), applied to SAM2's logits before the outline is traced. 0 traces
+        /// them as sent; higher values remove one-sample holes and zigzags but start to merge thin necks and push the line
+        /// outward. Applies to the next segmentation, not to proposals already on screen.
+        /// </summary>
+        public double SegmentationSmoothingSigma
+        {
+            get => _segmentationSmoothingSigma;
+            set
+            {
+                double clampedValue = MathUtils.Clamp(value, 0, MaxSegmentationSmoothingSigma);
+                if (Math.Abs(_segmentationSmoothingSigma - clampedValue) > 0.0001)
+                {
+                    _segmentationSmoothingSigma = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _segmentationEdgeSnapEnabled = true;
+
+        /// <summary>
+        /// When true each traced contour is moved onto the nearest strong bright-to-dark edge of the image, so the line
+        /// sits on the membrane instead of where the SAM2 logits cross the threshold. On by default. Changing it
+        /// retraces the proposals on screen and does not re-segment.
+        /// </summary>
+        public bool SegmentationEdgeSnapEnabled
+        {
+            get => _segmentationEdgeSnapEnabled;
+            set
+            {
+                if (_segmentationEdgeSnapEnabled != value)
+                {
+                    _segmentationEdgeSnapEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private bool _autoPolygonizeCircles;
         public bool AutoPolygonizeCircles
         {
@@ -565,6 +642,41 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        private double _polygonPointOpacity = 0.75;
+        private double _originalPolygonPointOpacity = 0.75;
+
+        /// <summary>Opacity (0..1) of polygon control points, independent of polygon fill opacity.</summary>
+        public double PolygonPointOpacity
+        {
+            get => _polygonPointOpacity;
+            set
+            {
+                double clamped = Math.Max(0.0, Math.Min(1.0, value));
+                if (Math.Abs(_polygonPointOpacity - clamped) > 0.0001)
+                {
+                    _polygonPointOpacity = clamped;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _hidePolygonPointsInPenMode = true;
+        private bool _originalHidePolygonPointsInPenMode = true;
+
+        /// <summary>When true, polygon control points are not drawn in pen mode.</summary>
+        public bool HidePolygonPointsInPenMode
+        {
+            get => _hidePolygonPointsInPenMode;
+            set
+            {
+                if (_hidePolygonPointsInPenMode != value)
+                {
+                    _hidePolygonPointsInPenMode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private double _smallestRenderedSize;
         public double SmallestRenderedSize
         {
@@ -635,8 +747,16 @@ namespace WebAnnotation.WPF.Forms
             bool correctionShimEnabled = true,
             double correctionShimFadeStartDownsample = 8,
             double correctionShimFadeEndDownsample = 4,
-            bool correctionShimShowOffset = false)
+            bool correctionShimShowOffset = false,
+            double polygonPointOpacity = 0.75,
+            bool hidePolygonPointsInPenMode = true,
+            bool segmentationEdgeSnapEnabled = true,
+            double segmentationSmoothingSigma = DefaultSegmentationSmoothingSigma,
+            double segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers)
         {
+            _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
+            _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
+
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
             _numSectionsLoading = numSectionsLoading;
@@ -653,6 +773,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             _segmentationMaskThreshold = segmentationMaskThreshold;
             _segmentationUseMaskInput = segmentationUseMaskInput;
+            _segmentationEdgeSnapEnabled = segmentationEdgeSnapEnabled;
             _polygonPointRadius = polygonPointRadius;
             _smallestRenderedSize = smallestRenderedSize;
             _autoPolygonizeCircles = autoPolygonizeCircles;
@@ -682,6 +803,9 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             _originalSegmentationMaskThreshold = segmentationMaskThreshold;
             _originalSegmentationUseMaskInput = segmentationUseMaskInput;
+            _originalSegmentationEdgeSnapEnabled = segmentationEdgeSnapEnabled;
+            _originalSegmentationSmoothingSigma = segmentationSmoothingSigma;
+            _originalSegmentationMinFeatureNanometers = segmentationMinFeatureNanometers;
             _originalAutoPolygonizeCircles = autoPolygonizeCircles;
             _originalAutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             _originalAutoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
@@ -714,6 +838,9 @@ namespace WebAnnotation.WPF.Forms
             SegmentationEdgeCleanupRadius = segmentationEdgeCleanupRadius;
             SegmentationMaskThreshold = segmentationMaskThreshold;
             SegmentationUseMaskInput = segmentationUseMaskInput;
+            SegmentationEdgeSnapEnabled = segmentationEdgeSnapEnabled;
+            SegmentationSmoothingSigma = segmentationSmoothingSigma;
+            SegmentationMinFeatureNanometers = segmentationMinFeatureNanometers;
             AutoPolygonizeCircles = autoPolygonizeCircles;
             AutoPolygonizeMinRadiusNanometers = autoPolygonizeMinRadiusNanometers;
             AutoPolygonizeMaxDownsample = autoPolygonizeMaxDownsample;
@@ -753,6 +880,9 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentationEdgeCleanupRadius = _segmentationEdgeCleanupRadius;
             _originalSegmentationMaskThreshold = _segmentationMaskThreshold;
             _originalSegmentationUseMaskInput = _segmentationUseMaskInput;
+            _originalSegmentationEdgeSnapEnabled = _segmentationEdgeSnapEnabled;
+            _originalSegmentationSmoothingSigma = _segmentationSmoothingSigma;
+            _originalSegmentationMinFeatureNanometers = _segmentationMinFeatureNanometers;
             _originalAutoPolygonizeCircles = _autoPolygonizeCircles;
             _originalAutoPolygonizeMinRadiusNanometers = _autoPolygonizeMinRadiusNanometers;
             _originalAutoPolygonizeMaxDownsample = _autoPolygonizeMaxDownsample;
@@ -764,6 +894,8 @@ namespace WebAnnotation.WPF.Forms
             _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
             _originalCorrectionShimFadeEndDownsample = _correctionShimFadeEndDownsample;
             _originalPolygonPointRadius = _polygonPointRadius;
+            _originalPolygonPointOpacity = _polygonPointOpacity;
+            _originalHidePolygonPointsInPenMode = _hidePolygonPointsInPenMode;
             _originalSmallestRenderedSize = _smallestRenderedSize;
         }
 
@@ -788,6 +920,9 @@ namespace WebAnnotation.WPF.Forms
             _segmentationEdgeCleanupRadius = _originalSegmentationEdgeCleanupRadius;
             _segmentationMaskThreshold = _originalSegmentationMaskThreshold;
             _segmentationUseMaskInput = _originalSegmentationUseMaskInput;
+            _segmentationEdgeSnapEnabled = _originalSegmentationEdgeSnapEnabled;
+            _segmentationSmoothingSigma = _originalSegmentationSmoothingSigma;
+            _segmentationMinFeatureNanometers = _originalSegmentationMinFeatureNanometers;
             _autoPolygonizeCircles = _originalAutoPolygonizeCircles;
             _autoPolygonizeMinRadiusNanometers = _originalAutoPolygonizeMinRadiusNanometers;
             _autoPolygonizeMaxDownsample = _originalAutoPolygonizeMaxDownsample;
@@ -799,6 +934,8 @@ namespace WebAnnotation.WPF.Forms
             _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
             _correctionShimFadeEndDownsample = _originalCorrectionShimFadeEndDownsample;
             _polygonPointRadius = _originalPolygonPointRadius;
+            _polygonPointOpacity = _originalPolygonPointOpacity;
+            _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode;
             _smallestRenderedSize = _originalSmallestRenderedSize;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
@@ -825,6 +962,9 @@ namespace WebAnnotation.WPF.Forms
             _segmentationEdgeCleanupRadius = 8;
             _segmentationMaskThreshold = DefaultSegmentationMaskThreshold;
             _segmentationUseMaskInput = false;
+            _segmentationEdgeSnapEnabled = true;
+            _segmentationSmoothingSigma = DefaultSegmentationSmoothingSigma;
+            _segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers;
             _autoPolygonizeCircles = false;
             _autoPolygonizeMinRadiusNanometers = DefaultAutoPolygonizeMinRadiusNanometers;
             _autoPolygonizeMaxDownsample = 8.0;
@@ -841,6 +981,8 @@ namespace WebAnnotation.WPF.Forms
             _correctionShimFadeStartDownsample = 8;
             _correctionShimFadeEndDownsample = 4;
             _polygonPointRadius = 6.0;
+            _polygonPointOpacity = 0.75;
+            _hidePolygonPointsInPenMode = true;
             _smallestRenderedSize = 0.5;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed

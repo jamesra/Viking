@@ -117,7 +117,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void StoredMaskRetraceKeepsServerBytesAndAppliesTheNewRadius()
+        public void StoredMaskRetraceKeepsServerBytesOnScreenAndAppliesTheNewRadiusToTheOutline()
         {
             byte[] mask = FilledRectangleMask(24, 24, 4, 4, 19, 19);
             mask[(12 * 24) + 4] = 0;
@@ -156,7 +156,7 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(cleaned.Contains(keep));
             Assert.IsTrue(cleaned.Contains(new Vector2(4.5, 11.5)));
             Assert.AreEqual(0, rawDisplay.MaskData[(12 * 24) + 4]);
-            Assert.AreEqual(255, cleanedDisplay.MaskData[(12 * 24) + 4]);
+            Assert.AreEqual(0, cleanedDisplay.DisplayData[(12 * 24) + 4], "the picture is the server's mask; cleanup only changes the outline");
             Assert.AreEqual(0, mask[(12 * 24) + 4]);
         }
 

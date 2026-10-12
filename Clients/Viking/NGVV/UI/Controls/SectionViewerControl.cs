@@ -292,7 +292,7 @@ namespace Viking.UI.Controls
                 }
 
                 _Section = value;
-                UpdateCorrectionShim();
+                UpdateCorrectionShimSnapped();
                 if (_Section != null)
                 {
                     //NOTE: We have to update the section before we ask for the reference section
@@ -1722,8 +1722,10 @@ namespace Viking.UI.Controls
                 //DrawXNAControls(scene);
             }
 
-            // Draw section number overlay (after overlays but before cleanup)
-            DrawSectionNumberOverlay(graphicsDevice, scene);
+            // The section number is an overlay: hidden with the spacebar, and never drawn into a capture
+            // (RenderSceneToTexture clears ShowOverlays), where a number at a fixed spot is text SAM2 would segment.
+            if (ShowOverlays)
+                DrawSectionNumberOverlay(graphicsDevice, scene);
 
             graphicsDevice.Textures[0] = null;
             graphicsDevice.Textures[1] = null;

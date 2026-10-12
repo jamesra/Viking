@@ -1684,6 +1684,10 @@ break;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
                     StructureIDChoiceForm.Show();
                     return;
+                // Send every circle in view to auto-segmentation again, discarding what is shown for this section.
+                case Keys.F8:
+                    autoPolygonizeController?.ResubmitVisible();
+                    return;
                 case Keys.F7:
                     WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new()
                     {
@@ -2771,13 +2775,13 @@ break;
 
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
+            // While a pen stroke retraces a cell its child structures are hidden so they do not obscure the contour.
+            ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
+
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
             List<LocationCanvasView> listLocationsToDraw = HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures);
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures); //Find the locations on the adjacent sections
-            // While a pen stroke retraces a cell its child structures are hidden so they do not obscure the contour.
-            ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
-
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);

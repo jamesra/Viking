@@ -78,6 +78,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private CancellationTokenSource linkedRenderCancellationTokenSource;
         private CancellationTokenSource uploadCancellationTokenSource;
         private readonly TileUploadCache uploadedTileKeys = new();
+
+        /// <summary>Blurred grayscale copies of the tiles captured for SAM2, for the edge snap.</summary>
+        private readonly SegmentationTileImages tileImages = new();
+
+        /// <summary>
+        /// The tile images that cover each response, taken when it arrived and with the signature it was requested with,
+        /// so a later view change cannot change what the response's contours are snapped to.
+        /// </summary>
+        private readonly ConditionalWeakTable<SegmentationResponse, TileImageSet> responseTileImages = new();
         private readonly Viking.Services.Grpc.IGrpcChannelManager? channelManager;
         private int mosaicDownsample = 1;
 
@@ -443,6 +452,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedImageWidth = 0;
             uploadedImageHeight = 0;
             uploadedTileKeys.Clear();
+            tileImages.Clear();
             mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
             mosaicOriginX = 0;
             mosaicOriginY = 0;
@@ -722,6 +732,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 resultContexts.Record(response, downsample);
+                AttachTileImages(response, signature, downsample);
                 mosaicOriginX = response.OriginX;
                 mosaicOriginY = response.OriginY;
                 uploadedImageBounds = MosaicWorldBounds(response, DownsampleFor(response));
@@ -829,7 +840,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     preserveHolesContainingWorldPoints,
                     SegmentationMaskPolygonizer.ScaleCleanupRadius(cleanupRadius, field.Scale),
                     out SegmentationMaskPolygonizer.CleanupStats cleanupStats,
-                    keepComponentsContainingWorldPoints));
+                    keepComponentsContainingWorldPoints,
+                    WebAnnotation.Global.AnnotationSettings.SegmentationEdgeSnapEnabled ? CreateEdgeRefiner(response) : null,
+                    WebAnnotation.Global.AnnotationSettings.SegmentationMinFeatureWorld));
                 cleanupMs += cleanupStats.ElapsedMilliseconds;
                 polygonizeMs += Math.Max(0, polygonizeTimer.ElapsedMilliseconds - cleanupStats.ElapsedMilliseconds);
                 foregroundBefore += cleanupStats.ForegroundPixelsBefore;
@@ -844,6 +857,46 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 $"pixels={foregroundBefore}->{foregroundAfter} polygonize={polygonizeMs}ms " +
                 $"polygons={polygons.Count} vertices={vertexCount} total={totalTimer.ElapsedMilliseconds}ms");
             return polygons;
+        }
+
+        /// <summary>
+        /// Remembers the captured tile images that cover <paramref name="response"/>, for <see cref="CreateEdgeRefiner"/>.
+        /// </summary>
+        private void AttachTileImages(SegmentationResponse response, TileSignature signature, int downsample)
+        {
+            TileImageSet? images = tileImages.Snapshot(
+                downsample,
+                (row, column) => TileKey(signature, row, column),
+                MosaicWorldBounds(response, downsample));
+            responseTileImages.Remove(response);
+            if (images is not null)
+                responseTileImages.Add(response, images);
+        }
+
+        /// <summary>
+        /// A function that moves a polygon traced from <paramref name="response"/> onto the nearest strong bright-to-dark
+        /// image edge (<see cref="SegmentationEdgeSnap"/>), or null when no captured tile covers the response. It holds
+        /// the images as they were when the response arrived, so it stays valid however long a proposal keeps it, and it
+        /// does not look at the preference: callers decide whether to use it.
+        /// </summary>
+        public Func<Polygon, Polygon>? CreateEdgeRefiner(SegmentationResponse response)
+        {
+            if (response is null || !responseTileImages.TryGetValue(response, out TileImageSet? images))
+                return null;
+
+            return polygon =>
+            {
+                Polygon refined = SegmentationEdgeSnap.Refine(
+                    polygon,
+                    images.Sample,
+                    images.Downsample,
+                    new EdgeSnapOptions { ReferenceEdgeLevelsPerPixel = images.EdgeScale },
+                    out EdgeSnapStats stats);
+                SegmentationDiag.Log(
+                    $"EdgeSnap rings={stats.Rings} snapped={stats.Snapped} meanOffset={stats.MeanOffsetPixels:+0.0;-0.0}px " +
+                    $"meanAbs={stats.MeanAbsoluteOffsetPixels:0.0}px reducedRange={stats.ReducedRange} edgeScale={images.EdgeScale:0.0}");
+                return refined;
+            };
         }
 
         private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, SegmentField> decodedFields = new();
@@ -863,7 +916,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             decodedFields.GetValue(segment, s =>
             {
                 if (SegmentationLogitField.HasLogits(s))
-                    return SegmentationLogitField.Decode(s, WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold);
+                    return SegmentationLogitField.Decode(
+                        s,
+                        WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
+                        WebAnnotation.Global.AnnotationSettings.SegmentationSmoothingSigma);
 
                 (byte[]? data, int width, int height) = DecodePngMask(s.Mask.ToByteArray());
                 return new SegmentField(data, width, height, 1, s.X, s.Y);
@@ -879,7 +935,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Decodes a SAM2 probability PNG into 0–255 bytes. Older 1-bit masks arrive as 0 and 255.
+        /// Decodes a mask PNG into 0–255 bytes. A thresholded mask arrives as 0 and 255.
         /// Returns null data on an invalid PNG.
         /// </summary>
         public (byte[]? maskData, int width, int height) DecodePngMask(byte[] pngBytes)

@@ -322,6 +322,30 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.75")]
+        public double PolygonPointOpacity {
+            get {
+                return ((double)(this["PolygonPointOpacity"]));
+            }
+            set {
+                this["PolygonPointOpacity"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool HidePolygonPointsInPenMode {
+            get {
+                return ((bool)(this["HidePolygonPointsInPenMode"]));
+            }
+            set {
+                this["HidePolygonPointsInPenMode"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1.0")]
         public double SmallestRenderedSize {
             get {

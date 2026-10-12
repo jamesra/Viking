@@ -113,7 +113,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     continue;
                 }
 
-                var (png, width, height) = await CaptureTileImage(cell, signature.Downsample, grayscale, token).ConfigureAwait(false);
+                var (png, width, height) = await CaptureTileImage(
+                    cell,
+                    signature.Downsample,
+                    grayscale,
+                    token,
+                    gray => tileImages.Store(key, gray)).ConfigureAwait(false);
                 if (png is null || png.Length == 0)
                 {
                     SegmentationDiag.Log($"Capture failed row={cell.Row} col={cell.Col} ds={signature.Downsample}");
@@ -335,11 +340,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return true;
         }
 
+        /// <summary>
+        /// Renders one cell and encodes it for SAM2. <paramref name="onGray"/>, when given, receives the blurred grayscale
+        /// copy kept for the edge snap (<see cref="SegmentationTileImages.PrepareGray"/>) once the capture is valid.
+        /// </summary>
         private async Task<(byte[]? data, int width, int height)> CaptureTileImage(
             TileCell cell,
             int downsample,
             bool grayscale,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Action<byte[]>? onGray = null)
         {
             try
             {
@@ -391,10 +401,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     }).Task.ConfigureAwait(false);
                     // Awaiting the dispatcher task can resume this method on the UI thread; encoding a 1024x1024
                     // tile there stalls the viewer, so it is pushed to the pool explicitly.
+                    Task<byte[]> grayTask = onGray is null
+                        ? Task.FromResult<byte[]>([])
+                        : Task.Run(
+                            () => SegmentationTileImages.PrepareGray(
+                                SegmentationCaptureEncoder.StretchedLuma(pixels, grayscale),
+                                width,
+                                height),
+                            cancellationToken);
                     byte[] pngData = await Task.Run(
                         () => SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale),
                         cancellationToken).ConfigureAwait(false);
-                    SegmentationCaptureEncoder.SaveCaptureForReview(pngData, width, height);
+                    byte[] gray = await grayTask.ConfigureAwait(false);
+                    SegmentationCaptureEncoder.SaveCaptureForReview(
+                        pngData,
+                        width,
+                        height,
+                        $"s{parent.Section?.Number}_ds{downsample}_r{cell.Row}_c{cell.Col}");
                     var (isValid, errorMessage) = CapturedPng.Validate(pngData, width, height);
                     SegmentationDiag.Log(
                         $"CaptureTile encoded row={cell.Row} col={cell.Col} " +
@@ -404,6 +427,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         Debug.WriteLine($"Tile capture failed validation: {errorMessage}");
                         return (null, 0, 0);
                     }
+
+                    if (onGray is not null && gray.Length == width * height)
+                        onGray(gray);
 
                     return (pngData, width, height);
                 }

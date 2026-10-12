@@ -163,7 +163,12 @@ namespace WebAnnotation
                 Global.AnnotationSettings.CorrectionShimEnabled,
                 Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
                 Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
-                Global.AnnotationSettings.CorrectionShimShowOffset
+                Global.AnnotationSettings.CorrectionShimShowOffset,
+                Global.AnnotationSettings.PolygonPointOpacity,
+                Global.AnnotationSettings.HidePolygonPointsInPenMode,
+                Global.AnnotationSettings.SegmentationEdgeSnapEnabled,
+                Global.AnnotationSettings.SegmentationSmoothingSigma,
+                Global.AnnotationSettings.SegmentationMinFeatureNanometers
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -189,6 +194,11 @@ namespace WebAnnotation
                     Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
                 if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationUseMaskInput))
                     Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+                // Client-side: the setter retraces what is on screen from the stored masks, so no request is sent.
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationEdgeSnapEnabled))
+                    Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationMinFeatureNanometers))
+                    Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
 
                 if (AnnotationOverlay.CurrentOverlay?.Parent?.CurrentCommand is not SegmentationCommand command)
                     return;
@@ -288,6 +298,8 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
                 Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
                 Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+                Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+                Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
             };
 
             _preferencesDialog.Show(); // Modeless dialog
@@ -310,6 +322,9 @@ namespace WebAnnotation
             Global.AnnotationSettings.SegmentationEdgeCleanupRadius = viewModel.SegmentationEdgeCleanupRadius;
             Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
             Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+            Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+            Global.AnnotationSettings.SegmentationSmoothingSigma = viewModel.SegmentationSmoothingSigma;
+            Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
             Global.AnnotationSettings.AutoPolygonizeCircles = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers = viewModel.AutoPolygonizeMinRadiusNanometers;
             Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
@@ -328,6 +343,8 @@ namespace WebAnnotation
             if (menuAutoPolygonizeCircles != null)
                 menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
+            Global.AnnotationSettings.PolygonPointOpacity = viewModel.PolygonPointOpacity;
+            Global.AnnotationSettings.HidePolygonPointsInPenMode = viewModel.HidePolygonPointsInPenMode;
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
 
             // Update static accessor properties

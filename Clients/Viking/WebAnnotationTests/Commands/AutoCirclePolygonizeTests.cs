@@ -1180,7 +1180,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void GroupPromptBoxesTheLargestPolygonAndClicksEachPolygonOnce()
+        public void GroupPromptBoxIsTheLargestRectangleInsideThePolygonsAndClicksEachPolygonOnce()
         {
             Polygon small = Square(100, 100, 10);
             Polygon large = Square(0, 0, 40);
@@ -1191,13 +1191,110 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(3, prompt.Foreground.Count);
             Assert.IsNotNull(prompt.Box);
-            Assert.AreEqual(
-                CircleSegmentationPrompts.InscribedSeedBox(large.BoundingBox, prompt.Foreground[1]),
-                prompt.Box);
-            Assert.IsTrue(large.BoundingBox.Width > prompt.Box.Value.Width);
+            AssertInsideAny(prompt.Box.Value, small, large, medium);
+            Assert.IsTrue(prompt.Box.Value.Width > 30 && prompt.Box.Value.Height > 30, "it is the 40 x 40 polygon, less a cell");
             Assert.IsTrue(large.Contains(prompt.Foreground[1]));
             Assert.IsTrue(small.Contains(prompt.Foreground[0]));
             Assert.IsTrue(medium.Contains(prompt.Foreground[2]));
+        }
+
+        [TestMethod]
+        public void GroupPromptBoxStaysInsideAnElongatedBentPolygon()
+        {
+            // An L: a 100 x 100 bounding box, but only 30 thick. A square sized from the bounding box (about 71
+            // wide) centred on the polygon would cover background.
+            Polygon bent = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(100, 0),
+                new Vector2(100, 30),
+                new Vector2(30, 30),
+                new Vector2(30, 100),
+                new Vector2(0, 100),
+                new Vector2(0, 0)
+            ]);
+
+            CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([bent]);
+
+            Assert.IsNotNull(prompt.Box);
+            AssertInsideAny(prompt.Box.Value, bent);
+            double area = prompt.Box.Value.Width * prompt.Box.Value.Height;
+            Assert.IsTrue(area > 0.5 * 3000, $"close to the 3,000 area of the longer arm, got {area}");
+            Rectangle oldSquare = CircleSegmentationPrompts.InscribedSeedBox(bent.BoundingBox, prompt.Foreground[0]).Value;
+            Assert.IsFalse(
+                new[] { oldSquare.LowerLeft, oldSquare.UpperRight, new Vector2(oldSquare.Left, oldSquare.Top), new Vector2(oldSquare.Right, oldSquare.Bottom) }
+                    .All(point => bent.Contains(point)),
+                "the bounding-box square this replaces would have reached outside the polygon");
+        }
+
+        [TestMethod]
+        public void GroupPromptBoxMaySpanOverlappingPolygons()
+        {
+            Polygon left = Square(0, 0, 60);
+            Polygon right = Square(40, 0, 60);
+
+            CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([left, right]);
+
+            Assert.IsNotNull(prompt.Box);
+            AssertInsideAny(prompt.Box.Value, left, right);
+            Assert.IsTrue(prompt.Box.Value.Width > 80, $"it covers both squares, got width {prompt.Box.Value.Width}");
+        }
+
+        [TestMethod]
+        public void GroupPromptHasNoBoxWhenThePolygonsAreTooThinToHoldOne()
+        {
+            Polygon sliver = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(1000, 0),
+                new Vector2(1000, 0.5),
+                new Vector2(0, 0.5),
+                new Vector2(0, 0)
+            ]);
+
+            CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([sliver]);
+
+            Assert.IsNull(prompt.Box);
+        }
+
+        [TestMethod]
+        public void LargestAllInsideRectangleOfAGridIsFound()
+        {
+            bool[,] grid = new bool[6, 8];
+            for (int row = 1; row <= 4; row++)
+            {
+                for (int column = 2; column <= 6; column++)
+                    grid[row, column] = true;
+            }
+
+            grid[2, 4] = false;
+            grid[3, 4] = false;   // a notch splits the 4 x 5 block into 4 x 2 on the left, 4 x 2 on the right (rows 1..4)
+            grid[0, 0] = true;    // a lone cell elsewhere
+
+            Assert.IsTrue(InscribedRectangle.TryFindLargest(grid, out int r0, out int r1, out int c0, out int c1));
+            int area = (r1 - r0 + 1) * (c1 - c0 + 1);
+            Assert.AreEqual(8, area, $"rows {r0}..{r1}, columns {c0}..{c1}");
+            for (int row = r0; row <= r1; row++)
+            {
+                for (int column = c0; column <= c1; column++)
+                    Assert.IsTrue(grid[row, column]);
+            }
+
+            Assert.IsFalse(InscribedRectangle.TryFindLargest(new bool[3, 3], out _, out _, out _, out _));
+        }
+
+        private static void AssertInsideAny(Rectangle box, params Polygon[] polygons)
+        {
+            Vector2[] samples =
+            [
+                box.LowerLeft,
+                box.UpperRight,
+                new Vector2(box.Left, box.Top),
+                new Vector2(box.Right, box.Bottom),
+                new Vector2((box.Left + box.Right) / 2, (box.Bottom + box.Top) / 2)
+            ];
+            foreach (Vector2 sample in samples)
+                Assert.IsTrue(polygons.Any(polygon => polygon.Contains(sample)), $"{sample} is outside every polygon");
         }
 
         [TestMethod]

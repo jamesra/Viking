@@ -111,7 +111,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// One grouped overlap resubmit that is running. Starting a group that contains this job's
         /// locations cancels it so a smaller, older answer cannot arrive after the larger one.
-        /// Owns <see cref="Cancellation"/> until <see cref="ResubmitOverlapGroupAsync"/> disposes it.
+        /// Owns <see cref="Cancellation"/> until <see cref="MergeOverlapGroupAsync"/> disposes it.
         /// </summary>
         private sealed class OverlapGroupJob(HashSet<long> locationIds, long ticket)
         {
@@ -258,6 +258,25 @@ namespace WebAnnotation.UI.AutoPolygonize
                 clear();
             else
                 dispatcher.BeginInvoke(clear);
+        }
+
+        /// <summary>
+        /// Throws away the proposals, cached results and dismissals for the current section and starts a new idle scan, so
+        /// every circle in view is sent to the segmentation server again. Bound to a hotkey. Does nothing while
+        /// auto-polygonize is off. Call on the UI thread; the new requests run on the usual batch path.
+        /// </summary>
+        public void ResubmitVisible()
+        {
+            if (!enabled || parent.Section is null)
+                return;
+
+            int sectionNumber = parent.Section.Number;
+            SegmentationDiag.Log($"AutoPolygonize.ResubmitVisible section={sectionNumber}");
+            CancelProcessPhase();
+            DropProposalsForSection(sectionNumber);
+            cache.ClearSection(sectionNumber);
+            parent.Invalidate();
+            RestartIdleTimer();
         }
 
         /// <summary>
@@ -1614,6 +1633,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     }
                 }
 
+                SegmentationDiag.Log(
+                    $"publish ids=[{string.Join(",", proposal.LocationIds)}] ticket={proposal.RequestTicket} round={proposal.OverlapResubmitRound} " +
+                    $"area={proposal.Polygon.Area:F0} replaces=[{string.Join("; ", replaced.Select(item => string.Join(",", item.LocationIds)))}]");
                 foreach (AutoPolygonizeProposal old in replaced)
                 {
                     old.DisposeMaskOverlay();
@@ -1928,7 +1950,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Cache dropped LastModified skip after a geometry commit. Overlay is stale; force one SegmentImage if still in view.</summary>
         private void OnCacheGeometryInvalidated(long locationId, int sectionNumber, int generation)
         {
-            RemoveProposal(locationId);
+            DissolveProposal(locationId);
             if (!enabled)
                 return;
 
@@ -1959,7 +1981,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private void OnCacheLocationForgotten(long locationId)
         {
-            RemoveProposal(locationId);
+            DissolveProposal(locationId);
             if (enabled)
                 parent.Invalidate();
         }
@@ -2184,32 +2206,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Overlap-resubmit empty union: skip every involved ID so the group is not
-        /// SegmentImage'd again until a member's LastModified changes.
-        /// </summary>
-        private void RememberEmptyMaskForIds(
-            IReadOnlyList<long> locationIds,
-            int sectionNumber,
-            DateTime lastModifiedFallback,
-            SegmentationViewportSession session,
-            double downsample)
-        {
-            AutoPolygonizeUploadContext? upload = SharedViewportImageLease.TryCreateContext(session);
-            foreach (long id in locationIds)
-            {
-                LocationObj loc = Store.Locations.GetObjectByID(id, false);
-                cache.RememberProposal(
-                    id,
-                    sectionNumber,
-                    loc?.LastModified ?? lastModifiedFallback,
-                    loc?.TypeCode ?? LocationType.CIRCLE,
-                    loc,
-                    upload,
-                    downsample);
-            }
-        }
-
-        /// <summary>
         /// Reuses a viewport-similar upload or runs one capture shared with <see cref="SegmentationCommand"/>.
         /// Installs the image on <paramref name="session"/>. The lease holds the id; callers add their own hold while segmenting.
         /// </summary>
@@ -2297,12 +2293,72 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
         }
 
+        /// <summary>
+        /// Removes the proposal that stands for <paramref name="changedId"/> and, when it is a merge of several circles,
+        /// puts the proposals it replaced back on screen, except those that contain the changed circle. The changed circle
+        /// is re-segmented by its own refresh, whose publish re-merges the group. Without this the whole group vanished and
+        /// the other circles stayed blank, because their cache entries still said they were done. UI thread.
+        /// </summary>
+        private void DissolveProposal(long changedId)
+        {
+            List<AutoPolygonizeProposal> restored = [];
+            AutoPolygonizeProposal? dissolved = null;
+            lock (proposalLock)
+            {
+                if (!proposals.TryGetValue(changedId, out dissolved))
+                    return;
+
+                if (ReferenceEquals(hoveredProposal, dissolved))
+                    hoveredProposal = null;
+
+                dissolved.DisposeMaskOverlay();
+                foreach (long id in dissolved.LocationIds)
+                    proposals.Remove(id);
+                proposals.Remove(changedId);
+
+                List<AutoPolygonizeProposal> survivors = [];
+                CollectSurvivors(dissolved, changedId, survivors);
+                foreach (AutoPolygonizeProposal survivor in survivors)
+                {
+                    if (survivor.LocationIds.Any(proposals.ContainsKey))
+                        continue;
+
+                    survivor.EndRefining();
+                    if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+                        survivor.AttachMaskOverlay(parent.Device);
+
+                    foreach (long id in survivor.LocationIds)
+                        proposals[id] = survivor;
+                    restored.Add(survivor);
+                }
+            }
+
+            SegmentationDiag.Log(
+                $"dissolve changed={changedId} removed=[{string.Join(",", dissolved.LocationIds)}] " +
+                $"restored=[{string.Join("; ", restored.Select(item => string.Join(",", item.LocationIds)))}]");
+        }
+
+        /// <summary>
+        /// The proposals a merged proposal replaced that do not contain <paramref name="changedId"/>. A member that does
+        /// contain it and is itself a merge is searched in turn; one that is a single request result is dropped.
+        /// </summary>
+        internal static void CollectSurvivors(AutoPolygonizeProposal merged, long changedId, List<AutoPolygonizeProposal> survivors)
+        {
+            foreach (AutoPolygonizeProposal member in merged.MergedFrom)
+            {
+                if (!member.LocationIds.Contains(changedId))
+                    survivors.Add(member);
+                else
+                    CollectSurvivors(member, changedId, survivors);
+            }
+        }
+
         private IEnumerable<AutoPolygonizeProposal> DistinctProposalsUnlocked() =>
             proposals.Values.Distinct();
 
         /// <summary>
         /// After a publish, if other same-cell overlays or already-saved sibling polygons
-        /// nested-contain or cross this one, start one combined SegmentImage.
+        /// nested-contain or cross this one, merge their logit fields into one proposal (no server request).
         /// At most <see cref="AutoPolygonizeSelection.MaxOverlapResubmitRound"/> rounds.
         /// </summary>
         private void TryBeginOverlapResubmit(AutoPolygonizeProposal seed)
@@ -2333,7 +2389,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Starts one combined SegmentImage for a same-cell component of 2+ locations.
+        /// Starts the logit merge (<see cref="MergeOverlapGroupAsync"/>) for a same-cell component of 2+ locations.
         /// Skips when this exact ID set is already a grouped overlay.
         /// </summary>
         private void BeginOverlapResubmit(
@@ -2384,7 +2440,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                 overlapResubmitsInFlight[key] = job;
             }
 
-            ObserveFaults(ResubmitOverlapGroupAsync(members, locationIds, currentRound + 1, key, job), "overlap resubmit");
+            // The members are drawn from single-circle masks and are about to be replaced by the group's mask.
+            // They show as provisional until the resubmit ends, whether it publishes, finds nothing or is cancelled.
+            foreach (AutoPolygonizeProposal member in members)
+                member.BeginRefining();
+
+            parent.Invalidate();
+            ObserveFaults(MergeOverlapGroupAsync(members, locationIds, currentRound + 1, key, job), "overlap merge");
         }
 
         /// <summary>
@@ -2401,7 +2463,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// One grouped SAM2 resubmit per overlapping saved-sibling component in the live view.
+        /// One logit merge per overlapping saved-sibling component in the live view.
         /// Called from the UI thread after an idle batch (including a batch with no circles).
         /// </summary>
         private void TryBeginSavedSiblingOverlapResubmits()
@@ -2482,18 +2544,28 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (proposed is null || parent.Section is null)
                 return proposed;
 
+            IReadOnlyCollection<LocationObj> nearby = [.. CollectVisibleLocationObjs(proposed.BoundingBox)];
             List<Polygon> existing = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
-                CollectVisibleLocationObjs(proposed.BoundingBox),
+                nearby,
                 proposed,
                 excludeLocationIds,
                 parent.Section.ActiveSectionToVolumeTransform,
                 parent.Section.Number,
                 excludeParentId);
+            // Circle annotations of other structures count as well, so a cell that is still only a circle is not painted over.
+            List<Polygon> circleDisks = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
+                AutoPolygonizeSelection.ToCircleFootprints(nearby),
+                proposed,
+                excludeLocationIds,
+                parent.Section.Number,
+                excludeParentId,
+                keepPoint);
+            existing.AddRange(circleDisks);
             Polygon? carved = AutoPolygonizeSelection.SubtractOverlappingPolygons(proposed, existing, keepPoint);
             SegmentationDiag.Log(
                 $"Carve exclude=[{string.Join(",", excludeLocationIds)}] keepPoint={keepPoint} " +
                 $"proposed area={proposed.Area:F0} bbox={proposed.BoundingBox} vertices={proposed.TotalUniqueVertices}; " +
-                $"overlapping existing={existing.Count} [{string.Join("; ", existing.Select(polygon => $"area={polygon.Area:F0} bbox={polygon.BoundingBox}"))}]; " +
+                $"overlapping existing={existing.Count} (circles={circleDisks.Count}) [{string.Join("; ", existing.Select(polygon => $"area={polygon.Area:F0} bbox={polygon.BoundingBox}"))}]; " +
                 (carved is null
                     ? "result=null (existing annotations cover the proposal)"
                     : $"result area={carved.Area:F0} bbox={carved.BoundingBox} vertices={carved.TotalUniqueVertices}"));
@@ -2544,10 +2616,16 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// One SegmentImage using points from the overlapping polygons. Replaces the member overlays
-        /// with a single group proposal stored under every involved location ID.
+        /// Merges overlapping same-structure proposals without asking the server again: the members' logit fields are
+        /// combined by per-pixel maximum (<see cref="AutoPolygonizeMaskOverlay.TryOr"/>) and the result is traced once
+        /// at the mask threshold. Replaces the member overlays with a single group proposal stored under every involved
+        /// location ID. Saved sibling polygons that have no mask are unioned into the outline as fixed rings.
         /// </summary>
-        private async Task ResubmitOverlapGroupAsync(
+        /// <remarks>
+        /// Runs on a worker thread and finishes on the UI thread. <paramref name="job"/> is cancelled when a larger
+        /// group containing these locations starts, so a smaller merge cannot publish after a larger one.
+        /// </remarks>
+        private async Task MergeOverlapGroupAsync(
             List<AutoPolygonizeProposal> members,
             long[] locationIds,
             int overlapRound,
@@ -2558,9 +2636,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             try
             {
                 if (!enabled || parent.Section is null || parent.Scene is null)
-                    return;
-
-                if (!IsWithinAutoSegmentDownsample())
                     return;
 
                 CancellationToken lifecycleToken;
@@ -2574,268 +2649,159 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (processToken.IsCancellationRequested)
                     return;
 
-                SegmentationViewportSession session = new(parent);
-                if (!session.TryInitializeClient())
+                double downsample = GetCurrentDownsample();
+                IReadOnlyList<Polygon> promptPolygons = CollectOverlapPromptPolygons(members, locationIds);
+                IReadOnlyList<Vector2> foreground = CircleSegmentationPrompts.CreateGroupPromptFromPolygons(promptPolygons).Foreground;
+                if (foreground.Count == 0)
                     return;
 
-                double downsample = GetCurrentDownsample();
-                bool acquiredHold = false;
-                ulong? holdImageId = null;
-                try
+                LocationObj? firstLoc = Store.Locations.GetObjectByID(locationIds[0], false);
+                int sectionNumber = members.Count > 0 ? members[0].SectionNumber : firstLoc?.Section ?? parent.Section.Number;
+                long? parentId = members.Count > 0 ? members[0].ParentID : firstLoc?.ParentID;
+                if (parentId is null)
+                    return;
+
+                DateTime lastModified = members.Count > 0
+                    ? members.Max(member => member.LastModified)
+                    : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.LastModified ?? DateTime.MinValue).Max();
+                double circleRadius = members.Count > 0
+                    ? members.Max(member => member.CircleRadius)
+                    : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.Radius ?? 0).DefaultIfEmpty(0).Max();
+
+                Rectangle viewBounds = GetCurrentViewportBounds();
+                HashSet<long> involved = [.. locationIds];
+                List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
+                IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                        visibleForPrompts,
+                        parent.Section.ActiveSectionToVolumeTransform,
+                        foreground,
+                        Global.AnnotationSettings.SegmentationPointRadius * downsample,
+                        involved,
+                        parentId);
+                SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                    "auto-overlap-merge", involved, parentId, visibleForPrompts, foreground, background));
+
+                List<Polygon> originalPolygons = [.. promptPolygons];
+                AutoPolygonizeMaskOverlay? mergedMask = AutoPolygonizeMaskOverlay.TryOr(
+                    [.. members.Select(member => member.MaskOverlay)]);
+
+                // A ring that was not traced from a mask (a saved sibling, or a proposal without one) is unioned as is.
+                List<Polygon> fixedPolygons = [];
+                foreach (Polygon shape in originalPolygons)
                 {
-                    bool reused = false;
+                    bool tracedFromMask = members.Any(member =>
+                        member.MaskSources.Count > 0 && ReferenceEquals(member.Polygon, shape));
+                    if (!tracedFromMask)
+                        fixedPolygons.Add(shape);
+                }
+
+                List<AutoPolygonizeMaskSource> maskSources = mergedMask is null
+                    ? []
+                    : [new AutoPolygonizeMaskSource(mergedMask, foreground, background)];
+                double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
+                double holeDrop = Global.AnnotationSettings.SegmentationHoleDropFraction;
+                int cleanupRadius = Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
+                Vector2 unionKeepPoint = originalPolygons.Count > 0 ? originalPolygons[0].Centroid : foreground[0];
+
+                Polygon? merged = await Task.Run(() =>
+                {
+                    if (maskSources.Count == 0)
+                    {
+                        Polygon? union = AutoPolygonizeSelection.UnionPolygons([.. originalPolygons], unionKeepPoint);
+                        return union is null ? null : AutoPolygonizeSelection.SimplifyProposal(union, simplifyTolerance);
+                    }
+
+                    return AutoPolygonizeMaskRetrace.TryCreate(
+                        maskSources,
+                        fixedPolygons,
+                        unionKeepPoint,
+                        holeDrop,
+                        cleanupRadius,
+                        simplifyTolerance,
+                        out Polygon? traced,
+                        out _)
+                        ? traced
+                        : null;
+                }).ConfigureAwait(false);
+                if (processToken.IsCancellationRequested)
+                    return;
+
+                SegmentationDiag.Log(
+                    $"auto-overlap-merge ids=[{string.Join(",", locationIds)}] masks={maskSources.Count} fixed={fixedPolygons.Count} " +
+                    $"merged={(merged is null ? "null" : $"area={merged.Area:F0}")} " +
+                    $"mask={(mergedMask is null ? "none" : $"{mergedMask.Width}x{mergedMask.Height}")}");
+
+                var dispatcher = Viking.UI.State.MainThreadDispatcher;
+                if (dispatcher is null)
+                    return;
+
+                await dispatcher.InvokeAsync(() =>
+                {
+                    if (processToken.IsCancellationRequested || !locationIds.All(IsGroupMemberValid))
+                        return;
+
+                    Polygon? polygon = merged;
+                    if (polygon is not null)
+                    {
+                        LocationObj? keepLocation = Store.Locations.GetObjectByID(locationIds[0], false);
+                        Vector2 keepPoint = keepLocation?.VolumePosition ?? unionKeepPoint;
+                        polygon = CarveAgainstExistingPolygons(polygon, locationIds, keepPoint, parentId);
+                        if (polygon is not null)
+                            polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
+                    }
+
+                    // Members keep their upload so the group does not lose the image its masks were captured from.
+                    AutoPolygonizeUploadContext? groupUpload = null;
                     foreach (long id in locationIds)
                     {
-                        if (cache.TryGetUploadContext(id, out AutoPolygonizeUploadContext upload) &&
-                            upload.IsUsable &&
-                            upload.ImageId != 0)
+                        if (cache.TryGetUploadContext(id, out AutoPolygonizeUploadContext existing))
                         {
-                            session.AdoptUploadedImage(
-                                upload.ImageId,
-                                upload.WorldBounds,
-                                upload.Width,
-                                upload.Height);
-                            if (upload.MatchesViewportForReuse(GetCurrentViewportBounds(), downsample))
-                                viewportImageLease.Publish(upload);
-                            reused = true;
+                            groupUpload = existing;
                             break;
                         }
                     }
 
-                    if (!reused)
+                    if (polygon is null)
                     {
-                        AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
-                            session,
-                            GetCurrentViewportBounds(),
-                            downsample,
-                            processToken).ConfigureAwait(false);
-                        if (uploaded is null)
-                            return;
-
-                        if (uploaded.Value.ImageId != 0)
-                        {
-                            cache.AcquireBatchHold(uploaded.Value.ImageId);
-                            acquiredHold = true;
-                            holdImageId = uploaded.Value.ImageId;
-                        }
+                        RememberGroup(locationIds, sectionNumber, lastModified, groupUpload, downsample);
+                        return;
                     }
 
-                    IReadOnlyList<Polygon> promptPolygons = CollectOverlapPromptPolygons(members, locationIds);
-                    CircleSegmentationPrompts.GroupPrompt groupPrompt =
-                        CircleSegmentationPrompts.CreateGroupPromptFromPolygons(promptPolygons);
-                    IReadOnlyList<Vector2> foreground = groupPrompt.Foreground;
-                    IReadOnlyList<Rectangle> foregroundBoxes = groupPrompt.Box is Rectangle groupBox ? [groupBox] : [];
-                    if (foreground.Count == 0)
-                        return;
-
-                    LocationObj? firstLoc = Store.Locations.GetObjectByID(locationIds[0], false);
-                    int sectionNumber = members.Count > 0 ? members[0].SectionNumber : firstLoc?.Section ?? parent.Section.Number;
-                    long? parentId = members.Count > 0 ? members[0].ParentID : firstLoc?.ParentID;
-                    if (parentId is null)
-                        return;
-
-                    DateTime lastModified = members.Count > 0
-                        ? members.Max(member => member.LastModified)
-                        : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.LastModified ?? DateTime.MinValue).Max();
-                    double circleRadius = members.Count > 0
-                        ? members.Max(member => member.CircleRadius)
-                        : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.Radius ?? 0).DefaultIfEmpty(0).Max();
-
-                    Rectangle viewBounds = GetCurrentViewportBounds();
-                    HashSet<long> involved = [.. locationIds];
-                    List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
-                    IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                            visibleForPrompts,
-                            parent.Section.ActiveSectionToVolumeTransform,
-                            foreground,
-                            Global.AnnotationSettings.SegmentationPointRadius * downsample,
-                            involved,
-                            parentId);
-                    SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                        "auto-overlap-group", involved, parentId, visibleForPrompts, foreground, background));
-                    SegmentationDiag.Log($"auto-overlap-group boxes={foregroundBoxes.Count} clicks={foreground.Count}");
-
-                    // Snapshot before the remask: OR keeps every original footprint even when the
-                    // group SegmentAsync returns NO_MATCHING_MASK or a partial remask.
-                    List<Polygon> originalPolygons = [.. promptPolygons];
-                    List<AutoPolygonizeMaskOverlay?> originalMasks = [.. members.Select(member => member.MaskOverlay)];
-
-                    var response = await session.SegmentAsync(
+                    AutoPolygonizeProposal group = new(
+                        this,
+                        locationIds[0],
+                        sectionNumber,
+                        lastModified,
+                        circleRadius,
+                        polygon,
+                        AutoPolygonizeProposal.CreateRingViews(
+                            polygon,
+                            AutoPolygonizeProposal.ColorForLocation(locationIds[0]),
+                            circleRadius,
+                            downsample),
+                        mergedMask,
+                        locationIds,
+                        parentId,
+                        overlapRound,
                         foreground,
                         background,
-                        processToken,
-                        foregroundBoxes,
-                        (ulong)job.Ticket).ConfigureAwait(false);
-                    if (processToken.IsCancellationRequested)
-                        return;
-
-                    if (!locationIds.All(IsGroupMemberValid))
-                        return;
-
-                    double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
-                    (Polygon? Remask, AutoPolygonizeMaskOverlay? RemaskOverlay) remask = (null, null);
-                    if (response is not null)
+                        [],
+                        maskSources,
+                        fixedPolygons,
+                        members)
                     {
-                        remask = await Task.Run(() =>
-                        {
-                            IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
-                                response,
-                                preserveHolesContainingWorldPoints: background,
-                                keepComponentsContainingWorldPoints: foreground);
-                            Polygon? first = polygons.FirstOrDefault();
-                            if (first is null)
-                                return ((Polygon?)null, (AutoPolygonizeMaskOverlay?)null);
+                        RequestTicket = job.Ticket
+                    };
 
-                            return (
-                                AutoPolygonizeSelection.SimplifyProposal(first, simplifyTolerance),
-                                AutoPolygonizeMaskOverlay.TryCreate(session, response));
-                        }).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        SegmentationDiag.Log(
-                            $"auto-overlap-group remask missing ids=[{string.Join(",", locationIds)}]; " +
-                            "OR of original sibling masks will still publish");
-                    }
-
-                    Vector2 unionKeepPoint = originalPolygons.Count > 0
-                        ? originalPolygons[0].Centroid
-                        : foreground[0];
-
-                    List<Polygon?> unionInputs = [.. originalPolygons];
-                    if (remask.Remask is not null)
-                        unionInputs.Add(remask.Remask);
-
-                    Polygon? merged = await Task.Run(() =>
-                        AutoPolygonizeSelection.UnionPolygons(unionInputs, unionKeepPoint)).ConfigureAwait(false);
-                    if (merged is not null)
-                        merged = AutoPolygonizeSelection.SimplifyProposal(merged, simplifyTolerance);
-
-                    AutoPolygonizeMaskOverlay? mergedMask = AutoPolygonizeMaskOverlay.TryOr(
-                        [.. originalMasks, remask.RemaskOverlay]);
-
-                    SegmentationDiag.Log(
-                        $"auto-overlap-group OR originals={originalPolygons.Count} remask={(remask.Remask is null ? "none" : $"area={remask.Remask.Area:F0}")} " +
-                        $"merged={(merged is null ? "null" : $"area={merged.Area:F0}")} mask={(mergedMask is null ? "none" : $"{mergedMask.Width}x{mergedMask.Height}")}");
-
-                    var dispatcher = Viking.UI.State.MainThreadDispatcher;
-                    if (dispatcher is null)
-                        return;
-
-                    // Store reads, carving, colors, cache bookkeeping and publishing are one UI-thread step. It is
-                    // awaited so the batch hold below is released only after the cache holds the image itself.
-                    await dispatcher.InvokeAsync(() =>
-                    {
-                        if (processToken.IsCancellationRequested || !locationIds.All(IsGroupMemberValid))
-                            return;
-
-                        Polygon? polygon = merged;
-                        if (polygon is not null)
-                        {
-                            LocationObj? keepLocation = Store.Locations.GetObjectByID(locationIds[0], false);
-                            Vector2 keepPoint = keepLocation?.VolumePosition ?? unionKeepPoint;
-                            polygon = CarveAgainstExistingPolygons(
-                                polygon,
-                                locationIds,
-                                keepPoint,
-                                parentId);
-                            if (polygon is not null)
-                                polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);
-                        }
-
-                        if (polygon is null)
-                        {
-                            RememberEmptyMaskForIds(
-                                locationIds,
-                                sectionNumber,
-                                lastModified,
-                                session,
-                                downsample);
-                            return;
-                        }
-
-                        List<AutoPolygonizeMaskSource> maskSources = [];
-                        foreach (AutoPolygonizeProposal member in members)
-                        {
-                            if (member.MaskSources.Count > 0)
-                                maskSources.AddRange(member.MaskSources);
-                        }
-
-                        if (remask.RemaskOverlay is not null)
-                            maskSources.Add(new AutoPolygonizeMaskSource(remask.RemaskOverlay, foreground, background));
-
-                        List<Polygon> fixedPolygons = [];
-                        foreach (Polygon shape in originalPolygons)
-                        {
-                            bool retracedFromMask = false;
-                            foreach (AutoPolygonizeProposal member in members)
-                            {
-                                if (member.MaskSources.Count > 0 && ReferenceEquals(member.Polygon, shape))
-                                {
-                                    retracedFromMask = true;
-                                    break;
-                                }
-                            }
-
-                            if (!retracedFromMask)
-                                fixedPolygons.Add(shape);
-                        }
-
-                        AutoPolygonizeProposal group = new(
-                            this,
-                            locationIds[0],
-                            sectionNumber,
-                            lastModified,
-                            circleRadius,
-                            polygon,
-                            AutoPolygonizeProposal.CreateRingViews(
-                                polygon,
-                                AutoPolygonizeProposal.ColorForLocation(locationIds[0]),
-                                circleRadius,
-                                downsample),
-                            mergedMask,
-                            locationIds,
-                            parentId,
-                            overlapRound,
-                            foreground,
-                            background,
-                            foregroundBoxes,
-                            maskSources,
-                            fixedPolygons)
-                        {
-                            RequestTicket = job.Ticket
-                        };
-
-                        PublishProposalOnUiThread(group, () =>
-                        {
-                            AutoPolygonizeUploadContext? uploadContext = SharedViewportImageLease.TryCreateContext(session);
-                            foreach (long id in locationIds)
-                            {
-                                LocationObj loc = Store.Locations.GetObjectByID(id, false);
-                                cache.RememberProposal(
-                                    id,
-                                    sectionNumber,
-                                    loc?.LastModified ?? lastModified,
-                                    loc?.TypeCode ?? LocationType.CIRCLE,
-                                    loc,
-                                    uploadContext,
-                                    downsample);
-                            }
-                        });
-                    }).Task.ConfigureAwait(false);
-                }
-                finally
-                {
-                    if (acquiredHold && holdImageId is ulong id)
-                        cache.ReleaseBatchHold(id);
-                }
+                    PublishProposalOnUiThread(group, () => RememberGroup(locationIds, sectionNumber, lastModified, groupUpload, downsample));
+                }).Task.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Auto polygonize overlap resubmit failed: {ex.Message}");
+                Debug.WriteLine($"Auto polygonize overlap merge failed: {ex.Message}");
             }
             finally
             {
@@ -2843,6 +2809,39 @@ namespace WebAnnotation.UI.AutoPolygonize
                     overlapResubmitsInFlight.Remove(inFlightKey);
                 linkedCancellation?.Dispose();
                 job.Cancellation.Dispose();
+                foreach (AutoPolygonizeProposal member in members)
+                    member.EndRefining();
+
+                parent.Invalidate();
+            }
+        }
+
+        /// <summary>
+        /// Records every ID of a merged group in the cache so none of them is segmented again until its
+        /// <c>LastModified</c> changes. Each ID keeps the upload it already has; the others take
+        /// <paramref name="fallbackUpload"/>. UI thread.
+        /// </summary>
+        private void RememberGroup(
+            IReadOnlyList<long> locationIds,
+            int sectionNumber,
+            DateTime lastModifiedFallback,
+            AutoPolygonizeUploadContext? fallbackUpload,
+            double downsample)
+        {
+            foreach (long id in locationIds)
+            {
+                LocationObj loc = Store.Locations.GetObjectByID(id, false);
+                AutoPolygonizeUploadContext? upload = cache.TryGetUploadContext(id, out AutoPolygonizeUploadContext own)
+                    ? own
+                    : fallbackUpload;
+                cache.RememberProposal(
+                    id,
+                    sectionNumber,
+                    loc?.LastModified ?? lastModifiedFallback,
+                    loc?.TypeCode ?? LocationType.CIRCLE,
+                    loc,
+                    upload,
+                    downsample);
             }
         }
 

@@ -71,6 +71,29 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void TheServerFieldKeepsTheLogitsAsSentWhileTheTracedFieldIsSmoothed()
+        {
+            // One isolated high sample in a low field: smoothing lowers it, the server field must not.
+            SegmentationServiceTypes.SegmentResult segment = SegmentWithLogits(
+                width: 5,
+                height: 5,
+                scale: 4,
+                x: 0,
+                y: 0,
+                (x, y) => x == 2 && y == 2 ? 3f : -3f);
+
+            SegmentField smoothed = SegmentationLogitField.Decode(segment, iso: 1.0, sigma: 0.75);
+            SegmentField unsmoothed = SegmentationLogitField.Decode(segment, iso: 1.0, sigma: 0);
+
+            int centre = (2 * 5) + 2;
+            Assert.IsNotNull(smoothed.ServerData);
+            Assert.AreEqual(SegmentationLogitField.ToSoftByte(3f, 1.0), smoothed.ServerData![centre], "as sent");
+            Assert.IsTrue(smoothed.Data![centre] < smoothed.ServerData[centre], "the traced field was blurred");
+            CollectionAssert.AreEqual(unsmoothed.ServerData, unsmoothed.Data, "sigma 0 traces the logits as sent");
+            CollectionAssert.AreEqual(smoothed.ServerData, unsmoothed.ServerData, "the server field does not depend on sigma");
+        }
+
+        [TestMethod]
         public void ASegmentWithoutMatchingLogitsFallsBackToTheMaskPlacement()
         {
             SegmentationServiceTypes.SegmentResult segment = new() { X = 3, Y = 4 };
@@ -189,7 +212,7 @@ namespace WebAnnotationTests.Commands
             // A one-sample hole just under the iso level, deep inside the object.
             field[(6 * width) + 4] = 0.4f;
 
-            float[] smooth = SegmentationLogitField.Smooth(field, width, height, SegmentationLogitField.SmoothingSigma);
+            float[] smooth = SegmentationLogitField.Smooth(field, width, height, SegmentationLogitField.DefaultSmoothingSigma);
 
             Assert.IsTrue(smooth[(6 * width) + 4] > 1.0f, "the hole is filled in");
             // The edge between sample 9 (4) and 10 (-4) stays between them: the crossing sits at x = 9.5.

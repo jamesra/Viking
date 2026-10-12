@@ -95,6 +95,12 @@
     <Setting Name="PolygonPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">6</Value>
     </Setting>
+    <Setting Name="PolygonPointOpacity" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.75</Value>
+    </Setting>
+    <Setting Name="HidePolygonPointsInPenMode" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
     </Setting>

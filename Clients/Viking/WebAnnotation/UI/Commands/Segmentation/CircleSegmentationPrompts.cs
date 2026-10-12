@@ -292,19 +292,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Prompt for several overlapping polygons of one structure: SAM2 takes one box per call.
-        /// <paramref name="Box"/> is an inscribed seed square inside the largest polygon (same
-        /// sizing as a circle's inscribed square relative to its AABB). A full proposal AABB is
-        /// wrong: the server requires the mask to cover 95% of the box and extend past it, so a
-        /// tight remask of an already-complete footprint always returns <c>NO_MATCHING_MASK</c>.
-        /// <paramref name="Foreground"/> holds one interior click per polygon, the largest included.
+        /// <paramref name="Box"/> is the largest rectangle that lies entirely inside the polygons
+        /// (<see cref="InscribedRectangle"/>). The server takes a client's box as inside the object and marks
+        /// all of it as object, so it must never reach outside the polygons: a square sized from a bounding box
+        /// does for a round polygon, but covers background for a bent or elongated one.
+        /// <paramref name="Foreground"/> holds one interior click per polygon.
         /// </summary>
         public readonly record struct GroupPrompt(IReadOnlyList<Vector2> Foreground, Rectangle? Box);
 
         /// <summary>
-        /// One SAM2 seed box and one click per polygon. The largest polygon (by area) supplies an
-        /// inscribed seed square centered on its interior click; every polygon supplies one click.
-        /// Many boundary clicks in one prompt (the old 17 per polygon) made SAM2 return a smaller
-        /// mask than fewer clicks did. Polygons with no interior point, or degenerate rings, are skipped.
+        /// One SAM2 seed box and one click per polygon. The box is the largest rectangle inside the union of the
+        /// polygons; every polygon supplies one click. Many boundary clicks in one prompt (the old 17 per
+        /// polygon) made SAM2 return a smaller mask than fewer clicks did. Polygons with no interior point, or
+        /// degenerate rings, are skipped. The box is null when the polygons are too thin to hold one.
         /// </summary>
         public static GroupPrompt CreateGroupPromptFromPolygons(IEnumerable<Polygon> polygons)
         {
@@ -312,8 +312,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return new GroupPrompt([], null);
 
             List<Vector2> clicks = [];
-            Rectangle? box = null;
-            double largestArea = double.NegativeInfinity;
+            List<Polygon> used = [];
             foreach (Polygon polygon in polygons)
             {
                 if (polygon?.ExteriorRing is null || polygon.ExteriorRing.Length < 4)
@@ -324,14 +323,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     continue;
 
                 clicks.Add(click.Value);
-                if (polygon.Area > largestArea)
-                {
-                    largestArea = polygon.Area;
-                    box = InscribedSeedBox(polygon.BoundingBox, click.Value);
-                }
+                used.Add(polygon);
             }
 
-            return new GroupPrompt(clicks, box);
+            return new GroupPrompt(clicks, InscribedRectangle.Largest(used));
         }
 
         /// <summary>

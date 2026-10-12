@@ -191,6 +191,45 @@ namespace WebAnnotation.UI.AutoPolygonize
             SimplifyProposal(polygon, CreatedShapeSimplifyWorld(downsample));
 
         /// <summary>
+        /// Same reduction as the "Simplify Polygon" context menu: exterior at
+        /// <see cref="Global.PenSimplifyThreshold"/>, holes at half of it. Applied once when a
+        /// segmented polygon is persisted (<see cref="ViewModel.LocationShapeUpdate"/>), so the
+        /// user no longer has to simplify by hand. The input should not already have been through
+        /// this method; the preview rings only use the finer <see cref="SimplifyForCreatedShape"/>.
+        /// Returns the input unchanged if a reduced ring self-intersects.
+        /// </summary>
+        public static Polygon SimplifyForSave(Polygon polygon)
+        {
+            if (polygon is null)
+                return polygon;
+
+            double tolerance = Global.PenSimplifyThreshold;
+            try
+            {
+                Polygon result = new(polygon.ExteriorRing);
+                Polygon simpleOuter = result.Simplify(tolerance);
+                if (simpleOuter.ExteriorRing.Length < 4 ||
+                    simpleOuter.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed))
+                {
+                    return polygon;
+                }
+
+                result = new Polygon(simpleOuter.ExteriorRing);
+                foreach (Polygon hole in polygon.InteriorPolygons)
+                {
+                    Polygon simpleHole = hole.Simplify(tolerance / 2.0);
+                    result.AddInteriorRing(simpleHole.ExteriorRing.Length >= 4 ? simpleHole.ExteriorRing : hole.ExteriorRing);
+                }
+
+                return result;
+            }
+            catch (ArgumentException)
+            {
+                return polygon;
+            }
+        }
+
+        /// <summary>
         /// Fits a CURVEPOLYGON to the mask contour within <paramref name="tolerance"/>.
         /// Douglas-Peucker and Catmull-Rom each get half the budget so they do not stack to
         /// ~2× drift (DP spent the full travel, then the curve fit spent it again).
@@ -426,6 +465,98 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// A circle annotation reduced to what carving needs: where it is and how big, in volume space.
+        /// </summary>
+        /// <param name="Id">Location ID.</param>
+        /// <param name="ParentId">Structure the circle belongs to.</param>
+        /// <param name="Section">Section number.</param>
+        /// <param name="Center">Volume position of the center.</param>
+        /// <param name="Radius">Radius in the same units the auto-segmentation uses for the disk.</param>
+        internal readonly record struct CircleFootprint(long Id, long? ParentId, int Section, Vector2 Center, double Radius);
+
+        /// <summary>
+        /// The circle annotations among <paramref name="annotations"/> as footprints. Other shapes are skipped.
+        /// </summary>
+        internal static List<CircleFootprint> ToCircleFootprints(IEnumerable<LocationObj>? annotations)
+        {
+            List<CircleFootprint> result = [];
+            if (annotations is null)
+                return result;
+
+            foreach (LocationObj location in annotations)
+            {
+                if (location is not null && location.TypeCode == LocationType.CIRCLE)
+                    result.Add(new CircleFootprint(location.ID, location.ParentID, location.Section, location.VolumePosition, location.Radius));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// The disks of other structures' circle annotations that overlap or lie inside <paramref name="proposed"/>, to be
+        /// subtracted from it. Annotations already in the database always win, so a circle is subtracted whatever its size.
+        /// </summary>
+        /// <param name="circles">Candidate circles, usually from <see cref="ToCircleFootprints"/>.</param>
+        /// <param name="proposed">The outline being proposed or accepted.</param>
+        /// <param name="excludeLocationIds">The locations the proposal stands for.</param>
+        /// <param name="sectionNumber">Only circles on this section count.</param>
+        /// <param name="excludeParentId">Circles of this structure are siblings of the proposal, not other cells.</param>
+        /// <param name="ownCenter">
+        /// The proposal's own seed center. A circle that encloses it belongs to a larger cell around this one, so it is
+        /// left alone: subtracting it would delete the proposal for being inside something.
+        /// </param>
+        internal static List<Polygon> CollectOverlappingCircleDisks(
+            IEnumerable<CircleFootprint>? circles,
+            Polygon proposed,
+            IReadOnlyCollection<long>? excludeLocationIds = null,
+            int? sectionNumber = null,
+            long? excludeParentId = null,
+            Vector2? ownCenter = null)
+        {
+            List<Polygon> result = [];
+            if (proposed is null || circles is null)
+                return result;
+
+            foreach (CircleFootprint circle in circles)
+            {
+                if (!(circle.Radius > 0))
+                    continue;
+                if (excludeLocationIds is not null && excludeLocationIds.Contains(circle.Id))
+                    continue;
+                if (excludeParentId.HasValue && circle.ParentId == excludeParentId)
+                    continue;
+                if (sectionNumber.HasValue && circle.Section != sectionNumber.Value)
+                    continue;
+                if (ownCenter.HasValue && Vector2.Distance(circle.Center, ownCenter.Value) <= circle.Radius)
+                    continue;
+
+                Polygon disk = CircleToPolygon(circle.Center, circle.Radius);
+                if (!proposed.Intersects(disk))
+                    continue;
+
+                result.Add(disk);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// A counter-clockwise polygon of <paramref name="segments"/> corners on the circle, closed.
+        /// </summary>
+        internal static Polygon CircleToPolygon(Vector2 center, double radius, int segments = 64)
+        {
+            Vector2[] ring = new Vector2[segments + 1];
+            for (int i = 0; i < segments; i++)
+            {
+                double angle = 2 * Math.PI * i / segments;
+                ring[i] = new Vector2(center.X + (radius * Math.Cos(angle)), center.Y + (radius * Math.Sin(angle)));
+            }
+
+            ring[segments] = ring[0];
+            return new Polygon(ring);
         }
 
         /// <summary>

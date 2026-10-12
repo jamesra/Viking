@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
@@ -23,6 +24,20 @@ namespace WebAnnotation.UI.AutoPolygonize
     internal sealed class AutoPolygonizeMaskOverlay
     {
         public byte[] MaskData { get; }
+
+        /// <summary>
+        /// The mask overlay's samples: the logits as the server sent them when known, else <see cref="MaskData"/>.
+        /// <see cref="MaskData"/> is what gets traced (smoothed, then cleaned and snapped), so this is how the picture
+        /// and the outline can be told apart.
+        /// </summary>
+        public byte[] DisplayData => ServerMaskData ?? MaskData;
+
+        /// <summary>
+        /// The server's logits as soft bytes on the grid of <see cref="MaskData"/> with no smoothing, or null when the
+        /// mask came from a PNG or from merging overlays.
+        /// </summary>
+        public byte[]? ServerMaskData { get; }
+
         public int Width { get; }
         public int Height { get; }
         public Geometry.Rectangle WorldBounds { get; }
@@ -32,6 +47,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// The texture is drawn over <see cref="WorldBounds"/> whatever this is, so it is only upscaled by the GPU.
         /// </summary>
         public int PixelScale { get; }
+
+        /// <summary>
+        /// Moves a polygon traced from this field onto image edges (<see cref="SegmentationEdgeSnap"/>), or null when no
+        /// captured tile covered it. Kept with the field so a retrace after a cleanup change snaps the same way. Whether to
+        /// use it is the <c>SegmentationEdgeSnapEnabled</c> preference, read where the polygon is traced.
+        /// </summary>
+        public Func<Polygon, Polygon>? EdgeRefiner { get; }
 
         /// <summary>
         /// The rectangle to trace <see cref="MaskData"/> against: <see cref="WorldBounds"/>, moved half a sample when
@@ -45,13 +67,17 @@ namespace WebAnnotation.UI.AutoPolygonize
             int width,
             int height,
             Geometry.Rectangle worldBounds,
-            int pixelScale = 1)
+            int pixelScale = 1,
+            Func<Polygon, Polygon>? edgeRefiner = null,
+            byte[]? serverMaskData = null)
         {
             MaskData = maskData;
+            ServerMaskData = serverMaskData is not null && serverMaskData.Length == maskData.Length ? serverMaskData : null;
             Width = width;
             Height = height;
             WorldBounds = worldBounds;
             PixelScale = Math.Max(1, pixelScale);
+            EdgeRefiner = edgeRefiner;
         }
 
         /// <summary>
@@ -91,14 +117,23 @@ namespace WebAnnotation.UI.AutoPolygonize
                 field.Y,
                 field.PixelWidth,
                 field.PixelHeight);
-            return new AutoPolygonizeMaskOverlay(decodedMaskData, decodedWidth, decodedHeight, worldBounds, field.Scale);
+            return new AutoPolygonizeMaskOverlay(
+                decodedMaskData,
+                decodedWidth,
+                decodedHeight,
+                worldBounds,
+                field.Scale,
+                session.CreateEdgeRefiner(response),
+                field.ServerData);
         }
 
         /// <summary>
-        /// Pixel-wise max (soft-mask OR) of several overlays onto a shared world canvas.
-        /// Used when merging same-cell sibling proposals so the debug overlay matches the
-        /// unioned ring. Null/empty sources are skipped; a single usable source is returned as-is.
-        /// Output size is capped so a wide group cannot allocate an unbounded texture.
+        /// Pixel-wise max of several overlays onto a shared world canvas: the logit union of overlapping
+        /// same-structure proposals. Because a soft byte is linear in the logit, the max of bytes is the max of
+        /// logits, so tracing the result at the iso level traces the union. Both layers are merged separately: the
+        /// smoothed <see cref="MaskData"/> that gets traced and the unsmoothed <see cref="DisplayData"/> that is
+        /// drawn. Null/empty sources are skipped; a single usable source is returned as-is. Output size is capped
+        /// so a wide group cannot allocate an unbounded texture.
         /// </summary>
         public static AutoPolygonizeMaskOverlay? TryOr(IEnumerable<AutoPolygonizeMaskOverlay?>? sources)
         {
@@ -126,9 +161,11 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             double worldWidth = Math.Max(bounds.Width, 1e-6);
             double worldHeight = Math.Max(bounds.Height, 1e-6);
-            double pixelsPerWorld = masks.Max(mask =>
+            static double Density(AutoPolygonizeMaskOverlay mask) =>
                 Math.Max(mask.Width / Math.Max(mask.WorldBounds.Width, 1e-6),
-                    mask.Height / Math.Max(mask.WorldBounds.Height, 1e-6)));
+                    mask.Height / Math.Max(mask.WorldBounds.Height, 1e-6));
+            AutoPolygonizeMaskOverlay finest = masks.OrderByDescending(Density).First();
+            double pixelsPerWorld = Density(finest);
 
             int width = Math.Max(1, (int)Math.Ceiling(worldWidth * pixelsPerWorld));
             int height = Math.Max(1, (int)Math.Ceiling(worldHeight * pixelsPerWorld));
@@ -141,40 +178,56 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             byte[] merged = new byte[width * height];
+            byte[] mergedServer = new byte[width * height];
             for (int y = 0; y < height; y++)
             {
-                double worldY = bounds.Bottom + ((y + 0.5) / height) * worldHeight;
+                // Rows run down, like every mask, so row 0 is the top of the canvas.
+                double worldY = bounds.Top - ((y + 0.5) / height) * worldHeight;
                 for (int x = 0; x < width; x++)
                 {
                     double worldX = bounds.Left + ((x + 0.5) / width) * worldWidth;
                     byte value = 0;
+                    byte serverValue = 0;
                     foreach (AutoPolygonizeMaskOverlay mask in masks)
                     {
-                        byte sample = Sample(mask, worldX, worldY);
+                        byte sample = Sample(mask, mask.MaskData, worldX, worldY);
                         if (sample > value)
                             value = sample;
+
+                        byte serverSample = Sample(mask, mask.DisplayData, worldX, worldY);
+                        if (serverSample > serverValue)
+                            serverValue = serverSample;
                     }
 
                     merged[y * width + x] = value;
+                    mergedServer[y * width + x] = serverValue;
                 }
             }
 
-            return new AutoPolygonizeMaskOverlay(merged, width, height, bounds);
+            return new AutoPolygonizeMaskOverlay(
+                merged,
+                width,
+                height,
+                bounds,
+                finest.PixelScale,
+                masks.Select(mask => mask.EdgeRefiner).FirstOrDefault(refiner => refiner is not null),
+                mergedServer);
         }
 
-        private static byte Sample(AutoPolygonizeMaskOverlay mask, double worldX, double worldY)
+        private static byte Sample(AutoPolygonizeMaskOverlay mask, byte[] data, double worldX, double worldY)
         {
             Geometry.Rectangle bounds = mask.WorldBounds;
             double w = Math.Max(bounds.Width, 1e-6);
             double h = Math.Max(bounds.Height, 1e-6);
             double nx = (worldX - bounds.Left) / w;
-            double ny = (worldY - bounds.Bottom) / h;
+            double ny = (bounds.Top - worldY) / h;
             if (nx < 0 || ny < 0 || nx >= 1 || ny >= 1)
                 return 0;
 
+            // World Y is up and mask rows run down, so the fraction is measured from the top.
             int px = Math.Min(mask.Width - 1, (int)(nx * mask.Width));
             int py = Math.Min(mask.Height - 1, (int)(ny * mask.Height));
-            return mask.MaskData[py * mask.Width + px];
+            return data[py * mask.Width + px];
         }
     }
 
@@ -195,7 +248,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             PreserveHoles = preserveHoles is { Count: > 0 } ? [.. preserveHoles] : [];
         }
 
-        /// <summary>Decoded server probability field. Not replaced when the cleanup radius changes.</summary>
+        /// <summary>Decoded soft field (SAM2 logits, or a mask PNG from a server that sent none). Not replaced when the cleanup radius changes.</summary>
         public AutoPolygonizeMaskOverlay Mask { get; }
 
         /// <summary>World points that choose which connected piece of <see cref="Mask"/> to trace.</summary>
@@ -224,7 +277,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 PreserveHoles,
                 SegmentationMaskPolygonizer.ScaleCleanupRadius(edgeCleanupRadius, Mask.PixelScale),
                 out _,
-                KeepPoints);
+                KeepPoints,
+                Global.AnnotationSettings.SegmentationEdgeSnapEnabled ? Mask.EdgeRefiner : null,
+                Global.AnnotationSettings.SegmentationMinFeatureWorld);
             return polygons.FirstOrDefault();
         }
     }
@@ -267,19 +322,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (traced is not null)
                     parts.Add(AutoPolygonizeSelection.SimplifyProposal(traced, simplifyTolerance));
 
-                byte[] displayBytes = edgeCleanupRadius > 0
-                    ? SegmentationMaskPolygonizer.ApplyEdgeCleanup(
-                        source.Mask.MaskData,
-                        source.Mask.Width,
-                        source.Mask.Height,
-                        SegmentationMaskPolygonizer.ScaleCleanupRadius(edgeCleanupRadius, source.Mask.PixelScale))
-                    : source.Mask.MaskData;
+                // The picture is the server's mask; cleanup and snapping change only the outline.
                 cleaned.Add(new AutoPolygonizeMaskOverlay(
-                    displayBytes,
+                    source.Mask.DisplayData,
                     source.Mask.Width,
                     source.Mask.Height,
                     source.Mask.WorldBounds,
-                    source.Mask.PixelScale));
+                    source.Mask.PixelScale,
+                    source.Mask.EdgeRefiner));
             }
 
             if (fixedPolygons is not null)
@@ -327,6 +377,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         private const float HighlightAlpha = 1.0f;
         private const float MaskOverlayAlpha = 0.35f;
 
+        /// <summary>Alpha of the white hatching drawn over a proposal that is still being refined.</summary>
+        private const float RefiningHatchAlpha = 0.55f;
+
+        /// <summary>Texels per stripe of the refining hatch. Texels are 1 to 4 image pixels, so stripes scale with zoom.</summary>
+        private const int RefiningHatchStripeTexels = 2;
+
         /// <summary>
         /// Depth test always passes and stencil is off. <see cref="DepthStencilState.None"/> drops
         /// the draw: the texture shader writes SV_Depth, and a disabled depth buffer discards those pixels.
@@ -355,6 +411,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         private PointSetView? backgroundPointsView;
         private bool isHighlighted;
 
+        private int refiningCount;
+        private bool ringsDrawnAsRefining;
+        private Texture2D? hatchTexture;
+        private TextureOverlayView? hatchView;
+
         public AutoPolygonizeProposal(
             AutoCirclePolygonizeController controller,
             long locationId,
@@ -371,8 +432,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             IReadOnlyList<Geometry.Vector2>? backgroundPrompts = null,
             IReadOnlyList<Geometry.Rectangle>? startingBoxes = null,
             IReadOnlyList<AutoPolygonizeMaskSource>? maskSources = null,
-            IReadOnlyList<Polygon>? fixedPolygons = null)
+            IReadOnlyList<Polygon>? fixedPolygons = null,
+            IReadOnlyList<AutoPolygonizeProposal>? mergedFrom = null)
         {
+            MergedFrom = mergedFrom is { Count: > 0 } ? [.. mergedFrom] : [];
             this.controller = controller;
             LocationIds = locationIds is { Count: > 0 }
                 ? [.. locationIds.Distinct().OrderBy(id => id)]
@@ -420,6 +483,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public IReadOnlyList<Polygon> FixedPolygons { get; }
 
+        /// <summary>
+        /// The proposals this one replaced when overlapping circles were merged, kept so that changing or deleting one
+        /// circle can put the others back on screen at once instead of leaving them blank until the next scan. Empty for
+        /// a proposal that came straight from one request. A member may itself be a merged proposal.
+        /// </summary>
+        public IReadOnlyList<AutoPolygonizeProposal> MergedFrom { get; }
+
         /// <summary>Lowest ID in <see cref="LocationIds"/>; used for color and dictionary lookup.</summary>
         public long LocationId { get; }
 
@@ -456,11 +526,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         public void ReplacePolygon(Polygon polygon, double downsample)
         {
             Polygon = polygon;
+            ringsDrawnAsRefining = IsRefining;
             RingViews = CreateRingViews(
                 polygon,
                 ColorForLocation(LocationId, isHighlighted),
                 CircleRadius,
-                downsample);
+                downsample,
+                ringsDrawnAsRefining ? LineStyle.Dashed : LineStyle.Tubular);
         }
 
         /// <summary>Volume-space SAM2 label-1 clicks from the SegmentImage that produced this overlay.</summary>
@@ -475,6 +547,36 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <see cref="SegmentationCommand"/> without remasking clicks alone.
         /// </summary>
         public IReadOnlyList<Geometry.Rectangle> StartingBoxes { get; }
+
+        /// <summary>
+        /// True while a better mask for this proposal is on its way: it was drawn from one circle's
+        /// segmentation and an overlap-group re-segmentation that will replace it has not finished.
+        /// Such a proposal is drawn dashed and hatched in white, so it is not mistaken for the final mask.
+        /// Read from the graphics thread, written from the controller's worker threads.
+        /// </summary>
+        public bool IsRefining => Volatile.Read(ref refiningCount) > 0;
+
+        /// <summary>
+        /// Marks one more pending refinement. Every call needs a matching <see cref="EndRefining"/>:
+        /// several overlap groups can claim the same proposal, and it stays marked until all of them finish.
+        /// </summary>
+        public void BeginRefining() => Interlocked.Increment(ref refiningCount);
+
+        /// <summary>
+        /// Ends one pending refinement started by <see cref="BeginRefining"/>. Never goes below zero.
+        /// </summary>
+        public void EndRefining()
+        {
+            while (true)
+            {
+                int current = Volatile.Read(ref refiningCount);
+                if (current <= 0)
+                    return;
+
+                if (Interlocked.CompareExchange(ref refiningCount, current - 1, current) == current)
+                    return;
+            }
+        }
 
         public bool IsHighlighted
         {
@@ -590,6 +692,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
+            bool refining = IsRefining;
+            EnsureRingStyle(refining, scene.Camera.Downsample);
             if (Global.AnnotationSettings.AutoPolygonizeShowSegmentationRings)
             {
                 double lineWidth = AutoPolygonizeSelection.ProposalLineWidth(CircleRadius, scene.Camera.Downsample);
@@ -600,6 +704,11 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
             }
 
+            if (refining)
+                DrawRefiningHatch(graphicsDevice, scene);
+            else
+                DisposeRefiningHatch();
+
             if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
             {
                 EnsureMaskOverlay(graphicsDevice);
@@ -608,6 +717,110 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             if (Global.AnnotationSettings.AutoPolygonizeOverlayPrompts)
                 DrawPromptOverlays(graphicsDevice, scene);
+        }
+
+        /// <summary>
+        /// Rebuilds the rings in the style that matches <paramref name="refining"/> when it changed:
+        /// dashed while a better mask is on its way, solid once it is final.
+        /// </summary>
+        private void EnsureRingStyle(bool refining, double downsample)
+        {
+            if (refining == ringsDrawnAsRefining)
+                return;
+
+            ringsDrawnAsRefining = refining;
+            RingViews = CreateRingViews(
+                Polygon,
+                ColorForLocation(LocationId, isHighlighted),
+                CircleRadius,
+                downsample,
+                refining ? LineStyle.Dashed : LineStyle.Tubular);
+        }
+
+        /// <summary>
+        /// Hatches the proposal's mask in white while a refinement is pending. This shows even when the
+        /// debug mask overlay preference is off, because it is not the raw SAM2 mask: it tells the user the
+        /// shape is provisional. Needs the decoded mask bytes; a proposal without them keeps only the dashed ring.
+        /// Must run on the graphics thread.
+        /// </summary>
+        private void DrawRefiningHatch(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
+        {
+            if (hatchView is null)
+            {
+                AutoPolygonizeMaskOverlay? shown = displayMask ?? maskOverlayData;
+                if (graphicsDevice is null || shown?.MaskData is null)
+                    return;
+
+                Color hatch = Color.White.SetAlpha(RefiningHatchAlpha);
+                hatchTexture = CreateHatchTexture(graphicsDevice, shown, hatch);
+                if (hatchTexture is null)
+                    return;
+
+                hatchView = new TextureOverlayView(hatchTexture, shown.WorldBounds, hatch);
+            }
+
+            DepthStencilState previous = graphicsDevice.DepthStencilState;
+            graphicsDevice.DepthStencilState = MaskOverlayDepthState;
+            try
+            {
+                hatchView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, MaskOverlayDepthState);
+            }
+            finally
+            {
+                graphicsDevice.DepthStencilState = previous;
+            }
+        }
+
+        /// <summary>Releases the refining hatch. Called when refinement ends and when the proposal goes away.</summary>
+        private void DisposeRefiningHatch()
+        {
+            hatchView = null;
+            hatchTexture?.Dispose();
+            hatchTexture = null;
+        }
+
+        /// <summary>
+        /// Diagonal stripes over the inside of the mask: every other stripe is <paramref name="color"/>, the rest
+        /// and the outside are transparent.
+        /// </summary>
+        internal static Texture2D? CreateHatchTexture(
+            GraphicsDevice graphicsDevice,
+            AutoPolygonizeMaskOverlay overlay,
+            Color color)
+        {
+            if (overlay.MaskData.Length != overlay.Width * overlay.Height)
+                return null;
+
+            try
+            {
+                Texture2D texture = new(graphicsDevice, overlay.Width, overlay.Height);
+                texture.SetData(HatchPixels(overlay, color));
+                return texture;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The pixels of <see cref="CreateHatchTexture"/>, separate so the pattern can be tested without a GPU.
+        /// </summary>
+        internal static Color[] HatchPixels(AutoPolygonizeMaskOverlay overlay, Color color)
+        {
+            Color[] pixels = new Color[overlay.MaskData.Length];
+            for (int y = 0; y < overlay.Height; y++)
+            {
+                for (int x = 0; x < overlay.Width; x++)
+                {
+                    int index = (y * overlay.Width) + x;
+                    bool inside = overlay.MaskData[index] >= SegmentationMaskPolygonizer.SoftMaskForeground;
+                    bool stripe = (((x + y) / RefiningHatchStripeTexels) & 1) == 0;
+                    pixels[index] = inside && stripe ? color : Color.Transparent;
+                }
+            }
+
+            return pixels;
         }
 
         /// <summary>
@@ -696,11 +909,12 @@ namespace WebAnnotation.UI.AutoPolygonize
             maskOverlayView = null;
             maskTexture?.Dispose();
             maskTexture = null;
+            DisposeRefiningHatch();
         }
 
         /// <summary>
-        /// Packs the probability mask into a Color texture. Values on the inside of the
-        /// logit-zero boundary use <paramref name="color"/>; the outside halo stays transparent.
+        /// Packs the soft field into a Color texture. Samples on the inside of the iso level
+        /// use <paramref name="color"/>; the outside halo stays transparent.
         /// </summary>
         private static Texture2D CreateMaskTexture(
             GraphicsDevice graphicsDevice,
@@ -714,8 +928,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             {
                 Texture2D texture = new(graphicsDevice, overlay.Width, overlay.Height);
                 Color[] pixels = new Color[overlay.MaskData.Length];
-                for (int i = 0; i < overlay.MaskData.Length; i++)
-                    pixels[i] = overlay.MaskData[i] >= SegmentationMaskPolygonizer.SoftMaskForeground
+                for (int i = 0; i < overlay.DisplayData.Length; i++)
+                    pixels[i] = overlay.DisplayData[i] >= SegmentationMaskPolygonizer.SoftMaskForeground
                         ? color
                         : Color.Transparent;
 
@@ -736,29 +950,34 @@ namespace WebAnnotation.UI.AutoPolygonize
             Polygon polygon,
             Color color,
             double circleRadius,
-            double downsample)
+            double downsample,
+            LineStyle lineStyle = LineStyle.Tubular)
         {
             double lineWidth = AutoPolygonizeSelection.ProposalLineWidth(circleRadius, downsample);
             Color ringColor = color;
             List<CurveView> rings =
             [
-                CreateRingView(polygon.ExteriorRing, ringColor, lineWidth)
+                CreateRingView(polygon.ExteriorRing, ringColor, lineWidth, lineStyle)
             ];
 
             foreach (Geometry.Vector2[] hole in polygon.InteriorRings)
-                rings.Add(CreateRingView(hole, ringColor, lineWidth));
+                rings.Add(CreateRingView(hole, ringColor, lineWidth, lineStyle));
 
             return rings;
         }
 
-        private static CurveView CreateRingView(ICollection<Geometry.Vector2> ring, Color color, double lineWidth) =>
+        private static CurveView CreateRingView(
+            ICollection<Geometry.Vector2> ring,
+            Color color,
+            double lineWidth,
+            LineStyle lineStyle) =>
             new(
                 ring,
                 color,
                 TryToClose: true,
                 numInterpolations: Global.NumClosedCurveInterpolationPointsForDisplay,
                 lineWidth: lineWidth,
-                lineStyle: LineStyle.Tubular,
+                lineStyle: lineStyle,
                 ShowControlPoints: false);
 
         /// <summary>

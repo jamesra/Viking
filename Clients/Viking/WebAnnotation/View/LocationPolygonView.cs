@@ -136,7 +136,7 @@ namespace WebAnnotation.View
                 (byte)(newR * 255f),
                 (byte)(newG * 255f),
                 (byte)(newB * 255f),
-                _Color.A
+                (byte)(Global.AnnotationSettings.PolygonPointOpacity * 255.0)
             );
         }
 
@@ -145,13 +145,23 @@ namespace WebAnnotation.View
             get => polygonMesh.Alpha;
             set
             {
+                // Control points use PolygonPointOpacity, not the polygon fill alpha; see SyncControlPointOpacity.
                 polygonMesh.Alpha = value;
-                if (ControlPointView != null)
-                {
-                    ControlPointView.Alpha = value;
-                    ControlPointView.UpdateViews();
-                }
             }
+        }
+
+        /// <summary>
+        /// Rebuilds the control point circles when <c>PolygonPointOpacity</c> changed since they were last built.
+        /// Called from <see cref="Draw"/> on the render thread each frame, like the radius sync.
+        /// </summary>
+        private void SyncControlPointOpacity()
+        {
+            float opacity = (float)Global.AnnotationSettings.PolygonPointOpacity;
+            if (Math.Abs(ControlPointView.Alpha - opacity) < 1f / 512f)
+                return;
+
+            ControlPointView.Alpha = opacity;
+            ControlPointView.UpdateViews();
         }
 
         private double _ControlPointRadius;
@@ -403,20 +413,25 @@ namespace WebAnnotation.View
             double expected_radius = Global.AnnotationSettings.PolygonPointRadius * radius_scalar;
 
             //Todo: Check if control points will be visible.
+            bool hidePoints = Global.PenMode && Global.AnnotationSettings.HidePolygonPointsInPenMode;
 #if DEBUG
-            for (int i = 0; i < listToDraw.Length; i++)
+            if (!hidePoints)
             {
-                LocationPolygonView lpv = listToDraw[i];
-                if (lpv.ControlPointView is null)
-                    continue;
+                for (int i = 0; i < listToDraw.Length; i++)
+                {
+                    LocationPolygonView lpv = listToDraw[i];
+                    if (lpv.ControlPointView is null)
+                        continue;
 
-                if(Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
-                    lpv.ControlPointRadius = expected_radius;
+                    if (Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
+                        lpv.ControlPointRadius = expected_radius;
 
-                lpv.ControlPointView.Draw(device, scene, OverlayStyle.Alpha);
+                    lpv.SyncControlPointOpacity();
+                    lpv.ControlPointView.Draw(device, scene, OverlayStyle.Alpha);
+                }
             }
 #else
-            if (!Global.PenMode)
+            if (!hidePoints)
             {
                 for (int i = 0; i < listToDraw.Length; i++)
                 {
@@ -427,6 +442,7 @@ namespace WebAnnotation.View
                     if (lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
                         lpv.ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
 
+                    lpv.SyncControlPointOpacity();
                     lpv.ControlPointView.Draw(device, scene, OverlayStyle.Luma);
                 }
             }

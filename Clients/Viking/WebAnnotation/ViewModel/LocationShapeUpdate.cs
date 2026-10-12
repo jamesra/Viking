@@ -55,7 +55,9 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// One CreatedShapeSimplify fit, then mosaic control points + smoothed volume shape.
+        /// One <see cref="AutoPolygonizeSelection.SimplifyForSave"/> pass (the context-menu
+        /// "Simplify Polygon" tolerance), then mosaic control points + smoothed volume shape.
+        /// <paramref name="downsample"/> is retained for callers but no longer affects the fit.
         /// Callers that enqueue a later Save (new structure create) use this; Accept uses
         /// <see cref="ApplyVolumePolygon"/> which saves immediately.
         /// </summary>
@@ -72,7 +74,8 @@ namespace WebAnnotation.ViewModel
             if (transform is null)
                 throw new ArgumentNullException(nameof(transform));
 
-            Polygon simplified = AutoPolygonizeSelection.SimplifyForCreatedShape(volumePolygon, downsample);
+            // Single save-time pass at the "Simplify Polygon" menu tolerance; no second fit follows.
+            Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon);
             modelObj.TypeCode = LocationType.CURVEPOLYGON;
 
             ICollection<Vector2[]> interior = simplified.HasInteriorRings

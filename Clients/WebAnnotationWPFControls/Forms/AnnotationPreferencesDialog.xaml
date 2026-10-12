@@ -356,6 +356,47 @@
                             TickFrequency="0.5"
                             PreviewMode="PixelRadius"/>
 
+                        <!-- Polygon Point Opacity -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Opacity:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonPointOpacity, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonPointOpacity, StringFormat='F2', Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity of the control points on polygon annotations. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Hide Polygon Points In Pen Mode -->
+                        <CheckBox Content="Hide polygon points in pen mode"
+                                  IsChecked="{Binding HidePolygonPointsInPenMode, Mode=TwoWay}"
+                                  Margin="5,5,5,10"/>
+
                         <!-- Polygon Opacity Parentless -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -499,6 +540,78 @@
                                      TextWrapping="Wrap"
                                      Text="Opacity for circles with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
                         </Grid>
+
+                        <!-- Segmentation Minimum Feature Width -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Minimum Width (nm):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationMinFeatureNanometers, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="100"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationMinFeatureNanometers, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Parts of a SAM2 mask narrower than this are cut before the outline is traced, so a thin bridge no longer joins the cell to a neighbor. Edges of wider parts do not move. A cell membrane is at least 7 to 10 nm thick, so nothing narrower is cytoplasm. 0 keeps everything. Changing it retraces the current view."/>
+                        </Grid>
+
+                        <!-- Segmentation Smoothing -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Smoothing:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationSmoothingSigma, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="2"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationSmoothingSigma, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Blur, in SAM2 logit samples (4 pixels each), applied before the outline is traced. 0 traces the logits as sent; 0.5 is the default. Higher values remove tiny holes and zigzags but push the line outward and can merge thin necks. Applies to the next segmentation. The mask overlay always shows the server's mask."/>
+                        </Grid>
                     </StackPanel>
                 </Expander>
 
@@ -627,6 +740,16 @@
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
                                    Text="Feeds each cell's first prediction back to SAM2 as mask_input and predicts again with the same prompts. Off by default. Changing it re-segments the current view."/>
+
+                        <CheckBox Margin="10,0,0,0"
+                                  IsChecked="{Binding SegmentationEdgeSnapEnabled, Mode=TwoWay}"
+                                  Content="Snap contours to image edges"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="20,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Moves the traced line onto the nearest strong bright-to-dark edge of the image, so it sits on the membrane instead of where SAM2's logits cross the threshold. Where the image has no clear edge the line stays where SAM2 put it. On by default. Changing it retraces the current view without re-segmenting."/>
 
                         <controls:CircleSizePreviewSlider
                             Header="Auto Polygonize Min Size:"

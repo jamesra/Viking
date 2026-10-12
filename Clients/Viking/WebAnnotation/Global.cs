@@ -607,6 +607,82 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Largest accepted <see cref="SegmentationMinFeatureNanometers"/>.</summary>
+            public const double MAX_SEGMENTATION_MIN_FEATURE_NANOMETERS = 100.0;
+
+            /// <summary>
+            /// Narrowest part of a SAM2 mask that is kept, in nanometers; thinner bridges and specks are cut before the outline
+            /// is traced. 0 keeps everything. A change retraces the proposals on screen from their stored masks.
+            /// </summary>
+            public static double SegmentationMinFeatureNanometers
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationMinFeatureNanometers, 0, MAX_SEGMENTATION_MIN_FEATURE_NANOMETERS);
+                set
+                {
+                    double clamped = MathUtils.Clamp(value, 0, MAX_SEGMENTATION_MIN_FEATURE_NANOMETERS);
+                    if (Math.Abs(Properties.Settings.Default.SegmentationMinFeatureNanometers - clamped) < 0.0001)
+                        return;
+
+                    Properties.Settings.Default.SegmentationMinFeatureNanometers = clamped;
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            /// <summary>
+            /// <see cref="SegmentationMinFeatureNanometers"/> in world units (volume pixels at downsample 1), using the volume's
+            /// nanometers per pixel. 0 when the setting is off or the scale is not known.
+            /// </summary>
+            public static double SegmentationMinFeatureWorld
+            {
+                get
+                {
+                    double nanometersPerWorld = Scale.X;
+                    double nanometers = SegmentationMinFeatureNanometers;
+                    return nanometers > 0 && nanometersPerWorld > 0 ? nanometers / nanometersPerWorld : 0;
+                }
+            }
+
+            /// <summary>Largest accepted <see cref="SegmentationSmoothingSigma"/>, in logit samples.</summary>
+            public const double MAX_SEGMENTATION_SMOOTHING_SIGMA = 2.0;
+
+            /// <summary>
+            /// Smoothing, in logit samples (four pixels each), applied to a response's logits before they are traced; 0 traces
+            /// them as sent. Not retroactive: a response is decoded once, so the value applies to the next segmentation.
+            /// </summary>
+            public static double SegmentationSmoothingSigma
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationSmoothingSigma, 0, MAX_SEGMENTATION_SMOOTHING_SIGMA);
+                set
+                {
+                    double clamped = MathUtils.Clamp(value, 0, MAX_SEGMENTATION_SMOOTHING_SIGMA);
+                    if (Math.Abs(Properties.Settings.Default.SegmentationSmoothingSigma - clamped) < 0.0001)
+                        return;
+
+                    Properties.Settings.Default.SegmentationSmoothingSigma = clamped;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// When true each traced contour is moved onto the nearest strong bright-to-dark image edge. Client-side, so a
+            /// change retraces the active command and the on-screen auto-polygonize proposals from their stored masks
+            /// without asking the server again.
+            /// </summary>
+            public static bool SegmentationEdgeSnapEnabled
+            {
+                get => Properties.Settings.Default.SegmentationEdgeSnapEnabled;
+                set
+                {
+                    if (Properties.Settings.Default.SegmentationEdgeSnapEnabled == value)
+                        return;
+
+                    Properties.Settings.Default.SegmentationEdgeSnapEnabled = value;
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
             /// <summary>
             /// Waits for the mask-threshold slider to stop moving, then re-requests on the UI thread.
             /// Each change restarts the wait so a drag sends one request, not one per tick.
@@ -812,6 +888,33 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>
+            /// Opacity (0..1) of the control-point circles drawn on polygon annotations. Independent of the
+            /// polygon fill opacity. Read per frame by <c>LocationPolygonView.Draw</c>.
+            /// </summary>
+            public static double PolygonPointOpacity
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonPointOpacity, 0.0, 1.0);
+                set
+                {
+                    Properties.Settings.Default.PolygonPointOpacity = MathUtils.Clamp(value, 0.0, 1.0);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// When true (the default), polygon control points are not drawn while pen mode is on.
+            /// </summary>
+            public static bool HidePolygonPointsInPenMode
+            {
+                get => Properties.Settings.Default.HidePolygonPointsInPenMode;
+                set
+                {
+                    Properties.Settings.Default.HidePolygonPointsInPenMode = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static double SmallestRenderedSize
             {
                 get => Math.Max(MIN_SMALLEST_RENDERED_SIZE, Properties.Settings.Default.SmallestRenderedSize);
@@ -850,6 +953,9 @@ namespace WebAnnotation
                 Properties.Settings.Default.SegmentationEdgeCleanupRadius = 8;
                 Properties.Settings.Default.SegmentationMaskThreshold = DEFAULT_SEGMENTATION_MASK_THRESHOLD;
                 Properties.Settings.Default.SegmentationUseMaskInput = false;
+                Properties.Settings.Default.SegmentationEdgeSnapEnabled = true;
+                Properties.Settings.Default.SegmentationSmoothingSigma = 0.5;
+                Properties.Settings.Default.SegmentationMinFeatureNanometers = 10;
                 Properties.Settings.Default.AutoPolygonizeCircles = false;
                 Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers;
@@ -860,6 +966,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeHideSegmentationRings = false;
                 Properties.Settings.Default.PolygonPointRadius = 6.0;
+                Properties.Settings.Default.PolygonPointOpacity = 0.75;
+                Properties.Settings.Default.HidePolygonPointsInPenMode = true;
                 Properties.Settings.Default.SmallestRenderedSize = 0.5;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();

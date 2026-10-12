@@ -8,14 +8,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     /// <param name="Data">
     /// Soft bytes, 0–255, with <see cref="SegmentationMaskPolygonizer.SoftMaskIsoLevel"/> as the object boundary.
-    /// Null when the segment carried nothing decodable.
+    /// Smoothed for tracing. Null when the segment carried nothing decodable.
     /// </param>
     /// <param name="Width">Samples across.</param>
     /// <param name="Height">Samples down.</param>
     /// <param name="Scale">Image pixels per sample: 1 for a full-resolution mask, 4 for SAM2's native logit grid.</param>
     /// <param name="X">Image-pixel X of the field's top-left, in the frame <see cref="SegmentationServiceTypes.SegmentResult.X"/> uses.</param>
     /// <param name="Y">Image-pixel Y of the field's top-left.</param>
-    internal sealed record SegmentField(byte[]? Data, int Width, int Height, int Scale, int X, int Y)
+    /// <param name="ServerData">
+    /// The same grid as <paramref name="Data"/> with the logits exactly as the server sent them (no smoothing), so the
+    /// mask overlay shows the server's mask. Null for a mask decoded from a PNG, which has nothing to smooth.
+    /// </param>
+    internal sealed record SegmentField(byte[]? Data, int Width, int Height, int Scale, int X, int Y, byte[]? ServerData = null)
     {
         /// <summary>Width of the field in image pixels.</summary>
         public int PixelWidth => Width * Scale;
@@ -46,9 +50,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Standard deviation, in logit samples (four pixels each), of the smoothing applied before the field is
         /// traced. SAM2's logits hover around the threshold along an edge, so contouring them raw leaves one-sample
         /// holes and islands (63 and 80 in one real capture, none deeper than 0.5 logit) and a zigzag one sample
-        /// long. 0.75 removed 97% of them in captures while moving the inside area by about 2%.
+        /// long. 0.75 removed 97% of them in captures while moving the inside area by about 2%, but it moved the
+        /// contour outward by a quarter pixel and split thin necks in 2 of 40 captures; 0.5 split none. The value
+        /// in use is the <c>SegmentationSmoothingSigma</c> preference; this is its default.
         /// </summary>
-        public const double SmoothingSigma = 0.75;
+        public const double DefaultSmoothingSigma = 0.5;
 
         /// <summary>
         /// True when <paramref name="segment"/> carries logits that match its declared size.
@@ -69,7 +75,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         /// <param name="segment">A segment from a response that asked for logits.</param>
         /// <param name="iso">The logit the server thresholded at; it becomes the boundary at byte 127.5.</param>
-        public static SegmentField Decode(SegmentationServiceTypes.SegmentResult segment, double iso)
+        /// <param name="sigma">Smoothing, in logit samples, applied to the traced field; 0 or less leaves it as sent.</param>
+        public static SegmentField Decode(SegmentationServiceTypes.SegmentResult segment, double iso, double sigma = DefaultSmoothingSigma)
         {
             if (!HasLogits(segment))
                 return new SegmentField(null, 0, 0, 1, segment.X, segment.Y);
@@ -81,12 +88,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
             for (int i = 0; i < logits.Length; i++)
                 logits[i] = HalfToSingle((ushort)(half[2 * i] | (half[(2 * i) + 1] << 8)));
 
-            logits = Smooth(logits, width, height, SmoothingSigma);
-            byte[] soft = new byte[logits.Length];
-            for (int i = 0; i < soft.Length; i++)
-                soft[i] = ToSoftByte(logits[i], iso);
+            byte[] server = new byte[logits.Length];
+            for (int i = 0; i < server.Length; i++)
+                server[i] = ToSoftByte(logits[i], iso);
 
-            return new SegmentField(soft, width, height, PixelScale(segment), segment.LogitsX, segment.LogitsY);
+            float[] smoothed = Smooth(logits, width, height, sigma);
+            byte[] soft = ReferenceEquals(smoothed, logits) ? server : new byte[logits.Length];
+            if (!ReferenceEquals(soft, server))
+            {
+                for (int i = 0; i < soft.Length; i++)
+                    soft[i] = ToSoftByte(smoothed[i], iso);
+            }
+
+            return new SegmentField(soft, width, height, PixelScale(segment), segment.LogitsX, segment.LogitsY, server);
         }
 
         /// <summary>
