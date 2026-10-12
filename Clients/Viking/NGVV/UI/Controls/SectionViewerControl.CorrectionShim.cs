@@ -30,6 +30,7 @@ namespace Viking.UI.Controls
 
         SectionShimService? _correctionShim;
         bool _correctionShimCreated;
+        string? _lastCorrectionUnavailableReason;
         ToolStripLabel? _tsCorrection;
 
         /// <summary>The shim currently applied to the camera, in nanometres.</summary>
@@ -42,7 +43,7 @@ namespace Viking.UI.Controls
         /// <param name="statusBar">The viewer's status strip.</param>
         void InitializeCorrectionStatus(StatusStrip statusBar)
         {
-            _tsCorrection = new ToolStripLabel { AutoToolTip = false };
+            _tsCorrection = new ToolStripLabel { AutoToolTip = false, Alignment = ToolStripItemAlignment.Right };
             _tsCorrection.Click += (_, _) => ToggleCorrectionShim();
             statusBar.Items.Add(_tsCorrection);
             SectionShimContext.SettingsChanged += OnCorrectionSettingsChanged;
@@ -131,7 +132,17 @@ namespace Viking.UI.Controls
             string? url = State.CorrectionServiceUrl;
             string? database = State.CorrectionDatabaseName;
             if (source is null || string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(database))
+            {
+                string reason = $"Corrections unavailable: source {(source is null ? "missing" : "set")}, "
+                    + $"service URL '{url ?? "(none)"}', database '{database ?? "(none)"}'.";
+                if (reason != _lastCorrectionUnavailableReason)
+                {
+                    _lastCorrectionUnavailableReason = reason;
+                    Trace.WriteLine(reason, "CorrectionShim");
+                }
+
                 return;
+            }
 
             _correctionShimCreated = true;
             _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, SectionShimContext.Settings,
