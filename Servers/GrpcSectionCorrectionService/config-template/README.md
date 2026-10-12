@@ -57,8 +57,6 @@ docker compose up -d --no-deps section-correction-service
 docker compose stop section-correction-certbot-renewer
 ```
 
-`rebuild-and-start.ps1 -DisableCertbot` does the same.
-
 ## Rebuild
 
 `Rebuild__Cron` is a 5-field cron in UTC. Default `0 2 * * 0` is Sunday 02:00.

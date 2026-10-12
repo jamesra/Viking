@@ -77,9 +77,6 @@ From the **solution root directory**:
 
 # Or manually with Docker CLI
 docker build -f Servers/VolumeAnnotationServices/Dockerfile -t viking-annotation-services:latest .
-
-# Or with Docker Compose
-docker-compose -f docker-compose.combined.yml build
 ```
 
 ## Running the Container
@@ -219,8 +216,6 @@ This approach:
 ## Related Documentation
 
 - `../../DOCKER-COMBINED-QUICKSTART.md` - Quick start guide
-- `../../Docker-Combined-Services-README.md` - Comprehensive documentation
-- `../../DOCKER-BUILD-FIXES.md` - Build fixes and troubleshooting
 - `../../Scripts/BuildAndRunCombined.ps1` - Build automation script
 - `../../Scripts/ValidateDockerSetup.ps1` - Prerequisites validation
 - `../../Scripts/TestDockerImage.ps1` - Deployment testing
