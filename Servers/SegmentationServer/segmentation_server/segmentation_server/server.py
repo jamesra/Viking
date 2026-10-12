@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
 
 import grpc
+import cv2
 import numpy as np
 from grpc.aio import ServicerContext
 from numpy.typing import NDArray
@@ -72,6 +73,7 @@ from segmentation_server.cell_grid import (
     LOGIT_SCALE,
     TILE_SIZE,
     Cell,
+    MaskShape,
     TileIndex,
     crop_window,
     is_aligned,
@@ -1293,9 +1295,9 @@ class SegmentationServicer(SegmentationServiceServicer):
                 await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
                 return
             if prompts.client_chose:
-                boxes, omit_with_box, client_chose_boxes = prompts.boxes, [], bool(prompts.boxes)
+                boxes, omit_with_box = prompts.boxes, []
             else:
-                boxes, omit_with_box, client_chose_boxes = _resolve_boxes(request, foreground)
+                boxes, omit_with_box, _client_chose = _resolve_boxes(request, foreground)
             tag = _session_tag(identity, foreground, background)
             logger.info(
                 "SegmentTiles mask_threshold=%.3f use_mask_input=%s",
@@ -1313,7 +1315,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 logit_iso=settings.mask_threshold,
                 boxes=boxes,
                 omit_with_box=omit_with_box,
-                assume_boxes=client_chose_boxes,
+                assume_boxes=False,
                 masks=prompts.masks,
                 hint_boxes=prompts.hint_boxes,
                 background_masks=prompts.background_masks,
@@ -1946,7 +1948,7 @@ class _Prompts:
     boxes: List[Tuple[int, int, int, int]]
     hint_boxes: List[Tuple[int, int, int, int]]
     masks: List[Tuple[int, int, int, int]]
-    background_masks: List[Tuple[int, int, int, int]]
+    background_masks: List[MaskShape]
     background_rects: List[Tuple[int, int, int, int]]
     client_chose: bool
 
@@ -1965,27 +1967,26 @@ def _prompts_from(request: Any) -> _Prompts:
     boxes = _client_boxes(request.foreground_boxes)
     hint_boxes: List[Tuple[int, int, int, int]] = []
     masks: List[Tuple[int, int, int, int]] = []
-    background_masks: List[Tuple[int, int, int, int]] = []
+    background_masks: List[MaskShape] = []
     background_rects: List[Tuple[int, int, int, int]] = []
     feature_sent = False
 
-    def shapes(feature: Any) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int, int, int]]]:
-        rectangles = _client_boxes([feature.rectangle]) if feature.HasField("rectangle") else []
-        mask_boxes: List[Tuple[int, int, int, int]] = []
-        if feature.HasField("mask"):
-            if feature.mask.png:
-                raise ValueError("Mask.png is not supported yet; send Mask.bounds only.")
-            mask_boxes = _client_boxes([feature.mask.bounds])
-        return rectangles, mask_boxes
+    def shapes(feature: Any, allow_png: bool) -> Tuple[List[Tuple[int, int, int, int]], List[MaskShape]]:
+        rectangles = _client_boxes(feature.rectangles)
+        return rectangles, [_mask_shape(feature.mask, allow_png)] if feature.HasField("mask") else []
 
     if request.HasField("foreground_feature"):
         feature_sent = True
         foreground.extend((point.x, point.y) for point in request.foreground_feature.points)
-        hint_boxes, masks = shapes(request.foreground_feature)
+        hint_boxes, foreground_shapes = shapes(request.foreground_feature, allow_png=False)
+        masks = [shape.box for shape in foreground_shapes]
+        if masks:
+            # A foreground mask is the prompt; boxes (legacy or a Feature's rectangle) add nothing to it.
+            boxes, hint_boxes = [], []
     if request.HasField("background_feature"):
         feature_sent = True
         background.extend((point.x, point.y) for point in request.background_feature.points)
-        background_rects, background_masks = shapes(request.background_feature)
+        background_rects, background_masks = shapes(request.background_feature, allow_png=True)
     if not foreground:
         anchor = (masks or hint_boxes or boxes or [None])[0]
         if anchor is not None:
@@ -2000,6 +2001,32 @@ def _prompts_from(request: Any) -> _Prompts:
         background_rects=background_rects,
         client_chose=feature_sent or bool(boxes),
     )
+
+
+MAX_MASK_PIXELS = 1 << 26
+
+
+def _mask_shape(mask: Any, allow_png: bool) -> MaskShape:
+    """One ``Mask`` message as a :class:`MaskShape`.
+
+    Raises:
+        ValueError: The bounds are inverted or larger than ``MAX_MASK_PIXELS``, ``png`` is sent where
+            it is not allowed, or the PNG does not decode to exactly the bounds' size.
+    """
+    x0, x1 = sorted((int(mask.bounds.x_min), int(mask.bounds.x_max)))
+    y0, y1 = sorted((int(mask.bounds.y_min), int(mask.bounds.y_max)))
+    width, height = x1 - x0 + 1, y1 - y0 + 1
+    if width * height > MAX_MASK_PIXELS:
+        raise ValueError(f"Mask bounds {width}x{height} exceed {MAX_MASK_PIXELS} pixels.")
+    if not mask.png:
+        return MaskShape((x0, y0, x1, y1))
+    if not allow_png:
+        raise ValueError("Mask.png is only supported in a background Feature; send Mask.bounds only.")
+    image = cv2.imdecode(np.frombuffer(mask.png, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+    if image is None or image.shape != (height, width):
+        got = None if image is None else f"{image.shape[1]}x{image.shape[0]}"
+        raise ValueError(f"Mask.png must decode to {width}x{height} to match bounds, got {got}.")
+    return MaskShape((x0, y0, x1, y1), np.flipud(image > 0))
 
 
 def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:

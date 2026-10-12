@@ -71,10 +71,10 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    plus the square's center as a click; the whole square is taken as object and the mask grows
    beyond it), plus four foreground clicks on the axes at 95% of the radius (outside the
    square's edges, just inside the circle). A `Feature`'s rectangle is only a "most likely inside"
-   box hint and is not taken as object. A background `Feature` adds background clicks, a
+   box hint; no box is ever taken as object, and a foreground mask replaces the boxes. A background `Feature` adds background clicks, a
    background mask (strongly negative in every window's `mask_input`, and cleared from the
    answer) and a background rectangle (weakly negative in `mask_input` where nothing positive is
-   known, never cleared). `Mask.png` is not supported yet. The candidates are the cells the prompt touches (each whose core holds part of a
+   known, never cleared). A background mask may carry a PNG shape over its bounds (`Mask.png`); the client sends one mask per side. The candidates are the cells the prompt touches (each whose core holds part of a
    box, each that owns a point). The candidate whose window holds the most of the prompt starts
    first, with ties going to the window with the most room round it; that repeats for what is
    still unseen. A window holds a box only when the whole box reaches its core and sits clear of

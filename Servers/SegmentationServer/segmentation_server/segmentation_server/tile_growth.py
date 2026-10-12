@@ -85,6 +85,7 @@ from segmentation_server.cell_grid import (
     Canvas,
     Cell,
     MaskArray,
+    MaskShape,
     Point,
     TileIndex,
     cell_of_point,
@@ -287,7 +288,7 @@ def grow_segmentation(
     assume_boxes: bool = False,
     masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     hint_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
-    background_masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+    background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
     background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
 ) -> GrowthResult:
     """One pass of ``GrowthWalk``: walk outward from the clicks with the tiles ``predict`` has.
@@ -366,7 +367,7 @@ class GrowthWalk:
         assume_boxes: bool = False,
         masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         hint_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
-        background_masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+        background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
         background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     ) -> None:
         self._started = False
@@ -392,7 +393,10 @@ class GrowthWalk:
         self._hints: Set[Box] = {(int(a), int(b), int(c), int(d)) for a, b, c, d in hint_boxes or ()}
         self._boxes += sorted(self._hints.difference(self._boxes))
         self._boxes += sorted(self._masks.difference(self._boxes))
-        self._background_masks = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_masks or ()]
+        self._background_masks: List[MaskShape] = [
+            item if isinstance(item, MaskShape) else MaskShape(tuple(int(v) for v in item))  # type: ignore[arg-type]
+            for item in background_masks or ()
+        ]
         self._background_rects = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_rects or ()]
         self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
         self._logit_iso = float(logit_iso)
@@ -894,7 +898,12 @@ class GrowthWalk:
         for rect in self._background_rects:
             paint_box(out, cell, rect, -BACKGROUND_RECT_LOGIT, only_unset_or_negative=True)
         for mask in self._background_masks:
-            paint_box(out, cell, mask, -MASK_PROMPT_LOGIT)
+            if mask.bitmap_up is None:
+                paint_box(out, cell, mask.box, -MASK_PROMPT_LOGIT)
+                continue
+            samples = mask.window_samples(cell)
+            if samples is not None:
+                out[samples] = -MASK_PROMPT_LOGIT
         if mask_logits is None and not out.any():
             return None
         return out
@@ -1073,9 +1082,9 @@ class GrowthWalk:
                 taken = box in self._masks or (self._assume_boxes and box not in self._hints)
                 if taken and cores_under_box(box) is not None:
                     canvas.assume_box(box)
-            for box in self._background_masks:
-                if cores_under_box(box) is not None:
-                    canvas.deny_box(box)
+            for shape in self._background_masks:
+                if cores_under_box(shape.box) is not None:
+                    canvas.deny_mask(shape)
         owners = canvas.decided_cells()
 
         min_row = min(cell.row for cell in owners)

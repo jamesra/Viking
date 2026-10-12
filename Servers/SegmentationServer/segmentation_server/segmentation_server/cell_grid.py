@@ -193,6 +193,41 @@ def crop_window(cell: Cell, tiles: Mapping[Tuple[int, int], NDArray]) -> Optiona
     return out
 
 
+@dataclass(frozen=True)
+class MaskShape:
+    """A mask prompt in mosaic space: a rectangle, optionally narrowed to a shape inside it.
+
+    ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. ``bitmap_up`` is None for a filled
+    rectangle; otherwise a boolean array of shape ``(y_max - y_min + 1, x_max - x_min + 1)`` in Y-up
+    order (row 0 is ``y_min``), true where the pixel is in the mask.
+    """
+
+    box: Box
+    bitmap_up: Optional[MaskArray] = None
+
+    def window_samples(self, cell: "Cell") -> Optional[NDArray[np.bool_]]:
+        """The mask over ``cell``'s window as a ``LOGIT_WINDOW`` square (Y-down), or None when it misses the window.
+
+        A sample is set when any of the ``LOGIT_SCALE`` squared pixels it covers is in the mask.
+        """
+        x0, y0, x1, y1 = self.box
+        wx0, wy0 = window_origin(cell)
+        xa, xb = max(x0, wx0), min(x1, wx0 + CELL_SIZE - 1)
+        ya, yb = max(y0, wy0), min(y1, wy0 + CELL_SIZE - 1)
+        if xa > xb or ya > yb:
+            return None
+        pixels = np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
+        # Window row 0 is the highest mosaic y of the window, so rows run in the opposite direction.
+        rows = slice(wy0 + CELL_SIZE - 1 - yb, wy0 + CELL_SIZE - 1 - ya + 1)
+        cols = slice(xa - wx0, xb - wx0 + 1)
+        if self.bitmap_up is None:
+            pixels[rows, cols] = True
+        else:
+            pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
+        samples = pixels.reshape(LOGIT_WINDOW, LOGIT_SCALE, LOGIT_WINDOW, LOGIT_SCALE).any(axis=(1, 3))
+        return samples if samples.any() else None
+
+
 class Canvas:
     """The result mask ``G`` as one 512x512 Y-up block per owning cell, fused from SAM2 logits.
 
@@ -351,6 +386,29 @@ class Canvas:
                     held = store.get(cell)
                     if held is not None:
                         held[piece] = False
+
+    def deny_mask(self, shape: MaskShape) -> None:
+        """Like :meth:`deny_box` for a :class:`MaskShape`: only the pixels inside the shape are cleared."""
+        if shape.bitmap_up is None:
+            self.deny_box(shape.box)
+            return
+        x0, y0, x1, y1 = shape.box
+        first = cell_of_point(x0, y0)
+        last = cell_of_point(x1, y1)
+        for row in range(first.row, last.row + 1):
+            for col in range(first.col, last.col + 1):
+                cell = Cell(row, col)
+                bx, by = core_origin(cell)
+                xa, xb = max(x0, bx), min(x1, bx + CORE_SIZE - 1)
+                ya, yb = max(y0, by), min(y1, by + CORE_SIZE - 1)
+                if xa > xb or ya > yb:
+                    continue
+                piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
+                inside = shape.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+                for store in (self._blocks, self._decided, self._pinned):
+                    held = store.get(cell)
+                    if held is not None:
+                        held[piece] &= ~inside
 
     def blend_window(
         self,

@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from cell_world import World, ellipse, iou
-from segmentation_server.cell_grid import Cell, cell_of_point, mosaic_to_window
+from segmentation_server.cell_grid import Cell, cell_of_point, core_origin, mosaic_to_window
 from segmentation_server.mask_utils import NoMatchingMask
 from segmentation_server.tile_growth import GrowthWalk, grow_segmentation
 
@@ -288,21 +288,22 @@ def test_features_merge_with_the_legacy_prompt_fields() -> None:
         foreground=[pb.Point(x=1, y=2)],
         foreground_feature=pb.Feature(
             points=[pb.Point(x=3, y=4)],
-            rectangle=pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10),
+            rectangles=[pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)],
             mask=pb.Mask(bounds=pb.BoundingBox(x_min=20, y_min=20, x_max=40, y_max=60)),
         ),
         background_feature=pb.Feature(
             points=[pb.Point(x=9, y=9)],
-            rectangle=pb.BoundingBox(x_min=100, y_min=100, x_max=110, y_max=110),
+            rectangles=[pb.BoundingBox(x_min=100, y_min=100, x_max=110, y_max=110)],
             mask=pb.Mask(bounds=pb.BoundingBox(x_min=200, y_min=200, x_max=220, y_max=220)),
         ),
     )
     prompts = _prompts_from(request)
 
     assert prompts.foreground == [(1, 2), (3, 4)] and prompts.background == [(9, 9)]
-    assert prompts.hint_boxes == [(0, 0, 10, 10)] and prompts.masks == [(20, 20, 40, 60)]
-    assert prompts.background_rects == [(100, 100, 110, 110)] and prompts.background_masks == [(200, 200, 220, 220)]
-    assert prompts.boxes == [] and prompts.client_chose is True
+    assert prompts.hint_boxes == [] and prompts.boxes == [], "a foreground mask replaces the boxes"
+    assert prompts.masks == [(20, 20, 40, 60)]
+    assert prompts.background_rects == [(100, 100, 110, 110)] and [shape.box for shape in prompts.background_masks] == [(200, 200, 220, 220)]
+    assert prompts.client_chose is True
 
 
 def test_a_feature_with_only_a_mask_starts_the_walk_from_the_mask_center_and_png_is_refused() -> None:
@@ -351,3 +352,59 @@ def test_a_background_rectangle_is_only_a_weak_negative_and_never_clears_the_ans
     assert any(prompt.min() == pytest.approx(-2.0) for prompt in prompts), "the rectangle reached a window"
     assert world.mask_prompts[0].max() == pytest.approx(8.0)
     assert world.to_truth_frame(result)[2304, 2304]
+
+
+def test_a_foreground_rectangle_without_a_mask_stays_a_hint_box() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    request = _request(
+        foreground_boxes=[pb.BoundingBox(x_min=1, y_min=1, x_max=5, y_max=5)],
+        foreground_feature=pb.Feature(
+            points=[pb.Point(x=3, y=3)], rectangles=[pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)]
+        ),
+    )
+    prompts = _prompts_from(request)
+
+    assert prompts.hint_boxes == [(0, 0, 10, 10)] and prompts.boxes == [(1, 1, 5, 5)] and prompts.masks == []
+
+
+def test_a_background_png_mask_is_decoded_y_up_and_only_its_pixels_are_cleared() -> None:
+    import cv2
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.cell_grid import Canvas
+    from segmentation_server.server import _prompts_from
+
+    image = np.zeros((40, 50), dtype=np.uint8)  # 50 wide, 40 high; row 0 is y_max
+    image[:20, :] = 255  # the top half of the image is the high-y half
+    ok, png = cv2.imencode(".png", image)
+    bounds = pb.BoundingBox(x_min=2200, y_min=2200, x_max=2249, y_max=2239)
+    prompts = _prompts_from(_request(
+        foreground=[pb.Point(x=1, y=2)], background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))
+    ))
+    shape = prompts.background_masks[0]
+    assert shape.bitmap_up.shape == (40, 50) and shape.bitmap_up[39, 0] and not shape.bitmap_up[0, 0]
+
+    canvas = Canvas()
+    canvas.assume_box((2200, 2200, 2249, 2239))
+    canvas.deny_mask(shape)
+    core = canvas.decided_core(cell_of_point(2200, 2200))
+    bx, by = core_origin(cell_of_point(2200, 2200))
+    assert not core[2239 - by, 2210 - bx], "high-y half is cleared"
+    assert core[2200 - by, 2210 - bx], "low-y half is still object"
+
+
+def test_a_png_that_does_not_match_its_bounds_or_a_foreground_png_is_refused() -> None:
+    import cv2
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    ok, png = cv2.imencode(".png", np.full((5, 5), 255, dtype=np.uint8))
+    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=9, y_max=9)
+    with pytest.raises(ValueError):
+        _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
+    with pytest.raises(ValueError):
+        _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
