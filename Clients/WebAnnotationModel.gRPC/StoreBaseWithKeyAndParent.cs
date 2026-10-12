@@ -34,6 +34,16 @@ namespace WebAnnotationModel.gRPC
         public readonly ReadOnlyObservableCollection<KEY> RootObjects;
 
         ReadOnlyObservableCollection<KEY> IStoreWithParent<KEY, OBJECT>.RootObjects => RootObjects;
+
+        /// <summary>
+        /// Children whose ParentID names an object not yet cached, keyed by that parent ID. Filled by
+        /// WireParentsAndRoots and drained by AdoptWaitingChildren when the parent arrives in a later batch.
+        /// Guarded by <see cref="_childrenAwaitingParentLock"/>; Parent is never assigned while the lock is held.
+        /// Entries can be stale (child re-parented or replaced), so AdoptWaitingChildren re-checks each one.
+        /// </summary>
+        private readonly Dictionary<KEY, List<OBJECT>> _childrenAwaitingParent = new Dictionary<KEY, List<OBJECT>>();
+
+        private readonly object _childrenAwaitingParentLock = new object();
           
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -50,11 +60,15 @@ namespace WebAnnotationModel.gRPC
         /// gRPC GetAll uses IStoreEditor.GetOrAdd, which never called the old InternalAdd
         /// that populated RootObjects and Parent.Children. Wire that here when the batch is applied.
         /// Updated objects are re-wired too, because a server update can change ParentID (the WCF InternalUpdate did the same).
+        /// Added objects also adopt cached children that arrived in an earlier batch before them.
         /// </summary>
         internal override async Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
         {
             if (inventory?.AddedObjects != null && inventory.AddedObjects.Count > 0)
+            {
                 WireParentsAndRoots(inventory.AddedObjects);
+                AdoptWaitingChildren(inventory.AddedObjects);
+            }
 
             if (inventory?.UpdatedObjects != null && inventory.UpdatedObjects.Count > 0)
                 RewireUpdated(inventory.UpdatedObjects);
@@ -79,7 +93,8 @@ namespace WebAnnotationModel.gRPC
 
         /// <summary>
         /// ParentID == null → RootObjects. Otherwise set Parent (which AddChilds).
-        /// Parents must already be in IDToObject; GetAll loads the full table first so one pass is enough.
+        /// A parent not yet in IDToObject is not fetched (the WCF InternalAdd fetched it); the child waits in
+        /// <see cref="_childrenAwaitingParent"/> until a later batch adds that parent.
         /// Setting Parent when ParentID already matches does not mark DBAction.UPDATE.
         /// </summary>
         void WireParentsAndRoots(IEnumerable<OBJECT> objects)
@@ -95,8 +110,69 @@ namespace WebAnnotationModel.gRPC
                     continue;
                 }
 
-                if (IDToObject.TryGetValue(obj.ParentID.Value, out OBJECT parent))
+                OBJECT parent;
+                lock (_childrenAwaitingParentLock)
+                {
+                    // Checked under the lock so a parent batch draining this key cannot slip between the check and the record.
+                    if (!IDToObject.TryGetValue(obj.ParentID.Value, out parent))
+                    {
+                        if (!_childrenAwaitingParent.TryGetValue(obj.ParentID.Value, out List<OBJECT> waiting))
+                            _childrenAwaitingParent[obj.ParentID.Value] = waiting = new List<OBJECT>();
+                        if (!waiting.Contains(obj))
+                            waiting.Add(obj);
+                    }
+                }
+
+                if (parent != null)
                     obj.Parent = parent;
+            }
+        }
+
+        /// <summary>
+        /// Attaches children recorded by WireParentsAndRoots to each newly added parent. A waiting child is
+        /// skipped when it is no longer the cached instance for its ID, its ParentID changed, or it already has a
+        /// Parent. Parent is assigned outside the lock because the setter raises property and collection events.
+        /// Never walks ancestor chains, so cyclic ParentID data from the server cannot loop here.
+        /// </summary>
+        void AdoptWaitingChildren(IEnumerable<OBJECT> addedParents)
+        {
+            foreach (OBJECT parent in addedParents)
+            {
+                if (parent == null)
+                    continue;
+
+                List<OBJECT> waiting;
+                lock (_childrenAwaitingParentLock)
+                {
+                    if (!_childrenAwaitingParent.TryGetValue(parent.ID, out waiting))
+                        continue;
+                    _childrenAwaitingParent.Remove(parent.ID);
+                }
+
+                foreach (OBJECT child in waiting)
+                {
+                    if (child.Parent == null && child.ParentID.HasValue && child.ParentID.Value.Equals(parent.ID) &&
+                        IDToObject.TryGetValue(child.ID, out OBJECT cached) && ReferenceEquals(cached, child))
+                    {
+                        child.Parent = parent;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Drops <paramref name="obj"/> from the list of children waiting on its ParentID, so a removed object is
+        /// neither adopted nor kept alive by that list. Called from TryRemoveFromParent.
+        /// </summary>
+        private void ForgetWaitingChild(OBJECT obj)
+        {
+            lock (_childrenAwaitingParentLock)
+            {
+                if (_childrenAwaitingParent.TryGetValue(obj.ParentID.Value, out List<OBJECT> waiting) &&
+                    waiting.Remove(obj) && waiting.Count == 0)
+                {
+                    _childrenAwaitingParent.Remove(obj.ParentID.Value);
+                }
             }
         }
 
@@ -392,6 +468,8 @@ namespace WebAnnotationModel.gRPC
                 //Long winded way of removing ourselves from our parents list
                 if (obj.Parent != null)
                     obj.Parent.RemoveChild(obj);
+                else
+                    ForgetWaitingChild(obj);
             }
 
         }
