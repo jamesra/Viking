@@ -81,6 +81,13 @@ namespace WebAnnotation
             menuAutoPolygonizeCircles.Click += OnAutoPolygonizeCircles;
             menuRoot.DropDownItems.Add(menuAutoPolygonizeCircles);
 
+            ToolStripMenuItem menuRandomizeColors = new("Randomize All Colors")
+            {
+                ToolTipText = "Gives every cell a new random display color. Only changes what you see; nothing is saved and reloading restores the original colors."
+            };
+            menuRandomizeColors.Click += OnRandomizeAllColors;
+            menuRoot.DropDownItems.Add(menuRandomizeColors);
+
             ToolStripMenuItem menuSelectSegmentation = new("Select Segmentation Service…");
             menuSelectSegmentation.Click += OnSelectSegmentationService;
             menuRoot.DropDownItems.Add(menuSelectSegmentation);
@@ -117,6 +124,22 @@ namespace WebAnnotation
             Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new(Global.UserFavoriteStructureTypes);
             StructureIDChoiceForm.DataContext = favorite_view_model;
             StructureIDChoiceForm.Show();
+        }
+
+        /// <summary>
+        /// Annotation menu: re-rolls the random display color of every loaded cell. Display only, see <see cref="StructureColors"/>.
+        /// </summary>
+        private static void OnRandomizeAllColors(object sender, EventArgs e)
+        {
+            try
+            {
+                int recolored = StructureColors.RandomizeAll();
+                Debug.WriteLine($"Randomized the display color of {recolored} cells");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error randomizing colors: {ex.Message}");
+            }
         }
 
         public static void OnPreferences(object sender, EventArgs e)
