@@ -48,6 +48,7 @@
 
 .PARAMETER EnvFile
     Per-database env file. Default: D:\Docker\Builds\GrpcAnnotationService\<Database>.env.
+    A relative path is resolved against the current PowerShell location.
     Must be outside the repo; it holds credentials.
 
 .PARAMETER Remove
@@ -211,7 +212,10 @@ if ($Remove) {
 if (-not $EnvFile) {
     $EnvFile = Join-Path $defaultEnvDir "$Database.env"
 }
-$envFull = [System.IO.Path]::GetFullPath($EnvFile)
+# Resolve against $PWD, not the process working directory that [IO.Path]::GetFullPath uses;
+# the two differ in an interactive session, which would let a relative path slip past the
+# repo check below and land the file somewhere else.
+$envFull = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($EnvFile)
 if ($envFull.StartsWith($repoRoot.TrimEnd('\') + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "EnvFile must be outside the repo ($repoRoot): it holds credentials."
 }
@@ -250,7 +254,9 @@ if (-not (Test-Path -LiteralPath $envFull)) {
         if (-not (Test-Path -LiteralPath $dir)) {
             New-Item -ItemType Directory -Path $dir | Out-Null
         }
-        Set-Content -LiteralPath $envFull -Value $lines -Encoding UTF8
+        # UTF-8 without BOM from both PowerShell editions (Set-Content -Encoding UTF8 adds a
+        # BOM on Windows PowerShell 5.1), so the file matches the template byte for byte.
+        [System.IO.File]::WriteAllLines($envFull, [string[]]$lines, [System.Text.UTF8Encoding]::new($false))
         Write-Host "Created $envFull."
     }
     Write-Host 'Fill in these keys in the env file, then re-run:'
