@@ -17,6 +17,7 @@ from segmentation_server.image_cache import (
     DEFAULT_TTL_SECONDS,
 )
 from segmentation_server.server import DEFAULT_TLS_PORT, PortBindError, TlsConfigurationError, serve
+from segmentation_server.tile_work import install_queued_console_logging
 
 logger = logging.getLogger(__name__)
 
@@ -171,15 +172,14 @@ async def main() -> None:
 
 def run() -> None:
     """Sync wrapper for `python -m segmentation_server` and the console script."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    listener = install_queued_console_logging()
     try:
         asyncio.run(main())
     except (TlsConfigurationError, PortBindError) as error:
         logger.critical("Cannot start: %s", error)
         raise SystemExit(2) from error
+    finally:
+        listener.stop()
 
 
 if __name__ == '__main__':

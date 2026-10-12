@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import io
 import logging
 import os
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, Tuple
@@ -287,9 +289,7 @@ class SegmentationModel:
         """Enable CUDA autocast only on CUDA; CPU/MPS leave dtypes unchanged."""
         if self.device.type != "cuda":
             return nullcontext()
-        major = torch.cuda.get_device_properties(0).major
-        dtype = torch.bfloat16 if major >= 8 else torch.float16
-        return torch.autocast("cuda", dtype=dtype)
+        return torch.autocast("cuda", dtype=_cuda_autocast_dtype())
 
     def _encode_image(self, predictor: SAM2ImagePredictor, image_np: NDArray) -> None:
         """``set_image()`` under the GPU lock, turning a dead CUDA context into its own error."""
@@ -417,6 +417,38 @@ class SegmentationModel:
             return
         try:
             blob = self._export_disk_features(predictor) if payload is None else self._serialize_payload(payload)
+            if not store.save(digest, blob, mode):
+                return
+        except Exception:
+            logger.exception("Embedding disk write failed sha=%s mode=%s", digest[:12], mode)
+            return
+        logger.info("Embedding disk store sha=%s mode=%s bytes=%s", digest[:12], mode, len(blob))
+
+    def _save_disk_embedding_later(
+        self,
+        predictor: SAM2ImagePredictor,
+        digest: str,
+        mode: str,
+        payload: Optional[dict],
+    ) -> None:
+        """Serialize and write ``payload`` on the disk-writer thread so the prediction does not wait for it.
+
+        Called from inference threads. The CPU payload is already detached from the predictor, so
+        the predictor can be released before the write runs. Without a payload the write needs the
+        predictor's features, so it runs inline. Failures are logged by :meth:`_save_disk_embedding`.
+        """
+        if payload is None or self._embedding_store is None:
+            self._save_disk_embedding(predictor, digest, mode, payload)
+            return
+        _disk_writer().submit(self._save_disk_embedding_payload, digest, mode, payload)
+
+    def _save_disk_embedding_payload(self, digest: str, mode: str, payload: dict) -> None:
+        """Disk-writer thread body: store ``payload`` without touching any predictor."""
+        store = self._embedding_store
+        if store is None:
+            return
+        try:
+            blob = self._serialize_payload(payload)
             if not store.save(digest, blob, mode):
                 return
         except Exception:
@@ -605,7 +637,7 @@ class SegmentationModel:
             raw_logits = np.asarray(logits)
             if raw_logits.ndim >= 1 and raw_logits.shape[0] == masks_np.shape[0]:
                 logits_np = raw_logits[sorted_ind]
-        return masks_np[sorted_ind].astype(np.bool_), scores_np[sorted_ind], logits_np
+        return masks_np[sorted_ind].astype(np.bool_, copy=False), scores_np[sorted_ind], logits_np
 
     def predict_ephemeral(
         self,
@@ -636,7 +668,7 @@ class SegmentationModel:
             if not self._try_load_disk_embedding(predictor, digest, mode, remember=True):
                 self._encode_image(predictor, image)
                 payload = self._export_payload_for_cache(predictor, digest, mode)
-                self._save_disk_embedding(predictor, digest, mode, payload)
+                self._save_disk_embedding_later(predictor, digest, mode, payload)
             return self.predict_tile(
                 predictor,
                 coordinates,
@@ -740,9 +772,14 @@ class SegmentationModel:
         height, width = mask.shape[:2]
         forced = mask.copy()
         radius = _POSITIVE_POINT_RADIUS
-        ys, xs = np.ogrid[:height, :width]
         for x, y in positives:
-            forced |= (xs - int(x)) ** 2 + (ys - int(y)) ** 2 <= radius * radius
+            cx, cy = int(x), int(y)
+            x0, x1 = max(cx - radius, 0), min(cx + radius + 1, width)
+            y0, y1 = max(cy - radius, 0), min(cy + radius + 1, height)
+            if x0 >= x1 or y0 >= y1:
+                continue
+            ys, xs = np.ogrid[y0:y1, x0:x1]
+            forced[y0:y1, x0:x1] |= (xs - cx) ** 2 + (ys - cy) ** 2 <= radius * radius
         return forced
 
     @staticmethod
@@ -874,12 +911,41 @@ def _as_sam2_mask_input(mask_logits: NDArray) -> NDArray[np.float32]:
     return np.clip(array, -_MASK_INPUT_LIMIT, _MASK_INPUT_LIMIT)[None, :, :]
 
 
+@functools.lru_cache(maxsize=1)
+def _cuda_autocast_dtype() -> torch.dtype:
+    """bfloat16 on Ampere and newer, float16 before; the device does not change, so ask once."""
+    return torch.bfloat16 if torch.cuda.get_device_properties(0).major >= 8 else torch.float16
+
+
+_disk_writer_pool: Optional[ThreadPoolExecutor] = None
+_disk_writer_lock = threading.Lock()
+
+
+def _disk_writer() -> ThreadPoolExecutor:
+    """The single thread that writes embeddings to the disk store, created on first use.
+
+    One thread keeps writes ordered and bounds the memory held by queued payloads to what
+    inference produces faster than the disk absorbs. Interpreter exit waits for queued writes, so
+    an embedding already computed is not lost on a clean shutdown.
+    """
+    global _disk_writer_pool
+    with _disk_writer_lock:
+        if _disk_writer_pool is None:
+            _disk_writer_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="embedding-disk-writer")
+        return _disk_writer_pool
+
+
 def _image_digest(image: NDArray) -> str:
-    """Stable id for one cropped cell window. Shape is part of the key."""
-    digest = hashlib.sha256()
+    """Stable id for one cropped cell window. Shape is part of the key.
+
+    blake2b is several times faster than sha256 on multi-megabyte windows and the key only needs
+    to be collision-resistant. Changing the hash orphans embeddings already on disk, which are
+    simply recomputed.
+    """
+    digest = hashlib.blake2b(digest_size=32)
     digest.update(str(image.shape).encode("ascii"))
     digest.update(str(image.dtype).encode("ascii"))
-    digest.update(np.ascontiguousarray(image).tobytes())
+    digest.update(np.ascontiguousarray(image))
     return digest.hexdigest()
 
 

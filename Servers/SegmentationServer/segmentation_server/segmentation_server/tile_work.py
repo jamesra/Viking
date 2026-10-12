@@ -11,6 +11,8 @@ that line is emitted on every set_image().
 from __future__ import annotations
 
 import logging
+import queue
+from logging.handlers import QueueHandler, QueueListener
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import Iterator, Optional, Tuple
@@ -39,6 +41,26 @@ def install_sam2_log_filter() -> None:
     if any(isinstance(existing, _DropSam2NumpyLayoutNote) for existing in root.filters):
         return
     root.addFilter(_DropSam2NumpyLayoutNote())
+
+
+def install_queued_console_logging(level: int = logging.INFO, fmt: str = "%(asctime)s %(levelname)s %(name)s: %(message)s") -> QueueListener:
+    """Send root-logger output to stderr through a queue and a writer thread.
+
+    The console handler blocks whenever the terminal does (a Windows QuickEdit selection, a slow
+    redirected pipe). Called directly it would freeze whichever thread logged, including the asyncio
+    event loop that serves every stream. Here callers only enqueue; the returned listener owns the
+    blocking write. The record is formatted at enqueue time, so the tile prefix added by
+    :func:`install_tile_work_logging` is kept. The caller stops the listener at shutdown to flush it.
+    """
+    log_queue: queue.SimpleQueue[logging.LogRecord] = queue.SimpleQueue()
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter(fmt))
+    listener = QueueListener(log_queue, console)
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.addHandler(QueueHandler(log_queue))
+    listener.start()
+    return listener
 
 
 @contextmanager
