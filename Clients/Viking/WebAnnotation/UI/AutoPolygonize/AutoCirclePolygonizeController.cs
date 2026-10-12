@@ -1317,6 +1317,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                         Global.AnnotationSettings.SegmentationPointRadius * downsample,
                         [circle.ID],
                         circle.ParentID);
+                    SegmentationMaskUnion backgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+                        visibleForPrompts, transform, [circle.ID], circle.ParentID);
                     SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
                         "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
                     long promptMs = proposalTimer.ElapsedMilliseconds;
@@ -1328,7 +1330,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                         background,
                         processToken,
                         startingBoxes,
-                        requestId: (ulong)requestTicket).ConfigureAwait(false);
+                        requestId: (ulong)requestTicket,
+                        backgroundMask: backgroundMask).ConfigureAwait(false);
                     long segmentMs = segmentTimer.ElapsedMilliseconds;
                     if (response is null)
                         continue;
@@ -2120,6 +2123,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     Global.AnnotationSettings.SegmentationPointRadius * downsample,
                     [circle.ID],
                     circle.ParentID);
+                SegmentationMaskUnion backgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+                    visibleForPrompts, transform, [circle.ID], circle.ParentID);
                 SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
                     "auto-circle", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
 
@@ -2130,7 +2135,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     background,
                     processToken,
                     startingBoxes,
-                    requestId: (ulong)requestTicket).ConfigureAwait(false);
+                    requestId: (ulong)requestTicket,
+                    backgroundMask: backgroundMask).ConfigureAwait(false);
                 if (response is null)
                     return;
 

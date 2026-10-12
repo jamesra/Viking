@@ -182,6 +182,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool grayscale,
             CancellationToken token,
             IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            SegmentationMaskUnion? backgroundMask = null,
             ulong requestId = 0)
         {
             if (grpcClient is null)
@@ -246,6 +247,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     request.Background.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
                 }
             }
+
+            // Other structures' circles (inscribed squares) and polygons, summed into the one mask the server takes.
+            SegmentationServiceTypes.Mask? backgroundMaskMessage = backgroundMask?.ToMask(signature.Downsample);
+            if (backgroundMaskMessage is not null)
+                request.BackgroundFeature = new SegmentationServiceTypes.Feature { Mask = backgroundMaskMessage };
+            else if (backgroundMask is { IsEmpty: false })
+                SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: empty or over {SegmentationMaskUnion.MaxPixels} px at ds={signature.Downsample}");
 
 
             CallOptions callOptions = new(

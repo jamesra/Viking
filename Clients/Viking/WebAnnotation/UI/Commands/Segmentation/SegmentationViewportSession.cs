@@ -575,6 +575,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool grayscale,
             CancellationToken cancellationToken,
             IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            SegmentationMaskUnion? backgroundMask = null,
             ulong requestId = 0)
         {
             const int maxNotFoundRetries = 16;
@@ -592,6 +593,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         grayscale,
                         cancellationToken,
                         foregroundBoxes,
+                        backgroundMask,
                         requestId).ConfigureAwait(false);
                 }
                 catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
@@ -671,7 +673,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             CancellationToken cancellationToken,
             IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
-            ulong requestId = 0)
+            ulong requestId = 0,
+            SegmentationMaskUnion? backgroundMask = null)
         {
             if (grpcClient is null)
             {
@@ -724,6 +727,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     grayscale,
                     cancellationToken,
                     foregroundBoxes,
+                    backgroundMask,
                     requestId).ConfigureAwait(false);
                 if (response is null)
                 {

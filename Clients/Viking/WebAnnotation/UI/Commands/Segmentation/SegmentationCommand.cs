@@ -67,6 +67,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private readonly List<Geometry.Vector2> derivedBackgroundPoints = [];
 
+        /// <summary>
+        /// The other structures' circles and polygons derived for the current view, sent as the background
+        /// mask with every request. Replaced with the points whenever the view changes.
+        /// </summary>
+        private SegmentationMaskUnion? derivedBackgroundMask;
+
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
         private PointSetView backgroundPointsView;
@@ -309,6 +315,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 "context-menu", excludeIds, structureIdToExcludeFromBackgroundPoints, visible, foregroundPoints, derived));
             derivedBackgroundPoints.AddRange(derived);
             backgroundPoints.AddRange(derived);
+            derivedBackgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+                visible,
+                Parent.Section.ActiveSectionToVolumeTransform,
+                excludeIds,
+                structureIdToExcludeFromBackgroundPoints);
         }
 
         /// <summary>
@@ -317,6 +328,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private void RemoveDerivedBackgroundPoints()
         {
+            derivedBackgroundMask = null;
             if (derivedBackgroundPoints.Count == 0)
                 return;
 
@@ -945,7 +957,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     $"{foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
                 CancellationToken segmentToken = segmentRequestCts.Token;
                 var response = await viewportSession.SegmentAsync(
-                    foregroundSnapshot, backgroundSnapshot, segmentToken, startingBoxes).ConfigureAwait(false);
+                    foregroundSnapshot, backgroundSnapshot, segmentToken, startingBoxes,
+                    backgroundMask: derivedBackgroundMask).ConfigureAwait(false);
                 SegmentationDiag.Log(
                     $"RequestSegmentation done responseNull={response is null} segments={response?.Segments.Count ?? -1}");
                 delivered = response is not null;
@@ -1548,6 +1561,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             foregroundPoints.Clear();
             backgroundPoints.Clear();
             derivedBackgroundPoints.Clear();
+            derivedBackgroundMask = null;
             // Clear point views but keep them initialized (never null)
             foregroundPointsView.Points = [];
             backgroundPointsView.Points = [];

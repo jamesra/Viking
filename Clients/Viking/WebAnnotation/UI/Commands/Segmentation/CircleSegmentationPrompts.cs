@@ -1,7 +1,9 @@
 using Geometry;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using WebAnnotationModel;
 
@@ -201,6 +203,85 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             IReadOnlyList<Vector2> mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(otherAnnotations);
             return ToVolumePoints(mosaicPoints, transform);
+        }
+
+        /// <summary>
+        /// The other structures' annotations as one background mask, in volume space: the inscribed square of
+        /// each circle (the same square <see cref="TryCreateStartingPrompt"/> seeds a circle with) and the
+        /// polygon, with its holes, of each polygon annotation. Same annotation filter as
+        /// <see cref="CreateOtherStructureBackgroundVolumePoints"/>.
+        /// </summary>
+        /// <remarks>
+        /// "Everything inside is background, and the engine should grow it": a circle that is some other structure
+        /// is background throughout its inscribed square, and so is every polygon. Annotations whose points fail
+        /// to map to volume space are skipped. The server takes one mask per request, so these are summed here.
+        /// </remarks>
+        public static SegmentationMaskUnion CreateOtherStructureBackgroundMask(
+            IEnumerable<LocationObj> visible,
+            IVolumeToSectionTransform transform,
+            IReadOnlyCollection<long>? excludeLocationIds,
+            long? excludeStructureId,
+            Func<long, long?>? structureParentLookup = null)
+        {
+            SegmentationMaskUnion union = new();
+            if (visible is null || transform is null)
+                return union;
+
+            foreach (LocationObj other in OtherStructureAnnotations(visible, excludeLocationIds, excludeStructureId, structureParentLookup))
+            {
+                switch (other.TypeCode)
+                {
+                    case LocationType.CIRCLE:
+                        if (TryCreateStartingPrompt(
+                                ToVolumePoints(CreateMosaicRadiusPoints(new Circle(other.Position, other.Radius)), transform),
+                                out StartingPrompt square))
+                        {
+                            union.Add(square.Box);
+                        }
+
+                        break;
+                    case LocationType.POLYGON:
+                    case LocationType.CURVEPOLYGON:
+                        if (TryToVolumeRings(other, transform, out List<Vector2[]> rings))
+                            union.Add(rings);
+                        break;
+                }
+            }
+
+            return union;
+        }
+
+        /// <summary>
+        /// A polygon annotation's unsmoothed mosaic exterior ring and holes mapped to volume space. False when the
+        /// shape is not a polygon, a ring is too short, or any vertex fails to map (a partial ring would misdraw the mask).
+        /// </summary>
+        private static bool TryToVolumeRings(LocationObj location, IVolumeToSectionTransform transform, out List<Vector2[]> rings)
+        {
+            rings = [];
+            try
+            {
+                if (location.MosaicShape is null)
+                    return false;
+
+                Polygon mosaic = location.MosaicShape.ToPolygon();
+                foreach (Vector2[] mosaicRing in new[] { mosaic.ExteriorRing }.Concat(mosaic.InteriorRings))
+                {
+                    if (mosaicRing is null || mosaicRing.Length < 3)
+                        return false;
+
+                    IReadOnlyList<Vector2> volumeRing = ToVolumePoints(mosaicRing, transform);
+                    if (volumeRing.Count != mosaicRing.Length)
+                        return false;
+
+                    rings.Add([.. volumeRing]);
+                }
+
+                return rings.Count > 0;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         /// <summary>
