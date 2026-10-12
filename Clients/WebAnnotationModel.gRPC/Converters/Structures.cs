@@ -14,22 +14,34 @@ using WebAnnotationModel;
 namespace WebAnnotationModel.gRPC.Converters
 {
 
+    /// <summary>
+    /// Builds a new <see cref="StructureObj"/> for a structure the client sees for the first time in a server batch
+    /// (called by <see cref="StoreServerQueryResultsHandler{KEY,OBJECT,SERVER_OBJECT}"/> on a cache miss; cached
+    /// objects go through <see cref="StructureServerToClientUpdater"/> instead).
+    /// </summary>
+    /// <remarks>
+    /// The result mirrors the server: it carries the server's ParentID, so the store wires it under its parent rather
+    /// than into RootObjects, and its DBAction is <see cref="DBACTION.NONE"/> so Save never sends it back.
+    /// <c>DBAction</c> is assigned last in each initializer because every property setter marks the object UPDATE.
+    /// </remarks>
     public class StructureServerToClientConverter : IObjectConverter<Structure, StructureObj>,
         IObjectConverter<IStructure, StructureObj>
     {
+        /// <summary>Converts a proto structure, copying every field the proto carries, including the optional parent id.</summary>
         public StructureObj Convert(Structure src)
         {
             StructureObj obj =
                 new StructureObj(src.Id, src.TypeId)
                 {
-                    DBAction = DBACTION.NONE,
                     Label = src.Label,
                     Notes = src.Notes,
-                    Confidence = src.Confidence, 
-                    Username = src.Username, 
+                    Confidence = src.Confidence,
+                    Username = src.Username,
                     Verified = src.Verified,
+                    ParentID = src.HasParentId ? (long?)src.ParentId : (long?)null,
                     LastModified = src.LastModified?.ToDateTime() ?? default,
                     Created = src.Created?.ToDateTime() ?? default,
+                    DBAction = DBACTION.NONE,
                 };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
@@ -42,6 +54,10 @@ namespace WebAnnotationModel.gRPC.Converters
             return obj;
         }
 
+        /// <summary>
+        /// Converts any <see cref="IStructure"/>; a proto <see cref="Structure"/> takes the full proto path,
+        /// other implementations copy ID, type, label, parent and attributes.
+        /// </summary>
         public StructureObj Convert(IStructure src)
         {
             if (src is Structure concrete)
@@ -50,8 +66,9 @@ namespace WebAnnotationModel.gRPC.Converters
             StructureObj obj =
                 new StructureObj((long)src.ID, src.TypeID)
                 {
-                    DBAction = DBACTION.NONE,
                     Label = src.Label,
+                    ParentID = src.ParentID,
+                    DBAction = DBACTION.NONE,
                 };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
