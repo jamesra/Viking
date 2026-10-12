@@ -15,14 +15,15 @@
 services:
   annotation-sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: viking-annotation-sql
+    # Override both when a second project runs its own SQL container beside this one.
+    container_name: ${ANNOTATION_SQL_CONTAINER_NAME:-viking-annotation-sql}
     env_file:
       - D:/Docker/Builds/AnnotationSql/.env
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
     ports:
-      - "1433:1433"
+      - "${ANNOTATION_SQL_HOST_PORT:-1433}:1433"
     volumes:
       - annotation-sql-data:/var/opt/mssql
       - ./Servers/AnnotationDatabase/scripts:/scripts:ro

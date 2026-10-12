@@ -15,10 +15,10 @@
         D:\Docker\Builds\GrpcAnnotationService\), fills in the database name and, when given,
         the SQL server, then stops and lists the keys that still need real values.
       - Later runs: checks that no placeholder is left and prints the deployment plan.
-        It does not start containers yet: the root docker-compose.yml still fixes the host
-        ports (5010/5011), the env file path (.env.Docker) and the SQL container name, so a
-        second project would clash with the running stack. Starting waits for the compose
-        files to take those from variables.
+        It does not start containers yet. The compose files now read the host ports, env
+        file path, corrections folder and SQL container name from GRPC_ANNOTATION_* and
+        ANNOTATION_SQL_* variables (see the README's "Compose variables"); passing them
+        from this script is the next step.
       - -Status lists deployed viking-annotation-* projects with their containers and ports.
       - -Remove stops and removes one project's containers and network (volumes are kept).
 
@@ -272,6 +272,5 @@ if ($unfilled.Count -gt 0) {
     throw "Fill in $envFull, then re-run."
 }
 
-Write-Warning ("Env file is ready, but starting $project is not implemented yet: docker-compose.yml " +
-    'still fixes host ports 5010/5011, the .env.Docker path and the annotation-sql container name, ' +
-    'so a second project would clash with the running stack.')
+Write-Warning ("Env file is ready, but starting $project is not implemented yet: this script does " +
+    'not yet pass the GRPC_ANNOTATION_* compose variables, so the defaults would clash with the running stack.')

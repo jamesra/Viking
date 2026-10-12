@@ -40,10 +40,10 @@ the filled-in copy.
 
 `scripts/Deploy-AnnotationGrpc.ps1` prepares a deployment per annotation
 database as compose project `viking-annotation-<database>`. It does not start
-containers yet: `docker-compose.yml` still fixes host ports 5010/5011, the
-`.env.Docker` path and the `viking-annotation-sql` container name, so a second
-project would clash with the running stack. It also does not choose an Identity
-Server; the env file keeps the template's identity values.
+containers yet; the compose files now take the per-project values from the
+variables listed under [Compose variables](#compose-variables), and passing
+them is the script's next step. It also does not choose an Identity Server;
+the env file keeps the template's identity values.
 
 1. Preview (writes nothing):
 
@@ -81,9 +81,26 @@ using ASP.NET Core's `__` (double-underscore) section-path convention. See
 `IdentityServer:Endpoint`, `IdentityServer:ClientId`, `IdentityServer:ClientSecret`,
 `IdentityServer:AllowHttpMetadata`.
 
+## Compose variables
+
+Optional; when unset, each default below is used, which is the single local
+stack. Set them in the shell or in the file given to `docker compose --env-file`.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GRPC_ANNOTATION_ENV_FILE` | `D:/Docker/Builds/GrpcAnnotationService/.env.Docker` | Env file for `grpc-annotation-service` (connection string, Identity). |
+| `GRPC_ANNOTATION_HTTP_PORT` | `5010` | Host port for container port 80 (HTTP/2 cleartext). |
+| `GRPC_ANNOTATION_HTTPS_PORT` | `5011` | Host port for container port 443 (HTTPS, the Viking endpoint). |
+| `GRPC_ANNOTATION_CORRECTIONS_PATH` | `D:/Docker/Builds/GrpcAnnotationService/corrections` | Host folder mounted at `/corrections`. |
+| `ANNOTATION_SQL_CONTAINER_NAME` | `viking-annotation-sql` | `annotation-sql` container name (`docker-compose.annotation-db.yml` only). |
+| `ANNOTATION_SQL_HOST_PORT` | `1433` | Host port for that SQL container (`docker-compose.annotation-db.yml` only). |
+
+`Start-AnnotationTestStack.ps1` assumes, and `Apply-MinimalSchema.ps1`
+defaults to, the `viking-annotation-sql` container name.
+
 ## Ports
 
-The compose file maps:
+With the defaults above, the compose file maps:
 
 - container **80** → host **5010** (HTTP/2 cleartext, tests and .NET 5+)
 - container **443** → host **5011** (HTTPS with a localhost dev cert)

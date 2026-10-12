@@ -26,17 +26,20 @@ services:
       dockerfile: Servers/GrpcAnnotationService/Dockerfile
     # Real secrets/connection info live outside the repo, see
     # Servers/GrpcAnnotationService/config-template/README.md for setup.
+    # GRPC_ANNOTATION_* variables let one compose project per annotation database
+    # (Deploy-AnnotationGrpc.ps1) use its own env file, ports and corrections folder;
+    # unset, they keep the single local stack's values.
     env_file:
-      - D:/Docker/Builds/GrpcAnnotationService/.env.Docker
+      - ${GRPC_ANNOTATION_ENV_FILE:-D:/Docker/Builds/GrpcAnnotationService/.env.Docker}
     ports:
       # 5000/5001 are already used by the identity-server stack on this host.
       # :5010 h2c for tests / modern .NET. :5011 HTTPS for Viking (.NET 4.8 WinHttpHandler).
-      - "5010:80"
-      - "5011:443"
+      - "${GRPC_ANNOTATION_HTTP_PORT:-5010}:80"
+      - "${GRPC_ANNOTATION_HTTPS_PORT:-5011}:443"
     volumes:
       - ./Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro
       - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro
-      - D:/Docker/Builds/GrpcAnnotationService/corrections:/corrections
+      - ${GRPC_ANNOTATION_CORRECTIONS_PATH:-D:/Docker/Builds/GrpcAnnotationService/corrections}:/corrections
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=
