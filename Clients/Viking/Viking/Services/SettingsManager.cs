@@ -14,6 +14,10 @@ namespace Viking.Services
         /// </summary>
         public static void UpgradeSettingsIfNeeded()
         {
+            // VikingCore and the login library each have their own Settings class; Upgrade() on the exe's class does not touch it.
+            Viking.Properties.CoreSettingsUpgrade.UpgradeIfNeeded();
+            Viking.UI.WPF.Properties.LoginSettingsUpgrade.UpgradeIfNeeded();
+
             try
             {
                 var settings = Properties.Settings.Default;

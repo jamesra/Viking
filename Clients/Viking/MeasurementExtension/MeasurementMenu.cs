@@ -1,4 +1,4 @@
-using SIMeasurement;
+﻿using SIMeasurement;
 using System;
 using System.Diagnostics;
 
@@ -7,6 +7,9 @@ namespace MeasurementExtension
     [Viking.Common.MenuAttribute("Measurement")]
     class MeasurementMenu
     {
+        /// <summary>Copies the scale-bar preference from the previous version before the first read.</summary>
+        static MeasurementMenu() => Measurement.Properties.Settings.Default.UpgradeIfNeeded();
+
         [Viking.Common.MenuItem("Set Scale")]
         public static void OnMenuSetScale(object sender, EventArgs e)
         {

@@ -1,4 +1,4 @@
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using SIMeasurement;
 using System;
@@ -11,6 +11,9 @@ namespace MeasurementExtension
     [Viking.Common.SectionOverlay("Scale Bar")]
     public class MeasureOverlay : Viking.Common.ISectionOverlayExtension
     {
+        /// <summary>Copies the scale-bar preference from the previous version before the first read.</summary>
+        static MeasureOverlay() => Measurement.Properties.Settings.Default.UpgradeIfNeeded();
+
         private SectionViewerControl? Parent;
 
         public static double MeasureBarWidthScreenTargetFraction = 0.15;
