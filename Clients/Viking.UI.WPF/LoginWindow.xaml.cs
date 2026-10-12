@@ -32,6 +32,7 @@ namespace Viking.UI.WPF
         private VolumeSelectionViewModel _volumeSelectionViewModel;
         private AnnotationServerSelectionViewModel _annotationServerSelectionViewModel;
         private string _pendingAnnotationVolumeName;
+        private string[] _pendingAnnotationAlternateNames = [];
         private Uri _pendingAnnotationIdentityApiUrl;
         private Uri _pendingAnnotationIdentityServerUrl;
         private SegmentationServiceSelectionViewModel _segmentationServiceSelectionViewModel;
@@ -436,6 +437,10 @@ namespace Viking.UI.WPF
 
                 AccessibleVolumeSession.Clear();
 
+                // Same names the launch-code lookup tries, so the identity row (and its annotation server)
+                // is found whichever of them the VikingXML, launch link or picker used.
+                string[] alternateVolumeNames = [InitialVolumeName, parsedVolumeName];
+
                 TokenResponse apiToken;
                 TokenResponse volumeToken;
                 UserResourcePermissions accessibleVolume = null;
@@ -470,7 +475,8 @@ namespace Viking.UI.WPF
                         identityApiUrl,
                         identityServerUrl,
                         requireReviewRights: false,
-                        clientSecret: IdentityAppSettings.ClientSecret);
+                        clientSecret: IdentityAppSettings.ClientSecret,
+                        alternateVolumeNames: alternateVolumeNames);
 
                     ApiToken = apiToken;
                 }
@@ -483,7 +489,7 @@ namespace Viking.UI.WPF
                     && !AutoAdvanceFromDeepLink;
                 if (interactive && serverChoices.Count > 1)
                 {
-                    ShowAnnotationServerPicker(serverChoices, volumeName, identityApiUrl, identityServerUrl);
+                    ShowAnnotationServerPicker(serverChoices, volumeName, identityApiUrl, identityServerUrl, alternateVolumeNames);
                     UpdateViewModelStatus(false, string.Empty);
                     return;
                 }
@@ -848,11 +854,13 @@ namespace Viking.UI.WPF
             List<AnnotationServerChoice> choices,
             string volumeName,
             Uri identityApiUrl,
-            Uri identityServerUrl)
+            Uri identityServerUrl,
+            string[] alternateVolumeNames)
         {
             CleanupAnnotationServerViewModel();
 
             _pendingAnnotationVolumeName = volumeName;
+            _pendingAnnotationAlternateNames = alternateVolumeNames;
             _pendingAnnotationIdentityApiUrl = identityApiUrl;
             _pendingAnnotationIdentityServerUrl = identityServerUrl;
 
@@ -889,7 +897,8 @@ namespace Viking.UI.WPF
                     _pendingAnnotationIdentityServerUrl,
                     requireReviewRights: false,
                     clientSecret: IdentityAppSettings.ClientSecret,
-                    annotationServerName: choice.Name);
+                    annotationServerName: choice.Name,
+                    alternateVolumeNames: _pendingAnnotationAlternateNames);
 
                 ApiToken = apiToken;
                 ApplyAccessibleVolumeSession(accessibleVolume, choice);
@@ -933,15 +942,10 @@ namespace Viking.UI.WPF
 
             identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
             var helper = new IdentityApiHelper { IdentityApiURL = identityApiUrl };
-            try
-            {
-                return await helper.FindAccessibleVolumeAsync(apiToken, candidateNames);
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"[LoginWindow] AccessibleVolumes lookup failed (legacy servers OK): {ex.Message}");
-                return null;
-            }
+
+            // A 404 (legacy server) comes back as null; any other failure propagates so login reports it
+            // instead of continuing with a token scoped by the wrong name.
+            return await helper.FindAccessibleVolumeAsync(apiToken, candidateNames);
         }
 
         /// <summary>

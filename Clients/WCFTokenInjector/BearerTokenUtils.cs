@@ -95,14 +95,25 @@ namespace Viking.Tokens
         public string? ImageSet { get; set; }
 
         /// <summary>
-        /// Identity 1.1.0: alternate volume endpoints (reserved; mirror selection not implemented yet).
+        /// Identity 1.1.0: alternate volume endpoints, preferred first (reserved; mirror selection not implemented yet).
+        /// Must stay a list of objects: Identity sends <c>VolumeMirrorInfo</c> rows, and a mismatched element type makes
+        /// <c>JsonSerializer.Deserialize</c> throw for the whole AccessibleVolumes response, which login then swallows
+        /// and scopes the token by context name instead of annotation server name.
         /// </summary>
-        public List<string>? Mirrors { get; set; }
+        public List<VolumeMirrorChoice>? Mirrors { get; set; }
 
         /// <summary>
         /// Identity 1.1.0: registration label used to match VikingXML volume names when they differ from <see cref="Name"/>.
         /// </summary>
         public string? RegistrationName { get; set; }
+    }
+
+    /// <summary>One enabled mirror of a volume's VikingXML (Identity <c>VolumeMirrorInfo</c>).</summary>
+    public class VolumeMirrorChoice
+    {
+        public string? Url { get; set; }
+        public string? Region { get; set; }
+        public int Priority { get; set; }
     }
 
     /// <summary>
@@ -393,6 +404,22 @@ namespace Viking.Tokens
     }
 
     /// <summary>
+    /// A non-success answer from the Identity API. Derives from <see cref="HttpRequestException"/> so existing
+    /// handlers still catch it; exists because net48's exception carries no status code, and callers need to tell
+    /// a server without a route (404) from a real failure.
+    /// </summary>
+    public sealed class IdentityApiStatusException : HttpRequestException
+    {
+        public System.Net.HttpStatusCode StatusCode { get; }
+
+        public IdentityApiStatusException(System.Net.HttpStatusCode statusCode, Uri requestUri)
+            : base($"Identity API {requestUri} answered {(int)statusCode} ({statusCode}).")
+        {
+            StatusCode = statusCode;
+        }
+    }
+
+    /// <summary>
     /// Helper class for Identity API operations (permissions, volumes, services)
     /// </summary>
     public class IdentityApiHelper
@@ -457,7 +484,8 @@ namespace Viking.Tokens
             request.SetBearerToken(token.AccessToken);
 
             var response = await client.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+                throw new IdentityApiStatusException(response.StatusCode, address_uri);
 
             var json = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<T>(json, JsonOptions);
@@ -504,9 +532,13 @@ namespace Viking.Tokens
         /// <summary>
         /// Loads accessible volumes and returns the row matching any of the supplied volume names.
         /// Called while requesting a volume token and from the login window.
-        /// Returns null when no row matches, or when Identity has no AccessibleVolumes route
-        /// (live servers answer 404). Callers then scope the token with the VikingXML volume name.
+        /// Returns null, with a trace warning, when Identity has no AccessibleVolumes route (404, a legacy server)
+        /// or no row matches. Callers then scope the token with the volume name, which only works for contexts
+        /// without an annotation server. Any other failure (network, 401/500, unparseable payload) is thrown:
+        /// continuing would mint a token scoped by the wrong name that the annotation service later denies.
         /// </summary>
+        /// <exception cref="HttpRequestException">Identity answered with a non-404 error or was unreachable.</exception>
+        /// <exception cref="JsonException">The response was not the expected AccessibleVolumes shape.</exception>
         public async Task<UserResourcePermissions> FindAccessibleVolumeAsync(TokenResponse user_token, params string[] candidateNames)
         {
             System.Collections.Generic.Dictionary<long, UserResourcePermissions> volumes;
@@ -514,16 +546,22 @@ namespace Viking.Tokens
             {
                 volumes = await RetrieveUserAccessibleVolumes(user_token);
             }
-            catch (Exception ex)
+            catch (IdentityApiStatusException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                Trace.WriteLine($"[IdentityApiHelper] AccessibleVolumes lookup skipped: {ex.Message}");
+                Trace.TraceWarning($"[IdentityApiHelper] Identity has no AccessibleVolumes route; treating it as a legacy server. {ex.Message}");
                 return null;
             }
 
-            if (volumes is null || volumes.Count == 0)
-                return null;
+            UserResourcePermissions match = volumes is null || volumes.Count == 0
+                ? null
+                : AccessibleVolumeCatalog.FindMatch(volumes.Values, candidateNames);
+            if (match is null)
+            {
+                Trace.TraceWarning(
+                    $"[IdentityApiHelper] No accessible volume matches [{string.Join(", ", candidateNames)}] among {volumes?.Count ?? 0} returned.");
+            }
 
-            return AccessibleVolumeCatalog.FindMatch(volumes.Values, candidateNames);
+            return match;
         }
 
         /// <summary>
@@ -565,10 +603,11 @@ namespace Viking.Tokens
             Uri identityServerUrl,
             bool requireReviewRights = false,
             string clientSecret = null,
-            string annotationServerName = null)
+            string annotationServerName = null,
+            IReadOnlyList<string> alternateVolumeNames = null)
         {
             var apiToken = await GetApiTokenAsync(username, password, identityServerUrl, clientSecret);
-            var (volumeToken, _) = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret, annotationServerName);
+            var (volumeToken, _) = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret, annotationServerName, alternateVolumeNames);
             return volumeToken;
         }
 
@@ -583,10 +622,11 @@ namespace Viking.Tokens
             Uri identityServerUrl,
             bool requireReviewRights = false,
             string clientSecret = null,
-            string annotationServerName = null)
+            string annotationServerName = null,
+            IReadOnlyList<string> alternateVolumeNames = null)
         {
             var apiToken = await GetApiTokenAsync(username, password, identityServerUrl, clientSecret);
-            var (volumeToken, accessibleVolume) = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret, annotationServerName);
+            var (volumeToken, accessibleVolume) = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret, annotationServerName, alternateVolumeNames);
             return (apiToken, volumeToken, accessibleVolume);
         }
 
@@ -619,7 +659,8 @@ namespace Viking.Tokens
             TokenResponse apiToken,
             bool requireReviewRights,
             string clientSecret,
-            string annotationServerName)
+            string annotationServerName,
+            IReadOnlyList<string> alternateVolumeNames)
         {
             identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
             var identityApiHelper = new IdentityApiHelper
@@ -627,10 +668,17 @@ namespace Viking.Tokens
                 IdentityApiURL = identityApiUrl
             };
 
-            UserResourcePermissions accessibleVolume = await identityApiHelper.FindAccessibleVolumeAsync(apiToken, volumeName);
-            string scopeResourceName = IdentityEndpoints.ResolveScopeResourceName(
-                volumeName,
-                annotationServerName ?? accessibleVolume?.AnnotationServerName ?? null);
+            string[] candidateNames = new[] { volumeName }.Concat(alternateVolumeNames ?? Array.Empty<string>()).ToArray();
+            UserResourcePermissions accessibleVolume = await identityApiHelper.FindAccessibleVolumeAsync(apiToken, candidateNames);
+            string resolvedServerName = annotationServerName ?? accessibleVolume?.AnnotationServerName;
+            if (accessibleVolume != null && string.IsNullOrWhiteSpace(resolvedServerName))
+            {
+                Trace.TraceWarning(
+                    $"[IdentityApiHelper] Identity context '{accessibleVolume.Name}' has no annotation server; scoping the token by '{volumeName}'. "
+                    + "That is only valid for an image-only context; otherwise assign an annotation server in Identity.");
+            }
+
+            string scopeResourceName = IdentityEndpoints.ResolveScopeResourceName(volumeName, resolvedServerName);
 
             var volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, scopeResourceName);
             if (volumePermissions is null || volumePermissions.Length == 0)

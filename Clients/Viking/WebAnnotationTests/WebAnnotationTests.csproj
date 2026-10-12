@@ -28,6 +28,8 @@
   </ItemGroup>
   <ItemGroup>
         <Compile Include="ExceptionReportTests.cs" />
+        <Compile Include="AccessibleVolumesPayloadTests.cs" />
+        <Compile Include="FindAccessibleVolumeAsyncTests.cs" />
         <Compile Include="LINQLikeExtensionsTests.cs" />
         <Compile Include="StructureIdTextTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
