@@ -161,7 +161,9 @@ namespace GeometryTests
             ["curve ring30 tiny n8"] = "a07c868a77de645a",
             ["mesh circle60"] = "ba32540e95ccdce4",
 #endif
-            ["curve ring40 n1"] = "6a25223a2314e22d",
+            // Re-recorded after NumInterpolations = 1 stopped producing an all-NaN curve (t = 0 / 0); the pre-Phase 7
+            // value 6a25223a2314e22d fingerprinted those NaNs.
+            ["curve ring40 n1"] = "0f83b427e4cc62b2",
             ["delaunay circle64"] = "e88601271f0b3a7c",
             ["delaunay grid40"] = "2890b6dd8b815596",
             ["delaunay random1000"] = "8653b063a73842de",
