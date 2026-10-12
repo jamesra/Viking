@@ -15,6 +15,8 @@ COPY Servers/SectionCorrection/SectionCorrection.csproj Servers/SectionCorrectio
 COPY Servers/SectionCorrectionBuilder/SectionCorrectionBuilder.csproj Servers/SectionCorrectionBuilder/
 COPY Servers/ConnectomeDataModelCore/ConnectomeDataModelCore.csproj Servers/ConnectomeDataModelCore/
 COPY AnnotationVizLib/AnnotationVizLib.csproj AnnotationVizLib/
+COPY AnnotationVizLibODataClient/AnnotationVizLibODataClient.csproj AnnotationVizLibODataClient/
+COPY ODataClient/ODataClient.csproj ODataClient/
 COPY AnnotationInterfaces/AnnotationInterfaces.csproj AnnotationInterfaces/
 COPY Clients/VolumeModel/VolumeModel.csproj Clients/VolumeModel/
 COPY Clients/Common/Common.csproj Clients/Common/
@@ -39,6 +41,8 @@ COPY Servers/SectionCorrection/ Servers/SectionCorrection/
 COPY Servers/SectionCorrectionBuilder/ Servers/SectionCorrectionBuilder/
 COPY Servers/ConnectomeDataModelCore/ Servers/ConnectomeDataModelCore/
 COPY AnnotationVizLib/ AnnotationVizLib/
+COPY AnnotationVizLibODataClient/ AnnotationVizLibODataClient/
+COPY ODataClient/ ODataClient/
 COPY AnnotationInterfaces/ AnnotationInterfaces/
 COPY Clients/VolumeModel/ Clients/VolumeModel/
 COPY Clients/Common/ Clients/Common/

@@ -1579,32 +1579,43 @@ namespace Viking.UI.Controls
                 {
 
                     if (token.IsCancellationRequested)
+                    {
+                        // Without this the awaiting caller would wait forever.
+                        taskCompletionSource.TrySetCanceled(token);
                         return;
+                    }
 
                     var originalScene = this.Scene;
+                    var originalShowOverlays = this.ShowOverlays;
                     try
                     {
-                        var originalShowOverlays = this.ShowOverlays;
                         this.ShowOverlays = showOverlays;
                         Draw(TileScene, renderTargetTile);
                         //Obtain texture from renderTarget
                         graphicsDevice.SetRenderTarget(null);
-                        taskCompletionSource.SetResult(true);
-
-                        this.ShowOverlays = originalShowOverlays;
+                        taskCompletionSource.TrySetResult(true);
                     }
                     catch (Exception ex)
                     {
                         // Mark the task as faulted if an exception occurs
-                        taskCompletionSource.SetException(ex);
+                        taskCompletionSource.TrySetException(ex);
                     }
                     finally
                     {
+                        this.ShowOverlays = originalShowOverlays;
                         this.Scene = originalScene;
                     }
                 }));
 
-                await taskCompletionSource.Task;
+                try
+                {
+                    await taskCompletionSource.Task;
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    renderTargetTile.Dispose();
+                    return null;
+                }
 
                 if (token.IsCancellationRequested)
                     return null;

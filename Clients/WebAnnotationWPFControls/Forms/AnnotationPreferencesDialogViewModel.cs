@@ -33,6 +33,7 @@ namespace WebAnnotation.WPF.Forms
         private double _originalPolygonVertexPointsVisibleAtWidthFraction;
         private double _originalPolygonVertexPointsHiddenAtWidthFraction;
         private bool _originalCorrectionShimEnabled;
+        private bool _originalCorrectionShimShowOffset;
         private double _originalCorrectionShimFadeStartDownsample;
         private double _originalCorrectionShimFadeEndDownsample;
         #endregion
@@ -130,6 +131,22 @@ namespace WebAnnotation.WPF.Forms
                 if (_correctionShimEnabled != value)
                 {
                     _correctionShimEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _correctionShimShowOffset;
+
+        /// <summary>Whether the status bar shows the applied correction offset (nm) after "Corrections: On".</summary>
+        public bool CorrectionShimShowOffset
+        {
+            get => _correctionShimShowOffset;
+            set
+            {
+                if (_correctionShimShowOffset != value)
+                {
+                    _correctionShimShowOffset = value;
                     OnPropertyChanged();
                 }
             }
@@ -479,7 +496,8 @@ namespace WebAnnotation.WPF.Forms
             double? sceneDownsample = null,
             bool correctionShimEnabled = true,
             double correctionShimFadeStartDownsample = 8,
-            double correctionShimFadeEndDownsample = 4)
+            double correctionShimFadeEndDownsample = 4,
+            bool correctionShimShowOffset = false)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -500,6 +518,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
             _sceneWidthPixels = sceneWidthPixels ?? 1920;
             _correctionShimEnabled = correctionShimEnabled;
+            _correctionShimShowOffset = correctionShimShowOffset;
             _correctionShimFadeStartDownsample = correctionShimFadeStartDownsample;
             _correctionShimFadeEndDownsample = correctionShimFadeEndDownsample;
 
@@ -524,6 +543,7 @@ namespace WebAnnotation.WPF.Forms
             _originalPolygonVertexPointsVisibleAtWidthFraction = polygonVertexPointsVisibleAtWidthFraction;
             _originalPolygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
             _originalCorrectionShimEnabled = correctionShimEnabled;
+            _originalCorrectionShimShowOffset = correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
             _originalCorrectionShimFadeEndDownsample = correctionShimFadeEndDownsample;
 
@@ -574,6 +594,7 @@ namespace WebAnnotation.WPF.Forms
             _originalPolygonVertexPointsVisibleAtWidthFraction = _polygonVertexPointsVisibleAtWidthFraction;
             _originalPolygonVertexPointsHiddenAtWidthFraction = _polygonVertexPointsHiddenAtWidthFraction;
             _originalCorrectionShimEnabled = _correctionShimEnabled;
+            _originalCorrectionShimShowOffset = _correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
             _originalCorrectionShimFadeEndDownsample = _correctionShimFadeEndDownsample;
         }
@@ -600,6 +621,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonVertexPointsVisibleAtWidthFraction = _originalPolygonVertexPointsVisibleAtWidthFraction;
             _polygonVertexPointsHiddenAtWidthFraction = _originalPolygonVertexPointsHiddenAtWidthFraction;
             _correctionShimEnabled = _originalCorrectionShimEnabled;
+            _correctionShimShowOffset = _originalCorrectionShimShowOffset;
             _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
             _correctionShimFadeEndDownsample = _originalCorrectionShimFadeEndDownsample;
 
@@ -628,6 +650,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonVertexPointsVisibleAtWidthFraction = 0.0025;
             _polygonVertexPointsHiddenAtWidthFraction = 0.002;
             _correctionShimEnabled = true;
+            _correctionShimShowOffset = false;
             _correctionShimFadeStartDownsample = 8;
             _correctionShimFadeEndDownsample = 4;
 

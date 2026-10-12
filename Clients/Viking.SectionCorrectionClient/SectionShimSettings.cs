@@ -21,6 +21,12 @@ namespace Viking.SectionCorrectionClient
         /// </summary>
         public bool Enabled { get; set; } = true;
 
+        /// <summary>
+        /// When true the host shows the offset currently applied to the view (nm) next to the on/off indicator.
+        /// Off by default; saved with the annotation preferences.
+        /// </summary>
+        public bool ShowOffset { get; set; }
+
         /// <summary>Downsample (volume units per screen pixel) at and above which the shim is not applied.</summary>
         public double FadeStartDownsample { get; set; } = DefaultFadeStartDownsample;
 
