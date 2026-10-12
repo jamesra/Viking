@@ -121,7 +121,14 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return permissions;
         }
 
+        /// <summary>
+        /// Annotation contexts the caller can open, with the annotation server each one uses. Also served as
+        /// <c>AccessibleVolumes</c>, the route shipped clients call to resolve <c>AnnotationServerName</c>; without it
+        /// they scope the token by context name (e.g. <c>RC1-Pitt.Read</c>) instead of by annotation server
+        /// (<c>RC1.Read</c>) and the annotation service denies access.
+        /// </summary>
         [HttpGet("AccessibleAnnotationContexts")]
+        [HttpGet("AccessibleVolumes")]
         public async Task<ActionResult<Dictionary<long, object>>> UserAccessibleAnnotationContexts()
         {
             var caller = await GetAuthenticatedUserAsync();
