@@ -246,6 +246,7 @@ namespace WebAnnotation.UI.Commands
             System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Subscribed to events");
             PenInput.OnPathChanged += OnPenPathChanged;
             PenInput.OnPathCompleted += OnPenPathComplete;
+            PenInput.OnPathAbandoned += OnPenPathAbandoned;
             PenInput.OnProposedNextSegmentChanged += OnPenProposedNextSegmentChanged;
             PenInput.OnPathLoop += OnPathLoop;
             this.success_callback = success_callback;
@@ -297,11 +298,23 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute() => Execute(PenInput.SimplifiedPath);
 
+        /// <summary>
+        /// The button was released before the stroke grew past its first point (a click with no drag). There is
+        /// nothing to place and nothing will complete the command, so end it instead of leaving the pen tool
+        /// current with the dot on screen.
+        /// </summary>
+        private void OnPenPathAbandoned(object sender, EventArgs e)
+        {
+            System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} stroke abandoned before a second point; deactivating");
+            Deactivated = true;
+        }
+
         protected override void OnDeactivate()
         {
             System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Unubscribed to events");
             PenInput.OnPathChanged -= OnPenPathChanged;
             PenInput.OnPathCompleted -= OnPenPathComplete;
+            PenInput.OnPathAbandoned -= OnPenPathAbandoned;
             PenInput.OnProposedNextSegmentChanged -= OnPenProposedNextSegmentChanged;
             PenInput.OnPathLoop -= OnPathLoop;
             PenInput.UnsubscribeEvents();

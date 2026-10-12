@@ -192,6 +192,13 @@ namespace Viking.UI
         public delegate void OnPathCompleteEventHandler(object sender, Vector2[] Path);
         public event OnPathCompleteEventHandler OnPathCompleted;
 
+        /// <summary>
+        /// Raised when the left button is released with fewer than two points in the path, so the stroke can never
+        /// complete. Without it the owning command stays current with nothing to finish it. The owner should end
+        /// the command. Raised on the UI thread from the viewer's MouseUp.
+        /// </summary>
+        public event EventHandler OnPathAbandoned;
+
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnPathChanged
         {
             add => path.OnPathChanged += value;
@@ -489,10 +496,14 @@ namespace Viking.UI
 
         private void OnMouseUp(object sender, MouseEventArgs e)
         {
+            System.Diagnostics.Trace.WriteLine($"PenInput: mouse up button={e.Button} points={Points.Count}");
             if (e.Button.LeftOnly())
             {
                 if (Points.Count <= 1)
+                {
+                    OnPathAbandoned?.Invoke(this, EventArgs.Empty);
                     return;
+                }
 
                 OnPathCompleted?.Invoke(this, [.. this.Points]);
             }
@@ -502,8 +513,14 @@ namespace Viking.UI
         {
         }
 
+        /// <summary>
+        /// The pen left hover range of the tablet, which is the pen's "finished drawing" signal: lifting from the
+        /// surface alone only pauses the stroke (see <see cref="OnPenLeaveContact"/>). Completes the path unless the
+        /// last touch was unrelated to it.
+        /// </summary>
         protected virtual void OnPenLeaveRange(object sender, PenEventArgs e)
         {
+            System.Diagnostics.Trace.WriteLine($"PenInput: leave range points={Points.Count} ignoringContact={IgnoringThisPenContact}");
             if (IgnoringThisPenContact)
                 return;
 
@@ -526,6 +543,7 @@ namespace Viking.UI
 
             Vector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
             IgnoringThisPenContact = this.path.Distance(cursor_position) > MaxInteractDistanceInPixels(Parent.Camera.Downsample);
+            System.Diagnostics.Trace.WriteLine($"PenInput: contact points={Points.Count} ignoringContact={IgnoringThisPenContact}");
 
             if (IgnoringThisPenContact)
                 return;
@@ -559,8 +577,16 @@ namespace Viking.UI
             }
         }
 
+        /// <summary>
+        /// The pen lifted from the surface. The stroke is paused, not finished: the next touch resumes it if it lands
+        /// within the resume distance of the last point. A touch that was ignored as unrelated ends with its
+        /// contact, otherwise <see cref="OnPenLeaveRange"/> would never complete the stroke after one stray touch
+        /// far from the path.
+        /// </summary>
         protected virtual void OnPenLeaveContact(object sender, PenEventArgs e)
         {
+            System.Diagnostics.Trace.WriteLine($"PenInput: leave contact points={Points.Count} ignoringContact={IgnoringThisPenContact}");
+            IgnoringThisPenContact = false;
             MustCheckResumeDistance = true;
             LastPenPosition = new Vector2?();
         }
