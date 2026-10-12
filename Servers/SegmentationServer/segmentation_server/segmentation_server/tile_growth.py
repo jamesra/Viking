@@ -530,15 +530,20 @@ class GrowthWalk:
                 logger.warning("Box %s spans too many cells to be a prompt; only its clicks start the walk", box)
                 continue
             full, partial = split
-            for cell in full:
-                if cell in self._assumed:
-                    continue
-                self._assumed.add(cell)
-                added = self._canvas.assume_core(cell)
-                if added:
-                    self._spread(cell, {cell: added})
-            box_cells[box] = list(partial)
-            for cell in partial:
+            touched = list(partial)
+            if box in self._masks:
+                for cell in full:
+                    if cell in self._assumed:
+                        continue
+                    self._assumed.add(cell)
+                    added = self._canvas.assume_core(cell)
+                    if added:
+                        self._spread(cell, {cell: added})
+            else:
+                # A box is a hint, not a claim about every pixel, so a core it covers is predicted like any other.
+                touched = list(full) + touched
+            box_cells[box] = touched
+            for cell in touched:
                 start(cell)
         for point in self._fg:
             start(cell_of_point(*point))

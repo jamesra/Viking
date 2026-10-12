@@ -83,7 +83,7 @@ def test_whole_cores_are_never_predicted_and_are_wholly_in_the_result() -> None:
     world = _disc_world()
     full, _partial = _split()
 
-    result = grow_segmentation(_clicks(), [], world.predict, boxes=[BOX])
+    result = grow_segmentation(_clicks(), [], world.predict, masks=[BOX])
 
     predicted = {cell for cell, *_ in world.given}
     assert not (predicted & full), "a core the box covers must not cost a prediction"
@@ -134,12 +134,12 @@ def test_the_grown_result_matches_a_disc_far_larger_than_one_window() -> None:
 
 
 def test_the_start_cell_being_taken_as_object_means_a_rejected_neighbor_is_not_a_failure() -> None:
-    def refuse(row, col, points, labels, box=None):
+    def refuse(row, col, points, labels, box=None, mask_logits=None):
         raise NoMatchingMask("nothing fits")
 
     full, _partial = _split()
 
-    result = grow_segmentation(_clicks(), [], refuse, boxes=[BOX])
+    result = grow_segmentation(_clicks(), [], refuse, masks=[BOX])
 
     covered = {cell for cell in result.cells if result.cells[cell].core.all()}
     assert covered == full
@@ -157,7 +157,7 @@ def test_a_small_box_still_prompts_the_starting_cell_as_before() -> None:
 
 def test_a_core_taken_as_object_is_not_counted_against_the_cell_budget() -> None:
     world = _disc_world()
-    walk = GrowthWalk(_clicks(), [], world.predict, boxes=[BOX], max_cells=16)
+    walk = GrowthWalk(_clicks(), [], world.predict, masks=[BOX], max_cells=16)
 
     walk.advance()
 
@@ -173,8 +173,18 @@ def test_the_walk_runs_with_only_the_tiles_the_partly_covered_cells_need() -> No
     full, partial = _split()
     world.available = {(t.row, t.col) for cell in partial for t in tiles_for_cell(cell)}
 
-    result = grow_segmentation(_clicks(), [], world.predict, boxes=[BOX])
+    result = grow_segmentation(_clicks(), [], world.predict, masks=[BOX])
 
     covered = {cell for cell in result.cells if result.cells[cell].core.all()}
     assert full <= covered
     assert not any(cell in full for cell, *_ in world.given)
+
+
+def test_a_hint_box_covering_whole_cores_does_not_take_them_as_object() -> None:
+    world = World(ellipse(2304, 2304, 1500, 1500, 0.0))
+    walk = GrowthWalk(_clicks(), [], world.predict, hint_boxes=[BOX], max_cells=64)
+    walk.advance()
+
+    predicted = {cell for cell, _points, _labels in world.calls}
+    wholly, _partial = cores_under_box(BOX)
+    assert wholly and all(cell in predicted for cell in wholly), "a box is predicted like any other cell"
