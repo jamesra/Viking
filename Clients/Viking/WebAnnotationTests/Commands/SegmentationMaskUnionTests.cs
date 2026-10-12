@@ -1,20 +1,21 @@
 using Geometry;
-using Rectangle = Geometry.Rectangle;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.Collections.Generic;
-using System.Linq;
 using WebAnnotation.UI.Commands.Segmentation;
+using Rectangle = Geometry.Rectangle;
 
 namespace WebAnnotationTests.Commands
 {
     /// <summary>
-    /// The background mask sums squares and polygons into one bounds-sized PNG, image row 0 at the highest y.
+    /// The background mask sums squares and polygons into one 1-bit, 1024-square PNG centred on the seed,
+    /// image row 0 at the highest y.
     /// </summary>
     [TestClass]
     public class SegmentationMaskUnionTests
     {
+        private static readonly Vector2 Centre = new(500, 500);
+
         private static Image<L8> Decode(Viking.gRPC.SegmentationServiceTypes.V1.Mask mask)
             => Image.Load<L8>(mask.Png.ToByteArray());
 
@@ -22,104 +23,118 @@ namespace WebAnnotationTests.Commands
             => image[mosaicX - mask.Bounds.XMin, mask.Bounds.YMax - mosaicY].PackedValue == 255;
 
         [TestMethod]
-        public void AnEmptyUnionHasNoMask() => Assert.IsNull(new SegmentationMaskUnion().ToMask(1));
+        public void AnEmptyUnionHasNoMask() => Assert.IsNull(new SegmentationMaskUnion().ToMask(1, Centre));
 
         [TestMethod]
-        public void ASquareFillsItsBoundsAndThePngMatchesTheBounds()
+        public void TheMaskIsAlwaysTheWindowSquareCentredOnTheSeed()
         {
             SegmentationMaskUnion union = new();
-            union.Add(new Rectangle(new Vector2(100, 200), new Vector2(140, 230)));
+            union.Add(new Rectangle(new Vector2(480, 490), new Vector2(520, 510)));
 
-            var mask = union.ToMask(1)!;
+            var mask = union.ToMask(1, Centre)!;
             using Image<L8> image = Decode(mask);
 
-            Assert.AreEqual(100, mask.Bounds.XMin);
-            Assert.AreEqual(140, mask.Bounds.XMax);
-            Assert.AreEqual(200, mask.Bounds.YMin);
-            Assert.AreEqual(230, mask.Bounds.YMax);
-            Assert.AreEqual(mask.Bounds.XMax - mask.Bounds.XMin + 1, image.Width);
-            Assert.AreEqual(mask.Bounds.YMax - mask.Bounds.YMin + 1, image.Height);
-            Assert.IsTrue(On(image, mask, 120, 215));
-            Assert.IsTrue(On(image, mask, 101, 201));
+            Assert.AreEqual(1024, mask.Bounds.XMax - mask.Bounds.XMin + 1);
+            Assert.AreEqual(1024, mask.Bounds.YMax - mask.Bounds.YMin + 1);
+            Assert.AreEqual(500 - 512, mask.Bounds.XMin);
+            Assert.AreEqual(1024, image.Width);
+            Assert.AreEqual(1024, image.Height);
+            Assert.IsTrue(On(image, mask, 500, 500));
+            Assert.IsFalse(On(image, mask, 600, 600));
+        }
+
+        [TestMethod]
+        public void ThePngIsOneBitPerPixel()
+        {
+            SegmentationMaskUnion union = new();
+            union.Add(new Rectangle(new Vector2(0, 0), new Vector2(1000, 1000)));
+
+            var mask = union.ToMask(1, Centre)!;
+            var info = Image.Identify(mask.Png.ToByteArray());
+
+            Assert.AreEqual(1, info.PixelType.BitsPerPixel);
+            Assert.IsTrue(mask.Png.Length < 2000, $"a 1024 square of one shape should compress to a few hundred bytes, got {mask.Png.Length}");
         }
 
         [TestMethod]
         public void TwoSeparateShapesAreOneMaskAndTheGapStaysOff()
         {
             SegmentationMaskUnion union = new();
-            union.Add(new Rectangle(new Vector2(0, 0), new Vector2(20, 20)));
-            union.Add(new Rectangle(new Vector2(100, 100), new Vector2(120, 120)));
+            union.Add(new Rectangle(new Vector2(400, 400), new Vector2(420, 420)));
+            union.Add(new Rectangle(new Vector2(600, 600), new Vector2(620, 620)));
 
-            var mask = union.ToMask(1)!;
+            var mask = union.ToMask(1, Centre)!;
             using Image<L8> image = Decode(mask);
 
-            Assert.IsTrue(On(image, mask, 10, 10));
-            Assert.IsTrue(On(image, mask, 110, 110));
-            Assert.IsFalse(On(image, mask, 60, 60));
-            Assert.IsFalse(On(image, mask, 10, 110));
+            Assert.IsTrue(On(image, mask, 410, 410));
+            Assert.IsTrue(On(image, mask, 610, 610));
+            Assert.IsFalse(On(image, mask, 510, 510));
+            Assert.IsFalse(On(image, mask, 410, 610));
         }
 
         [TestMethod]
         public void APolygonsHoleStaysOpenAndAnotherShapeMayFillIt()
         {
-            Vector2[] outer = [new(0, 0), new(100, 0), new(100, 100), new(0, 100)];
-            Vector2[] hole = [new(40, 40), new(60, 40), new(60, 60), new(40, 60)];
+            Vector2[] outer = [new(450, 450), new(550, 450), new(550, 550), new(450, 550)];
+            Vector2[] hole = [new(490, 490), new(510, 490), new(510, 510), new(490, 510)];
             SegmentationMaskUnion union = new();
             union.Add([outer, hole]);
 
-            var mask = union.ToMask(1)!;
+            var mask = union.ToMask(1, Centre)!;
             using (Image<L8> image = Decode(mask))
             {
-                Assert.IsTrue(On(image, mask, 10, 10));
-                Assert.IsFalse(On(image, mask, 50, 50));
+                Assert.IsTrue(On(image, mask, 460, 460));
+                Assert.IsFalse(On(image, mask, 500, 500));
             }
 
-            union.Add(new Rectangle(new Vector2(45, 45), new Vector2(55, 55)));
-            mask = union.ToMask(1)!;
+            union.Add(new Rectangle(new Vector2(495, 495), new Vector2(505, 505)));
+            mask = union.ToMask(1, Centre)!;
             using Image<L8> filled = Decode(mask);
-            Assert.IsTrue(On(filled, mask, 50, 50));
+            Assert.IsTrue(On(filled, mask, 500, 500));
         }
 
         [TestMethod]
-        public void DownsampleScalesTheBoundsToMosaicPixels()
+        public void DownsampleScalesTheWindowToMosaicPixels()
         {
             SegmentationMaskUnion union = new();
-            union.Add(new Rectangle(new Vector2(400, 800), new Vector2(800, 1200)));
+            union.Add(new Rectangle(new Vector2(1900, 1900), new Vector2(2100, 2100)));
 
-            var mask = union.ToMask(4)!;
+            var mask = union.ToMask(4, new Vector2(2000, 2000))!;
 
-            Assert.AreEqual(100, mask.Bounds.XMin);
-            Assert.AreEqual(200, mask.Bounds.XMax);
-            Assert.AreEqual(200, mask.Bounds.YMin);
-            Assert.AreEqual(300, mask.Bounds.YMax);
+            Assert.AreEqual(500 - 512, mask.Bounds.XMin);
+            Assert.AreEqual(500 - 512 + 1023, mask.Bounds.XMax);
         }
 
         [TestMethod]
-        public void AUnionSpreadOverMoreThanTheMaximumIsNotSent()
+        public void ShapesOutsideTheWindowAreDroppedAndAShapeThatStraddlesItIsClipped()
         {
-            SegmentationMaskUnion union = new();
-            union.Add(new Rectangle(new Vector2(0, 0), new Vector2(10, 10)));
-            union.Add(new Rectangle(new Vector2(100000, 100000), new Vector2(100010, 100010)));
+            SegmentationMaskUnion far = new();
+            far.Add(new Rectangle(new Vector2(100000, 100000), new Vector2(100010, 100010)));
+            Assert.IsNull(far.ToMask(1, Centre));
 
-            Assert.IsNull(union.ToMask(1));
+            SegmentationMaskUnion straddle = new();
+            straddle.Add(new Rectangle(new Vector2(400, 400), new Vector2(100000, 100000)));
+            var mask = straddle.ToMask(1, Centre)!;
+            using Image<L8> image = Decode(mask);
+            Assert.IsTrue(On(image, mask, 500, 500));
+            Assert.AreEqual(1024, image.Width);
         }
 
         [TestMethod]
         public void ACircleBecomesItsInscribedSquare()
         {
-            // Radius 100 at the origin: the square's half side is 100 / sqrt 2.
             Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(
                 [new Vector2(500, 500), new Vector2(600, 500), new Vector2(500, 600), new Vector2(400, 500), new Vector2(500, 400)],
                 out CircleSegmentationPrompts.StartingPrompt prompt));
             SegmentationMaskUnion union = new();
             union.Add(prompt.Box);
 
-            var mask = union.ToMask(1)!;
+            var mask = union.ToMask(1, Centre)!;
             using Image<L8> image = Decode(mask);
 
             Assert.IsTrue(On(image, mask, 500, 500));
             Assert.IsTrue(On(image, mask, 440, 440), "inside the square");
-            Assert.AreEqual(429, mask.Bounds.XMin, 1);
+            Assert.IsFalse(On(image, mask, 420, 500), "outside the inscribed square, inside the circle");
         }
     }
 }

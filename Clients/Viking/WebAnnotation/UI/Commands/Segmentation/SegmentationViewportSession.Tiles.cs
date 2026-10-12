@@ -217,26 +217,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            // The seed rectangle is a mask prompt ("everything inside is object, grow beyond it"), not a box.
-            // A Feature holds one mask, so with several seeds the largest is sent.
+            // The seeds (a circle's inscribed square, a group's inscribed rectangle) are the foreground mask:
+            // "everything inside is object, grow beyond it". The server takes one mask, so they are summed here
+            // into a 1-bit window-sized bitmap centred on the seeds.
+            Geometry.Vector2 seedCentre = default;
             if (foregroundBoxes is { Count: > 0 })
             {
-                Geometry.Rectangle seed = foregroundBoxes.OrderByDescending(box => box.Width * box.Height).First();
-                (int xA, int yA) = SegmentationTileGrid.WorldToMosaicPixel(seed.Left, seed.Bottom, signature.Downsample);
-                (int xB, int yB) = SegmentationTileGrid.WorldToMosaicPixel(seed.Right, seed.Top, signature.Downsample);
-                request.ForegroundFeature = new SegmentationServiceTypes.Feature
-                {
-                    Mask = new SegmentationServiceTypes.Mask
-                    {
-                        Bounds = new SegmentationServiceTypes.BoundingBox
-                        {
-                            XMin = Math.Min(xA, xB),
-                            YMin = Math.Min(yA, yB),
-                            XMax = Math.Max(xA, xB),
-                            YMax = Math.Max(yA, yB)
-                        }
-                    }
-                };
+                SegmentationMaskUnion seeds = new();
+                foreach (Geometry.Rectangle seed in foregroundBoxes)
+                    seeds.Add(seed);
+
+                seedCentre = new Geometry.Vector2(foregroundBoxes.Average(box => box.Center.X), foregroundBoxes.Average(box => box.Center.Y));
+                SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(signature.Downsample, seedCentre);
+                if (foregroundMask is not null)
+                    request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask };
+            }
+            else if (foregroundPoints is { Count: > 0 })
+            {
+                seedCentre = new Geometry.Vector2(foregroundPoints.Average(p => p.X), foregroundPoints.Average(p => p.Y));
             }
 
             if (backgroundPoints is not null)
@@ -249,11 +247,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             // Other structures' circles (inscribed squares) and polygons, summed into the one mask the server takes.
-            SegmentationServiceTypes.Mask? backgroundMaskMessage = backgroundMask?.ToMask(signature.Downsample);
+            SegmentationServiceTypes.Mask? backgroundMaskMessage = backgroundMask?.ToMask(signature.Downsample, seedCentre);
             if (backgroundMaskMessage is not null)
                 request.BackgroundFeature = new SegmentationServiceTypes.Feature { Mask = backgroundMaskMessage };
             else if (backgroundMask is { IsEmpty: false })
-                SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: empty or over {SegmentationMaskUnion.MaxPixels} px at ds={signature.Downsample}");
+                SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: none reaches the {SegmentationMaskUnion.WindowSize} px window around the seed at ds={signature.Downsample}");
 
 
             CallOptions callOptions = new(

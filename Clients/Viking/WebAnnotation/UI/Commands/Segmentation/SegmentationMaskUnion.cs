@@ -13,18 +13,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     /// <remarks>
     /// The segmentation server accepts one mask per <c>Feature</c>, so a client that has several shapes sums
-    /// them here. Used for the background: the inscribed squares of other structures' circles and the
+    /// them here into one 1-bit, window-sized bitmap. Used for the background: the inscribed squares of other structures' circles and the
     /// polygons of other structures. A shape is a list of rings filled with the even-odd rule, so a polygon's
     /// holes stay open. Not thread safe; build it, then call <see cref="ToMask"/> from one thread.
     /// </remarks>
     internal sealed class SegmentationMaskUnion
     {
         /// <summary>
-        /// Largest mask bounds, in pixels at the request's downsample, that <see cref="ToMask"/> will rasterize.
-        /// A union spread over more than this (for example annotations on a far-away part of a huge section) is
-        /// not sent, because the bitmap would cost more than the hint is worth.
+        /// Side of the square the mask covers, in pixels at the request's downsample: SAM2's input size, so a mask
+        /// larger than this could never be used by one window.
         /// </summary>
-        public const long MaxPixels = 16_000_000;
+        public const int WindowSize = 1024;
 
         private readonly List<IReadOnlyList<Vector2[]>> shapes = [];
 
@@ -59,65 +58,59 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Rasterizes the union at <paramref name="downsample"/> and returns it as the wire <c>Mask</c>, or null
-        /// when it is empty, bigger than <see cref="MaxPixels"/>, or covers no pixel centre.
+        /// Rasterizes the union into the <see cref="WindowSize"/> square centred on <paramref name="centreVolume"/> at
+        /// <paramref name="downsample"/> and returns it as the wire <c>Mask</c>, or null when it is empty or no shape
+        /// reaches the square.
         /// </summary>
         /// <remarks>
-        /// <c>Bounds</c> are mosaic pixels (world divided by downsample, floored, Y up) and the PNG is
-        /// exactly bounds-sized with image row 0 at <c>YMax</c>, as the proto requires. A pixel is in the mask
-        /// when its centre is inside a shape.
+        /// <c>Bounds</c> are mosaic pixels (world divided by downsample, floored, Y up), always exactly
+        /// <see cref="WindowSize"/> square. The PNG is a 1-bit greyscale bitmap of the same size with image row 0
+        /// at <c>YMax</c>, as the proto requires. A pixel is in the mask when its centre is inside a shape. Shapes
+        /// are clipped to the square, so background further than half a window from the centre is not in the mask;
+        /// the background points still cover it. The centre is normally the seed's centre, which is where the
+        /// server's first window is.
         /// </remarks>
-        public SegmentationServiceTypes.Mask? ToMask(int downsample)
+        public SegmentationServiceTypes.Mask? ToMask(int downsample, Vector2 centreVolume)
         {
             if (shapes.Count == 0 || downsample <= 0)
                 return null;
 
-            double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
-            foreach (IReadOnlyList<Vector2[]> shape in shapes)
-            {
-                foreach (Vector2 vertex in shape[0])
-                {
-                    minX = Math.Min(minX, vertex.X);
-                    maxX = Math.Max(maxX, vertex.X);
-                    minY = Math.Min(minY, vertex.Y);
-                    maxY = Math.Max(maxY, vertex.Y);
-                }
-            }
+            int xMin = (int)Math.Floor(centreVolume.X / downsample) - WindowSize / 2;
+            int yMin = (int)Math.Floor(centreVolume.Y / downsample) - WindowSize / 2;
+            int yMax = yMin + WindowSize - 1;
 
-            int xMin = (int)Math.Floor(minX / downsample);
-            int xMax = (int)Math.Floor(maxX / downsample);
-            int yMin = (int)Math.Floor(minY / downsample);
-            int yMax = (int)Math.Floor(maxY / downsample);
-            long width = (long)xMax - xMin + 1;
-            long height = (long)yMax - yMin + 1;
-            if (width * height > MaxPixels)
-                return null;
-
-            byte[] pixels = new byte[width * height];
+            byte[] pixels = new byte[WindowSize * WindowSize];
             bool any = false;
             foreach (IReadOnlyList<Vector2[]> shape in shapes)
-                any |= Fill(pixels, (int)width, (int)height, xMin, yMax, downsample, shape);
+                any |= Fill(pixels, WindowSize, WindowSize, xMin, yMax, downsample, shape);
 
             if (!any)
                 return null;
 
-            using MemoryStream stream = new();
             L8[] gray = new L8[pixels.Length];
             for (int i = 0; i < pixels.Length; i++)
                 gray[i] = new L8(pixels[i]);
-            using (var image = SixLabors.ImageSharp.Image.LoadPixelData<L8>(gray, (int)width, (int)height))
+
+            using MemoryStream stream = new();
+            using (var image = SixLabors.ImageSharp.Image.LoadPixelData<L8>(gray, WindowSize, WindowSize))
             {
                 image.Save(stream, new PngEncoder
                 {
                     ColorType = PngColorType.Grayscale,
-                    BitDepth = PngBitDepth.Bit8,
-                    CompressionLevel = PngCompressionLevel.BestSpeed
+                    BitDepth = PngBitDepth.Bit1,
+                    CompressionLevel = PngCompressionLevel.BestCompression
                 });
             }
 
             return new SegmentationServiceTypes.Mask
             {
-                Bounds = new SegmentationServiceTypes.BoundingBox { XMin = xMin, YMin = yMin, XMax = xMax, YMax = yMax },
+                Bounds = new SegmentationServiceTypes.BoundingBox
+                {
+                    XMin = xMin,
+                    YMin = yMin,
+                    XMax = xMin + WindowSize - 1,
+                    YMax = yMax
+                },
                 Png = Google.Protobuf.ByteString.CopyFrom(stream.ToArray())
             };
         }
