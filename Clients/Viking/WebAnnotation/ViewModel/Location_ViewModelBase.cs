@@ -584,7 +584,7 @@ namespace WebAnnotation.ViewModel
                     modelObj.Parent.TypeID,
                     modelObj.ID,
                     modelObj.ParentID,
-                    startingBoxes: [startingPrompt.Box]);
+                    startingBoxes: [startingPrompt.Seed]);
 
                 parent.CurrentCommand = segmentCommand;
             }

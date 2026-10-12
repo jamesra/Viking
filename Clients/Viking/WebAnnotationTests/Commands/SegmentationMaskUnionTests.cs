@@ -121,20 +121,23 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void ACircleBecomesItsInscribedSquare()
+        public void ACircleSeedIsMaskedAsTheCircleNotItsInscribedSquare()
         {
             Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(
                 [new Vector2(500, 500), new Vector2(600, 500), new Vector2(500, 600), new Vector2(400, 500), new Vector2(500, 400)],
                 out CircleSegmentationPrompts.StartingPrompt prompt));
+            Assert.AreEqual(100.0, prompt.Seed.Circle!.Value.Radius, 1e-9);
             SegmentationMaskUnion union = new();
-            union.Add(prompt.Box);
+            union.Add(prompt.Seed);
 
             var mask = union.ToMask(1, Centre)!;
             using Image<L8> image = Decode(mask);
 
             Assert.IsTrue(On(image, mask, 500, 500));
-            Assert.IsTrue(On(image, mask, 440, 440), "inside the square");
-            Assert.IsFalse(On(image, mask, 420, 500), "outside the inscribed square, inside the circle");
+            Assert.IsTrue(On(image, mask, 425, 500), "inside the circle, outside the inscribed square (half side 70.7)");
+            Assert.IsTrue(On(image, mask, 500, 590));
+            Assert.IsFalse(On(image, mask, 580, 580), "the corner of the circle's bounding box, 113 from the centre");
+            Assert.IsFalse(On(image, mask, 500, 610));
         }
     }
 }

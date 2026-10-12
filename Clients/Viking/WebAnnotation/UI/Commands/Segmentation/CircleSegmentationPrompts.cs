@@ -10,7 +10,7 @@ using WebAnnotationModel;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// SAM2 prompts for a circle: the inscribed square and four axis clicks
+    /// SAM2 prompts for a circle: the circle itself as the mask (<see cref=\"StartingPrompt.Seed\"/>) and four axis clicks
     /// (<see cref="TryCreateStartingPrompt"/>), shared by auto-polygonize and the circle context menu,
     /// plus the other-structure avoid marks.
     /// </summary>
@@ -24,13 +24,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public const double StartingPointRadiusFraction = 0.95;
 
         /// <summary>The box and clicks that start a circle's segmentation, in volume space.</summary>
-        internal readonly struct StartingPrompt(Rectangle box, IReadOnlyList<Vector2> points)
+        internal readonly struct StartingPrompt(Rectangle box, IReadOnlyList<Vector2> points, Circle circle)
         {
             /// <summary>The square inscribed in the circle, axis-aligned.</summary>
             public Rectangle Box { get; } = box;
 
             /// <summary>Four foreground clicks: east, north, west, south of the center at <see cref="StartingPointRadiusFraction"/> of the radius.</summary>
             public IReadOnlyList<Vector2> Points { get; } = points;
+
+            /// <summary>The circle in volume space, averaged over the transformed radius points.</summary>
+            public Circle Circle { get; } = circle;
+
+            /// <summary>The circle as the seed sent to the server: its disc, not <see cref="Box"/>.</summary>
+            public SegmentationSeed Seed => SegmentationSeed.FromCircle(Circle);
 
             /// <summary>Center of <see cref="Box"/>, which is the circle's center.</summary>
             public Vector2 Center => new((Box.Left + Box.Right) / 2.0, (Box.Bottom + Box.Top) / 2.0);
@@ -89,7 +95,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     new Vector2(center.X, center.Y + reach),
                     new Vector2(center.X - reach, center.Y),
                     new Vector2(center.X, center.Y - reach),
-                ]);
+                ],
+                new Circle(center, radius));
             return true;
         }
 
@@ -206,14 +213,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// The other structures' annotations as one background mask, in volume space: the inscribed square of
+        /// The other structures' annotations as one background mask, in volume space: the disc of
         /// each circle (the same square <see cref="TryCreateStartingPrompt"/> seeds a circle with) and the
         /// polygon, with its holes, of each polygon annotation. Same annotation filter as
         /// <see cref="CreateOtherStructureBackgroundVolumePoints"/>.
         /// </summary>
         /// <remarks>
         /// "Everything inside is background, and the engine should grow it": a circle that is some other structure
-        /// is background throughout its inscribed square, and so is every polygon. Annotations whose points fail
+        /// is background throughout its disc, and so is every polygon. Annotations whose points fail
         /// to map to volume space are skipped. The server takes one mask per request, so these are summed here.
         /// </remarks>
         public static SegmentationMaskUnion CreateOtherStructureBackgroundMask(
@@ -236,7 +243,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                                 ToVolumePoints(CreateMosaicRadiusPoints(new Circle(other.Position, other.Radius)), transform),
                                 out StartingPrompt square))
                         {
-                            union.Add(square.Box);
+                            union.Add(square.Seed);
                         }
 
                         break;

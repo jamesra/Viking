@@ -181,7 +181,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             bool grayscale,
             CancellationToken token,
-            IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            IReadOnlyList<SegmentationSeed>? foregroundBoxes = null,
             SegmentationMaskUnion? backgroundMask = null,
             ulong requestId = 0)
         {
@@ -224,10 +224,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (foregroundBoxes is { Count: > 0 })
             {
                 SegmentationMaskUnion seeds = new();
-                foreach (Geometry.Rectangle seed in foregroundBoxes)
+                foreach (SegmentationSeed seed in foregroundBoxes)
                     seeds.Add(seed);
 
-                seedCentre = new Geometry.Vector2(foregroundBoxes.Average(box => box.Center.X), foregroundBoxes.Average(box => box.Center.Y));
+                seedCentre = new Geometry.Vector2(foregroundBoxes.Average(seed => seed.Center.X), foregroundBoxes.Average(seed => seed.Center.Y));
                 SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(signature.Downsample, seedCentre);
                 if (foregroundMask is not null)
                     request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask };

@@ -58,7 +58,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// for the life of the command. Clicks the user adds or removes change the points but not the box:
         /// the circle it was drawn from has not changed.
         /// </summary>
-        private IReadOnlyList<Geometry.Rectangle> startingBoxes = [];
+        private IReadOnlyList<SegmentationSeed> startingBoxes = [];
         private readonly List<Geometry.Vector2> backgroundPoints = [];
 
         /// <summary>
@@ -258,7 +258,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Constructor that accepts initial foreground and background points for automated segmentation.
         /// <paramref name="placementFallback"/> is the dragged volume polygon Escape saves when the mask has not arrived.
         /// <paramref name="startingBoxes"/> are volume-space boxes sent as the foreground Feature's mask (<c>foreground_feature.mask</c>) with every request,
-        /// for example the square inscribed in a circle (see <see cref="CircleSegmentationPrompts.TryCreateStartingPrompt"/>).
+        /// for example a circle's disc (see <see cref="CircleSegmentationPrompts.TryCreateStartingPrompt"/>).
         /// <paramref name="onAbandoned"/> runs when the command deactivates without accepting a mask.
         /// </summary>
         public SegmentationCommand(SectionViewerControl parent,
@@ -270,7 +270,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             long? excludeLocationId = null,
             long? excludeStructureId = null,
             Polygon? placementFallback = null,
-            IReadOnlyList<Geometry.Rectangle>? startingBoxes = null,
+            IReadOnlyList<SegmentationSeed>? startingBoxes = null,
             Action? onAbandoned = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId, placementFallback, onAbandoned)
         {
             this.startingBoxes = startingBoxes ?? [];
@@ -969,7 +969,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Geometry.Vector2[] keepSnapshot =
                     [
                         .. foregroundSnapshot,
-                        .. startingBoxes.Select(box => new Geometry.Vector2((box.Left + box.Right) / 2.0, (box.Bottom + box.Top) / 2.0)),
+                        .. startingBoxes.Select(seed => seed.Center),
                     ];
                     StartProcessSegmentationResponse(response, generation, keepSnapshot, backgroundSnapshot);
                 }

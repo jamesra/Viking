@@ -789,10 +789,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             IReadOnlyList<Vector2> foreground = proposal.ForegroundPrompts;
-            IReadOnlyList<Rectangle> startingBoxes = proposal.StartingBoxes;
+            IReadOnlyList<SegmentationSeed> startingBoxes = proposal.StartingBoxes;
             if (foreground.Count == 0 || startingBoxes.Count == 0)
             {
-                if (!TryResolveAddPointsSeed(proposal, out IReadOnlyList<Vector2> fallbackFg, out IReadOnlyList<Rectangle> fallbackBoxes))
+                if (!TryResolveAddPointsSeed(proposal, out IReadOnlyList<Vector2> fallbackFg, out IReadOnlyList<SegmentationSeed> fallbackBoxes))
                 {
                     MessageBox.Show(
                         "This proposal has no segmentation prompts to edit.",
@@ -860,7 +860,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private bool TryResolveAddPointsSeed(
             AutoPolygonizeProposal proposal,
             out IReadOnlyList<Vector2> foreground,
-            out IReadOnlyList<Rectangle> startingBoxes)
+            out IReadOnlyList<SegmentationSeed> startingBoxes)
         {
             foreground = [];
             startingBoxes = [];
@@ -881,7 +881,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 foreground = startingPrompt.Points;
-                startingBoxes = [startingPrompt.Box];
+                startingBoxes = [startingPrompt.Seed];
                 return true;
             }
 
@@ -1307,7 +1307,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     }
 
                     IReadOnlyList<Vector2> foreground = startingPrompt.Points;
-                    IReadOnlyList<Rectangle> startingBoxes = [startingPrompt.Box];
+                    IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                     IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
 
                     IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
@@ -1464,7 +1464,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             CancellationToken processToken,
             long requestTicket,
             IReadOnlyList<Vector2>? extraKeepPoints = null,
-            IReadOnlyList<Rectangle>? startingBoxes = null)
+            IReadOnlyList<SegmentationSeed>? startingBoxes = null)
         {
             if (processToken.IsCancellationRequested || !enabled || !cache.IsGenerationCurrent(circle.ID, generation))
                 return;
@@ -2112,7 +2112,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 IReadOnlyList<Vector2> foreground = startingPrompt.Points;
-                IReadOnlyList<Rectangle> startingBoxes = [startingPrompt.Box];
+                IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                 IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
 
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];

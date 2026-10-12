@@ -430,7 +430,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             int overlapResubmitRound = 0,
             IReadOnlyList<Geometry.Vector2>? foregroundPrompts = null,
             IReadOnlyList<Geometry.Vector2>? backgroundPrompts = null,
-            IReadOnlyList<Geometry.Rectangle>? startingBoxes = null,
+            IReadOnlyList<WebAnnotation.UI.Commands.Segmentation.SegmentationSeed>? startingBoxes = null,
             IReadOnlyList<AutoPolygonizeMaskSource>? maskSources = null,
             IReadOnlyList<Polygon>? fixedPolygons = null,
             IReadOnlyList<AutoPolygonizeProposal>? mergedFrom = null)
@@ -546,7 +546,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// group seed box). Empty when the request had none. Kept so Add points can reopen
         /// <see cref="SegmentationCommand"/> without remasking clicks alone.
         /// </summary>
-        public IReadOnlyList<Geometry.Rectangle> StartingBoxes { get; }
+        public IReadOnlyList<WebAnnotation.UI.Commands.Segmentation.SegmentationSeed> StartingBoxes { get; }
 
         /// <summary>
         /// True while a better mask for this proposal is on its way: it was drawn from one circle's

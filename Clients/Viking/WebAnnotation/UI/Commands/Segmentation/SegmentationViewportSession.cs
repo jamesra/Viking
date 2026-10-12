@@ -574,7 +574,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             bool grayscale,
             CancellationToken cancellationToken,
-            IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            IReadOnlyList<SegmentationSeed>? foregroundBoxes = null,
             SegmentationMaskUnion? backgroundMask = null,
             ulong requestId = 0)
         {
@@ -672,7 +672,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> foregroundPoints,
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             CancellationToken cancellationToken,
-            IReadOnlyList<Geometry.Rectangle>? foregroundBoxes = null,
+            IReadOnlyList<SegmentationSeed>? foregroundBoxes = null,
             ulong requestId = 0,
             SegmentationMaskUnion? backgroundMask = null)
         {
@@ -698,8 +698,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // The cells under the clicks, and under each box's center: the box says where the object is,
                 // so its center cell is the best first tile to have ready.
                 List<Geometry.Vector2> tilePoints = [.. foregroundPoints ?? []];
-                foreach (Geometry.Rectangle box in foregroundBoxes ?? [])
-                    tilePoints.Add(new Geometry.Vector2((box.Left + box.Right) / 2.0, (box.Bottom + box.Top) / 2.0));
+                foreach (SegmentationSeed seed in foregroundBoxes ?? [])
+                    tilePoints.Add(seed.Center);
                 List<TileCell> needed = SegmentationTileGrid.CellsContainingPoints(tilePoints, downsample);
                 SegmentationDiag.Log(
                     $"SegmentAsync ds={downsample} visible={visible.Count} promptTiles={needed.Count} " +

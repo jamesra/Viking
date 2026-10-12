@@ -33,6 +33,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>True when no shape has been added.</summary>
         public bool IsEmpty => shapes.Count == 0;
 
+        /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegments"/> vertices) or its rectangle.</summary>
+        public void Add(SegmentationSeed seed)
+        {
+            if (seed.Circle is not Circle circle)
+            {
+                Add(seed.Bounds);
+                return;
+            }
+
+            Vector2[] ring = new Vector2[CircleSegments];
+            for (int i = 0; i < ring.Length; i++)
+            {
+                double angle = 2 * Math.PI * i / ring.Length;
+                ring[i] = new Vector2(circle.Center.X + circle.Radius * Math.Cos(angle), circle.Center.Y + circle.Radius * Math.Sin(angle));
+            }
+
+            Add([ring]);
+        }
+
+        /// <summary>Vertices of the polygon that stands in for a circle: at 1024 px the edge is within half a pixel of the true circle.</summary>
+        private const int CircleSegments = 180;
+
         /// <summary>Adds an axis-aligned rectangle, volume space.</summary>
         public void Add(Rectangle rectangle)
         {
