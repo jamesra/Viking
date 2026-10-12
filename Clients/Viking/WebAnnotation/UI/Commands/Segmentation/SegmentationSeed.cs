@@ -1,4 +1,5 @@
 using Geometry;
+using System.Collections.Generic;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -7,16 +8,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// inscribed rectangle). Sent to the server as the foreground mask: everything inside is object.
     /// </summary>
     /// <remarks>
-    /// A circle annotation is masked as the circle itself, not its inscribed square. <see cref="Bounds"/> is the
-    /// shape's axis-aligned box and is what callers use to find where it is.
+    /// A circle annotation is masked as the circle itself, not its inscribed square, and a polygon as its rings
+    /// (exterior and holes). <see cref="Bounds"/> is the shape's axis-aligned box.
     /// </remarks>
     internal readonly struct SegmentationSeed
     {
-        private SegmentationSeed(Rectangle bounds, Circle? circle)
+        private SegmentationSeed(Rectangle bounds, Circle? circle, IReadOnlyList<Vector2[]>? rings = null, Vector2? interior = null)
         {
             Bounds = bounds;
             Circle = circle;
+            Rings = rings;
+            interiorPoint = interior;
         }
+
+        private readonly Vector2? interiorPoint;
 
         /// <summary>Axis-aligned bounds of the shape.</summary>
         public Rectangle Bounds { get; }
@@ -24,11 +29,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>The disc when the seed is a circle annotation; null for a rectangle.</summary>
         public Circle? Circle { get; }
 
-        /// <summary>Centre of the circle, or of the rectangle. Always inside the shape.</summary>
-        public Vector2 Center => Circle?.Center ?? Bounds.Center;
+        /// <summary>The exterior ring followed by any holes when the seed is a polygon; null otherwise. Volume space.</summary>
+        public IReadOnlyList<Vector2[]>? Rings { get; }
+
+        /// <summary>
+        /// A point that is inside the shape: the circle's or rectangle's centre, or the interior click a polygon
+        /// was given (a concave polygon's centroid can lie outside it).
+        /// </summary>
+        public Vector2 Center => interiorPoint ?? Circle?.Center ?? Bounds.Center;
 
         /// <summary>A seed that is the disc of <paramref name="circle"/>.</summary>
         public static SegmentationSeed FromCircle(Circle circle) => new(circle.BoundingBox, circle);
+
+        /// <summary>A seed that is <paramref name="polygon"/> with its holes; <paramref name="interior"/> must lie inside it.</summary>
+        public static SegmentationSeed FromPolygon(Polygon polygon, Vector2 interior) =>
+            new(polygon.BoundingBox, null, [polygon.ExteriorRing, .. polygon.InteriorRings], interior);
 
         /// <summary>A rectangle is a seed filled to its edges.</summary>
         public static implicit operator SegmentationSeed(Rectangle rectangle) => new(rectangle, null);

@@ -1180,7 +1180,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void GroupPromptBoxIsTheLargestRectangleInsideThePolygonsAndClicksEachPolygonOnce()
+        public void GroupPromptSeedsAreThePolygonsAndClicksEachPolygonOnce()
         {
             Polygon small = Square(100, 100, 10);
             Polygon large = Square(0, 0, 40);
@@ -1190,19 +1190,17 @@ namespace WebAnnotationTests.Commands
                 CircleSegmentationPrompts.CreateGroupPromptFromPolygons([small, large, medium]);
 
             Assert.AreEqual(3, prompt.Foreground.Count);
-            Assert.IsNotNull(prompt.Box);
-            AssertInsideAny(prompt.Box.Value, small, large, medium);
-            Assert.IsTrue(prompt.Box.Value.Width > 30 && prompt.Box.Value.Height > 30, "it is the 40 x 40 polygon, less a cell");
-            Assert.IsTrue(large.Contains(prompt.Foreground[1]));
+            Assert.AreEqual(3, prompt.Seeds.Count);
             Assert.IsTrue(small.Contains(prompt.Foreground[0]));
+            Assert.IsTrue(large.Contains(prompt.Foreground[1]));
             Assert.IsTrue(medium.Contains(prompt.Foreground[2]));
+            CollectionAssert.AreEqual(large.ExteriorRing, prompt.Seeds[1].Rings![0]);
+            Assert.AreEqual(prompt.Foreground[1], prompt.Seeds[1].Center, "a seed's centre is the polygon's interior click");
         }
 
         [TestMethod]
-        public void GroupPromptBoxStaysInsideAnElongatedBentPolygon()
+        public void GroupSeedOfABentPolygonCentresOnAPointInsideIt()
         {
-            // An L: a 100 x 100 bounding box, but only 30 thick. A square sized from the bounding box (about 71
-            // wide) centred on the polygon would cover background.
             Polygon bent = new(
             [
                 new Vector2(0, 0),
@@ -1216,86 +1214,22 @@ namespace WebAnnotationTests.Commands
 
             CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([bent]);
 
-            Assert.IsNotNull(prompt.Box);
-            AssertInsideAny(prompt.Box.Value, bent);
-            double area = prompt.Box.Value.Width * prompt.Box.Value.Height;
-            Assert.IsTrue(area > 0.5 * 3000, $"close to the 3,000 area of the longer arm, got {area}");
-            Rectangle oldSquare = CircleSegmentationPrompts.InscribedSeedBox(bent.BoundingBox, prompt.Foreground[0]).Value;
-            Assert.IsFalse(
-                new[] { oldSquare.LowerLeft, oldSquare.UpperRight, new Vector2(oldSquare.Left, oldSquare.Top), new Vector2(oldSquare.Right, oldSquare.Bottom) }
-                    .All(point => bent.Contains(point)),
-                "the bounding-box square this replaces would have reached outside the polygon");
+            Assert.AreEqual(1, prompt.Seeds.Count);
+            Assert.IsTrue(bent.Contains(prompt.Seeds[0].Center));
         }
 
         [TestMethod]
-        public void GroupPromptBoxMaySpanOverlappingPolygons()
+        public void GroupSeedKeepsAPolygonsHoleOpen()
         {
-            Polygon left = Square(0, 0, 60);
-            Polygon right = Square(40, 0, 60);
+            Polygon ring = Square(0, 0, 100);
+            ring.AddInteriorRing([new Vector2(40, 40), new Vector2(60, 40), new Vector2(60, 60), new Vector2(40, 60), new Vector2(40, 40)]);
 
-            CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([left, right]);
+            CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([ring]);
 
-            Assert.IsNotNull(prompt.Box);
-            AssertInsideAny(prompt.Box.Value, left, right);
-            Assert.IsTrue(prompt.Box.Value.Width > 80, $"it covers both squares, got width {prompt.Box.Value.Width}");
+            Assert.AreEqual(2, prompt.Seeds[0].Rings!.Count, "the exterior ring and the hole");
+            Assert.IsTrue(ring.Contains(prompt.Seeds[0].Center), "the click is not in the hole");
         }
 
-        [TestMethod]
-        public void GroupPromptHasNoBoxWhenThePolygonsAreTooThinToHoldOne()
-        {
-            Polygon sliver = new(
-            [
-                new Vector2(0, 0),
-                new Vector2(1000, 0),
-                new Vector2(1000, 0.5),
-                new Vector2(0, 0.5),
-                new Vector2(0, 0)
-            ]);
-
-            CircleSegmentationPrompts.GroupPrompt prompt = CircleSegmentationPrompts.CreateGroupPromptFromPolygons([sliver]);
-
-            Assert.IsNull(prompt.Box);
-        }
-
-        [TestMethod]
-        public void LargestAllInsideRectangleOfAGridIsFound()
-        {
-            bool[,] grid = new bool[6, 8];
-            for (int row = 1; row <= 4; row++)
-            {
-                for (int column = 2; column <= 6; column++)
-                    grid[row, column] = true;
-            }
-
-            grid[2, 4] = false;
-            grid[3, 4] = false;   // a notch splits the 4 x 5 block into 4 x 2 on the left, 4 x 2 on the right (rows 1..4)
-            grid[0, 0] = true;    // a lone cell elsewhere
-
-            Assert.IsTrue(InscribedRectangle.TryFindLargest(grid, out int r0, out int r1, out int c0, out int c1));
-            int area = (r1 - r0 + 1) * (c1 - c0 + 1);
-            Assert.AreEqual(8, area, $"rows {r0}..{r1}, columns {c0}..{c1}");
-            for (int row = r0; row <= r1; row++)
-            {
-                for (int column = c0; column <= c1; column++)
-                    Assert.IsTrue(grid[row, column]);
-            }
-
-            Assert.IsFalse(InscribedRectangle.TryFindLargest(new bool[3, 3], out _, out _, out _, out _));
-        }
-
-        private static void AssertInsideAny(Rectangle box, params Polygon[] polygons)
-        {
-            Vector2[] samples =
-            [
-                box.LowerLeft,
-                box.UpperRight,
-                new Vector2(box.Left, box.Top),
-                new Vector2(box.Right, box.Bottom),
-                new Vector2((box.Left + box.Right) / 2, (box.Bottom + box.Top) / 2)
-            ];
-            foreach (Vector2 sample in samples)
-                Assert.IsTrue(polygons.Any(polygon => polygon.Contains(sample)), $"{sample} is outside every polygon");
-        }
 
         [TestMethod]
         public void UnionPolygonsOrsOverlappingRings()
@@ -1351,7 +1285,7 @@ namespace WebAnnotationTests.Commands
         public void GroupPromptRejectsEmptyInput()
         {
             Assert.AreEqual(0, CircleSegmentationPrompts.CreateGroupPromptFromPolygons(null).Foreground.Count);
-            Assert.IsNull(CircleSegmentationPrompts.CreateGroupPromptFromPolygons([]).Box);
+            Assert.AreEqual(0, CircleSegmentationPrompts.CreateGroupPromptFromPolygons([]).Seeds.Count);
         }
 
         private static (long Ticket, IReadOnlyCollection<long> LocationIds) Published(long ticket, params long[] ids) =>

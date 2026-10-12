@@ -33,9 +33,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>True when no shape has been added.</summary>
         public bool IsEmpty => shapes.Count == 0;
 
-        /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegments"/> vertices) or its rectangle.</summary>
+        /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegments"/> vertices), a polygon with its holes, or a rectangle.</summary>
         public void Add(SegmentationSeed seed)
         {
+            if (seed.Rings is not null)
+            {
+                Add(seed.Rings);
+                return;
+            }
+
             if (seed.Circle is not Circle circle)
             {
                 Add(seed.Bounds);
@@ -89,10 +95,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <see cref="WindowSize"/> square. The PNG is a 1-bit greyscale bitmap of the same size with image row 0
         /// at <c>YMax</c>, as the proto requires. A pixel is in the mask when its centre is inside a shape. Shapes
         /// are clipped to the square, so background further than half a window from the centre is not in the mask;
-        /// the background points still cover it. The centre is normally the seed's centre, which is where the
+        /// the background points still cover it. Each point in <paramref name="holePointsVolume"/> clears a disc of
+        /// <paramref name="holeRadiusPixels"/> from the mask, so a background click inside a foreground mask is not
+        /// overruled by it (the server returns every foreground mask pixel as object). The centre is normally the seed's centre, which is where the
         /// server's first window is.
         /// </remarks>
-        public SegmentationServiceTypes.Mask? ToMask(int downsample, Vector2 centreVolume)
+        public SegmentationServiceTypes.Mask? ToMask(
+            int downsample,
+            Vector2 centreVolume,
+            IReadOnlyList<Vector2>? holePointsVolume = null,
+            double holeRadiusPixels = 0)
         {
             if (shapes.Count == 0 || downsample <= 0)
                 return null;
@@ -105,6 +117,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool any = false;
             foreach (IReadOnlyList<Vector2[]> shape in shapes)
                 any |= Fill(pixels, WindowSize, WindowSize, xMin, yMax, downsample, shape);
+
+            if (any && holePointsVolume is { Count: > 0 } && holeRadiusPixels > 0)
+                any = CutHoles(pixels, WindowSize, xMin, yMax, downsample, holePointsVolume, holeRadiusPixels);
 
             if (!any)
                 return null;
@@ -135,6 +150,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 },
                 Png = Google.Protobuf.ByteString.CopyFrom(stream.ToArray())
             };
+        }
+
+        /// <summary>Clears a disc of <paramref name="radius"/> pixels around each point; returns whether any pixel is still set.</summary>
+        private static bool CutHoles(byte[] pixels, int size, int xMin, int yMax, int downsample, IReadOnlyList<Vector2> points, double radius)
+        {
+            foreach (Vector2 point in points)
+            {
+                double centreColumn = point.X / downsample - xMin;
+                double centreRow = yMax + 1 - point.Y / downsample;
+                int firstRow = Math.Max(0, (int)Math.Floor(centreRow - radius));
+                int lastRow = Math.Min(size - 1, (int)Math.Ceiling(centreRow + radius));
+                int firstColumn = Math.Max(0, (int)Math.Floor(centreColumn - radius));
+                int lastColumn = Math.Min(size - 1, (int)Math.Ceiling(centreColumn + radius));
+                for (int row = firstRow; row <= lastRow; row++)
+                {
+                    for (int column = firstColumn; column <= lastColumn; column++)
+                    {
+                        double dx = column + 0.5 - centreColumn, dy = row + 0.5 - centreRow;
+                        if (dx * dx + dy * dy <= radius * radius)
+                            pixels[row * size + column] = 0;
+                    }
+                }
+            }
+
+            return Array.Exists(pixels, value => value != 0);
         }
 
         /// <summary>

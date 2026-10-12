@@ -379,28 +379,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 : string.Join(",", ids.Take(max)) + $"+{ids.Count - max}";
 
         /// <summary>
-        /// Prompt for several overlapping polygons of one structure: SAM2 takes one box per call.
-        /// <paramref name="Box"/> is the largest rectangle that lies entirely inside the polygons
-        /// (<see cref="InscribedRectangle"/>). The server takes the rectangle as a mask prompt (foreground Feature mask), which it marks
-        /// all of it as object, so it must never reach outside the polygons: a square sized from a bounding box
-        /// does for a round polygon, but covers background for a bent or elongated one.
-        /// <paramref name="Foreground"/> holds one interior click per polygon.
+        /// Prompt for several overlapping polygons of one structure. <paramref name="Seeds"/> are the polygons
+        /// themselves (exterior rings and holes), sent summed into the foreground mask: everything inside them is
+        /// object and the segmentation grows beyond. <paramref name="Foreground"/> holds one interior click per
+        /// polygon, in the same order as <paramref name="Seeds"/>.
         /// </summary>
-        public readonly record struct GroupPrompt(IReadOnlyList<Vector2> Foreground, Rectangle? Box);
+        public readonly record struct GroupPrompt(IReadOnlyList<Vector2> Foreground, IReadOnlyList<SegmentationSeed> Seeds);
 
         /// <summary>
-        /// One SAM2 seed box and one click per polygon. The box is the largest rectangle inside the union of the
-        /// polygons; every polygon supplies one click. Many boundary clicks in one prompt (the old 17 per
-        /// polygon) made SAM2 return a smaller mask than fewer clicks did. Polygons with no interior point, or
-        /// degenerate rings, are skipped. The box is null when the polygons are too thin to hold one.
+        /// One seed and one click per polygon. Many boundary clicks in one prompt (the old 17 per polygon) made SAM2
+        /// return a smaller mask than fewer clicks did. Polygons with no interior point, or degenerate rings, are skipped.
         /// </summary>
         public static GroupPrompt CreateGroupPromptFromPolygons(IEnumerable<Polygon> polygons)
         {
             if (polygons is null)
-                return new GroupPrompt([], null);
+                return new GroupPrompt([], []);
 
             List<Vector2> clicks = [];
-            List<Polygon> used = [];
+            List<SegmentationSeed> seeds = [];
             foreach (Polygon polygon in polygons)
             {
                 if (polygon?.ExteriorRing is null || polygon.ExteriorRing.Length < 4)
@@ -411,10 +407,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     continue;
 
                 clicks.Add(click.Value);
-                used.Add(polygon);
+                seeds.Add(SegmentationSeed.FromPolygon(polygon, click.Value));
             }
 
-            return new GroupPrompt(clicks, InscribedRectangle.Largest(used));
+            return new GroupPrompt(clicks, seeds);
         }
 
         /// <summary>

@@ -228,7 +228,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     seeds.Add(seed);
 
                 seedCentre = new Geometry.Vector2(foregroundBoxes.Average(seed => seed.Center.X), foregroundBoxes.Average(seed => seed.Center.Y));
-                SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(signature.Downsample, seedCentre);
+                SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(
+                    signature.Downsample,
+                    seedCentre,
+                    backgroundPoints,
+                    WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
                 if (foregroundMask is not null)
                     request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask };
             }

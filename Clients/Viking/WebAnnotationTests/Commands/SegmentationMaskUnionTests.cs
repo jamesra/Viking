@@ -139,5 +139,29 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(On(image, mask, 580, 580), "the corner of the circle's bounding box, 113 from the centre");
             Assert.IsFalse(On(image, mask, 500, 610));
         }
+
+        [TestMethod]
+        public void ABackgroundPointCutsAHoleInTheForegroundMask()
+        {
+            SegmentationMaskUnion union = new();
+            union.Add(new Rectangle(new Vector2(400, 400), new Vector2(600, 600)));
+
+            var mask = union.ToMask(1, Centre, [new Vector2(450, 450)], 10)!;
+            using Image<L8> image = Decode(mask);
+
+            Assert.IsFalse(On(image, mask, 450, 450), "the background click is not overruled by the mask");
+            Assert.IsFalse(On(image, mask, 455, 450));
+            Assert.IsTrue(On(image, mask, 470, 450), "beyond the click's radius");
+            Assert.IsTrue(On(image, mask, 550, 550));
+        }
+
+        [TestMethod]
+        public void AMaskCutEntirelyAwayByBackgroundPointsIsNotSent()
+        {
+            SegmentationMaskUnion union = new();
+            union.Add(new Rectangle(new Vector2(495, 495), new Vector2(505, 505)));
+
+            Assert.IsNull(union.ToMask(1, Centre, [new Vector2(500, 500)], 20));
+        }
     }
 }

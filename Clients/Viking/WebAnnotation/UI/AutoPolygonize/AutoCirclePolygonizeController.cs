@@ -891,7 +891,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return false;
 
             foreground = groupPrompt.Foreground;
-            startingBoxes = groupPrompt.Box is Rectangle box ? [box] : [];
+            startingBoxes = groupPrompt.Seeds;
             return startingBoxes.Count > 0 || foreground.Count > 0;
         }
 
