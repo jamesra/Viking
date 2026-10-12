@@ -66,11 +66,9 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
 
 1. Start the walk in **the fewest windows that between them see the whole prompt**. The prompt
    is every box (`foreground_boxes` and a foreground `Feature`'s rectangle), every mask (a
-   `Feature`'s mask) and every foreground point. A modern client sends the square inscribed in a
-   circle as the foreground `Feature`'s **mask** (the start window gets it as SAM2 `mask_input`
-   plus the square's center as a click; the whole square is taken as object and the mask grows
-   beyond it), plus four foreground clicks on the axes at 95% of the radius (outside the
-   square's edges, just inside the circle). A `Feature`'s rectangle is only a "most likely inside"
+   `Feature`'s mask) and every foreground point. A modern client sends a circle seed as the foreground `Feature`'s **mask**, the disc of the circle itself, (the start window gets it as SAM2 `mask_input`
+   plus a click on the mask; every mask pixel is taken as object and the mask grows
+   beyond it), plus four foreground clicks on the axes at 95% of the radius (just inside the circle's edge). A `Feature`'s rectangle is only a "most likely inside"
    box hint; no box is ever taken as object, and a foreground mask replaces the boxes. A background `Feature` adds background clicks, a
    background mask (strongly negative in every window's `mask_input`, and cleared from the
    answer) and a background rectangle (weakly negative in `mask_input` where nothing positive is
