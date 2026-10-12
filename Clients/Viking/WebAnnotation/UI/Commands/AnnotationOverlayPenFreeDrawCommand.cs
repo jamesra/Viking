@@ -175,12 +175,25 @@ namespace WebAnnotation.UI.Commands
             //If not we create a new open curve annotation.
             Execute();
 
+        /// <summary>
+        /// Runs on every new pen point. When the newest segment crosses the boundary of an existing polygon, this
+        /// command deactivates itself and hands the stroke so far to a <see cref="RetraceAndReplacePathCommand"/> on
+        /// that polygon. The stroke may have started inside or outside the polygon. By design, a stroke that starts
+        /// outside, goes in and comes back out cuts that chunk off the polygon, and one that stays inside replaces the
+        /// stretch of boundary it retraces.
+        /// </summary>
+        /// <remarks>
+        /// Consequence for drawing new polygons next to existing ones: a stroke that brushes a neighbouring polygon's
+        /// edge is taken over by that polygon and edits it instead of creating or converting the annotation you
+        /// were drawing around. Keep the stroke clear of other polygons, or draw it where they do not touch.
+        /// Called on the UI thread from the pen input's path-changed event. Only the first intersected object
+        /// is considered, and only <see cref="LocationPolygonView"/> triggers the takeover.
+        /// </remarks>
         protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             base.OnPenPathChanged(sender, e);
 
-            //This path currently only executes when the user is inside an annotation, but leaves the annotation to fire a retrace and replace command.
-            //In the future we should probably fire OnLeavingAnnotation events to simplify detecting this case
+            // The first intersected polygon takes over wherever the stroke started; there is no inside-only check.
             if (PenInput.Points.Count <= 1)
             {
                 return;

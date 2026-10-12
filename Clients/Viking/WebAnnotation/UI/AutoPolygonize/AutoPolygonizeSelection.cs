@@ -36,9 +36,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public const double MaxLineWidthMultiplier = 6.0;
 
         /// <summary>
-        /// First group resubmit plus one expansion if a later same-cell proposal overlaps the group.
+        /// Backstop on how many times a group may be merged into a larger one. It is not what ends the
+        /// regrouping: every round replaces at least two proposals with one, so groups of groups of groups
+        /// keep merging until nothing overlaps. The cap only stops a runaway if that ever fails to hold.
         /// </summary>
-        public const int MaxOverlapResubmitRound = 2;
+        public const int MaxOverlapResubmitRound = 32;
 
         /// <summary>
         /// Ignore boundary-only touches when deciding whether an existing annotation occupies

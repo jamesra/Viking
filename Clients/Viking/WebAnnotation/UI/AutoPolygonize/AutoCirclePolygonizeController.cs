@@ -2373,7 +2373,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// After a publish, if other same-cell overlays or already-saved sibling polygons
         /// nested-contain or cross this one, merge their logit fields into one proposal (no server request).
-        /// At most <see cref="AutoPolygonizeSelection.MaxOverlapResubmitRound"/> rounds.
+        /// Runs again on the merged result, so groups that come to overlap are grouped in turn, up to the
+        /// <see cref="AutoPolygonizeSelection.MaxOverlapResubmitRound"/> backstop.
         /// </summary>
         private void TryBeginOverlapResubmit(AutoPolygonizeProposal seed)
         {

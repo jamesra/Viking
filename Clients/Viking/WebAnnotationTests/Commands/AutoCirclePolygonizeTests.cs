@@ -1082,6 +1082,36 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void TwoGroupsWhoseMergedOutlinesOverlapAreGroupedAgainEvenThoughNoMembersOverlap()
+        {
+            // Group {1,2} grew to cover 0..60 and group {3,4} to 50..110, but 1 and 2 never touched 3 or 4 themselves.
+            OverlapCandidate first = new([1, 2], 9, 1, Square(0, 0, 60));
+            OverlapCandidate second = new([3, 4], 9, 1, Square(50, 0, 60));
+            OverlapCandidate unrelated = new([5], 9, 1, Square(500, 0, 10));
+
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(
+                first,
+                [first, second, unrelated]);
+
+            long[] ids = [.. component.SelectMany(item => item.LocationIds).Distinct().OrderBy(id => id)];
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4 }, ids);
+        }
+
+        [TestMethod]
+        public void AGroupOfGroupsThatLaterOverlapsAThirdGroupIsGroupedAgain()
+        {
+            OverlapCandidate ab = new([1, 2], 9, 1, Square(0, 0, 60));
+            OverlapCandidate cd = new([3, 4], 9, 1, Square(50, 0, 60));
+            OverlapCandidate ef = new([5, 6], 9, 1, Square(100, 0, 60));
+
+            List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(ab, [ab, cd, ef]);
+
+            long[] ids = [.. component.SelectMany(item => item.LocationIds).Distinct().OrderBy(id => id)];
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4, 5, 6 }, ids, "the chain reaches the third group through the second");
+            Assert.IsTrue(AutoPolygonizeSelection.MaxOverlapResubmitRound > 2, "groups of groups of groups are not cut off at the second level");
+        }
+
+        [TestMethod]
         public void OverlappingDifferentCellsAreNotGrouped()
         {
             Polygon left = Square(0, 0, 10);
