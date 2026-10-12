@@ -70,3 +70,16 @@ debug-*.log
 
 # Signing certificates and key stores
 *.pfx
+
+# Local scratch: one-off scripts, run logs, captures and VS temp projects
+/artifacts/
+/test-results/
+/tmp_*
+/_*.py
+/bajaj-*.txt
+/harness-*.txt
+/testbed-*-run.txt
+/linkkey_files.txt
+/objects_files.txt
+/Clients/MonogameTestbed/_extract_poly_wkt.py
+*_wpftmp.csproj
