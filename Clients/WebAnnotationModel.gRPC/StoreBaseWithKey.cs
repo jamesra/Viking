@@ -1091,12 +1091,16 @@ namespace WebAnnotationModel.gRPC
         /// Forget everything we know on the client about an object.  This will force a refresh from the
         /// server for the next request.
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+        /// <param name="key">Key of the object to drop from the local cache.</param>
+        /// <returns>
+        /// The removed object, or null when the key was never loaded. Callers such as
+        /// <c>StructureStore.Merge</c> call this after the server call succeeded, so an unloaded key must not throw.
+        /// Matches the WCF store.
+        /// </returns>
         public virtual OBJECT ForgetLocally(KEY key)
         {
             List<OBJECT> listForgotten = ForgetLocally(new KEY[] { key });
-            return listForgotten[0];
+            return listForgotten.Count == 0 ? default : listForgotten[0];
         }
 
         /// <summary>
