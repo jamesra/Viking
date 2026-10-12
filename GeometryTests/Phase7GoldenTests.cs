@@ -154,12 +154,16 @@ namespace GeometryTests
             ["curve ring200 gaussian"] = "88fc6d413ba665ac",
             ["curve ring200 n3"] = "eced2c18f07747f0",
             ["curve ring200 n8"] = "d0813813b394ef4c",
+            // The cocircular mesh inputs (circle60, grid14) were re-recorded after 69ed44e2 made the DelaunayMesh merge
+            // in-circle test strict; "mesh paths circle60" now also differs per runtime.
 #if NETFRAMEWORK
             ["curve ring30 tiny n8"] = "8a691514a63d156f",
-            ["mesh circle60"] = "7cbc9d2918923704",
+            ["mesh circle60"] = "24425013735cd344",
+            ["mesh paths circle60"] = "74f48755dee4bc65",
 #else
             ["curve ring30 tiny n8"] = "a07c868a77de645a",
-            ["mesh circle60"] = "ba32540e95ccdce4",
+            ["mesh circle60"] = "d3535816d809e604",
+            ["mesh paths circle60"] = "f614d3de98ceab25",
 #endif
             // Re-recorded after NumInterpolations = 1 stopped producing an all-NaN curve (t = 0 / 0); the pre-Phase 7
             // value 6a25223a2314e22d fingerprinted those NaNs.
@@ -168,9 +172,8 @@ namespace GeometryTests
             ["delaunay grid40"] = "2890b6dd8b815596",
             ["delaunay random1000"] = "8653b063a73842de",
             ["delaunay tiny"] = "7c350ef9e4db1798",
-            ["mesh grid14"] = "b80842d8012d70ee",
-            ["mesh paths circle60"] = "38b0592d3ba2a4a5",
-            ["mesh paths grid14"] = "29a86b3825e6f7f8",
+            ["mesh grid14"] = "c4f9e8bf7c927946",
+            ["mesh paths grid14"] = "efcf0be5e47392d7",
             ["mesh paths random300"] = "2fe5bdb2a36b5630",
             ["mesh paths tiny100"] = "97dbb3980455647e",
             ["mesh random300"] = "42057da0dad82711",

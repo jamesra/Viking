@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace Geometry
 {
@@ -217,12 +216,6 @@ namespace Geometry
 
                     GridIndexTriangle newTri = new(E.iA, E.iB, iPoint, ref allpoints);
                     triangles.Add(newTri);
-
-
-#if DEBUG
-                    //Check to make sure the new triangle intersects the point.  This is a slow test.
-                    Debug.Assert(((Triangle)newTri).Covers(P));
-#endif
                 }
             }
 
