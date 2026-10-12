@@ -33,6 +33,6 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | StructureStore.GetObjectsInRegion(Async) | `GetLocalObjectsInRegion` (mosaic bounding box intersects region, Radius >= MinRadius, as WCF `LocationRTree`), `GetServerObjectsInRegion` | done | `StructureStoreRegionQueryTests` (local only) | |
 | StoreBaseWithKeyAndParent.InternalUpdate (ParentID changed by the server) | `StoreBaseWithKeyAndParent.CallOnCollectionChanged` re-wires `UpdatedObjects` (RootObjects, parent `Children`); `ParentID` setters keep the assigned value | done: server batches only; structure types are loaded once and never updated | `StructureReparentTests` | |
 | StoreBaseWithKeyAndParent.InternalAdd (ParentID on first load; WCF objects wrap the server data) | `StructureServerToClientConverter` copies the server parent id and leaves DBAction NONE; `CallOnCollectionChanged` wires `AddedObjects` | done | `StructureServerCreateParentTests` | |
-| StructureTypeStore.LoadStructureTypes | `GetAll`, `Create` | done | | |
+| StructureTypeStore.LoadStructureTypes | `GetAll`, `Create` (`StructureTypeServerToClientConverter` leaves server-created types DBAction NONE, so `Create` does not queue them for Save) | done | `StructureTypeServerCreateTests` | |
 | StructureLinkStore / PermittedStructureLinkStore (Create, sections) | `GetLinks`, `Save`, `MergeServerLinksAsync` / `Save` | done | | |
 | Interfaces.cs, IKeyGenerator, LongIndexGenerator (client-side keys) | server-assigned IDs | n/a: ID generation is server-side | | |

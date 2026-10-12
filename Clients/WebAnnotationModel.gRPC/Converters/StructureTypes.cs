@@ -12,9 +12,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAnnotationModel.gRPC.Converters
 { 
+    /// <summary>
+    /// Builds a new <see cref="StructureTypeObj"/> for a type the client sees for the first time (the GetAll table
+    /// load on a cache miss, and the server's echo of a type created through <c>StructureTypeStore.Create</c>).
+    /// </summary>
+    /// <remarks>
+    /// The result mirrors the server, so its DBAction must end as <see cref="DBACTION.NONE"/>: <c>Add</c> queues any
+    /// object whose DBAction is not NONE for the next Save. <c>DBAction</c> is assigned last in each initializer
+    /// because the Name, Notes and ParentID setters mark the object UPDATE.
+    /// </remarks>
     public class StructureTypeServerToClientConverter : IObjectConverter<StructureType, StructureTypeObj>,
         IObjectConverter<IStructureType, StructureTypeObj>
     {
+        /// <summary>Converts a proto structure type, copying every field the proto carries, including the optional parent id.</summary>
         public StructureTypeObj Convert(StructureType src)
         {
             StructureTypeObj obj =
@@ -22,10 +32,10 @@ namespace WebAnnotationModel.gRPC.Converters
                 {
                     Code = src.Code,
                     Color = (uint)src.Color,
-                    DBAction = DBACTION.NONE,
                     Name = src.Name,
                     Notes = src.Notes,
                     ParentID = src.HasParentId ? (long?)src.ParentId : (long?)null,
+                    DBAction = DBACTION.NONE,
                 };
 
             ApplyAttributes(obj, src.Attributes);
@@ -33,6 +43,9 @@ namespace WebAnnotationModel.gRPC.Converters
             return obj;
         }
 
+        /// <summary>
+        /// Converts any <see cref="IStructureType"/>; a proto <see cref="StructureType"/> takes the full proto path.
+        /// </summary>
         public StructureTypeObj Convert(IStructureType src)
         {
             if (src is StructureType concrete)
@@ -43,10 +56,10 @@ namespace WebAnnotationModel.gRPC.Converters
                 {
                     Code = src.Code,
                     Color = src.Color,
-                    DBAction = DBACTION.NONE,
                     Name = src.Name,
                     Notes = src.Notes,
                     ParentID = src.ParentID,
+                    DBAction = DBACTION.NONE,
                 };
 
             ApplyAttributes(obj, src.Attributes);
