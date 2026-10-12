@@ -40,6 +40,9 @@ namespace WebAnnotation.WPF.Forms
         private bool _originalAutoPolygonizeOverlayMasks;
         private bool _originalAutoPolygonizeOverlayPrompts;
         private bool _originalAutoPolygonizeHideSegmentationRings;
+        private bool _originalAutoPolygonizeShimmerEnabled;
+        private double _originalAutoPolygonizeShimmerBrightness;
+        private int _originalAutoPolygonizeShimmerDurationMs;
         private bool _originalCorrectionShimEnabled;
         private bool _originalCorrectionShimShowOffset;
         private double _originalCorrectionShimFadeStartDownsample;
@@ -457,6 +460,74 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        /// <summary>Starting <see cref="AutoPolygonizeShimmerBrightness"/>; matches WebAnnotation's stored default.</summary>
+        public const double DefaultAutoPolygonizeShimmerBrightness = 0.6;
+
+        /// <summary>Dimmest allowed <see cref="AutoPolygonizeShimmerBrightness"/>.</summary>
+        public const double MinAutoPolygonizeShimmerBrightness = 0.1;
+
+        /// <summary>Brightest allowed <see cref="AutoPolygonizeShimmerBrightness"/>.</summary>
+        public const double MaxAutoPolygonizeShimmerBrightness = 1.0;
+
+        /// <summary>Starting <see cref="AutoPolygonizeShimmerDurationMs"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultAutoPolygonizeShimmerDurationMs = 750;
+
+        /// <summary>Shortest allowed <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
+        public const int MinAutoPolygonizeShimmerDurationMs = 250;
+
+        /// <summary>Longest allowed <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
+        public const int MaxAutoPolygonizeShimmerDurationMs = 1000;
+
+        private bool _autoPolygonizeShimmerEnabled = true;
+
+        /// <summary>Plays a one-shot shimmer over each newly shown auto-polygonize result.</summary>
+        public bool AutoPolygonizeShimmerEnabled
+        {
+            get => _autoPolygonizeShimmerEnabled;
+            set
+            {
+                if (_autoPolygonizeShimmerEnabled != value)
+                {
+                    _autoPolygonizeShimmerEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness;
+
+        /// <summary>Peak alpha of the shimmer lines.</summary>
+        public double AutoPolygonizeShimmerBrightness
+        {
+            get => _autoPolygonizeShimmerBrightness;
+            set
+            {
+                double clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeShimmerBrightness, MaxAutoPolygonizeShimmerBrightness);
+                if (Math.Abs(_autoPolygonizeShimmerBrightness - clampedValue) > 0.0001)
+                {
+                    _autoPolygonizeShimmerBrightness = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs;
+
+        /// <summary>Milliseconds the shimmer takes to cross a result.</summary>
+        public int AutoPolygonizeShimmerDurationMs
+        {
+            get => _autoPolygonizeShimmerDurationMs;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeShimmerDurationMs, MaxAutoPolygonizeShimmerDurationMs);
+                if (_autoPolygonizeShimmerDurationMs != clampedValue)
+                {
+                    _autoPolygonizeShimmerDurationMs = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         /// <summary>
         /// Green foreground and red background clicks on auto-polygonize proposals.
         /// Debug builds reset this to on; release builds reset it to off. Independent of the mask overlay.
@@ -752,7 +823,10 @@ namespace WebAnnotation.WPF.Forms
             bool hidePolygonPointsInPenMode = true,
             bool segmentationEdgeSnapEnabled = true,
             double segmentationSmoothingSigma = DefaultSegmentationSmoothingSigma,
-            double segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers)
+            double segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers,
+            bool autoPolygonizeShimmerEnabled = true,
+            double autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness,
+            int autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -782,6 +856,9 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             _autoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             _autoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
+            _autoPolygonizeShimmerEnabled = autoPolygonizeShimmerEnabled;
+            _autoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
+            _autoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
 
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -812,6 +889,9 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             _originalAutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             _originalAutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
+            _originalAutoPolygonizeShimmerEnabled = autoPolygonizeShimmerEnabled;
+            _originalAutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
+            _originalAutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
             _originalCorrectionShimEnabled = correctionShimEnabled;
             _originalCorrectionShimShowOffset = correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -847,6 +927,9 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeOverlayMasks = autoPolygonizeOverlayMasks;
             AutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             AutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
+            AutoPolygonizeShimmerEnabled = autoPolygonizeShimmerEnabled;
+            AutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
+            AutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
             CorrectionShimEnabled = correctionShimEnabled;
             CorrectionShimShowOffset = correctionShimShowOffset;
             CorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -889,6 +972,9 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeOverlayMasks = _autoPolygonizeOverlayMasks;
             _originalAutoPolygonizeOverlayPrompts = _autoPolygonizeOverlayPrompts;
             _originalAutoPolygonizeHideSegmentationRings = _autoPolygonizeHideSegmentationRings;
+            _originalAutoPolygonizeShimmerEnabled = _autoPolygonizeShimmerEnabled;
+            _originalAutoPolygonizeShimmerBrightness = _autoPolygonizeShimmerBrightness;
+            _originalAutoPolygonizeShimmerDurationMs = _autoPolygonizeShimmerDurationMs;
             _originalCorrectionShimEnabled = _correctionShimEnabled;
             _originalCorrectionShimShowOffset = _correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
@@ -929,6 +1015,9 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayMasks = _originalAutoPolygonizeOverlayMasks;
             _autoPolygonizeOverlayPrompts = _originalAutoPolygonizeOverlayPrompts;
             _autoPolygonizeHideSegmentationRings = _originalAutoPolygonizeHideSegmentationRings;
+            _autoPolygonizeShimmerEnabled = _originalAutoPolygonizeShimmerEnabled;
+            _autoPolygonizeShimmerBrightness = _originalAutoPolygonizeShimmerBrightness;
+            _autoPolygonizeShimmerDurationMs = _originalAutoPolygonizeShimmerDurationMs;
             _correctionShimEnabled = _originalCorrectionShimEnabled;
             _correctionShimShowOffset = _originalCorrectionShimShowOffset;
             _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
@@ -976,6 +1065,9 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayPrompts = false;
 #endif
             _autoPolygonizeHideSegmentationRings = false;
+            _autoPolygonizeShimmerEnabled = true;
+            _autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness;
+            _autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs;
             _correctionShimEnabled = true;
             _correctionShimShowOffset = false;
             _correctionShimFadeStartDownsample = 8;

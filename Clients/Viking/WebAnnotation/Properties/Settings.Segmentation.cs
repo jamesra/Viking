@@ -165,6 +165,44 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
+        /// True plays a one-shot shimmer over each newly shown auto-polygonize proposal.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoPolygonizeShimmerEnabled
+        {
+            get => (bool)this[nameof(AutoPolygonizeShimmerEnabled)];
+            set => this[nameof(AutoPolygonizeShimmerEnabled)] = value;
+        }
+
+        /// <summary>
+        /// Peak alpha of the shimmer lines, 0.1 to 1. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.6")]
+        public double AutoPolygonizeShimmerBrightness
+        {
+            get => (double)this[nameof(AutoPolygonizeShimmerBrightness)];
+            set => this[nameof(AutoPolygonizeShimmerBrightness)] = value;
+        }
+
+        /// <summary>
+        /// Milliseconds the shimmer takes to cross a proposal, 250 to 1000. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("750")]
+        public int AutoPolygonizeShimmerDurationMs
+        {
+            get => (int)this[nameof(AutoPolygonizeShimmerDurationMs)];
+            set => this[nameof(AutoPolygonizeShimmerDurationMs)] = value;
+        }
+
+        /// <summary>
         /// Stored mask-overlay choice. Debug builds ignore this until
         /// <see cref="AutoPolygonizeOverlayMasksUserSet"/> is true.
         /// </summary>

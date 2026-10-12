@@ -797,6 +797,72 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Smallest accepted <see cref="AutoPolygonizeShimmerBrightness"/>.</summary>
+            public const double MIN_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS = 0.1;
+
+            /// <summary>Largest accepted <see cref="AutoPolygonizeShimmerBrightness"/>.</summary>
+            public const double MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS = 1.0;
+
+            /// <summary>Starting <see cref="AutoPolygonizeShimmerBrightness"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const double DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS = 0.6;
+
+            /// <summary>Shortest accepted <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
+            public const int MIN_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 250;
+
+            /// <summary>Longest accepted <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
+            public const int MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 1000;
+
+            /// <summary>Starting <see cref="AutoPolygonizeShimmerDurationMs"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const int DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 750;
+
+            /// <summary>
+            /// Whether a newly shown auto-polygonize proposal plays the one-shot shimmer. Read when the proposal is
+            /// first drawn, so turning it off does not cut a shimmer already running.
+            /// </summary>
+            public static bool AutoPolygonizeShimmerEnabled
+            {
+                get => Properties.Settings.Default.AutoPolygonizeShimmerEnabled;
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerEnabled = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Peak alpha of the shimmer lines, clamped to the MIN/MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS range.</summary>
+            public static double AutoPolygonizeShimmerBrightness
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeShimmerBrightness,
+                    MIN_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS,
+                    MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerBrightness = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS,
+                        MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Milliseconds the shimmer takes to cross a proposal, clamped to the MIN/MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS range.</summary>
+            public static int AutoPolygonizeShimmerDurationMs
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeShimmerDurationMs,
+                    MIN_AUTOPOLYGONIZE_SHIMMER_DURATION_MS,
+                    MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_SHIMMER_DURATION_MS,
+                        MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             /// <summary>
             /// Debug overlay of the raw SAM2 mask on auto-polygonize proposals.
             /// Debug builds start on until the user toggles this. After a toggle the choice
@@ -960,6 +1026,9 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers;
                 Properties.Settings.Default.AutoPolygonizeMaxDownsample = 2.0;
+                Properties.Settings.Default.AutoPolygonizeShimmerEnabled = true;
+                Properties.Settings.Default.AutoPolygonizeShimmerBrightness = DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS;
+                Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;

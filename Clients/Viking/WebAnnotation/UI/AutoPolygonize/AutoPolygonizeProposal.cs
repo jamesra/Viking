@@ -384,13 +384,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Texels per stripe of the refining hatch. Texels are 1 to 4 image pixels, so stripes scale with zoom.</summary>
         private const int RefiningHatchStripeTexels = 2;
 
-        /// <summary>How long the one-shot shimmer wash takes to cross a newly shown proposal.</summary>
-        private const int ShimmerDurationMs = 750;
-
-        /// <summary>Peak alpha of the white lines at the centre of the shimmer band.</summary>
-        private const float ShimmerAlpha = 0.6f;
-
-        /// <summary>Width of the shimmer band as a fraction of the mask's diagonal extent (width + height).</summary>
+        /// <summary>Width of the shimmer band as a fraction of the polygon's diagonal extent (its x+y span in texels).</summary>
         private const float ShimmerBandFraction = 0.3f;
 
         /// <summary>Texels per line of the shimmer. Lines run perpendicular to the sweep direction.</summary>
@@ -431,9 +425,14 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private long shimmerStartTimestamp;
         private bool shimmerDone;
+        private int shimmerDurationMs;
+        private float shimmerPeakAlpha;
         private Texture2D? shimmerTexture;
         private TextureOverlayView? shimmerView;
         private Color[]? shimmerPixels;
+        private bool[]? shimmerInside;
+        private int shimmerDiagonalLow;
+        private int shimmerDiagonalHigh;
 
         public AutoPolygonizeProposal(
             AutoCirclePolygonizeController controller,
@@ -802,9 +801,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         public bool IsShimmering => shimmerStartTimestamp != 0 && !shimmerDone;
 
         /// <summary>
-        /// Sweeps a band of white lines across the mask once, <see cref="ShimmerDurationMs"/> after the first
-        /// frame this proposal is drawn in its final (non-refining) form. Never replays for the same proposal,
-        /// including after a mask rebuild. Needs the decoded mask bytes; without them it is skipped.
+        /// Sweeps a band of white lines across the mask once, starting on the first frame this proposal is drawn in
+        /// its final (non-refining) form. Duration and brightness come from the preferences and are read when the
+        /// shimmer starts. Skipped for good when the preference is off at that moment. Never replays for the same
+        /// proposal, including after a mask rebuild. Needs the decoded mask bytes; without them it is skipped.
         /// Must run on the graphics thread.
         /// </summary>
         private void DrawShimmer(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
@@ -820,9 +820,19 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             if (shimmerStartTimestamp == 0)
-                shimmerStartTimestamp = Stopwatch.GetTimestamp();
+            {
+                if (!Global.AnnotationSettings.AutoPolygonizeShimmerEnabled)
+                {
+                    shimmerDone = true;
+                    return;
+                }
 
-            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / ShimmerDurationMs;
+                shimmerDurationMs = Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs;
+                shimmerPeakAlpha = (float)Global.AnnotationSettings.AutoPolygonizeShimmerBrightness;
+                shimmerStartTimestamp = Stopwatch.GetTimestamp();
+            }
+
+            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / shimmerDurationMs;
             if (progress >= 1.0)
             {
                 shimmerDone = true;
@@ -838,9 +848,17 @@ namespace WebAnnotation.UI.AutoPolygonize
                     shimmerTexture = new Texture2D(graphicsDevice, shown.Width, shown.Height);
                     shimmerPixels = new Color[shown.MaskData.Length];
                     shimmerView = new TextureOverlayView(shimmerTexture, shown.WorldBounds, Color.White);
+                    shimmerInside = null;
                 }
 
-                ShimmerPixels(shown, progress, shimmerPixels!);
+                // The ring is the traced polygon, which can be much smaller than the raw mask (stray blobs,
+                // filled holes), so clip to the polygon rather than to the mask.
+                if (shimmerInside is null)
+                {
+                    shimmerInside = RasterizePolygon(Polygon, shown, out shimmerDiagonalLow, out shimmerDiagonalHigh);
+                }
+
+                ShimmerPixels(shown, shimmerInside, shimmerDiagonalLow, shimmerDiagonalHigh, progress, shimmerPeakAlpha, shimmerPixels!);
                 shimmerTexture.SetData(shimmerPixels);
             }
             catch (Exception)
@@ -869,18 +887,94 @@ namespace WebAnnotation.UI.AutoPolygonize
             shimmerTexture?.Dispose();
             shimmerTexture = null;
             shimmerPixels = null;
+            shimmerInside = null;
+        }
+
+        /// <summary>
+        /// Marks the texels of <paramref name="overlay"/> that fall inside <paramref name="polygon"/> (exterior ring
+        /// minus holes, even-odd). Texel centres map to world space exactly as the merged mask does: row 0 is the top
+        /// of <see cref="AutoPolygonizeMaskOverlay.WorldBounds"/>. <paramref name="diagonalLow"/> and
+        /// <paramref name="diagonalHigh"/> are the smallest and largest x+y of any marked texel, so the shimmer sweeps
+        /// only across the polygon (both 0 when nothing is marked).
+        /// </summary>
+        internal static bool[] RasterizePolygon(
+            Polygon polygon,
+            AutoPolygonizeMaskOverlay overlay,
+            out int diagonalLow,
+            out int diagonalHigh)
+        {
+            int width = overlay.Width;
+            int height = overlay.Height;
+            bool[] inside = new bool[width * height];
+            diagonalLow = int.MaxValue;
+            diagonalHigh = int.MinValue;
+
+            List<Geometry.Vector2[]> rings = [polygon.ExteriorRing, .. polygon.InteriorRings];
+            Geometry.Rectangle bounds = overlay.WorldBounds;
+            double worldWidth = Math.Max(bounds.Width, 1e-6);
+            double worldHeight = Math.Max(bounds.Height, 1e-6);
+            List<double> crossings = [];
+
+            for (int y = 0; y < height; y++)
+            {
+                double worldY = bounds.Top - ((y + 0.5) / height * worldHeight);
+                crossings.Clear();
+                foreach (Geometry.Vector2[] ring in rings)
+                {
+                    for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++)
+                    {
+                        Geometry.Vector2 a = ring[j];
+                        Geometry.Vector2 b = ring[i];
+                        if ((a.Y > worldY) == (b.Y > worldY))
+                            continue;
+
+                        crossings.Add(a.X + ((worldY - a.Y) / (b.Y - a.Y) * (b.X - a.X)));
+                    }
+                }
+
+                crossings.Sort();
+                for (int c = 0; c + 1 < crossings.Count; c += 2)
+                {
+                    // Texel x is inside when its centre, Left + (x + 0.5) / width * worldWidth, lies between the pair.
+                    int first = (int)Math.Ceiling(((crossings[c] - bounds.Left) / worldWidth * width) - 0.5);
+                    int last = (int)Math.Floor(((crossings[c + 1] - bounds.Left) / worldWidth * width) - 0.5);
+                    first = Math.Max(first, 0);
+                    last = Math.Min(last, width - 1);
+                    if (first > last)
+                        continue;
+
+                    for (int x = first; x <= last; x++)
+                        inside[(y * width) + x] = true;
+                    diagonalLow = Math.Min(diagonalLow, first + y);
+                    diagonalHigh = Math.Max(diagonalHigh, last + y);
+                }
+            }
+
+            if (diagonalLow > diagonalHigh)
+                diagonalLow = diagonalHigh = 0;
+
+            return inside;
         }
 
         /// <summary>
         /// Fills <paramref name="pixels"/> with one frame of the shimmer: lines along the x-y diagonal, visible only
-        /// inside the mask and only within a band centred on the x+y diagonal that moves from the lower-left
-        /// corner (<paramref name="progress"/> 0) to the upper-right (1). Separate from the draw so it needs no GPU.
+        /// where <paramref name="inside"/> is set and only within a band centred on the x+y diagonal. The band moves
+        /// from the lower-left (<paramref name="progress"/> 0) to the upper-right (1) across
+        /// <paramref name="diagonalLow"/> to <paramref name="diagonalHigh"/>, the span of the inside texels.
+        /// <paramref name="peakAlpha"/> is the alpha at the centre of the band. Separate from the draw so it needs no GPU.
         /// </summary>
-        internal static void ShimmerPixels(AutoPolygonizeMaskOverlay overlay, double progress, Color[] pixels)
+        internal static void ShimmerPixels(
+            AutoPolygonizeMaskOverlay overlay,
+            bool[] inside,
+            int diagonalLow,
+            int diagonalHigh,
+            double progress,
+            float peakAlpha,
+            Color[] pixels)
         {
-            double span = overlay.Width + overlay.Height;
-            double halfBand = span * ShimmerBandFraction / 2.0;
-            double center = -halfBand + (progress * (span + (2.0 * halfBand)));
+            double span = Math.Max(1, diagonalHigh - diagonalLow);
+            double halfBand = Math.Max(2.0, span * ShimmerBandFraction / 2.0);
+            double center = diagonalLow - halfBand + (progress * (span + (2.0 * halfBand)));
 
             for (int y = 0; y < overlay.Height; y++)
             {
@@ -888,16 +982,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                 {
                     int index = (y * overlay.Width) + x;
                     double distance = Math.Abs(x + y - center);
-                    bool inside = overlay.MaskData[index] >= SegmentationMaskPolygonizer.SoftMaskForeground;
                     bool line = (((x - y + overlay.Height) / ShimmerLineTexels) & 1) == 0;
-                    if (!inside || !line || distance >= halfBand)
+                    if (!inside[index] || !line || distance >= halfBand)
                     {
                         pixels[index] = Color.Transparent;
                         continue;
                     }
 
                     double falloff = 1.0 - (distance / halfBand);
-                    pixels[index] = Color.White.SetAlpha((float)(ShimmerAlpha * falloff * falloff * (3.0 - (2.0 * falloff))));
+                    pixels[index] = Color.White.SetAlpha((float)(peakAlpha * falloff * falloff * (3.0 - (2.0 * falloff))));
                 }
             }
         }

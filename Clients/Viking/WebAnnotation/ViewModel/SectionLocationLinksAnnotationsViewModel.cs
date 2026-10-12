@@ -85,32 +85,41 @@ namespace WebAnnotation.ViewModel
             // freezes the UI) and must not leave a half-added entry: KeyTracker rolls the key back when
             // the action throws, but LocationLinks is ours to clean up. A leftover entry would otherwise
             // make every later add of the same link fail.
-            KnownLinks.TryAdd(key, () =>
+            try
             {
-                LocationLinks[key] = lv;
+                KnownLinks.TryAdd(key, () =>
+                {
+                    LocationLinks[key] = lv;
 
-                try
-                {
-                    if (lv.LinksOverlap())
+                    try
                     {
-                        OverlappedLinkKeys.TryAdd(key, () =>
+                        if (lv.LinksOverlap())
                         {
-                            OverlappedAdjacentLocationIDs.AddRef(key.A);
-                            OverlappedAdjacentLocationIDs.AddRef(key.B);
-                        });
+                            OverlappedLinkKeys.TryAdd(key, () =>
+                            {
+                                OverlappedAdjacentLocationIDs.AddRef(key.A);
+                                OverlappedAdjacentLocationIDs.AddRef(key.B);
+                            });
+                        }
+                        else
+                        {
+                            NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                        }
                     }
-                    else
+                    catch (System.Exception ex)
                     {
-                        NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                        LocationLinks.TryRemove(key, out _);
+                        Trace.WriteLine($"AddLocationLink {key.A}-{key.B} on section {Section.Number} failed and was rolled back: {ex}");
+                        throw;
                     }
-                }
-                catch (System.Exception ex)
-                {
-                    LocationLinks.TryRemove(key, out _);
-                    Trace.WriteLine($"AddLocationLink {key.A}-{key.B} on section {Section.Number} failed and was rolled back: {ex}");
-                    throw;
-                }
-            });
+                });
+            }
+            catch (KeyNotFoundException)
+            {
+                // An endpoint was deleted after the TryGetValue checks above (LinksOverlap re-reads the store).
+                // The tracker and LocationLinks are already rolled back, and the link is gone with its location,
+                // so skip it rather than abort the caller's loop over the remaining links.
+            }
         }
 
         protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)

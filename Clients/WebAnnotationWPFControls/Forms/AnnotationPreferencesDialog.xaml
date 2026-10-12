@@ -835,6 +835,59 @@
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
                                    Text="Draws the green foreground and red background clicks sent with each auto-polygonize request. Debug builds start with this on; turn it off for normal tracing."/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeShimmerEnabled, Mode=TwoWay}"
+                                  Content="Shimmer new auto-segmentations"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Sweeps a band of white lines across each auto-polygonize result once when it first appears."/>
+                        <Grid IsEnabled="{Binding AutoPolygonizeShimmerEnabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Shimmer brightness:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"
+                                    Minimum="0.1"
+                                    Maximum="1"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeShimmerBrightness, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+
+                            <Label Grid.Row="1" Grid.Column="0" Content="Shimmer duration (ms):"/>
+                            <Slider Grid.Row="1" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"
+                                    Minimum="250"
+                                    Maximum="1000"
+                                    TickFrequency="50"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="1" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeShimmerDurationMs, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                        </Grid>
                     </StackPanel>
                 </Expander>
             </StackPanel>
