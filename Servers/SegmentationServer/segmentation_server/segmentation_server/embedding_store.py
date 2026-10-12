@@ -17,6 +17,7 @@ import re
 import shutil
 import threading
 import time
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
@@ -48,6 +49,70 @@ def _directory_bytes(directory: Path) -> int:
             except OSError:
                 continue
     return total
+
+
+DEFAULT_RAM_ENTRIES = 4
+
+
+class EmbeddingRamCache:
+    """The last few image embeddings, kept in host memory, in front of the disk store.
+
+    An offset cell window is predicted on a throwaway predictor, so without this each prediction on a window the
+    server has seen reloads its embedding from disk (``torch.load`` of tens of MiB) or, with no disk store, runs
+    the image encoder again. Entries are CPU tensor dicts in the disk blob's layout, keyed like the disk store by
+    ``(pixel digest, encoder generation)``, evicted least recently used first. Thread safe; the payloads are
+    handed out shared and must be treated as read only.
+    """
+
+    def __init__(self, max_entries: int) -> None:
+        self._max_entries = max_entries
+        self._entries: "OrderedDict[tuple[str, str], dict]" = OrderedDict()
+        self._lock = threading.Lock()
+
+    @property
+    def max_entries(self) -> int:
+        """Most embeddings held at once."""
+        return self._max_entries
+
+    def get(self, digest: str, mode: str) -> Optional[dict]:
+        """The payload for the key, now the most recently used, or None."""
+        with self._lock:
+            payload = self._entries.get((digest, mode))
+            if payload is not None:
+                self._entries.move_to_end((digest, mode))
+            return payload
+
+    def put(self, digest: str, mode: str, payload: dict) -> None:
+        """Remember ``payload``, dropping the least recently used entries beyond the cap."""
+        with self._lock:
+            self._entries[(digest, mode)] = payload
+            self._entries.move_to_end((digest, mode))
+            while len(self._entries) > self._max_entries:
+                self._entries.popitem(last=False)
+
+    def discard(self, digest: str, mode: str) -> None:
+        """Forget the key, for example after its payload failed to install."""
+        with self._lock:
+            self._entries.pop((digest, mode), None)
+
+
+def open_embedding_ram_cache() -> Optional[EmbeddingRamCache]:
+    """The in-memory embedding cache, sized by ``SEGMENTATION_EMBEDDING_RAM_ENTRIES`` (default 4, 0 turns it off).
+
+    A 1024 window's embedding is roughly 40 to 85 MiB, so the default holds a few hundred MiB of host memory.
+    """
+    raw = os.environ.get("SEGMENTATION_EMBEDDING_RAM_ENTRIES", "").strip()
+    entries = DEFAULT_RAM_ENTRIES
+    if raw:
+        try:
+            entries = int(raw)
+        except ValueError:
+            logger.warning("Invalid SEGMENTATION_EMBEDDING_RAM_ENTRIES=%r; using %s", raw, DEFAULT_RAM_ENTRIES)
+    if entries <= 0:
+        logger.info("Embedding RAM cache disabled")
+        return None
+    logger.info("Embedding RAM cache holds %s embeddings", entries)
+    return EmbeddingRamCache(entries)
 
 
 def checkpoint_stamp(checkpoint_path: str, model_cfg: str) -> str:

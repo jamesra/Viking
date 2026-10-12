@@ -201,6 +201,8 @@ Cache defaults: 5 minute idle TTL for ad-hoc uploads (grid tiles do not expire),
 
 The GPU cap is the hot set. Feature maps for each cell are also written under `SEGMENTATION_EMBEDDING_CACHE` (inside the container, `/var/cache/segmentation-embeddings`). Compose mounts `${SEGMENTATION_EMBEDDING_CACHE_HOST:-D:/Docker/cache/segmentation-embeddings}` there. A later upload of the same PNG bytes reloads that file and skips `set_image()`. The directory is split by checkpoint identity and by encoder generation (`eager` while compile is warming, `compiled` after the swap), so a new checkpoint or the compiled encoder does not reuse the other generation. Default disk cap is 32 GiB (`SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES`, `0` for no cap). The client still sends the PNG; the disk hit skips the encoder only.
 
+In front of the disk store, offset cell windows (the ones predicted on a throwaway predictor) keep their last few embeddings in host memory (`SEGMENTATION_EMBEDDING_RAM_ENTRIES`, default 4, `0` turns it off; a 1024 window is roughly 40 to 85 MiB). A repeat prediction on the same window pixels then skips both the encoder and the disk read, and with no disk store configured it is the only thing that does.
+
 ## GPU / CUDA
 
 The Docker image is `nvidia/cuda:13.2.1-devel-ubuntu24.04` with `torch==2.14.0+cu132` and `torchvision==0.29.0`. It is built for **Ada sm_89 and later** (RTX 4500 Ada, RTX 40, L40, Hopper, Blackwell). Host NVIDIA driver must be **595+** or the container will not start.

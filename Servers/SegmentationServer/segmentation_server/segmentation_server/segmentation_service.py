@@ -26,7 +26,7 @@ from segmentation_server.compile_config import (
     env_box_multimask_enabled,
     hydra_overrides_for_image_encoder,
 )
-from segmentation_server.embedding_store import EmbeddingStore, open_embedding_store
+from segmentation_server.embedding_store import EmbeddingRamCache, EmbeddingStore, open_embedding_ram_cache, open_embedding_store
 from segmentation_server.cuda_errors import raise_if_cuda_lost
 from segmentation_server.encoder_parity import EncoderParityError, compare_feature_maps
 from segmentation_server.model_capabilities import SAM2_CAPABILITIES
@@ -82,6 +82,8 @@ class SegmentationModel:
     """
 
     capabilities = SAM2_CAPABILITIES
+    # Host-memory embeddings for offset windows; None until ``__init__`` opens it (or when turned off).
+    _ram_embeddings: Optional[EmbeddingRamCache] = None
 
 
     def __init__(
@@ -137,6 +139,7 @@ class SegmentationModel:
             sam2_checkpoint,
             model_cfg,
         )
+        self._ram_embeddings: Optional[EmbeddingRamCache] = open_embedding_ram_cache()
 
         if hydra_overrides_for_image_encoder(compile_image_encoder, self.device.type):
             self.compile_status = COMPILE_WARMING
@@ -345,29 +348,75 @@ class SegmentationModel:
         predictor: SAM2ImagePredictor,
         digest: str,
         mode: str,
+        remember: bool = False,
     ) -> bool:
+        """Install a stored embedding onto ``predictor``: from host memory, else from disk.
+
+        ``remember`` also keeps a disk hit in the in-memory cache; the throwaway predictors of offset windows
+        ask for it, the pinned aligned tiles do not (the GPU cache already holds those).
+        """
         store = self._embedding_store
+        ram = self._ram_embeddings
+        cached = ram.get(digest, mode) if ram is not None else None
+        if cached is not None:
+            try:
+                self._install_disk_features(predictor, cached)
+            except Exception:
+                logger.warning("Embedding RAM entry unusable sha=%s mode=%s", digest[:12], mode)
+                ram.discard(digest, mode)
+            else:
+                if store is not None:
+                    store.touch(digest, mode)
+                logger.info("Embedding RAM hit sha=%s mode=%s", digest[:12], mode)
+                return True
         if store is None:
             return False
         blob = store.try_load(digest, mode)
         if blob is None:
             return False
         try:
-            payload = torch.load(io.BytesIO(blob), map_location=predictor.device, weights_only=True)
+            payload = torch.load(io.BytesIO(blob), map_location="cpu", weights_only=True)
             self._install_disk_features(predictor, payload)
         except Exception:
             logger.warning("Embedding disk blob unreadable sha=%s mode=%s", digest[:12], mode)
             store.discard(digest, mode)
             return False
+        if remember and ram is not None:
+            ram.put(digest, mode, payload)
         logger.info("Embedding disk hit sha=%s mode=%s bytes=%s", digest[:12], mode, len(blob))
         return True
 
-    def _save_disk_embedding(self, predictor: SAM2ImagePredictor, digest: str, mode: str) -> None:
+    def _export_payload_for_cache(self, predictor: SAM2ImagePredictor, digest: str, mode: str) -> Optional[dict]:
+        """The predictor's embedding as a CPU tensor dict, filed in the in-memory cache; None when there is none to keep.
+
+        The same dict is handed to :meth:`_save_disk_embedding` so the device-to-host copy happens once. Returns None
+        (and keeps nothing) when neither cache is on, since the copy would be wasted.
+        """
+        ram = self._ram_embeddings
+        if (ram is None and self._embedding_store is None) or predictor._features is None or not predictor._orig_hw:
+            return None
+        try:
+            payload = self._export_payload(predictor)
+        except Exception:
+            logger.exception("Embedding export failed sha=%s mode=%s", digest[:12], mode)
+            return None
+        if ram is not None:
+            ram.put(digest, mode, payload)
+        return payload
+
+    def _save_disk_embedding(
+        self,
+        predictor: SAM2ImagePredictor,
+        digest: str,
+        mode: str,
+        payload: Optional[dict] = None,
+    ) -> None:
+        """Write the predictor's embedding to the disk store; ``payload`` is its CPU tensor dict when the caller already exported it."""
         store = self._embedding_store
         if store is None or predictor._features is None or not predictor._orig_hw:
             return
         try:
-            blob = self._export_disk_features(predictor)
+            blob = self._export_disk_features(predictor) if payload is None else self._serialize_payload(payload)
             if not store.save(digest, blob, mode):
                 return
         except Exception:
@@ -377,6 +426,11 @@ class SegmentationModel:
 
     @staticmethod
     def _export_disk_features(predictor: SAM2ImagePredictor) -> bytes:
+        """The predictor's embedding as disk blob bytes."""
+        return SegmentationModel._serialize_payload(SegmentationModel._export_payload(predictor))
+
+    @staticmethod
+    def _export_payload(predictor: SAM2ImagePredictor) -> dict:
         """CPU tensor dict. weights_only loads accept tensors, not Python lists."""
         features = predictor._features
         height, width = predictor._orig_hw[0]
@@ -389,6 +443,11 @@ class SegmentationModel:
         }
         for index, tensor in enumerate(high_res):
             payload[f"high_res_{index}"] = tensor.detach().to("cpu").contiguous()
+        return payload
+
+    @staticmethod
+    def _serialize_payload(payload: dict) -> bytes:
+        """A tensor dict from :meth:`_export_payload` as the bytes the disk store keeps."""
         buffer = io.BytesIO()
         torch.save(payload, buffer)
         return buffer.getvalue()
@@ -574,9 +633,10 @@ class SegmentationModel:
             mode = self._embedding_mode
         predictor = SAM2ImagePredictor(model)
         try:
-            if not self._try_load_disk_embedding(predictor, digest, mode):
+            if not self._try_load_disk_embedding(predictor, digest, mode, remember=True):
                 self._encode_image(predictor, image)
-                self._save_disk_embedding(predictor, digest, mode)
+                payload = self._export_payload_for_cache(predictor, digest, mode)
+                self._save_disk_embedding(predictor, digest, mode, payload)
             return self.predict_tile(
                 predictor,
                 coordinates,

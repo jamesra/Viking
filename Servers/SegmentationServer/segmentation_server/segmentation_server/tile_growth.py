@@ -45,7 +45,6 @@ was already predicted is predicted again and ``G`` only ever gains pixels.
 
 from __future__ import annotations
 
-import copy
 import logging
 import os
 from collections import deque
@@ -1094,7 +1093,7 @@ class GrowthWalk:
         # request whose every start was rejected would return the rectangle it was given.
         canvas = self._canvas
         if self._assume_boxes or self._masks or self._background_masks:
-            canvas = copy.deepcopy(self._canvas)
+            canvas = self._canvas.fork_for_pins()
             for box in self._boxes:
                 if cores_under_box(box) is None:
                     continue

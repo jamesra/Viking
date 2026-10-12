@@ -290,6 +290,25 @@ class Canvas:
         self._reach: dict[Cell, MaskArray] = {}
         self._decided: dict[Cell, MaskArray] = {}
 
+    def fork_for_pins(self) -> "Canvas":
+        """A canvas that can take :meth:`assume_core`, :meth:`assume_box`, :meth:`assume_mask` and :meth:`deny_mask` without touching this one.
+
+        Only the blocks, decided cores and pins those methods write are copied. The fused logits, the per-window
+        contributions and the reach masks (about 1.5 MB per predicted window, which a ``copy.deepcopy`` would copy
+        too) are shared, so the fork is for reading them (:meth:`decided_cells`, :meth:`decided_core`,
+        :meth:`fused_mosaic`, :meth:`has_logits`) and must not be given another prediction.
+        """
+        fork = Canvas.__new__(Canvas)
+        fork._blocks = {cell: block.copy() for cell, block in self._blocks.items()}
+        fork._pinned = {cell: block.copy() for cell, block in self._pinned.items()}
+        fork._decided = {cell: block.copy() for cell, block in self._decided.items()}
+        fork._legacy = self._legacy
+        fork._sum = self._sum
+        fork._weight = self._weight
+        fork._windows = self._windows
+        fork._reach = self._reach
+        return fork
+
     def cells(self) -> List[Cell]:
         """Cells that own at least one set pixel, in insertion order."""
         return [cell for cell, block in self._blocks.items() if block.any()]

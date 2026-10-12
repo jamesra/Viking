@@ -469,3 +469,62 @@ def test_an_embedding_blob_with_another_format_is_refused_not_installed() -> Non
         SegmentationModel._install_disk_features(predictor, good)
     except KeyError:
         pass
+
+
+def _model_with_ram_cache(monkeypatch, ram):
+    """A model whose encoder, exporter and installer are fakes, to test when the encoder runs."""
+    model = _model_with_store(monkeypatch)
+    model._embedding_store = None
+    model._ram_embeddings = ram
+    model.encoded = 0
+    model.installed = []
+
+    def encode(predictor, image) -> None:
+        model.encoded += 1
+        predictor._features = {"image_embed": 1}
+        predictor._orig_hw = [(16, 16)]
+
+    monkeypatch.setattr(model, "_encode_image", encode)
+    monkeypatch.setattr(SegmentationModel, "_export_payload", staticmethod(lambda predictor: {"embedding": "payload"}))
+    monkeypatch.setattr(
+        SegmentationModel, "_install_disk_features", staticmethod(lambda predictor, payload: model.installed.append(payload))
+    )
+    monkeypatch.setattr(model, "predict_tile", lambda *args, **kwargs: "predicted")
+    monkeypatch.setattr(model, "release_predictor", lambda predictor: None)
+    return model
+
+
+def test_a_window_seen_before_skips_the_encoder_and_installs_the_cached_embedding(monkeypatch) -> None:
+    from segmentation_server.embedding_store import EmbeddingRamCache
+
+    model = _model_with_ram_cache(monkeypatch, EmbeddingRamCache(2))
+    window = np.random.default_rng(3).integers(0, 255, (16, 16, 3), dtype=np.uint8)
+
+    assert model.predict_ephemeral(window, [(1, 1)], [1], False, (16, 16)) == "predicted"
+    assert model.encoded == 1 and model.installed == []
+    assert model.predict_ephemeral(window, [(2, 2)], [1], False, (16, 16)) == "predicted"
+
+    assert model.encoded == 1, "the second prediction on the same pixels reused the embedding"
+    assert model.installed == [{"embedding": "payload"}]
+
+
+def test_with_the_ram_cache_off_each_window_prediction_encodes(monkeypatch) -> None:
+    model = _model_with_ram_cache(monkeypatch, None)
+    window = np.random.default_rng(3).integers(0, 255, (16, 16, 3), dtype=np.uint8)
+
+    model.predict_ephemeral(window, [(1, 1)], [1], False, (16, 16))
+    model.predict_ephemeral(window, [(1, 1)], [1], False, (16, 16))
+
+    assert model.encoded == 2
+
+
+def test_different_window_pixels_are_different_ram_entries(monkeypatch) -> None:
+    from segmentation_server.embedding_store import EmbeddingRamCache
+
+    model = _model_with_ram_cache(monkeypatch, EmbeddingRamCache(4))
+    rng = np.random.default_rng(5)
+
+    model.predict_ephemeral(rng.integers(0, 255, (16, 16, 3), dtype=np.uint8), [(1, 1)], [1], False, (16, 16))
+    model.predict_ephemeral(rng.integers(0, 255, (16, 16, 3), dtype=np.uint8), [(1, 1)], [1], False, (16, 16))
+
+    assert model.encoded == 2
