@@ -641,7 +641,29 @@ class SegmentationModel:
         index = select_mask(masks, scores, box=box, positives=positives)
         chosen_logits = None if logits is None or len(logits) <= index else logits[index]
         chosen = self._force_positive_points(masks[index], positives)
+        if mask_logits is not None and not (multimask_output or box_multimask):
+            chosen = self._force_prompt_mask(chosen, mask_logits, mask_threshold)
         return chosen, chosen_logits, float(scores[index])
+
+    @staticmethod
+    def _force_prompt_mask(
+        mask: NDArray[np.bool_], mask_logits: NDArray, mask_threshold: float
+    ) -> NDArray[np.bool_]:
+        """Return ``mask`` with every pixel the mask prompt already calls object set to foreground.
+
+        ``mask_logits`` is the 2-D prompt given to ``_predict_with_logits`` (any size, Y-down); it is
+        resized to the mask and a pixel above ``mask_threshold`` is kept, so what neighboring
+        windows found cannot be dropped by this window's decoder. Neutral (0) and negative areas
+        are left to the prediction. Only called when the prompt was actually used as ``mask_input``,
+        which multimask output ignores. Returns a copy.
+        """
+        prompt = np.asarray(mask_logits, dtype=np.float32)
+        if prompt.ndim != 2 or prompt.size == 0:
+            return mask
+        height, width = mask.shape[:2]
+        if prompt.shape != (height, width):
+            prompt = cv2.resize(prompt, (width, height), interpolation=cv2.INTER_LINEAR)
+        return mask | (prompt > float(mask_threshold))
 
     @staticmethod
     def _force_positive_points(mask: NDArray[np.bool_], positives: Sequence[Point]) -> NDArray[np.bool_]:

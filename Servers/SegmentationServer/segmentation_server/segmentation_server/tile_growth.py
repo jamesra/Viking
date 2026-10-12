@@ -125,6 +125,10 @@ DEFAULT_MAX_PREDICTIONS = 96
 DEFAULT_MAX_CELLS = 48
 # A box prompt clipped to less than this on a side says nothing useful about the object.
 MIN_BOX_SIDE = 16
+# Logit a mask prompt gives the pixels it covers: confidently object, well inside SAM2's mask_input range.
+MASK_PROMPT_LOGIT = 8.0
+# Logit a background rectangle gives where nothing positive is known: it only says "most likely background".
+BACKGROUND_RECT_LOGIT = 2.0
 # A frontier is tried once per square of this many mosaic pixels, so one that stays uncovered cannot loop.
 FRONTIER_TRY_PX = 64
 # How far from the object it found, in logit samples (4 px each), a prediction's "not object"
@@ -281,6 +285,10 @@ def grow_segmentation(
     boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     omit_with_box: Optional[Sequence[Point]] = None,
     assume_boxes: bool = False,
+    masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+    hint_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+    background_masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+    background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
 ) -> GrowthResult:
     """One pass of ``GrowthWalk``: walk outward from the clicks with the tiles ``predict`` has.
 
@@ -300,6 +308,10 @@ def grow_segmentation(
         boxes=boxes,
         omit_with_box=omit_with_box,
         assume_boxes=assume_boxes,
+        masks=masks,
+        hint_boxes=hint_boxes,
+        background_masks=background_masks,
+        background_rects=background_rects,
     )
     walk.advance()
     return walk.result()
@@ -328,6 +340,15 @@ class GrowthWalk:
     ``assume_boxes`` takes every pixel of every box as object, predicted or not: for boxes a
     client chose and placed inside the structure, so what SAM2 leaves out of one (an organelle,
     a pale compartment) is not left as a hole. Boxes the server inferred are not assumed.
+    ``masks`` are rectangle-shaped mask prompts (same frame as ``boxes``): "everything inside is
+    object, and the mask grows beyond it". They start cells and cover cores exactly as boxes do and
+    are always taken as object, but a cell's first prediction is given the rectangle as SAM2's
+    ``mask_input`` (with the rectangle's center as a click) instead of as a box.
+    ``hint_boxes`` are boxes in the "most likely inside" sense: they start cells and are sent as boxes
+    like ``boxes`` but are never taken as object, whatever ``assume_boxes`` says.
+    ``background_masks`` are rectangles that are all background: every window's mask prompt is
+    strongly negative there and they are cleared from the answer. ``background_rects`` are
+    rectangles the background is most likely inside: a weak negative in the mask prompt only.
     """
 
     def __init__(
@@ -343,6 +364,10 @@ class GrowthWalk:
         boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         omit_with_box: Optional[Sequence[Point]] = None,
         assume_boxes: bool = False,
+        masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+        hint_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+        background_masks: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+        background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     ) -> None:
         self._started = False
         self._assume_boxes = assume_boxes
@@ -360,7 +385,15 @@ class GrowthWalk:
         self._pending: List[TileIndex] = []
         self._asked: Set[TileIndex] = set()
         self._unavailable: Set[TileIndex] = set()
+        self._masks: Set[Box] = {(int(a), int(b), int(c), int(d)) for a, b, c, d in masks or ()}
+        # Masks follow boxes in this list so start-cell choice and core coverage treat both alike;
+        # ``_masks`` says which entries are prompted as masks.
         self._boxes = [(int(a), int(b), int(c), int(d)) for a, b, c, d in boxes or ()]
+        self._hints: Set[Box] = {(int(a), int(b), int(c), int(d)) for a, b, c, d in hint_boxes or ()}
+        self._boxes += sorted(self._hints.difference(self._boxes))
+        self._boxes += sorted(self._masks.difference(self._boxes))
+        self._background_masks = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_masks or ()]
+        self._background_rects = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_rects or ()]
         self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
         self._logit_iso = float(logit_iso)
         self._fg = [(int(x), int(y)) for x, y in foreground]
@@ -572,18 +605,20 @@ class GrowthWalk:
         margin = _box_window_margin(cell, box)
         return margin if margin >= edge_clearance_px() else None
 
-    def _start_box(self, cell: Cell) -> Optional[Box]:
-        """The mosaic box this cell's first prediction is prompted with, or None.
+    def _start_box(self, cell: Cell) -> Optional[Tuple[Box, bool]]:
+        """The mosaic rectangle this cell's first prediction is prompted with and whether it is a mask, or None.
 
         A cell is prompted with a box only when the box reaches its core. When the whole box lies
         inside the window (clear of the border) the box is used as it is. When it does not, which
         is a box bigger than the window, only its overlap with the core is used: that rectangle is
         inside the object and at least 256 px from the window border, where a mask can cover it.
-        The largest such rectangle wins when several boxes reach the cell.
+        The largest such rectangle wins when several boxes reach the cell. The flag is True when the
+        winner came from a mask prompt (or is the overlap of one).
         """
         core_x, core_y = core_origin(cell)
         clearance = edge_clearance_px()
         best: Optional[Box] = None
+        best_is_mask = False
         for box in self._boxes:
             x0, y0, x1, y1 = box
             overlap = (max(x0, core_x), max(y0, core_y), min(x1, core_x + CORE_SIZE - 1), min(y1, core_y + CORE_SIZE - 1))
@@ -594,8 +629,8 @@ class GrowthWalk:
             if chosen[2] - chosen[0] + 1 < MIN_BOX_SIDE or chosen[3] - chosen[1] + 1 < MIN_BOX_SIDE:
                 continue
             if best is None or _box_area(chosen) > _box_area(best):
-                best = chosen
-        return best
+                best, best_is_mask = chosen, box in self._masks
+        return None if best is None else (best, best_is_mask)
 
     def _unreached_foreground_owners(self) -> List[Cell]:
         owners: List[Cell] = []
@@ -713,9 +748,13 @@ class GrowthWalk:
     def _run_attempt(self, cell: Cell, attempt: _Attempt) -> bool:
         """Predict ``cell`` for one attempt and fold the answer into ``G``. False when the cell is deferred."""
         if attempt.kind == "user":
-            mosaic_box = self._start_box(cell)
-            box = window_box(cell, [mosaic_box]) if mosaic_box is not None else None
-            points, labels, positives = self._start_prompts(cell, mosaic_box, boxed=box is not None)
+            start = self._start_box(cell)
+            mosaic_box = start[0] if start is not None else None
+            masked = start is not None and start[1]
+            box = window_box(cell, [mosaic_box]) if mosaic_box is not None and not masked else None
+            points, labels, positives = self._start_prompts(
+                cell, mosaic_box, boxed=box is not None, send_center=masked
+            )
             clicks: List[Point] = []
         elif attempt.kind == "frontier":
             # The object ran into area no window had covered here. This is the cell centered on that spot:
@@ -745,6 +784,9 @@ class GrowthWalk:
         # A continuation window is told what the windows around it have found, so it continues that
         # object instead of choosing one from its prompt alone. A start window has nothing to be told.
         mask_logits = self._canvas.window_logits(cell) if attempt.kind in ("edge", "frontier") else None
+        if attempt.kind == "user" and masked:
+            mask_logits = mask_prompt_logits(cell, mosaic_box)
+        mask_logits = self._with_background(cell, mask_logits)
         outcome = self._call_predict(cell, points, labels, box, mask_logits)
         if outcome is None:
             return False
@@ -838,8 +880,27 @@ class GrowthWalk:
         new = self._canvas.or_core(cell, core_up)
         return {cell: new} if new else {}
 
+    def _with_background(self, cell: Cell, mask_logits: Optional[NDArray]) -> Optional[NDArray]:
+        """``mask_logits`` with the client's background rectangles and masks painted into ``cell``'s window.
+
+        A background mask is ``-MASK_PROMPT_LOGIT`` wherever it covers; a background rectangle is only
+        ``-BACKGROUND_RECT_LOGIT`` and only where nothing positive is already known, because it says the
+        background is likely there, not certain. The input is not modified. Returns it unchanged when no
+        background shape reaches the window.
+        """
+        if not self._background_rects and not self._background_masks:
+            return mask_logits
+        out = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=np.float32) if mask_logits is None else mask_logits.copy()
+        for rect in self._background_rects:
+            paint_box(out, cell, rect, -BACKGROUND_RECT_LOGIT, only_unset_or_negative=True)
+        for mask in self._background_masks:
+            paint_box(out, cell, mask, -MASK_PROMPT_LOGIT)
+        if mask_logits is None and not out.any():
+            return None
+        return out
+
     def _start_prompts(
-        self, cell: Cell, mosaic_box: Optional[Box], boxed: bool
+        self, cell: Cell, mosaic_box: Optional[Box], boxed: bool, send_center: bool = False
     ) -> Tuple[List[Point], List[int], List[Point]]:
         """Window-local points, labels and positives for a cell the client's prompt started.
 
@@ -847,7 +908,9 @@ class GrowthWalk:
         for the legacy nine-click circle can be listed in ``omit_with_box``: it is left out of the
         prompt but still counts as a positive when filtering the answer. The box's center is also a
         positive for that filter, so a piece covering the box is never dropped for holding no click
-        and the window may hold none; it is not sent to SAM2 unless the client sent it itself.
+        and the window may hold none; it is not sent to SAM2 unless the client sent it itself or
+        ``send_center`` is set, which a mask-prompted start uses so SAM2 has a click to pair with
+        the mask.
         """
         legacy_omit = set(self._omit_with_box) if boxed else set()
         filter_only: Set[Point] = set()
@@ -855,7 +918,8 @@ class GrowthWalk:
         if mosaic_box is not None:
             center = box_center(mosaic_box)
             if center not in self._fg_set:
-                filter_only.add(center)
+                if not send_center:
+                    filter_only.add(center)
                 extra.append(center)
         points, labels, positives = self._build_prompts(cell, legacy_omit | filter_only, extra_positives=extra)
         # Legacy nine-click prompt: if the window holds nothing but omitted clicks, send them.
@@ -1003,11 +1067,15 @@ class GrowthWalk:
         # runs they would stand in for predictions (edge crossings, a found answer), and a
         # request whose every start was rejected would return the rectangle it was given.
         canvas = self._canvas
-        if self._assume_boxes:
+        if self._assume_boxes or self._masks or self._background_masks:
             canvas = copy.deepcopy(self._canvas)
             for box in self._boxes:
-                if cores_under_box(box) is not None:
+                taken = box in self._masks or (self._assume_boxes and box not in self._hints)
+                if taken and cores_under_box(box) is not None:
                     canvas.assume_box(box)
+            for box in self._background_masks:
+                if cores_under_box(box) is not None:
+                    canvas.deny_box(box)
         owners = canvas.decided_cells()
 
         min_row = min(cell.row for cell in owners)
@@ -1092,6 +1160,37 @@ def window_box(
         if area > best_area or (area == best_area and best is not None and clipped < best):
             best, best_area = clipped, area
     return best
+
+
+def mask_prompt_logits(cell: Cell, box: Box) -> NDArray[np.float32]:
+    """A rectangle-shaped mask prompt as SAM2 ``mask_input`` for ``cell``'s window.
+
+    ``LOGIT_WINDOW`` square, Y-down like :meth:`Canvas.window_logits`: ``MASK_PROMPT_LOGIT`` inside the
+    rectangle and 0 (no information) elsewhere, because a mask prompt says what is object and nothing
+    about the rest. The rectangle is clipped to the window.
+    """
+    out = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=np.float32)
+    paint_box(out, cell, box, MASK_PROMPT_LOGIT)
+    return out
+
+
+def paint_box(
+    out: NDArray[np.float32], cell: Cell, box: Box, value: float, only_unset_or_negative: bool = False
+) -> None:
+    """Write ``value`` into ``out`` (a ``LOGIT_WINDOW`` square, Y-down) over the part of ``box`` in ``cell``'s window.
+
+    With ``only_unset_or_negative`` a sample that is already positive is left alone.
+    """
+    clipped = clip_box_to_window(cell, box)
+    if clipped is None:
+        return
+    left, top, right, bottom = clipped
+    region = out[top // LOGIT_SCALE:bottom // LOGIT_SCALE + 1, left // LOGIT_SCALE:right // LOGIT_SCALE + 1]
+    if only_unset_or_negative:
+        free = region <= 0
+        region[free] = np.minimum(region[free], value)
+    else:
+        region[:] = value
 
 
 def clip_box_to_window(

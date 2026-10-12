@@ -158,3 +158,18 @@ def test_a_positive_point_is_always_foreground_in_the_returned_mask() -> None:
 def test_no_positive_points_leaves_the_mask_alone() -> None:
     mask = np.zeros((SIDE, SIDE), dtype=np.bool_)
     assert not _model()._force_positive_points(mask, []).any()
+
+
+def test_a_mask_prompt_keeps_its_foreground_in_the_returned_mask() -> None:
+    """Pixels the prompt calls object stay object even where the decoder said background."""
+    prompt = np.zeros((SIDE, SIDE), dtype=np.float32)
+    prompt[0:5, 0:5] = 4.0
+    prompt[50:60, 50:60] = -4.0
+    forced = _model()._force_prompt_mask(np.zeros((SIDE, SIDE), dtype=np.bool_), prompt, 0.0)
+    assert forced[0:5, 0:5].all() and forced.sum() == 25
+
+
+def test_a_mask_prompt_of_another_size_is_resized_before_forcing() -> None:
+    prompt = np.full((16, 16), 3.0, dtype=np.float32)
+    forced = _model()._force_prompt_mask(np.zeros((SIDE, SIDE), dtype=np.bool_), prompt, 0.0)
+    assert forced.all()

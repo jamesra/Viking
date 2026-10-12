@@ -325,6 +325,33 @@ class Canvas:
                     added[cell] = new
         return added
 
+    def deny_box(self, box: Box) -> None:
+        """Mark every pixel of a mosaic box as not object, whatever was predicted or pinned there.
+
+        ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. Used for a background mask the
+        client sent ("everything inside is background"), applied to the finished answer only, after
+        :meth:`assume_box`, so a background mask wins where it overlaps a foreground one. Cells with
+        no pixels yet are left alone.
+        """
+        x0, y0, x1, y1 = (int(v) for v in box)
+        x0, x1 = min(x0, x1), max(x0, x1)
+        y0, y1 = min(y0, y1), max(y0, y1)
+        first = cell_of_point(x0, y0)
+        last = cell_of_point(x1, y1)
+        for row in range(first.row, last.row + 1):
+            for col in range(first.col, last.col + 1):
+                cell = Cell(row, col)
+                bx, by = core_origin(cell)
+                xa, xb = max(x0, bx), min(x1, bx + CORE_SIZE - 1)
+                ya, yb = max(y0, by), min(y1, by + CORE_SIZE - 1)
+                if xa > xb or ya > yb:
+                    continue
+                piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
+                for store in (self._blocks, self._decided, self._pinned):
+                    held = store.get(cell)
+                    if held is not None:
+                        held[piece] = False
+
     def blend_window(
         self,
         cell: Cell,

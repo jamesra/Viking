@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from cell_world import World, ellipse, iou
-from segmentation_server.cell_grid import Cell, cell_of_point
+from segmentation_server.cell_grid import Cell, cell_of_point, mosaic_to_window
 from segmentation_server.mask_utils import NoMatchingMask
 from segmentation_server.tile_growth import GrowthWalk, grow_segmentation
 
@@ -79,7 +79,9 @@ def test_only_boxes_the_client_sent_are_taken_as_object() -> None:
 
     from segmentation_server.server import _resolve_boxes
 
-    sent = SimpleNamespace(foreground_boxes=[SimpleNamespace(x_min=10, y_min=20, x_max=110, y_max=140)])
+    sent = SimpleNamespace(
+        foreground_boxes=[SimpleNamespace(x_min=10, y_min=20, x_max=110, y_max=140)]
+    )
     boxes, omit, client_chose = _resolve_boxes(sent, [(60, 80)])
     assert boxes == [(10, 20, 110, 140)] and omit == [] and client_chose is True
 
@@ -257,3 +259,95 @@ def test_a_walk_that_is_waiting_for_tiles_has_not_failed() -> None:
 
     assert walk.take_requested(), "the cells need tiles it does not have"
     walk.result()
+
+
+def test_a_mask_prompt_starts_the_cell_with_mask_input_and_no_box_and_is_taken_as_object() -> None:
+    world, hole = _world_with_a_hole_in_the_box()
+    square, points = client_prompt(2304, 2304, 300)
+
+    result = grow_segmentation(points, [], world.predict, masks=[square])
+
+    start = world.calls[0]
+    assert world.mask_prompts[0] is not None and world.mask_prompts[0].max() > 0, "the square is the mask_input"
+    assert mosaic_to_window(start[0], 2304, 2304) in start[1], "the square's center is a click"
+    assert world.to_truth_frame(result)[hole].all(), "everything inside a mask is object"
+
+
+def _request(**fields):
+    from segmentation_grpc import segmentation_pb2
+
+    return segmentation_pb2.SegmentTilesRequest(**fields)
+
+
+def test_features_merge_with_the_legacy_prompt_fields() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    request = _request(
+        foreground=[pb.Point(x=1, y=2)],
+        foreground_feature=pb.Feature(
+            points=[pb.Point(x=3, y=4)],
+            rectangle=pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10),
+            mask=pb.Mask(bounds=pb.BoundingBox(x_min=20, y_min=20, x_max=40, y_max=60)),
+        ),
+        background_feature=pb.Feature(
+            points=[pb.Point(x=9, y=9)],
+            rectangle=pb.BoundingBox(x_min=100, y_min=100, x_max=110, y_max=110),
+            mask=pb.Mask(bounds=pb.BoundingBox(x_min=200, y_min=200, x_max=220, y_max=220)),
+        ),
+    )
+    prompts = _prompts_from(request)
+
+    assert prompts.foreground == [(1, 2), (3, 4)] and prompts.background == [(9, 9)]
+    assert prompts.hint_boxes == [(0, 0, 10, 10)] and prompts.masks == [(20, 20, 40, 60)]
+    assert prompts.background_rects == [(100, 100, 110, 110)] and prompts.background_masks == [(200, 200, 220, 220)]
+    assert prompts.boxes == [] and prompts.client_chose is True
+
+
+def test_a_feature_with_only_a_mask_starts_the_walk_from_the_mask_center_and_png_is_refused() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    bounds = pb.BoundingBox(x_min=20, y_min=20, x_max=40, y_max=60)
+    assert _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds)))).foreground == [(30, 40)]
+    with pytest.raises(ValueError):
+        _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=b"x"))))
+
+
+def test_a_hint_box_is_prompted_as_a_box_but_not_taken_as_object() -> None:
+    world, hole = _world_with_a_hole_in_the_box()
+    square, points = client_prompt(2304, 2304, 300)
+
+    result = grow_segmentation(points, [], world.predict, hint_boxes=[square], assume_boxes=True)
+
+    assert world.mask_prompts[0] is None, "a rectangle is a box prompt, not mask_input"
+    interior = (slice(hole[0].start + 4, hole[0].stop - 4), slice(hole[1].start + 4, hole[1].stop - 4))
+    assert not world.to_truth_frame(result)[interior].any(), "a hint is not pinned as object"
+
+
+def test_a_background_mask_is_cleared_from_the_answer_and_painted_negative_in_the_prompt() -> None:
+    world = _RecordingWorld(ellipse(2304, 2304, 300, 300, 0.0))
+    square, points = client_prompt(2304, 2304, 300)
+    carve = (2400, 2200, 2500, 2400)
+
+    result = grow_segmentation(points, [], world.predict, masks=[square], background_masks=[carve])
+
+    answer = world.to_truth_frame(result)
+    assert not answer[carve[1]:carve[3] + 1, carve[0]:carve[2] + 1].any()
+    assert answer[2304, 2304]
+    assert world.mask_prompts[0].min() <= -8.0
+
+
+def test_a_background_rectangle_is_only_a_weak_negative_and_never_clears_the_answer() -> None:
+    world = _RecordingWorld(ellipse(2304, 2304, 300, 300, 0.0))
+    square, points = client_prompt(2304, 2304, 300)
+    region = (2530, 2200, 2600, 2400)  # outside the square mask, so nothing positive is known there
+
+    result = grow_segmentation(points, [], world.predict, masks=[square], background_rects=[region])
+
+    prompts = [prompt for prompt in world.mask_prompts if prompt is not None]
+    assert any(prompt.min() == pytest.approx(-2.0) for prompt in prompts), "the rectangle reached a window"
+    assert world.mask_prompts[0].max() == pytest.approx(8.0)
+    assert world.to_truth_frame(result)[2304, 2304]

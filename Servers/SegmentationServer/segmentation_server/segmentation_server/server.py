@@ -1281,8 +1281,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         self._load.begin()
         start_time = time.perf_counter()
         try:
-            foreground = [(point.x, point.y) for point in request.foreground]
-            background = [(point.x, point.y) for point in request.background]
+            prompts = _prompts_from(request)
+            foreground = prompts.foreground
+            background = prompts.background
             if not await self._pin_start_tiles(session, request, foreground, context):
                 return
             settings = _PredictSettings.from_request(request)
@@ -1291,7 +1292,10 @@ class SegmentationServicer(SegmentationServiceServicer):
             except ValueError as e:
                 await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
                 return
-            boxes, omit_with_box, client_chose_boxes = _resolve_boxes(request, foreground)
+            if prompts.client_chose:
+                boxes, omit_with_box, client_chose_boxes = prompts.boxes, [], bool(prompts.boxes)
+            else:
+                boxes, omit_with_box, client_chose_boxes = _resolve_boxes(request, foreground)
             tag = _session_tag(identity, foreground, background)
             logger.info(
                 "SegmentTiles mask_threshold=%.3f use_mask_input=%s",
@@ -1310,6 +1314,10 @@ class SegmentationServicer(SegmentationServiceServicer):
                 boxes=boxes,
                 omit_with_box=omit_with_box,
                 assume_boxes=client_chose_boxes,
+                masks=prompts.masks,
+                hint_boxes=prompts.hint_boxes,
+                background_masks=prompts.background_masks,
+                background_rects=prompts.background_rects,
             )
             loop = asyncio.get_running_loop()
             cancel_watch = asyncio.create_task(self._watch_rpc_cancel(context, stop_growth))
@@ -1400,10 +1408,15 @@ class SegmentationServicer(SegmentationServiceServicer):
         if len(request.tiles) == 0:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentTiles requires at least one tile.")
             return None
-        if len(request.foreground) == 0:
+        try:
+            prompts = _prompts_from(request)
+        except ValueError as e:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+            return None
+        if len(prompts.foreground) == 0:
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                "SegmentTiles requires at least one foreground point.",
+                "SegmentTiles requires at least one foreground point, rectangle or mask.",
             )
             return None
         if len(request.tiles) > self._limits.max_tiles:
@@ -1411,15 +1424,19 @@ class SegmentationServicer(SegmentationServiceServicer):
                 context, "tiles", len(request.tiles), self._limits.max_tiles, "SEGMENTATION_MAX_TILES"
             )
             return None
-        prompt_points = len(request.foreground) + len(request.background)
+        prompt_points = len(prompts.foreground) + len(prompts.background)
         if prompt_points > self._limits.max_points:
             await self._abort_over_limit(
                 context, "prompt points", prompt_points, self._limits.max_points, "SEGMENTATION_MAX_POINTS"
             )
             return None
-        if len(request.foreground_boxes) > self._limits.max_boxes:
+        box_count = (
+            len(prompts.boxes) + len(prompts.hint_boxes) + len(prompts.masks)
+            + len(prompts.background_masks) + len(prompts.background_rects)
+        )
+        if box_count > self._limits.max_boxes:
             await self._abort_over_limit(
-                context, "boxes", len(request.foreground_boxes), self._limits.max_boxes, "SEGMENTATION_MAX_BOXES"
+                context, "boxes and masks", box_count, self._limits.max_boxes, "SEGMENTATION_MAX_BOXES"
             )
             return None
         identity = request.tiles[0]
@@ -1911,6 +1928,78 @@ class SegmentationServicer(SegmentationServiceServicer):
             finally:
                 self._load.end(time.perf_counter() - start)
             yield response
+
+
+@dataclass(frozen=True)
+class _Prompts:
+    """Everything a ``SegmentTilesRequest`` says about the object, the legacy fields and the Features merged.
+
+    Points are mosaic ``(x, y)``; every rectangle is ``(x_min, y_min, x_max, y_max)``, corners ordered,
+    Y up. ``boxes`` are the legacy ``foreground_boxes`` (taken as object, as before); ``hint_boxes`` are
+    a foreground Feature's rectangle ("most likely inside"); ``masks`` are its mask ("everything inside
+    is object, grow beyond"); the ``background_*`` pair is the same for the background Feature.
+    ``client_chose`` is True when the client sent boxes or a Feature, so nothing is inferred from the clicks.
+    """
+
+    foreground: List[Tuple[int, int]]
+    background: List[Tuple[int, int]]
+    boxes: List[Tuple[int, int, int, int]]
+    hint_boxes: List[Tuple[int, int, int, int]]
+    masks: List[Tuple[int, int, int, int]]
+    background_masks: List[Tuple[int, int, int, int]]
+    background_rects: List[Tuple[int, int, int, int]]
+    client_chose: bool
+
+
+def _prompts_from(request: Any) -> _Prompts:
+    """Merge the request's legacy prompt fields with its foreground and background ``Feature``.
+
+    A foreground Feature with a mask or rectangle but no points still starts the walk: the center of
+    the mask (else the rectangle) becomes the foreground click.
+
+    Raises:
+        ValueError: A ``Mask`` carries ``png``, which is not supported yet.
+    """
+    foreground = [(point.x, point.y) for point in request.foreground]
+    background = [(point.x, point.y) for point in request.background]
+    boxes = _client_boxes(request.foreground_boxes)
+    hint_boxes: List[Tuple[int, int, int, int]] = []
+    masks: List[Tuple[int, int, int, int]] = []
+    background_masks: List[Tuple[int, int, int, int]] = []
+    background_rects: List[Tuple[int, int, int, int]] = []
+    feature_sent = False
+
+    def shapes(feature: Any) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int, int, int]]]:
+        rectangles = _client_boxes([feature.rectangle]) if feature.HasField("rectangle") else []
+        mask_boxes: List[Tuple[int, int, int, int]] = []
+        if feature.HasField("mask"):
+            if feature.mask.png:
+                raise ValueError("Mask.png is not supported yet; send Mask.bounds only.")
+            mask_boxes = _client_boxes([feature.mask.bounds])
+        return rectangles, mask_boxes
+
+    if request.HasField("foreground_feature"):
+        feature_sent = True
+        foreground.extend((point.x, point.y) for point in request.foreground_feature.points)
+        hint_boxes, masks = shapes(request.foreground_feature)
+    if request.HasField("background_feature"):
+        feature_sent = True
+        background.extend((point.x, point.y) for point in request.background_feature.points)
+        background_rects, background_masks = shapes(request.background_feature)
+    if not foreground:
+        anchor = (masks or hint_boxes or boxes or [None])[0]
+        if anchor is not None:
+            foreground.append(((anchor[0] + anchor[2]) // 2, (anchor[1] + anchor[3]) // 2))
+    return _Prompts(
+        foreground=foreground,
+        background=background,
+        boxes=boxes,
+        hint_boxes=hint_boxes,
+        masks=masks,
+        background_masks=background_masks,
+        background_rects=background_rects,
+        client_chose=feature_sent or bool(boxes),
+    )
 
 
 def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:
