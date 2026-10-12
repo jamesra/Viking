@@ -1,63 +1,78 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Viking.SectionCorrectionClient
 {
     /// <summary>
-    /// Keeps a view-only translation ("shim") current for the section on screen. The host reports the scene with
-    /// <see cref="SceneChanged"/> on every camera change; the service asks the correction service for the offset at the
-    /// view's centre and four corners (debounced, one request in flight, results cached), fades the offset in by
-    /// downsample using <see cref="Settings"/>, and hands the result to the apply callback in volume units.
+    /// Keeps a view-only translation ("shim") current for the section on screen. The correction service publishes one
+    /// lattice per section and changes it only on a rebuild, so the service downloads whole lattices (the section on
+    /// screen first, then its neighbours in the direction of travel), samples them locally for the view's centre and
+    /// four corners, fades the offset in by downsample using <see cref="Settings"/>, and hands the result to the apply
+    /// callback in volume units. Camera moves and section steps that hit a cached lattice need no network at all.
     /// </summary>
     /// <remarks>
-    /// Threading: <see cref="SceneChanged"/> and <see cref="Configure"/> may be called from the UI thread and are cheap
-    /// (no I/O). The apply callback runs on the caller's thread for cached values and on a thread-pool thread when a
-    /// request completes, so a UI host must marshal inside the callback. Nothing here touches the camera.
-    /// Disposing cancels any request in flight.
+    /// Cached lattices are valid while the service's version token (see <see cref="ISectionShimSource.GetVersionAsync"/>)
+    /// is unchanged; it is read before the first download for a StosGroup and again every
+    /// <see cref="DefaultVersionCheckInterval"/>, and a change drops that StosGroup's lattices.
+    /// Threading: <see cref="SceneChanged"/> and <see cref="Configure"/> may be called from the UI thread and do no
+    /// I/O. The apply callback runs on the caller's thread for cached lattices and on a thread-pool thread when a
+    /// download completes, so a UI host must marshal inside the callback. Nothing here touches the camera.
+    /// Disposing cancels all downloads in flight.
     /// </remarks>
     public sealed class SectionShimService : IDisposable
     {
-        const int MaxCachedViewsPerSection = 8;
+        /// <summary>How often the service's version token is re-read while the viewer is in use.</summary>
+        public static readonly TimeSpan DefaultVersionCheckInterval = TimeSpan.FromMinutes(10);
+
+        const int MaxCachedSections = 48;
+        const int MaxConcurrentDownloads = 3;
         static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(30);
 
         readonly ISectionShimSource _source;
         readonly Action<double, double> _apply;
         readonly Action<string> _log;
-        readonly TimeSpan _debounce;
+        readonly TimeSpan _versionCheckInterval;
         readonly object _lock = new object();
-        readonly Timer _timer;
-        readonly Dictionary<(string Stos, long Z), List<CachedView>> _cache = new Dictionary<(string, long), List<CachedView>>();
+        readonly Dictionary<(string Stos, long Z), LatticeEntry> _lattices = new Dictionary<(string, long), LatticeEntry>();
+        readonly HashSet<(string Stos, long Z)> _downloading = new HashSet<(string, long)>();
+        readonly Dictionary<string, string> _versions = new Dictionary<string, string>();
+        readonly Dictionary<string, DateTime> _nextVersionCheckUtc = new Dictionary<string, DateTime>();
+        readonly HashSet<string> _checkingVersion = new HashSet<string>();
+        List<(string Stos, long Z)> _wanted = new List<(string, long)>();
 
         Uri _serviceUrl;
         string _database;
         double _nmPerPixel = 1;
         View _view;
-        CancellationTokenSource _inFlight;
+        CancellationTokenSource _cancellation = new CancellationTokenSource();
+        int _generation;
+        long _tick;
         DateTime _backoffUntilUtc = DateTime.MinValue;
         double _appliedX = double.NaN;
         double _appliedY = double.NaN;
         bool _disposed;
 
-        /// <param name="source">Where offsets come from.</param>
+        /// <param name="source">Where lattices come from.</param>
         /// <param name="apply">Receives the faded shim in volume units (the camera's units). See the threading remarks.</param>
         /// <param name="settings">Fade preferences; may be changed at any time.</param>
         /// <param name="log">Optional diagnostics sink.</param>
-        /// <param name="debounce">Quiet time after the last scene change before a request is sent.</param>
+        /// <param name="versionCheckInterval">How often to re-read the service's version token; defaults to <see cref="DefaultVersionCheckInterval"/>.</param>
         public SectionShimService(
             ISectionShimSource source,
             Action<double, double> apply,
             SectionShimSettings settings = null,
             Action<string> log = null,
-            TimeSpan? debounce = null)
+            TimeSpan? versionCheckInterval = null)
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
             _apply = apply ?? throw new ArgumentNullException(nameof(apply));
             Settings = settings ?? new SectionShimSettings();
             _log = log;
-            _debounce = debounce ?? TimeSpan.FromMilliseconds(250);
-            _timer = new Timer(_ => OnTimer(), null, Timeout.Infinite, Timeout.Infinite);
+            _versionCheckInterval = versionCheckInterval ?? DefaultVersionCheckInterval;
         }
 
         /// <summary>Fade preferences. Takes effect on the next <see cref="SceneChanged"/>.</summary>
@@ -86,8 +101,7 @@ namespace Viking.SectionCorrectionClient
                 && nmPerPixel > 0;
             lock (_lock)
             {
-                CancelInFlightLocked();
-                _cache.Clear();
+                DropEverythingLocked();
                 _backoffUntilUtc = DateTime.MinValue;
                 _serviceUrl = enabled ? url : null;
                 _database = enabled ? annotationDatabase : null;
@@ -99,8 +113,8 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <summary>
-        /// Reports the current scene. Applies the cached, faded shim immediately and, when the shim is not fully
-        /// faded out and nothing cached covers this view, schedules a request.
+        /// Reports the current scene. Applies the shim sampled from the cached lattice for this section at once and
+        /// queues whatever lattices are still missing around it.
         /// </summary>
         /// <param name="stosGroup">Active transform (StosGroup) name; null or empty means no correction set.</param>
         /// <param name="z">Section number on screen.</param>
@@ -109,86 +123,165 @@ namespace Viking.SectionCorrectionClient
         /// <param name="halfWidth">Half the visible width in volume units.</param>
         /// <param name="halfHeight">Half the visible height in volume units.</param>
         /// <param name="downsample">Camera downsample.</param>
-        public void SceneChanged(string stosGroup, long z, double centerX, double centerY, double halfWidth, double halfHeight, double downsample)
+        /// <param name="neighborZs">
+        /// Sections the user is likely to step to next, nearest first (for example z-1, z+1, z-2, z+2). Their lattices
+        /// are downloaded after the section on screen, those in the direction of travel first.
+        /// </param>
+        /// <remarks>
+        /// While the section's lattice is still downloading the apply callback receives zero; it receives the sampled
+        /// shim as soon as the download completes.
+        /// </remarks>
+        public void SceneChanged(string stosGroup, long z, double centerX, double centerY, double halfWidth, double halfHeight, double downsample,
+            IReadOnlyList<long> neighborZs = null)
         {
-            // A switched-off shim behaves as a zero weight: nothing is requested and the view is not shifted.
+            // A switched-off shim behaves as a zero weight: nothing is downloaded and the view is not shifted.
             double weight = Settings.Enabled ? Settings.Weight(downsample) : 0;
-            ShimSample? raw = null;
-            bool needRequest = false;
+            SectionLatticeField field = null;
+            bool sectionChanged;
+            string sectionLog = null;
+            double nmPerPixel;
+            View view;
+            List<Download> jobs;
+            ProbeJob probe;
             lock (_lock)
             {
                 if (_serviceUrl == null || _disposed)
                     return;
 
-                _view = new View(stosGroup ?? string.Empty, z, centerX, centerY, halfWidth, halfHeight, downsample);
-                if (_view.Stos.Length == 0)
+                View previous = _view;
+                view = new View(stosGroup ?? string.Empty, z, centerX, centerY, halfWidth, halfHeight, downsample, neighborZs, previous);
+                _view = view;
+                nmPerPixel = _nmPerPixel;
+                sectionChanged = previous == null || previous.Z != z || previous.Stos != view.Stos;
+                if (view.Stos.Length > 0)
                 {
-                    // No active StosGroup: nothing to key a set by.
+                    field = TouchLocked((view.Stos, z))?.Field;
+                    PlanLocked(view, weight);
+                    probe = TakeProbeLocked(view.Stos, weight);
+                    jobs = TakeDownloadsLocked();
+                    if (sectionChanged && _log != null)
+                    {
+                        sectionLog = $"Section z={z}: lattice {(_lattices.ContainsKey((view.Stos, z)) ? (field != null ? $"cached ({field.NodeCount} nodes)" : "cached as none") : "not cached")}, "
+                            + $"queued z=[{string.Join(",", _wanted.Select(w => w.Z))}], weight={weight:0.00}";
+                    }
                 }
                 else
                 {
-                    CachedView cached = FindLocked(_view);
-                    needRequest = cached == null && weight > 0 && DateTime.UtcNow >= _backoffUntilUtc;
-                    // Until the exact view is answered, the nearest answer on this section beats snapping to zero.
-                    raw = (cached ?? NearestLocked(_view))?.Sample;
+                    probe = null;
+                    jobs = new List<Download>();
                 }
             }
 
-            ApplyFaded(raw, weight);
-            if (needRequest)
-                _timer.Change(_debounce, Timeout.InfiniteTimeSpan);
+            if (sectionLog != null)
+                _log(sectionLog);
+            ApplyFaded(field == null ? (ShimSample?)null : Reduce(field, view, nmPerPixel), weight, nmPerPixel);
+            Start(probe, jobs);
         }
 
-        void OnTimer()
+        /// <summary>
+        /// Rebuilds the ordered download list for the view: the section on screen, then its neighbours with those in
+        /// the direction of travel first, skipping lattices already held or in flight. Caller holds <see cref="_lock"/>.
+        /// </summary>
+        void PlanLocked(View view, double weight)
         {
-            View view;
-            Uri url;
-            string database;
-            double nmPerPixel;
-            CancellationToken token;
-            lock (_lock)
+            var wanted = new List<(string, long)>();
+            if (weight > 0 && DateTime.UtcNow >= _backoffUntilUtc)
             {
-                if (_disposed || _serviceUrl == null || _view == null)
-                    return;
-                view = _view;
-                url = _serviceUrl;
-                database = _database;
-                nmPerPixel = _nmPerPixel;
-                CancelInFlightLocked();
-                _inFlight = new CancellationTokenSource();
-                token = _inFlight.Token;
+                foreach (long z in new[] { view.Z }.Concat(view.NeighborZs))
+                {
+                    var key = (view.Stos, z);
+                    if (TouchLocked(key) == null && !_downloading.Contains(key))
+                        wanted.Add(key);
+                }
             }
 
-            _ = RequestAsync(view, url, database, nmPerPixel, token);
+            _wanted = wanted;
         }
 
-        async Task RequestAsync(View view, Uri url, string database, double nmPerPixel, CancellationToken token)
+        /// <summary>Marks a held lattice as recently used and returns it, or null when it is not held.</summary>
+        LatticeEntry TouchLocked((string Stos, long Z) key)
+        {
+            if (!_lattices.TryGetValue(key, out LatticeEntry entry))
+                return null;
+            entry.Used = ++_tick;
+            return entry;
+        }
+
+        /// <summary>
+        /// A version read is due when the StosGroup has none yet or the last one is old. Downloads wait for the first
+        /// one so every lattice is stored against a known version. Caller holds <see cref="_lock"/>.
+        /// </summary>
+        ProbeJob TakeProbeLocked(string stos, double weight)
+        {
+            if (weight <= 0 || DateTime.UtcNow < _backoffUntilUtc || _checkingVersion.Contains(stos))
+                return null;
+            bool due = !_versions.ContainsKey(stos)
+                || (_nextVersionCheckUtc.TryGetValue(stos, out DateTime next) && DateTime.UtcNow >= next);
+            if (!due)
+                return null;
+
+            _checkingVersion.Add(stos);
+            return new ProbeJob(stos, _serviceUrl, _database, _generation, _cancellation.Token);
+        }
+
+        /// <summary>
+        /// Takes the next downloads off the wanted list, up to the concurrency limit, for StosGroups whose version is
+        /// known. Caller holds <see cref="_lock"/> and starts the returned jobs after releasing it.
+        /// </summary>
+        List<Download> TakeDownloadsLocked()
+        {
+            var jobs = new List<Download>();
+            while (_downloading.Count < MaxConcurrentDownloads && _wanted.Count > 0)
+            {
+                (string stos, long z) = _wanted[0];
+                _wanted.RemoveAt(0);
+                if (!_versions.ContainsKey(stos) || _lattices.ContainsKey((stos, z)) || !_downloading.Add((stos, z)))
+                    continue;
+                jobs.Add(new Download(stos, z, _serviceUrl, _database, _generation, _cancellation.Token));
+            }
+
+            return jobs;
+        }
+
+        void Start(ProbeJob probe, List<Download> jobs)
+        {
+            if (probe != null)
+                _ = CheckVersionAsync(probe);
+            foreach (Download job in jobs)
+                _ = DownloadAsync(job);
+        }
+
+        async Task CheckVersionAsync(ProbeJob job)
         {
             try
             {
-                var points = new List<(double X, double Y)>(5)
-                {
-                    (view.CenterX * nmPerPixel, view.CenterY * nmPerPixel)
-                };
-                foreach (double sx in new[] { -1.0, 1.0 })
-                {
-                    foreach (double sy in new[] { -1.0, 1.0 })
-                        points.Add(((view.CenterX + sx * view.HalfWidth) * nmPerPixel, (view.CenterY + sy * view.HalfHeight) * nmPerPixel));
-                }
-
-                ShimSample? sample = await _source
-                    .GetShimAsync(url, database, view.Stos, view.Z, points, token).ConfigureAwait(false);
-                if (token.IsCancellationRequested)
+                string version = await _source.GetVersionAsync(job.Url, job.Database, job.Stos, job.Token).ConfigureAwait(false);
+                if (job.Token.IsCancellationRequested)
                     return;
 
+                List<Download> jobs;
                 lock (_lock)
                 {
-                    if (_disposed || !ReferenceEquals(_serviceUrl, url))
+                    _checkingVersion.Remove(job.Stos);
+                    if (_disposed || job.Generation != _generation)
                         return;
-                    StoreLocked(view, sample);
+
+                    version = version ?? string.Empty;
+                    if (_versions.TryGetValue(job.Stos, out string known) && known != version)
+                    {
+                        _log?.Invoke($"Correction set for '{job.Stos}' changed ('{known}' to '{version}'); dropping cached lattices.");
+                        DropLatticesLocked(job.Stos);
+                    }
+
+                    _versions[job.Stos] = version;
+                    _nextVersionCheckUtc[job.Stos] = DateTime.UtcNow + _versionCheckInterval;
+                    if (_view != null && _view.Stos == job.Stos)
+                        PlanLocked(_view, Settings.Enabled ? Settings.Weight(_view.Downsample) : 0);
+                    jobs = TakeDownloadsLocked();
                 }
 
                 ApplyForLatestView();
+                Start(null, jobs);
             }
             catch (OperationCanceledException)
             {
@@ -196,32 +289,109 @@ namespace Viking.SectionCorrectionClient
             catch (Exception ex)
             {
                 lock (_lock)
+                {
+                    _checkingVersion.Remove(job.Stos);
                     _backoffUntilUtc = DateTime.UtcNow + FailureBackoff;
-                _log?.Invoke($"Section correction shim request failed: {ex.Message}");
+                }
+
+                _log?.Invoke($"Section correction version check failed: {ex.Message}");
+            }
+        }
+
+        async Task DownloadAsync(Download job)
+        {
+            var clock = Stopwatch.StartNew();
+            try
+            {
+                SectionLatticeField field = await _source
+                    .GetLatticeAsync(job.Url, job.Database, job.Stos, job.Z, job.Token).ConfigureAwait(false);
+                if (job.Token.IsCancellationRequested)
+                    return;
+
+                List<Download> jobs;
+                lock (_lock)
+                {
+                    _downloading.Remove((job.Stos, job.Z));
+                    if (_disposed || job.Generation != _generation)
+                        return;
+
+                    // A section the service has no map for is stored as "no correction" so it is not asked again.
+                    _lattices[(job.Stos, job.Z)] = new LatticeEntry(field) { Used = ++_tick };
+                    EvictLocked();
+                    jobs = TakeDownloadsLocked();
+                }
+
+                _log?.Invoke($"Lattice for z={job.Z}: {(field == null ? "none" : field.NodeCount + " nodes")} in {clock.ElapsedMilliseconds} ms");
+                ApplyForLatestView();
+                Start(null, jobs);
+            }
+            catch (OperationCanceledException)
+            {
+                lock (_lock)
+                    _downloading.Remove((job.Stos, job.Z));
+            }
+            catch (Exception ex)
+            {
+                lock (_lock)
+                {
+                    _downloading.Remove((job.Stos, job.Z));
+                    _backoffUntilUtc = DateTime.UtcNow + FailureBackoff;
+                }
+
+                _log?.Invoke($"Section correction lattice download for z={job.Z} failed: {ex.Message}");
             }
         }
 
         void ApplyForLatestView()
         {
-            ShimSample? raw = null;
-            double weight = 0;
+            SectionLatticeField field = null;
+            View view;
+            double weight;
+            double nmPerPixel;
             lock (_lock)
             {
                 if (_view == null || _disposed)
                     return;
-                weight = Settings.Enabled ? Settings.Weight(_view.Downsample) : 0;
-                raw = (FindLocked(_view) ?? NearestLocked(_view))?.Sample;
+                view = _view;
+                weight = Settings.Enabled ? Settings.Weight(view.Downsample) : 0;
+                nmPerPixel = _nmPerPixel;
+                field = TouchLocked((view.Stos, view.Z))?.Field;
             }
 
-            ApplyFaded(raw, weight);
+            ApplyFaded(field == null ? (ShimSample?)null : Reduce(field, view, nmPerPixel), weight, nmPerPixel);
         }
 
-        void ApplyFaded(ShimSample? raw, double weight)
+        /// <summary>
+        /// The mean offset of the trusted samples at the view's centre and four corners, so a point far from any
+        /// support cannot drag the whole view. Null when no sample is trusted.
+        /// </summary>
+        static ShimSample? Reduce(SectionLatticeField field, View view, double nmPerPixel)
         {
-            double nmPerPixel;
-            lock (_lock)
-                nmPerPixel = _nmPerPixel;
+            double sumX = 0;
+            double sumY = 0;
+            int count = 0;
+            void Add(double x, double y)
+            {
+                (double dx, double dy, bool trusted) = field.Sample(x * nmPerPixel, y * nmPerPixel);
+                if (!trusted)
+                    return;
+                sumX += dx;
+                sumY += dy;
+                count++;
+            }
 
+            Add(view.CenterX, view.CenterY);
+            foreach (double sx in new[] { -1.0, 1.0 })
+            {
+                foreach (double sy in new[] { -1.0, 1.0 })
+                    Add(view.CenterX + sx * view.HalfWidth, view.CenterY + sy * view.HalfHeight);
+            }
+
+            return count == 0 ? (ShimSample?)null : new ShimSample(sumX / count, sumY / count);
+        }
+
+        void ApplyFaded(ShimSample? raw, double weight, double nmPerPixel)
+        {
             if (raw is ShimSample s && weight > 0)
                 SetApplied(s.DxNm / nmPerPixel * weight, s.DyNm / nmPerPixel * weight);
             else
@@ -241,68 +411,40 @@ namespace Viking.SectionCorrectionClient
             _apply(dx, dy);
         }
 
-        CachedView FindLocked(View view)
+        /// <summary>Drops the least recently used lattices beyond <see cref="MaxCachedSections"/>. Caller holds <see cref="_lock"/>.</summary>
+        void EvictLocked()
         {
-            if (!_cache.TryGetValue((view.Stos, view.Z), out List<CachedView> views))
-                return null;
-
-            double extent = view.Extent;
-            foreach (CachedView c in views)
+            while (_lattices.Count > MaxCachedSections)
             {
-                double ratio = extent / c.Extent;
-                if (ratio < 0.75 || ratio > 1.34)
-                    continue;
-                if (Math.Abs(c.CenterX - view.CenterX) <= 0.25 * c.Extent && Math.Abs(c.CenterY - view.CenterY) <= 0.25 * c.Extent)
-                    return c;
+                var oldest = _lattices.OrderBy(kv => kv.Value.Used).First().Key;
+                _lattices.Remove(oldest);
             }
-
-            return null;
         }
 
-        CachedView NearestLocked(View view)
+        void DropLatticesLocked(string stos)
         {
-            if (!_cache.TryGetValue((view.Stos, view.Z), out List<CachedView> views))
-                return null;
-
-            CachedView best = null;
-            double bestDistance = 2 * view.Extent;
-            foreach (CachedView c in views)
-            {
-                double dx = c.CenterX - view.CenterX;
-                double dy = c.CenterY - view.CenterY;
-                double distance = Math.Sqrt(dx * dx + dy * dy);
-                if (distance <= bestDistance)
-                {
-                    best = c;
-                    bestDistance = distance;
-                }
-            }
-
-            return best;
+            foreach (var key in _lattices.Keys.Where(k => k.Stos == stos).ToList())
+                _lattices.Remove(key);
+            // Downloads started before the change must not store their older lattices.
+            _generation++;
+            _downloading.RemoveWhere(k => k.Stos == stos);
         }
 
-        void StoreLocked(View view, ShimSample? sample)
+        void DropEverythingLocked()
         {
-            var key = (view.Stos, view.Z);
-            if (!_cache.TryGetValue(key, out List<CachedView> views))
-            {
-                views = new List<CachedView>();
-                _cache[key] = views;
-            }
-
-            views.Add(new CachedView(view.CenterX, view.CenterY, view.Extent, sample));
-            if (views.Count > MaxCachedViewsPerSection)
-                views.RemoveAt(0);
+            _cancellation.Cancel();
+            _cancellation.Dispose();
+            _cancellation = new CancellationTokenSource();
+            _generation++;
+            _lattices.Clear();
+            _downloading.Clear();
+            _versions.Clear();
+            _nextVersionCheckUtc.Clear();
+            _checkingVersion.Clear();
+            _wanted = new List<(string, long)>();
         }
 
-        void CancelInFlightLocked()
-        {
-            _inFlight?.Cancel();
-            _inFlight?.Dispose();
-            _inFlight = null;
-        }
-
-        /// <summary>Stops the debounce timer and cancels any request in flight.</summary>
+        /// <summary>Cancels any download in flight.</summary>
         public void Dispose()
         {
             lock (_lock)
@@ -310,15 +452,15 @@ namespace Viking.SectionCorrectionClient
                 if (_disposed)
                     return;
                 _disposed = true;
-                CancelInFlightLocked();
+                _cancellation.Cancel();
+                _cancellation.Dispose();
             }
-
-            _timer.Dispose();
         }
 
         sealed class View
         {
-            public View(string stos, long z, double centerX, double centerY, double halfWidth, double halfHeight, double downsample)
+            public View(string stos, long z, double centerX, double centerY, double halfWidth, double halfHeight, double downsample,
+                IReadOnlyList<long> neighborZs, View previous)
             {
                 Stos = stos;
                 Z = z;
@@ -327,7 +469,17 @@ namespace Viking.SectionCorrectionClient
                 HalfWidth = halfWidth;
                 HalfHeight = halfHeight;
                 Downsample = downsample;
+
+                IEnumerable<long> neighbors = (neighborZs ?? Array.Empty<long>()).Where(n => n != z).Distinct();
+                // Stepping in a direction predicts the next sections better than the ones behind.
+                int direction = previous == null || previous.Stos != stos ? 0 : Math.Sign(z - previous.Z);
+                NeighborZs = direction == 0
+                    ? neighbors.ToArray()
+                    : neighbors.OrderBy(n => Math.Sign(n - z) == direction ? 0 : 1).ToArray();
             }
+
+            /// <summary>Sections to download after <see cref="Z"/>, most likely next first.</summary>
+            public IReadOnlyList<long> NeighborZs { get; }
 
             public string Stos { get; }
             public long Z { get; }
@@ -336,25 +488,55 @@ namespace Viking.SectionCorrectionClient
             public double HalfWidth { get; }
             public double HalfHeight { get; }
             public double Downsample { get; }
-            public double Extent => Math.Max(2 * HalfWidth, 2 * HalfHeight);
         }
 
-        sealed class CachedView
+        sealed class LatticeEntry
         {
-            public CachedView(double centerX, double centerY, double extent, ShimSample? sample)
+            public LatticeEntry(SectionLatticeField field) => Field = field;
+
+            /// <summary>The lattice, or null when the service had no correction for the section (kept so it is not asked again).</summary>
+            public SectionLatticeField Field { get; }
+
+            /// <summary>Order of last use, for eviction.</summary>
+            public long Used { get; set; }
+        }
+
+        sealed class Download
+        {
+            public Download(string stos, long z, Uri url, string database, int generation, CancellationToken token)
             {
-                CenterX = centerX;
-                CenterY = centerY;
-                Extent = extent;
-                Sample = sample;
+                Stos = stos;
+                Z = z;
+                Url = url;
+                Database = database;
+                Generation = generation;
+                Token = token;
             }
 
-            public double CenterX { get; }
-            public double CenterY { get; }
-            public double Extent { get; }
+            public string Stos { get; }
+            public long Z { get; }
+            public Uri Url { get; }
+            public string Database { get; }
+            public int Generation { get; }
+            public CancellationToken Token { get; }
+        }
 
-            /// <summary>The offset, or null when the service had no correction here (cached so it is not asked again).</summary>
-            public ShimSample? Sample { get; }
+        sealed class ProbeJob
+        {
+            public ProbeJob(string stos, Uri url, string database, int generation, CancellationToken token)
+            {
+                Stos = stos;
+                Url = url;
+                Database = database;
+                Generation = generation;
+                Token = token;
+            }
+
+            public string Stos { get; }
+            public Uri Url { get; }
+            public string Database { get; }
+            public int Generation { get; }
+            public CancellationToken Token { get; }
         }
     }
 }

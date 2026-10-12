@@ -201,8 +201,7 @@ class Canvas:
     feather weight that is 0 at the prediction's window border and 1 across its core, so the
     cell that sees a sample most centred dominates and overlapping windows blend continuously.
     A block is the fused logit, upsampled bilinearly (as SAM2 itself does) and thresholded at
-    ``iso``. There is no veto and no margin gate: a neighbor's unsure answer near its own window
-    edge simply weighs little. A prediction without logits can only say object / not object, so
+    ``iso``. A neighbor's unsure answer near its own window edge weighs little. A prediction without logits can only say object / not object, so
     :meth:`or_core` adds its core to the block outright. :meth:`assume_core` and
     :meth:`assume_box` pin pixels as object regardless of the logits.
 

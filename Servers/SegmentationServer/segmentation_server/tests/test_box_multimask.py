@@ -145,3 +145,16 @@ def test_each_candidate_is_logged_so_the_trial_can_be_judged_from_real_requests(
     assert "#0 score=0.950" in line and "touches_box=False" in line
     assert "#1 score=0.800" in line and "touches_box=True" in line
     assert "#2 score=0.700" in line
+
+
+def test_a_positive_point_is_always_foreground_in_the_returned_mask() -> None:
+    """The decoder can leave the clicked pixel out; the returned mask covers it anyway."""
+    mask = np.zeros((SIDE, SIDE), dtype=np.bool_)
+    forced = _model()._force_positive_points(mask, [(20, 20)])
+    assert forced[20, 20] and forced[22, 20] and not forced[23, 20]
+    assert not mask.any()
+
+
+def test_no_positive_points_leaves_the_mask_alone() -> None:
+    mask = np.zeros((SIDE, SIDE), dtype=np.bool_)
+    assert not _model()._force_positive_points(mask, []).any()

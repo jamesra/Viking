@@ -377,7 +377,7 @@ namespace Viking.UI.WPF.ViewModels
                 volumeInfo.AnnotationDatabaseName = TryGetMetadataString(resourcePermissions.Metadata, "AnnotationDatabaseName");
             }
 
-            System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Converted VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}, Description={volumeInfo.Description ?? "(null)"}");
+            System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Converted VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}, Description={volumeInfo.Description ?? "(null)"}, CorrectionServiceUrl={volumeInfo.CorrectionServiceUrl ?? "(null)"}, AnnotationDatabaseName={volumeInfo.AnnotationDatabaseName ?? "(null)"}");
 
             return volumeInfo;
         }
@@ -435,7 +435,7 @@ namespace Viking.UI.WPF.ViewModels
                 // Ensure URL has proper format (add volume.vikingxml if needed)
                 selectedUrl = AppendDefaultVolumeFilenameIfMissing(selectedUrl);
 
-                System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final volume URL: {selectedUrl}, Name: {selectedName ?? "(null - will load from XML)"}");
+                System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final volume URL: {selectedUrl}, Name: {selectedName ?? "(null - will load from XML)"}, CorrectionServiceUrl: {correctionServiceUrl ?? "(null)"}, AnnotationDatabaseName: {annotationDatabaseName ?? "(null)"}");
                 VolumeSelected?.Invoke(this, new VolumeSelectedEventArgs
                 {
                     Url = selectedUrl,

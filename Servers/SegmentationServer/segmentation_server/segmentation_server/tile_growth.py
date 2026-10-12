@@ -771,6 +771,16 @@ class GrowthWalk:
 
         score, raw_down, logits = outcome
         kept_down = _components_with_positives(raw_down, positives)
+        if raw_down.any() and not kept_down.any():
+            # The prediction exists but holds none of the foreground clicks, so nothing of it is used. Say so,
+            # because the client only sees an empty result.
+            on_mask = sum(1 for x, y in positives if raw_down[y, x])
+            logger.info(
+                "SegmentTiles cell row=%s col=%s kind=%s: prediction kept nothing: mask %d px, "
+                "%d of %d foreground click(s) on it, %d background point(s) sent",
+                cell.row, cell.col, attempt.kind, int(raw_down.sum()), on_mask, len(positives),
+                int(sum(1 for label in labels if label == 0)),
+            )
         kept_up = np.flipud(kept_down)
         core_up = kept_up[CORE_MARGIN:CORE_MARGIN + CORE_SIZE, CORE_MARGIN:CORE_MARGIN + CORE_SIZE]
         if logits is None:

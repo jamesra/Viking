@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,13 +9,16 @@ using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
 namespace Viking.SectionCorrectionClient
 {
     /// <summary>
-    /// <see cref="ISectionShimSource"/> backed by the AnnotateSectionCorrections <c>CorrectPoints</c> RPC.
-    /// The shim is the mean offset of the trusted samples, so a point far from any annotation support cannot
-    /// drag the whole view.
+    /// <see cref="ISectionShimSource"/> backed by the AnnotateSectionCorrections <c>GetSectionCorrection</c>,
+    /// <c>GetCorrectionManifest</c> and <c>GetRebuildStatus</c> RPCs.
     /// </summary>
     public sealed class GrpcSectionShimSource : ISectionShimSource
     {
         readonly Func<Uri, CallInvoker> _invokerFactory;
+
+        // GetSectionCorrection does not carry the kernel radius; it comes from the manifest read by GetVersionAsync.
+        readonly ConcurrentDictionary<(string Database, string Stos), double> _kernelRadiusNm =
+            new ConcurrentDictionary<(string, string), double>();
 
         /// <param name="invokerFactory">
         /// Returns the call invoker for a service URL, normally from the shared gRPC channel manager so channels are
@@ -27,48 +30,71 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <inheritdoc/>
-        public async Task<ShimSample?> GetShimAsync(
+        /// <remarks>
+        /// Call <see cref="GetVersionAsync"/> first for the set so the lattice gets the set's kernel radius; before that
+        /// the service default applies.
+        /// </remarks>
+        public async Task<SectionLatticeField> GetLatticeAsync(
             Uri serviceUrl,
             string annotationDatabase,
             string stosGroup,
             long z,
-            IReadOnlyList<(double X, double Y)> pointsNm,
             CancellationToken cancellationToken)
         {
             var client = new AnnotateSectionCorrections.AnnotateSectionCorrectionsClient(_invokerFactory(serviceUrl));
-
-            var section = new SectionPoints { Z = z };
-            foreach ((double x, double y) in pointsNm)
-                section.Points.Add(new VolumeXY { X = x, Y = y });
-
-            var request = new CorrectPointsRequest
+            var request = new GetSectionCorrectionRequest
             {
                 VolumeName = annotationDatabase,
                 StosGroup = stosGroup ?? string.Empty,
-                // Only the published residual field is wanted; the curve fit needs structures.
-                Correction = CorrectionMode.Neighbor
+                Z = z
             };
-            request.Sections.Add(section);
 
-            CorrectPointsResponse response;
             try
             {
-                response = await client.CorrectPointsAsync(request, cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
+                SectionCorrection response = await client.GetSectionCorrectionAsync(request, cancellationToken: cancellationToken)
+                    .ResponseAsync.ConfigureAwait(false);
+                _kernelRadiusNm.TryGetValue((annotationDatabase, stosGroup ?? string.Empty), out double kernel);
+                return new SectionLatticeField(
+                    response.PitchNm,
+                    kernel,
+                    response.Nodes.Select(n => (n.Gx, n.Gy, n.Dx, n.Dy)));
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
             {
                 return null;
             }
+        }
 
-            CorrectedSection found = response.Sections.FirstOrDefault(s => s.Z == z && s.FoundSection);
-            if (found == null)
+        /// <inheritdoc/>
+        public async Task<string> GetVersionAsync(
+            Uri serviceUrl,
+            string annotationDatabase,
+            string stosGroup,
+            CancellationToken cancellationToken)
+        {
+            var client = new AnnotateSectionCorrections.AnnotateSectionCorrectionsClient(_invokerFactory(serviceUrl));
+            try
+            {
+                CorrectionManifest manifest = await client
+                    .GetCorrectionManifestAsync(new GetCorrectionManifestRequest
+                    {
+                        VolumeName = annotationDatabase,
+                        StosGroup = stosGroup ?? string.Empty
+                    }, cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
+                RebuildStatus status = await client
+                    .GetRebuildStatusAsync(new GetRebuildStatusRequest(), cancellationToken: cancellationToken)
+                    .ResponseAsync.ConfigureAwait(false);
+
+                _kernelRadiusNm[(annotationDatabase, stosGroup ?? string.Empty)] = manifest.Provenance?.KernelRadiusNm ?? 0;
+
+                // The host version changes on algorithm deploys even when the published field's build time does not.
+                string built = manifest.Provenance?.BuiltUtc?.ToDateTime().Ticks.ToString() ?? string.Empty;
+                return built + "|" + status.ServiceVersion;
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+            {
                 return null;
-
-            List<CorrectedXY> trusted = found.Points.Where(p => p.Trusted).ToList();
-            if (trusted.Count == 0)
-                return null;
-
-            return new ShimSample(trusted.Average(p => p.Dx), trusted.Average(p => p.Dy));
+            }
         }
     }
 }

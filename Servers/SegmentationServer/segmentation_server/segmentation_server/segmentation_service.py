@@ -53,6 +53,9 @@ _GENERATION_ATTR = "_viking_encoder_generation"
 _SAM2_LOW_RES = 256
 # Logits handed to SAM2 as a mask prompt are kept within this magnitude.
 _MASK_INPUT_LIMIT = 20.0
+# Radius in image pixels of the disc around each positive point that is forced to foreground in the
+# chosen mask, so the pixel the user clicked is never reported as background.
+_POSITIVE_POINT_RADIUS = 2
 # Layout of a disk embedding blob. It touches private SAM2 predictor state (_features, _orig_hw),
 # so a blob carries this number and one with another value is discarded instead of installed.
 # Bump it when the payload or the SAM2 pin changes what those fields mean.
@@ -637,7 +640,28 @@ class SegmentationModel:
             self._log_box_candidates(masks, scores, box)
         index = select_mask(masks, scores, box=box, positives=positives)
         chosen_logits = None if logits is None or len(logits) <= index else logits[index]
-        return masks[index], chosen_logits, float(scores[index])
+        chosen = self._force_positive_points(masks[index], positives)
+        return chosen, chosen_logits, float(scores[index])
+
+    @staticmethod
+    def _force_positive_points(mask: NDArray[np.bool_], positives: Sequence[Point]) -> NDArray[np.bool_]:
+        """Return ``mask`` with a small disc around each positive point set to foreground.
+
+        Applied after :func:`select_mask`, not before: forcing the discs first would make every
+        candidate cover every point and defeat the selection. Positives only, and no box clamp:
+        a box encloses background as well as the object, so clamping it would return the box.
+        Equivalent to clamping the full-resolution logits above the threshold, but the mask is
+        already thresholded here. Returns a copy; the input may be a view of the prediction.
+        """
+        if not positives:
+            return mask
+        height, width = mask.shape[:2]
+        forced = mask.copy()
+        radius = _POSITIVE_POINT_RADIUS
+        ys, xs = np.ogrid[:height, :width]
+        for x, y in positives:
+            forced |= (xs - int(x)) ** 2 + (ys - int(y)) ** 2 <= radius * radius
+        return forced
 
     @staticmethod
     def _log_box_candidates(masks: NDArray, scores: NDArray, box: Sequence[int]) -> None:

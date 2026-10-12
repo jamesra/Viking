@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Viking.SectionCorrectionClient;
+using Viking.ViewModels;
 
 #nullable enable
 
@@ -119,6 +121,7 @@ namespace Viking.UI.Controls
             _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, SectionShimContext.Settings,
                 message => Trace.WriteLine(message, "CorrectionShim"));
             _correctionShim.Configure(url, database, _Section.VolumeViewModel.DefaultXYScale.Value);
+            Trace.WriteLine($"Corrections available: service URL '{url}', database '{database}', IsAvailable={_correctionShim.IsAvailable}.", "CorrectionShim");
             UpdateCorrectionStatus();
         }
 
@@ -141,7 +144,85 @@ namespace Viking.UI.Controls
                 camera.LookAt.Y,
                 Scene.Viewport.Width * downsample / 2.0,
                 Scene.Viewport.Height * downsample / 2.0,
-                downsample);
+                downsample,
+                AdjacentShimSectionNumbers(_Section.Number));
+        }
+
+        /// <summary>How many sections on each side of the one on screen have their correction lattice prefetched.</summary>
+        const int ShimPrefetchSections = 3;
+
+        /// <summary>
+        /// The section numbers within <see cref="ShimPrefetchSections"/> steps below and above
+        /// <paramref name="sectionNumber"/> in the volume's own order (section numbers may have gaps), nearest first and
+        /// alternating below/above. Empty when the volume or the section is unknown.
+        /// </summary>
+        static long[] AdjacentShimSectionNumbers(int sectionNumber)
+        {
+            SortedList<int, SectionViewModel>? sections = State.volume?.SectionViewModels;
+            int index = sections?.IndexOfKey(sectionNumber) ?? -1;
+            if (sections is null || index < 0)
+                return [];
+
+            var neighbors = new List<long>(2 * ShimPrefetchSections);
+            for (int step = 1; step <= ShimPrefetchSections; step++)
+            {
+                if (index - step >= 0)
+                    neighbors.Add(sections.Keys[index - step]);
+                if (index + step < sections.Count)
+                    neighbors.Add(sections.Keys[index + step]);
+            }
+
+            return [.. neighbors];
+        }
+
+        /// <summary>How long the camera shim takes to glide to a new value.</summary>
+        const int ShimTweenMilliseconds = 200;
+
+        System.Windows.Forms.Timer? _shimTweenTimer;
+        readonly Stopwatch _shimTweenClock = new();
+        Vector2 _shimTweenFrom;
+        Vector2 _shimTweenTo;
+
+        /// <summary>
+        /// Glides <see cref="VikingXNA.Camera.Shim"/> from where it is now to <paramref name="target"/> so a late
+        /// correction answer slides the image instead of snapping it. A new target mid-glide restarts from the
+        /// current position. UI thread only.
+        /// </summary>
+        void StartShimTween(Vector2 target)
+        {
+            _shimTweenFrom = Camera.Shim;
+            _shimTweenTo = target;
+            if (Vector2.DistanceSquared(_shimTweenFrom, target) < 1e-8f)
+            {
+                _shimTweenTimer?.Stop();
+                return;
+            }
+
+            if (_shimTweenTimer is null)
+            {
+                _shimTweenTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                _shimTweenTimer.Tick += (_, _) => StepShimTween();
+            }
+
+            _shimTweenClock.Restart();
+            _shimTweenTimer.Start();
+        }
+
+        void StepShimTween()
+        {
+            if (IsDisposed)
+            {
+                _shimTweenTimer?.Stop();
+                return;
+            }
+
+            float t = Math.Min(1f, (float)(_shimTweenClock.ElapsedMilliseconds / (double)ShimTweenMilliseconds));
+            float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+            Camera.Shim = Vector2.Lerp(_shimTweenFrom, _shimTweenTo, eased);
+            if (t >= 1f)
+                _shimTweenTimer?.Stop();
+
+            Invalidate();
         }
 
         /// <summary>
@@ -166,8 +247,7 @@ namespace Viking.UI.Controls
                 return;
             }
 
-            Camera.Shim = new Vector2((float)dx, (float)dy);
-            Invalidate();
+            StartShimTween(new Vector2((float)dx, (float)dy));
         }
 
         /// <inheritdoc/>
@@ -183,6 +263,8 @@ namespace Viking.UI.Controls
         void DisposeCorrectionShim()
         {
             SectionShimContext.SettingsChanged -= OnCorrectionSettingsChanged;
+            _shimTweenTimer?.Dispose();
+            _shimTweenTimer = null;
             _correctionShim?.Dispose();
             _correctionShim = null;
         }

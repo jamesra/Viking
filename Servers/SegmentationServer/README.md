@@ -115,7 +115,7 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    (0 at the border, 1 across the core), so the cell that sees a pixel most centred decides it
    and a neighbor's unsure edge answer barely counts. A cell's later prediction replaces its
    earlier one. The result is where the fused logit is above the request's `mask_threshold`
-   (bilinearly upsampled, as SAM2 does). There is no margin gate and no owner veto. The walk
+   (bilinearly upsampled, as SAM2 does). The walk
    itself follows a separate control view, every pixel any one window answered as object away
    from its border, so a window with more context can reveal object a blind neighbor denied.
    A prediction that returns no logits contributes its core only.

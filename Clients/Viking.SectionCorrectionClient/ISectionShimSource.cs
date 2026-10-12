@@ -22,27 +22,39 @@ namespace Viking.SectionCorrectionClient
     }
 
     /// <summary>
-    /// Asks a correction service how far the image of a section should be shifted around some points.
-    /// Implementations must be safe to call from any thread.
+    /// Fetches correction data from a correction service. Implementations must be safe to call from any thread.
     /// </summary>
     public interface ISectionShimSource
     {
         /// <summary>
-        /// Samples the correction field at <paramref name="pointsNm"/> and reduces it to one translation.
+        /// Downloads the whole correction lattice of one section.
         /// </summary>
         /// <param name="serviceUrl">Correction service endpoint Identity sent for the annotation context.</param>
         /// <param name="annotationDatabase">Annotation database; with <paramref name="stosGroup"/> it keys the correction set.</param>
         /// <param name="stosGroup">Active transform (StosGroup) name.</param>
         /// <param name="z">Section number.</param>
-        /// <param name="pointsNm">Points in volume space, in nanometres.</param>
-        /// <param name="cancellationToken">Cancelled when a newer request supersedes this one.</param>
-        /// <returns>The translation, or null when the service has no usable correction here (unknown set, no map for the section, no trusted support).</returns>
-        Task<ShimSample?> GetShimAsync(
+        /// <param name="cancellationToken">Cancelled when the service is disposed or reconfigured.</param>
+        /// <returns>The lattice, or null when the service has no correction for the section or no such set.</returns>
+        Task<SectionLatticeField> GetLatticeAsync(
             Uri serviceUrl,
             string annotationDatabase,
             string stosGroup,
             long z,
-            IReadOnlyList<(double X, double Y)> pointsNm,
+            CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Reads an opaque token that changes whenever the service publishes a new correction set (a rebuild or a
+        /// deploy that changes the algorithm). Cached lattices are valid only while the token is unchanged.
+        /// </summary>
+        /// <param name="serviceUrl">Correction service endpoint.</param>
+        /// <param name="annotationDatabase">Annotation database name.</param>
+        /// <param name="stosGroup">Active transform (StosGroup) name.</param>
+        /// <param name="cancellationToken">Cancelled when the service is disposed or reconfigured.</param>
+        /// <returns>The token, or null when the service has no such set.</returns>
+        Task<string> GetVersionAsync(
+            Uri serviceUrl,
+            string annotationDatabase,
+            string stosGroup,
             CancellationToken cancellationToken);
     }
 }
