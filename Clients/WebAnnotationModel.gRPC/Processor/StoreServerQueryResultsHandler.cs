@@ -159,20 +159,19 @@ namespace WebAnnotationModel.gRPC
         /// <summary>
         /// Delete the specified keys.  Return the objects removed from the store.
         /// </summary>
-        /// <param name="Keys"></param>
-        /// <returns>A list of removed objects or null if no object was found</returns>
+        /// <param name="Keys">IDs the server reports as deleted; may include IDs this client never loaded.</param>
+        /// <returns>The removed objects. IDs not in the store are skipped, so the list never contains null
+        /// (a null would reach subscribers as a null Remove OldItems entry); matches the WCF store.</returns>
         protected virtual List<OBJECT> InternalDelete(KEY[] Keys)
         {
             List<OBJECT> listDeleted = new List<OBJECT>(Keys.Length);
 
             for (int iObj = 0; iObj < Keys.Length; iObj++)
             {
-                KEY Key = Keys[iObj];
-                OBJECT removedObj = _StoreEditor.TryRemoveObject(Key);
-                listDeleted.Add(removedObj);
+                OBJECT removedObj = _StoreEditor.TryRemoveObject(Keys[iObj]);
+                if (removedObj != null)
+                    listDeleted.Add(removedObj);
             }
-
-            //CallOnCollectionChangedForDelete(listDeleted);
 
             return listDeleted;
         }
