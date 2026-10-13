@@ -877,25 +877,69 @@ namespace gRPCAnnotationService
             await _context.PersistCircleShapesAsync(entity, mosaicWkt, volumeWkt, ct);
         }
 
-        private static void ApplyUpdate(ProtoLocation src, EfLocation dst, string username)
+        /// <summary>
+        /// Copies an update onto the stored row. LastModified always advances so incremental
+        /// GetLocationChanges calls deliver the change; Username becomes the caller only when
+        /// something other than the volume shape changed, matching the WCF service. A pass that
+        /// only remaps VolumeShape (Viking's "Update Volume Positions") therefore keeps the
+        /// original author. Called from Update inside its transaction; not thread-safe on
+        /// <paramref name="dst"/>.
+        /// </summary>
+        internal static void ApplyUpdate(ProtoLocation src, EfLocation dst, string username)
         {
             var updated = src.ToLocation();
+
+            bool authorChanged = dst.Username is null;
 
             // Proto3 defaults missing ParentId to 0; keep the existing parent rather than
             // writing an invalid FK.
             if (updated.ParentId != 0)
+            {
+                authorChanged |= dst.ParentId != updated.ParentId;
                 dst.ParentId = updated.ParentId;
+            }
+
+            authorChanged |= dst.Z != updated.Z;
             dst.Z = updated.Z;
+            authorChanged |= dst.Closed != updated.Closed;
             dst.Closed = updated.Closed;
+            authorChanged |= TagsDiffer(dst.Tags, updated.Tags);
             dst.Tags = updated.Tags;
+            authorChanged |= dst.Terminal != updated.Terminal;
             dst.Terminal = updated.Terminal;
+            authorChanged |= dst.OffEdge != updated.OffEdge;
             dst.OffEdge = updated.OffEdge;
+            authorChanged |= dst.TypeCode != updated.TypeCode;
             dst.TypeCode = updated.TypeCode;
+            authorChanged |= ShapesDiffer(dst.MosaicShape, updated.MosaicShape);
             dst.MosaicShape = updated.MosaicShape;
             dst.VolumeShape = updated.VolumeShape;
+            authorChanged |= dst.Width != updated.Width;
             dst.Width = updated.Width;
-            dst.Username = username;
+
+            if (authorChanged)
+                dst.Username = username;
             dst.LastModified = DateTime.UtcNow;
+        }
+
+        /// <summary>Null and empty tags are the same "no tags"; the WCF service treats them alike.</summary>
+        private static bool TagsDiffer(string stored, string incoming)
+            => !string.Equals(string.IsNullOrEmpty(stored) ? null : stored, string.IsNullOrEmpty(incoming) ? null : incoming, StringComparison.Ordinal);
+
+        /// <summary>Topological equality like SQL STEquals; falls back to exact comparison when NTS rejects an invalid geometry.</summary>
+        private static bool ShapesDiffer(NetTopologySuite.Geometries.Geometry stored, NetTopologySuite.Geometries.Geometry incoming)
+        {
+            if (stored is null || incoming is null)
+                return !(stored is null && incoming is null);
+
+            try
+            {
+                return !stored.EqualsTopologically(incoming);
+            }
+            catch (Exception)
+            {
+                return !stored.EqualsExact(incoming);
+            }
         }
 
         #endregion
