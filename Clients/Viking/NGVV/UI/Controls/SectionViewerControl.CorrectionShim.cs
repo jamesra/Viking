@@ -84,7 +84,8 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Shows None (grey) when the context has no correction service, otherwise On (green) or Off (red).
+        /// Shows None (grey) when the context has no correction service, Error (red) when the service could not be
+        /// reached, otherwise On (green) or Off (red).
         /// </summary>
         void UpdateCorrectionStatus()
         {
@@ -96,6 +97,15 @@ namespace Viking.UI.Controls
                 _tsCorrection.Text = "Corrections: None";
                 _tsCorrection.ForeColor = System.Drawing.SystemColors.GrayText;
                 _tsCorrection.ToolTipText = "This annotation context has no correction service.";
+                return;
+            }
+
+            string? error = _correctionShim.LastError;
+            if (error is not null)
+            {
+                _tsCorrection.Text = "Corrections: " + ServiceErrorTracker.ErrorText;
+                _tsCorrection.ForeColor = ServiceErrorTracker.ErrorColor;
+                _tsCorrection.ToolTipText = ServiceErrorTracker.ToolTip("The correction service", error);
                 return;
             }
 
@@ -117,6 +127,27 @@ namespace Viking.UI.Controls
 
             return string.Format(System.Globalization.CultureInfo.CurrentCulture, " - {0:0.0}x, {1:0.0}y nm",
                 _correctionOffsetXNm, _correctionOffsetYNm);
+        }
+
+        /// <summary>
+        /// Redraws the status item after the service reported a changed error. Raised on a thread-pool thread.
+        /// </summary>
+        void OnCorrectionErrorChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            try
+            {
+                if (InvokeRequired)
+                    BeginInvoke(new Action(UpdateCorrectionStatus));
+                else
+                    UpdateCorrectionStatus();
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle destroyed while a request was in flight.
+            }
         }
 
         /// <summary>
@@ -147,6 +178,7 @@ namespace Viking.UI.Controls
             _correctionShimCreated = true;
             _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, SectionShimContext.Settings,
                 message => Trace.WriteLine(message, "CorrectionShim"));
+            _correctionShim.ErrorChanged += OnCorrectionErrorChanged;
             _correctionShim.Configure(url, database, _Section.VolumeViewModel.DefaultXYScale.Value);
             Trace.WriteLine($"Corrections available: service URL '{url}', database '{database}', IsAvailable={_correctionShim.IsAvailable}.", "CorrectionShim");
             UpdateCorrectionStatus();
@@ -338,6 +370,8 @@ namespace Viking.UI.Controls
             SectionShimContext.SettingsChanged -= OnCorrectionSettingsChanged;
             _shimTweenTimer?.Dispose();
             _shimTweenTimer = null;
+            if (_correctionShim is not null)
+                _correctionShim.ErrorChanged -= OnCorrectionErrorChanged;
             _correctionShim?.Dispose();
             _correctionShim = null;
         }

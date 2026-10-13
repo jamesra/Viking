@@ -218,6 +218,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     .GetServerStatusAsync(new ServerStatusRequest(), options)
                     .ResponseAsync.ConfigureAwait(false);
 
+                SegmentationServiceHealth.ReportSuccess();
                 SegmentationModelProfile? profile = ProfileToAdopt(status?.Capabilities, MaxTileDownsample);
                 if (profile is null)
                     return;
@@ -236,6 +237,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             catch (Exception ex)
             {
                 SegmentationDiag.Log($"GetServerStatus failed: {ex.GetType().Name}: {ex.Message}");
+                if (ex is RpcException statusError)
+                    SegmentationServiceHealth.ReportRpcError(statusError);
                 lock (capabilitiesGate)
                 {
                     if (string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
@@ -550,6 +553,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             catch (Exception ex)
             {
                 Debug.WriteLine($"Tile upload error: {ex.Message}");
+                if (ex is RpcException uploadError)
+                    SegmentationServiceHealth.ReportRpcError(uploadError);
                 RecordSkip(SegmentationSkipKind.UploadFailed, ex.Message);
             }
             finally
@@ -744,6 +749,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadedImageWidth = Math.Max(1, response.Width) * responseScale;
                 uploadedImageHeight = Math.Max(1, response.Height) * responseScale;
                 ClearSkip();
+                SegmentationServiceHealth.ReportSuccess();
                 return response;
             }
             catch (OperationCanceledException)
@@ -759,6 +765,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // clicks) and does not guess. There is nothing to retry; log what the server said.
                 SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.Status.Detail}");
                 Debug.WriteLine($"Segmentation found no matching mask: {rpcEx.Status.Detail}");
+                SegmentationServiceHealth.ReportSuccess();
                 RecordSkip(SegmentationSkipKind.Error, rpcEx.Status.Detail);
                 return null;
             }
@@ -768,6 +775,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // told that trying again can work instead of being shown the raw gRPC status.
                 string reason = SegmentationRpcErrors.Describe(rpcEx)!;
                 SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
+                SegmentationServiceHealth.ReportRpcError(rpcEx);
                 RecordSkip(SegmentationSkipKind.Error, reason);
                 return null;
             }
@@ -775,6 +783,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 SegmentationDiag.Log($"SegmentAsync error: {ex.GetType().Name}: {ex.Message}");
                 Debug.WriteLine($"Segmentation error: {ex.Message}");
+                if (ex is RpcException callError)
+                    SegmentationServiceHealth.ReportRpcError(callError);
                 RecordSkip(SegmentationSkipKind.Error, ex.Message);
                 return null;
             }

@@ -95,7 +95,16 @@ namespace WebAnnotationModel.Objects
 
         readonly ObservableCollection<THISTYPE> _Children = [];
 
-        public THISTYPE[] Children => [.. _Children];
+        /// <summary>
+        /// A snapshot of the children that are loaded in memory. Never null and never contains null; children that
+        /// exist only on the server are not listed, and reading this never contacts the server.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="_Children"/> is not locked, and the store can remove a child on another thread while the UI
+        /// copies the list. The copy is sized before it is filled, so a concurrent removal leaves null slots at the end;
+        /// those are dropped here so callers can use every element.
+        /// </remarks>
+        public THISTYPE[] Children => Array.FindAll(_Children.ToArray(), child => child is not null);
 
         protected void AddChild(THISTYPE child)
         {

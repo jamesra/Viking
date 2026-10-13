@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using Viking.UI;
 using Viking.UI.Controls;
 using WebAnnotation.UI.Commands.Segmentation;
 
@@ -110,9 +111,12 @@ namespace WebAnnotation.UI
             bool segBusy = IsSegmentationBusy(viewer);
             bool segProcessing = viewer.CurrentCommand is SegmentationCommand processingCommand &&
                 processingCommand.IsProcessingResults;
-            var seg = DescribeSegmentation(segAvailable, segBusy, segProcessing);
+            string? segError = segAvailable ? SegmentationServiceHealth.LastError : null;
+            var seg = DescribeSegmentation(segAvailable, segBusy, segProcessing, segError);
             string segTip = !segAvailable
                 ? "No segmentation service selected. Click to choose one."
+                : segError is not null
+                    ? ServiceErrorTracker.ToolTip("The segmentation service", segError) + " Click to change or clear."
                 : segBusy
                     ? "Segmentation upload or request in progress."
                     : segProcessing
@@ -121,7 +125,7 @@ namespace WebAnnotation.UI
             viewer.SetViewerStatusChip(
                 ViewerStatusChipSlot.Segmentation,
                 seg.Text,
-                ChipColor(seg.EmphasizeOn, seg.EmphasizeBusy, seg.EmphasizeUnavailable),
+                seg.EmphasizeError ? ServiceErrorTracker.ErrorColor : ChipColor(seg.EmphasizeOn, seg.EmphasizeBusy, seg.EmphasizeUnavailable),
                 segTip);
 
             AnnotationModeToolbar.SyncFromSettings();
@@ -170,21 +174,26 @@ namespace WebAnnotation.UI
         }
 
         /// <summary>
-        /// Pure Seg chip label. Unavailable wins; then busy; then processing (server answered, outlines
-        /// still being built); else ready.
+        /// Pure Seg chip label. Unavailable (no service selected) wins; then an error from the last server call,
+        /// which outranks busy so a failing server is not hidden by the next attempt; then busy; then processing
+        /// (server answered, outlines still being built); else ready.
         /// </summary>
-        internal static (string Text, bool EmphasizeOn, bool EmphasizeBusy, bool EmphasizeUnavailable) DescribeSegmentation(
+        /// <param name="error">The last server failure, or null when the server last answered.</param>
+        internal static (string Text, bool EmphasizeOn, bool EmphasizeBusy, bool EmphasizeUnavailable, bool EmphasizeError) DescribeSegmentation(
             bool available,
             bool busy,
-            bool processing = false)
+            bool processing = false,
+            string? error = null)
         {
             if (!available)
-                return ("Seg Off", false, false, true);
+                return ("Seg Off", false, false, true, false);
+            if (error is not null)
+                return ("Seg " + ServiceErrorTracker.ErrorText, false, false, false, true);
             if (busy)
-                return ("Seg Busy", false, true, false);
+                return ("Seg Busy", false, true, false, false);
             if (processing)
-                return ("Seg Processing", false, true, false);
-            return ("Seg Ready", true, false, false);
+                return ("Seg Processing", false, true, false, false);
+            return ("Seg Ready", true, false, false, false);
         }
 
         private static void OnChipClicked(object? sender, ViewerStatusChipSlot slot)

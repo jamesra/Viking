@@ -1,4 +1,5 @@
 using Geometry;
+using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.VolumeModel;
 using VikingXNA;
@@ -320,10 +322,18 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Return true if the locations overlap when viewed from the passed section
+        /// True when the two linked locations overlap as seen from <see cref="Z"/>. An overlapped link is not drawn
+        /// as a line; the section shows the small up/down circle symbol instead.
         /// </summary>
-        /// <param name="sectionNumber"></param>
-        /// <returns></returns>
+        /// <remarks>
+        /// Any overlap counts, including touching. Each endpoint is tested with the shape it is drawn with, except that
+        /// an endpoint on an adjacent section which is a polygon (polygon, curve polygon or closed curve) is tested
+        /// with its real outline, mapped into volume space, and not with the inscribed circle that stands in for it on
+        /// screen. A polygon whose circle is clear of the other location can still overlap it. Links whose
+        /// endpoints are on the same section never overlap.
+        /// Called while the link is added to a section, under the tracker's lock, so it must stay cheap and must not
+        /// throw for a bad polygon: that case falls back to the circle.
+        /// </remarks>
         public bool LinksOverlap()
         {
             if (LinkDirection == 0) //Links on the same section never overlap, this is to ensure they are displayed and because the convention of Viking is annotations of the same structure do not overlap
@@ -331,31 +341,40 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            GetCanvasViews(Key, mapProvider, out LocationCanvasView AView, out LocationCanvasView BView);
+            SqlGeometry shapeA = OverlapShape(Store.Locations[Key.A]);
+            SqlGeometry shapeB = OverlapShape(Store.Locations[Key.B]);
+            return shapeA.STIntersects(shapeB).IsTrue;
+        }
 
-            return AView.Intersects(BView.VolumeShapeAsRendered);
-            /*
-            this.Key.A 
-            int sectionNumber = Z; 
-            return A.Intersects(B);
-            */
-            /*
-            //Don't draw if the link falls within the radius of the location we are drawing
-            if (A.Section == sectionNumber)
+        /// <summary>
+        /// The shape one endpoint is tested with in <see cref="LinksOverlap"/>, in volume space.
+        /// </summary>
+        private SqlGeometry OverlapShape(LocationObj location)
+        {
+            IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
+            bool onViewedSection = location.Z == Z;
+            if (!onViewedSection && IsPolygonType(location.TypeCode))
             {
-                return A.VolumeShape.STIntersects(B.VolumeShape).IsTrue;
-                //return Geometry.Vector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + LocationCanvasView.CalcOffSectionRadius((float)B.Radius);
+                try
+                {
+                    SqlGeometry? mapped = mapper.TryMapShapeSectionToVolume(location.MosaicShape);
+                    if (mapped is not null)
+                        return mapped;
+                }
+                catch (ArgumentException)
+                {
+                    // A polygon SQL cannot represent is tested by its circle, the shape it is drawn with.
+                }
             }
 
-            if (B.Section == sectionNumber)
-            {
-                return B.VolumeShape.STIntersects(A.VolumeShape).IsTrue;
-                //return Geometry.Vector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + LocationCanvasView.CalcOffSectionRadius((float)A.Radius);
-            } 
-            
-            return false; 
-            */
+            LocationCanvasView view = onViewedSection
+                ? AnnotationViewFactory.Create(location, mapper)
+                : AnnotationViewFactory.CreateAdjacent(location, mapper);
+            return view.VolumeShapeAsRendered;
         }
+
+        private static bool IsPolygonType(LocationType type) =>
+            type is LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE;
 
         #region IUIObjectBasic Members
 

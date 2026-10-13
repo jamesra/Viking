@@ -55,6 +55,7 @@ namespace Viking.SectionCorrectionClient
         double _appliedX = double.NaN;
         double _appliedY = double.NaN;
         bool _disposed;
+        string _lastError;
 
         /// <param name="source">Where lattices come from.</param>
         /// <param name="apply">Receives the faded shim in volume units (the camera's units). See the threading remarks.</param>
@@ -89,6 +90,26 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <summary>
+        /// The message of the most recent failed request to the correction service, or null when the last request
+        /// succeeded or none has been made. Cleared by the next successful version check or lattice download, which the
+        /// 30-second back-off after a failure schedules again while the shim is switched on.
+        /// </summary>
+        public string LastError
+        {
+            get
+            {
+                lock (_lock)
+                    return _lastError;
+            }
+        }
+
+        /// <summary>
+        /// Raised when <see cref="LastError"/> changes between null and a message, or to a different message.
+        /// Runs on a thread-pool thread, outside the service's lock; a UI host must marshal.
+        /// </summary>
+        public event Action ErrorChanged;
+
+        /// <summary>
         /// Sets the service for the open annotation context. A null or invalid URL disables the shim and clears it.
         /// </summary>
         /// <param name="correctionServiceUrl">URL Identity sent for the context, or null when it has none.</param>
@@ -103,6 +124,7 @@ namespace Viking.SectionCorrectionClient
             {
                 DropEverythingLocked();
                 _backoffUntilUtc = DateTime.MinValue;
+                _lastError = null;
                 _serviceUrl = enabled ? url : null;
                 _database = enabled ? annotationDatabase : null;
                 _nmPerPixel = enabled ? nmPerPixel : 1;
@@ -260,6 +282,7 @@ namespace Viking.SectionCorrectionClient
                     return;
 
                 List<Download> jobs;
+                bool clearedError = false;
                 lock (_lock)
                 {
                     _checkingVersion.Remove(job.Stos);
@@ -274,12 +297,15 @@ namespace Viking.SectionCorrectionClient
                     }
 
                     _versions[job.Stos] = version;
+                    clearedError = true;
                     _nextVersionCheckUtc[job.Stos] = DateTime.UtcNow + _versionCheckInterval;
                     if (_view != null && _view.Stos == job.Stos)
                         PlanLocked(_view, Settings.Enabled ? Settings.Weight(_view.Downsample) : 0);
                     jobs = TakeDownloadsLocked();
                 }
 
+                if (clearedError)
+                    SetError(null);
                 ApplyForLatestView();
                 Start(null, jobs);
             }
@@ -295,6 +321,7 @@ namespace Viking.SectionCorrectionClient
                 }
 
                 _log?.Invoke($"Section correction version check failed: {ex.Message}");
+                SetError(ex.Message);
             }
         }
 
@@ -321,6 +348,7 @@ namespace Viking.SectionCorrectionClient
                     jobs = TakeDownloadsLocked();
                 }
 
+                SetError(null);
                 _log?.Invoke($"Lattice for z={job.Z}: {(field == null ? "none" : field.NodeCount + " nodes")} in {clock.ElapsedMilliseconds} ms");
                 ApplyForLatestView();
                 Start(null, jobs);
@@ -339,7 +367,22 @@ namespace Viking.SectionCorrectionClient
                 }
 
                 _log?.Invoke($"Section correction lattice download for z={job.Z} failed: {ex.Message}");
+                SetError(ex.Message);
             }
+        }
+
+        /// <summary>Records the outcome of a request and raises <see cref="ErrorChanged"/> when it differs from the last one.</summary>
+        /// <param name="message">The failure message, or null after a success.</param>
+        void SetError(string message)
+        {
+            lock (_lock)
+            {
+                if (_disposed || _lastError == message)
+                    return;
+                _lastError = message;
+            }
+
+            ErrorChanged?.Invoke();
         }
 
         void ApplyForLatestView()

@@ -35,6 +35,7 @@ namespace WebAnnotation
             {
                 // The capabilities belong to the old server; the next connection asks the new one.
                 WebAnnotation.UI.Commands.Segmentation.SegmentationViewportSession.ResetModelProfile();
+                SegmentationServiceHealth.Reset();
                 bool newEndpointIsUsable = Global.HasValidSegmentationServiceUrl(normalized);
                 AutoPolygonizeResubmit?.Invoke(newEndpointIsUsable);
                 AnnotationOverlay.CurrentOverlay?.OnSegmentationEndpointChanged(newEndpointIsUsable);

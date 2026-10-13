@@ -11,7 +11,7 @@ using WebAnnotation.View;
 using WebAnnotationModel;
 using Viking.UI.Controls;
 using VikingXNA;
-using VikingXNAGraphics;
+using VikingXNAGraphics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 

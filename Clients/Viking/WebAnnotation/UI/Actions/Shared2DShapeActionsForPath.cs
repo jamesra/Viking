@@ -25,14 +25,14 @@ namespace WebAnnotation.UI.Actions
 
             if (StartEntry.Index == 0)
             {
-                return output;
+                return Rejected(output, locID, "the start event is at path index 0");
             }
 
             Vector2[] subpath = path.PathBetween(StartEntry.Index - 2 < 0 ? 0 : StartEntry.Index - 2, NextEntry.Index + 1 < path.Count ? NextEntry.Index + 1 : NextEntry.Index); //path.PathBetween(StartEntry.Index - 1 < 0 ? 0 : StartEntry.Index - 1, path.Count-1); //path.PathBetween(StartEntry.Index - 1 < 0 ? 0 : StartEntry.Index - 1, NextEntry.Index);
 
             if (subpath.Length <= 1)
             {
-                return output;
+                return Rejected(output, locID, $"sub-path has {subpath.Length} point(s)");
             }
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,7 @@ namespace WebAnnotation.UI.Actions
 
                 if (intersectedSegments.Count < 2)
                 {
-                    return output;
+                    return Rejected(output, locID, $"path crosses the polygon outline {intersectedSegments.Count} time(s), need 2 (events {StartEntry.Interaction}@{StartEntry.Index} to {NextEntry.Interaction}@{NextEntry.Index})");
                 }
             }
 
@@ -60,7 +60,7 @@ namespace WebAnnotation.UI.Actions
             //We cannot cut across rings, so check that
             if (FirstIntersection.AreOnSameRing(SecondIntersection) == false)
             {
-                return output;
+                return Rejected(output, locID, "the first two crossings are on different rings");
             }
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +90,7 @@ namespace WebAnnotation.UI.Actions
             //Condition Check to make sure pen path exists and is valid
             if (subpath is null || subpath.Length < 2 || OriginalVolumePolygon.TotalVertices <= 3)
             {
-                return output;
+                return Rejected(output, locID, "the polygon has 3 or fewer vertices");
             }
 
             PolyBeingCut = FirstIntersection;
@@ -109,10 +109,10 @@ namespace WebAnnotation.UI.Actions
                 clockwise_poly = clockwise_poly.ReduceExteriorRing(tolerance);
                 counter_clockwise_poly = counter_clockwise_poly.ReduceExteriorRing(tolerance);
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
                 //Thrown when the polygon cannot be cut using the path
-                return output;
+                return Rejected(output, locID, $"the polygon could not be cut along the path: {ex.Message}");
             }
 
 
@@ -140,7 +140,7 @@ namespace WebAnnotation.UI.Actions
                 switch (cutType)
                 {
                     case RetraceCommandAction.NONE:
-                        return output;
+                        return Rejected(output, locID, "no retrace action applies");
                     case RetraceCommandAction.GROW_EXTERIOR_RING:
                         UseCCW = counter_clockwise_poly.Area > clockwise_poly.Area;
                         Polygon outputVolumePoly = UseCCW ? counter_clockwise_poly : clockwise_poly;
@@ -148,7 +148,7 @@ namespace WebAnnotation.UI.Actions
                         Polygon growthLobe = UseCCW ? clockwise_poly : counter_clockwise_poly;
                         // Only the kept piece is saved, so an unmappable discarded lobe must not block the cut.
                         if (outputMosaicPoly is null)
-                            return output;
+                            return Rejected(output, locID, "the grown outline has a vertex outside the section's mapped area");
                         grow_action = new Change2DContourAction(locObj, cutType, outputMosaicPoly, outputVolumePoly, transform: Transform);
                         AttachCachedPreview(grow_action, OriginalVolumePolygon, subpath, addedPatch: growthLobe, excludedPatch: null);
                         output.Add(grow_action);
@@ -157,7 +157,7 @@ namespace WebAnnotation.UI.Actions
                         // TryMapShapeVolumeToSection returns null when any vertex is outside the section's mapped area.
                         // Both pieces are offered as choices, so one that cannot be saved means no valid pair.
                         if (mosaic_counter_clockwise_poly is null || mosaic_clockwise_poly is null)
-                            return output;
+                            return Rejected(output, locID, "a cut piece has a vertex outside the section's mapped area");
                         counter_clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly, transform: Transform);
                         clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true, Transform);
                         AttachShrinkPreview(counter_clockwise_action, clockwise_action, OriginalVolumePolygon, subpath, counter_clockwise_poly, clockwise_poly);
@@ -193,6 +193,16 @@ namespace WebAnnotation.UI.Actions
                 }
             }
 
+            return output;
+        }
+
+        /// <summary>
+        /// Logs why a pen path produced no retrace choice and returns the (empty) result, so a stroke that offers no
+        /// polygon change can be explained from the log.
+        /// </summary>
+        private static List<Change2DContourAction> Rejected(List<Change2DContourAction> output, long locID, string reason)
+        {
+            Trace.WriteLine($"Pen retrace of location {locID} offered no change: {reason}.");
             return output;
         }
 
@@ -423,6 +433,7 @@ namespace WebAnnotation.UI.Actions
 
             //Check for retrace and replace contour actions
             //We retrace if we enter/exit the shape and there is not a loop
+            Trace.WriteLine($"Pen path over location {locID}: {shapeEntryExitEntries.Length} enter/exit event(s), self-intersecting={path.HasSelfIntersection}.");
             if (path.HasSelfIntersection == false)
             {
                 if (shapeEntryExitEntries.Length >= 2)

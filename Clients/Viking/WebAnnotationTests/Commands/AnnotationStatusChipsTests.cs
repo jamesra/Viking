@@ -42,5 +42,39 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual("Seg Processing", AnnotationStatusChips.DescribeSegmentation(true, busy: false, processing: true).Text);
             Assert.AreEqual("Seg Busy", AnnotationStatusChips.DescribeSegmentation(true, busy: true, processing: true).Text);
         }
+
+        [TestMethod]
+        public void DescribeSegmentationErrorOutranksBusyButNotUnavailable()
+        {
+            var failing = AnnotationStatusChips.DescribeSegmentation(true, busy: true, processing: true, error: "server down");
+            Assert.AreEqual("Seg Error", failing.Text);
+            Assert.IsTrue(failing.EmphasizeError);
+            Assert.AreEqual("Seg Off", AnnotationStatusChips.DescribeSegmentation(false, busy: false, error: "server down").Text);
+            Assert.IsFalse(AnnotationStatusChips.DescribeSegmentation(true, busy: false).EmphasizeError);
+        }
+
+        [TestMethod]
+        public void OnlyServerFailuresCountAsSegmentationErrors()
+        {
+            Assert.IsTrue(global::WebAnnotation.SegmentationServiceHealth.IsServiceFailure(new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.Unavailable, "down"))));
+            Assert.IsTrue(global::WebAnnotation.SegmentationServiceHealth.IsServiceFailure(new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.DeadlineExceeded, "slow"))));
+            Assert.IsFalse(global::WebAnnotation.SegmentationServiceHealth.IsServiceFailure(new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.Cancelled, ""))));
+            Assert.IsFalse(global::WebAnnotation.SegmentationServiceHealth.IsServiceFailure(new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.FailedPrecondition, "NO_MATCHING_MASK"))));
+        }
+
+        [TestMethod]
+        public void TrackerKeepsTheErrorUntilTheNextSuccess()
+        {
+            Viking.UI.ServiceErrorTracker tracker = new();
+            int changes = 0;
+            tracker.Changed += () => changes++;
+            tracker.ReportFailure("no route");
+            tracker.ReportFailure("no route");
+            Assert.AreEqual("no route", tracker.LastError);
+            Assert.AreEqual(1, changes);
+            tracker.ReportSuccess();
+            Assert.IsNull(tracker.LastError);
+            Assert.AreEqual(2, changes);
+        }
     }
 }
