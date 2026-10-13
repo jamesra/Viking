@@ -64,7 +64,13 @@ namespace WebAnnotation.UI.Actions
             }
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            LocationObj locObj = Store.Locations[locID];
+            //The view can outlive its store entry (deleted or replaced by a poll), so a missing location rejects the cut instead of throwing out of the mouse-up handler.
+            LocationObj locObj = Store.Locations.GetObjectByID(locID);
+            if (locObj is null)
+            {
+                return Rejected(output, locID, "the location is no longer in the store");
+            }
+
             // Cuts near or past the edge of the registration grid have vertices a discrete grid cannot map; the RBF fallback extrapolates them.
             IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform.WithContinuousFallback();
 
@@ -440,7 +446,7 @@ namespace WebAnnotation.UI.Actions
                 {
                     InteractionLogEvent StartEntry = shapeEntries[0];
 
-                    LocationObj locModel = Store.Locations[locID];
+                    //No Store.Locations lookup: the view can outlive its store entry (deleted or replaced by a poll), and only the ID is needed.
                     //Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)locModel.Z);
 
                     //Polygon VolumePolygon = transform.TryMapShapeSectionToVolume(locModel.MosaicShape).ToPolygon();
@@ -457,7 +463,7 @@ namespace WebAnnotation.UI.Actions
                         StartEntry = NextEntry;
                     }
                     */
-                    output.AddRange(PolygonCut.GetRetraceActionForPath(locModel.ID, smooth_volume_polygon, path.Points, shapeEntryExitEntries[shapeEntryExitEntries.Length - 2], shapeEntryExitEntries[shapeEntryExitEntries.Length - 1]));
+                    output.AddRange(PolygonCut.GetRetraceActionForPath(locID, smooth_volume_polygon, path.Points, shapeEntryExitEntries[shapeEntryExitEntries.Length - 2], shapeEntryExitEntries[shapeEntryExitEntries.Length - 1]));
                 }
             }
             else if (path.HasSelfIntersection)
