@@ -212,7 +212,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             //Determine which groups we are already a member of, this prevents cycles
             List<Group> AlreadyMemberOf = await _context.RecursiveMemberOfGroups(id.Value,false);
 
-            var groupEditDetails = await _context.Group
+            // One projection that both Includes every collection and OUTER APPLYs the user and group lists joined them into a
+            // cartesian product (about 45 s for a 36-user, 13-group database). Load the group on its own as a split query,
+            // then fetch the membership sets with small queries.
+            var group = await _context.Group
+                .AsSplitQuery()
                 .Include(g => g.GroupsWithPermissions)
                 .Include(g => g.UsersWithPermissions)
                 .Include(g => g.ResourceType.Permissions)
@@ -221,35 +225,31 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(g => g.MemberUsers)
                 .Include(g => g.MemberGroups)
                 .Include(g => g.Parent)
-                .Where(g => g.Id == id)
-                .Select(g => new GroupEditViewModel
+                .SingleOrDefaultAsync(g => g.Id == id);
+
+            GroupEditViewModel groupEditDetails = null;
+            if (group != null)
+            {
+                HashSet<string> memberUserIds = [.. group.MemberUsers.Select(m => m.UserId)];
+                HashSet<long> memberGroupIds = [.. group.MemberGroups.Select(m => m.MemberGroupId)];
+                HashSet<long> alreadyMemberOfIds = [.. AlreadyMemberOf.Select(am => am.Id)];
+
+                groupEditDetails = new GroupEditViewModel
                 {
-                    Group = g, 
-                    Members = new GroupMembershipViewModel() {
-                        UserList = _context.Users.OrderBy(u => u.UserName).Select(u => new UserSelectedViewModel
-                        {
-                            Id = u.Id,
-                            Name = u.UserName,
-                            Selected = g.MemberUsers.Any(uwp => uwp.UserId == u.Id)
-                        }).ToList(),
-                        GroupList = _context.Group.Where(mg => mg.Id != g.Id && AlreadyMemberOf.Contains(mg) == false).OrderBy(mg => mg.Name).Select(mg => new GroupSelectedViewModel
-                        {
-                            Id = mg.Id,
-                            Name = mg.Name,
-                            Selected = g.MemberGroups.Any(uwp => uwp.MemberGroupId == mg.Id),
-                        }).ToList(),
+                    Group = group,
+                    Members = new GroupMembershipViewModel()
+                    {
+                        UserList = (await _context.Users.AsNoTracking().OrderBy(u => u.UserName)
+                            .Select(u => new { u.Id, u.UserName }).ToListAsync())
+                            .Select(u => new UserSelectedViewModel { Id = u.Id, Name = u.UserName, Selected = memberUserIds.Contains(u.Id) }).ToList(),
+                        GroupList = (await _context.Group.AsNoTracking().OrderBy(mg => mg.Name)
+                            .Select(mg => new { mg.Id, mg.Name }).ToListAsync())
+                            .Where(mg => mg.Id != group.Id && alreadyMemberOfIds.Contains(mg.Id) == false)
+                            .Select(mg => new GroupSelectedViewModel { Id = mg.Id, Name = mg.Name, Selected = memberGroupIds.Contains(mg.Id) }).ToList(),
                     },
                     AlreadyMemberOf = AlreadyMemberOf.Select(am => am.Name).ToList()
-                    /*
-                    Children = g.Children.OrderBy(c => c.Name).Select(g => new GroupDetailsViewModel
-                    {
-                        Name = g.Name,
-                        Id = g.Id,
-                        Children = new List<GroupDetailsViewModel>()
-                    }).ToList()
-                    */
-                })
-                .SingleOrDefaultAsync(g => g.Group.Id == id);
+                };
+            }
 
             if (groupEditDetails == null)
             {
