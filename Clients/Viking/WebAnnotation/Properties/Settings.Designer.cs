@@ -202,7 +202,7 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
         public uint NumClosedCurveInterpolationPointsForDisplay {
             get {
                 return ((uint)(this["NumClosedCurveInterpolationPointsForDisplay"]));
@@ -214,7 +214,7 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
         public int PenSimplifyThreshold {
             get {
                 return ((int)(this["PenSimplifyThreshold"]));

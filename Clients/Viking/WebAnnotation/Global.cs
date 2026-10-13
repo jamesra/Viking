@@ -1007,8 +1007,8 @@ namespace WebAnnotation
                 CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeStartDownsample;
                 CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeEndDownsample;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
-                Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 4;
-                Properties.Settings.Default.PenSimplifyThreshold = 4;
+                Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 3;
+                Properties.Settings.Default.PenSimplifyThreshold = 3;
                 Properties.Settings.Default.MinRadius = 0.5;
                 Properties.Settings.Default.PolygonOpacityParentless = 0.5f;
                 Properties.Settings.Default.PolygonOpacityWithParent = 0.33f;
