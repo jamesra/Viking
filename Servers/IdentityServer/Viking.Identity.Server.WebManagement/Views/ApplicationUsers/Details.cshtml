@@ -26,6 +26,9 @@
             <a asp-action="SetPassword" asp-route-id="@Model.Id" class="btn btn-warning">
                 <i class="bi bi-key"></i> Set Password
             </a>
+            <a asp-action="Permissions" asp-route-id="@Model.Id" class="btn btn-success">
+                <i class="bi bi-shield-check"></i> All Permissions
+            </a>
         }
         <a asp-action="Index" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to List

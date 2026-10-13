@@ -442,6 +442,89 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        /// <summary>
+        /// Admin page listing every permission the user holds: direct grants (revocable here) and grants inherited
+        /// through group membership (shown with the group, revoked on the group).
+        /// </summary>
+        // GET: ApplicationUsers/Permissions/5
+        [Authorize(Roles = Special.Roles.Admin)]
+        public async Task<IActionResult> Permissions(string id)
+        {
+            if (id == null)
+                return NotFound();
+
+            var user = await _context.ApplicationUser.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+                return NotFound();
+
+            var direct = (await _context.GrantedUserPermissions.AsNoTracking()
+                .Where(g => g.UserId == id)
+                .Select(g => new { g.ResourceId, g.Resource.Name, g.Resource.ResourceTypeId, g.PermissionId })
+                .ToListAsync())
+                .GroupBy(g => g.ResourceId)
+                .Select(grp => new UserDirectGrantRow
+                {
+                    ResourceId = grp.Key,
+                    ResourceName = grp.First().Name,
+                    ResourceType = grp.First().ResourceTypeId,
+                    Permissions = [.. grp.Select(g => g.PermissionId).OrderBy(p => p)]
+                })
+                .OrderBy(r => r.ResourceType).ThenBy(r => r.ResourceName)
+                .ToList();
+
+            var groups = (await _context.RecursiveMemberOfGroups(id)).Where(g => g != null).DistinctBy(g => g.Id).ToList();
+            var groupIds = groups.Select(g => g.Id).ToList();
+            var groupNames = groups.ToDictionary(g => g.Id, g => g.Name);
+
+            var inherited = (await _context.GrantedGroupPermissions.AsNoTracking()
+                .Where(g => groupIds.Contains(g.GroupId))
+                .Select(g => new { g.ResourceId, g.Resource.Name, g.Resource.ResourceTypeId, g.PermissionId, g.GroupId })
+                .ToListAsync())
+                .Select(g => new UserInheritedGrantRow
+                {
+                    ResourceId = g.ResourceId,
+                    ResourceName = g.Name,
+                    ResourceType = g.ResourceTypeId,
+                    PermissionId = g.PermissionId,
+                    GroupId = g.GroupId,
+                    GroupName = groupNames[g.GroupId]
+                })
+                .OrderBy(r => r.ResourceType).ThenBy(r => r.ResourceName).ThenBy(r => r.PermissionId)
+                .ToList();
+
+            return View(new UserAllPermissionsViewModel { UserId = user.Id, UserName = user.UserName, Direct = direct, Inherited = inherited });
+        }
+
+        /// <summary>
+        /// Revokes one direct grant, or every direct grant on the resource when <paramref name="permissionId"/> is empty.
+        /// Group-inherited grants are not touched. Admin only; the redirect goes back to the user's permissions page.
+        /// </summary>
+        // POST: ApplicationUsers/RevokePermission
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = Special.Roles.Admin)]
+        public async Task<IActionResult> RevokePermission(string id, long resourceId, string permissionId)
+        {
+            var grants = await _context.GrantedUserPermissions
+                .Where(g => g.UserId == id && g.ResourceId == resourceId && (string.IsNullOrEmpty(permissionId) || g.PermissionId == permissionId))
+                .ToListAsync();
+
+            if (grants.Count == 0)
+            {
+                TempData["StatusMessage"] = "Error: that permission is no longer granted.";
+            }
+            else
+            {
+                _context.GrantedUserPermissions.RemoveRange(grants);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("{Admin} revoked {Count} permission(s) on resource {ResourceId} from user {UserId}",
+                    User.Identity?.Name, grants.Count, resourceId, id);
+                TempData["StatusMessage"] = $"Revoked {grants.Count} permission(s).";
+            }
+
+            return RedirectToAction(nameof(Permissions), new { id });
+        }
+
         private bool ApplicationUserExists(string id)
         {
             return _context.ApplicationUser.Any(e => e.Id == id);
