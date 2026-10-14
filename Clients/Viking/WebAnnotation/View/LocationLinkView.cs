@@ -332,7 +332,9 @@ namespace WebAnnotation.ViewModel
         /// screen. A polygon whose circle is clear of the other location can still overlap it. Links whose
         /// endpoints are on the same section never overlap.
         /// Called while the link is added to a section, under the tracker's lock, so it must stay cheap and must not
-        /// throw for a bad polygon: that case falls back to the circle.
+        /// throw for a bad polygon: that case falls back to the circle. An endpoint that cannot be mapped into the
+        /// volume at all (the factory throws <see cref="ArgumentException"/>) leaves the answer unknown, and the
+        /// link is reported as not overlapped so its line is drawn.
         /// </remarks>
         public bool LinksOverlap()
         {
@@ -341,15 +343,16 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            SqlGeometry shapeA = OverlapShape(Store.Locations[Key.A]);
-            SqlGeometry shapeB = OverlapShape(Store.Locations[Key.B]);
-            return shapeA.STIntersects(shapeB).IsTrue;
+            SqlGeometry? shapeA = OverlapShape(Store.Locations[Key.A]);
+            SqlGeometry? shapeB = OverlapShape(Store.Locations[Key.B]);
+            return shapeA is not null && shapeB is not null && shapeA.STIntersects(shapeB).IsTrue;
         }
 
         /// <summary>
-        /// The shape one endpoint is tested with in <see cref="LinksOverlap"/>, in volume space.
+        /// The shape one endpoint is tested with in <see cref="LinksOverlap"/>, in volume space, or null when the
+        /// location cannot be mapped into the volume.
         /// </summary>
-        private SqlGeometry OverlapShape(LocationObj location)
+        private SqlGeometry? OverlapShape(LocationObj location)
         {
             IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
             bool onViewedSection = location.Z == Z;
@@ -367,10 +370,17 @@ namespace WebAnnotation.ViewModel
                 }
             }
 
-            LocationCanvasView view = onViewedSection
-                ? AnnotationViewFactory.Create(location, mapper)
-                : AnnotationViewFactory.CreateAdjacent(location, mapper);
-            return view.VolumeShapeAsRendered;
+            try
+            {
+                LocationCanvasView view = onViewedSection
+                    ? AnnotationViewFactory.Create(location, mapper)
+                    : AnnotationViewFactory.CreateAdjacent(location, mapper);
+                return view.VolumeShapeAsRendered;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
 
         private static bool IsPolygonType(LocationType type) =>
