@@ -829,6 +829,20 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>
+            /// Whether dragging a linked annotation onto the next section opens the segmentation step before the polygon is
+            /// saved. Read when the drag is released, so changing it does not affect a segmentation already open.
+            /// </summary>
+            public static bool SegmentLinkedAnnotations
+            {
+                get => Properties.Settings.Default.SegmentLinkedAnnotations;
+                set
+                {
+                    Properties.Settings.Default.SegmentLinkedAnnotations = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             /// <summary>Peak alpha of the shimmer lines, clamped to the MIN/MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS range.</summary>
             public static double AutoPolygonizeShimmerBrightness
             {
@@ -1027,6 +1041,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers;
                 Properties.Settings.Default.AutoPolygonizeMaxDownsample = 2.0;
                 Properties.Settings.Default.AutoPolygonizeShimmerEnabled = true;
+                Properties.Settings.Default.SegmentLinkedAnnotations = true;
                 Properties.Settings.Default.AutoPolygonizeShimmerBrightness = DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS;
                 Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;

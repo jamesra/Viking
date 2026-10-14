@@ -526,7 +526,7 @@ namespace WebAnnotation
                             }
                         }
 
-                        if (!Global.IsSegmentationServiceAvailable)
+                        if (!Global.AnnotationSettings.SegmentLinkedAnnotations || !Global.IsSegmentationServiceAvailable)
                         {
                             return new TranslatePolygonCommand(Parent,
                                 mosaicPolygon,
@@ -582,7 +582,10 @@ namespace WebAnnotation
                                     loc.Parent.TypeID,
                                     loc.ID,
                                     loc.ParentID,
-                                    volumeFallback));
+                                    volumeFallback)
+                                {
+                                    ShowPenButtons = true
+                                });
                             });
                     }
                 case LocationAction.CHANGEBOUNDARY:

@@ -41,6 +41,7 @@ namespace WebAnnotation.WPF.Forms
         private bool _originalAutoPolygonizeOverlayPrompts;
         private bool _originalAutoPolygonizeHideSegmentationRings;
         private bool _originalAutoPolygonizeShimmerEnabled;
+        private bool _originalSegmentLinkedAnnotations;
         private double _originalAutoPolygonizeShimmerBrightness;
         private int _originalAutoPolygonizeShimmerDurationMs;
         private bool _originalCorrectionShimEnabled;
@@ -478,6 +479,22 @@ namespace WebAnnotation.WPF.Forms
         /// <summary>Longest allowed <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
         public const int MaxAutoPolygonizeShimmerDurationMs = 1000;
 
+        private bool _segmentLinkedAnnotations = true;
+
+        /// <summary>Runs the segmentation step (accept, cancel, skip) after a linked annotation is dragged onto the next section.</summary>
+        public bool SegmentLinkedAnnotations
+        {
+            get => _segmentLinkedAnnotations;
+            set
+            {
+                if (_segmentLinkedAnnotations != value)
+                {
+                    _segmentLinkedAnnotations = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private bool _autoPolygonizeShimmerEnabled = true;
 
         /// <summary>Plays a one-shot shimmer over each newly shown auto-polygonize result.</summary>
@@ -826,7 +843,8 @@ namespace WebAnnotation.WPF.Forms
             double segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers,
             bool autoPolygonizeShimmerEnabled = true,
             double autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness,
-            int autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs)
+            int autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs,
+            bool segmentLinkedAnnotations = true)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -857,6 +875,7 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             _autoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
             _autoPolygonizeShimmerEnabled = autoPolygonizeShimmerEnabled;
+            _segmentLinkedAnnotations = segmentLinkedAnnotations;
             _autoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
 
@@ -890,6 +909,7 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             _originalAutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
             _originalAutoPolygonizeShimmerEnabled = autoPolygonizeShimmerEnabled;
+            _originalSegmentLinkedAnnotations = segmentLinkedAnnotations;
             _originalAutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             _originalAutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
             _originalCorrectionShimEnabled = correctionShimEnabled;
@@ -928,6 +948,7 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeOverlayPrompts = autoPolygonizeOverlayPrompts;
             AutoPolygonizeHideSegmentationRings = autoPolygonizeHideSegmentationRings;
             AutoPolygonizeShimmerEnabled = autoPolygonizeShimmerEnabled;
+            SegmentLinkedAnnotations = segmentLinkedAnnotations;
             AutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             AutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
             CorrectionShimEnabled = correctionShimEnabled;
@@ -973,6 +994,7 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeOverlayPrompts = _autoPolygonizeOverlayPrompts;
             _originalAutoPolygonizeHideSegmentationRings = _autoPolygonizeHideSegmentationRings;
             _originalAutoPolygonizeShimmerEnabled = _autoPolygonizeShimmerEnabled;
+            _originalSegmentLinkedAnnotations = _segmentLinkedAnnotations;
             _originalAutoPolygonizeShimmerBrightness = _autoPolygonizeShimmerBrightness;
             _originalAutoPolygonizeShimmerDurationMs = _autoPolygonizeShimmerDurationMs;
             _originalCorrectionShimEnabled = _correctionShimEnabled;
@@ -1016,6 +1038,7 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeOverlayPrompts = _originalAutoPolygonizeOverlayPrompts;
             _autoPolygonizeHideSegmentationRings = _originalAutoPolygonizeHideSegmentationRings;
             _autoPolygonizeShimmerEnabled = _originalAutoPolygonizeShimmerEnabled;
+            _segmentLinkedAnnotations = _originalSegmentLinkedAnnotations;
             _autoPolygonizeShimmerBrightness = _originalAutoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = _originalAutoPolygonizeShimmerDurationMs;
             _correctionShimEnabled = _originalCorrectionShimEnabled;
@@ -1066,6 +1089,7 @@ namespace WebAnnotation.WPF.Forms
 #endif
             _autoPolygonizeHideSegmentationRings = false;
             _autoPolygonizeShimmerEnabled = true;
+            _segmentLinkedAnnotations = true;
             _autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs;
             _correctionShimEnabled = true;

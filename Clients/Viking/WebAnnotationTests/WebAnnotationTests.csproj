@@ -28,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
         <Compile Include="ExceptionReportTests.cs" />
+        <Compile Include="Commands\SegmentationPenButtonsTests.cs" />
         <Compile Include="AccessibleVolumesPayloadTests.cs" />
         <Compile Include="FindAccessibleVolumeAsyncTests.cs" />
         <Compile Include="LINQLikeExtensionsTests.cs" />

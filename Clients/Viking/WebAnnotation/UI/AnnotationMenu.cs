@@ -194,7 +194,8 @@ namespace WebAnnotation
                 Global.AnnotationSettings.SegmentationMinFeatureNanometers,
                 Global.AnnotationSettings.AutoPolygonizeShimmerEnabled,
                 Global.AnnotationSettings.AutoPolygonizeShimmerBrightness,
-                Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs
+                Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs,
+                Global.AnnotationSettings.SegmentLinkedAnnotations
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -358,6 +359,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.AutoPolygonizeOverlayPrompts = viewModel.AutoPolygonizeOverlayPrompts;
             Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings = viewModel.AutoPolygonizeHideSegmentationRings;
             Global.AnnotationSettings.AutoPolygonizeShimmerEnabled = viewModel.AutoPolygonizeShimmerEnabled;
+            Global.AnnotationSettings.SegmentLinkedAnnotations = viewModel.SegmentLinkedAnnotations;
             Global.AnnotationSettings.AutoPolygonizeShimmerBrightness = viewModel.AutoPolygonizeShimmerBrightness;
             Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
             Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;

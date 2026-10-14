@@ -177,6 +177,19 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
+        /// True runs the interactive segmentation step (with accept, cancel and skip buttons) after the user
+        /// drags a linked annotation onto the next section. False places the dragged polygon as it is.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SegmentLinkedAnnotations
+        {
+            get => (bool)this[nameof(SegmentLinkedAnnotations)];
+            set => this[nameof(SegmentLinkedAnnotations)] = value;
+        }
+
+        /// <summary>
         /// Peak alpha of the shimmer lines, 0.1 to 1. Keep the default in step with
         /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS"/>.
         /// </summary>

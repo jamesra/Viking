@@ -742,6 +742,16 @@
                                    Text="Feeds each cell's first prediction back to SAM2 as mask_input and predicts again with the same prompts. Off by default. Changing it re-segments the current view."/>
 
                         <CheckBox Margin="10,0,0,0"
+                                  IsChecked="{Binding SegmentLinkedAnnotations, Mode=TwoWay}"
+                                  Content="Segment linked annotations"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="20,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="After you drag a linked annotation onto the next section, SAM2 refines its outline. Pen buttons let you accept it, cancel the new annotation, or skip the refinement and place the dragged polygon as it is. When off, the dragged polygon is placed as soon as you release it."/>
+
+                        <CheckBox Margin="10,0,0,0"
                                   IsChecked="{Binding SegmentationEdgeSnapEnabled, Mode=TwoWay}"
                                   Content="Snap contours to image edges"
                                   VerticalContentAlignment="Center"/>

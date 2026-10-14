@@ -151,6 +151,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>Cancels the in-flight SegmentImage so Escape can place the fallback before a late mask arrives.</summary>
         private CancellationTokenSource segmentRequestCts = new();
 
+        private SegmentationPenButtons? penButtons;
+
+        /// <summary>
+        /// True shows accept, skip and cancel buttons down the right edge for pen use. Skip appears only when the
+        /// command was given a <c>placementFallback</c> to place. Set before the command is queued; used by the linked
+        /// annotation drag, where the user can step past segmentation and keep the polygon as dragged.
+        /// </summary>
+        public bool ShowPenButtons { get; set; }
+
+        private bool PenButtonsIncludeSkip => placementFallback is not null;
+
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
         /// </summary>
@@ -423,6 +434,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Mouse Input Handling
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
+            if (ShowPenButtons && !placementFinished && e.Button.Left() &&
+                SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y) is SegmentationPenButton pressed)
+            {
+                HandlePenButton(pressed);
+                return;
+            }
+
             Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
 
@@ -452,6 +470,42 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             base.OnMouseDown(sender, e);
+        }
+
+        /// <summary>
+        /// Runs the action behind a pen button. Accept saves the segmented polygon, skip places the dragged polygon
+        /// without segmentation (see <see cref="AcceptPlacementFallback"/>), and cancel ends the whole creation and
+        /// clears the command queue like Escape does elsewhere.
+        /// </summary>
+        private void HandlePenButton(SegmentationPenButton button)
+        {
+            switch (button)
+            {
+                case SegmentationPenButton.Accept:
+                    AcceptBestPolygon();
+                    break;
+                case SegmentationPenButton.Skip:
+                    AcceptPlacementFallback();
+                    break;
+                default:
+                    CancelCommand();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Accepts the segmented polygon a pen user most likely means: among the polygons holding a foreground point,
+        /// the largest; if none holds one, the largest of all. Does nothing while no polygon exists yet.
+        /// </summary>
+        private void AcceptBestPolygon()
+        {
+            List<Polygon> candidates = [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>()];
+            if (candidates.Count == 0)
+                return;
+
+            List<Polygon> withPoint = [.. candidates.Where(polygon => foregroundPoints.Any(point => polygon.Covers(point)))];
+            selectedPolygon = (withPoint.Count > 0 ? withPoint : candidates).OrderByDescending(polygon => polygon.Area).First();
+            Execute();
         }
 
         private void HandlePointDeletion(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos)
@@ -1393,7 +1447,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             foregroundPointsView?.Alpha = (float)(0.64 + foregroundPulse * 0.33); // Range: 0.0 to 1.0
             foregroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 
-            
+            if (ShowPenButtons && !placementFinished)
+            {
+                penButtons ??= new SegmentationPenButtons(Parent);
+                penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip);
+            }
 
             // Restore previous depth buffer state
             graphicsDevice.DepthStencilState = previousDepthStencilState;
