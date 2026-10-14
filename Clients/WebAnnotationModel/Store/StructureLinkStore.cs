@@ -57,7 +57,7 @@ namespace WebAnnotationModel
 
         public StructureLinkObj Create(StructureLinkObj link)
         {
-            using IClientChannel proxy = CreateProxy();
+            IClientChannel proxy = CreateProxy();
             StructureLink dblink = ((IAnnotateStructures)proxy).CreateStructureLink(link.GetData());
             StructureLinkObj created_link = new(dblink);
             Add(created_link);

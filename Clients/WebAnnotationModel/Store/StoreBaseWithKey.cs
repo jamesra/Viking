@@ -20,6 +20,13 @@ namespace WebAnnotationModel
         public readonly DateTime StartTime = DateTime.UtcNow;
         public readonly Action<ICollection<T>> OnLoadCompletedCallBack = LoadCompletedCallback;
 
+        /// <summary>
+        /// The registration that aborts this call's channel when its section load is cancelled. The completion
+        /// callback disposes it before the channel goes back to the pool, so a late cancellation cannot abort a
+        /// channel another call has rented.
+        /// </summary>
+        public IDisposable CancellationRegistration { get; set; }
+
         public override string ToString() => SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString();
 
         public bool Equals(GetObjectBySectionCallbackState<PROXY, T> other)
@@ -605,23 +612,23 @@ namespace WebAnnotationModel
             }
 
             IAsyncResult result = null;
+            IClientChannel proxy = null;
+            bool queryRegistered = false;
+            bool queryStarted = false;
             try
             {
-                var proxy = CreateProxy();
+                proxy = RentAsyncProxy();
+                GetObjectBySectionCallbackState<INTERFACE, OBJECT> newState = new((INTERFACE)proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
+                queryRegistered = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
+                if (queryRegistered)
                 {
-                    //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                    GetObjectBySectionCallbackState<INTERFACE, OBJECT> newState = new((INTERFACE)proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
-                    bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
-                    if (NoOutstandingRequest)
-                    {
-
-                        //Build list of Locations to check
-                        result = ProxyBeginGetBySection((INTERFACE)proxy,
-                                                SectionNumber,
-                                                newState.LastQueryExecutedTime,
-                                                new AsyncCallback(GetObjectsBySectionCallback),
-                                                newState);
-                    }
+                    //Build list of Locations to check
+                    result = ProxyBeginGetBySection((INTERFACE)proxy,
+                                            SectionNumber,
+                                            newState.LastQueryExecutedTime,
+                                            new AsyncCallback(GetObjectsBySectionCallback),
+                                            newState);
+                    queryStarted = true;
                 }
             }
 
@@ -635,7 +642,15 @@ namespace WebAnnotationModel
             }
             finally
             {
-                //Do not free the proxy.  The callback function handles that
+                //Once the query has started, the callback releases the channel.  Otherwise it is released here, and
+                //a registration that never started must not leave the section marked as loading.
+                if (!queryStarted && proxy is not null)
+                {
+                    if (queryRegistered)
+                        OutstandingSectionQueries.TryRemove(SectionNumber, out _);
+
+                    ReleaseAsyncProxy(proxy, completedNormally: !queryRegistered);
+                }
             }
 
             return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects.Values);
@@ -694,10 +709,15 @@ namespace WebAnnotationModel
                 return;
 
             INTERFACE client = state.Proxy;
+            IClientChannel channel = (IClientChannel)client;
+            bool completedNormally = false;
 
             //This happens if we called abort
-            if (IsProxyBroken((IClientChannel)state.Proxy))
+            if (IsProxyBroken(channel))
+            {
+                ReleaseAsyncProxy(channel, completedNormally: false);
                 return;
+            }
 
             Debug.Assert(client != null);
 
@@ -708,6 +728,7 @@ namespace WebAnnotationModel
             try
             {
                 objs = ProxyGetBySectionCallback(out TicksAtQueryExecute, out DeletedLocations, state, result);
+                completedNormally = true;
             }
             catch (TimeoutException)
             {
@@ -726,8 +747,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (client is IClientChannel proxy)
-                    proxy.Close();
+                ReleaseAsyncProxy(channel, completedNormally);
             }
 
             DateTime TraceQueryEnd = DateTime.Now;

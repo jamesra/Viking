@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -165,6 +166,109 @@ namespace WebAnnotationModel
     }
 
     /// <summary>
+    /// Idle WCF channels lent to one asynchronous call at a time, so concurrent requests do not each pay to open a
+    /// channel but no call ever shares a channel with another.
+    /// </summary>
+    /// <remarks>
+    /// Thread safe. A rented channel belongs to the renter until it is handed back with <see cref="Return"/> or
+    /// <see cref="Discard"/>, which makes it safe to <see cref="Discard"/> (abort) it from a cancellation callback
+    /// while the call is in flight. Never touch a channel after handing it back. Return only a channel whose last call
+    /// completed normally; anything else, including a call that timed out, is discarded because its state is unknown.
+    /// </remarks>
+    /// <typeparam name="TChannel">The channel type, normally <see cref="IClientChannel"/>.</typeparam>
+    public sealed class ChannelPool<TChannel> where TChannel : class, ICommunicationObject
+    {
+        private readonly Func<TChannel> _create;
+        private readonly int _maxIdle;
+        private readonly ConcurrentStack<TChannel> _idle = new();
+        private int _idleCount;
+
+        /// <param name="create">Makes a new, unopened channel.</param>
+        /// <param name="maxIdle">Most idle channels kept; extra returned channels are closed.</param>
+        public ChannelPool(Func<TChannel> create, int maxIdle = 16)
+        {
+            _create = create ?? throw new ArgumentNullException(nameof(create));
+            _maxIdle = maxIdle;
+        }
+
+        /// <summary>Number of idle channels waiting to be rented.</summary>
+        public int IdleCount => Volatile.Read(ref _idleCount);
+
+        /// <summary>
+        /// An open channel nobody else is using. Idle channels that have closed or faulted since they were returned
+        /// are dropped.
+        /// </summary>
+        public TChannel Rent()
+        {
+            while (_idle.TryPop(out TChannel channel))
+            {
+                Interlocked.Decrement(ref _idleCount);
+                if (channel.State == CommunicationState.Opened)
+                    return channel;
+
+                Discard(channel);
+            }
+
+            TChannel fresh = _create();
+            try
+            {
+                fresh.Open();
+            }
+            catch
+            {
+                Discard(fresh);
+                throw;
+            }
+
+            return fresh;
+        }
+
+        /// <summary>Hands back a channel whose call finished normally so the next call can reuse it.</summary>
+        public void Return(TChannel channel)
+        {
+            if (channel is null)
+                return;
+
+            if (channel.State != CommunicationState.Opened || Volatile.Read(ref _idleCount) >= _maxIdle)
+            {
+                Close(channel);
+                return;
+            }
+
+            _idle.Push(channel);
+            Interlocked.Increment(ref _idleCount);
+        }
+
+        /// <summary>Aborts a channel that must not be reused. Safe while a call on it is in flight.</summary>
+        public static void Discard(TChannel channel)
+        {
+            if (channel is null)
+                return;
+
+            try
+            {
+                channel.Abort();
+            }
+            catch (Exception)
+            {
+                // Already closed or faulted.
+            }
+        }
+
+        private static void Close(TChannel channel)
+        {
+            try
+            {
+                channel.Close();
+            }
+            catch (Exception)
+            {
+                Discard(channel);
+            }
+        }
+    }
+
+    /// <summary>
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
     public abstract class StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT> : INotifyCollectionChanged
@@ -180,12 +284,45 @@ namespace WebAnnotationModel
         //Perform any required initialization
         public abstract void Init();
 
+        /// <summary>
+        /// The calling thread's own channel, for synchronous calls. Reused across calls and never closed by the
+        /// caller. Do not start an asynchronous call on it: its completion or cancellation would close or abort a
+        /// channel the thread's later synchronous calls depend on. Use <see cref="RentAsyncProxy"/> for those.
+        /// </summary>
         protected virtual IClientChannel CreateProxy()
         {
             proxyFactory ??= new ThreadLocalProxyFactory<INTERFACE>(channelFactory);
 
             //return (IClientChannel)channelFactory.CreateChannel(State.EndpointAddress);
             return proxyFactory.GetProxy();
+        }
+
+        private ChannelPool<IClientChannel> asyncChannels;
+
+        /// <summary>
+        /// A channel for one asynchronous (Begin/End) call, exclusive until released with
+        /// <see cref="ReleaseAsyncProxy"/>. Because nothing else uses it, it may be aborted to cancel the call.
+        /// </summary>
+        protected IClientChannel RentAsyncProxy() =>
+            LazyInitializer.EnsureInitialized(ref asyncChannels,
+                () => new ChannelPool<IClientChannel>(() => (IClientChannel)channelFactory.CreateChannel(State.EndpointAddress)))
+            .Rent();
+
+        /// <summary>
+        /// Ends the use of a channel from <see cref="RentAsyncProxy"/>. A channel whose call completed normally goes
+        /// back to the pool; any other is aborted. Does nothing for null. Call it once, after cancellation hooks for
+        /// the call have been disposed.
+        /// </summary>
+        /// <param name="completedNormally">True only when the End call returned without an exception.</param>
+        protected void ReleaseAsyncProxy(IClientChannel proxy, bool completedNormally)
+        {
+            if (proxy is null)
+                return;
+
+            if (completedNormally && asyncChannels is not null)
+                asyncChannels.Return(proxy);
+            else
+                ChannelPool<IClientChannel>.Discard(proxy);
         }
 
         #region Public Creation/Removal methods

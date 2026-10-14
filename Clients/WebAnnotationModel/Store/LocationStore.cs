@@ -459,7 +459,7 @@ namespace WebAnnotationModel
             DateTime StartTime = DateTime.UtcNow;
             AnnotationSet serverAnnotations = null;
             long QueryExecutedTime = 0;
-            using (var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 try
                 {
@@ -527,27 +527,27 @@ namespace WebAnnotationModel
             bool requestStarted = false;
             IAsyncResult result = null;
             IClientChannel proxy = null;
+            GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = null;
             try
             {
-                proxy = CreateProxy();
-
-                // Register a cancellation callback that aborts the WCF proxy, freeing the connection
-                // for use by requests for the current section. The existing IsProxyBroken check in
-                // GetObjectsBySectionRegionCallback will cause the stale callback to exit immediately.
-                if (token.CanBeCanceled)
-                {
-                    var proxyToAbort = proxy;
-                    token.Register(() =>
-                    {
-                        try { proxyToAbort.Abort(); }
-                        catch { /* Proxy may already be closed/faulted */ }
-                    });
-                }
+                // The channel is exclusive to this request, so the cancellation below can abort it without
+                // disturbing any other call.
+                proxy = RentAsyncProxy();
 
                 IAnnotateLocations client = (IAnnotateLocations)proxy;
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = new((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc ?? DateTime.MinValue, OnLoadCompletedCallBack);
+                newState = new((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc ?? DateTime.MinValue, OnLoadCompletedCallBack);
+
+                // Register a cancellation callback that aborts the WCF proxy, freeing the connection
+                // for use by requests for the current section. The existing IsProxyBroken check in
+                // GetObjectsBySectionRegionCallback will cause the stale callback to exit immediately.
+                // The callback disposes the registration before it releases the channel.
+                if (token.CanBeCanceled)
+                {
+                    var proxyToAbort = proxy;
+                    newState.CancellationRegistration = token.Register(() => ChannelPool<IClientChannel>.Discard(proxyToAbort));
+                }
 
                 //Build list of Locations to check
                 result = client.BeginGetAnnotationsInMosaicRegion(SectionNumber,
@@ -567,15 +567,17 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-                proxy?.Close();
-                proxy = null;
             }
             finally
             {
-                // If the request didn't start successfully, release the throttle immediately.
-                // Otherwise it will be released in GetObjectsBySectionRegionCallback.
+                // If the request didn't start successfully, release the throttle and the channel immediately.
+                // Otherwise both are released in GetObjectsBySectionRegionCallback.
                 if (!requestStarted)
+                {
+                    newState?.CancellationRegistration?.Dispose();
+                    ReleaseAsyncProxy(proxy, completedNormally: false);
                     _wcfRequestThrottle.Release();
+                }
             }
 
             return new MixedLocalAndRemoteQueryResults<long, LocationObj>(result, SpatialSearch.Intersects(bounds, SectionNumber));
@@ -583,17 +585,23 @@ namespace WebAnnotationModel
 
         protected void GetObjectsBySectionRegionCallback(IAsyncResult result)
         {
+            IClientChannel proxy = null;
             try
             {
                 //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
                 //queries are in-flight
                 GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state = result.AsyncState as GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>;
 
-                IClientChannel proxy = (IClientChannel)state.Proxy;
+                proxy = (IClientChannel)state.Proxy;
+
+                // After this a cancelled section can no longer abort the channel, which may be rented again below.
+                state.CancellationRegistration?.Dispose();
 
                 //This happens if we called abort — notify so RegionRequestData can clear LastQuery
                 if (IsProxyBroken(proxy))
                 {
+                    ReleaseAsyncProxy(proxy, completedNormally: false);
+                    proxy = null;
                     state.OnLoadCompletedCallBack?.Invoke(null);
                     return;
                 }
@@ -607,6 +615,8 @@ namespace WebAnnotationModel
                 try
                 {
                     serverAnnotations = ((IAnnotateLocations)proxy).EndGetAnnotationsInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+                    ReleaseAsyncProxy(proxy, completedNormally: true);
+                    proxy = null;
                 }
                 catch (TimeoutException)
                 {
@@ -646,6 +656,8 @@ namespace WebAnnotationModel
             }
             finally
             {
+                // Still set when the call did not complete normally, or the callback failed before End was reached.
+                ReleaseAsyncProxy(proxy, completedNormally: false);
                 _wcfRequestThrottle.Release();
             }
         }
