@@ -25,11 +25,14 @@ namespace WebAnnotation.ViewModel
         private readonly ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new();
 
         /// <summary>
-        /// Return all the line segments visible in the passed bounds
+        /// Return all the line segments visible in the passed bounds. A link removed on another thread leaves the
+        /// spatial index after the dictionary, so a key it returns can already be gone; those are skipped.
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)).Select((sl_key) => StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene))];
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber))
+            .Select((sl_key) => StructureLinks.TryGetValue(sl_key, out StructureLinkViewModelBase link) ? link : null)
+            .Where(sl => sl != null && sl.IsVisible(scene))];
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)
         {
