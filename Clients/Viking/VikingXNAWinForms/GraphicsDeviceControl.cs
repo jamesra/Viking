@@ -177,11 +177,32 @@ namespace VikingXNAWinForms
                 return;
 
             if (_trackedForm != null)
+            {
                 _trackedForm.LocationChanged -= OnFormLocationChanged;
+                _trackedForm.ResizeEnd -= OnFormMoveEnded;
+            }
 
             _trackedForm = form;
             if (_trackedForm != null)
+            {
                 _trackedForm.LocationChanged += OnFormLocationChanged;
+                _trackedForm.ResizeEnd += OnFormMoveEnded;
+            }
+        }
+
+        /// <summary>
+        /// Re-reads HDR once a window drag finishes. DWM can still report the previous monitor's
+        /// state while the window is mid-drag, and <see cref="OnFormLocationChanged"/> ignores
+        /// further moves once the monitor handle has been noted.
+        /// </summary>
+        void OnFormMoveEnded(object? sender, EventArgs e)
+        {
+            if (!IsHandleCreated || graphicsDeviceService is null)
+                return;
+            if (graphicsDeviceService.DeviceWindowHandle != Handle)
+                return;
+
+            NoteOutput(MonitorFromWindow(Handle, MonitorDefaultToNearest));
         }
 
         /// <summary>
@@ -236,9 +257,14 @@ namespace VikingXNAWinForms
             if (monitor == IntPtr.Zero)
                 return;
 
-            _outputMonitor = monitor;
+            // Record the monitor only after a successful read, so a failed read is retried on the next move.
             if (!MonitorAdvancedColor.TryGetEnabled(monitor, out bool enabled))
+            {
+                Trace.WriteLine("HDR state of the output monitor could not be read; swap chain left alone.");
                 return;
+            }
+
+            _outputMonitor = monitor;
 
             if (!_knownAdvancedColor)
             {
@@ -250,6 +276,7 @@ namespace VikingXNAWinForms
             if (enabled == _advancedColorEnabled)
                 return;
 
+            Trace.WriteLine($"Advanced color (HDR) changed to {enabled}; recreating swap chain.");
             _advancedColorEnabled = enabled;
             ResetSwapChainForOutputChange();
         }
@@ -289,6 +316,7 @@ namespace VikingXNAWinForms
             if (_trackedForm != null)
             {
                 _trackedForm.LocationChanged -= OnFormLocationChanged;
+                _trackedForm.ResizeEnd -= OnFormMoveEnded;
                 _trackedForm = null;
             }
 
