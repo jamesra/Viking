@@ -23,12 +23,21 @@ namespace WebAnnotation.UI.Commands
     internal sealed class PenCancelButton(SectionViewerControl parent)
     {
         /// <summary>Radius of the button in screen pixels. Large enough for a pen tip.</summary>
-        internal const double RadiusPixels = 28;
+        internal const double RadiusPixels = 38;
 
         private const double MarginPixels = 24;
         private const double GapBelowPixels = 14;
         private const double GlyphLineWidthPixels = 5;
-        private const double GlyphHalfSizePixels = 10;
+        private const double GlyphHalfSizePixels = 9;
+
+        /// <summary>How far above the disc centre the X sits, leaving the lower half for the caption.</summary>
+        private const double GlyphRaisePixels = 10;
+
+        /// <summary>How far below the disc centre the caption's middle sits.</summary>
+        private const double CaptionDropPixels = 17;
+
+        private const double CaptionFontPixels = 13;
+        private const float BackingAlpha = 0.5f;
 
         /// <summary>
         /// Distance in screen pixels from the top of the viewer below which other pen chrome may be stacked without
@@ -36,7 +45,10 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         internal const double ReservedTopPixels = MarginPixels + 2 * RadiusPixels + GapBelowPixels;
 
-        private static readonly Color DiscColor = new(200, 30, 30);
+        /// <summary>Red of the X and the ring. The disc behind them is 50% black.</summary>
+        private static readonly Color RedColor = new(235, 40, 40);
+
+        private LabelView? caption;
 
         private readonly SectionViewerControl parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
@@ -64,25 +76,34 @@ namespace WebAnnotation.UI.Commands
             GeometryVector2 centerWorld = parent.ScreenToWorld(cx, cy);
             GeometryCircle disc = new(centerWorld, RadiusPixels * downsample);
 
+            // 50% black backing so the red X and white caption read on any tissue, then the red ring.
             CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha,
-                [new CircleView(disc, DiscColor) { Alpha = 1f }, PenButtonStyle.RingFor(disc, DiscColor)]);
+                [new CircleView(disc, Color.Black) { Alpha = BackingAlpha }, PenButtonStyle.RingFor(disc, RedColor)]);
 
             foreach (GeometryVector2[] stroke in Glyph())
             {
                 PolyLineView line = new(
                     stroke.Select(offset => parent.ScreenToWorld(cx + offset.X, cy + offset.Y)),
-                    Color.White,
+                    RedColor,
                     null,
                     GlyphLineWidthPixels * downsample);
                 line.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
+
+            if (parent.spriteBatch is null || parent.fontArial is null)
+                return;
+
+            caption ??= new LabelView("Cancel", GeometryVector2.Zero, Color.White, Alignment.CenterCenter, Anchor.CenterCenter, scaleFontWithScene: true);
+            caption.Position = parent.ScreenToWorld(cx, cy + CaptionDropPixels);
+            caption.FontSize = CaptionFontPixels * downsample;
+            LabelView.Draw(parent.spriteBatch, parent.fontArial, scene, [caption]);
         }
 
         /// <summary>The strokes of the X as pixel offsets from the centre (x right, y down).</summary>
         private static GeometryVector2[][] Glyph() =>
         [
-            [new(-GlyphHalfSizePixels, -GlyphHalfSizePixels), new(GlyphHalfSizePixels, GlyphHalfSizePixels)],
-            [new(-GlyphHalfSizePixels, GlyphHalfSizePixels), new(GlyphHalfSizePixels, -GlyphHalfSizePixels)],
+            [new(-GlyphHalfSizePixels, -GlyphHalfSizePixels - GlyphRaisePixels), new(GlyphHalfSizePixels, GlyphHalfSizePixels - GlyphRaisePixels)],
+            [new(-GlyphHalfSizePixels, GlyphHalfSizePixels - GlyphRaisePixels), new(GlyphHalfSizePixels, -GlyphHalfSizePixels - GlyphRaisePixels)],
         ];
     }
 }
