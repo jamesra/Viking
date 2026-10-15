@@ -39,7 +39,7 @@ namespace WebAnnotation.UI.Commands
         /// A per-action set of objects that either support IRenderable or IActionView
         /// </summary>
         private readonly Dictionary<IAction, List<object>> ActionViews = [];
-        private CircularButton? CancelButton;
+        private PenCancelButton? cancelButton;
         private readonly List<IAction> _labeledActions = [];
         private LabelView[] _buttonLabels = [];
         private readonly Dictionary<IAction, IIconTexture> _ActionIcona = [];
@@ -95,14 +95,20 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private bool CancelHover = false;
 
-        /// <summary>Target button diameter in screen pixels for the right-side chrome column.</summary>
-        private const double ButtonScreenPixels = 56;
+        /// <summary>Target button diameter in screen pixels for the right-side chrome column. Big enough for a caption inside.</summary>
+        private const double ButtonScreenPixels = 84;
 
-        /// <summary>Gap between the bottom of the circle and the top of its caption, in radii. World Y decreases down the screen.</summary>
-        private const double LabelGapRadii = 0.28;
+        /// <summary>Distance from the right and bottom edges of the viewer to the buttons, in screen pixels.</summary>
+        private const double EdgeMarginPixels = 24;
 
-        /// <summary>Caption wrap width in button radii so names stay under the circle.</summary>
-        private const double LabelWidthRadii = 2.6;
+        /// <summary>Gap between neighbouring buttons, in screen pixels.</summary>
+        private const double ButtonGapPixels = 14;
+
+        /// <summary>Caption wrap width in button radii so names stay inside the circle.</summary>
+        private const double LabelWidthRadii = 1.6;
+
+        /// <summary>Caption font size in button radii before <see cref="PenButtonStyle.LabelFontScale"/> shrinks long words.</summary>
+        private const double LabelFontRadii = 0.36;
 
         private ActionSelectionCanvasControl(SectionViewerControl parent, OnCommandSuccess? success_callback = null) : base(parent)
         {
@@ -122,8 +128,9 @@ namespace WebAnnotation.UI.Commands
 
         /// <summary>
         /// Create a button for every action that requires it. When
-        /// <see cref="Global.ShowPenActionButtons"/> is false, action circles are omitted but
-        /// Cancel stays so the user is never stranded without an on-canvas out (Escape also cancels).
+        /// <see cref="Global.ShowPenActionButtons"/> is false, action circles are omitted. The red cancel X is a
+        /// <see cref="PenCancelButton"/> and is always shown, so the user is never stranded without an on-canvas out
+        /// (Escape also cancels).
         /// </summary>
         private void GenerateActionButtons(Dictionary<IAction, IIconTexture> actionIcons)
         {
@@ -142,14 +149,11 @@ namespace WebAnnotation.UI.Commands
                     IAction action = item.Key;
                     IIconTexture value = item.Value;
 
-                    CircleView btnView = null;
-
                     Color color = value is not IColorView colorView ? Color.Green : colorView.Color;
 
-                    Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor. 
-                    btnView = value.Icon != BuiltinTexture.None
-                        ? new TextureCircleView(value.Icon.GetTexture(), circle, color)
-                        : new CircleView(circle, color);
+                    // The caption is drawn inside the disc, so the disc is plain and opaque rather than an icon.
+                    Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor.
+                    CircleView btnView = new(circle, color) { Alpha = 1f };
 
                     //TODO: Sort and Map visuals on the circlular buttons according to action types
                     CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
@@ -168,8 +172,6 @@ namespace WebAnnotation.UI.Commands
 
                 _Buttons = [.. buttons];
             }
-
-            AppendCancelButton();
 
             LayoutButtons();
             CreateButtonLabels();
@@ -197,10 +199,10 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// Text drawn under each choice button. Called after <see cref="LayoutButtons"/>.
+        /// Text drawn inside each choice button. Called after <see cref="LayoutButtons"/>.
         /// Long names wrap via <see cref="LabelView.MaxLineWidth"/>. Font size tracks the
-        /// screen-fixed button radius so captions stay readable under the chrome.
-        /// Cancel is the last button and is not in <see cref="_labeledActions"/>.
+        /// screen-fixed button radius so captions stay readable on the chrome, and the colour is black or white
+        /// depending on the disc (<see cref="PenButtonStyle.LabelColorFor"/>).
         /// </summary>
         private void CreateButtonLabels()
         {
@@ -214,8 +216,7 @@ namespace WebAnnotation.UI.Commands
             List<LabelView> labels = new(Buttons.Length);
             for (int i = 0; i < Buttons.Length; i++)
             {
-                string text = i < _labeledActions.Count ? LabelFor(_labeledActions[i]) : "Cancel";
-                labels.Add(CreateLabelForButton(Buttons[i], text, maxLineWidth));
+                labels.Add(CreateLabelForButton(Buttons[i], LabelFor(_labeledActions[i]), maxLineWidth));
             }
 
             _buttonLabels = [.. labels];
@@ -233,28 +234,24 @@ namespace WebAnnotation.UI.Commands
             }
 
             double maxLineWidth = LabelMaxLineWidthWorld();
-            double fontSize = ScreenFixedLabelFontSize();
             for (int i = 0; i < Buttons.Length; i++)
             {
-                Circle circle = Buttons[i].Circle;
-                _buttonLabels[i].Position = LabelPositionUnderCircle(circle);
+                _buttonLabels[i].Position = Buttons[i].Circle.Center;
                 _buttonLabels[i].MaxLineWidth = maxLineWidth;
-                _buttonLabels[i].FontSize = fontSize;
+                _buttonLabels[i].FontSize = ScreenFixedLabelFontSize(_buttonLabels[i].Text);
             }
         }
 
         private LabelView CreateLabelForButton(CircularButton button, string text, double maxLineWidth)
         {
-            Circle circle = button.Circle;
-            Geometry.Vector2 position = LabelPositionUnderCircle(circle);
             LabelView label = new(
                 text,
-                position,
-                Color.White,
+                button.Circle.Center,
+                PenButtonStyle.LabelColorFor(button.Color),
                 Alignment.CenterCenter,
-                Anchor.TopCenter,
+                Anchor.CenterCenter,
                 scaleFontWithScene: true,
-                fontSize: ScreenFixedLabelFontSize())
+                fontSize: ScreenFixedLabelFontSize(text))
             {
                 MaxLineWidth = maxLineWidth
             };
@@ -262,20 +259,16 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// World position of the caption's top edge, centered under the circle.
-        /// </summary>
-        private static Geometry.Vector2 LabelPositionUnderCircle(Circle circle) =>
-            new(circle.Center.X, circle.Center.Y - circle.Radius * (1 + LabelGapRadii));
-
-        /// <summary>
-        /// World-space wrap width so captions stay under the circle and wrap onto extra lines.
+        /// World-space wrap width so captions stay inside the circle and wrap onto extra lines.
         /// </summary>
         private double LabelMaxLineWidthWorld() => ScreenFixedButtonRadius() * LabelWidthRadii;
 
         /// <summary>
-        /// Font size in world units so captions stay proportional to the screen-fixed button radius.
+        /// Font size in world units so captions stay proportional to the screen-fixed button radius, smaller for
+        /// captions with a long word.
         /// </summary>
-        private double ScreenFixedLabelFontSize() => ScreenFixedButtonRadius() * 0.55;
+        private double ScreenFixedLabelFontSize(string text) =>
+            ScreenFixedButtonRadius() * LabelFontRadii * PenButtonStyle.LabelFontScale(text);
 
         /// <summary>
         /// Button radius in world units so the chrome is roughly <see cref="ButtonScreenPixels"/> tall on screen.
@@ -365,9 +358,8 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// Places action buttons in vertical columns along the right edge of the visible view.
-        /// Fills top-to-bottom, then adds columns to the left. Cancel sits under the last
-        /// action in the rightmost column when there is room, otherwise at the bottom margin.
+        /// Places action buttons in vertical columns along the right edge of the visible view, below the
+        /// <see cref="PenCancelButton"/>. Fills top-to-bottom, then adds columns to the left.
         /// </summary>
         private void LayoutButtons()
         {
@@ -375,51 +367,26 @@ namespace WebAnnotation.UI.Commands
                 return;
 
             Geometry.Rectangle visible = Parent.Scene.VisibleWorldBounds;
+            double downsample = Parent.Camera?.Downsample ?? Parent.Downsample;
+            if (downsample <= 0)
+                downsample = 1;
+
             double radius = ScreenFixedButtonRadius();
-            double margin = radius * 1.5;
-            double horizontalSpacing = radius * 3.4;
-            // Room under each circle for a wrapped caption before the next button.
-            double verticalSpacing = radius * 4.6;
+            double margin = EdgeMarginPixels * downsample;
+            double step = 2 * radius + ButtonGapPixels * downsample;
+            double topY = visible.Top - PenCancelButton.ReservedTopPixels * downsample - radius;
+            double usableHeight = visible.Height - (PenCancelButton.ReservedTopPixels + EdgeMarginPixels) * downsample;
+            int maxRows = Math.Max(1, (int)Math.Floor((usableHeight + ButtonGapPixels * downsample) / step));
 
-            int maxRows = Math.Max(1, (int)Math.Floor((visible.Height - 2 * margin) / verticalSpacing));
-            int actionCount = Math.Max(0, Buttons.Length - 1);
-
-            double rightColX = visible.Right - margin;
-            double topY = visible.Top - margin;
-
-            for (int i = 0; i < actionCount; i++)
+            double rightColX = visible.Right - margin - radius;
+            for (int i = 0; i < Buttons.Length; i++)
             {
                 int col = i / maxRows;
                 int row = i % maxRows;
-                double x = rightColX - col * horizontalSpacing;
-                double y = topY - row * verticalSpacing;
+                double x = rightColX - col * step;
+                double y = topY - row * step;
                 Buttons[i].Circle = new Circle(new Geometry.Vector2(x, y), radius);
             }
-
-            int actionsInRightCol = Math.Min(actionCount, maxRows);
-            double cancelX = rightColX;
-            double cancelY = topY - actionsInRightCol * verticalSpacing;
-            if (cancelY - radius < visible.Bottom + margin * 0.25)
-            {
-                // Right column is full; place cancel one column left at the bottom.
-                cancelX = rightColX - horizontalSpacing;
-                cancelY = visible.Bottom + margin;
-            }
-
-            Buttons[Buttons.Length - 1].Circle = new Circle(new Geometry.Vector2(cancelX, cancelY), radius);
-        }
-
-        /// <summary>
-        /// Create the cancel button
-        /// </summary>
-        private void AppendCancelButton()
-        {
-            double cancelRadius = ScreenFixedButtonRadius();
-            Circle buttonCircle = new(Geometry.Vector2.Zero, cancelRadius);
-            TextureCircleView cancelBtnView = new(BuiltinTexture.X.GetTexture(), buttonCircle, Color.Magenta);
-            CancelButton = CircularButton.CreateSimple(cancelBtnView, () => { return; });
-
-            _Buttons = Buttons.Add(CancelButton);
         }
 
         public override void OnActivate() => base.OnActivate();
@@ -473,11 +440,21 @@ namespace WebAnnotation.UI.Commands
         private void DrawButtonsAndLabels(GraphicsDevice graphicsDevice, Scene scene)
         {
             if (Buttons.Length > 0)
-                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, [.. Buttons.Select(b => b.circleView)]);
+            {
+                // Discs first, then the polygon-vertex rings framing them (CircleView.Draw draws rings last).
+                IRenderable[] views =
+                [
+                    .. Buttons.Select(b => b.circleView),
+                    .. Buttons.Select(b => PenButtonStyle.RingFor(b.Circle, b.Color)),
+                ];
+                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, views);
+            }
 
             // LabelView.Draw owns SpriteBatch.Begin/End; nesting Begin here leaves the batch open if the inner Begin throws.
             if (_buttonLabels.Length > 0 && Parent.fontArial != null && Parent.spriteBatch != null)
                 LabelView.Draw(Parent.spriteBatch, Parent.fontArial, scene, _buttonLabels);
+
+            (cancelButton ??= new PenCancelButton(Parent)).Draw(graphicsDevice, scene);
         }
 
         private static void DrawView(GraphicsDevice graphicsDevice, Scene scene, object action, bool UseActive)
@@ -552,12 +529,13 @@ namespace WebAnnotation.UI.Commands
         {
             base.OnMouseDown(sender, e);
 
-            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-            if (CancelButton is not null && CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
+            if (e.Button == MouseButtons.Left && (cancelButton ??= new PenCancelButton(Parent)).HitTest(e.X, e.Y))
             {
-                Deactivated = true;
+                CancelCommand();
                 return;
             }
+
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             foreach (List<IHitTesting> actionInteractables in ActionInteractables.Values)
             {
@@ -591,7 +569,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-            UpdateActiveView(WorldPosition);
+            UpdateActiveView(WorldPosition, e.X, e.Y);
         }
 
         protected override void OnMouseUp(object sender, MouseEventArgs e) => base.OnMouseUp(sender, e);
@@ -600,13 +578,13 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenContact(object sender, PenEventArgs e)
         {
-            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-
-            if (CancelButton is not null && CancelButton.Contains(WorldPosition) && CancelButton.OnClick(CancelButton, WorldPosition, InputDevice.Pen, e))
+            if ((cancelButton ??= new PenCancelButton(Parent)).HitTest(e.X, e.Y))
             {
-                Deactivated = true;
+                CancelCommand();
                 return;
             }
+
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             foreach (List<IHitTesting> actionInteractables in ActionInteractables.Values)
             {
@@ -643,7 +621,7 @@ namespace WebAnnotation.UI.Commands
             if (e.InContact == false)
             {
                 Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                UpdateActiveView(WorldPosition);
+                UpdateActiveView(WorldPosition, e.X, e.Y);
             }
 
             base.OnPenMove(sender, e);
@@ -653,9 +631,9 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShouldSerializeProperty(DependencyProperty dp) => base.ShouldSerializeProperty(dp);
 
-        protected void UpdateActiveView(Geometry.Vector2 WorldPosition)
+        protected void UpdateActiveView(Geometry.Vector2 WorldPosition, double screenX, double screenY)
         {
-            if (CancelButton is not null && CancelButton.Contains(WorldPosition))
+            if ((cancelButton ??= new PenCancelButton(Parent)).HitTest(screenX, screenY))
             {
                 active_action = null;
                 CancelHover = true;

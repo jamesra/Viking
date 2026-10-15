@@ -37,6 +37,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly RasterMask input;
         private readonly Action<RasterMask?> onFinished;
         private readonly SegmentationPenButtons penButtons;
+        private readonly PenCancelButton cancelButton;
 
         private float[]? signedDistance;
         private byte[] editedPixels = new byte[RasterMask.Size * RasterMask.Size];
@@ -64,6 +65,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             input = mask ?? throw new ArgumentNullException(nameof(mask));
             this.onFinished = onFinished ?? throw new ArgumentNullException(nameof(onFinished));
             penButtons = new SegmentationPenButtons(parent);
+            cancelButton = new PenCancelButton(parent);
             StepNanometers = DefaultStepNanometers;
             SettleDelayMs = DefaultSettleDelayMs;
         }
@@ -163,15 +165,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <inheritdoc />
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left &&
-                SegmentationPenButtons.HitTest(includeSkip: false, Parent.ClientSize.Width, e.X, e.Y) is { } button)
+            if (e.Button == MouseButtons.Left)
             {
-                if (button == SegmentationPenButton.Accept)
-                    Accept();
-                else
+                if (cancelButton.HitTest(e.X, e.Y))
+                {
                     CancelCommand();
+                    return;
+                }
 
-                return;
+                if (SegmentationPenButtons.HitTest(includeSkip: false, Parent.ClientSize.Width, e.X, e.Y) is SegmentationPenButton.Accept)
+                {
+                    Accept();
+                    return;
+                }
             }
 
             base.OnMouseDown(sender, e);
@@ -249,6 +255,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             DepthStencilState previousDepth = graphicsDevice.DepthStencilState;
             graphicsDevice.DepthStencilState = DepthStencilState.None;
             penButtons.Draw(graphicsDevice, scene, includeSkip: false);
+            cancelButton.Draw(graphicsDevice, scene);
             graphicsDevice.DepthStencilState = previousDepth;
         }
     }

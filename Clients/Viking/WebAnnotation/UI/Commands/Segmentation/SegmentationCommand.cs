@@ -152,6 +152,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private CancellationTokenSource segmentRequestCts = new();
 
         private SegmentationPenButtons? penButtons;
+        private PenCancelButton? cancelButton;
 
         /// <summary>
         /// True shows accept, skip and cancel buttons down the right edge for pen use. Skip appears only when the
@@ -434,6 +435,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Mouse Input Handling
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
+            if (!placementFinished && e.Button.Left() && (cancelButton ??= new PenCancelButton(Parent)).HitTest(e.X, e.Y))
+            {
+                CancelCommand();
+                return;
+            }
+
             if (ShowPenButtons && !placementFinished && e.Button.Left() &&
                 SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y) is SegmentationPenButton pressed)
             {
@@ -474,8 +481,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Runs the action behind a pen button. Accept saves the segmented polygon, skip places the dragged polygon
-        /// without segmentation (see <see cref="AcceptPlacementFallback"/>), and cancel ends the whole creation and
-        /// clears the command queue like Escape does elsewhere.
+        /// without segmentation (see <see cref="AcceptPlacementFallback"/>). Cancel is the shared
+        /// <see cref="PenCancelButton"/>, handled in <see cref="OnMouseDown"/>.
         /// </summary>
         private void HandlePenButton(SegmentationPenButton button)
         {
@@ -486,9 +493,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     break;
                 case SegmentationPenButton.Skip:
                     AcceptPlacementFallback();
-                    break;
-                default:
-                    CancelCommand();
                     break;
             }
         }
@@ -1451,6 +1455,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 penButtons ??= new SegmentationPenButtons(Parent);
                 penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip);
+            }
+
+            if (!placementFinished)
+            {
+                cancelButton ??= new PenCancelButton(Parent);
+                cancelButton.Draw(graphicsDevice, scene);
             }
 
             // Restore previous depth buffer state

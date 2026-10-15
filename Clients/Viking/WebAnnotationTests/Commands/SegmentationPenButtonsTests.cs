@@ -1,5 +1,6 @@
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -13,10 +14,10 @@ namespace WebAnnotationTests.Commands
         public void SkipIsOfferedOnlyWithAFallbackPolygon()
         {
             CollectionAssert.AreEqual(
-                new[] { SegmentationPenButton.Accept, SegmentationPenButton.Skip, SegmentationPenButton.Cancel },
+                new[] { SegmentationPenButton.Accept, SegmentationPenButton.Skip },
                 SegmentationPenButtons.Layout(includeSkip: true).ToArray());
             CollectionAssert.AreEqual(
-                new[] { SegmentationPenButton.Accept, SegmentationPenButton.Cancel },
+                new[] { SegmentationPenButton.Accept },
                 SegmentationPenButtons.Layout(includeSkip: false).ToArray());
         }
 
@@ -40,10 +41,11 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void WithoutSkipTheSecondSlotIsCancel()
+        public void ButtonsSitBelowTheCancelButton()
         {
-            (double x, double y) = SegmentationPenButtons.CenterOf(1, Width);
-            Assert.AreEqual(SegmentationPenButton.Cancel, SegmentationPenButtons.HitTest(false, Width, x, y));
+            (double _, double firstY) = SegmentationPenButtons.CenterOf(0, Width);
+            (double _, double cancelY) = PenCancelButton.CenterOf(Width);
+            Assert.IsTrue(firstY - SegmentationPenButtons.RadiusPixels >= cancelY + PenCancelButton.RadiusPixels);
         }
     }
 }

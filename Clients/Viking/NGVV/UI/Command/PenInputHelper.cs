@@ -147,6 +147,12 @@ namespace Viking.UI
         /// </summary>
         public bool IgnoringThisPenContact { get; private set; }
 
+        /// <summary>
+        /// Optional test of a screen point (viewer pixels). Input on a point it blocks is not part of the stroke, so
+        /// on-screen buttons over the viewer can be pressed without extending the path.
+        /// </summary>
+        public Func<int, int, bool> IsScreenPointBlocked { get; set; }
+
         public Path path = new();
 
         private double PointIntervalOnDrag => Parent.Downsample * 4.0;
@@ -410,6 +416,9 @@ namespace Viking.UI
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
+            if (IsScreenPointBlocked?.Invoke(e.X, e.Y) == true)
+                return;
+
             Vector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
 
             bool EraseButtonDown = e.Button.Middle(); ;
@@ -535,6 +544,12 @@ namespace Viking.UI
         /// <param name="e"></param>
         protected virtual void OnPenContact(object sender, PenEventArgs e)
         {
+            if (IsScreenPointBlocked?.Invoke(e.X, e.Y) == true)
+            {
+                IgnoringThisPenContact = true;
+                return;
+            }
+
             if (Points.Count == 0)
             {
                 IgnoringThisPenContact = false;

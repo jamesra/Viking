@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.78 — unreleased
 
+* Pen action buttons are easier to see and use: the choice buttons on the right edge are larger with the caption inside the button (black or white, whichever reads better), and all pen buttons are framed by the same ring as polygon vertices. A red X cancel button now stays in the top right corner during a pen stroke, the choice buttons, and segmentation; tapping it cancels the command like Escape.
 * Copy-link URLs for bookmarks now write coordinates with the invariant culture. On a PC set to a comma-decimal locale (for example German), X, Y, and DS were written as 123456,8, which broke the link.
 * Geometry sent to or read from SQL as WKT (points, lines, circles, polygons) now uses the invariant culture. On a comma-decimal locale the text was written as 10,50 20,25, which SQL Server rejects or misreads.
 * Pen and touch input no longer throws an unhandled exception on 64-bit Windows when the pointer is above or left of the primary monitor (negative coordinates).

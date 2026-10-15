@@ -20,14 +20,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>Leave segmentation and save the polygon as it was dragged (a double chevron).</summary>
         Skip,
-
-        /// <summary>Stop creating the annotation altogether (an X).</summary>
-        Cancel,
     }
 
     /// <summary>
-    /// Three large buttons down the right edge of the viewer so a pen user can finish a
-    /// <see cref="SegmentationCommand"/> without the keyboard or a double-click: accept, skip, cancel.
+    /// Large buttons down the right edge of the viewer, below the shared <see cref="PenCancelButton"/>, so a pen user can
+    /// finish a <see cref="SegmentationCommand"/> without the keyboard or a double-click: accept and skip.
     /// </summary>
     /// <remarks>
     /// Layout and hit testing are pure screen-pixel arithmetic (<see cref="Layout"/>, <see cref="HitTest"/>), so they
@@ -41,7 +38,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private const double GapPixels = 14;
         private const double MarginPixels = 24;
-        private const double TopPixels = 90;
+        private const double TopPixels = PenCancelButton.ReservedTopPixels;
         private const double GlyphLineWidthPixels = 5;
 
         private readonly SectionViewerControl parent = parent ?? throw new ArgumentNullException(nameof(parent));
@@ -51,8 +48,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         internal static IReadOnlyList<SegmentationPenButton> Layout(bool includeSkip) =>
             includeSkip
-                ? [SegmentationPenButton.Accept, SegmentationPenButton.Skip, SegmentationPenButton.Cancel]
-                : [SegmentationPenButton.Accept, SegmentationPenButton.Cancel];
+                ? [SegmentationPenButton.Accept, SegmentationPenButton.Skip]
+                : [SegmentationPenButton.Accept];
 
         /// <summary>Screen position of the centre of the button at <paramref name="index"/> in the layout.</summary>
         internal static (double X, double Y) CenterOf(int index, int clientWidth) =>
@@ -89,11 +86,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 (double cx, double cy) = CenterOf(i, width);
                 GeometryVector2 centerWorld = parent.ScreenToWorld(cx, cy);
 
-                CircleView disc = new(new GeometryCircle(centerWorld, RadiusPixels * downsample), DiscColor(buttons[i]))
-                {
-                    Alpha = 0.85f
-                };
-                disc.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                GeometryCircle circle = new(centerWorld, RadiusPixels * downsample);
+                Color color = DiscColor(buttons[i]);
+                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha,
+                    [new CircleView(circle, color) { Alpha = 1f }, PenButtonStyle.RingFor(circle, color)]);
 
                 foreach (GeometryVector2[] stroke in Glyph(buttons[i]))
                 {
@@ -110,8 +106,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private static Color DiscColor(SegmentationPenButton button) => button switch
         {
             SegmentationPenButton.Accept => new Color(30, 150, 60),
-            SegmentationPenButton.Skip => new Color(200, 140, 20),
-            _ => new Color(190, 40, 40),
+            _ => new Color(200, 140, 20),
         };
 
         /// <summary>The strokes of a button's symbol as pixel offsets from its centre (x right, y down).</summary>
@@ -122,13 +117,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 case SegmentationPenButton.Accept:
                     yield return [new(-13, 0), new(-4, 10), new(13, -11)];
                     break;
-                case SegmentationPenButton.Skip:
+                default:
                     yield return [new(-13, -11), new(-3, 0), new(-13, 11)];
                     yield return [new(1, -11), new(11, 0), new(1, 11)];
-                    break;
-                default:
-                    yield return [new(-11, -11), new(11, 11)];
-                    yield return [new(-11, 11), new(11, -11)];
                     break;
             }
         }
