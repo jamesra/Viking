@@ -1,6 +1,6 @@
 # Starts a standalone Data API Builder container against AnnotationTest
 # (http://localhost:3002/mcp) for the Cursor "Annotation Test Database" MCP
-# server. Uses docker run so it is not part of the VikingLegacy Compose group.
+# server. Uses docker run so it is not part of the Viking Compose group.
 #
 # Prerequisites:
 #   - annotation-sql running and published on localhost,1433

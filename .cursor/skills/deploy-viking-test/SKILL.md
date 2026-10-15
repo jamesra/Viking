@@ -27,7 +27,7 @@ Side-by-side **Viking Test** channel for AI-assisted fixes while the signed prod
 | Deep-link protocol | `viking://` | `viking-test://` (cold start for Test only) |
 | Update check | production feed | test feed |
 | Code signing | YubiKey / ECC HSM required | **None** (Windows unsigned warning OK) |
-| Single-instance pipes | `VikingLegacy.Activation.*` | **Same pipes** as production |
+| Single-instance pipes | `Viking.Activation.*` | **Same pipes** as production |
 
 Compile-time switch: MSBuild `/p:VikingTestChannel=true` → `VIKING_TEST_CHANNEL` → `VikingChannelIdentity` in `Clients/Viking/Viking/VikingChannelIdentity.cs`.
 
@@ -36,13 +36,13 @@ Compile-time switch: MSBuild `/p:VikingTestChannel=true` → `VIKING_TEST_CHANNE
 ## Deep links and SBFSEM tools
 
 - Production registers `viking://`. Test registers `viking-test://` and does not steal the production protocol.
-- Test **listens on the same named pipes** as production (`VikingLegacy.Activation.*`).
+- Test **listens on the same named pipes** as production (`Viking.Activation.*`).
 - Workflow for a bug-fix build: user **pre-opens Viking Test** on the volume; SBFSEM `viking://` links still launch the signed handler briefly, which **forwards** into the already-open Test instance.
 - Only one of Test or signed can own a given volume’s pipe at a time. Prefer Test alone when validating fixes.
 
 ## Sync from git before publish (required)
 
-Work in the **VikingClient** checkout on the Legacy / VikingLegacy-Maintenance line (`Clients/Viking/Viking`). Before packing:
+Work in the **VikingClient** checkout on the Legacy / VikingLegacy line (`Clients/Viking/Viking`). Before packing:
 
 1. `git fetch` from the remote (origin / github.com/jamesra/Viking).
 2. Attempt to integrate remote updates into the branch you will pack (`git pull --ff-only` when clean; otherwise a normal pull/merge or rebase onto the tracked upstream). Prefer a fast-forward when possible.

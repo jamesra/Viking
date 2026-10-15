@@ -1,6 +1,6 @@
-# VikingLegacy Refactoring Assessment
+# Viking Refactoring Assessment
 
-Refactoring assessment of the VikingLegacy monorepo. Items marked **Status: completed** have been implemented; remaining items are still open.
+Refactoring assessment of the Viking monorepo. Items marked **Status: completed** have been implemented; remaining items are still open.
 
 **Scope:** Clients, Servers, Geometry/MorphologyMesh, shared annotation libs, Scripts/Docs.  
 **Quarantine (do not deep-edit):** Triangle.NET, Collada generated schema dumps, `Servers/Libs/NetTopologySuite*`, EF migration dumps, SQL `.dbmdl`/`.jfm`, `bin`/`obj`.  
@@ -132,7 +132,7 @@ Refactoring assessment of the VikingLegacy monorepo. Items marked **Status: comp
 - **Recommendation:** Delete or gate behind CLI/`#if DEBUG`; no machine paths.
 - **Effort:** S  
 - **Risk:** low  
-- **Evidence:** Writes `d:\src\git\VikingLegacy\debug-be41e5.log`; `// #region agent log`.
+- **Evidence:** Writes `d:\src\git\Viking\debug-be41e5.log`; `// #region agent log`.
 
 #### C01-010 — Finish or delete broken Collada production path
 - **Paths:** `MorphologyMesh/Serialization/MorphologyColladaView.cs`; ColladaIOTest; BajajMultiTest.SaveMeshes

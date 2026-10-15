@@ -26,7 +26,7 @@ namespace MorphologyMeshTest
 
         internal static async Task RunReproDiagnostic(ulong[] locations, Uri endpoint)
         {
-            const string logPath = @"d:\src\git\VikingLegacy\debug-be41e5.log";
+            const string logPath = @"d:\src\git\Viking\debug-be41e5.log";
             void Log(string hypothesisId, string location, string message, object data = null)
             {
                 string line = JsonSerializer.Serialize(new

@@ -211,7 +211,7 @@ After starting the container:
 ## Location Summary
 
 ```
-VikingLegacy/
+Viking/
 ├── Servers/
 │   └── VolumeAnnotationServices/          ← NEW: Dedicated directory
 │       ├── Dockerfile                      ← Relocated from root

@@ -1,5 +1,5 @@
 ---
-description: VikingLegacy is servers and containers; VikingLegacy-Maintenance is clients; keep client trees in parallel for a later merge
+description: Viking is servers and containers; VikingLegacy is clients; keep client trees in parallel for a later merge
 alwaysApply: true
 ---
 
@@ -9,25 +9,25 @@ Two checkouts share this product. Put the change in the repo that owns that kind
 
 | Work | Repo | Path |
 |------|------|------|
-| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction | **VikingLegacy** | `d:\src\git\VikingLegacy` |
-| Clients (Viking, VikingAU, Jotunn, MonogameTestbed, shared client libraries) | **VikingLegacy-Maintenance** | `d:\src\git\VikingLegacy-Maintenance` |
+| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction | **Viking** | `d:\src\git\Viking` |
+| Clients (Viking, VikingAU, Jotunn, MonogameTestbed, shared client libraries) | **VikingLegacy** | `d:\src\git\VikingLegacy` |
 
 ## Keep clients in parallel
 
-VikingLegacy still has a `Clients/` tree. Keep it aligned with VikingLegacy-Maintenance so the two can merge later.
+Viking still has a `Clients/` tree. Keep it aligned with VikingLegacy so the two can merge later.
 
-- Land client changes in **VikingLegacy-Maintenance** first.
-- Mirror the same change into VikingLegacy `Clients/` (and any shared client projects it touches) on a best-effort basis in the same piece of work.
-- If a client fix is made in VikingLegacy, mirror it back into VikingLegacy-Maintenance the same way.
+- Land client changes in **VikingLegacy** first.
+- Mirror the same change into Viking `Clients/` (and any shared client projects it touches) on a best-effort basis in the same piece of work.
+- If a client fix is made in Viking, mirror it back into VikingLegacy the same way.
 - Do not let the two client trees drift when the mirror is practical in the same change.
 
-Server and container changes stay in VikingLegacy. Do not start that work in VikingLegacy-Maintenance.
+Server and container changes stay in Viking. Do not start that work in VikingLegacy.
 
 ```text
 Jotunn panel change
-  → edit Clients/Jotunn in VikingLegacy-Maintenance
-  → mirror the same edit under Clients/ in VikingLegacy
+  → edit Clients/Jotunn in VikingLegacy
+  → mirror the same edit under Clients/ in Viking
 
 IdentityServer compose / cert change
-  → edit Servers/ in VikingLegacy only
+  → edit Servers/ in Viking only
 ```

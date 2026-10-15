@@ -73,7 +73,7 @@ namespace Viking.Benchmarks.VolumeBench
 
 #if !VIKINGBENCH_WCF_ANNOTATIONS
         /// <summary>
-        /// This build has no WCF annotation store (VikingLegacy splits it into a separate project). The snapshot format is
+        /// This build has no WCF annotation store (Viking splits it into a separate project). The snapshot format is
         /// tree-independent, so copy the <c>annotations</c> folder from a VikingLegacy-Maintenance prime instead.
         /// </summary>
         private static int SnapshotAnnotations(BenchOptions options, XElement volume)

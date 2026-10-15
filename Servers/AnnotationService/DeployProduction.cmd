@@ -1,1 +1,1 @@
-robocopy C:\src\git\VikingLegacy\Servers\AnnotationService\AnnotationService\bin \\OpR-Marc-WebSv2\C$\Services\Release\AnnotationService\bin /mt:8 /XF web.config /XF webText.config
+robocopy C:\src\git\Viking\Servers\AnnotationService\AnnotationService\bin \\OpR-Marc-WebSv2\C$\Services\Release\AnnotationService\bin /mt:8 /XF web.config /XF webText.config

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <SourceFile>C:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.png</SourceFile>
+  <SourceFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.png</SourceFile>
   <SourceTime>2021-10-20T12:43:06.4714755-07:00</SourceTime>
-  <DestFile>C:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.xnb</DestFile>
+  <DestFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.xnb</DestFile>
   <DestTime>2021-10-20T15:52:16.4718349-07:00</DestTime>
   <Importer>TextureImporter</Importer>
   <ImporterTime>2016-03-29T23:36:08-07:00</ImporterTime>

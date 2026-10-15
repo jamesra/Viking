@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <SourceFile>D:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/../../Monographics/Content/Circle.png</SourceFile>
+  <SourceFile>D:/src/git/Viking/Clients/MonogameTestbed/Content/../../Monographics/Content/Circle.png</SourceFile>
   <SourceTime>2026-02-21T15:40:03.7247579-08:00</SourceTime>
-  <DestFile>D:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/bin/DesktopGL/../../Monographics/Content/Circle.xnb</DestFile>
+  <DestFile>D:/src/git/Viking/Clients/MonogameTestbed/Content/bin/DesktopGL/../../Monographics/Content/Circle.xnb</DestFile>
   <DestTime>2026-06-17T23:32:30.3990256-07:00</DestTime>
   <Importer>TextureImporter</Importer>
   <ImporterTime>2026-01-17T03:11:16-08:00</ImporterTime>

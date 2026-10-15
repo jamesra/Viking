@@ -10,14 +10,14 @@ The Docker configuration for Viking's volume annotation services has been organi
 
 **Before**:
 ```
-VikingLegacy/
+Viking/
 ├── Dockerfile.Combined          # At solution root
 └── ... other files
 ```
 
 **After**:
 ```
-VikingLegacy/
+Viking/
 ├── Servers/
 │   └── VolumeAnnotationServices/
 │       ├── Dockerfile            # Relocated and enhanced

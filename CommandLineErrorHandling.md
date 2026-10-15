@@ -1,6 +1,6 @@
 # Command Line Error Handling Improvements
 
-This document describes the improvements made to command line argument parsing error handling across the VikingLegacy codebase.
+This document describes the improvements made to command line argument parsing error handling across the Viking codebase.
 
 ## Overview
 

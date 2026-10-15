@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Web.Http;
 using Unity;
 using Unity.AspNet.WebApi;
@@ -25,8 +25,9 @@ namespace ConnectomeODataV4
             // Set up Web API configuration
             GlobalConfiguration.Configure(config =>
             {
-                // Set Unity as the dependency resolver
-                config.DependencyResolver = new UnityDependencyResolver(_container);
+                // Set Unity as the dependency resolver. The hierarchical resolver creates a child container per request,
+                // which is what makes HierarchicalLifetimeManager give each request its own DbContext.
+                config.DependencyResolver = new UnityHierarchicalDependencyResolver(_container);
 
                 // Register Web API routes and OData model
                 WebApiConfig.Register(config);
