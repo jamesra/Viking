@@ -66,6 +66,7 @@ namespace WebAnnotationModel
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
+                    LastSaveFault = e;
                     RestoreChangedObjects(input);
                     return false;
                 }
@@ -74,9 +75,11 @@ namespace WebAnnotationModel
 
                 inventory = ProcessUpdateResults(newIDs, input, changedDBObj);
             }
-            catch (FaultException)
+            catch (FaultException e)
             {
-                //  System.Windows.Forms.MessageBox.Show("An exception occurred while saving structure types.  Viking is pretending none of the changes happened.  Exception Data: " + e.Message, "Error");
+                // The server's fault is the real failure; log it so a rolled-back save is diagnosable.
+                Trace.WriteLine("The server rejected the update: " + e, "WebAnnotation");
+                LastSaveFault = e;
 
                 if (changedDBObj != null)
                 {
@@ -85,11 +88,9 @@ namespace WebAnnotationModel
                     for (int iObj = 0; iObj < changedDBObj.Count; iObj++)
                     {
                         WCFOBJECT data = changedDBObj[iObj];
-                        if (data is not WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj)
-                        {
-                            Debug.Fail("Could not convert WCFOBJECT template to proper type, StoreBaseWithIndexKey.cs");
-                            continue;
-                        }
+                        // WCF does not marshal the templates for the WCFObject types, so a cast of the data object fails;
+                        // the matching input object carries the same key (see ProcessUpdateResults).
+                        WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = input[iObj];
 
                         if (IDToObject.TryGetValue(keyObj.ID, out OBJECT obj) == false)
                         {

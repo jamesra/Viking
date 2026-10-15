@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -52,10 +53,13 @@ namespace Viking.UI.Controls
             if (_viewerTaskStatus is not null)
                 return;
 
+            // Fixed width so changing message lengths (counts, section numbers) never move the progress bar and Cancel button.
             _viewerTaskStatus = new ToolStripStatusLabel
             {
                 Visible = false,
-                AutoSize = true,
+                AutoSize = false,
+                Width = (int)(320 * DeviceDpi / 96.0),
+                TextAlign = ContentAlignment.MiddleLeft,
                 Text = "Working"
             };
             _viewerTaskProgress = new ToolStripProgressBar

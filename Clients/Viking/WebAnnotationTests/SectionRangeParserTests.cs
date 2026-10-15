@@ -125,7 +125,7 @@ namespace WebAnnotationTests
             Assert.IsTrue(selection.CanStart);
             CollectionAssert.AreEqual(new long[] { 1, 3, 4 }, (System.Collections.ICollection)selection.Present);
             CollectionAssert.AreEqual(new long[] { 9 }, (System.Collections.ICollection)selection.Missing);
-            Assert.AreEqual("Will update: 1, 3-4" + System.Environment.NewLine + "Skipped (not in this volume): 9", selection.Interpretation);
+            Assert.AreEqual("1, 3-4, 9: 3 sections in this volume will be updated.", selection.Interpretation);
         }
 
         [TestMethod]
@@ -149,8 +149,7 @@ namespace WebAnnotationTests
             Assert.IsTrue(selection.CanStart);
             CollectionAssert.AreEqual(new long[] { 1, 2, 3, 5, 8, 9, 10, 21 }, (System.Collections.ICollection)selection.Present);
             CollectionAssert.AreEqual(new long[] { 4, 6, 7, 20, 22 }, (System.Collections.ICollection)selection.Missing);
-            StringAssert.Contains(selection.Interpretation, "Will update: 1-3, 5, 8-10, 21");
-            StringAssert.Contains(selection.Interpretation, "Skipped (not in this volume): 4, 6-7, 20, 22");
+            Assert.AreEqual("1-10, 20-22: 8 sections in this volume will be updated.", selection.Interpretation);
         }
 
         [TestMethod]
@@ -161,7 +160,7 @@ namespace WebAnnotationTests
                 new HashSet<int> { 1, 2, 3 });
             Assert.IsFalse(selection.CanStart);
             Assert.AreEqual(0, selection.Present.Count);
-            Assert.AreEqual("None of these sections are in this volume: 4, 6-7", selection.Interpretation);
+            Assert.AreEqual("None of these sections are in this volume.", selection.Interpretation);
         }
     }
 }

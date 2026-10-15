@@ -149,7 +149,7 @@ namespace WebAnnotation
                             {
                                 return new VolumePositionUpdateResult(
                                     cancelled: false,
-                                    error: $"Failed to save section {section.Number}.",
+                                    error: $"Failed to save section {section.Number}." + (locations.LastSaveFault is null ? "" : Environment.NewLine + Environment.NewLine + locations.LastSaveFault),
                                     corrections: corrections);
                             }
                         }
@@ -298,6 +298,8 @@ namespace WebAnnotation
                     if (location.TypeCode != LocationType.POINT)
                     {
                         location.TypeCode = LocationType.POINT;
+                        // The database requires a null width on types without one (chk_Location_Width).
+                        location.Width = null;
                         return true;
                     }
                     break;
@@ -305,6 +307,7 @@ namespace WebAnnotation
                     if (location.TypeCode != LocationType.CIRCLE)
                     {
                         location.TypeCode = LocationType.CIRCLE;
+                        location.Width = null;
                         return true;
                     }
                     break;

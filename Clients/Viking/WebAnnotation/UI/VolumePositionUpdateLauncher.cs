@@ -22,6 +22,43 @@ namespace WebAnnotation.UI
         private static Task? _activeRun;
         private static CancellationTokenSource? _activeCancellation;
 
+        /// <summary>True while a volume position pass is running. Read on the UI thread.</summary>
+        private static bool IsRunning => _activeRun is not null && !_activeRun.IsCompleted;
+
+        private static Form? _hookedForm;
+
+        /// <summary>
+        /// Subscribes once to the viewer form's closing event so exiting mid-pass asks first.
+        /// Called on the UI thread when a pass starts; the handler is a no-op while nothing is running.
+        /// </summary>
+        private static void HookExitConfirmation(Form? form)
+        {
+            if (form is null || ReferenceEquals(_hookedForm, form))
+                return;
+
+            _hookedForm = form;
+            form.FormClosing += (_, e) =>
+            {
+                if (!e.Cancel && !ConfirmExit(form))
+                    e.Cancel = true;
+            };
+        }
+
+        /// <summary>Returns true when it is fine to close: no pass is running, or the user chose to exit anyway.</summary>
+        private static bool ConfirmExit(IWin32Window? owner)
+        {
+            if (!IsRunning)
+                return true;
+
+            return MessageBox.Show(
+                owner,
+                "Update Volume Positions is still running. If you exit now it will stop and the remaining sections will not be updated.\n\nAre you sure you want to exit?",
+                "Update Volume Positions",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+        }
+
         /// <summary>Called from the Annotation menu click. Re-checks reviewer access before opening the dialog.</summary>
         public static async Task RunAsync()
         {
@@ -38,11 +75,7 @@ namespace WebAnnotation.UI
             catch (Exception ex)
             {
                 Trace.WriteLine(ex.ToString());
-                MessageBox.Show(
-                    "Volume position update failed.\n" + ex.Message,
-                    "Update Volume Positions",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                Viking.UI.Forms.ErrorDialog.Show(State.ViewerForm, "Update Volume Positions", "Volume position update failed.\n\n" + ex);
             }
             finally
             {
@@ -134,6 +167,7 @@ namespace WebAnnotation.UI
             MappingManager mappings = volume.CreateMappingManager();
             string? transformName = dialog.TransformName;
             _activeCancellation = cancellation;
+            HookExitConfirmation(State.ViewerForm);
             _activeRun = FinishAsync(mappings, sections, transformName, handle, cancellation);
         }
 
@@ -189,6 +223,13 @@ namespace WebAnnotation.UI
     {
         public static void Show(IWin32Window? owner, VolumePositionUpdateResult result)
         {
+            // Errors go to the shared dialog, which has a Copy button for error reports.
+            if (!string.IsNullOrWhiteSpace(result.Error))
+            {
+                Viking.UI.Forms.ErrorDialog.Show(owner, "Volume position update", BuildText(result));
+                return;
+            }
+
             using Form form = new()
             {
                 Text = "Volume position update",

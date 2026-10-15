@@ -43,7 +43,7 @@ namespace WebAnnotation
         /// <summary>Requested sections that are not in the volume, sorted. These are not updated.</summary>
         public IReadOnlyList<long> Missing { get; }
 
-        /// <summary>Dialog text: the sections that will run, plus any numbers that were skipped.</summary>
+        /// <summary>Dialog text: the requested range and how many sections will run. Missing numbers are skipped without being listed.</summary>
         public string Interpretation { get; }
 
         /// <summary>False when every requested section is missing, so the dialog must not start.</summary>
@@ -137,12 +137,16 @@ namespace WebAnnotation
 
             string interpretation;
             if (present.Count == 0)
-                interpretation = "None of these sections are in this volume: " + FormatCanonical(missing);
+                interpretation = "None of these sections are in this volume.";
             else if (missing.Count == 0)
                 interpretation = FormatCanonical(present);
             else
-                interpretation = "Will update: " + FormatCanonical(present) + Environment.NewLine
-                    + "Skipped (not in this volume): " + FormatCanonical(missing);
+            {
+                var requested = new List<long>(present);
+                requested.AddRange(missing);
+                requested.Sort();
+                interpretation = $"{FormatCanonical(requested)}: {present.Count} sections in this volume will be updated.";
+            }
 
             return new VolumeSectionSelection(present, missing, interpretation);
         }

@@ -1026,8 +1026,15 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// The exception behind the most recent <see cref="Save()"/> that returned false, or null when it succeeded.
+        /// Set by the save implementation on the calling thread; callers such as the volume-position job read it right after Save() to show users the cause.
+        /// </summary>
+        public Exception LastSaveFault { get; protected set; }
+
         public virtual bool Save()
         {
+            LastSaveFault = null;
             List<OBJECT> changed = new(ChangedObjects.Count);
 
             while (ChangedObjects.Count > 0)
