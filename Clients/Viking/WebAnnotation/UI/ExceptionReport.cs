@@ -22,7 +22,8 @@ namespace WebAnnotation.UI
         public static void Show(string summary, Exception exception)
         {
             Trace.WriteLine(summary + Environment.NewLine + exception);
-            MessageBox.Show(summary + Environment.NewLine + Environment.NewLine + Describe(exception), "Recoverable Error");
+            Viking.UI.Forms.ErrorDialog.Show(null, "Recoverable Error",
+                summary + Environment.NewLine + Environment.NewLine + Describe(exception));
         }
 
         /// <summary>

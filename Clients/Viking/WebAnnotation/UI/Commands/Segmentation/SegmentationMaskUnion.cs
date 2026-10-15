@@ -106,12 +106,37 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Vector2>? holePointsVolume = null,
             double holeRadiusPixels = 0)
         {
+            byte[]? pixels = Rasterize(downsample, centreVolume, out int xMin, out int yMax, holePointsVolume, holeRadiusPixels);
+            return pixels is null ? null : EncodeMask(pixels, xMin, yMax);
+        }
+
+        /// <summary>
+        /// Rasterizes the union into a <see cref="WindowSize"/> square (row 0 is mosaic <paramref name="yMax"/>, set
+        /// pixels are 255) exactly as <see cref="ToMask"/> does, but returns the pixels instead of a PNG. Null when
+        /// the union is empty or nothing reaches the square.
+        /// </summary>
+        /// <param name="downsample">Pixel size in volume units.</param>
+        /// <param name="centreVolume">Volume-space point the square is centred on.</param>
+        /// <param name="xMin">Mosaic pixel column of the square's left edge.</param>
+        /// <param name="yMax">Mosaic pixel row of the square's top edge.</param>
+        /// <param name="holePointsVolume">See <see cref="ToMask"/>.</param>
+        /// <param name="holeRadiusPixels">See <see cref="ToMask"/>.</param>
+        public byte[]? Rasterize(
+            int downsample,
+            Vector2 centreVolume,
+            out int xMin,
+            out int yMax,
+            IReadOnlyList<Vector2>? holePointsVolume = null,
+            double holeRadiusPixels = 0)
+        {
+            xMin = 0;
+            yMax = 0;
             if (shapes.Count == 0 || downsample <= 0)
                 return null;
 
-            int xMin = (int)Math.Floor(centreVolume.X / downsample) - WindowSize / 2;
+            xMin = (int)Math.Floor(centreVolume.X / downsample) - WindowSize / 2;
             int yMin = (int)Math.Floor(centreVolume.Y / downsample) - WindowSize / 2;
-            int yMax = yMin + WindowSize - 1;
+            yMax = yMin + WindowSize - 1;
 
             byte[] pixels = new byte[WindowSize * WindowSize];
             bool any = false;
@@ -121,9 +146,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (any && holePointsVolume is { Count: > 0 } && holeRadiusPixels > 0)
                 any = CutHoles(pixels, WindowSize, xMin, yMax, downsample, holePointsVolume, holeRadiusPixels);
 
-            if (!any)
-                return null;
+            return any ? pixels : null;
+        }
 
+        /// <summary>
+        /// Wraps a <see cref="WindowSize"/> square of 0/255 pixels (row 0 at mosaic <paramref name="yMax"/>) as the
+        /// wire <c>Mask</c>: a 1-bit greyscale PNG with the square's mosaic bounds.
+        /// </summary>
+        public static SegmentationServiceTypes.Mask EncodeMask(byte[] pixels, int xMin, int yMax)
+        {
             L8[] gray = new L8[pixels.Length];
             for (int i = 0; i < pixels.Length; i++)
                 gray[i] = new L8(pixels[i]);
@@ -144,7 +175,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Bounds = new SegmentationServiceTypes.BoundingBox
                 {
                     XMin = xMin,
-                    YMin = yMin,
+                    YMin = yMax - WindowSize + 1,
                     XMax = xMin + WindowSize - 1,
                     YMax = yMax
                 },

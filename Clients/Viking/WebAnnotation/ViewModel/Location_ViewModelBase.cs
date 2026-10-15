@@ -350,6 +350,14 @@ namespace WebAnnotation.ViewModel
                 menuShape.DropDownItems.Add(menuSegmentPoly);
             }
 
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
+            {
+                ToolStripMenuItem menuEditMask = new("Dilate/erode mask (preview)");
+                menuEditMask.Click += ContextMenu_EditPolygonMask;
+                menuShape.DropDownItems.Add(menuEditMask);
+            }
+
             menu.Items.Add(menuShape);
         }
 
@@ -644,6 +652,55 @@ namespace WebAnnotation.ViewModel
                 Debug.WriteLine($"Error launching segmentation: {ex.Message}");
                 MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
+        /// shrunk with the wheel. The command's output mask is only logged; no annotation is changed.
+        /// </summary>
+        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        {
+            try
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
+                {
+                    MessageBox.Show("There is no open section viewer.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
+                List<Geometry.Vector2[]> volumeRings = [];
+                foreach (Geometry.Vector2[] ring in new[] { mosaicPolygon.ExteriorRing }.Concat(mosaicPolygon.InteriorRings))
+                {
+                    bool[] mapped = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(ring, out Geometry.Vector2[] volumeRing);
+                    if (mapped.Any(ok => !ok))
+                    {
+                        MessageBox.Show("This polygon could not be mapped onto the volume.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    volumeRings.Add(volumeRing);
+                }
+
+                int downsample = RasterMask.ChooseDownsample(RasterMask.BoundsOf(volumeRings[0]), marginPixels: 128);
+                RasterMask mask = RasterMask.FromRings(volumeRings, downsample);
+                if (mask is null)
+                {
+                    MessageBox.Show("This polygon is too small to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                parent.CurrentCommand = new SegmentationMaskEditCommand(parent, mask, edited =>
+                    Trace.WriteLine(edited is null
+                        ? "Mask edit cancelled"
+                        : $"Mask edit accepted at downsample {edited.Downsample}: {edited.Pixels.Count(p => p != 0)} pixels"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching mask edit: {ex.Message}");
+                MessageBox.Show($"Failed to launch mask edit: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

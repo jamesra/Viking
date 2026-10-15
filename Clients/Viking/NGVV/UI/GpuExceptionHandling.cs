@@ -30,8 +30,8 @@ namespace Viking.UI
 
             try
             {
-                using ThreadExceptionDialog dlg = new(e.Exception);
-                dlg.ShowDialog();
+                Viking.UI.Forms.ErrorDialog.Show(null, "Unhandled exception",
+                    e?.Exception?.ToString() ?? "Unhandled UI exception");
             }
             catch (Exception)
             {
