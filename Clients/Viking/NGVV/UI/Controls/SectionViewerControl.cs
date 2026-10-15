@@ -571,6 +571,34 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Pixels of the client area covered by visible docked child controls (the viewer toolstrip, the status bar and
+        /// the F1 help bar). The render surface runs underneath them, so on-screen buttons drawn into the scene must stay
+        /// clear of these insets or they are hidden.
+        /// </summary>
+        public Padding DockedChromeInsets
+        {
+            get
+            {
+                int left = 0, top = 0, right = 0, bottom = 0;
+                foreach (Control child in Controls)
+                {
+                    if (!child.Visible)
+                        continue;
+
+                    switch (child.Dock)
+                    {
+                        case DockStyle.Left: left += child.Width; break;
+                        case DockStyle.Top: top += child.Height; break;
+                        case DockStyle.Right: right += child.Width; break;
+                        case DockStyle.Bottom: bottom += child.Height; break;
+                    }
+                }
+
+                return new Padding(left, top, right, bottom);
+            }
+        }
+
         private void CreateWPFControls()
         {
             commandHelpTextScrollerHost = new ElementHost

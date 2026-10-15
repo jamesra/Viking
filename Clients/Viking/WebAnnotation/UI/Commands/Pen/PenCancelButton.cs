@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.UI.Controls;
@@ -37,7 +38,7 @@ namespace WebAnnotation.UI.Commands
         private const double CaptionDropPixels = 17;
 
         private const double CaptionFontPixels = 13;
-        private const float BackingAlpha = 0.5f;
+        
 
         /// <summary>
         /// Distance in screen pixels from the top of the viewer below which other pen chrome may be stacked without
@@ -52,33 +53,37 @@ namespace WebAnnotation.UI.Commands
 
         private readonly SectionViewerControl parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
-        /// <summary>Screen position of the centre of the button for a viewer <paramref name="clientWidth"/> pixels wide.</summary>
-        internal static (double X, double Y) CenterOf(int clientWidth) =>
-            (clientWidth - MarginPixels - RadiusPixels, MarginPixels + RadiusPixels);
+        /// <summary>
+        /// Screen position of the centre of the button for a viewer <paramref name="clientWidth"/> pixels wide.
+        /// <paramref name="insets"/> are the parts of the viewer covered by docked controls
+        /// (<see cref="SectionViewerControl.DockedChromeInsets"/>); the button sits just inside them.
+        /// </summary>
+        internal static (double X, double Y) CenterOf(int clientWidth, Padding insets = default) =>
+            (clientWidth - insets.Right - MarginPixels - RadiusPixels, insets.Top + MarginPixels + RadiusPixels);
 
         /// <summary>True when the screen point (<paramref name="x"/>, <paramref name="y"/>) is on the button.</summary>
-        internal static bool HitTest(int clientWidth, double x, double y)
+        internal static bool HitTest(int clientWidth, double x, double y, Padding insets = default)
         {
-            (double cx, double cy) = CenterOf(clientWidth);
+            (double cx, double cy) = CenterOf(clientWidth, insets);
             double dx = x - cx;
             double dy = y - cy;
             return dx * dx + dy * dy <= RadiusPixels * RadiusPixels;
         }
 
         /// <summary>True when the screen point is on the button of this viewer.</summary>
-        internal bool HitTest(double x, double y) => HitTest(parent.ClientSize.Width, x, y);
+        internal bool HitTest(double x, double y) => HitTest(parent.ClientSize.Width, x, y, parent.DockedChromeInsets);
 
         /// <summary>Draws the button over the scene. Depth testing should already be off.</summary>
         internal void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
             double downsample = parent.Downsample;
-            (double cx, double cy) = CenterOf(parent.ClientSize.Width);
+            (double cx, double cy) = CenterOf(parent.ClientSize.Width, parent.DockedChromeInsets);
             GeometryVector2 centerWorld = parent.ScreenToWorld(cx, cy);
             GeometryCircle disc = new(centerWorld, RadiusPixels * downsample);
 
             // 50% black backing so the red X and white caption read on any tissue, then the red ring.
             CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha,
-                [new CircleView(disc, Color.Black) { Alpha = BackingAlpha }, PenButtonStyle.RingFor(disc, RedColor)]);
+                [new CircleView(disc, Color.Black) { Alpha = PenButtonStyle.DiscAlpha }, PenButtonStyle.RingFor(disc, RedColor)]);
 
             foreach (GeometryVector2[] stroke in Glyph())
             {

@@ -41,6 +41,17 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void ButtonsMoveInsideDockedChromeInsets()
+        {
+            var insets = new System.Windows.Forms.Padding(0, 40, 15, 60);
+            (double x0, double y0) = SegmentationPenButtons.CenterOf(0, Width);
+            (double x, double y) = SegmentationPenButtons.CenterOf(0, Width, insets);
+            Assert.AreEqual(x0 - 15, x, 1e-9);
+            Assert.AreEqual(y0 + 40, y, 1e-9);
+            Assert.AreEqual(SegmentationPenButton.Accept, SegmentationPenButtons.HitTest(true, Width, x, y, insets));
+        }
+
+        [TestMethod]
         public void ButtonsSitBelowTheCancelButton()
         {
             (double _, double firstY) = SegmentationPenButtons.CenterOf(0, Width);

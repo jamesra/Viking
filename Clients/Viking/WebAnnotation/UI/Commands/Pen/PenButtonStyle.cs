@@ -14,8 +14,17 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     internal static class PenButtonStyle
     {
-        /// <summary>The ring is drawn this much larger than the disc so its band straddles the disc's rim.</summary>
-        internal const double RingScale = 1.15;
+        /// <summary>The ring is drawn at the disc's own radius, so its band is the outermost slice of the button.</summary>
+        internal const double RingScale = 1.0;
+
+        /// <summary>Opaque border band, as a fraction of the button radius.</summary>
+        internal const double RingThickness = 0.05;
+
+        /// <summary>Soft fade inside the border band, as a fraction of the button radius.</summary>
+        internal const double RingFade = 0.05;
+
+        /// <summary>Opacity of the button fill, so the image under a button shows through.</summary>
+        internal const float DiscAlpha = 0.5f;
 
         /// <summary>Luminance above which a disc is light enough that black text reads better than white.</summary>
         private const double DarkTextLuminanceThreshold = 0.4;
@@ -31,7 +40,11 @@ namespace WebAnnotation.UI.Commands
         /// Draw it after the disc.
         /// </summary>
         internal static RingCircleView RingFor(GeometryCircle disc, Color color) =>
-            new(new GeometryCircle(disc.Center, disc.Radius * RingScale), color);
+            new(new GeometryCircle(disc.Center, disc.Radius * RingScale), color)
+            {
+                SolidStart = (float)(1 - RingThickness),
+                FadeStart = (float)(1 - RingThickness - RingFade),
+            };
 
         /// <summary>Black or white, whichever has the better contrast on a disc of <paramref name="background"/>.</summary>
         internal static Color LabelColorFor(Color background) =>

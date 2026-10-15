@@ -173,7 +173,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
-                if (SegmentationPenButtons.HitTest(includeSkip: false, Parent.ClientSize.Width, e.X, e.Y) is SegmentationPenButton.Accept)
+                if (SegmentationPenButtons.HitTest(includeSkip: false, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets) is SegmentationPenButton.Accept)
                 {
                     Accept();
                     return;

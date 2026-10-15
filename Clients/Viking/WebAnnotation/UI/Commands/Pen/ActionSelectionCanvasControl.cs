@@ -153,7 +153,7 @@ namespace WebAnnotation.UI.Commands
 
                     // The caption is drawn inside the disc, so the disc is plain and opaque rather than an icon.
                     Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor.
-                    CircleView btnView = new(circle, color) { Alpha = 1f };
+                    CircleView btnView = new(circle, color) { Alpha = PenButtonStyle.DiscAlpha };
 
                     //TODO: Sort and Map visuals on the circlular buttons according to action types
                     CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
@@ -371,11 +371,15 @@ namespace WebAnnotation.UI.Commands
             if (downsample <= 0)
                 downsample = 1;
 
+            // The toolstrip, status bar and F1 help bar are docked over the render surface; keep clear of them.
+            System.Windows.Forms.Padding insets = Parent.DockedChromeInsets;
+
             double radius = ScreenFixedButtonRadius();
-            double margin = EdgeMarginPixels * downsample;
+            double margin = (EdgeMarginPixels + insets.Right) * downsample;
             double step = 2 * radius + ButtonGapPixels * downsample;
-            double topY = visible.Top - PenCancelButton.ReservedTopPixels * downsample - radius;
-            double usableHeight = visible.Height - (PenCancelButton.ReservedTopPixels + EdgeMarginPixels) * downsample;
+            double topY = visible.Top - (insets.Top + PenCancelButton.ReservedTopPixels) * downsample - radius;
+            double usableHeight = visible.Height
+                - (insets.Top + PenCancelButton.ReservedTopPixels + EdgeMarginPixels + insets.Bottom) * downsample;
             int maxRows = Math.Max(1, (int)Math.Floor((usableHeight + ButtonGapPixels * downsample) / step));
 
             double rightColX = visible.Right - margin - radius;

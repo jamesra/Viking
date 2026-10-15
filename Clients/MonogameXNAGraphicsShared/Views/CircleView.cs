@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using VikingXNA;
+using VikingXNA;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -226,6 +226,15 @@ namespace VikingXNAGraphics
     public class RingCircleView(Circle circle, Color color) : CircleView(circle, color)
     {
         /// <summary>
+        /// Overrides <see cref="OverlayShaderEffect.RingSolidStart"/> (radius fraction where the opaque band begins) for
+        /// this ring only. Null keeps the effect's value, which polygon vertices use.
+        /// </summary>
+        public float? SolidStart { get; set; }
+
+        /// <summary>Overrides <see cref="OverlayShaderEffect.RingFadeStart"/> for this ring only. Null keeps the effect's value.</summary>
+        public float? FadeStart { get; set; }
+
+        /// <summary>
         /// Draws the rings with <paramref name="overlayEffect"/>. Changes the effect's technique and the device's
         /// vertex/index buffers; call on the render thread.
         /// </summary>
@@ -238,17 +247,30 @@ namespace VikingXNAGraphics
             device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
             overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleRingOverlayEffect;
 
-            Matrix worldViewProj = scene.World * scene.ViewProj;
-            foreach (RingCircleView cv in listToDraw)
+            // The band parameters are shared effect state, so put back what the polygon vertices expect.
+            float defaultSolidStart = overlayEffect.RingSolidStart;
+            float defaultFadeStart = overlayEffect.RingFadeStart;
+            try
             {
-                overlayEffect.AnnotationColorHSL = cv.HSLColor;
-                overlayEffect.WorldViewProjMatrix = cv.ModelMatrix * worldViewProj;
-
-                foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                Matrix worldViewProj = scene.World * scene.ViewProj;
+                foreach (RingCircleView cv in listToDraw)
                 {
-                    pass.Apply();
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
+                    overlayEffect.RingSolidStart = cv.SolidStart ?? defaultSolidStart;
+                    overlayEffect.RingFadeStart = cv.FadeStart ?? defaultFadeStart;
+                    overlayEffect.AnnotationColorHSL = cv.HSLColor;
+                    overlayEffect.WorldViewProjMatrix = cv.ModelMatrix * worldViewProj;
+
+                    foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
+                    }
                 }
+            }
+            finally
+            {
+                overlayEffect.RingSolidStart = defaultSolidStart;
+                overlayEffect.RingFadeStart = defaultFadeStart;
             }
         }
     }

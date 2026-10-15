@@ -442,7 +442,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             if (ShowPenButtons && !placementFinished && e.Button.Left() &&
-                SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y) is SegmentationPenButton pressed)
+                SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets) is SegmentationPenButton pressed)
             {
                 HandlePenButton(pressed);
                 return;

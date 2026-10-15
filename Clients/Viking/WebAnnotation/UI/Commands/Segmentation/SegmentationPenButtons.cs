@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.UI.Controls;
@@ -52,19 +53,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 : [SegmentationPenButton.Accept];
 
         /// <summary>Screen position of the centre of the button at <paramref name="index"/> in the layout.</summary>
-        internal static (double X, double Y) CenterOf(int index, int clientWidth) =>
-            (clientWidth - MarginPixels - RadiusPixels, TopPixels + RadiusPixels + index * (2 * RadiusPixels + GapPixels));
+        internal static (double X, double Y) CenterOf(int index, int clientWidth, Padding insets = default) =>
+            (clientWidth - insets.Right - MarginPixels - RadiusPixels,
+             insets.Top + TopPixels + RadiusPixels + index * (2 * RadiusPixels + GapPixels));
 
         /// <summary>
         /// The button under the screen point (<paramref name="x"/>, <paramref name="y"/>), or null when the point is on
         /// none of them.
         /// </summary>
-        internal static SegmentationPenButton? HitTest(bool includeSkip, int clientWidth, double x, double y)
+        internal static SegmentationPenButton? HitTest(bool includeSkip, int clientWidth, double x, double y, Padding insets = default)
         {
             IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip);
             for (int i = 0; i < buttons.Count; i++)
             {
-                (double cx, double cy) = CenterOf(i, clientWidth);
+                (double cx, double cy) = CenterOf(i, clientWidth, insets);
                 double dx = x - cx;
                 double dy = y - cy;
                 if (dx * dx + dy * dy <= RadiusPixels * RadiusPixels)
@@ -80,16 +82,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip);
             double downsample = parent.Downsample;
             int width = parent.ClientSize.Width;
+            Padding insets = parent.DockedChromeInsets;
 
             for (int i = 0; i < buttons.Count; i++)
             {
-                (double cx, double cy) = CenterOf(i, width);
+                (double cx, double cy) = CenterOf(i, width, insets);
                 GeometryVector2 centerWorld = parent.ScreenToWorld(cx, cy);
 
                 GeometryCircle circle = new(centerWorld, RadiusPixels * downsample);
                 Color color = DiscColor(buttons[i]);
                 CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha,
-                    [new CircleView(circle, color) { Alpha = 1f }, PenButtonStyle.RingFor(circle, color)]);
+                    [new CircleView(circle, color) { Alpha = PenButtonStyle.DiscAlpha }, PenButtonStyle.RingFor(circle, color)]);
 
                 foreach (GeometryVector2[] stroke in Glyph(buttons[i]))
                 {

@@ -23,6 +23,18 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void SitsInsideDockedChromeInsets()
+        {
+            var insets = new System.Windows.Forms.Padding(0, 40, 15, 60);
+            (double x, double y) = PenCancelButton.CenterOf(1200, insets);
+            (double x0, double y0) = PenCancelButton.CenterOf(1200);
+            Assert.AreEqual(x0 - 15, x, 1e-9);
+            Assert.AreEqual(y0 + 40, y, 1e-9);
+            Assert.IsTrue(PenCancelButton.HitTest(1200, x, y, insets));
+            Assert.IsFalse(PenCancelButton.HitTest(1200, x0, y0, insets));
+        }
+
+        [TestMethod]
         public void PointsOutsideTheDiscHitNothing()
         {
             (double x, double y) = PenCancelButton.CenterOf(1200);
