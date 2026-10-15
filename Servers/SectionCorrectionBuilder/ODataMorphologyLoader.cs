@@ -24,7 +24,7 @@ namespace Viking.SectionCorrectionBuilder
     /// </remarks>
     public sealed class ODataMorphologyLoader
     {
-        const string LocationSelect = "ID,ParentID,Z,X,Y,VolumeX,VolumeY,Terminal,OffEdge,TypeCode,LastModified";
+        const string LocationSelect = "ID,ParentID,Z,X,Y,Terminal,OffEdge,TypeCode,LastModified";
 
         readonly Container _container;
 
@@ -96,9 +96,6 @@ namespace Viking.SectionCorrectionBuilder
             Z = (long)l.Z,
             X = l.X,
             Y = l.Y,
-            VolumeX = l.VolumeX,
-            VolumeY = l.VolumeY,
-            HasVolumePosition = l.VolumeX != 0 || l.VolumeY != 0,
             Terminal = l.Terminal,
             OffEdge = l.OffEdge,
             TypeCode = (short)l.TypeCode,
