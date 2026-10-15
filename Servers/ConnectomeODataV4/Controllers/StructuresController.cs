@@ -1,4 +1,4 @@
-using ConnectomeDataModel;
+﻿using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Routing;
@@ -332,23 +332,46 @@ namespace ConnectomeODataV4.Controllers
 
         /// <summary>
         /// Batched freshness for mesh caches: max LastModified and location count over each
-        /// structure and its direct children. GET StructureFreshness(IDs=[…]).
+        /// structure and its descendants. GET StructureFreshness(IDs=[...]) or
+        /// StructureFreshness(IDs=[...],Depth=n). Depth omitted = 1 (direct children),
+        /// 0 = the structure only, -1 = unlimited.
         /// </summary>
         [HttpGet]
         [ODataRoute("StructureFreshness(IDs={IDs})")]
-        public IHttpActionResult GetStructureFreshness([FromODataUri] ICollection<long> IDs)
+        [ODataRoute("StructureFreshness(IDs={IDs},Depth={Depth})")]
+        public IHttpActionResult GetStructureFreshness([FromODataUri] ICollection<long> IDs, [FromODataUri] int Depth = 1)
         {
             try
             {
-                _logger.LogInformation("StructureFreshness for {Count} ids", IDs?.Count ?? 0);
+                _logger.LogInformation("StructureFreshness for {Count} ids, depth {Depth}", IDs?.Count ?? 0, Depth);
                 _db.ConfigureAsReadOnly();
-                return Ok(_db.SelectStructureFreshness(IDs));
+                return Ok(_db.SelectStructureFreshness(IDs, Depth));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in StructureFreshness");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// POST twin of StructureFreshness for ID lists too long for a URL.
+        /// Body: {"IDs":[1,2,3],"Depth":-1}. Depth omitted = 1, 0 = structure only, -1 = unlimited.
+        /// Read-only despite being an OData action (functions cannot take a request body).
+        /// </summary>
+        [HttpPost]
+        [ODataRoute("StructureFreshnessBatch")]
+        public IHttpActionResult PostStructureFreshnessBatch(ODataActionParameters parameters)
+        {
+            if (parameters == null || !ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var ids = parameters["IDs"] as IEnumerable<long>;
+            int depth = parameters.TryGetValue("Depth", out object d) && d is int i ? i : 1;
+
+            _logger.LogInformation("StructureFreshnessBatch for {Count} ids, depth {Depth}", ids?.Count() ?? 0, depth);
+            _db.ConfigureAsReadOnly();
+            return Ok(_db.SelectStructureFreshness(ids, depth));
         }
 
         [HttpGet]

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using ConnectomeDataModel;
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Builder;
@@ -264,8 +264,16 @@ namespace ConnectomeODataV4
 
             var freshness = builder.Function("StructureFreshness");
             freshness.CollectionParameter<long>("IDs");
+            freshness.Parameter<int>("Depth").Optional(); // omitted = 1 (direct children); 0 = structure only; -1 = unlimited
             freshness.ReturnsCollection<StructureFreshness>();
             freshness.Namespace = null;
+
+            // POST twin of the function for ID lists too long for a URL (HTTP.sys caps a path segment at 260 chars).
+            var freshnessBatch = builder.Action("StructureFreshnessBatch");
+            freshnessBatch.CollectionParameter<long>("IDs");
+            freshnessBatch.Parameter<int>("Depth").Optional();
+            freshnessBatch.ReturnsCollection<StructureFreshness>();
+            freshnessBatch.Namespace = null;
         }
     }
 }
