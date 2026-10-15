@@ -62,3 +62,17 @@ docker compose stop section-correction-certbot-renewer
 `Rebuild__Cron` is a 5-field cron in UTC. Default `0 2 * * 0` is Sunday 02:00.
 `Rebuild__RunOnStartup=true` publishes every Identity volume that has a VikingXML
 Endpoint and an `AnnotationConnections__{VolumeName}` SQL mapping.
+
+## Console menu (status and manual refresh)
+
+Connect to the running container to see which volumes have corrections and to rebuild one:
+
+```bash
+docker exec -it <container> correction-menu
+```
+
+- **Status** shows the rebuild state, last start/finish/error, and each volume + StosGroup with its build time.
+- **Refresh volume** lists every volume (or All), optionally forces the rebuild, and shows a progress bar until it finishes. Any key stops watching; the rebuild keeps running.
+- **Exit** leaves the menu. The service itself is not affected.
+
+The menu is a gRPC client of the service in the same container (`CORRECTION_MENU_URL`, default `http://127.0.0.1:80`). `RebuildVolume` is refused for any caller that is not on loopback, and only one rebuild runs at a time.

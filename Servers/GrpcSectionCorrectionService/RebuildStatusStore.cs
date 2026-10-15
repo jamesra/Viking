@@ -22,6 +22,10 @@ namespace Viking.GrpcSectionCorrectionService
         DateTime? _lastCompletedUtc;
         string _lastError = "";
         List<string> _lastVolumes = [];
+        string _currentVolume = "";
+        string _currentStep = "";
+        int _groupsDone;
+        int _groupsTotal;
 
         /// <summary>
         /// Assembly InformationalVersion for this host. Clients key CorrectStructures caches
@@ -52,7 +56,54 @@ namespace Viking.GrpcSectionCorrectionService
                 _lastStartedUtc = DateTime.UtcNow;
                 _lastError = "";
                 _lastVolumes = [.. volumeNames];
+                _currentVolume = "";
+                _currentStep = "";
+                _groupsDone = 0;
+                _groupsTotal = 0;
             }
+        }
+
+        /// <summary>
+        /// Records how many correction sets the running rebuild will build, once Identity has listed them.
+        /// </summary>
+        /// <param name="groupsTotal">Number of (database, StosGroup) groups in this run.</param>
+        public void SetPlan(int groupsTotal)
+        {
+            lock (_gate)
+                _groupsTotal = groupsTotal;
+        }
+
+        /// <summary>
+        /// Notes the group now being built and clears the previous group's step message.
+        /// </summary>
+        /// <param name="volumeName">Annotation database name of the group.</param>
+        public void BeginGroup(string volumeName)
+        {
+            lock (_gate)
+            {
+                _currentVolume = volumeName ?? "";
+                _currentStep = "";
+            }
+        }
+
+        /// <summary>
+        /// Stores the latest builder message for the current group. Called from the publisher's log callback,
+        /// possibly on a worker thread.
+        /// </summary>
+        /// <param name="step">Message text; null is treated as empty.</param>
+        public void SetStep(string step)
+        {
+            lock (_gate)
+                _currentStep = step ?? "";
+        }
+
+        /// <summary>
+        /// Counts a group as processed, whether it succeeded, was skipped or failed.
+        /// </summary>
+        public void EndGroup()
+        {
+            lock (_gate)
+                _groupsDone++;
         }
 
         /// <summary>
@@ -77,6 +128,8 @@ namespace Viking.GrpcSectionCorrectionService
                 _inProgress = false;
                 _lastCompletedUtc = DateTime.UtcNow;
                 _lastError = error ?? "";
+                _currentVolume = "";
+                _currentStep = "";
             }
         }
 
@@ -92,7 +145,11 @@ namespace Viking.GrpcSectionCorrectionService
                 {
                     InProgress = _inProgress,
                     LastError = _lastError ?? "",
-                    ServiceVersion = ServiceVersion
+                    ServiceVersion = ServiceVersion,
+                    CurrentVolume = _currentVolume ?? "",
+                    CurrentStep = _currentStep ?? "",
+                    GroupsDone = _groupsDone,
+                    GroupsTotal = _groupsTotal
                 };
                 if (_lastStartedUtc.HasValue)
                     status.LastStartedUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(_lastStartedUtc.Value, DateTimeKind.Utc));

@@ -9,11 +9,19 @@ namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
     /// Kestrel host. Docker binds h2c :80 and HTTPS :443 separately — gRPC clients do not follow redirects.
+    /// <c>menu</c> as the first argument runs <see cref="CorrectionMenu"/> instead.
     /// </summary>
     public class Program
     {
         public static void Main(string[] args)
         {
+            // "menu" runs the console client of the already-running service instead of starting a second host.
+            if (args.Length > 0 && args[0].Equals("menu", StringComparison.OrdinalIgnoreCase))
+            {
+                Environment.Exit(CorrectionMenu.RunConsoleAsync(args[1..]).GetAwaiter().GetResult());
+                return;
+            }
+
             // Release builds strip Trace/Debug; Console keeps the version visible without a debugger.
             Console.WriteLine($"GrpcSectionCorrectionService starting, service_version={RebuildStatusStore.ServiceVersion}");
             CreateHostBuilder(args).Build().Run();

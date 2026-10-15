@@ -252,5 +252,140 @@ namespace GrpcSectionCorrectionService.Tests
                 Directory.Delete(root, true);
             }
         }
+
+        [TestMethod]
+        public async Task RunAsync_VolumeFilter_BuildsOnlyThatVolumeAndCountsProgress()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "rebuild-filter-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var volumes = new StaticIdentityVolumeSource(
+                [
+                    new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann", "RC1db", "grid"),
+                    new IdentityVolumeRow("RC2", "http://example/RC2.vikingxml", "http://ann2", "RC2db", "grid")
+                ]);
+                var connections = new AnnotationConnectionResolver(
+                    new Dictionary<string, string> { ["RC1db"] = "Server=a", ["RC2db"] = "Server=b" }, template: null);
+                var publisher = new RecordingPublisher();
+                using VolumeCorrectionCatalog catalog = new(root);
+                var status = new RebuildStatusStore();
+                IConfiguration config = new ConfigurationBuilder()
+                    .AddInMemoryCollection(new Dictionary<string, string> { ["Corrections:RootDirectory"] = root })
+                    .Build();
+                var runner = new CorrectionRebuildRunner(
+                    volumes, connections, publisher, catalog, status, config, NullLogger<CorrectionRebuildRunner>.Instance);
+
+                await runner.RunAsync("rc2DB", force: false, CancellationToken.None);
+
+                Assert.AreEqual(1, publisher.Calls.Count);
+                Assert.AreEqual("Server=b", publisher.Calls[0].Connection);
+                var snapshot = status.Snapshot();
+                Assert.AreEqual(1, snapshot.GroupsTotal);
+                Assert.AreEqual(1, snapshot.GroupsDone);
+                Assert.AreEqual("", snapshot.LastError);
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        [TestMethod]
+        public async Task RunAsync_UnknownVolume_RecordsErrorAndBuildsNothing()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "rebuild-unknown-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var publisher = new RecordingPublisher();
+                using VolumeCorrectionCatalog catalog = new(root);
+                var status = new RebuildStatusStore();
+                var volumes = new StaticIdentityVolumeSource([new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann")]);
+                IConfiguration config = new ConfigurationBuilder()
+                    .AddInMemoryCollection(new Dictionary<string, string> { ["Corrections:RootDirectory"] = root })
+                    .Build();
+                var runner = new CorrectionRebuildRunner(
+                    volumes, new AnnotationConnectionResolver(null, template: null), publisher, catalog, status, config,
+                    NullLogger<CorrectionRebuildRunner>.Instance);
+
+                await runner.RunAsync("Nope", force: false, CancellationToken.None);
+
+                Assert.AreEqual(0, publisher.Calls.Count);
+                StringAssert.Contains(status.Snapshot().LastError, "Nope");
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        [TestMethod]
+        public async Task TryStartInBackground_WhileRunning_ReturnsFalseThenSucceedsAfterFinish()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "rebuild-bg-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var publisher = new BlockingPublisher(release.Task);
+                using VolumeCorrectionCatalog catalog = new(root);
+                var status = new RebuildStatusStore();
+                var volumes = new StaticIdentityVolumeSource([new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann")]);
+                IConfiguration config = new ConfigurationBuilder()
+                    .AddInMemoryCollection(new Dictionary<string, string> { ["Corrections:RootDirectory"] = root })
+                    .Build();
+                var connections = new AnnotationConnectionResolver(
+                    new Dictionary<string, string> { ["RC1"] = "Server=a" }, template: null);
+                var runner = new CorrectionRebuildRunner(
+                    volumes, connections, publisher, catalog, status, config, NullLogger<CorrectionRebuildRunner>.Instance);
+
+                Assert.IsTrue(runner.TryStartInBackground("RC1", false, CancellationToken.None));
+                await publisher.Entered.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.IsTrue(status.Snapshot().InProgress);
+                Assert.IsFalse(runner.TryStartInBackground("RC1", false, CancellationToken.None));
+
+                release.SetResult();
+                DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+                while (status.Snapshot().InProgress && DateTime.UtcNow < deadline)
+                    await Task.Delay(20);
+                Assert.IsFalse(status.Snapshot().InProgress);
+                Assert.IsTrue(runner.TryStartInBackground("RC1", false, CancellationToken.None));
+                await Task.Delay(100);
+            }
+            finally
+            {
+                try { Directory.Delete(root, true); } catch (IOException) { }
+            }
+        }
+
+        [TestMethod]
+        public void CorrectionMenu_RenderBar_ScalesAndHandlesUnknownTotal()
+        {
+            Assert.AreEqual("[" + new string('.', 30) + "]", CorrectionMenu.RenderBar(0, 0));
+            Assert.AreEqual("[" + new string('#', 15) + new string('-', 15) + "]", CorrectionMenu.RenderBar(1, 2));
+            Assert.AreEqual("[" + new string('#', 30) + "]", CorrectionMenu.RenderBar(5, 2));
+            Assert.AreEqual("3d 4h ago", CorrectionMenu.FormatAge(TimeSpan.FromHours(76)));
+        }
+
+        sealed class BlockingPublisher(Task release) : IVolumeCorrectionPublisher
+        {
+            readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public Task Entered => _entered.Task;
+
+            public async Task<int> PublishVolumeAsync(
+                string annotationConnection, string volumeUrl, Viking.SectionCorrectionBuilder.CorrectionPublishOptions options,
+                CancellationToken cancellationToken)
+            {
+                _entered.TrySetResult();
+                await release;
+                return 0;
+            }
+
+            public Task<int> PublishVolumeFromODataAsync(
+                Uri odataEndpoint, string volumeUrl, Viking.SectionCorrectionBuilder.CorrectionPublishOptions options,
+                CancellationToken cancellationToken) => Task.FromResult(0);
+        }
     }
 }

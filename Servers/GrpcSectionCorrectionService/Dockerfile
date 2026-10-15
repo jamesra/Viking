@@ -65,4 +65,8 @@ COPY --from=build /app/publish .
 
 ENV ASPNETCORE_URLS=http://+:80
 
+# `docker exec -it <container> correction-menu` opens the status / refresh-volume console.
+RUN printf '#!/bin/sh\nexec dotnet /app/GrpcSectionCorrectionService.dll menu "$@"\n' > /usr/local/bin/correction-menu \
+    && chmod +x /usr/local/bin/correction-menu
+
 ENTRYPOINT ["dotnet", "GrpcSectionCorrectionService.dll"]

@@ -1,5 +1,7 @@
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -34,6 +36,8 @@ namespace Viking.GrpcSectionCorrectionService
         readonly IConfiguration _configuration;
         readonly RebuildStatusStore _rebuild;
         readonly ILogger<SectionCorrectionsService> _logger;
+        readonly CorrectionRebuildRunner _rebuildRunner;
+        readonly IHostApplicationLifetime _lifetime;
 
         public SectionCorrectionsService(
             VolumeCorrectionCatalog catalog,
@@ -41,8 +45,12 @@ namespace Viking.GrpcSectionCorrectionService
             AnnotationConnectionResolver connections,
             IConfiguration configuration,
             RebuildStatusStore rebuild,
-            ILogger<SectionCorrectionsService> logger)
+            ILogger<SectionCorrectionsService> logger,
+            CorrectionRebuildRunner rebuildRunner = null,
+            IHostApplicationLifetime lifetime = null)
         {
+            _rebuildRunner = rebuildRunner;
+            _lifetime = lifetime;
             _catalog = catalog;
             _volumes = volumes;
             _connections = connections;
@@ -94,6 +102,35 @@ namespace Viking.GrpcSectionCorrectionService
             ServerCallContext context)
         {
             return Task.FromResult(_rebuild.Snapshot());
+        }
+
+        /// <summary>
+        /// Manual rebuild trigger for the container's correction-menu console. The gRPC surface is otherwise
+        /// anonymous, so this only accepts a caller on the loopback interface (a process inside the container);
+        /// traffic published through Docker arrives from the bridge address and is refused.
+        /// </summary>
+        public override Task<RebuildVolumeResponse> RebuildVolume(
+            RebuildVolumeRequest request,
+            ServerCallContext context)
+        {
+            System.Net.IPAddress caller = context.GetHttpContext()?.Connection.RemoteIpAddress;
+            if (caller is null || !System.Net.IPAddress.IsLoopback(caller))
+                throw new RpcException(new Status(StatusCode.PermissionDenied,
+                    "RebuildVolume is only available from inside the service host."));
+            if (_rebuildRunner is null)
+                throw new RpcException(new Status(StatusCode.Unimplemented, "This host has no rebuild runner."));
+
+            string volume = request.VolumeName?.Trim() ?? "";
+            bool started = _rebuildRunner.TryStartInBackground(
+                volume, request.Force, _lifetime?.ApplicationStopping ?? CancellationToken.None);
+            string target = volume.Length == 0 ? "all volumes" : $"'{volume}'";
+            _logger.LogInformation("Manual rebuild of {Target} (force={Force}) {Result}.",
+                target, request.Force, started ? "started" : "refused: one is already running");
+            return Task.FromResult(new RebuildVolumeResponse
+            {
+                Started = started,
+                Message = started ? $"Rebuild of {target} started." : "A rebuild is already running."
+            });
         }
 
         public override Task<ListCorrectionSetsResponse> ListCorrectionSets(
