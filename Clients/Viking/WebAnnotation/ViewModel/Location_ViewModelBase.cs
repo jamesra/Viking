@@ -331,6 +331,14 @@ namespace WebAnnotation.ViewModel
                 menuShape.DropDownItems.Add(menuCircle);
             }
 
+            // Manual conversion needs no segmentation service or review role, so every annotator with write access gets it.
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            {
+                ToolStripMenuItem menuConvertCircle = new("Convert to Polygon");
+                menuConvertCircle.Click += ContextMenu_ConvertCircleToPolygon;
+                menuShape.DropDownItems.Add(menuConvertCircle);
+            }
+
             // Add segmentation option for circles
             if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE &&
                 Global.IsSegmentationServiceAvailable)
@@ -420,10 +428,13 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnTerminal(object sender, EventArgs e)
         {
+            bool oldTerminal = modelObj.Terminal;
+            bool oldOffEdge = modelObj.OffEdge;
             modelObj.Terminal = !modelObj.Terminal;
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationFlags("Toggle Terminal", modelObj, oldTerminal, oldOffEdge);
             }
             catch (System.ServiceModel.FaultException ex)
             {
@@ -544,6 +555,59 @@ namespace WebAnnotation.ViewModel
             catch (Exception)
             {
                 Trace.WriteLine("Could not simplify polygon");
+            }
+        }
+
+        /// <summary>
+        /// Number of vertices in the polygon that replaces a circle in <see cref="ContextMenu_ConvertCircleToPolygon"/>.
+        /// </summary>
+        private const int ManualCirclePolygonVertexCount = 24;
+
+        /// <summary>
+        /// Replaces this circle with a polygon that traces its outline, with no segmentation service involved.
+        /// The ring is built in mosaic space, mapped to volume space, and saved through
+        /// <see cref="LocationShapeUpdate.ApplyVolumePolygon"/> like Segment to Polygon, so the user can then
+        /// reshape it with the normal polygon vertex tools. Runs on the UI thread from the Change Shape menu.
+        /// </summary>
+        protected void ContextMenu_ConvertCircleToPolygon(object sender, EventArgs e)
+        {
+            try
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent?.Section is null)
+                {
+                    MessageBox.Show("There is no open section viewer to convert in.", "Convert to Polygon", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Circle mosaicCircle = GetCircleFromLocation();
+                Geometry.Vector2[] mosaicRing = new Geometry.Vector2[ManualCirclePolygonVertexCount + 1];
+                for (int i = 0; i < ManualCirclePolygonVertexCount; i++)
+                {
+                    double angle = 2.0 * Math.PI * i / ManualCirclePolygonVertexCount;
+                    mosaicRing[i] = new Geometry.Vector2(
+                        mosaicCircle.Center.X + mosaicCircle.Radius * Math.Cos(angle),
+                        mosaicCircle.Center.Y + mosaicCircle.Radius * Math.Sin(angle));
+                }
+
+                mosaicRing[ManualCirclePolygonVertexCount] = mosaicRing[0];
+
+                IReadOnlyList<Geometry.Vector2> volumeRing = CircleSegmentationPrompts.ToVolumePoints(
+                    mosaicRing,
+                    parent.Section.ActiveSectionToVolumeTransform);
+                if (volumeRing.Count != mosaicRing.Length)
+                {
+                    MessageBox.Show("This circle could not be mapped onto the volume.", "Convert to Polygon", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                UpdateLocationShapeFromVolumePolygon(new Polygon(volumeRing.ToArray()));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error converting circle to polygon: {ex.Message}");
+                MessageBox.Show($"Failed to convert to polygon: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -730,10 +794,13 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
+            bool oldTerminal = modelObj.Terminal;
+            bool oldOffEdge = modelObj.OffEdge;
             modelObj.OffEdge = !modelObj.OffEdge;
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationFlags("Toggle OffEdge", modelObj, oldTerminal, oldOffEdge);
             }
             catch (System.ServiceModel.FaultException ex)
             {

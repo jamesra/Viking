@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.UI;
 using Viking.VolumeModel;
@@ -34,6 +36,15 @@ namespace WebAnnotation.UI.Commands
         private Geometry.Vector2[] _cutPath;
         private Polygon _viewSmall;
         private Task _choiceFallback;
+
+        // Temporary fill: the visible part of each cut piece, meshed while the full-polygon triangulation is still running.
+        // Display only. The cut and the saved shape always use the full polygon.
+        private sealed record TemporaryFillRequest(Func<Polygon> LargePiece, Polygon CapPiece, Microsoft.Xna.Framework.Color LargeColor, Microsoft.Xna.Framework.Color CapColor, Geometry.Rectangle ClipArea);
+        private PositionColorMeshModel[] _tempBaseMeshes;
+        private PositionColorMeshModel[] _tempCapMeshes;
+        private Polygon _tempFor;
+        private TemporaryFillRequest _tempLatest;
+        private int _tempRunning;
         private RetraceCommandAction _viewAction = RetraceCommandAction.NONE;
         private bool _viewSwitch;
         private bool _viewKeepBoth;
@@ -204,7 +215,10 @@ namespace WebAnnotation.UI.Commands
             if (!IsCutComplete && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
                 //See if the addition to the path finished the cut
-                CutAction = GetRetraceActionForPath(PenInput.SimplifiedPath, out ClockwiseCutPolygon, out CounterClockwiseCutPolygon);
+                using (WebAnnotation.View.PolygonViewTimingLog.Measure("retrace-cut", $"verts={OriginalVolumePolygon.TotalVertices}"))
+                {
+                    CutAction = GetRetraceActionForPath(PenInput.SimplifiedPath, out ClockwiseCutPolygon, out CounterClockwiseCutPolygon);
+                }
             }
             else if (IsCutComplete && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove || e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Replace)
             {
@@ -245,6 +259,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void FinishCut()
         {
+            using WebAnnotation.View.PolygonViewTimingLog.PenStepTimer timer = WebAnnotation.View.PolygonViewTimingLog.Measure("finish-cut", $"verts={OriginalVolumePolygon.TotalVertices}");
             OutputVolumePolygon = GenerateOutputVolumePolygon();
             Polygon discardedVolume = KeepBothPieces ? DiscardedVolumePolygon() : null;
 
@@ -271,12 +286,22 @@ namespace WebAnnotation.UI.Commands
         /// Location links cannot join two polygons on one section, so the sibling is not linked.
         /// Called by the pen retrace success callbacks before the location save.
         /// </summary>
-        public void ApplyCut(LocationObj location)
+        /// <returns>
+        /// An action that records the edit for Ctrl+Z; the caller invokes it once the save succeeded.
+        /// Null when a sibling was created, because restoring only the original's shape would leave the sibling overlapping it.
+        /// </returns>
+        public Action ApplyCut(LocationObj location)
         {
+            Microsoft.SqlServer.Types.SqlGeometry oldShape = location.MosaicShape;
+            LocationType oldType = location.TypeCode;
             WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(location.ID, "Retrace");
-            location.SetShapeFromGeometryInSection(mapping, OutputMosaicPolygon.ToSqlGeometry());
+            using (WebAnnotation.View.PolygonViewTimingLog.Measure("apply-cut"))
+            {
+                location.SetShapeFromGeometryInSection(mapping, OutputMosaicPolygon.ToSqlGeometry());
+            }
+
             if (SplitOffMosaicPolygon is null)
-                return;
+                return () => UndoManager.PushLocationShape("Change Boundary", location, mapping, oldShape, oldType);
 
             LocationObj sibling = new(location.Parent, location.Section, location.TypeCode);
             if (location.Width.HasValue)
@@ -284,6 +309,7 @@ namespace WebAnnotation.UI.Commands
 
             sibling.SetShapeFromGeometryInSection(mapping, SplitOffMosaicPolygon.ToSqlGeometry());
             Store.Locations.Create(sibling);
+            return null;
         }
 
         private RetraceCommandAction GetRetraceActionForPath(IList<Geometry.Vector2> path, out Polygon clockwise_poly, out Polygon counter_clockwise_poly)
@@ -436,11 +462,15 @@ namespace WebAnnotation.UI.Commands
             }
 
             bool sameCut = ReferenceEquals(_viewSmall, small) && _viewAction == CutAction;
-            if (sameCut && _choiceBaseMesh is not null)
+            if (sameCut && (_choiceBaseMesh is not null || _choiceCapMesh is not null))
             {
+                // The full-polygon meshes are ready, so the temporary fill is no longer needed.
+                _tempBaseMeshes = null;
+                _tempCapMeshes = null;
                 if (_viewSwitch != SwitchSide || _viewKeepBoth != KeepBothPieces)
                 {
-                    _choiceBaseMesh.Color = largeColor;
+                    if (_choiceBaseMesh is not null)
+                        _choiceBaseMesh.Color = largeColor;
                     if (_choiceCapMesh is not null)
                         _choiceCapMesh.Color = smallColor;
                     _viewSwitch = SwitchSide;
@@ -450,11 +480,25 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
+            if (sameCut && (_tempBaseMeshes is not null || _tempCapMeshes is not null) && (_viewSwitch != SwitchSide || _viewKeepBoth != KeepBothPieces))
+            {
+                foreach (PositionColorMeshModel m in _tempBaseMeshes ?? [])
+                    m.Color = largeColor;
+                foreach (PositionColorMeshModel m in _tempCapMeshes ?? [])
+                    m.Color = smallColor;
+                _viewSwitch = SwitchSide;
+                _viewKeepBoth = KeepBothPieces;
+            }
+
             if (!sameCut)
             {
                 _choiceBaseMesh = null;
                 _choiceCapMesh = null;
                 _choiceFallback = null;
+                _tempBaseMeshes = null;
+                _tempCapMeshes = null;
+                _tempFor = null;
+                _tempLatest = null;
             }
 
             _viewSmall = small;
@@ -485,6 +529,12 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
+            if (!ReferenceEquals(_tempFor, small))
+            {
+                _tempFor = small;
+                RequestTemporaryFill(small, largeColor, smallColor, grow);
+            }
+
             if ((interior || _fillTask is { IsFaulted: true }) && _choiceFallback is null)
             {
                 // The cached cell has no triangles inside a hole. Mesh off the pen thread, without a Steiner budget.
@@ -500,6 +550,114 @@ namespace WebAnnotation.UI.Commands
                     _choiceCapMesh = capMesh;
                 });
             }
+        }
+
+        /// <summary>
+        /// Starts meshing only the part of each cut piece near the visible scene. The pieces were already computed by the cut;
+        /// this clips them to the view (flat edges along the clip border) so the triangulation is small.
+        /// </summary>
+        private void RequestTemporaryFill(Polygon small, Microsoft.Xna.Framework.Color largeColor, Microsoft.Xna.Framework.Color smallColor, bool grow)
+        {
+            Polygon cw = ClockwiseCutPolygon;
+            Polygon ccw = CounterClockwiseCutPolygon;
+            RetraceCommandAction action = CutAction;
+            PolygonIndex? cutIndex = PolyBeingCut;
+            Polygon original = OriginalVolumePolygon;
+            Polygon bigger = ccw.Area > cw.Area ? ccw : cw;
+
+            Func<Polygon> largePiece = () =>
+            {
+                if (action == RetraceCommandAction.GROW_INTERNAL_RING && cutIndex.HasValue)
+                {
+                    Polygon grown = (Polygon)original.Clone();
+                    grown.ReplaceInteriorRing(cutIndex.Value.InnerShapeIndex.Value, bigger);
+                    return grown;
+                }
+
+                return bigger;
+            };
+
+            QueueTemporaryFill(new TemporaryFillRequest(largePiece, grow ? null : small, largeColor, smallColor, PolygonViewportClip.ClipAreaForScene(Parent.Scene)));
+        }
+
+        private void QueueTemporaryFill(TemporaryFillRequest request)
+        {
+            _tempLatest = request;
+            if (Interlocked.CompareExchange(ref _tempRunning, 1, 0) != 0)
+                return;
+
+            Task.Run(RunTemporaryFill);
+        }
+
+        /// <summary>
+        /// Meshes the newest request; if a newer one arrives while meshing, the older result is dropped and the newer one is built.
+        /// </summary>
+        private void RunTemporaryFill()
+        {
+            TemporaryFillRequest request = _tempLatest;
+            TemporaryFillRequest handled = null;
+            using (WebAnnotation.View.PolygonViewTimingLog.Measure("temporary-fill"))
+            {
+                try
+                {
+                    while (request is not null)
+                    {
+                        PositionColorMeshModel[] baseMeshes = MeshClippedPieces(request.LargePiece(), request.ClipArea, request.LargeColor);
+                        PositionColorMeshModel[] capMeshes = MeshClippedPieces(request.CapPiece, request.ClipArea, request.CapColor);
+
+                        TemporaryFillRequest newest = _tempLatest;
+                        if (ReferenceEquals(newest, request))
+                        {
+                            _tempBaseMeshes = baseMeshes;
+                            _tempCapMeshes = capMeshes;
+                            handled = request;
+                            break;
+                        }
+
+                        // Superseded or cleared while meshing; null means the cut changed and nothing should be shown.
+                        request = newest;
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    // A piece the triangulation rejects simply gets no temporary fill. Do not retry the same request.
+                    handled = request;
+                }
+                finally
+                {
+                    Volatile.Write(ref _tempRunning, 0);
+                }
+            }
+
+            // A request queued after the last check but before the flag was cleared saw the flag set and returned, so pick it up here.
+            TemporaryFillRequest pending = _tempLatest;
+            if (pending is not null && !ReferenceEquals(pending, handled) && Interlocked.CompareExchange(ref _tempRunning, 1, 0) == 0)
+                Task.Run(RunTemporaryFill);
+        }
+
+        private static PositionColorMeshModel[] MeshClippedPieces(Polygon piece, Geometry.Rectangle area, Microsoft.Xna.Framework.Color color)
+        {
+            if (piece is null)
+                return [];
+
+            return [.. PolygonViewportClip.Clip(piece, area)
+                .Select(p => PolygonCutMeshBuilder.FromPatch(p, color))
+                .Where(m => m is not null)];
+        }
+
+        /// <summary>
+        /// The pan or zoom has left the area the temporary fill was clipped to, so clip again around the new view.
+        /// </summary>
+        private void RefreshTemporaryFillIfViewMoved(VikingXNA.Scene scene)
+        {
+            TemporaryFillRequest latest = _tempLatest;
+            if (latest is null || (_tempBaseMeshes is null && _tempCapMeshes is null))
+                return;
+
+            if (PolygonViewportClip.Covers(latest.ClipArea, PolygonViewportClip.ClipAreaForScene(scene, 0)))
+                return;
+
+            QueueTemporaryFill(latest with { ClipArea = PolygonViewportClip.ClipAreaForScene(scene) });
         }
 
         protected override void OnPenPathComplete(object sender, Geometry.Vector2[] Path)
@@ -551,15 +709,28 @@ return false;
             if (CutAction != RetraceCommandAction.NONE && _choiceBaseMesh is null)
                 UpdateViews();
 
+            PositionColorMeshModel[] meshes = null;
             if (_choiceBaseMesh is not null || _choiceCapMesh is not null)
             {
-                float originalAlphaLuma = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
-                Parent.PolygonOverlayEffect.InputLumaAlphaValue = 0.5f;
-                PositionColorMeshModel[] meshes = _choiceCapMesh is null
+                meshes = _choiceCapMesh is null
                     ? [_choiceBaseMesh]
                     : _choiceBaseMesh is null
                         ? [_choiceCapMesh]
                         : [_choiceBaseMesh, _choiceCapMesh];
+            }
+            else
+            {
+                RefreshTemporaryFillIfViewMoved(scene);
+                PositionColorMeshModel[] tempBase = _tempBaseMeshes;
+                PositionColorMeshModel[] tempCap = _tempCapMeshes;
+                if (tempBase is { Length: > 0 } || tempCap is { Length: > 0 })
+                    meshes = [.. tempBase ?? [], .. tempCap ?? []];
+            }
+
+            if (meshes is not null)
+            {
+                float originalAlphaLuma = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
+                Parent.PolygonOverlayEffect.InputLumaAlphaValue = 0.5f;
                 MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: meshes);
                 Parent.PolygonOverlayEffect.InputLumaAlphaValue = originalAlphaLuma;
             }

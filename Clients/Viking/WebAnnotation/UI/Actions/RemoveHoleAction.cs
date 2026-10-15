@@ -73,6 +73,7 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationShape("Remove Hole", Location, Transform, original_mosaic_shape, Location.TypeCode);
             }
             catch (System.ServiceModel.FaultException e)
             {

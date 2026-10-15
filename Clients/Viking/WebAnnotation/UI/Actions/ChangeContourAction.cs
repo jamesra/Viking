@@ -106,6 +106,7 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationShape("Change Contour", Location, Transform, original_mosaic_polygon, Location.TypeCode);
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -183,6 +184,7 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationShape("Change Contour", Location, Transform, originalShape, Location.TypeCode);
             }
             catch (System.ServiceModel.FaultException e)
             {

@@ -122,6 +122,29 @@ namespace WebAnnotation.View
             sb.AppendLine();
         }
 
+        /// <summary>
+        /// Times one step of a pen edit (cut computation, shape conversion, save, temporary fill) and writes a
+        /// <c>pen-step</c> line when the scope ends, so the slow step shows up in the same log as the view timings.
+        /// Steps under a millisecond are not written.
+        /// </summary>
+        /// <param name="step">Short step name, for example <c>save</c>.</param>
+        /// <param name="detail">Optional context such as vertex counts.</param>
+        public static PenStepTimer Measure(string step, string detail = "") => new(step, detail);
+
+        internal readonly struct PenStepTimer(string step, string detail) : IDisposable
+        {
+            private readonly long start = Stopwatch.GetTimestamp();
+
+            public void Dispose()
+            {
+                double ms = ToMilliseconds(Stopwatch.GetTimestamp() - start);
+                if (ms >= 1.0)
+                {
+                    Write(FormattableString.Invariant($"pen-step step={step} ms={ms:F1} thread={Environment.CurrentManagedThreadId} {detail}").TrimEnd());
+                }
+            }
+        }
+
         internal static double ToMilliseconds(long stopwatchTicks) => stopwatchTicks * 1000.0 / Stopwatch.Frequency;
 
         internal static void Write(string line)

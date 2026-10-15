@@ -49,7 +49,7 @@ namespace WebAnnotation.UI.Actions
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
             NewVolumePolygon = newVolumePolygon;
-            NewSmoothVolumePolygon = NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            NewSmoothVolumePolygon = NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints, Global.PenSimplifyThreshold);
 
             CreateDefaultVisuals();
         }
@@ -57,6 +57,7 @@ namespace WebAnnotation.UI.Actions
         public void OnExecute()
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
+            LocationType originalType = Location.TypeCode;
             Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
             Location.TypeCode = LocationType.CURVEPOLYGON;
             Location.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
@@ -64,6 +65,7 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationShape("Change Type", Location, Transform, original_mosaic_polygon, originalType);
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -164,6 +166,7 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationShape("Change Type", Location, Transform, originalShape, originalType);
             }
             catch (System.ServiceModel.FaultException e)
             {

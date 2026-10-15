@@ -42,7 +42,7 @@ Compile-time switch: MSBuild `/p:VikingTestChannel=true` → `VIKING_TEST_CHANNE
 
 ## Sync from git before publish (required)
 
-Work in the **VikingClient** checkout on the Legacy / VikingLegacy-Maintenance line (`Clients/Viking/Viking`). Before packing:
+Work in the **VikingClient** checkout on the Legacy / VikingLegacy line (`Clients/Viking/Viking`). Before packing:
 
 1. `git fetch` from the remote (origin / github.com/jamesra/Viking).
 2. Attempt to integrate remote updates into the branch you will pack (`git pull --ff-only` when clean; otherwise a normal pull/merge or rebase onto the tracked upstream). Prefer a fast-forward when possible.

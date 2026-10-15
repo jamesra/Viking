@@ -49,7 +49,7 @@ namespace WebAnnotation.UI.Actions
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
             NewVolumeInteriorPolygon = newVolumeInteriorPolygon;
-            NewSmoothVolumeInteriorPolygon = NewVolumeInteriorPolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            NewSmoothVolumeInteriorPolygon = NewVolumeInteriorPolygon.Smooth(Global.NumClosedCurveInterpolationPoints, Global.PenSimplifyThreshold);
 
             CreateDefaultVisuals();
         }
@@ -66,6 +66,7 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 Store.Locations.Save();
+                UndoManager.PushLocationShape("Cut Hole", Location, Transform, original_mosaic_shape, Location.TypeCode);
             }
             catch (System.ServiceModel.FaultException e)
             {

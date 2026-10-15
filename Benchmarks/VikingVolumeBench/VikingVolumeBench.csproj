@@ -13,7 +13,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <NoWarn>$(NoWarn);CA1014</NoWarn>
-    <!-- Differences between the two client trees. VikingLegacy-Maintenance: WCF LocationStore lives in WebAnnotationModel,
+    <!-- Differences between the two client trees. VikingLegacy: WCF LocationStore lives in WebAnnotationModel,
          and TileViewModel's vertex field is spelled Verticies. VikingLegacy builds the same sources without these. -->
     <DefineConstants>$(DefineConstants);VIKINGBENCH_WCF_ANNOTATIONS;VIKINGBENCH_TILE_VERTICIES</DefineConstants>
   </PropertyGroup>

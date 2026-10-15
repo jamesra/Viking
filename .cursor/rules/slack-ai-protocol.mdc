@@ -15,7 +15,7 @@ alwaysApply: true
 
 This agent is **Viking-Client**. Address it as `[Viking-Client]`. Prefix every message with `[Viking-Client]`. Never post unprefixed.
 
-**Scope:** Viking/Jotunn clients and shared client libraries (annotation UI, volume viewing, deep links, segmentation client) in VikingLegacy-Maintenance.
+**Scope:** Viking/Jotunn clients and shared client libraries (annotation UI, volume viewing, deep links, segmentation client) in VikingLegacy.
 
 `[Viking]` means the asker is unsure client vs server. If the ask is client-side, this agent answers (still prefixed `[Viking-Client]`). Server work is left for the server agent.
 

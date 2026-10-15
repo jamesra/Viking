@@ -224,16 +224,18 @@ namespace WebAnnotation.UI.Commands
 
                         RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)senderCmd;
 
+                        Action recordUndo = null;
                         try
                         {
-                            cmd.ApplyCut(Loc);
+                            recordUndo = cmd.ApplyCut(Loc);
                         }
                         catch (ArgumentException r)
                         {
                             System.Windows.Forms.MessageBox.Show(Parent, r.Message, "Could not save Polygon", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                         }
 
-                        AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                        if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                            recordUndo?.Invoke();
                     }
                     );
 

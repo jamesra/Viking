@@ -370,8 +370,10 @@ namespace WebAnnotation
                                                                loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
                                                                (mosaicPolygon, points) =>
                                                                     {
+                                                                        SqlGeometry undoShape = loc.MosaicShape;
                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
-                                                                        AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                        if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                                                                            UndoManager.PushLocationShape("Move", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                                                                     });
                 case LocationAction.SCALE:
                     return null;
@@ -382,8 +384,10 @@ namespace WebAnnotation
                                                                        {
                                                                            try
                                                                            {
+                                                                               SqlGeometry undoShape = loc.MosaicShape;
                                                                                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
                                                                                Store.Locations.Save();
+                                                                               UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                                                                            }
                                                                            catch (ArgumentException e)
                                                                            {
@@ -403,8 +407,10 @@ namespace WebAnnotation
                                                       {
                                                           try
                                                           {
+                                                              SqlGeometry undoShape = loc.MosaicShape;
                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
                                                               Store.Locations.Save();
+                                                              UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                                                           }
                                                           catch (ArgumentException e)
                                                           {
@@ -422,8 +428,10 @@ namespace WebAnnotation
                                                       {
                                                           try
                                                           {
+                                                              SqlGeometry undoShape = loc.MosaicShape;
                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
                                                               Store.Locations.Save();
+                                                              UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                                                           }
                                                           catch (ArgumentException e)
                                                           {
@@ -448,6 +456,7 @@ namespace WebAnnotation
                                                                 {
                                                                     Geometry.Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                                                                    SqlGeometry undoShape = loc.MosaicShape;
 
                                                                     try
                                                                     {
@@ -458,7 +467,8 @@ namespace WebAnnotation
                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                                                     }
 
-                                                                    AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                    if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                                                                        UndoManager.PushLocationShape("Cut Hole", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                                                                 }
                                                                 );
 
@@ -469,6 +479,7 @@ namespace WebAnnotation
                             {
                                 Geometry.Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
                                 SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                                SqlGeometry undoShape = loc.MosaicShape;
 
                                 try
                                 {
@@ -479,7 +490,8 @@ namespace WebAnnotation
                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 }
 
-                                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                                    UndoManager.PushLocationShape("Cut Hole", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                             }
                             );
                         }
@@ -490,8 +502,10 @@ namespace WebAnnotation
                                                         Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volumePosition),
                                                         (MosaicPolygon, VolumePolygon) =>
                                                         {
+                                                            SqlGeometry undoShape = loc.MosaicShape;
                                                             loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
                                                             Store.Locations.Save();
+                                                            UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
                                                         },
                                                         loc.VolumeShape?.ToPolygon(),
                                                         volumePosition);
@@ -603,9 +617,10 @@ namespace WebAnnotation
                                                                      //Drawing from inside to outside:
                                                                      RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)sender;
 
+                                                                     Action recordUndo = null;
                                                                      try
                                                                      {
-                                                                         cmd.ApplyCut(loc);
+                                                                         recordUndo = cmd.ApplyCut(loc);
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {
@@ -613,7 +628,8 @@ namespace WebAnnotation
                                                                      }
 
 
-                                                                     AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                     if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                                                                         recordUndo?.Invoke();
 
                                                                  }
                                                                  );

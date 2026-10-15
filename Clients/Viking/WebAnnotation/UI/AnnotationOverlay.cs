@@ -303,7 +303,11 @@ namespace WebAnnotation
         {
             try
             {
-                Store.Locations.Save();
+                using (WebAnnotation.View.PolygonViewTimingLog.Measure("save"))
+                {
+                    Store.Locations.Save();
+                }
+
                 return true;
             }
             catch (System.ServiceModel.FaultException e)
@@ -1717,6 +1721,13 @@ break;
                 case Keys.F11:
                     OpenGotoStructureForm();
                     break;
+                // Undo the last recorded annotation edit, unless another command (drag, pen stroke) is active.
+                case Keys.Z when e.Control && !e.Shift && !e.Alt:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (IsCommandDefault())
+                        UndoManager.UndoLast();
+                    return;
                 // Pen Mode toggle: main-keyboard * (Shift+8) and numpad *. Free under default shortcuts.
                 case Keys.Multiply:
                     e.Handled = true;
