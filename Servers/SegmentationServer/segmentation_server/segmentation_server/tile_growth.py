@@ -55,6 +55,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
+from segmentation_server.mask_tiles import TiledMask
 from segmentation_server.mask_utils import DEFAULT_MASK_THRESHOLD, NoMatchingMask
 from segmentation_server.seams import (
     MAX_EXTRA_CLICKS,
@@ -75,6 +76,7 @@ from segmentation_server.seams import (
 from segmentation_server.cell_grid import (
     CELL_SIZE,
     CELL_STRIDE,
+    MAX_BOX_CELLS,
     CORE_MARGIN,
     CORE_SIZE,
     LOGIT_SCALE,
@@ -97,6 +99,7 @@ from segmentation_server.cell_grid import (
 )
 
 __all__ = [
+    "MAX_TILED_MASK_CELLS",
     "TILE_SIZE",
     "Cell",
     "CellPrediction",
@@ -125,6 +128,9 @@ DEFAULT_MAX_PREDICTIONS = 96
 DEFAULT_MAX_CELLS = 48
 # A box prompt clipped to less than this on a side says nothing useful about the object.
 MIN_BOX_SIDE = 16
+# A tiled mask can be many cores across (the foreground limit of 256 tiles is about 1100 cores), so its box is split into cores
+# up to this many, where the box of a mask that came as one bitmap stops at ``MAX_BOX_CELLS``.
+MAX_TILED_MASK_CELLS = 4096
 # Logit a mask prompt gives the pixels it covers: confidently object, well inside SAM2's mask_input range.
 MASK_PROMPT_LOGIT = 8.0
 # Logit a background rectangle gives where nothing positive is known: it only says "most likely background".
@@ -290,6 +296,7 @@ def grow_segmentation(
     background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
     background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     prompt_encoder: Optional[Any] = None,
+    background_tiles: Optional[Any] = None,
 ) -> GrowthResult:
     """One pass of ``GrowthWalk``: walk outward from the clicks with the tiles ``predict`` has.
 
@@ -314,6 +321,7 @@ def grow_segmentation(
         background_masks=background_masks,
         background_rects=background_rects,
         prompt_encoder=prompt_encoder,
+        background_tiles=background_tiles,
     )
     walk.advance()
     return walk.result()
@@ -354,6 +362,10 @@ class GrowthWalk:
     ``prompt_encoder`` (see ``prompt_encodings``) builds the mask prompt of a start window that has a client mask,
     background included, as the model was trained on it. None keeps the legacy flat prompt below. Windows the walk
     grows into are prompted with their neighbours' fused logits whichever encoder this is.
+    ``background_tiles`` (a ``TiledMask`` that is also in ``background_masks``) is the background the client sends tile by
+    tile: a window is predicted only when every tile it covers has been received, so a cell that lacks one is deferred and
+    the tile is queued for ``take_requested_masks``, whether or not the window's image tiles are held. ``resume`` carries on.
+    None means the background (if any) is already complete.
     """
 
     def __init__(
@@ -374,8 +386,13 @@ class GrowthWalk:
         background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
         background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         prompt_encoder: Optional[Any] = None,
+        background_tiles: Optional[Any] = None,
     ) -> None:
         self._prompt_encoder = prompt_encoder
+        self._background_tiles = background_tiles
+        # Background mask tiles asked for, in the order they were needed, and those not yet taken by ``take_requested_masks``.
+        self._asked_masks: Set[TileIndex] = set()
+        self._pending_masks: List[TileIndex] = []
         self._started = False
         self._assume_boxes = assume_boxes
         # Cells the client's prompt starts the walk in, and the first answer that no mask fit one
@@ -394,7 +411,7 @@ class GrowthWalk:
         self._unavailable: Set[TileIndex] = set()
         self._mask_shapes: Dict[Box, MaskShape] = {}
         for item in masks or ():
-            shape = item if isinstance(item, MaskShape) else MaskShape(tuple(int(v) for v in item))  # type: ignore[arg-type]
+            shape = _as_mask(item)
             self._mask_shapes[shape.box] = shape
         self._masks: Set[Box] = set(self._mask_shapes)
         # Masks follow boxes in this list so start-cell choice and core coverage treat both alike;
@@ -403,10 +420,7 @@ class GrowthWalk:
         self._hints: Set[Box] = {(int(a), int(b), int(c), int(d)) for a, b, c, d in hint_boxes or ()}
         self._boxes += sorted(self._hints.difference(self._boxes))
         self._boxes += sorted(self._masks.difference(self._boxes))
-        self._background_masks: List[MaskShape] = [
-            item if isinstance(item, MaskShape) else MaskShape(tuple(int(v) for v in item))  # type: ignore[arg-type]
-            for item in background_masks or ()
-        ]
+        self._background_masks: List[MaskShape] = [_as_mask(item) for item in background_masks or ()]
         self._background_rects = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_rects or ()]
         self._background_patches: Dict[Cell, Optional[Tuple[Optional[NDArray], Optional[NDArray]]]] = {}
         self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
@@ -477,6 +491,12 @@ class GrowthWalk:
         self._pending = []
         return taken
 
+    def take_requested_masks(self) -> List[TileIndex]:
+        """Background mask tiles the walk asked for since the last call, in the order they were needed."""
+        taken = self._pending_masks
+        self._pending_masks = []
+        return taken
+
     def resume(self, unavailable: Iterable[TileIndex] = ()) -> None:
         """Re-queue the cells that were waiting for tiles.
 
@@ -536,7 +556,7 @@ class GrowthWalk:
                 order.append(cell)
 
         for box in self._boxes:
-            split = cores_under_box(box)
+            split = self._cores_under(box, self._mask_shapes.get(box))
             if split is None:
                 logger.warning("Box %s spans too many cells to be a prompt; only its clicks start the walk", box)
                 continue
@@ -686,6 +706,17 @@ class GrowthWalk:
         self._pending.append(tile)
         self._requested.append(tile)
 
+    def _request_mask(self, tile: TileIndex) -> None:
+        if tile in self._asked_masks or len(self._pending_masks) >= self._max_requested:
+            return
+        self._asked_masks.add(tile)
+        self._pending_masks.append(tile)
+
+    def _cores_under(self, box: Box, shape: Optional[MaskShape] = None) -> Optional[Tuple[List[Cell], dict]]:
+        """``cores_under_box`` with the larger limit a tiled mask's box gets."""
+        limit = MAX_TILED_MASK_CELLS if isinstance(shape, TiledMask) else MAX_BOX_CELLS
+        return cores_under_box(box, limit)
+
     def _step(self, cell: Cell) -> None:
         """Make every prediction this cell is owed: the user's prompt, then one per edge with new ranges."""
         self._queued.discard(cell)
@@ -807,6 +838,16 @@ class GrowthWalk:
             if attempt.kind == "user":
                 self._user_attempted.add(cell)
             return True
+
+        if self._background_tiles is not None:
+            # A window is predicted only when the background it covers is known. A cell that lacks tiles waits for them
+            # and is asked for again by ``resume`` like a cell that lacks image tiles.
+            missing = self._background_tiles.missing_for_cell(cell)
+            if missing:
+                self._deferred.add(cell)
+                for tile in missing:
+                    self._request_mask(tile)
+                return False
 
         # A continuation window is told what the windows around it have found, so it continues that
         # object instead of choosing one from its prompt alone. A start window has nothing to be told.
@@ -1125,14 +1166,14 @@ class GrowthWalk:
         if self._assume_boxes or self._masks or self._background_masks:
             canvas = self._canvas.fork_for_pins()
             for box in self._boxes:
-                if cores_under_box(box) is None:
+                if self._cores_under(box, self._mask_shapes.get(box)) is None:
                     continue
                 if box in self._masks:
                     canvas.assume_mask(self._mask_shapes[box])
                 elif self._assume_boxes and box not in self._hints:
                     canvas.assume_box(box)
             for shape in self._background_masks:
-                if cores_under_box(shape.box) is not None:
+                if shape.box is not None and self._cores_under(shape.box, shape) is not None:
                     canvas.deny_mask(shape)
         owners = canvas.decided_cells()
 
@@ -1176,6 +1217,13 @@ class GrowthWalk:
             edges={key: list(runs) for key, runs in self._graph.edges.items()},
             logits=logits,
         )
+
+
+def _as_mask(item: Any) -> MaskShape:
+    """``item`` as a mask shape: a ``MaskShape`` or a ``TiledMask`` as it is, a ``(x0, y0, x1, y1)`` box as a filled rectangle."""
+    if isinstance(item, (MaskShape, TiledMask)):
+        return item  # type: ignore[return-value]
+    return MaskShape(tuple(int(v) for v in item))  # type: ignore[arg-type]
 
 
 def _box_window_margin(cell: Cell, box: Box) -> int:

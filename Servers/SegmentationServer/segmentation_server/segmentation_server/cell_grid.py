@@ -83,21 +83,22 @@ Box = Tuple[int, int, int, int]
 MAX_BOX_CELLS = 64
 
 
-def cores_under_box(box: Box) -> Optional[Tuple[List[Cell], dict]]:
+def cores_under_box(box: Box, max_cells: int = MAX_BOX_CELLS) -> Optional[Tuple[List[Cell], dict]]:
     """Split the cores a mosaic box touches into those it covers entirely and those it covers in part.
 
     ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. Returns ``(full, partial)``:
     ``full`` lists the cells whose whole 512x512 core lies inside the box, and ``partial`` maps
     every other touched cell to the box's overlap with that core (same form as ``box``, inside the
     core, so at least 256 px from the cell's window border). None when the box spans more than
-    ``MAX_BOX_CELLS`` cores, which no longer describes a seed.
+    ``max_cells`` cores (``MAX_BOX_CELLS`` unless the caller says otherwise, as it does for a tiled mask, which can be
+    many cores across), which no longer describes a seed.
     """
     x0, y0, x1, y1 = (int(v) for v in box)
     x0, x1 = min(x0, x1), max(x0, x1)
     y0, y1 = min(y0, y1), max(y0, y1)
     first = cell_of_point(x0, y0)
     last = cell_of_point(x1, y1)
-    if (last.row - first.row + 1) * (last.col - first.col + 1) > MAX_BOX_CELLS:
+    if (last.row - first.row + 1) * (last.col - first.col + 1) > max_cells:
         return None
     full: List[Cell] = []
     partial: dict = {}
@@ -208,6 +209,18 @@ class MaskShape:
     box: Box
     bitmap_up: Optional[MaskArray] = None
     role: str = "seed"
+
+    @property
+    def is_rectangle(self) -> bool:
+        """True for a filled rectangle (no bitmap)."""
+        return self.bitmap_up is None
+
+    def crop_up(self, xa: int, ya: int, xb: int, yb: int) -> MaskArray:
+        """The mask over the inclusive mosaic rectangle ``(xa, ya, xb, yb)``, which must lie inside ``box``, as Y-up rows (row 0 is ``ya``)."""
+        x0, y0, _x1, _y1 = self.box
+        if self.bitmap_up is None:
+            return np.ones((yb - ya + 1, xb - xa + 1), dtype=np.bool_)
+        return self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
 
     def covers_core(self, cell: "Cell") -> bool:
         """True when every pixel of ``cell``'s core is in the mask."""
@@ -463,8 +476,11 @@ class Canvas:
                         held[piece] = False
 
     def assume_mask(self, shape: MaskShape) -> dict[Cell, int]:
-        """Like :meth:`assume_box` for a :class:`MaskShape`: only the pixels inside the shape are marked object."""
-        if shape.bitmap_up is None:
+        """Like :meth:`assume_box` for a mask shape: only the pixels inside the shape are marked object.
+
+        ``shape`` is a :class:`MaskShape` or anything with its ``box``, ``is_rectangle`` and ``crop_up`` (a ``TiledMask``).
+        """
+        if shape.is_rectangle:
             return self.assume_box(shape.box)
         x0, y0, x1, y1 = shape.box
         added: dict[Cell, int] = {}
@@ -479,7 +495,7 @@ class Canvas:
                 if xa > xb or ya > yb:
                     continue
                 piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
-                inside = shape.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+                inside = shape.crop_up(xa, ya, xb, yb)
                 if not inside.any():
                     continue
                 block = self._blocks.setdefault(cell, np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_))
@@ -492,8 +508,8 @@ class Canvas:
         return added
 
     def deny_mask(self, shape: MaskShape) -> None:
-        """Like :meth:`deny_box` for a :class:`MaskShape`: only the pixels inside the shape are cleared."""
-        if shape.bitmap_up is None:
+        """Like :meth:`deny_box` for a mask shape (see :meth:`assume_mask`): only the pixels inside the shape are cleared."""
+        if shape.is_rectangle:
             self.deny_box(shape.box)
             return
         x0, y0, x1, y1 = shape.box
@@ -508,7 +524,7 @@ class Canvas:
                 if xa > xb or ya > yb:
                     continue
                 piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
-                inside = shape.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+                inside = shape.crop_up(xa, ya, xb, yb)
                 for store in (self._blocks, self._decided, self._pinned):
                     held = store.get(cell)
                     if held is not None:
