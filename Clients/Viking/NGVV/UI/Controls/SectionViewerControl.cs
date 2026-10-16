@@ -224,7 +224,8 @@ namespace Viking.UI.Controls
                     else
                     {
                         tsChannelItem = new ToolStripLabel();
-                        StatusBar.Items.Add(tsChannelItem);
+                        // Keep channel values directly after the "Channels:" label, ahead of the Corrections item.
+                        StatusBar.Items.Insert(StatusBar.Items.IndexOf(tsChannels) + 1 + _StatusChannels.Count, tsChannelItem);
                         _StatusChannels.Add(tsChannelItem);
                         itemsAddedOrRemoved = true;
                     }
