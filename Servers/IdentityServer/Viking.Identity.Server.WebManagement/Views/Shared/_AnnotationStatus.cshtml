@@ -1,0 +1,20 @@
+@model Viking.Identity.Models.AnnotationContext
+@using Viking.Identity.Server.Extensions.Services
+@{
+    var server = VolumeMetadata.DefaultServer(Model);
+    var database = VolumeMetadata.CorrectionDatabaseName(server);
+}
+@if (server != null)
+{
+    <span class="badge bg-success" title="Annotations are stored in annotation database @database">
+        <i class="bi bi-database"></i> Has annotations
+    </span>
+    <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@server.Id" class="small ms-1">@server.Name</a>
+}
+else
+{
+    <span class="badge bg-secondary" title="No annotation server is linked, so this volume has images only">
+        <i class="bi bi-slash-circle"></i> No annotations
+    </span>
+    <span class="small text-muted ms-1">images only</span>
+}

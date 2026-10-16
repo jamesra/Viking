@@ -42,6 +42,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var allVolumes = await _context.AnnotationContexts
                 .Include(v => v.Parent)
                 .Include(v => v.AnnotationServer)
+                .Include(v => v.AnnotationServerLinks).ThenInclude(l => l.AnnotationServer)
                 .Include(v => v.UsersWithPermissions)
                 .Include(v => v.GroupsWithPermissions)
                 .ToListAsync();

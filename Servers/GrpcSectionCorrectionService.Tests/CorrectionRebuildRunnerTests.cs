@@ -24,9 +24,9 @@ namespace GrpcSectionCorrectionService.Tests
             {
                 var volumes = new StaticIdentityVolumeSource(
                 [
-                    new IdentityVolumeRow("NoXml", "", null),
-                    new IdentityVolumeRow("NoSql", "http://example/volume.vikingxml", null),
-                    new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann")
+                    new IdentityVolumeRow("NoXml", "", null, "NoXml"),
+                    new IdentityVolumeRow("NoSql", "http://example/volume.vikingxml", null, "NoSql"),
+                    new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann", "RC1")
                 ]);
                 var connections = new AnnotationConnectionResolver(
                     new Dictionary<string, string> { ["RC1"] = "Server=local;Database=RC1" },
@@ -153,8 +153,8 @@ namespace GrpcSectionCorrectionService.Tests
             {
                 var volumes = new StaticIdentityVolumeSource(
                 [
-                    new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", null),
-                    new IdentityVolumeRow("RC2", "http://example/RC2.vikingxml", null)
+                    new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", null, "RC1"),
+                    new IdentityVolumeRow("RC2", "http://example/RC2.vikingxml", null, "RC2")
                 ]);
                 var connections = new AnnotationConnectionResolver(
                     new Dictionary<string, string>
@@ -301,7 +301,7 @@ namespace GrpcSectionCorrectionService.Tests
                 var publisher = new RecordingPublisher();
                 using VolumeCorrectionCatalog catalog = new(root);
                 var status = new RebuildStatusStore();
-                var volumes = new StaticIdentityVolumeSource([new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann")]);
+                var volumes = new StaticIdentityVolumeSource([new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann", "RC1")]);
                 IConfiguration config = new ConfigurationBuilder()
                     .AddInMemoryCollection(new Dictionary<string, string> { ["Corrections:RootDirectory"] = root })
                     .Build();
@@ -331,7 +331,7 @@ namespace GrpcSectionCorrectionService.Tests
                 var publisher = new BlockingPublisher(release.Task);
                 using VolumeCorrectionCatalog catalog = new(root);
                 var status = new RebuildStatusStore();
-                var volumes = new StaticIdentityVolumeSource([new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann")]);
+                var volumes = new StaticIdentityVolumeSource([new IdentityVolumeRow("RC1", "http://example/RC1.vikingxml", "http://ann", "RC1")]);
                 IConfiguration config = new ConfigurationBuilder()
                     .AddInMemoryCollection(new Dictionary<string, string> { ["Corrections:RootDirectory"] = root })
                     .Build();

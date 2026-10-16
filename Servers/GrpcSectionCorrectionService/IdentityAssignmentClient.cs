@@ -50,6 +50,19 @@ namespace Viking.GrpcSectionCorrectionService
     }
 
     /// <summary>
+    /// Stands in when Identity assignment settings are missing. Serving existing corrections does not need Identity,
+    /// so the host still starts; listing or rebuilding volumes reports exactly what to configure.
+    /// </summary>
+    public sealed class UnconfiguredIdentityVolumeSource : IIdentityVolumeSource
+    {
+        public Task<IReadOnlyList<IdentityVolumeRow>> ListAsync(CancellationToken cancellationToken) =>
+            throw new InvalidOperationException(
+                "The correction service is not connected to Identity. Set IdentityServer:Endpoint, "
+                + "IdentityServer:ClientSecret and CorrectionService:Name (environment variables IdentityServer__Endpoint, "
+                + "IdentityServer__ClientSecret, CorrectionService__Name); IdentityServer:ApiEndpoint is optional.");
+    }
+
+    /// <summary>
     /// Lists the annotation contexts Identity assigned to this correction service. Authenticates with the
     /// client-credentials grant, then calls <c>Permissions/AssignedAnnotationContexts</c>. Because the container may
     /// start before Identity is reachable, <see cref="ListAsync"/> retries with capped exponential backoff.

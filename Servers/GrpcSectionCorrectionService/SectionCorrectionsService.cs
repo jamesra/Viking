@@ -63,14 +63,15 @@ namespace Viking.GrpcSectionCorrectionService
             ListVolumesRequest request,
             ServerCallContext context)
         {
+            // Only contexts Identity assigns to this service that have an annotation database are volumes here.
+            // volume_name is the correction-set key: the annotation database.
             Dictionary<string, VolumeInfo> byName = new(StringComparer.OrdinalIgnoreCase);
             try
             {
                 foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
                 {
-                    if (string.IsNullOrWhiteSpace(row.CorrectionDatabase))
+                    if (!row.HasAnnotationDatabase)
                         continue;
-                    // volume_name is the correction-set key, which is the annotation database when Identity supplies one.
                     byName[row.CorrectionDatabase] = new VolumeInfo
                     {
                         VolumeName = row.CorrectionDatabase,
@@ -79,16 +80,12 @@ namespace Viking.GrpcSectionCorrectionService
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (IsIdentityTransportFailure(ex, context.CancellationToken))
             {
-                _logger.LogWarning(ex, "Identity volume list failed; returning catalog folders only.");
-            }
-
-            foreach (string name in _catalog.VolumeNames)
-            {
-                if (byName.ContainsKey(name))
-                    continue;
-                byName[name] = new VolumeInfo { VolumeName = name };
+                _logger.LogWarning(ex, "Identity volume list failed.");
+                throw new RpcException(new Status(
+                    StatusCode.Unavailable,
+                    $"Identity volume list unavailable: {ex.Message}"));
             }
 
             ListVolumesResponse response = new();
@@ -399,8 +396,8 @@ namespace Viking.GrpcSectionCorrectionService
         /// volume is not listed. Called only by <see cref="CorrectStructures"/>.
         /// </summary>
         /// <exception cref="RpcException">
-        /// <see cref="StatusCode.Unavailable"/> when the Identity listing fails in transport (HTTP or SQL Identity
-        /// source unreachable, no access token, or an HTTP timeout), matching how the sibling volume-load failure is
+        /// <see cref="StatusCode.Unavailable"/> when the Identity listing fails in transport (Identity unreachable,
+        /// not configured, no access token, or an HTTP timeout), matching how the sibling volume-load failure is
         /// mapped so callers can retry instead of seeing UNKNOWN.
         /// </exception>
         /// <exception cref="OperationCanceledException">Rethrown unchanged when the call itself was cancelled.</exception>
@@ -427,15 +424,16 @@ namespace Viking.GrpcSectionCorrectionService
 
         /// <summary>
         /// True for failures of an <see cref="IIdentityVolumeSource"/> that mean Identity is unreachable rather than
-        /// a bug: HTTP and I/O errors, SQL errors from <see cref="SqlIdentityVolumeSource"/>, the missing-token
-        /// <see cref="InvalidOperationException"/> from <see cref="IdentityAssignmentClient"/>, and an HTTP timeout
+        /// a bug: HTTP and I/O errors, the missing-token <see cref="InvalidOperationException"/> from
+        /// <see cref="IdentityAssignmentClient"/>, the not-configured error from <see cref="UnconfiguredIdentityVolumeSource"/>,
+        /// and an HTTP timeout
         /// (an <see cref="OperationCanceledException"/> while <paramref name="callCancellation"/> is not cancelled).
         /// Caller cancellation is excluded so it surfaces as CANCELLED.
         /// </summary>
         static bool IsIdentityTransportFailure(Exception ex, CancellationToken callCancellation) => ex switch
         {
             OperationCanceledException => !callCancellation.IsCancellationRequested,
-            HttpRequestException or IOException or DbException or InvalidOperationException => true,
+            HttpRequestException or IOException or InvalidOperationException => true,
             _ => false
         };
 

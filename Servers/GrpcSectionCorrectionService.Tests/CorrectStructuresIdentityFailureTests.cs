@@ -1,11 +1,11 @@
 using Grpc.Core;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,15 +52,38 @@ namespace GrpcSectionCorrectionService.Tests
             StringAssert.Contains(ex.Status.Detail, Volume);
         }
 
-        /// <summary>A SQL Identity source that cannot connect also maps to UNAVAILABLE.</summary>
+        /// <summary>
+        /// The volume list holds only contexts that have an annotation database, once per database. Contexts without
+        /// one (images only) and unrelated published folders are not volumes.
+        /// </summary>
         [TestMethod]
-        public async Task SqlIdentityFailureIsUnavailable()
+        public async Task ListVolumesHoldsOnlyContextsWithAnAnnotationDatabase()
         {
-            SqlException sql = CaptureSqlException();
+            var volumes = new StaticIdentityVolumeSource(
+            [
+                new IdentityVolumeRow("RC1", "https://x/RC1.vikingxml", "https://ann/RC1", "RC1"),
+                new IdentityVolumeRow("RC2", "https://x/RC2.vikingxml", "https://ann/RC2", "RC2"),
+                new IdentityVolumeRow("RC2-Pitt", "https://x/RC2p.vikingxml", "https://ann/RC2", "RC2"),
+                new IdentityVolumeRow("Zia", "https://x/Zia.vikingxml", null),
+                new IdentityVolumeRow("Mosaics", "https://x/Mosaics.vikingxml", "", "  ")
+            ]);
+
+            ListVolumesResponse response = await CreateService(volumes)
+                .ListVolumes(new ListVolumesRequest(), new CallContext(CancellationToken.None));
+
+            CollectionAssert.AreEqual(new[] { "RC1", "RC2" }, response.Volumes.Select(v => v.VolumeName).ToArray());
+        }
+
+        /// <summary>Without Identity settings the list reports what to configure instead of showing every folder.</summary>
+        [TestMethod]
+        public async Task ListVolumesWithoutIdentityIsUnavailableAndSaysWhatToSet()
+        {
             RpcException ex = await Assert.ThrowsExactlyAsync<RpcException>(
-                () => CreateService(sql).CorrectStructures(Request(), new CallContext(CancellationToken.None)));
+                () => CreateService(new UnconfiguredIdentityVolumeSource())
+                    .ListVolumes(new ListVolumesRequest(), new CallContext(CancellationToken.None)));
 
             Assert.AreEqual(StatusCode.Unavailable, ex.StatusCode);
+            StringAssert.Contains(ex.Status.Detail, "IdentityServer__ClientSecret");
         }
 
         /// <summary>Cancellation of the call itself is not reported as UNAVAILABLE.</summary>
@@ -111,27 +134,6 @@ namespace GrpcSectionCorrectionService.Tests
                 new ConfigurationBuilder().Build(),
                 new RebuildStatusStore(),
                 NullLogger<SectionCorrectionsService>.Instance);
-
-        /// <summary>
-        /// Produces a real <see cref="SqlException"/> (the type has no public constructor) by opening a connection
-        /// to a named pipe that does not exist, with a one-second timeout.
-        /// </summary>
-        static SqlException CaptureSqlException()
-        {
-            try
-            {
-                using SqlConnection connection = new(
-                    @"Data Source=np:\\.\pipe\viking-no-such-sql\query;Connect Timeout=1;Pooling=false;Encrypt=false");
-                connection.Open();
-            }
-            catch (SqlException ex)
-            {
-                return ex;
-            }
-
-            Assert.Inconclusive("Opening a missing named pipe unexpectedly succeeded.");
-            return null;
-        }
 
         /// <summary>Identity source whose listing always fails with the given exception.</summary>
         sealed class FailingIdentitySource(Exception toThrow) : IIdentityVolumeSource

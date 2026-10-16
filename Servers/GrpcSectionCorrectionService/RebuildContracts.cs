@@ -8,12 +8,12 @@ namespace Viking.GrpcSectionCorrectionService
     /// <summary>
     /// One annotation context this host corrects. <paramref name="AnnotationDatabase"/> and
     /// <paramref name="StosGroup"/> together are the correction-set key, so contexts that share both are built once.
-    /// Rows from the SQL fallback source leave them null, which keys the set by <paramref name="Name"/> as before.
+    /// A context with no annotation database has nothing to correct and is never listed or rebuilt.
     /// </summary>
     /// <param name="Name">Annotation context name.</param>
     /// <param name="VikingXmlEndpoint">VikingXML URL the stos transforms are loaded from.</param>
     /// <param name="AnnotationEndpoint">Annotation service root of the context's default server.</param>
-    /// <param name="AnnotationDatabase">Annotation database name, or null when unknown.</param>
+    /// <param name="AnnotationDatabase">Annotation database name from Identity, or null when the context has no annotation server.</param>
     /// <param name="StosGroup">Context registration name: null for the VikingXML default group.</param>
     /// <param name="ODataEndpoint">OData endpoint of the annotation server, or null.</param>
     public sealed record IdentityVolumeRow(
@@ -24,8 +24,11 @@ namespace Viking.GrpcSectionCorrectionService
         string StosGroup = null,
         string ODataEndpoint = null)
     {
-        /// <summary>Database part of the correction-set key: the annotation database, else the context name.</summary>
-        public string CorrectionDatabase => string.IsNullOrWhiteSpace(AnnotationDatabase) ? Name : AnnotationDatabase;
+        /// <summary>Database part of the correction-set key: the annotation database, or null when the context has none.</summary>
+        public string CorrectionDatabase => string.IsNullOrWhiteSpace(AnnotationDatabase) ? null : AnnotationDatabase.Trim();
+
+        /// <summary>True when the context has an annotation database, so it can be listed and rebuilt.</summary>
+        public bool HasAnnotationDatabase => CorrectionDatabase is not null;
     }
 
     public interface IIdentityVolumeSource

@@ -132,7 +132,8 @@
                         }
                         else
                         {
-                            <em class="text-muted">None. Viking will use VikingXML VolumeToEndpoint when present.</em>
+                            <span class="badge bg-secondary"><i class="bi bi-slash-circle"></i> No annotations</span>
+                            <em class="text-muted ms-1">No annotation server is linked, so this volume has images only.</em>
                         }
                     </dd>
 
@@ -206,21 +207,25 @@
                     @if (Model.AnnotationServer != null)
                     {
                         <p class="text-muted">
-                            Access to this volume comes from its annotation server, <strong>@Model.AnnotationServer.Name</strong>,
-                            and covers every volume that shares that database. Grants made directly on the volume still apply.
+                            <strong>Access</strong> decides who sees this volume in Viking and is granted here.
+                            Read, Annotate and Review are granted on its annotation server, <strong>@Model.AnnotationServer.Name</strong>,
+                            and cover every volume that shares that database.
                         </p>
-                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.AnnotationServer.Id" class="btn btn-primary">
-                            <i class="bi bi-shield-check"></i> Manage Annotation Server Permissions
+                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="bi bi-shield-check"></i> Manage Access to this Volume
                         </a>
-                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
-                            Volume-only grants
+                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.AnnotationServer.Id" class="btn btn-outline-primary">
+                            Manage Annotation Server Permissions
                         </a>
                     }
                     else
                     {
-                        <p class="text-muted">Manage which users and groups have access to this volume and what permissions they have.</p>
+                        <p class="text-muted">
+                            This volume has no annotation server and so no annotations. <strong>Access</strong> is its only
+                            permission: it decides who sees the volume in Viking.
+                        </p>
                         <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
-                            <i class="bi bi-shield-check"></i> Manage Permissions
+                            <i class="bi bi-shield-check"></i> Manage Access to this Volume
                         </a>
                     }
                 </div>

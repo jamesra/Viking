@@ -187,7 +187,7 @@ namespace Viking.GrpcSectionCorrectionService
         }
 
         /// <summary>
-        /// Lists every volume, asks which to rebuild (or all), starts it and watches it finish.
+        /// Lists every volume that has an annotation database, asks which to rebuild (or all), starts it and watches it finish.
         /// </summary>
         async Task RefreshVolumeAsync(CancellationToken cancellationToken)
         {
@@ -195,6 +195,12 @@ namespace Viking.GrpcSectionCorrectionService
             List<VolumeInfo> volumes = [.. response.Volumes];
 
             _output.WriteLine();
+            if (volumes.Count == 0)
+            {
+                _output.WriteLine("No volumes with an annotation database are assigned to this service.");
+                return;
+            }
+
             for (int i = 0; i < volumes.Count; i++)
                 _output.WriteLine($"  {i + 1,2}) {volumes[i].VolumeName}");
             _output.WriteLine("   A) All volumes");

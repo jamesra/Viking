@@ -43,8 +43,8 @@ namespace Viking.GrpcSectionCorrectionService
             });
 
             services.AddSingleton(AnnotationConnectionResolver.FromConfiguration(Configuration));
-            // Identity is the source of truth for the contexts assigned to this service. Without Identity settings
-            // (local runs, tests) fall back to reading the Identity database directly.
+            // Identity is the only source of the contexts assigned to this service. Without its settings the host
+            // still serves published corrections, but cannot list or rebuild volumes.
             IdentityAssignmentOptions identityOptions = IdentityAssignmentOptions.FromConfiguration(Configuration);
             services.AddSingleton(identityOptions);
             if (identityOptions.IsConfigured)
@@ -57,11 +57,7 @@ namespace Viking.GrpcSectionCorrectionService
             }
             else
             {
-                services.AddSingleton<IIdentityVolumeSource>(sp =>
-                {
-                    string identity = Configuration.GetConnectionString("IdentityConnection");
-                    return new SqlIdentityVolumeSource(identity);
-                });
+                services.AddSingleton<IIdentityVolumeSource, UnconfiguredIdentityVolumeSource>();
             }
             services.AddSingleton<IVolumeCorrectionPublisher, VolumeCorrectionPublisherAdapter>();
             services.AddSingleton<RebuildStatusStore>();
