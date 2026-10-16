@@ -1,0 +1,8 @@
+{
+  "domain": "segmentation.codepharm.net",
+  "upstreamHost": "192.168.0.6",
+  "models": [
+    { "prefix": "default", "model": "best_TEM_model.pt", "port": 40443 },
+    { "prefix": "v3", "model": "sam2_em_v3_epoch_9.pt", "port": 40445 }
+  ]
+}

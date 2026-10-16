@@ -312,13 +312,25 @@ whole-screen model (`FULL_VIEWPORT`) refuses `UploadTile` and `SegmentTilesStrea
 whole-screen RPCs unless `SEGMENTATION_STRICT_SUBMISSION_MODE=1`.
 
 **Several models at once** run as separate containers of the same image, each reached by its own host name that the
-reverse proxy routes by SNI. The compose profile `segmentation-v4` adds `segmentation-server-v4` (host port 40445,
-`SEGMENTATION_V4_CHECKPOINT`, default `/models/sam2_em_v4.pt`; name the file for the release, e.g. `/models/v4.3.pt`), reached as `v4.segmentation.codepharm.net`; the first
-container also answers as `v3.segmentation.codepharm.net`. Each container needs its own embedding cache folder, because
-the server deletes the other checkpoint folders it finds in its cache at start-up. The certificate carries every name
-(`LETSENCRYPT_ADDITIONAL_DOMAINS`), and the renewer restarts every model container when it renews
-(`CERTBOT_RESTART_CONTAINER`, comma separated). Start both with
-`D:\Docker\Builds\SegmentationServer\rebuild-and-start.ps1 -WithV4`.
+reverse proxy routes by SNI. `D:\Docker\Builds\SegmentationServer\models.json` maps each DNS prefix to the weights
+file it serves (and a stable host port); `default` is the bare `segmentation.codepharm.net`. One command manages them:
+
+```powershell
+./rebuild-and-start.ps1 v3 sam2_em_v3_epoch_9.pt   # add/update v3, rebuild and restart only that server
+./rebuild-and-start.ps1                            # rebuild and restart every row of models.json
+./rebuild-and-start.ps1 -h                         # usage
+```
+
+It builds the image once, writes `docker-compose.models.yml` (one service per non-default row, each with its own
+embedding cache folder, because the server deletes the other checkpoint folders it finds in its cache at start-up),
+adds the new names to the shared certificate (the renewer's `LETSENCRYPT_ADDITIONAL_DOMAINS`; it restarts every
+model container when the certificate changes), and updates the managed block in the reverse proxy's `stream.conf`.
+The certificate and proxy steps only report failures. Creating the DNS CNAME is manual. See `config-template/build/models.json`.
+
+Weights live in `D:\Docker\Run\segmentation-server` and the whole folder is mounted, so a model's sidecar
+(`<stem>.model.json`) is served with it. Weights with no sidecar are reported with `SEGMENTATION_MODEL_NAME` (the
+prefix) as display name and the file stem as version; their `model_id` stays `unknown` so requests naming a model
+are not refused.
 
 `SegmentVolumes` is the auto-segmentation stream. The client sends one foreground/background set at a time for a cached `image_id`, and the server writes one `SegmentationResponse` per set. Interactive clicks stay on unary `SegmentImage`.
 

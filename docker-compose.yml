@@ -144,6 +144,8 @@ services:
       SSL_CERT_PATH: ${SEGMENTATION_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem}
       SSL_KEY_PATH: ${SEGMENTATION_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/privkey.pem}
       SAM2_CHECKPOINT: ${SAM2_CHECKPOINT:-/models/best_TEM_model.pt}
+      # Label for weights that have no .model.json; reported as the model's display name.
+      SEGMENTATION_MODEL_NAME: ${SEGMENTATION_MODEL_NAME:-}
       # Tile embeddings (not weights). Survives eviction and container restart.
       SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
       # Set SEGMENTATION_DEBUG_DUMP=1 to write the newest 40 growth results (fused and per-tile masks) to
@@ -174,57 +176,9 @@ services:
     networks:
       - viking-network
 
-  # A second model served beside the first (for example the v4 model next to v3). The same image; the model
-  # comes from SEGMENTATION_V4_CHECKPOINT and its manifest next to it (<stem>.model.json), which says what the
-  # model is and how it is fed. Started only with: docker compose --profile segmentation-v4 up -d
-  # so a plain `up` does not put a second SAM2 on the GPU.
-  #
-  # It is reached as v4.segmentation.codepharm.net: the reverse proxy routes by SNI to host port 40445
-  # (D:\Docker\mounted-configs\ReverseProxy\data\nginx\stream\stream.conf), and that name must be on the
-  # certificate (LETSENCRYPT_ADDITIONAL_DOMAINS in D:\Docker\Builds\SegmentationServer\.env).
-  # The block repeats segmentation-server on purpose: only the differences below matter, and a shared
-  # anchor would put the live service's definition at risk of changing with it.
-  segmentation-server-v4:
-    profiles: ["segmentation-v4"]
-    build:
-      context: .
-      dockerfile: Servers/SegmentationServer/Dockerfile
-    restart: unless-stopped
-    ports:
-      # gRPC over TLS. No demo page for this model.
-      - "40445:443"
-    cap_add:
-      - NET_BIND_SERVICE
-    gpus: all
-    environment:
-      TORCHINDUCTOR_CACHE_DIR: /home/user/.cache/torch_inductor
-      TORCHINDUCTOR_FX_GRAPH_CACHE: "1"
-      TRITON_CACHE_DIR: /home/user/.cache/torch_inductor/triton
-      TORCHINDUCTOR_PERSISTENT_AUTOTUNE_DIR: /home/user/.cache/torch_inductor/autotune
-      # One certificate for every model name, from the shared segmentation-letsencrypt volume.
-      SSL_CERT_PATH: ${SEGMENTATION_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/fullchain.pem}
-      SSL_KEY_PATH: ${SEGMENTATION_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/segmentation.codepharm.net/privkey.pem}
-      SAM2_CHECKPOINT: ${SEGMENTATION_V4_CHECKPOINT:-/models/sam2_em_v4.pt}
-      SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
-      SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
-      SEGMENTATION_BOX_MULTIMASK: ${SEGMENTATION_BOX_MULTIMASK:-0}
-      SEGMENTATION_DEMO_SITE: "0"
-    volumes:
-      - ${SEGMENTATION_MODEL_HOST:-D:/Docker/Run/segmentation-server}:/models:ro
-      # Its own caches. The server deletes the other checkpoint folders it finds in the embedding cache
-      # at start-up, so two models sharing one folder would delete each other's embeddings.
-      - ${SEGMENTATION_V4_INDUCTOR_CACHE:-D:/Docker/cache/segmentation-inductor-v4}:/home/user/.cache/torch_inductor
-      - ${SEGMENTATION_V4_EMBEDDING_CACHE_HOST:-D:/Docker/cache/segmentation-embeddings-v4}:/var/cache/segmentation-embeddings
-      - segmentation-letsencrypt:/etc/letsencrypt:ro
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    networks:
-      - viking-network
+  # More models are served beside this one as separate containers of the same image, one per row of
+  # D:\Docker\Builds\SegmentationServer\models.json. rebuild-and-start.ps1 writes them to
+  # docker-compose.models.yml next to itself and passes it as a second -f file.
 
   # Started only with: docker compose --profile letsencrypt up -d
   # Requires D:\Docker\Builds\SegmentationServer\.env (see config-template).
@@ -241,7 +195,7 @@ services:
     environment:
       - CERTBOT_AUTH_METHOD=${CERTBOT_AUTH_METHOD:-dns-cloudflare}
       # Every model service that reads the certificate. A name with no running container is only logged.
-      - CERTBOT_RESTART_CONTAINER=${CERTBOT_RESTART_CONTAINER:-segmentation-server,segmentation-server-v4}
+      - CERTBOT_RESTART_CONTAINER=${CERTBOT_RESTART_CONTAINER:-segmentation-server}
       - CF_DNS_API_CREDENTIALS_FILE=${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/cloudflare.ini}
       - CF_DNS_PROPAGATION_SECONDS=${CF_DNS_PROPAGATION_SECONDS:-60}
     volumes:

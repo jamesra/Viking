@@ -135,6 +135,7 @@ def test_without_a_manifest_the_older_encoding_record_still_names_the_encoding(
     assert manifest.prompt_encoding == enc.PROMPT_ENCODING_VERSION
     assert manifest.encoding_record["SEED_LOGIT"] == 9.0
     assert manifest.model_id == "unknown"
+    assert manifest.display_name == "m"
     assert "no .model.json" in caplog.text
 
 
@@ -144,11 +145,34 @@ def test_with_no_files_at_all_the_model_is_the_legacy_tiled_default(
     with caplog.at_level(logging.WARNING):
         manifest = load_model_manifest(tmp_path / "best_TEM_model.pt")
 
-    assert manifest == default_manifest()
+    assert manifest.model_id == "unknown"
+    assert manifest.model_version == "best_TEM_model"
+    assert manifest.display_name == "best_TEM_model"
+    assert "best_TEM_model.pt" in manifest.description
+    assert manifest.to_model_info().display_name == "best_TEM_model"
     assert manifest.prompt_encoding == LEGACY_ENCODING
     assert manifest.capabilities().submission_mode == SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID
     assert "legacy flat mask prompt" in caplog.text
     assert load_model_manifest(None) == default_manifest()
+
+
+def test_the_operators_model_name_labels_weights_that_have_no_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SEGMENTATION_MODEL_NAME", "v3")
+
+    manifest = load_model_manifest(tmp_path / "sam2_em_v3_epoch_9.pt")
+
+    assert manifest.display_name == "v3"
+    assert manifest.model_version == "sam2_em_v3_epoch_9"
+    assert manifest.model_id == "unknown"
+
+
+def test_a_manifest_wins_over_the_operators_model_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEGMENTATION_MODEL_NAME", "v3")
+    write(tmp_path, "v4.3.model.json", v4_manifest())
+
+    assert load_model_manifest(tmp_path / "v4.3.pt").model_id == "v4"
 
 
 def test_an_unreadable_manifest_stops_the_server_instead_of_falling_back(tmp_path: Path) -> None:
