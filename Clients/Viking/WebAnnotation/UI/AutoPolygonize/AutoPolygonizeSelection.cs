@@ -380,8 +380,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (ShouldGroupSiblingRelation(ab) || ShouldGroupSiblingRelation(ba))
                 return true;
 
-            // Shared edge/vertex only: Intersects can still be true via segment contact.
-            if (ab == ShapeRelation.Touching || ba == ShapeRelation.Touching)
+            // Shared edge/vertex only: Intersects can still be true via segment contact. External contact is reported as
+            // Touching | Exterior, so test the flag rather than equality.
+            if ((ab & ShapeRelation.Touching) != 0 || (ba & ShapeRelation.Touching) != 0)
                 return false;
 
             // Intersects without Contained/Intersecting/Touching — trust Intersects.
