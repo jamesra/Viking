@@ -539,3 +539,29 @@ def test_a_mask_that_wholly_covers_a_core_takes_it_as_object_without_predicting_
     partial_bitmap[100, 100] = False
     partial = MaskShape(box, partial_bitmap)
     assert full.covers_core(cell) and not partial.covers_core(cell)
+
+
+def test_a_scaled_png_mask_wider_than_a_window_is_tiled_out_across_cells_and_returned_as_object() -> None:
+    import cv2
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    # A 1400 x 1400 disc (more than one 1024 window) sent as a 700 x 700 PNG at scale 2.
+    cx, cy, radius = 2048, 2048, 700
+    side = 2 * radius
+    yy, xx = np.mgrid[0:side // 2, 0:side // 2]
+    coarse = ((xx - (side // 2 - 0.5) / 2) ** 2 + (yy - (side // 2 - 0.5) / 2) ** 2 <= (radius / 2) ** 2)
+    ok, png = cv2.imencode(".png", coarse.astype(np.uint8) * 255)
+    bounds = pb.BoundingBox(x_min=cx - radius, y_min=cy - radius, x_max=cx + radius - 1, y_max=cy + radius - 1)
+    prompts = _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes(), scale=2))))
+    shape = prompts.masks[0]
+    assert shape.bitmap_up.shape == (side, side)
+
+    world = _RecordingWorld(ellipse(cx, cy, radius + 100, radius + 100, 0.0))
+    answer = world.to_truth_frame(grow_segmentation(prompts.foreground, [], world.predict, masks=[shape]))
+
+    x0, y0, x1, y1 = shape.box
+    inside = shape.bitmap_up
+    assert answer[y0:y1 + 1, x0:x1 + 1][inside].all(), "every pixel of the large mask is object"
+    assert len({call[0] for call in world.given}) > 1, "more than one cell took part"
