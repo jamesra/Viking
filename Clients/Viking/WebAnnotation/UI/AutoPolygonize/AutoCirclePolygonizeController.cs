@@ -1214,7 +1214,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 stepTimer.Restart();
-                localUploadSession = new SegmentationViewportSession(parent);
+                localUploadSession = new SegmentationViewportSession(parent) { EnforceAutoDownsampleLimit = true };
                 if (!localUploadSession.TryInitializeClient())
                 {
                     SegmentationDiag.Log("RunBatch abort: TryInitializeClient failed");

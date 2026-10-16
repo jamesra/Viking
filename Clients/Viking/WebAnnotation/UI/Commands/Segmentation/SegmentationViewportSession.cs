@@ -283,18 +283,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private static int EffectiveTileCeiling => ModelProfile.TileLevelCanChange ? MaxTileDownsample : 1;
 
         /// <summary>
-        /// False when the live camera is coarser than
+        /// False when this session enforces the auto-polygonize cutoff (<see cref="EnforceAutoDownsampleLimit"/>)
+        /// and the live camera is coarser than
         /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
         /// Equality still submits. The preference is capped at DS 4 (default 2), so a camera at DS 5
         /// never uploads. Called by <see cref="UploadCurrentImageAsync"/> and
         /// <see cref="SegmentAsync"/> before any tile is sent. Auto-segment checks the same
-        /// cutoff earlier so an idle batch never starts.
+        /// cutoff earlier so an idle batch never starts. A manual operation (Resegment, add points,
+        /// dilate/erode) never enforces it.
         /// </summary>
         private bool IsCameraWithinTileSubmission(bool recordSkip = true)
         {
             double cameraDownsample = parent.Camera?.Downsample ?? parent.Downsample;
             double maxCameraDownsample = WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample;
-            if (cameraDownsample <= maxCameraDownsample)
+            if (CameraAllowsSubmission(cameraDownsample, maxCameraDownsample, EnforceAutoDownsampleLimit))
                 return true;
 
             SegmentationDiag.Log(
@@ -303,6 +305,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 RecordSkip(SegmentationSkipKind.ZoomTooCoarse);
             return false;
         }
+
+        /// <summary>
+        /// True when a camera at <paramref name="cameraDownsample"/> may submit tiles: always when the limit is not
+        /// enforced (a manual operation), otherwise only up to and including <paramref name="maxCameraDownsample"/>.
+        /// </summary>
+        internal static bool CameraAllowsSubmission(double cameraDownsample, double maxCameraDownsample, bool enforceLimit)
+            => !enforceLimit || cameraDownsample <= maxCameraDownsample;
+
+        /// <summary>
+        /// True when this session refuses to submit while the camera is coarser than
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>. Only the auto-polygonize
+        /// batch sets it. Manual operations leave it false, so the user can segment or edit a mask at any zoom.
+        /// </summary>
+        public bool EnforceAutoDownsampleLimit { get; set; }
 
         /// <summary>
         /// Maps camera downsample to the integer pyramid level sent to UploadTile/SegmentTiles.
