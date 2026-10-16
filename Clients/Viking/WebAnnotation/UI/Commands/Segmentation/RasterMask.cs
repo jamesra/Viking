@@ -82,6 +82,55 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// A volume-space point inside the mask: the set pixel nearest the centroid of the set pixels, so a concave or
+        /// eroded shape still gets a point that is on the object. Null when the mask is empty.
+        /// </summary>
+        public Vector2? InteriorPoint()
+        {
+            double sumRow = 0, sumColumn = 0;
+            long count = 0;
+            for (int row = 0; row < Size; row++)
+            {
+                int offset = row * Size;
+                for (int column = 0; column < Size; column++)
+                {
+                    if (Pixels[offset + column] == 0)
+                        continue;
+
+                    sumRow += row;
+                    sumColumn += column;
+                    count++;
+                }
+            }
+
+            if (count == 0)
+                return null;
+
+            double centreRow = sumRow / count, centreColumn = sumColumn / count;
+            double best = double.MaxValue;
+            int bestRow = 0, bestColumn = 0;
+            for (int row = 0; row < Size; row++)
+            {
+                int offset = row * Size;
+                for (int column = 0; column < Size; column++)
+                {
+                    if (Pixels[offset + column] == 0)
+                        continue;
+
+                    double distance = (row - centreRow) * (row - centreRow) + (column - centreColumn) * (column - centreColumn);
+                    if (distance < best)
+                    {
+                        best = distance;
+                        bestRow = row;
+                        bestColumn = column;
+                    }
+                }
+            }
+
+            return new Vector2((XMin + bestColumn + 0.5) * Downsample, (YMax - bestRow + 0.5) * Downsample);
+        }
+
+        /// <summary>
         /// The smallest power-of-two downsample at which a shape of <paramref name="bounds"/> still leaves
         /// <paramref name="marginPixels"/> free on every side of the <see cref="Size"/> square, so it can be dilated.
         /// </summary>

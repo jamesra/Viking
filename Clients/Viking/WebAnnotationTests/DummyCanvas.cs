@@ -114,6 +114,11 @@ namespace WebAnnotationTests
 
         public List<HitTestResult> GetAnnotations(Rectangle rect)
         {
+            // A path segment parallel to an axis gives a rectangle with no width or height, which cannot become a polygon.
+            double minExtent = Tolerance.Epsilon * 10; // points closer than Tolerance.Epsilon count as identical
+            if (rect.Width < minExtent || rect.Height < minExtent)
+                rect = new Rectangle(rect.Left, rect.Left + Math.Max(rect.Width, minExtent), rect.Bottom, rect.Bottom + Math.Max(rect.Height, minExtent));
+
             var results = new List<HitTestResult>();
             foreach (DummyAnnotation annotation in Annotations)
             {

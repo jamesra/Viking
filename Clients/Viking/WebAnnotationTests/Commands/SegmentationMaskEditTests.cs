@@ -27,6 +27,51 @@ namespace WebAnnotationTests.Commands
 
         private static int Count(byte[] pixels) => pixels.Count(p => p != 0);
 
+        [TestMethod]
+        public void MaskSeed_BlitsTheBitmapAtAnotherDownsampleWithoutTracing()
+        {
+            Vector2[] ring = [new(1000, 1000), new(1400, 1000), new(1400, 1400), new(1000, 1400), new(1000, 1000)];
+            RasterMask mask = RasterMask.FromRings([ring], downsample: 4);
+            SegmentationSeed? seed = SegmentationSeed.FromMask(mask);
+            Assert.IsNotNull(seed);
+
+            SegmentationMaskUnion union = new();
+            union.Add(seed.Value);
+            byte[] pixels = union.Rasterize(downsample: 2, seed.Value.Center, out int xMin, out int yMax);
+
+            Assert.IsNotNull(pixels);
+            // 400 x 400 volume units at 2 units per pixel is 200 x 200 pixels, give or take the edge.
+            Assert.AreEqual(200 * 200, Count(pixels), 200 * 4);
+            Vector2 inside = seed.Value.Center;
+            int column = (int)Math.Floor(inside.X / 2) - xMin;
+            int row = yMax - (int)Math.Floor(inside.Y / 2);
+            Assert.AreEqual(255, pixels[row * Size + column]);
+        }
+
+        [TestMethod]
+        public void MaskSeed_EmptyMaskHasNoSeed()
+        {
+            RasterMask empty = new(downsample: 1, xMin: 0, yMax: 0, pixels: new byte[Size * Size]);
+            Assert.IsNull(SegmentationSeed.FromMask(empty));
+        }
+
+        [TestMethod]
+        public void InteriorPoint_OfARingIsOnTheObject()
+        {
+            // A ring: the centroid is in the hole, so the point must be moved onto the band.
+            byte[] pixels = Square(100, 100, 300);
+            for (int y = 150; y < 350; y++)
+                for (int x = 150; x < 350; x++)
+                    pixels[y * Size + x] = 0;
+            RasterMask ring = new(downsample: 1, xMin: 0, yMax: Size - 1, pixels: pixels);
+
+            Vector2 point = ring.InteriorPoint().Value;
+            int column = (int)Math.Floor(point.X);
+            int row = ring.YMax - (int)Math.Floor(point.Y);
+
+            Assert.AreEqual(255, pixels[row * Size + column]);
+        }
+
         private static byte[] Edit(byte[] mask, double radius)
         {
             float[] field = SegmentationMaskEdit.SignedDistance(mask, Size, Size)!;

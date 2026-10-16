@@ -233,7 +233,8 @@ namespace WebAnnotationTests.Commands
                 new Geometry.Vector2(0, 0),
                 new Geometry.Vector2(10, 0),
                 new Geometry.Vector2(10, 10),
-                new Geometry.Vector2(0, 10)
+                new Geometry.Vector2(0, 10),
+                new Geometry.Vector2(0, 0)
             };
             Polygon polygon = new Polygon(vertices);
             Geometry.Vector2 testPoint = new Geometry.Vector2(5, 5); // Center point
@@ -254,7 +255,8 @@ namespace WebAnnotationTests.Commands
                 new Geometry.Vector2(0, 0),
                 new Geometry.Vector2(10, 0),
                 new Geometry.Vector2(10, 10),
-                new Geometry.Vector2(0, 10)
+                new Geometry.Vector2(0, 10),
+                new Geometry.Vector2(0, 0)
             };
             Polygon polygon = new Polygon(vertices);
             Geometry.Vector2 testPoint = new Geometry.Vector2(15, 15); // Outside
@@ -275,16 +277,19 @@ namespace WebAnnotationTests.Commands
                 new Geometry.Vector2(0, 0),
                 new Geometry.Vector2(10, 0),
                 new Geometry.Vector2(10, 10),
-                new Geometry.Vector2(0, 10)
+                new Geometry.Vector2(0, 10),
+                new Geometry.Vector2(0, 0)
             };
             Polygon polygon = new Polygon(vertices);
             Geometry.Vector2 testPoint = new Geometry.Vector2(5, 0); // On edge
 
             // Act
+            bool covers = polygon.Covers(testPoint);
             bool contains = polygon.Contains(testPoint);
 
-            // Assert - Edge cases typically count as inside
-            Assert.IsTrue(contains, "Point on edge should be considered inside polygon");
+            // Assert - the boundary is covered but not contained
+            Assert.IsTrue(covers, "Point on edge should be covered by polygon");
+            Assert.IsFalse(contains, "Point on edge should not be strictly inside polygon");
         }
 
         #endregion

@@ -13,6 +13,18 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class SharedViewportImageLeaseTests
     {
+        // The default profile is a single tile level; these tests exercise tile levels that follow zoom.
+        [TestInitialize]
+        public void UseMultiResolutionProfile() => SegmentationViewportSession.AdoptModelCapabilities(
+            new Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities
+            {
+                SubmissionMode = Viking.gRPC.SegmentationServiceTypes.V1.SubmissionMode.FixedTileGrid,
+                ResolutionMode = Viking.gRPC.SegmentationServiceTypes.V1.ResolutionMode.Multi
+            });
+
+        [TestCleanup]
+        public void RestoreDefaultProfile() => SegmentationViewportSession.ResetModelProfile();
+
         private static AutoPolygonizeUploadContext Context(ulong id, double downsample, Rectangle bounds)
             => new(id, downsample, bounds, 64, 64);
 
@@ -42,7 +54,8 @@ namespace WebAnnotationTests.Commands
             AutoPolygonizeUploadContext atDs2 = Context(7, 2, bounds);
 
             Assert.IsFalse(atDs2.MatchesViewportForReuse(bounds, 1));
-            Assert.IsTrue(atDs2.MatchesViewportForReuse(bounds, 4));
+            Assert.IsFalse(atDs2.MatchesViewportForReuse(bounds, 4));
+            Assert.IsTrue(atDs2.MatchesViewportForReuse(bounds, 1.2));
         }
 
         [TestMethod]

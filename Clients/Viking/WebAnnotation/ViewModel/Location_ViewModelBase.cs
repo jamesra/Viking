@@ -361,7 +361,7 @@ namespace WebAnnotation.ViewModel
             if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
             {
-                ToolStripMenuItem menuEditMask = new("Dilate/erode mask (preview)");
+                ToolStripMenuItem menuEditMask = new("Dilate/erode mask...");
                 menuEditMask.Click += ContextMenu_EditPolygonMask;
                 menuShape.DropDownItems.Add(menuEditMask);
             }
@@ -721,7 +721,9 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
-        /// shrunk with the wheel. The command's output mask is only logged; no annotation is changed.
+        /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the
+        /// starting mask by a new <see cref="SegmentationCommand"/>, whose result the user accepts or declines; only an
+        /// accepted result changes this location. Cancelling the edit changes nothing.
         /// </summary>
         protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
         {
@@ -757,14 +759,59 @@ namespace WebAnnotation.ViewModel
                 }
 
                 parent.CurrentCommand = new SegmentationMaskEditCommand(parent, mask, edited =>
-                    Trace.WriteLine(edited is null
-                        ? "Mask edit cancelled"
-                        : $"Mask edit accepted at downsample {edited.Downsample}: {edited.Pixels.Count(p => p != 0)} pixels"));
+                {
+                    if (edited is null)
+                    {
+                        Trace.WriteLine("Mask edit cancelled");
+                        return;
+                    }
+
+                    Trace.WriteLine($"Mask edit accepted at downsample {edited.Downsample}: {edited.Pixels.Count(p => p != 0)} pixels");
+
+                    // The edit command finishes itself right after this callback returns, so start the next one afterwards.
+                    parent.BeginInvoke(() => SubmitEditedMask(parent, edited));
+                });
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error launching mask edit: {ex.Message}");
                 MessageBox.Show($"Failed to launch mask edit: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Starts a <see cref="SegmentationCommand"/> that sends <paramref name="edited"/> to the segmentation server as
+        /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
+        /// shape, declining leaves it as it was.
+        /// </summary>
+        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
+        {
+            try
+            {
+                SegmentationSeed? seed = SegmentationSeed.FromMask(edited);
+                if (seed is null)
+                {
+                    MessageBox.Show("The edited mask is empty, so there is nothing to segment from.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                parent.CurrentCommand = new SegmentationCommand(
+                    parent,
+                    [seed.Value.Center],
+                    Array.Empty<Geometry.Vector2>(),
+                    UpdateLocationShapeFromVolumePolygon,
+                    channelManager,
+                    modelObj.Parent.TypeID,
+                    modelObj.ID,
+                    modelObj.ParentID,
+                    startingBoxes: [seed.Value]);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error submitting edited mask: {ex.Message}");
+                MessageBox.Show($"Failed to segment the edited mask: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

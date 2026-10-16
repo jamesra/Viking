@@ -26,16 +26,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public const int WindowSize = 1024;
 
         private readonly List<IReadOnlyList<Vector2[]>> shapes = [];
+        private readonly List<RasterMask> bitmaps = [];
 
-        /// <summary>Number of shapes added.</summary>
-        public int Count => shapes.Count;
+        /// <summary>Number of shapes and bitmaps added.</summary>
+        public int Count => shapes.Count + bitmaps.Count;
 
-        /// <summary>True when no shape has been added.</summary>
-        public bool IsEmpty => shapes.Count == 0;
+        /// <summary>True when nothing has been added.</summary>
+        public bool IsEmpty => Count == 0;
 
         /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegments"/> vertices), a polygon with its holes, or a rectangle.</summary>
         public void Add(SegmentationSeed seed)
         {
+            if (seed.Mask is not null)
+            {
+                bitmaps.Add(seed.Mask);
+                return;
+            }
+
             if (seed.Rings is not null)
             {
                 Add(seed.Rings);
@@ -131,7 +138,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             xMin = 0;
             yMax = 0;
-            if (shapes.Count == 0 || downsample <= 0)
+            if (IsEmpty || downsample <= 0)
                 return null;
 
             xMin = (int)Math.Floor(centreVolume.X / downsample) - WindowSize / 2;
@@ -142,6 +149,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool any = false;
             foreach (IReadOnlyList<Vector2[]> shape in shapes)
                 any |= Fill(pixels, WindowSize, WindowSize, xMin, yMax, downsample, shape);
+
+            foreach (RasterMask bitmap in bitmaps)
+                any |= Blit(pixels, xMin, yMax, downsample, bitmap);
 
             if (any && holePointsVolume is { Count: > 0 } && holeRadiusPixels > 0)
                 any = CutHoles(pixels, WindowSize, xMin, yMax, downsample, holePointsVolume, holeRadiusPixels);
@@ -181,6 +191,37 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 },
                 Png = Google.Protobuf.ByteString.CopyFrom(stream.ToArray())
             };
+        }
+
+        /// <summary>
+        /// Sets every window pixel whose centre falls on a set pixel of <paramref name="bitmap"/>. The bitmap may be at a
+        /// different downsample than the window; it is sampled by world position, so nothing is traced or fitted.
+        /// </summary>
+        private static bool Blit(byte[] pixels, int xMin, int yMax, int downsample, RasterMask bitmap)
+        {
+            bool any = false;
+            for (int row = 0; row < WindowSize; row++)
+            {
+                double y = (yMax - row + 0.5) * downsample;
+                int sourceRow = bitmap.YMax - (int)Math.Floor(y / bitmap.Downsample);
+                if (sourceRow < 0 || sourceRow >= RasterMask.Size)
+                    continue;
+
+                int sourceOffset = sourceRow * RasterMask.Size;
+                int offset = row * WindowSize;
+                for (int column = 0; column < WindowSize; column++)
+                {
+                    double x = (xMin + column + 0.5) * downsample;
+                    int sourceColumn = (int)Math.Floor(x / bitmap.Downsample) - bitmap.XMin;
+                    if (sourceColumn < 0 || sourceColumn >= RasterMask.Size || bitmap.Pixels[sourceOffset + sourceColumn] == 0)
+                        continue;
+
+                    pixels[offset + column] = 255;
+                    any = true;
+                }
+            }
+
+            return any;
         }
 
         /// <summary>Clears a disc of <paramref name="radius"/> pixels around each point; returns whether any pixel is still set.</summary>
