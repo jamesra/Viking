@@ -1028,6 +1028,36 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Explains why <see cref="IsValid"/> is false, mirroring its checks in the same order.
+        /// Used by callers (e.g. the pen retrace) that need to tell a bad source polygon apart from a bad cut.
+        /// </summary>
+        /// <returns>Null when the polygon is valid; otherwise a short reason including vertex count and area.</returns>
+        public string DescribeInvalidity()
+        {
+            string stats = $"{_ExteriorRing.Length - 1} vertices, {InteriorPolygons.Count} interior ring(s), area {Area:F3}";
+
+            if (_ExteriorRing.Distinct().Count() != _ExteriorRing.Length - 1)
+                return $"exterior ring has repeated vertices ({stats})";
+
+            if (Polygon.SelfIntersects(this))
+                return $"exterior ring intersects itself ({stats})";
+
+            for (int iInnerPoly = 0; iInnerPoly < InteriorPolygons.Count; iInnerPoly++)
+            {
+                if (IsInnerValid(iInnerPoly, CheckForIntersectionWithOtherInnerPolygons: false) == false)
+                    return $"interior ring {iInnerPoly} is not valid inside the exterior ring ({stats})";
+            }
+
+            if (InteriorPolygons.Count > 0 && AnyInnerPolygonsIntersect())
+                return $"interior rings intersect each other ({stats})";
+
+            if (InteriorPolygons.Count > 0 && Area < Tolerance.Epsilon)
+                return $"area is below tolerance ({stats})";
+
+            return null;
+        }
+
+        /// <summary>
         /// Return true if the exterior ring intersects itself
         /// </summary>
         /// <param name="lines"></param>
