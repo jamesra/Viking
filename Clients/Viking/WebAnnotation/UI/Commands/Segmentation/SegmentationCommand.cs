@@ -49,7 +49,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Constants
         private const double SIMPLIFICATION_TOLERANCE = 2.0; // pixels
         private const int DEFAULT_DEBOUNCE_MS = 500;
-        private const int DEFAULT_MAX_TILE_ROUNDS = 4;
         #endregion
 
         #region Fields
@@ -65,6 +64,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         // gRPC client - channel is now shared via Global.SegmentationChannelManager
         private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
+
+        // How the server's model wants to be used, read from GetServerStatus on first use of a client.
+        private SegmentationServerContract? serverContract;
 
         // Segmentation state
         private byte[] currentMaskData;
@@ -92,7 +94,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         // Configuration 
         private readonly int debounceMs;
-        private readonly int maxTileRounds;
 
         // Structure type for created annotations
         //private readonly StructureTypeObj structureType;
@@ -168,9 +169,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             // Load configuration from AppSettings
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
-            maxTileRounds = int.TryParse(ConfigurationManager.AppSettings["SegmentationMaxTileRounds"], out var rounds) && rounds >= 0
-                ? rounds
-                : DEFAULT_MAX_TILE_ROUNDS;
 
             Parent.Cursor = Cursors.Cross;
 
@@ -264,6 +262,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
+                serverContract = null;
 
                 Debug.WriteLine($"SegmentationCommand activated. Using shared channel to {channel.ResolvedTarget}");
             }
@@ -801,13 +800,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             public int Downsample { get; }
         }
         /// <summary>
-        /// Uploads cells that contain foreground points, plus any cells the server asked for, then segments.
+        /// Uploads the cells that contain foreground points, then segments them over SegmentTilesStream, which asks for
+        /// (and this command uploads) any further cells the mask grows into.
         /// Does not upload or name every visible cell: the server embedding cache is smaller than a DS1 view,
         /// and listing those cells returns TILE_NOT_FOUND.
-        /// Shows each response immediately, including a partial mask that still needs tiles.
         /// Called from point clicks, auto-segmentation activation, and the pan/zoom debounce.
         /// </summary>
-
         private async Task RequestSegmentation()
         {
             if (grpcClient is null)
@@ -821,48 +819,35 @@ namespace WebAnnotation.UI.Commands.Segmentation
             CancellationToken token = uploadCancellationTokenSource.Token;
             try
             {
-                List<TileCell> extras = [];
-                for (int round = 0; round <= maxTileRounds; round++)
+                SegmentationServerContract contract = await EnsureServerContractAsync(token).ConfigureAwait(false);
+                if (!contract.AcceptsTiles)
                 {
-                    token.ThrowIfCancellationRequested();
-                    if (generation != Volatile.Read(ref segmentGeneration))
-                        return;
-                    (int downsample, TileSignature signature, _, bool grayscale) =
-                        await ReadViewTilesAsync().ConfigureAwait(false);
-                    mosaicDownsample = downsample;
-                    List<TileCell> needed = TilesForRound(foregroundPoints, downsample, extras);
-                    if (needed.Count == 0)
-                        return;
-                    if (!await UploadMissingTilesAsync(signature, needed, grayscale, token).ConfigureAwait(false))
-                    {
-                        Debug.WriteLine("No segmentation tiles could be uploaded");
-                        return;
-                    }
-                    if (generation != Volatile.Read(ref segmentGeneration))
-                        return;
-                    SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
-                        signature, needed, grayscale, token).ConfigureAwait(false);
-                    if (response is null || generation != Volatile.Read(ref segmentGeneration))
-                        return;
-                    await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        if (generation == Volatile.Read(ref segmentGeneration))
-                            ProcessSegmentationResponse(response);
-                    }).Task.ConfigureAwait(false);
-                    if (response.RequestedTiles.Count == 0 || round == maxTileRounds)
-                        break;
-                    extras.Clear();
-                    foreach (TileCoord tile in response.RequestedTiles)
-                    {
-                        if (tile.Downsample != downsample)
-                            continue;
-
-                        uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
-                        extras.Add(new TileCell(tile.Row, tile.Col));
-                    }
-                    if (extras.Count == 0)
-                        break;
+                    ReportUnsupportedSubmissionMode(contract);
+                    return;
                 }
+
+                (int downsample, TileSignature signature, _, bool grayscale) =
+                    await ReadViewTilesAsync().ConfigureAwait(false);
+                mosaicDownsample = downsample;
+                List<TileCell> needed = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
+                if (needed.Count == 0)
+                    return;
+                if (!await UploadMissingTilesAsync(signature, needed, grayscale, token).ConfigureAwait(false))
+                {
+                    Debug.WriteLine("No segmentation tiles could be uploaded");
+                    return;
+                }
+                if (generation != Volatile.Read(ref segmentGeneration))
+                    return;
+                SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
+                    contract, signature, needed, grayscale, token).ConfigureAwait(false);
+                if (response is null || generation != Volatile.Read(ref segmentGeneration))
+                    return;
+                await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
+                {
+                    if (generation == Volatile.Read(ref segmentGeneration))
+                        ProcessSegmentationResponse(response);
+                }).Task.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -883,11 +868,44 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
+        /// <summary>
+        /// The server's usage instructions (model_id, submission and resolution mode), fetched once per client.
+        /// </summary>
+        private async Task<SegmentationServerContract> EnsureServerContractAsync(CancellationToken token)
+        {
+            if (serverContract is not null)
+                return serverContract;
+            if (grpcClient is null)
+                throw new InvalidOperationException("Segmentation client is not connected.");
+
+            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(10), cancellationToken: token);
+            ServerStatusResponse status = await grpcClient.GetServerStatusAsync(new ServerStatusRequest(), callOptions)
+                .ResponseAsync.ConfigureAwait(false);
+            SegmentationServerContract contract = SegmentationServerContract.FromStatus(status);
+            Debug.WriteLine(
+                $"Segmentation model {contract.ModelId} ({status.Model?.PromptEncoding}), " +
+                $"{contract.SubmissionMode}/{contract.ResolutionMode}, requires model_id={contract.RequiresModelId}");
+            serverContract = contract;
+            return contract;
+        }
+
+        /// <summary>
+        /// This command only submits fixed tiles. A model that wants the whole viewport refuses UploadTile.
+        /// </summary>
+        private static void ReportUnsupportedSubmissionMode(SegmentationServerContract contract)
+        {
+            Debug.WriteLine($"Segmentation model {contract.ModelId} wants {contract.SubmissionMode}; tiles are not supported");
+            Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                MessageBox.Show(
+                    $"The segmentation server's model ({contract.ModelId}) takes whole-viewport images, which Viking does not support.",
+                    "Segmentation", MessageBoxButtons.OK, MessageBoxIcon.Warning)));
+        }
+
         private async Task<(int downsample, TileSignature signature, List<TileCell> visible, bool grayscale)> ReadViewTilesAsync()
         {
             return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
             {
-                int downsample = CurrentPyramidDownsample();
+                int downsample = TileDownsample;
                 TileSignature signature = CurrentTileSignature(downsample);
                 Rectangle bounds = GetCurrentViewportBounds();
                 viewportBounds = bounds;
@@ -903,34 +921,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Ceiling for submitted tile downsample from appSettings SegmentationTileDownsample (default 2).
+        /// Pyramid level of submitted tiles. The server's manifest does not report the pixel size its model was
+        /// trained at, so tiles are full resolution. Once it does, this is the nearest power of two to
+        /// (trained nm per pixel) / (volume nm per pixel), at least 1.
         /// </summary>
-        private static int MaxTileDownsample =>
-            int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int max) && max >= 1
-                ? max
-                : 2;
-
-        /// <summary>
-        /// Maps camera downsample to UploadTile/SegmentTiles pyramid level: ≤1 → 1, else ceil and clamp to max.
-        /// </summary>
-        private static int ResolveTileDownsample(double cameraDownsample)
-        {
-            if (double.IsNaN(cameraDownsample) || double.IsInfinity(cameraDownsample) || cameraDownsample <= 0)
-                return 1;
-
-            int roundedUp = (int)Math.Ceiling(cameraDownsample);
-            if (roundedUp < 1)
-                roundedUp = 1;
-
-            return Math.Min(MaxTileDownsample, roundedUp);
-        }
-
-        /// <summary>
-        /// Pyramid level for UploadTile/SegmentTiles from the live camera via
-        /// <see cref="ResolveTileDownsample"/>.
-        /// </summary>
-        private int CurrentPyramidDownsample()
-            => ResolveTileDownsample(Parent.Camera?.Downsample ?? Parent.Downsample);
+        private const int TileDownsample = 1;
 
         private TileSignature CurrentTileSignature(int downsample)
         {
@@ -959,15 +954,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Renders and uploads cells that this command has not yet had accepted.
         /// Returns false when every needed cell failed to capture.
         /// </summary>
-
         private async Task<bool> UploadMissingTilesAsync(
             TileSignature signature,
             IReadOnlyList<TileCell> cells,
             bool grayscale,
             CancellationToken token)
         {
-            if (grpcClient is null)
-                return false;
             bool anyReady = false;
             HashSet<(int Row, int Col)> seen = [];
             foreach (TileCell cell in cells)
@@ -975,60 +967,50 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 token.ThrowIfCancellationRequested();
                 if (!seen.Add((cell.Row, cell.Col)))
                     continue;
-                string key = TileKey(signature, cell.Row, cell.Col);
-                if (uploadedTileKeys.Contains(key))
-                {
+                if (await TryUploadTileAsync(signature, cell, grayscale, token).ConfigureAwait(false))
                     anyReady = true;
-                    continue;
-                }
-                var (png, width, height) = await CaptureTileImage(cell, signature.Downsample, grayscale, token).ConfigureAwait(false);
-                if (png is null || png.Length == 0)
-                {
-                    Debug.WriteLine($"Failed to capture tile row={cell.Row} col={cell.Col}");
-                    continue;
-                }
-                UploadTileRequest upload = new()
-                {
-                    Coord = ToCoord(signature, cell),
-                    ImageData = Google.Protobuf.ByteString.CopyFrom(png),
-                    Width = width,
-                    Height = height
-                };
-                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
-                Debug.WriteLine(
-                    $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
-                    $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} bytes={png.Length}");
-                UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
-                uploadedTileKeys.Add(key);
-                anyReady = true;
-                Debug.WriteLine(
-                    $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
-                    $"alreadyCached={response.AlreadyCached}");
             }
             return anyReady;
         }
 
         /// <summary>
-        /// Foreground cells plus growth neighbors. Background clicks do not add cells;
-        /// they can span the viewport and overflow the server embedding cache.
+        /// Renders and uploads one cell unless this command already had it accepted.
+        /// Returns false when the cell could not be captured.
         /// </summary>
-        private static List<TileCell> TilesForRound(
-            IReadOnlyList<Geometry.Vector2> foregroundPoints,
-            int downsample,
-            IReadOnlyList<TileCell> extras)
+        private async Task<bool> TryUploadTileAsync(
+            TileSignature signature,
+            TileCell cell,
+            bool grayscale,
+            CancellationToken token)
         {
-            List<TileCell> cells = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
-            if (extras is null || extras.Count == 0)
-                return cells;
-
-            HashSet<(int Row, int Col)> seen = new(cells.Select(cell => (cell.Row, cell.Col)));
-            foreach (TileCell extra in extras)
+            if (grpcClient is null)
+                return false;
+            string key = TileKey(signature, cell.Row, cell.Col);
+            if (uploadedTileKeys.Contains(key))
+                return true;
+            var (png, width, height) = await CaptureTileImage(cell, signature.Downsample, grayscale, token).ConfigureAwait(false);
+            if (png is null || png.Length == 0)
             {
-                if (seen.Add((extra.Row, extra.Col)))
-                    cells.Add(extra);
+                Debug.WriteLine($"Failed to capture tile row={cell.Row} col={cell.Col}");
+                return false;
             }
-
-            return cells;
+            UploadTileRequest upload = new()
+            {
+                Coord = ToCoord(signature, cell),
+                ImageData = Google.Protobuf.ByteString.CopyFrom(png),
+                Width = width,
+                Height = height
+            };
+            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
+            Debug.WriteLine(
+                $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
+                $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} bytes={png.Length}");
+            UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
+            uploadedTileKeys.Add(key);
+            Debug.WriteLine(
+                $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
+                $"alreadyCached={response.AlreadyCached}");
+            return true;
         }
 
         /// <summary>
@@ -1036,6 +1018,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// when the next evicted cell was still named in the request.
         /// </summary>
         private async Task<SegmentationResponse?> SegmentWithMissingTileRetriesAsync(
+            SegmentationServerContract contract,
             TileSignature signature,
             List<TileCell> needed,
             bool grayscale,
@@ -1048,7 +1031,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 try
                 {
-                    return await SegmentUploadedTilesAsync(signature, needed, token).ConfigureAwait(false);
+                    return await SegmentTilesStreamAsync(contract, signature, needed, grayscale, token).ConfigureAwait(false);
                 }
                 catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
                     TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
@@ -1079,20 +1062,88 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// SegmentTiles for <paramref name="cells"/> that this command has already uploaded.
+        /// SegmentTilesStream for <paramref name="cells"/> that this command has already uploaded. The server grows the
+        /// mask over the cells it has and asks for the ones it reaches; each is rendered, uploaded and answered here.
         /// </summary>
-        private async Task<SegmentationResponse> SegmentUploadedTilesAsync(
+        private async Task<SegmentationResponse> SegmentTilesStreamAsync(
+            SegmentationServerContract contract,
             TileSignature signature,
             IReadOnlyList<TileCell> cells,
+            bool grayscale,
             CancellationToken token)
         {
             if (grpcClient is null)
                 throw new InvalidOperationException("Segmentation client is not connected.");
+            SegmentTilesRequest request = BuildSegmentTilesRequest(contract, signature, cells);
+            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(120), cancellationToken: token);
+            using AsyncDuplexStreamingCall<SegmentTilesStreamRequest, SegmentTilesStreamResponse> call =
+                grpcClient.SegmentTilesStream(callOptions);
+            await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Start = request }).ConfigureAwait(false);
+            while (await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
+            {
+                SegmentTilesStreamResponse update = call.ResponseStream.Current;
+                if (update.UpdateCase == SegmentTilesStreamResponse.UpdateOneofCase.Needed)
+                {
+                    TilesAnswer answer = await UploadNeededTilesAsync(signature, update.Needed, grayscale, token).ConfigureAwait(false);
+                    await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Answer = answer }).ConfigureAwait(false);
+                }
+                else if (update.UpdateCase == SegmentTilesStreamResponse.UpdateOneofCase.Result)
+                {
+                    await call.RequestStream.CompleteAsync().ConfigureAwait(false);
+                    return update.Result;
+                }
+            }
+
+            throw new InvalidOperationException("The segmentation stream ended without a result.");
+        }
+
+        /// <summary>
+        /// Uploads each tile the server asked for and lists every one as ready or unavailable, as the stream requires.
+        /// </summary>
+        private async Task<TilesAnswer> UploadNeededTilesAsync(
+            TileSignature signature,
+            TilesNeeded needed,
+            bool grayscale,
+            CancellationToken token)
+        {
+            TilesAnswer answer = new();
+            foreach (TileCoord tile in needed.Tiles)
+            {
+                token.ThrowIfCancellationRequested();
+                bool ready = false;
+                if (tile.Downsample == signature.Downsample)
+                {
+                    // The server is asking, so it does not hold this cell whatever this command remembers.
+                    uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
+                    ready = await TryUploadTileAsync(signature, new TileCell(tile.Row, tile.Col), grayscale, token).ConfigureAwait(false);
+                }
+
+                if (ready)
+                    answer.Ready.Add(tile);
+                else
+                    answer.Unavailable.Add(tile);
+            }
+
+            return answer;
+        }
+
+        /// <summary>
+        /// Prompts as the server's contract asks: the model's id, and the clicks as a foreground and a background Feature
+        /// (the legacy foreground/background fields are not used). Points are volume-space pixels at the tiles' downsample,
+        /// which is what the proto calls mosaic pixels.
+        /// </summary>
+        private SegmentTilesRequest BuildSegmentTilesRequest(
+            SegmentationServerContract contract,
+            TileSignature signature,
+            IReadOnlyList<TileCell> cells)
+        {
             SegmentTilesRequest request = new()
             {
                 MultimaskOutput = false,
                 OmitLabeledImage = true
             };
+            if (!string.IsNullOrEmpty(contract.ModelId))
+                request.ModelId = contract.ModelId;
             foreach (TileCell cell in cells)
             {
                 string key = TileKey(signature, cell.Row, cell.Col);
@@ -1113,18 +1164,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (request.Tiles.Count == 0)
                 throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
+
+            Feature foreground = new();
             foreach (Geometry.Vector2 point in foregroundPoints)
             {
                 (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
-                request.Foreground.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+                foreground.Points.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
             }
-            foreach (Geometry.Vector2 point in backgroundPoints)
+            request.ForegroundFeature = foreground;
+
+            if (backgroundPoints.Count > 0)
             {
-                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
-                request.Background.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+                Feature background = new();
+                foreach (Geometry.Vector2 point in backgroundPoints)
+                {
+                    (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
+                    background.Points.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+                }
+                request.BackgroundFeature = background;
             }
-            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(60), cancellationToken: token);
-            return await grpcClient.SegmentTilesAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
+
+            return request;
         }
 
         private static bool TryParseMissingTile(string detail, out int row, out int col)
@@ -1278,11 +1338,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             try
             {
-                // Server polygons are top-left. MosaicPixelToWorld flips Y into Viking world space.
+                // Server polygon vertices are pixel centres, top-left origin. PolygonPointToWorld puts them on pixel
+                // edges and flips Y into Viking world space.
                 List<Geometry.Vector2> worldPoints = new(protoPolygon.Points.Count);
                 foreach (var point in protoPolygon.Points)
                 {
-                    worldPoints.Add(SegmentationTileGrid.MosaicPixelToWorld(
+                    worldPoints.Add(SegmentationTileGrid.PolygonPointToWorld(
                         response.OriginX,
                         response.OriginY,
                         point.X,
@@ -1340,70 +1401,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Image Capture
-        private async Task<(byte[]? data, int width, int height)> CaptureViewportImage(CancellationToken cancellationToken)
-        {
-            try
-            {
-                CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
-
-                var (graphicsDevice, scene, width, height) = ValidateRenderingContext();
-                if (graphicsDevice is null || scene is null)
-                {
-                    return (null, 0, 0);
-                }
-
-                var (renderTarget, isGrayscale) = await RenderViewportToTexture(scene, width, height, renderToken).ConfigureAwait(false);
-                if (renderTarget is null)
-                {
-                    return (null, 0, 0);
-                }
-
-                try
-                {
-                    // GetData must run on the UI/Graphics thread (GraphicsDevice affinity)
-                    Color[] pixels = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        Color[] p = new Color[width * height];
-                        renderTarget.GetData(p);
-                        return p;
-                    }).Task.ConfigureAwait(false);
-
-                    byte[] pngData = EncodeToPng(renderTarget, pixels, width, height, isGrayscale);
-
-                    // Validate the captured image
-                    var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
-                    if (!isValid)
-                    {
-                        Debug.WriteLine($"Captured image failed validation: {errorMessage}");
-                        return (null, 0, 0);
-                    }
-
-                    Debug.WriteLine($"Viewport image captured and validated as PNG ({pngData.Length} bytes, {width}x{height})");
-
-#if DEBUG
-                    // Save captured image to disk for debugging
-                    SaveCapturedImageToDisk(pngData, width, height);
-#endif
-
-                    return (pngData, width, height);
-                }
-                finally
-                {
-                    Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget?.Dispose()));
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("Viewport image capture was cancelled");
-                return (null, 0, 0);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error capturing viewport: {ex.Message}");
-                return (null, 0, 0);
-            }
-        }
-
         /// <summary>
         /// Validates that captured PNG image data is valid and can be fully decoded.
         /// Uses ImageSharp so validation can run on any thread without requiring the graphics device.
@@ -1511,109 +1508,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             // Otherwise return the render token
             return renderCancellationTokenSource.Token;
-        }
-
-#if DEBUG
-        /// <summary>
-        /// Saves captured image to disk for debugging purposes
-        /// </summary>
-        /// <param name="pngData">The PNG image data to save</param>
-        /// <param name="width">Image width in pixels</param>
-        /// <param name="height">Image height in pixels</param>
-        private void SaveCapturedImageToDisk(byte[] pngData, int width, int height)
-        {
-            try
-            {
-                // Create directory in temp folder
-                string debugDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "VikingSegmentation");
-                if (!Directory.Exists(debugDir))
-                {
-                    Directory.CreateDirectory(debugDir);
-                }
-
-                // Create filename with timestamp
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string filename = $"segmentation_capture_{timestamp}_{width}x{height}.png";
-                string filepath = System.IO.Path.Combine(debugDir, filename);
-
-                // Save the image
-                File.WriteAllBytes(filepath, pngData);
-
-                Debug.WriteLine($"Captured image saved to: {filepath}");
-            }
-            catch (Exception ex)
-            {
-                // Don't fail capture if save fails - just log the error
-                Debug.WriteLine($"Failed to save captured image to disk: {ex.Message}");
-            }
-        }
-#endif
-
-        private (GraphicsDevice device, VikingXNA.Scene scene, int width, int height) ValidateRenderingContext()
-        {
-            var graphicsDevice = Parent.Device;
-            if (graphicsDevice is null)
-            {
-                Debug.WriteLine("GraphicsDevice is null");
-                return (null, null, 0, 0);
-            }
-
-            var scene = Parent.Scene;
-            if (scene is null)
-            {
-                Debug.WriteLine("Scene is null");
-                return (null, null, 0, 0);
-            }
-
-            int width = scene.Viewport.Width;
-            int height = scene.Viewport.Height;
-
-            if (width <= 0 || height <= 0)
-            {
-                Debug.WriteLine($"Invalid viewport dimensions: {width}x{height}");
-                return (null, null, 0, 0);
-            }
-
-            return (graphicsDevice, scene, width, height);
-        }
-
-        private async Task<(RenderTarget2D? renderTarget, bool isGrayscale)> RenderViewportToTexture(VikingXNA.Scene scene, int width, int height, CancellationToken cancellationToken)
-        {
-            float centerX = scene.Camera.LookAt.X;
-            float centerY = scene.Camera.LookAt.Y;
-            int sectionZ = Parent.Section.Number;
-
-            Debug.WriteLine($"Rendering scene to texture: {width}x{height}, center: ({centerX}, {centerY}), section: {sectionZ}");
-
-            try
-            {
-                bool isGrayscale = Parent.CurrentChannelset.Length == 1;
-                RenderTarget2D renderTarget = await Parent.RenderSceneToTexture(
-                    scene,
-                    centerX,
-                    centerY,
-                    sectionZ,
-                    showOverlays: false,
-                    asyncTextureLoad: false,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (renderTarget is null)
-                {
-                    Debug.WriteLine("RenderSceneToTexture returned null");
-                }
-
-                return (renderTarget, isGrayscale);
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("RenderSceneToTexture was cancelled");
-                return (null, false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"RenderSceneToTexture failed: {ex.Message}");
-                return (null, false);
-            }
         }
 
         private byte[] EncodeToPng(RenderTarget2D renderTarget, Color[] pixels, int width, int height, bool isGrayscale)
