@@ -429,7 +429,7 @@ def _one_bit_png(rows) -> bytes:
     )
 
 
-def test_a_one_bit_png_foreground_mask_decodes_and_a_png_over_the_sam2_window_is_refused() -> None:
+def test_a_one_bit_png_foreground_mask_decodes() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
     from segmentation_server.server import _prompts_from
@@ -442,9 +442,73 @@ def test_a_one_bit_png_foreground_mask_decodes_and_a_png_over_the_sam2_window_is
     assert prompts.masks[0].bitmap_up.tolist() == [[True, True, False, False], [True, False, False, False]]
     assert prompts.foreground == [prompts.masks[0].interior_point()], "the click lands on the mask"
 
-    big = pb.BoundingBox(x_min=0, y_min=0, x_max=1024, y_max=0)
-    with pytest.raises(ValueError):
-        _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=big, png=b"x"))))
+
+def test_a_png_larger_than_one_sam2_window_is_accepted() -> None:
+    import cv2
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    width, height = 3000, 1500  # several cells across, well past 1024 on both sides
+    image = np.zeros((height, width), dtype=np.uint8)
+    image[0, 2999] = 255  # top-right pixel: (x_max, y_max)
+    ok, png = cv2.imencode(".png", image)
+    bounds = pb.BoundingBox(x_min=1000, y_min=2000, x_max=1000 + width - 1, y_max=2000 + height - 1)
+    prompts = _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
+
+    bitmap = prompts.masks[0].bitmap_up
+    assert bitmap.shape == (height, width) and bitmap.sum() == 1 and bitmap[height - 1, width - 1]
+    assert prompts.foreground == [(1000 + width - 1, 2000 + height - 1)]
+
+
+def test_a_scaled_png_is_expanded_to_blocks_anchored_at_x_min_and_y_max_and_clipped_to_the_bounds() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    # 7 wide x 5 high at scale 3 -> a 3x2 PNG. Row 0 is y_max; the last column and row are partial blocks.
+    rows = [[1, 0, 0], [0, 0, 1]]
+    bounds = pb.BoundingBox(x_min=100, y_min=200, x_max=106, y_max=204)
+    mask = pb.Mask(bounds=bounds, png=_one_bit_png(rows), scale=3)
+    shape = _prompts_from(_request(foreground_feature=pb.Feature(mask=mask))).masks[0]
+
+    expected_down = np.zeros((5, 7), dtype=bool)  # image order, row 0 is y_max
+    expected_down[0:3, 0:3] = True  # PNG pixel (0, 0)
+    expected_down[3:5, 6:7] = True  # PNG pixel (2, 1): a 1-wide, 2-high clipped block
+    assert shape.bitmap_up.tolist() == np.flipud(expected_down).tolist()
+
+
+@pytest.mark.parametrize("set_scale", [None, 0, 1])
+def test_an_unset_zero_or_one_scale_means_one_png_pixel_per_mosaic_pixel(set_scale) -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    rows = [[1, 0], [0, 1]]
+    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=1, y_max=1)
+    mask = pb.Mask(bounds=bounds, png=_one_bit_png(rows))
+    if set_scale is not None:
+        mask.scale = set_scale
+    shape = _prompts_from(_request(background_feature=pb.Feature(mask=mask))).background_masks[0]
+    assert shape.bitmap_up.tolist() == [[False, True], [True, False]]
+
+
+def test_a_png_that_does_not_match_the_bounds_at_its_scale_is_refused_before_it_is_decoded() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server import server
+    from segmentation_server.server import _prompts_from
+
+    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=6, y_max=4)  # 7 x 5
+    png = _one_bit_png([[1, 0, 0], [0, 0, 1]])  # 3 x 2: right for scale 3 only
+    for scale in (1, 2, 4):
+        with pytest.raises(ValueError, match="3x2"):
+            _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png, scale=scale))))
+    _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png, scale=3))))
+
+    huge = pb.BoundingBox(x_min=0, y_min=0, x_max=server.MAX_MASK_PIXELS, y_max=1)
+    with pytest.raises(ValueError, match="exceed"):
+        _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=huge, png=b"x", scale=2))))
 
 
 def test_every_pixel_of_a_foreground_bitmap_mask_is_returned_as_object_even_where_sam2_left_a_hole() -> None:

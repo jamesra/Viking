@@ -2054,7 +2054,7 @@ def _prompts_from(request: Any) -> _Prompts:
     the mask (else the rectangle) becomes the foreground click.
 
     Raises:
-        ValueError: A ``Mask`` carries ``png``, which is not supported yet.
+        ValueError: A ``Mask`` is larger than the server accepts or its ``png`` does not match its bounds and ``scale``.
     """
     foreground = [(point.x, point.y) for point in request.foreground]
     background = [(point.x, point.y) for point in request.background]
@@ -2101,16 +2101,27 @@ def _prompts_from(request: Any) -> _Prompts:
 
 
 MAX_MASK_PIXELS = 1 << 26
-# A mask bitmap covers at most one SAM2 window.
-MAX_MASK_PNG_SIDE = 1024
+
+
+def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
+    """``(width, height)`` from a PNG's IHDR chunk, or None when ``data`` does not start like a PNG.
+
+    Read before decoding so a tiny file that declares a huge image is refused without allocating it.
+    """
+    if len(data) < 24 or data[1:4] != b"PNG" or data[12:16] != b"IHDR":
+        return None
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
 def _mask_shape(mask: Any) -> MaskShape:
     """One ``Mask`` message as a :class:`MaskShape`.
 
+    A ``png`` is ``ceil(width / scale)`` by ``ceil(height / scale)``; each of its pixels is expanded to a
+    ``scale`` x ``scale`` block of mosaic pixels (nearest neighbour), clipped to the bounds.
+
     Raises:
-        ValueError: The bounds are larger than ``MAX_MASK_PIXELS``, a ``png`` is larger than
-            ``MAX_MASK_PNG_SIDE`` square, or the PNG does not decode to exactly the bounds' size.
+        ValueError: The bounds are larger than ``MAX_MASK_PIXELS``, or the PNG does not decode to the size
+            the bounds and ``scale`` call for.
     """
     x0, x1 = sorted((int(mask.bounds.x_min), int(mask.bounds.x_max)))
     y0, y1 = sorted((int(mask.bounds.y_min), int(mask.bounds.y_max)))
@@ -2119,13 +2130,21 @@ def _mask_shape(mask: Any) -> MaskShape:
         raise ValueError(f"Mask bounds {width}x{height} exceed {MAX_MASK_PIXELS} pixels.")
     if not mask.png:
         return MaskShape((x0, y0, x1, y1))
-    if width > MAX_MASK_PNG_SIDE or height > MAX_MASK_PNG_SIDE:
-        raise ValueError(f"Mask.png bounds {width}x{height} exceed {MAX_MASK_PNG_SIDE}x{MAX_MASK_PNG_SIDE}, the SAM2 input size.")
+    scale = max(int(mask.scale), 1) if mask.HasField("scale") else 1
+    want_width, want_height = -(-width // scale), -(-height // scale)
+    declared = _png_size(mask.png)
+    if declared is not None and declared != (want_width, want_height):
+        raise ValueError(f"Mask.png must be {want_width}x{want_height} for bounds {width}x{height} at scale {scale}, got {declared[0]}x{declared[1]}.")
     image = cv2.imdecode(np.frombuffer(mask.png, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
-    if image is None or image.shape != (height, width):
+    if image is None or image.shape != (want_height, want_width):
         got = None if image is None else f"{image.shape[1]}x{image.shape[0]}"
-        raise ValueError(f"Mask.png must decode to {width}x{height} to match bounds, got {got}.")
-    return MaskShape((x0, y0, x1, y1), np.flipud(image > 0))
+        raise ValueError(f"Mask.png must decode to {want_width}x{want_height} for bounds {width}x{height} at scale {scale}, got {got}.")
+    bitmap = image > 0
+    if scale > 1:
+        # Block (0, 0) is anchored at the image's top-left (x_min, y_max), so edge blocks are cut on the
+        # right and bottom of the image, i.e. at x_max and y_min.
+        bitmap = np.repeat(np.repeat(bitmap, scale, axis=0), scale, axis=1)[:height, :width]
+    return MaskShape((x0, y0, x1, y1), np.flipud(bitmap))
 
 
 def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:
