@@ -83,21 +83,22 @@ Box = Tuple[int, int, int, int]
 MAX_BOX_CELLS = 64
 
 
-def cores_under_box(box: Box) -> Optional[Tuple[List[Cell], dict]]:
+def cores_under_box(box: Box, max_cells: Optional[int] = MAX_BOX_CELLS) -> Optional[Tuple[List[Cell], dict]]:
     """Split the cores a mosaic box touches into those it covers entirely and those it covers in part.
 
     ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. Returns ``(full, partial)``:
     ``full`` lists the cells whose whole 512x512 core lies inside the box, and ``partial`` maps
     every other touched cell to the box's overlap with that core (same form as ``box``, inside the
     core, so at least 256 px from the cell's window border). None when the box spans more than
-    ``MAX_BOX_CELLS`` cores, which no longer describes a seed.
+    ``max_cells`` cores (default ``MAX_BOX_CELLS``), which no longer describes a seed. Pass None for no limit: a mask
+    is a claim about every pixel, so it is read however many cores it spans.
     """
     x0, y0, x1, y1 = (int(v) for v in box)
     x0, x1 = min(x0, x1), max(x0, x1)
     y0, y1 = min(y0, y1), max(y0, y1)
     first = cell_of_point(x0, y0)
     last = cell_of_point(x1, y1)
-    if (last.row - first.row + 1) * (last.col - first.col + 1) > MAX_BOX_CELLS:
+    if max_cells is not None and (last.row - first.row + 1) * (last.col - first.col + 1) > max_cells:
         return None
     full: List[Cell] = []
     partial: dict = {}
@@ -209,15 +210,48 @@ class MaskShape:
     bitmap_up: Optional[MaskArray] = None
     role: str = "seed"
 
+    @property
+    def filled(self) -> bool:
+        """True when every pixel of ``box`` is in the mask, so there is no bitmap to read."""
+        return self.bitmap_up is None
+
+    @property
+    def unbounded(self) -> bool:
+        """True for a mask that is a claim about every pixel however many cells it spans (a tiled mask), so the
+        limit on how many cores a box may span does not apply to it."""
+        return False
+
+    @property
+    def empty(self) -> bool:
+        """True when the mask holds no pixel at all (a tiled mask nothing has been settled in yet)."""
+        return False
+
+    def unknown_tiles(self, cell: "Cell") -> List["TileIndex"]:
+        """The tiles of ``cell``'s window this mask has not been told about yet, so cannot be used there.
+
+        A mask sent whole knows everything. A tiled background mask is filled in on request, and the walk asks for these
+        before it predicts the cell.
+        """
+        return []
+
+    def region(self, xa: int, ya: int, xb: int, yb: int) -> MaskArray:
+        """The mask over the inclusive rectangle ``(xa, ya)`` to ``(xb, yb)``, Y-up, which must lie inside ``box``.
+
+        Only a shape that is not :attr:`filled` has pixels to return. The result may be a view of the shape's own
+        storage; callers must not modify it.
+        """
+        x0, y0, _x1, _y1 = self.box
+        return self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+
     def covers_core(self, cell: "Cell") -> bool:
         """True when every pixel of ``cell``'s core is in the mask."""
         x0, y0, x1, y1 = self.box
         bx, by = core_origin(cell)
         if x0 > bx or y0 > by or x1 < bx + CORE_SIZE - 1 or y1 < by + CORE_SIZE - 1:
             return False
-        if self.bitmap_up is None:
+        if self.filled:
             return True
-        return bool(self.bitmap_up[by - y0:by - y0 + CORE_SIZE, bx - x0:bx - x0 + CORE_SIZE].all())
+        return bool(self.region(bx, by, bx + CORE_SIZE - 1, by + CORE_SIZE - 1).all())
 
     def interior_point(self) -> Point:
         """A mosaic pixel that is in the mask, near its centre: the box centre for a filled rectangle.
@@ -248,14 +282,14 @@ class MaskShape:
         # Window row 0 is the highest mosaic y of the window, so rows run in the opposite direction.
         rows = slice(wy0 + CELL_SIZE - 1 - yb, wy0 + CELL_SIZE - 1 - ya + 1)
         cols = slice(xa - wx0, xb - wx0 + 1)
-        if self.bitmap_up is None:
+        if self.filled:
             # A filled rectangle sets every sample it touches: no need to build the pixel grid.
             samples = np.zeros((LOGIT_WINDOW, LOGIT_WINDOW), dtype=np.bool_)
             samples[rows.start // LOGIT_SCALE:(rows.stop - 1) // LOGIT_SCALE + 1,
                     cols.start // LOGIT_SCALE:(cols.stop - 1) // LOGIT_SCALE + 1] = True
             return samples
         pixels = np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
-        pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
+        pixels[rows, cols] = np.flipud(self.region(xa, ya, xb, yb))
         samples = pixels.reshape(LOGIT_WINDOW, LOGIT_SCALE, LOGIT_WINDOW, LOGIT_SCALE).any(axis=(1, 3))
         return samples if samples.any() else None
 
@@ -274,10 +308,10 @@ class MaskShape:
         rows = slice(wy0 + CELL_SIZE - 1 - yb, wy0 + CELL_SIZE - 1 - ya + 1)
         cols = slice(xa - wx0, xb - wx0 + 1)
         pixels = np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
-        if self.bitmap_up is None:
+        if self.filled:
             pixels[rows, cols] = True
         else:
-            pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
+            pixels[rows, cols] = np.flipud(self.region(xa, ya, xb, yb))
         return pixels if pixels.any() else None
 
 
@@ -464,7 +498,7 @@ class Canvas:
 
     def assume_mask(self, shape: MaskShape) -> dict[Cell, int]:
         """Like :meth:`assume_box` for a :class:`MaskShape`: only the pixels inside the shape are marked object."""
-        if shape.bitmap_up is None:
+        if shape.filled:
             return self.assume_box(shape.box)
         x0, y0, x1, y1 = shape.box
         added: dict[Cell, int] = {}
@@ -479,7 +513,7 @@ class Canvas:
                 if xa > xb or ya > yb:
                     continue
                 piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
-                inside = shape.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+                inside = shape.region(xa, ya, xb, yb)
                 if not inside.any():
                     continue
                 block = self._blocks.setdefault(cell, np.zeros((CORE_SIZE, CORE_SIZE), dtype=np.bool_))
@@ -493,7 +527,7 @@ class Canvas:
 
     def deny_mask(self, shape: MaskShape) -> None:
         """Like :meth:`deny_box` for a :class:`MaskShape`: only the pixels inside the shape are cleared."""
-        if shape.bitmap_up is None:
+        if shape.filled:
             self.deny_box(shape.box)
             return
         x0, y0, x1, y1 = shape.box
@@ -508,7 +542,7 @@ class Canvas:
                 if xa > xb or ya > yb:
                     continue
                 piece = (slice(ya - by, yb - by + 1), slice(xa - bx, xb - bx + 1))
-                inside = shape.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1]
+                inside = shape.region(xa, ya, xb, yb)
                 for store in (self._blocks, self._decided, self._pinned):
                     held = store.get(cell)
                     if held is not None:

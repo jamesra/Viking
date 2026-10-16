@@ -13,7 +13,7 @@ import threading
 import time
 from concurrent import futures
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Tuple
 
 import grpc
 import cv2
@@ -68,6 +68,7 @@ from segmentation_server.mask_utils import (
     combined_mask_to_segments,
     prepare_image_for_sam2,
 )
+from segmentation_server.mask_tiles import MaskTileCollector, MaskTileError, png_size as _png_size
 from segmentation_server.tile_requests import TileRequestRegistry
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
@@ -122,6 +123,7 @@ class RequestLimits:
     max_boxes: int = 16
     max_sets: int = 5000
     max_answer_tiles: int = 4096
+    max_mask_tiles: int = 256
     max_concurrent_streams: int = 32
 
     @classmethod
@@ -142,6 +144,7 @@ class RequestLimits:
             max_boxes=read("SEGMENTATION_MAX_BOXES", defaults.max_boxes),
             max_sets=read("SEGMENTATION_MAX_SETS", defaults.max_sets),
             max_answer_tiles=read("SEGMENTATION_MAX_ANSWER_TILES", defaults.max_answer_tiles),
+            max_mask_tiles=read("SEGMENTATION_MAX_MASK_TILES", defaults.max_mask_tiles),
             max_concurrent_streams=read(
                 "SEGMENTATION_MAX_CONCURRENT_STREAMS", defaults.max_concurrent_streams
             ),
@@ -169,6 +172,8 @@ class _AnswerTimeout(Exception):
 
 
 DEFAULT_TILE_ANSWER_TIMEOUT_SECONDS = 60.0
+# How long the server lets a client's burst of start-time messages arrive before it asks for background mask tiles.
+EARLY_MASK_TILE_GRACE_SECONDS = 0.02
 
 
 def tile_answer_timeout_seconds() -> float:
@@ -288,6 +293,17 @@ class _TileWait:
     shared: dict = field(default_factory=dict)
     unavailable: List[TileIndex] = field(default_factory=list)
     answer_deadline: float = 0.0
+    # BACKGROUND mask tiles the client owes, and the ones among them it has not been told about yet.
+    masks_asked: set = field(default_factory=set)
+    masks_to_send: List[TileIndex] = field(default_factory=list)
+
+    def ask_mask(self, tile: TileIndex) -> None:
+        self.masks_asked.add((tile.row, tile.col))
+        self.masks_to_send.append(tile)
+
+    def take_masks_to_send(self) -> List[TileIndex]:
+        sending, self.masks_to_send = self.masks_to_send, []
+        return sending
 
     def ask(self, tile: TileIndex) -> None:
         self.asked.add((tile.row, tile.col))
@@ -399,6 +415,8 @@ class _TileSession:
     uploaded: List[TileIndex] = field(default_factory=list)
     # Names this stream to the TileRequestRegistry. The session itself is unhashable.
     token: object = field(default_factory=object)
+    # The request's mask tiles, when it sent any: the foreground, and the background as the walk asks for it.
+    masks: Optional[MaskTileCollector] = None
 
 
 @dataclass(frozen=True)
@@ -1227,6 +1245,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 f"{cache_stats['total_memory_mb']:.1f} MiB"
             ),
             in_flight_requests=in_flight,
+            mask_tiles=True,
             cached_images=int(cache_stats["total_images"]),
             cache_memory_bytes=int(cache_stats["total_memory_bytes"]),
             recent_latency_ms=recent_latency_ms,
@@ -1344,7 +1363,10 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return
         request: SegmentTilesRequest = first.start
-        identity = await self._validate_stream_start(request, context)
+        mask_tiles = MaskTileCollector(request.foreground_mask_tile_count)
+        if mask_tiles.enabled and not await self._read_foreground_mask_tiles(request, request_iterator, mask_tiles, context):
+            return
+        identity = await self._validate_stream_start(request, context, mask_tiles)
         if identity is None:
             return
 
@@ -1358,17 +1380,23 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return
 
-        session = _TileSession(identity=identity)
+        session = _TileSession(identity=identity, masks=mask_tiles if mask_tiles.enabled else None)
         reader = _StreamReader(request_iterator)
         self._active_streams += 1
         self._load.begin()
         start_time = time.perf_counter()
         try:
-            prompts = _prompts_from(request)
+            prompts = _prompts_from(request, mask_tiles)
             foreground = prompts.foreground
             background = prompts.background
             if not await self._pin_start_tiles(session, request, foreground, context):
                 return
+            if mask_tiles.enabled:
+                try:
+                    await self._absorb_early_mask_tiles(reader, session)
+                except _ProtocolError as e:
+                    await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+                    return
             settings = _PredictSettings.from_request(request)
             try:
                 options = ResponseOptions.from_flags(request.response_content)
@@ -1402,6 +1430,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 background_masks=prompts.background_masks,
                 background_rects=prompts.background_rects,
                 prompt_encoder=self._prompt_encoder,
+                holds_image=lambda tile: (tile.row, tile.col) in session.images,
             )
             loop = asyncio.get_running_loop()
             cancel_watch = asyncio.create_task(self._watch_rpc_cancel(context, stop_growth))
@@ -1410,15 +1439,17 @@ class SegmentationServicer(SegmentationServiceServicer):
                 while True:
                     await loop.run_in_executor(self.inference_executor, walk.advance)
                     needed = walk.take_requested()
-                    if not needed:
+                    needed_masks = walk.take_requested_masks()
+                    if not needed and not needed_masks:
                         break
                     rounds += 1
-                    wait = await self._begin_tile_wait(session, needed)
+                    wait = await self._begin_tile_wait(session, needed, needed_masks)
                     while True:
-                        if wait.to_send:
+                        if wait.to_send or wait.masks_to_send:
                             yield SegmentTilesStreamResponse(
                                 needed=TilesNeeded(
-                                    tiles=[_coord_for(identity, tile) for tile in wait.take_to_send()]
+                                    tiles=[_coord_for(identity, tile) for tile in wait.take_to_send()],
+                                    masks=[_coord_for(identity, tile) for tile in wait.take_masks_to_send()],
                                 )
                             )
                         finished = await self._receive_tiles(reader, session, wait)
@@ -1426,7 +1457,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                             logger.info(
                                 "SegmentTiles req=%s abandoned: the client ended the stream while %d tiles were awaited",
                                 request.request_id,
-                                len(needed),
+                                len(needed) + len(needed_masks),
                             )
                             return
                         if finished:
@@ -1485,8 +1516,93 @@ class SegmentationServicer(SegmentationServiceServicer):
             self._active_streams -= 1
             self._load.end(time.perf_counter() - start_time)
 
+    async def _read_foreground_mask_tiles(
+        self,
+        request: SegmentTilesRequest,
+        request_iterator,
+        collected: MaskTileCollector,
+        context: ServicerContext,
+    ) -> bool:
+        """Read the ``mask_tiles`` messages that carry the announced foreground tiles into ``collected``. False after an abort.
+
+        BACKGROUND tiles the client sends early are kept too. Each message is awaited for at most the idle limit used for
+        a TilesAnswer, so a client that announces tiles and stops sending gets ``DEADLINE_EXCEEDED``.
+        """
+        announced = collected.announced
+        if announced > self._limits.max_mask_tiles:
+            await self._abort_over_limit(
+                context, "foreground mask tiles", announced, self._limits.max_mask_tiles, "SEGMENTATION_MAX_MASK_TILES"
+            )
+            return False
+        if len(request.tiles) == 0:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentTiles requires at least one tile.")
+            return False
+        try:
+            while not collected.foreground_done:
+                message = await _next_message(request_iterator, self._tile_answer_timeout)
+                if message is None:
+                    raise MaskTileError(
+                        f"The stream ended after {collected.foreground_received} of {announced} announced foreground mask tiles."
+                    )
+                if message.WhichOneof("body") != "mask_tiles":
+                    raise MaskTileError(
+                        f"Expected {announced - collected.foreground_received} more foreground mask tiles before anything else."
+                    )
+                self._check_mask_message(message.mask_tiles)
+                collected.add(message.mask_tiles, request.tiles[0], _same_tile_identity)
+        except MaskTileError as e:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+            return False
+        except _AnswerTimeout:
+            logger.warning(
+                "SegmentTiles req=%s abandoned: %d of %d foreground mask tiles within %.0fs",
+                request.request_id,
+                collected.foreground_received,
+                announced,
+                self._tile_answer_timeout,
+            )
+            await context.abort(
+                grpc.StatusCode.DEADLINE_EXCEEDED,
+                f"Only {collected.foreground_received} of {announced} announced foreground mask tiles arrived "
+                f"within {self._tile_answer_timeout:.0f}s.",
+            )
+            return False
+        return True
+
+    async def _absorb_early_mask_tiles(self, reader: "_StreamReader", session: "_TileSession") -> None:
+        """Take the background mask tiles a client sent along with its start, so the walk does not ask for them.
+
+        Only messages that have already arrived are taken, after a moment for the transport to deliver a burst; the
+        read in progress stays with ``reader`` for the walk's first wait.
+
+        Raises:
+            _ProtocolError: A buffered message is not ``mask_tiles``, or a mask tile is not usable.
+        """
+        while True:
+            read = reader.pending()
+            done, _pending = await asyncio.wait({read}, timeout=EARLY_MASK_TILE_GRACE_SECONDS)
+            if read not in done:
+                return
+            message = reader.take()
+            if message is None:
+                return
+            if message.WhichOneof("body") != "mask_tiles":
+                raise _ProtocolError("SegmentTilesStream expected mask_tiles or nothing before the first TilesNeeded.")
+            try:
+                self._check_mask_message(message.mask_tiles)
+                session.masks.add(message.mask_tiles, session.identity, _same_tile_identity)
+            except MaskTileError as e:
+                raise _ProtocolError(str(e)) from e
+
+    def _check_mask_message(self, message: Any) -> None:
+        """Raise ``MaskTileError`` for a ``MaskTiles`` message that lists more tiles than the answer limit allows."""
+        if len(message.tiles) > self._limits.max_answer_tiles:
+            raise MaskTileError(
+                f"A MaskTiles message lists {len(message.tiles)} tiles; the server accepts at most "
+                f"{self._limits.max_answer_tiles} (SEGMENTATION_MAX_ANSWER_TILES)."
+            )
     async def _validate_stream_start(
-        self, request: SegmentTilesRequest, context: ServicerContext
+        self, request: SegmentTilesRequest, context: ServicerContext, mask_tiles: Optional[MaskTileCollector] = None
     ) -> Optional[TileCoord]:
         """Check a ``start`` message. Returns the tiles' shared identity, or None after an abort."""
         if not await self._submission_ok("SegmentTilesStream", True, context):
@@ -1497,7 +1613,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentTiles requires at least one tile.")
             return None
         try:
-            prompts = _prompts_from(request)
+            prompts = _prompts_from(request, mask_tiles)
         except ValueError as e:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
             return None
@@ -1744,7 +1860,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         except asyncio.CancelledError:
             return
 
-    async def _begin_tile_wait(self, session: "_TileSession", needed: List[TileIndex]) -> "_TileWait":
+    async def _begin_tile_wait(
+        self, session: "_TileSession", needed: List[TileIndex], masks: Sequence[TileIndex] = ()
+    ) -> "_TileWait":
         """Decide, tile by tile, whether to ask this stream's client or wait for another stream's upload.
 
         A tile some other stream has already asked its client for is subscribed to, not asked
@@ -1754,6 +1872,11 @@ class SegmentationServicer(SegmentationServiceServicer):
         wait = _TileWait()
         loop = asyncio.get_running_loop()
         now = loop.time()
+        for tile in masks:
+            # A background tile the client sent early is already held and is not asked for again.
+            if session.masks is not None and not session.masks.background.is_known((tile.row, tile.col)):
+                session.masks.asked_background.add((tile.row, tile.col))
+                wait.ask_mask(tile)
         for tile in needed:
             key = _tile_cache_key(_coord_for(session.identity, tile))
             if self._tile_share_timeout <= 0:
@@ -1800,12 +1923,12 @@ class SegmentationServicer(SegmentationServiceServicer):
         """
         loop = asyncio.get_running_loop()
         while True:
-            if wait.to_send:
+            if wait.to_send or wait.masks_to_send:
                 return False
-            if not wait.asked and not wait.shared:
+            if not wait.asked and not wait.shared and not wait.masks_asked:
                 return True
             deadlines = [shared.deadline for shared in wait.shared.values()]
-            if wait.asked:
+            if wait.asked or wait.masks_asked:
                 deadlines.append(wait.answer_deadline)
             read = reader.pending()
             watched = {read, *(shared.future for shared in wait.shared.values())}
@@ -1820,11 +1943,11 @@ class SegmentationServicer(SegmentationServiceServicer):
                 message = reader.take()
                 if message is None:
                     return None
-                progressed = await self._apply_answer(message, session, wait)
+                progressed = await self._apply_message(message, session, wait)
             now = loop.time()
             if progressed:
                 wait.answer_deadline = now + self._tile_answer_timeout
-            elif wait.asked and not wait.to_send and now >= wait.answer_deadline:
+            elif (wait.asked or wait.masks_asked) and not wait.to_send and now >= wait.answer_deadline:
                 raise _AnswerTimeout()
 
     async def _settle_shared_tiles(self, session: "_TileSession", wait: "_TileWait", now: float) -> None:
@@ -1860,6 +1983,25 @@ class SegmentationServicer(SegmentationServiceServicer):
             wait.ask(shared.tile)
             wait.answer_deadline = now + self._tile_answer_timeout
 
+    async def _apply_message(self, message: SegmentTilesStreamRequest, session: "_TileSession", wait: "_TileWait") -> bool:
+        """Apply one client message received while tiles are awaited: an ``answer`` or ``mask_tiles``. True on progress.
+
+        Raises:
+            _ProtocolError: Any other message, a mask tile that is not usable, or too many tiles in one message.
+        """
+        if message.WhichOneof("body") != "mask_tiles":
+            return await self._apply_answer(message, session, wait)
+        if session.masks is None:
+            raise _ProtocolError("This request announced no foreground mask tiles, so it cannot send mask tiles.")
+        try:
+            self._check_mask_message(message.mask_tiles)
+            session.masks.add(message.mask_tiles, session.identity, _same_tile_identity)
+        except MaskTileError as e:
+            raise _ProtocolError(str(e)) from e
+        for tile in message.mask_tiles.tiles:
+            wait.masks_asked.discard((int(tile.coord.row), int(tile.coord.col)))
+        return len(message.mask_tiles.tiles) > 0
+
     async def _apply_answer(self, message: SegmentTilesStreamRequest, session: "_TileSession", wait: "_TileWait") -> bool:
         """Apply one ``answer`` to the tiles this client owes. True when it settled at least one.
 
@@ -1870,13 +2012,19 @@ class SegmentationServicer(SegmentationServiceServicer):
         """
         if message.WhichOneof("body") != "answer":
             raise _ProtocolError("SegmentTilesStream expected an answer while tiles were requested.")
-        listed = len(message.answer.ready) + len(message.answer.unavailable)
+        listed = len(message.answer.ready) + len(message.answer.unavailable) + len(message.answer.masks_unavailable)
         if listed > self._limits.max_answer_tiles:
             raise _ProtocolError(
                 f"A TilesAnswer lists {listed} tiles; the server accepts at most "
                 f"{self._limits.max_answer_tiles} (SEGMENTATION_MAX_ANSWER_TILES)."
             )
         progressed = False
+        for coord in message.answer.masks_unavailable:
+            key = (int(coord.row), int(coord.col))
+            if key in wait.masks_asked and session.masks is not None:
+                wait.masks_asked.discard(key)
+                session.masks.background_unavailable(key)
+                progressed = True
         for coord in message.answer.unavailable:
             index = TileIndex(row=int(coord.row), col=int(coord.col))
             if (index.row, index.col) not in wait.asked:
@@ -2047,14 +2195,15 @@ class _Prompts:
     client_chose: bool
 
 
-def _prompts_from(request: Any) -> _Prompts:
-    """Merge the request's legacy prompt fields with its foreground and background ``Feature``.
+def _prompts_from(request: Any, mask_tiles: Optional[MaskTileCollector] = None) -> _Prompts:
+    """Merge the request's legacy prompt fields with its foreground and background ``Feature`` and its mask tiles.
 
     A foreground Feature with a mask or rectangle but no points still starts the walk: the center of
     the mask (else the rectangle) becomes the foreground click.
 
     Raises:
-        ValueError: A ``Mask`` is larger than the server accepts or its ``png`` does not match its bounds and ``scale``.
+        ValueError: A ``Mask`` is larger than the server accepts or its ``png`` does not match its bounds and ``scale``,
+            or one side's mask is given both as ``Feature.mask`` and as mask tiles.
     """
     foreground = [(point.x, point.y) for point in request.foreground]
     background = [(point.x, point.y) for point in request.background]
@@ -2082,6 +2231,19 @@ def _prompts_from(request: Any) -> _Prompts:
         feature_sent = True
         background.extend((point.x, point.y) for point in request.background_feature.points)
         background_rects, background_masks = shapes(request.background_feature)
+    if mask_tiles is not None and mask_tiles.enabled:
+        tiled_foreground = mask_tiles.foreground_shape()
+        if tiled_foreground is not None:
+            if masks:
+                raise ValueError("The foreground mask was sent both as Feature.mask and as mask tiles; send one.")
+            role = "correction" if request.foreground_feature.mask_role == MaskRole.MASK_ROLE_CORRECTION else "seed"
+            masks = [tiled_foreground.with_role(role)]
+            boxes, hint_boxes = [], []
+        if background_masks:
+            raise ValueError("The background mask was sent both as Feature.mask and as mask tiles; send one.")
+        # The background is asked for tile by tile as the walk enters windows, so it is a mask the walk can wait on.
+        background_masks = [mask_tiles.background]
+        feature_sent = True
     if not foreground:
         if masks:
             foreground.append(masks[0].interior_point())
@@ -2101,16 +2263,6 @@ def _prompts_from(request: Any) -> _Prompts:
 
 
 MAX_MASK_PIXELS = 1 << 26
-
-
-def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
-    """``(width, height)`` from a PNG's IHDR chunk, or None when ``data`` does not start like a PNG.
-
-    Read before decoding so a tiny file that declares a huge image is refused without allocating it.
-    """
-    if len(data) < 24 or data[1:4] != b"PNG" or data[12:16] != b"IHDR":
-        return None
-    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
 def _mask_shape(mask: Any) -> MaskShape:

@@ -89,6 +89,7 @@ from segmentation_server.cell_grid import (
     TileIndex,
     cell_of_point,
     core_origin,
+    MAX_BOX_CELLS,
     cores_under_box,
     in_window,
     mosaic_to_window,
@@ -374,8 +375,14 @@ class GrowthWalk:
         background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
         background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         prompt_encoder: Optional[Any] = None,
+        holds_image: Optional[Callable[[TileIndex], bool]] = None,
     ) -> None:
         self._prompt_encoder = prompt_encoder
+        # Whether the caller already holds a tile's image. A cell that waits for background mask tiles also asks for the
+        # image tiles it lacks in the same round, so the client is not asked twice for one window.
+        self._holds_image = holds_image
+        self._pending_masks: List[TileIndex] = []
+        self._masks_asked: Set[TileIndex] = set()
         self._started = False
         self._assume_boxes = assume_boxes
         # Cells the client's prompt starts the walk in, and the first answer that no mask fit one
@@ -477,6 +484,16 @@ class GrowthWalk:
         self._pending = []
         return taken
 
+    def take_requested_masks(self) -> List[TileIndex]:
+        """Tiles whose background mask the walk needs and does not hold, since the last call, in the order needed.
+
+        The caller settles each in the background mask (:meth:`TiledMaskShape.settle`), with no mask where the client
+        has none, then calls :meth:`resume`.
+        """
+        taken = self._pending_masks
+        self._pending_masks = []
+        return taken
+
     def resume(self, unavailable: Iterable[TileIndex] = ()) -> None:
         """Re-queue the cells that were waiting for tiles.
 
@@ -536,7 +553,7 @@ class GrowthWalk:
                 order.append(cell)
 
         for box in self._boxes:
-            split = cores_under_box(box)
+            split = cores_under_box(box, None if box in self._masks else MAX_BOX_CELLS)
             if split is None:
                 logger.warning("Box %s spans too many cells to be a prompt; only its clicks start the walk", box)
                 continue
@@ -808,6 +825,11 @@ class GrowthWalk:
                 self._user_attempted.add(cell)
             return True
 
+        missing = self._missing_background(cell)
+        if missing:
+            self._wait_for_background(cell, missing)
+            return False
+
         # A continuation window is told what the windows around it have found, so it continues that
         # object instead of choosing one from its prompt alone. A start window has nothing to be told.
         mask_logits = self._canvas.window_logits(cell) if attempt.kind in ("edge", "frontier") else None
@@ -1025,6 +1047,30 @@ class GrowthWalk:
         if self._should_stop is not None and self._should_stop():
             raise GrowthCancelled()
 
+    def _missing_background(self, cell: Cell) -> List[TileIndex]:
+        """The tiles of ``cell``'s window that some background mask has not been told about."""
+        missing: List[TileIndex] = []
+        for shape in self._background_masks:
+            for tile in shape.unknown_tiles(cell):
+                if tile not in missing:
+                    missing.append(tile)
+        return missing
+
+    def _wait_for_background(self, cell: Cell, missing: Sequence[TileIndex]) -> None:
+        """Defer ``cell`` until the caller has settled the background mask tiles ``missing`` (see :meth:`take_requested_masks`).
+
+        The window's image tiles the caller lacks are asked for in the same round.
+        """
+        self._deferred.add(cell)
+        for tile in missing:
+            if tile not in self._masks_asked:
+                self._masks_asked.add(tile)
+                self._pending_masks.append(tile)
+        if self._holds_image is not None:
+            for tile in tiles_for_cell(cell):
+                if not self._holds_image(tile):
+                    self._request(tile)
+
     def _call_predict(
         self,
         cell: Cell,
@@ -1125,16 +1171,25 @@ class GrowthWalk:
         if self._assume_boxes or self._masks or self._background_masks:
             canvas = self._canvas.fork_for_pins()
             for box in self._boxes:
-                if cores_under_box(box) is None:
+                if cores_under_box(box, None if box in self._masks else MAX_BOX_CELLS) is None:
                     continue
                 if box in self._masks:
                     canvas.assume_mask(self._mask_shapes[box])
                 elif self._assume_boxes and box not in self._hints:
                     canvas.assume_box(box)
             for shape in self._background_masks:
-                if cores_under_box(shape.box) is not None:
+                if not shape.empty and cores_under_box(shape.box, None if shape.unbounded else MAX_BOX_CELLS) is not None:
                     canvas.deny_mask(shape)
         owners = canvas.decided_cells()
+        if not owners:
+            # A background mask can clear everything the walk found.
+            return GrowthResult(
+                mask=np.zeros((0, 0), dtype=np.bool_),
+                origin_x=0,
+                origin_y=0,
+                score=0.0,
+                requested=list(self._requested),
+            )
 
         min_row = min(cell.row for cell in owners)
         max_row = max(cell.row for cell in owners)

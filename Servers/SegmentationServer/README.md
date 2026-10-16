@@ -88,6 +88,20 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    is changed: the walk, and whether the request found anything, ignore the box. Boxes the
    server inferred from nine-click circles are not added.
 
+   **Mask tiles** let a mask of any size be sent. A request that sets `foreground_mask_tile_count` sends that many
+   FOREGROUND `MaskTile`s after `start` (in `mask_tiles` stream messages): every 1024 tile the seed or correction
+   touches, as `full`, a 1-bit PNG (1024x1024, or 256x256 at `scale` 4), or an empty tile. The server waits for all of
+   them (the `TilesAnswer` idle limit; `DEADLINE_EXCEEDED` otherwise) before growth starts, and refuses a repeated
+   (coord, kind), a wrong-sized PNG, a tile at another downsample, or more tiles than announced (`INVALID_ARGUMENT`), and a count
+   over `SEGMENTATION_MAX_MASK_TILES` (default 256, `RESOURCE_EXHAUSTED`). The BACKGROUND (neighbors) is asked for on
+   demand: before it predicts a window the walk needs that window's background tiles, so `TilesNeeded.masks` lists
+   every tile a window it is about to predict covers whose background it does not hold, whether or not the image is
+   cached. The client answers with `mask_tiles` (an empty tile where there are no neighbors), then the `TilesAnswer`
+   (`masks_unavailable` for any it cannot supply, treated as no neighbors). Background tiles sent early are not asked
+   for again. Mask tiles are per request and never enter the image cache. A mask given as tiles is not capped at 64
+   cores the way a box is. `Feature.mask` is still accepted, but not for the same kind as mask tiles. `GetServerStatus`
+   reports `mask_tiles = true`.
+
    The mask that answers a prompt is chosen by one rule for every RPC, with no combining of
    masks: with a box, the highest-scoring candidate that has a pixel inside it (how much of the
    rectangle it fills is not asked: SAM2 leaves holes in an object's interior and stops short of a
