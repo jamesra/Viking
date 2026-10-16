@@ -1,4 +1,5 @@
 using Grpc.Core;
+using System;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -9,7 +10,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal static class SegmentationRpcErrors
     {
         /// <summary>
-        /// A readable reason for <see cref="StatusCode.DeadlineExceeded"/> and <see cref="StatusCode.ResourceExhausted"/>,
+        /// A readable reason for <see cref="StatusCode.DeadlineExceeded"/>, <see cref="StatusCode.ResourceExhausted"/> and a model-mismatch <see cref="StatusCode.FailedPrecondition"/>,
         /// or null for any other status so the caller keeps its generic handling.
         /// </summary>
         /// <remarks>
@@ -29,6 +30,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     "the segmentation server timed out waiting for image tiles; try again" + suffix,
                 StatusCode.ResourceExhausted =>
                     "the segmentation server is busy or the request was over a limit; try again in a moment" + suffix,
+                StatusCode.FailedPrecondition when !detail.StartsWith("NO_MATCHING_MASK", StringComparison.Ordinal) =>
+                    "the segmentation server is serving a different model than this request was built for; try again" + suffix,
                 _ => null
             };
         }

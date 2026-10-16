@@ -112,6 +112,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private static SegmentationModelProfile modelProfile = SegmentationModelProfile.Default;
 
+        private static string? serverModelId;
+
+        /// <summary>
+        /// The <c>ModelInfo.model_id</c> the server reported in GetServerStatus, or null until it has answered (or when it
+        /// reports none). Sent back as <c>model_id</c> on requests so the server can refuse prompts built for another model
+        /// instead of segmenting them wrongly. Cleared with the profile when the endpoint changes.
+        /// </summary>
+        public static string? ServerModelId => Volatile.Read(ref serverModelId);
+
         /// <summary>
         /// How the model in use wants its input: fixed grid tiles or the whole screen, and whether the
         /// tile level follows zoom. Starts as <see cref="SegmentationModelProfile.Default"/> (fixed tiles,
@@ -160,6 +169,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return profile;
         }
 
+        /// <summary>
+        /// The model id worth sending back on requests, or null when the server reported none. A server whose model has no
+        /// manifest reports "unknown", which names no model and is not sent.
+        /// </summary>
+        internal static string? ModelIdToAdopt(Viking.gRPC.SegmentationServiceTypes.V1.ModelInfo? model)
+        {
+            string? id = model?.ModelId?.Trim();
+            return string.IsNullOrEmpty(id) || string.Equals(id, "unknown", StringComparison.OrdinalIgnoreCase) ? null : id;
+        }
+
         private static readonly object capabilitiesGate = new();
         private static string? capabilitiesEndpoint;
 
@@ -174,6 +193,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 capabilitiesEndpoint = null;
 
             Volatile.Write(ref modelProfile, SegmentationModelProfile.Default);
+            Volatile.Write(ref serverModelId, null);
         }
 
         /// <summary>
@@ -220,16 +240,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 SegmentationServiceHealth.ReportSuccess();
                 SegmentationModelProfile? profile = ProfileToAdopt(status?.Capabilities, MaxTileDownsample);
-                if (profile is null)
-                    return;
+                string? modelId = ModelIdToAdopt(status?.Model);
 
                 lock (capabilitiesGate)
                 {
                     if (!string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
                         return;
 
-                    Volatile.Write(ref modelProfile, profile);
+                    // The model identity is independent of the capabilities: a server whose capabilities we ignore still
+                    // refuses prompts built for a different model.
+                    Volatile.Write(ref serverModelId, modelId);
+                    if (profile is not null)
+                        Volatile.Write(ref modelProfile, profile);
                 }
+
+                if (status?.Model is { } model)
+                    SegmentationDiag.Log($"GetServerStatus: model={model.ModelId} version={model.ModelVersion} encoding={model.PromptEncoding} data={model.TrainingDataSet} contract={model.ContractJson}");
+
+                if (profile is null)
+                    return;
 
                 SegmentationDiag.Log($"GetServerStatus: adopted submission={profile.Submission} resolution={profile.Resolution}");
                 WebAnnotation.UI.AnnotationStatusChips.Refresh();
@@ -775,6 +804,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // told that trying again can work instead of being shown the raw gRPC status.
                 string reason = SegmentationRpcErrors.Describe(rpcEx)!;
                 SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
+                if (rpcEx.StatusCode == StatusCode.FailedPrecondition)
+                {
+                    // The server now serves a different model than the one the next prompts were built for. Forget it so
+                    // the next connection asks GetServerStatus again.
+                    ResetModelProfile();
+                }
+
                 SegmentationServiceHealth.ReportRpcError(rpcEx);
                 RecordSkip(SegmentationSkipKind.Error, reason);
                 return null;

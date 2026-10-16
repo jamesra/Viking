@@ -26,9 +26,16 @@ namespace Viking.UI.WPF
             TokenResponse bearerToken,
             string identityServerUrl,
             string currentEndpoint,
-            IEnumerable<string> recentEndpoints)
+            IEnumerable<string> recentEndpoints,
+            string? lastError = null)
         {
             InitializeComponent();
+
+            if (!string.IsNullOrWhiteSpace(lastError))
+            {
+                errorText.Text = $"The current segmentation service is not working: {lastError}";
+                errorBanner.Visibility = Visibility.Visible;
+            }
 
             _viewModel = new SegmentationServiceSelectionViewModel(
                 bearerToken,
@@ -64,13 +71,15 @@ namespace Viking.UI.WPF
             string identityServerUrl,
             string currentEndpoint,
             IEnumerable<string> recentEndpoints,
-            out string? selectedEndpoint)
+            out string? selectedEndpoint,
+            string? lastError = null)
         {
             SegmentationServiceSelectionWindow window = new(
                 bearerToken,
                 identityServerUrl,
                 currentEndpoint,
-                recentEndpoints);
+                recentEndpoints,
+                lastError);
 
             if (ownerHandle != IntPtr.Zero)
                 new WindowInteropHelper(window).Owner = ownerHandle;

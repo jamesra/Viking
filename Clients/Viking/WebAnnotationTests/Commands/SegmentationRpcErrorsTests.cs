@@ -45,11 +45,19 @@ namespace WebAnnotationTests.Commands
         [DataTestMethod]
         [DataRow(StatusCode.NotFound)]
         [DataRow(StatusCode.Unavailable)]
-        [DataRow(StatusCode.FailedPrecondition)]
         [DataRow(StatusCode.Internal)]
         public void OtherStatusesKeepTheGenericHandling(StatusCode code)
         {
             Assert.IsNull(SegmentationRpcErrors.Describe(Failure(code, "x")));
+        }
+
+        [TestMethod]
+        public void ModelMismatchIsDescribedButNoMatchingMaskIsNot()
+        {
+            string? mismatch = SegmentationRpcErrors.Describe(Failure(StatusCode.FailedPrecondition, "model_id 'a' does not match served model 'b'"));
+            Assert.IsNotNull(mismatch);
+            StringAssert.Contains(mismatch, "different model");
+            Assert.IsNull(SegmentationRpcErrors.Describe(Failure(StatusCode.FailedPrecondition, "NO_MATCHING_MASK: nothing fits")));
         }
     }
 }

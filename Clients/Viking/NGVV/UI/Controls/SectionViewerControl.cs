@@ -481,7 +481,9 @@ namespace Viking.UI.Controls
             StatusBar = new System.Windows.Forms.StatusStrip
             {
                 Parent = this,
-                Dock = System.Windows.Forms.DockStyle.Bottom
+                Dock = System.Windows.Forms.DockStyle.Bottom,
+                // A StatusStrip hides item tooltips by default; the Pen/AutoPoly/Seg chips and service-error text rely on them.
+                ShowItemToolTips = true
             };
 
             tsSection = new System.Windows.Forms.ToolStripLabel("Section: ");

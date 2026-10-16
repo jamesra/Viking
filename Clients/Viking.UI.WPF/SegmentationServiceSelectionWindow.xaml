@@ -9,5 +9,18 @@
         MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
-    <controls:SegmentationServiceSelectionControl x:Name="segmentationSelectionControl"/>
+    <DockPanel>
+        <Border x:Name="errorBanner"
+                DockPanel.Dock="Top"
+                Visibility="Collapsed"
+                Background="#FFFDECEA"
+                BorderBrush="#FFC80000"
+                BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <TextBlock x:Name="errorText"
+                       Foreground="#FFC80000"
+                       TextWrapping="Wrap"/>
+        </Border>
+        <controls:SegmentationServiceSelectionControl x:Name="segmentationSelectionControl"/>
+    </DockPanel>
 </Window>

@@ -208,6 +208,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (request.Tiles.Count == 0)
                 throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
 
+            // Unset when the server has not reported a model yet: it accepts that unless the model's manifest requires an id.
+            if (ServerModelId is { } modelId)
+                request.ModelId = modelId;
+
             if (foregroundPoints is not null)
             {
                 foreach (Geometry.Vector2 point in foregroundPoints)
@@ -234,7 +238,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     backgroundPoints,
                     WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
                 if (foregroundMask is not null)
-                    request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask };
+                    request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask, MaskRole = SegmentationServiceTypes.MaskRole.Seed };
             }
             else if (foregroundPoints is { Count: > 0 })
             {

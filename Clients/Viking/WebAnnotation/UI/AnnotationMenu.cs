@@ -762,7 +762,8 @@ namespace WebAnnotation
                 identityUrl,
                 SegmentationServiceSession.CurrentEndpoint(),
                 State.RecentSegmentationServiceUrls,
-                out string? selectedEndpoint);
+                out string? selectedEndpoint,
+                SegmentationServiceHealth.LastError);
 
             if (confirmed == true)
                 SegmentationServiceSession.ApplyEndpoint(selectedEndpoint);
