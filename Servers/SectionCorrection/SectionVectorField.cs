@@ -59,6 +59,19 @@ namespace Viking.SectionCorrection
                 return (a * (1 - ty) + b * ty, true);
             }
 
+            // Some corners published: bilinear over those present, weights renormalized
+            // (same as NeighborResidualField.SampleAlways).
+            {
+                double ws = 0;
+                Vector2 acc = Vector2.Zero;
+                if (TryGet(gx0, gy0, out LatticeNode c00)) { double q = (1 - tx) * (1 - ty); acc += c00.Offset * q; ws += q; }
+                if (TryGet(gx0 + 1, gy0, out LatticeNode c10)) { double q = tx * (1 - ty); acc += c10.Offset * q; ws += q; }
+                if (TryGet(gx0, gy0 + 1, out LatticeNode c01)) { double q = (1 - tx) * ty; acc += c01.Offset * q; ws += q; }
+                if (TryGet(gx0 + 1, gy0 + 1, out LatticeNode c11)) { double q = tx * ty; acc += c11.Offset * q; ws += q; }
+                if (ws > 1e-6)
+                    return (acc * (1.0 / ws), true);
+            }
+
             int reach = (int)Math.Ceiling(KernelRadiusNm / PitchNm) + 1;
             double weightSum = 0;
             Vector2 weighted = Vector2.Zero;
@@ -72,8 +85,9 @@ namespace Viking.SectionCorrection
                     if (!TryGet(gx0 + dx, gy0 + dy, out LatticeNode n))
                         continue;
 
-                    double cx = (n.Gx + 0.5) * PitchNm;
-                    double cy = (n.Gy + 0.5) * PitchNm;
+                    // Node world XY is (gx * PitchNm, gy * PitchNm), as in the bilinear branch above.
+                    double cx = n.Gx * PitchNm;
+                    double cy = n.Gy * PitchNm;
                     double d2 = (xy.X - cx) * (xy.X - cx) + (xy.Y - cy) * (xy.Y - cy);
                     if (d2 > r2)
                         continue;

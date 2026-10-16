@@ -38,6 +38,43 @@ namespace Viking.SectionCorrection
 
         [JsonPropertyName("residual_window")]
         public ResidualWindowDto ResidualWindow { get; set; }
+
+        /// <summary>"joint-second-difference-v1" for fields from JointRegistrationSolver; absent for older leave-one-out sets.</summary>
+        [JsonPropertyName("method")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string Method { get; set; }
+
+        [JsonPropertyName("joint")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public JointFitDto Joint { get; set; }
+    }
+
+    /// <summary>How the joint fit was chosen and how it scored on structures held out of the fit.</summary>
+    public sealed class JointFitDto
+    {
+        [JsonPropertyName("ridge")]
+        public double Ridge { get; set; }
+
+        [JsonPropertyName("spatial_weight")]
+        public double SpatialWeight { get; set; }
+
+        [JsonPropertyName("pin_section")]
+        public int PinSection { get; set; }
+
+        [JsonPropertyName("identity")]
+        public bool Identity { get; set; }
+
+        [JsonPropertyName("triples")]
+        public int Triples { get; set; }
+
+        [JsonPropertyName("held_out_triples")]
+        public int HeldOutTriples { get; set; }
+
+        [JsonPropertyName("held_out_raw_median_nm")]
+        public double HeldOutRawMedianNm { get; set; }
+
+        [JsonPropertyName("held_out_corrected_median_nm")]
+        public double HeldOutCorrectedMedianNm { get; set; }
     }
 
     public sealed class ResidualWindowDto

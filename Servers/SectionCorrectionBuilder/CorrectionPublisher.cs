@@ -27,6 +27,9 @@ namespace Viking.SectionCorrectionBuilder
         public string PublicVolumeUrl { get; set; }
         public string StosGroups { get; set; }
         public Action<string> Log { get; set; }
+
+        /// <summary>Joint registration solve settings; null uses <see cref="JointRegistrationOptions"/> defaults.</summary>
+        public JointRegistrationOptions Joint { get; set; }
     }
 
     public sealed class CorrectionPublishResult
@@ -161,7 +164,11 @@ namespace Viking.SectionCorrectionBuilder
                 try
                 {
                     PublishedCorrectionSet existing = PublishedCorrectionSet.LoadDirectory(dest);
-                    if (CorrectionPublishGate.ShouldSkip(existing.Provenance?.AnnotationWatermark, watermark, force: false))
+                    // Sets built by the leave-one-out residual field are always rebuilt, whatever the watermark.
+                    bool current = existing.Provenance?.Method == "joint-second-difference-v1";
+                    if (!current)
+                        Log(options, $"{stosGroup}: existing set predates the joint registration fit; rebuilding.");
+                    if (current && CorrectionPublishGate.ShouldSkip(existing.Provenance?.AnnotationWatermark, watermark, force: false))
                     {
                         if (options.SkipQuiver)
                         {
@@ -186,22 +193,25 @@ namespace Viking.SectionCorrectionBuilder
                 }
             }
 
-            Log(options, $"{stosGroup}: mapping mosaic → volume and collecting residuals");
+            Log(options, $"{stosGroup}: mapping mosaic → volume and solving the joint registration field");
             SqlMorphologyLoader.LoadResult load = firstLoad.StosGroup == stosGroup
                 ? firstLoad
                 : await SqlMorphologyLoader.RemapAsync(firstLoad, volume, scale, stosGroup).ConfigureAwait(false);
 
+            // Joint fit over every section (JointRegistrationSolver). The former per-section leave-one-out residual
+            // field measured each section against uncorrected neighbours and made held-out structures less smooth.
             MorphologyGraph.ResidualWindowOptions window = MorphologyGraph.ResidualWindowOptions.Default;
-            List<NeighborResidualField.ResidualSample> residuals =
-                NeighborResidualField.CollectResiduals(load.Cells, window);
-            Log(options, $"{stosGroup}: {residuals.Count} residuals from {load.Cells.Count} structures");
-
-            NeighborResidualField field = NeighborResidualField.Build(residuals);
+            JointRegistrationOptions jointOptions = options.Joint ?? new JointRegistrationOptions();
+            JointRegistrationResult joint = JointRegistrationSolver.Solve(load.Cells, jointOptions, msg => Log(options, $"{stosGroup}: {msg}"));
+            NeighborResidualField field = joint.Field;
+            Log(options, $"{stosGroup}: {load.Cells.Count} structures, {joint.Triples} process triples, spatial {joint.ChosenSpatial} ridge {joint.ChosenRidge}, " +
+                         $"held-out second difference {joint.HeldOutRawMedianNm:F1} -> {joint.HeldOutCorrectedMedianNm:F1} nm" +
+                         (joint.Identity ? " (identity published)" : ""));
             foreach (string line in field.DescribeSections())
                 Log(options, $"  {line}");
 
             PublishedCorrectionSet published = FromResidualField(
-                stosGroup, watermark, field, window, options.PublicVolumeUrl ?? "");
+                stosGroup, watermark, field, window, options.PublicVolumeUrl ?? "", joint, jointOptions);
             Dictionary<long, SectionVectorField> sections = published.Sections as Dictionary<long, SectionVectorField>
                 ?? new Dictionary<long, SectionVectorField>(published.Sections);
 
@@ -255,7 +265,9 @@ namespace Viking.SectionCorrectionBuilder
             DateTime watermark,
             NeighborResidualField field,
             MorphologyGraph.ResidualWindowOptions window,
-            string volumeUrl)
+            string volumeUrl,
+            JointRegistrationResult joint = null,
+            JointRegistrationOptions jointOptions = null)
         {
             Dictionary<long, SectionVectorField> sections = [];
             foreach (IGrouping<int, (int Z, int Gx, int Gy, Geometry.Vector2 Offset, int Votes)> group in
@@ -282,6 +294,18 @@ namespace Viking.SectionCorrectionBuilder
                         MaxBoth = window.MaxBoth,
                         MinOne = window.MinOne,
                         MaxOne = window.MaxOne
+                    },
+                    Method = joint is null ? null : "joint-second-difference-v1",
+                    Joint = joint is null ? null : new JointFitDto
+                    {
+                        Ridge = joint.ChosenRidge,
+                        SpatialWeight = joint.ChosenSpatial,
+                        PinSection = joint.PinSection,
+                        Identity = joint.Identity,
+                        Triples = joint.Triples,
+                        HeldOutTriples = joint.HeldOutTriples,
+                        HeldOutRawMedianNm = joint.HeldOutRawMedianNm,
+                        HeldOutCorrectedMedianNm = joint.HeldOutCorrectedMedianNm
                     }
                 }
             };

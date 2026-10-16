@@ -68,7 +68,9 @@ namespace AnnotationVizLib
             {
                 foreach ((int Z, int Gx, int Gy, Vector2 Offset, int Votes) node in nodes)
                 {
-                    if (node.Votes < MinAnnotationVotes)
+                    // Published nodes are trusted as published: joint-fit nodes carry their triple support, which
+                    // may be below MinAnnotationVotes (legacy pooled nodes always had at least that many votes).
+                    if (node.Votes < 1)
                         continue;
                     var key = (node.Z, node.Gx, node.Gy);
                     offset[key] = node.Offset;
@@ -249,7 +251,7 @@ namespace AnnotationVizLib
                 var key = (sectionZ, gx, gy);
                 if (_offset.TryGetValue(key, out t) &&
                     _annotationVotes.TryGetValue(key, out int n) &&
-                    n >= MinAnnotationVotes)
+                    n >= 1)
                     return true;
                 t = Vector2.Zero;
                 return false;
@@ -263,6 +265,18 @@ namespace AnnotationVizLib
                 Vector2 a = t00 * (1 - tx) + t10 * tx;
                 Vector2 b = t01 * (1 - tx) + t11 * tx;
                 return (a * (1 - ty) + b * ty, true);
+            }
+
+            // Some corners published: bilinear over those present, weights renormalized.
+            {
+                double ws = 0;
+                Vector2 acc = Vector2.Zero;
+                if (TryGet(gx0, gy0, out Vector2 c00)) { double q = (1 - tx) * (1 - ty); acc += c00 * q; ws += q; }
+                if (TryGet(gx0 + 1, gy0, out Vector2 c10)) { double q = tx * (1 - ty); acc += c10 * q; ws += q; }
+                if (TryGet(gx0, gy0 + 1, out Vector2 c01)) { double q = (1 - tx) * ty; acc += c01 * q; ws += q; }
+                if (TryGet(gx0 + 1, gy0 + 1, out Vector2 c11)) { double q = tx * ty; acc += c11 * q; ws += q; }
+                if (ws > 1e-6)
+                    return (acc * (1.0 / ws), true);
             }
 
             int reach = (int)Math.Ceiling(_kernelRadiusNm / _pitchNm) + 1;
@@ -281,8 +295,9 @@ namespace AnnotationVizLib
                     if (!TryGet(gx, gy, out Vector2 t))
                         continue;
 
-                    double cx = (gx + 0.5) * _pitchNm;
-                    double cy = (gy + 0.5) * _pitchNm;
+                    // Node (gx, gy) sits at (gx * pitch, gy * pitch): the same position the bilinear branch uses.
+                    double cx = gx * _pitchNm;
+                    double cy = gy * _pitchNm;
                     double d2 = (xy.X - cx) * (xy.X - cx) + (xy.Y - cy) * (xy.Y - cy);
                     if (d2 > r2)
                         continue;
@@ -295,7 +310,7 @@ namespace AnnotationVizLib
                 }
             }
 
-            if (weightSum <= Tolerance.Epsilon || annotations < MinAnnotationVotes)
+            if (weightSum <= Tolerance.Epsilon || annotations < 1)
                 return (Vector2.Zero, false);
 
             return (weighted * (1.0 / weightSum), true);
