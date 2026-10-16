@@ -75,13 +75,12 @@ namespace GrpcSectionCorrectionService.Tests
                 var (candidates, links) = await loader.LoadRowsAsync(4, CancellationToken.None);
 
                 Assert.AreEqual(3, candidates.Count);
-                Assert.IsTrue(candidates[0].HasVolumePosition);
-                Assert.IsFalse(candidates[1].HasVolumePosition);
                 Assert.AreEqual(10, candidates[2].ParentID);
                 Assert.AreEqual(7, candidates[2].Z);
                 Assert.AreEqual(1, links.Count, "the link to a location that is not a candidate is dropped");
                 Assert.AreEqual((1L, 2L), (links[0].A, links[0].B));
-                Assert.IsTrue(requests.Any(r => r.Contains("$select=ID,ParentID,Z,X,Y,VolumeX,VolumeY,Terminal,OffEdge,TypeCode,LastModified")));
+                Assert.IsTrue(requests.Any(r => r.Contains("$select=ID,ParentID,Z,X,Y,Terminal,OffEdge,TypeCode,LastModified")));
+                Assert.IsFalse(requests.Any(r => r.Contains("VolumeX")), "stored volume positions must not be requested");
             }
         }
 

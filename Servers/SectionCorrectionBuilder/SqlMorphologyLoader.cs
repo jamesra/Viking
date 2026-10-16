@@ -24,9 +24,6 @@ namespace Viking.SectionCorrectionBuilder
             public long Z { get; set; }
             public double X { get; set; }
             public double Y { get; set; }
-            public double VolumeX { get; set; }
-            public double VolumeY { get; set; }
-            public bool HasVolumePosition { get; set; }
             public bool Terminal { get; set; }
             public bool OffEdge { get; set; }
             public short TypeCode { get; set; }
@@ -72,7 +69,8 @@ namespace Viking.SectionCorrectionBuilder
         /// <summary>
         /// Loads residual-field candidate locations and links for a rebuild.
         /// Called by <see cref="CorrectionPublisher"/>. SELECT must project every
-        /// <see cref="CandidateRow"/> property (including VolumeX/Y and HasVolumePosition);
+        /// <see cref="CandidateRow"/> property; the stored VolumeX/VolumeY columns are deliberately not read, because
+        /// positions come from mapping mosaic X/Y through the stos group (see <c>BuildCells</c>);
         /// EF Core <c>SqlQuery</c> fails the whole rebuild if a required column is missing.
         /// </summary>
         public static async Task<LoadResult> LoadAsync(
@@ -84,11 +82,9 @@ namespace Viking.SectionCorrectionBuilder
         {
             int min = minLocations < 1 ? 3 : minLocations;
             // Inline equivalent of dbo.ResidualFieldCandidateLocations so DBs without schema v85 still work.
-            // HasVolumePosition is computed (not a DB column); VolumeX/Y must be selected for BuildCells.
             List<CandidateRow> candidates = await db.Database
                 .SqlQuery<CandidateRow>($@"
-SELECT L.ID, L.ParentID, L.Z, L.X, L.Y, L.VolumeX, L.VolumeY,
-       CAST(CASE WHEN L.VolumeX <> 0 OR L.VolumeY <> 0 THEN 1 ELSE 0 END AS bit) AS HasVolumePosition,
+SELECT L.ID, L.ParentID, L.Z, L.X, L.Y,
        L.Terminal, L.OffEdge, L.TypeCode, L.LastModified
 FROM dbo.Location AS L
 INNER JOIN (
@@ -195,27 +191,21 @@ AND LK.B IN (
             Dictionary<long, MorphologyGraph> cells = [];
             HashSet<ulong> accepted = [];
             Dictionary<long, long> parentById = [];
+            int unmapped = 0;
             foreach (IGrouping<long, CandidateRow> group in candidates.GroupBy(c => c.ParentID))
             {
                 MorphologyGraph graph = new((ulong)group.Key, scale);
                 foreach (CandidateRow row in group)
                 {
-                    double xNm;
-                    double yNm;
-                    if (row.HasVolumePosition)
+                    IVolumeToSectionTransform map = MapFor(row.Z);
+                    if (!map.TrySectionToVolume(new Vector2(row.X, row.Y), out Vector2 volumeDb))
                     {
-                        xNm = row.VolumeX * scale.X.Value;
-                        yNm = row.VolumeY * scale.Y.Value;
+                        unmapped++;
+                        continue;
                     }
-                    else
-                    {
-                        IVolumeToSectionTransform map = MapFor(row.Z);
-                        if (!map.TrySectionToVolume(new Vector2(row.X, row.Y), out Vector2 volumeDb))
-                            continue;
 
-                        xNm = volumeDb.X * scale.X.Value;
-                        yNm = volumeDb.Y * scale.Y.Value;
-                    }
+                    double xNm = volumeDb.X * scale.X.Value;
+                    double yNm = volumeDb.Y * scale.Y.Value;
                     graph.AddNode(new MorphologyNode((ulong)row.ID, new VolumePointLocation(row, xNm, yNm, scale), graph));
                     accepted.Add((ulong)row.ID);
                     parentById[row.ID] = row.ParentID;
@@ -225,6 +215,8 @@ AND LK.B IN (
                     continue;
                 cells[group.Key] = graph;
             }
+
+            LogMappingGaps(volume, stosGroup, maps.Keys, unmapped);
 
             foreach (LinkRow link in links)
             {
@@ -241,9 +233,27 @@ AND LK.B IN (
         }
 
         /// <summary>
+        /// Reports rows the stos could not map and sections absent from the stos group, which
+        /// <see cref="VolumeTransformProvider"/> maps through identity without complaint.
+        /// </summary>
+        static void LogMappingGaps(Volume volume, string stosGroup, IEnumerable<long> sections, int unmapped)
+        {
+            if (unmapped > 0)
+                Console.WriteLine($"{stosGroup}: {unmapped} locations skipped (stos could not map them).");
+
+            if (string.IsNullOrEmpty(stosGroup) || stosGroup == "None" ||
+                !volume.Transforms.TryGetValue(stosGroup, out SortedList<int, ITransform> perSection))
+                return;
+
+            long[] missing = [.. sections.Where(z => !perSection.ContainsKey((int)z)).OrderBy(z => z)];
+            if (missing.Length > 0)
+                Console.WriteLine($"{stosGroup}: no stos for section(s) {string.Join(",", missing)}; their annotations map through identity.");
+        }
+
+        /// <summary>
         /// Locations for the requested structures, plus child structures when <paramref name="includeChildren"/> is set.
-        /// Called by gRPC <c>CorrectStructures</c>. Positions prefer stored VolumeX/VolumeY (times scale);
-        /// otherwise mosaic XY mapped through the stos group. Open curves often leave X/Y at 0 — centroid
+        /// Called by gRPC <c>CorrectStructures</c>. Positions are the mosaic XY mapped through the stos group
+        /// (the stored VolumeX/VolumeY are ignored: they were saved under older registrations). Open curves often leave X/Y at 0 — centroid
         /// is taken with SQL <c>STCentroid</c> so CurvePolygon never materializes through NetTopologySuite
         /// (NTS throws <c>Unsupported type: CurvePolygon</c> on outline-traced cells such as RC1 c410).
         /// </summary>
@@ -290,8 +300,6 @@ SELECT L.ID, L.ParentID, L.Z,
             THEN ISNULL(L.MosaicShape.STCentroid().STX, L.X) ELSE L.X END AS X,
        CASE WHEN L.X = 0 AND L.Y = 0 AND L.MosaicShape IS NOT NULL
             THEN ISNULL(L.MosaicShape.STCentroid().STY, L.Y) ELSE L.Y END AS Y,
-       L.VolumeX, L.VolumeY,
-       CAST(CASE WHEN L.VolumeX <> 0 OR L.VolumeY <> 0 THEN 1 ELSE 0 END AS bit) AS HasVolumePosition,
        L.Terminal, L.OffEdge, L.TypeCode, L.LastModified
 FROM dbo.Location AS L
 WHERE L.ParentID IN ({idList})")
