@@ -121,6 +121,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public static string? ServerModelId => Volatile.Read(ref serverModelId);
 
+        private static bool serverMaskTiles;
+
+        /// <summary>
+        /// True when the server said in GetServerStatus that SegmentTilesStream takes mask prompts as tiles. Until it has
+        /// answered (and for a server that does not say so) masks go out as the single <c>Mask</c> of the older protocol.
+        /// Cleared with the profile when the endpoint changes.
+        /// </summary>
+        public static bool ServerSupportsMaskTiles => Volatile.Read(ref serverMaskTiles);
+
         /// <summary>
         /// How the model in use wants its input: fixed grid tiles or the whole screen, and whether the
         /// tile level follows zoom. Starts as <see cref="SegmentationModelProfile.Default"/> (fixed tiles,
@@ -194,6 +203,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             Volatile.Write(ref modelProfile, SegmentationModelProfile.Default);
             Volatile.Write(ref serverModelId, null);
+            Volatile.Write(ref serverMaskTiles, false);
         }
 
         /// <summary>
@@ -250,10 +260,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     // The model identity is independent of the capabilities: a server whose capabilities we ignore still
                     // refuses prompts built for a different model.
                     Volatile.Write(ref serverModelId, modelId);
+                    Volatile.Write(ref serverMaskTiles, SegmentationMaskTiles.IsSupported(status));
                     if (profile is not null)
                         Volatile.Write(ref modelProfile, profile);
                 }
 
+                SegmentationDiag.Log($"GetServerStatus: mask tiles {(SegmentationMaskTiles.IsSupported(status) ? "supported" : "not supported")}");
                 if (status?.Model is { } model)
                     SegmentationDiag.Log($"GetServerStatus: model={model.ModelId} version={model.ModelVersion} encoding={model.PromptEncoding} data={model.TrainingDataSet} contract={model.ContractJson}");
 

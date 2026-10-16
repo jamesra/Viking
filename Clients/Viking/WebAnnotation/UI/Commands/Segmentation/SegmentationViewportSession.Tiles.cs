@@ -224,6 +224,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // The seeds (a circle's disc, a polygon, an edited mask) are the foreground mask:
             // "everything inside is object, grow beyond it". The server takes one mask, so they are summed here
             // into one 1-bit bitmap over their combined bounds, which may span many windows.
+            //
+            // A server that takes mask tiles gets them as the grid tiles the seeds touch, however large the seeds are, and asks
+            // for the background tiles it needs as the walk grows. Any other server gets the single Mask of the older protocol.
+            bool maskTiles = ServerSupportsMaskTiles;
+            int maskTileScale = SegmentationMaskTiles.ConfiguredScale;
+            double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
+            List<SegmentationServiceTypes.MaskTile> foregroundMaskTiles = [];
             Geometry.Vector2 seedCentre = default;
             if (foregroundBoxes is { Count: > 0 })
             {
@@ -232,13 +239,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     seeds.Add(seed);
 
                 seedCentre = new Geometry.Vector2(foregroundBoxes.Average(seed => seed.Center.X), foregroundBoxes.Average(seed => seed.Center.Y));
-                SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(
-                    signature.Downsample,
-                    seedCentre,
-                    backgroundPoints,
-                    WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
-                if (foregroundMask is not null)
-                    request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask, MaskRole = SegmentationServiceTypes.MaskRole.Seed };
+                if (maskTiles)
+                {
+                    foregroundMaskTiles = await Task.Run(
+                        () => SegmentationMaskTiles.BuildForeground(seeds, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, maskTileScale),
+                        token).ConfigureAwait(false);
+                    if (foregroundMaskTiles.Count > 0)
+                        request.ForegroundFeature = new SegmentationServiceTypes.Feature { MaskRole = SegmentationServiceTypes.MaskRole.Seed };
+                }
+                else
+                {
+                    SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(
+                        signature.Downsample,
+                        seedCentre,
+                        backgroundPoints,
+                        pointRadius);
+                    if (foregroundMask is not null)
+                        request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask, MaskRole = SegmentationServiceTypes.MaskRole.Seed };
+                }
             }
             else if (foregroundPoints is { Count: > 0 })
             {
@@ -254,12 +272,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            // Other structures' circles (inscribed squares) and polygons, summed into the one mask the server takes.
-            SegmentationServiceTypes.Mask? backgroundMaskMessage = backgroundMask?.ToMask(signature.Downsample, seedCentre);
-            if (backgroundMaskMessage is not null)
-                request.BackgroundFeature = new SegmentationServiceTypes.Feature { Mask = backgroundMaskMessage };
-            else if (backgroundMask is { IsEmpty: false })
-                SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: nothing of it is left at ds={signature.Downsample}");
+            if (maskTiles)
+            {
+                // Setting the count, even to 0, tells the server this client serves mask tiles: it will ask for the background.
+                request.ForegroundMaskTileCount = (uint)foregroundMaskTiles.Count;
+            }
+            else
+            {
+                // Other structures' circles (inscribed squares) and polygons, summed into the one mask the server takes.
+                SegmentationServiceTypes.Mask? backgroundMaskMessage = backgroundMask?.ToMask(signature.Downsample, seedCentre);
+                if (backgroundMaskMessage is not null)
+                    request.BackgroundFeature = new SegmentationServiceTypes.Feature { Mask = backgroundMaskMessage };
+                else if (backgroundMask is { IsEmpty: false })
+                    SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: nothing of it is left at ds={signature.Downsample}");
+            }
 
 
             CallOptions callOptions = new(
@@ -271,6 +297,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 grpcClient.SegmentTilesStream(callOptions))
             {
                 await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Start = request }).ConfigureAwait(false);
+                HashSet<TileCell> backgroundSent = [];
+                if (maskTiles)
+                {
+                    // The seed's tiles first: the server starts growing only when all the announced ones have arrived.
+                    await WriteMaskTilesAsync(call.RequestStream, foregroundMaskTiles).ConfigureAwait(false);
+
+                    // The background of the start windows' tiles up front. The server needs it before it predicts them, so asking
+                    // would only cost a round trip.
+                    List<SegmentationServiceTypes.MaskTile> startBackground = await Task.Run(
+                        () => SegmentationMaskTiles.BuildBackground(backgroundMask, request.Tiles, maskTileScale),
+                        token).ConfigureAwait(false);
+                    foreach (SegmentationServiceTypes.MaskTile tile in startBackground)
+                        backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
+
+                    await WriteMaskTilesAsync(call.RequestStream, startBackground).ConfigureAwait(false);
+                    SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={foregroundMaskTiles.Count} startBackground={startBackground.Count} scale={maskTileScale}");
+                }
+
                 while (response is null && await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
                 {
                     SegmentTilesStreamResponse update = call.ResponseStream.Current;
@@ -282,6 +326,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     {
                         requestedTileList.AddRange(update.Needed.Tiles.Select(tile => $"{tile.Row},{tile.Col}"));
                         TilesAnswer answer = await UploadNeededTilesAsync(signature, update.Needed, grayscale, token).ConfigureAwait(false);
+                        if (update.Needed.Masks.Count > 0)
+                            await AnswerNeededMasksAsync(call.RequestStream, update.Needed, answer, signature, backgroundMask, backgroundSent, maskTileScale, token).ConfigureAwait(false);
+
                         await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Answer = answer }).ConfigureAwait(false);
                     }
                 }
@@ -305,6 +352,48 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 $"requestedTiles=[{requestedTiles}] " +
                 $"segments=[{segmentSizes}]");
             return response;
+        }
+
+        /// <summary>Sends <paramref name="tiles"/> as <c>MaskTiles</c> messages. Nothing is sent for an empty list.</summary>
+        private static async Task WriteMaskTilesAsync(
+            IClientStreamWriter<SegmentTilesStreamRequest> stream,
+            IReadOnlyList<SegmentationServiceTypes.MaskTile> tiles)
+        {
+            foreach (SegmentationServiceTypes.MaskTiles message in SegmentationMaskTiles.Chunk(tiles))
+                await stream.WriteAsync(new SegmentTilesStreamRequest { MaskTiles = message }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Sends the BACKGROUND tiles the server asked for (<paramref name="needed"/>.Masks) before its answer, empty tiles
+        /// included, rasterizing only the neighbour shapes that reach each tile. A tile at another downsample is listed in
+        /// <c>masks_unavailable</c>; one already sent (the start windows') is not sent twice, which the server refuses.
+        /// </summary>
+        private static async Task AnswerNeededMasksAsync(
+            IClientStreamWriter<SegmentTilesStreamRequest> stream,
+            TilesNeeded needed,
+            TilesAnswer answer,
+            TileSignature signature,
+            SegmentationMaskUnion? backgroundMask,
+            HashSet<TileCell> backgroundSent,
+            int scale,
+            CancellationToken token)
+        {
+            List<TileCoord> wanted = [];
+            foreach (TileCoord coord in needed.Masks)
+            {
+                if (coord.Downsample != signature.Downsample)
+                    answer.MasksUnavailable.Add(coord);
+                else if (backgroundSent.Add(new TileCell(coord.Row, coord.Col)))
+                    wanted.Add(coord);
+            }
+
+            List<SegmentationServiceTypes.MaskTile> tiles = await Task.Run(
+                () => SegmentationMaskTiles.BuildBackground(backgroundMask, wanted, scale),
+                token).ConfigureAwait(false);
+            await WriteMaskTilesAsync(stream, tiles).ConfigureAwait(false);
+            SegmentationDiag.Log(
+                $"SegmentTilesStream background tiles sent={tiles.Count} unavailable={answer.MasksUnavailable.Count} " +
+                $"nonEmpty={tiles.Count(tile => tile.Full || !tile.Png.IsEmpty)}");
         }
 
         /// <summary>

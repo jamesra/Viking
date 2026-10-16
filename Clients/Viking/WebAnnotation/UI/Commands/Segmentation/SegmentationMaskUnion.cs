@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
@@ -28,6 +29,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly List<IReadOnlyList<Vector2[]>> shapes = [];
         private readonly List<RasterMask> bitmaps = [];
 
+        /// <summary>Per downsample, which shapes and bitmaps touch which tile. Dropped whenever something is added.</summary>
+        private readonly Dictionary<int, TileIndex> tileIndexes = [];
+
         /// <summary>Number of shapes and bitmaps added.</summary>
         public int Count => shapes.Count + bitmaps.Count;
 
@@ -40,6 +44,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (seed.Mask is not null)
             {
                 bitmaps.Add(seed.Mask);
+                tileIndexes.Clear();
                 return;
             }
 
@@ -78,6 +83,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 new Vector2(rectangle.Right, rectangle.Top),
                 new Vector2(rectangle.Left, rectangle.Top),
             ]]);
+            tileIndexes.Clear();
         }
 
         /// <summary>
@@ -90,6 +96,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
 
             shapes.Add(rings);
+            tileIndexes.Clear();
         }
 
         /// <summary>
@@ -168,6 +175,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (pixels is null || pixels.Length != (long)width * height)
                 throw new ArgumentException($"The layout needs {width} x {height} pixels.", nameof(pixels));
 
+            SegmentationServiceTypes.Mask mask = new()
+            {
+                Bounds = new SegmentationServiceTypes.BoundingBox
+                {
+                    XMin = layout.XMin,
+                    YMin = layout.YMin,
+                    XMax = layout.XMax,
+                    YMax = layout.YMax
+                },
+                Png = Google.Protobuf.ByteString.CopyFrom(EncodePng(pixels, width, height))
+            };
+            if (layout.Scale > 1)
+                mask.Scale = (uint)layout.Scale;
+
+            return mask;
+        }
+
+        /// <summary>A 1-bit greyscale PNG of <paramref name="width"/> x <paramref name="height"/> pixels, 255 (or any non-zero) set.</summary>
+        public static byte[] EncodePng(byte[] pixels, int width, int height)
+        {
             L8[] gray = new L8[pixels.Length];
             for (int i = 0; i < pixels.Length; i++)
                 gray[i] = new L8(pixels[i]);
@@ -183,21 +210,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 });
             }
 
-            SegmentationServiceTypes.Mask mask = new()
-            {
-                Bounds = new SegmentationServiceTypes.BoundingBox
-                {
-                    XMin = layout.XMin,
-                    YMin = layout.YMin,
-                    XMax = layout.XMax,
-                    YMax = layout.YMax
-                },
-                Png = Google.Protobuf.ByteString.CopyFrom(stream.ToArray())
-            };
-            if (layout.Scale > 1)
-                mask.Scale = (uint)layout.Scale;
-
-            return mask;
+            return stream.ToArray();
         }
 
         /// <summary>The inclusive mosaic-pixel box that holds every shape and every set bitmap pixel at <paramref name="downsample"/>.</summary>
@@ -208,19 +221,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             foreach (IReadOnlyList<Vector2[]> shape in shapes)
             {
-                double minX = double.MaxValue, maxX = double.MinValue, minY = double.MaxValue, maxY = double.MinValue;
-                foreach (Vector2 vertex in shape[0])
-                {
-                    minX = Math.Min(minX, vertex.X / downsample);
-                    maxX = Math.Max(maxX, vertex.X / downsample);
-                    minY = Math.Min(minY, vertex.Y / downsample);
-                    maxY = Math.Max(maxY, vertex.Y / downsample);
-                }
-
-                // The pixels whose centres (column + 0.5) can be inside the shape; a shape thinner than a pixel may have none.
-                long firstColumn = (long)Math.Ceiling(minX - 0.5), lastColumn = (long)Math.Floor(maxX - 0.5);
-                long firstRow = (long)Math.Ceiling(minY - 0.5), lastRow = (long)Math.Floor(maxY - 0.5);
-                if (lastColumn < firstColumn || lastRow < firstRow)
+                if (!TryGetShapeBounds(shape, downsample, out long firstColumn, out long lastColumn, out long firstRow, out long lastRow))
                     continue;
 
                 xMin = Math.Min(xMin, firstColumn);
@@ -231,16 +232,163 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             foreach (RasterMask bitmap in bitmaps)
             {
-                if (!bitmap.TryGetSetWorldBounds(out Rectangle bounds))
+                if (!TryGetBitmapBounds(bitmap, downsample, out long firstColumn, out long lastColumn, out long firstRow, out long lastRow))
                     continue;
 
-                xMin = Math.Min(xMin, (long)Math.Floor(bounds.Left / downsample));
-                xMax = Math.Max(xMax, (long)Math.Ceiling(bounds.Right / downsample) - 1);
-                yMin = Math.Min(yMin, (long)Math.Floor(bounds.Bottom / downsample));
-                yMax = Math.Max(yMax, (long)Math.Ceiling(bounds.Top / downsample) - 1);
+                xMin = Math.Min(xMin, firstColumn);
+                xMax = Math.Max(xMax, lastColumn);
+                yMin = Math.Min(yMin, firstRow);
+                yMax = Math.Max(yMax, lastRow);
             }
 
             return xMax >= xMin && yMax >= yMin;
+        }
+
+        /// <summary>
+        /// The mosaic pixels whose centres (column + 0.5) can be inside the shape; false for a shape thinner than a pixel,
+        /// which has none.
+        /// </summary>
+        private static bool TryGetShapeBounds(
+            IReadOnlyList<Vector2[]> shape, int downsample, out long firstColumn, out long lastColumn, out long firstRow, out long lastRow)
+        {
+            double minX = double.MaxValue, maxX = double.MinValue, minY = double.MaxValue, maxY = double.MinValue;
+            foreach (Vector2 vertex in shape[0])
+            {
+                minX = Math.Min(minX, vertex.X / downsample);
+                maxX = Math.Max(maxX, vertex.X / downsample);
+                minY = Math.Min(minY, vertex.Y / downsample);
+                maxY = Math.Max(maxY, vertex.Y / downsample);
+            }
+
+            firstColumn = (long)Math.Ceiling(minX - 0.5);
+            lastColumn = (long)Math.Floor(maxX - 0.5);
+            firstRow = (long)Math.Ceiling(minY - 0.5);
+            lastRow = (long)Math.Floor(maxY - 0.5);
+            return lastColumn >= firstColumn && lastRow >= firstRow;
+        }
+
+        /// <summary>The mosaic pixels the set pixels of <paramref name="bitmap"/> cover; false for an empty bitmap.</summary>
+        private static bool TryGetBitmapBounds(
+            RasterMask bitmap, int downsample, out long firstColumn, out long lastColumn, out long firstRow, out long lastRow)
+        {
+            firstColumn = lastColumn = firstRow = lastRow = 0;
+            if (!bitmap.TryGetSetWorldBounds(out Rectangle bounds))
+                return false;
+
+            firstColumn = (long)Math.Floor(bounds.Left / downsample);
+            lastColumn = (long)Math.Ceiling(bounds.Right / downsample) - 1;
+            firstRow = (long)Math.Floor(bounds.Bottom / downsample);
+            lastRow = (long)Math.Ceiling(bounds.Top / downsample) - 1;
+            return true;
+        }
+
+        // ---- tiles ---------------------------------------------------------------------------------------------------
+
+        /// <summary>Which shapes and bitmaps touch each 1024-pixel tile of the grid at one downsample.</summary>
+        private sealed class TileIndex
+        {
+            public readonly Dictionary<TileCell, (List<int> Shapes, List<int> Bitmaps)> Cells = [];
+
+            public List<int> Shapes(TileCell cell) => Entry(cell).Shapes;
+
+            public List<int> Bitmaps(TileCell cell) => Entry(cell).Bitmaps;
+
+            private (List<int> Shapes, List<int> Bitmaps) Entry(TileCell cell)
+            {
+                if (!Cells.TryGetValue(cell, out var entry))
+                {
+                    entry = ([], []);
+                    Cells[cell] = entry;
+                }
+
+                return entry;
+            }
+        }
+
+        private static long FloorDivide(long value, int divisor) => (long)Math.Floor(value / (double)divisor);
+
+        private TileIndex IndexFor(int downsample)
+        {
+            if (tileIndexes.TryGetValue(downsample, out TileIndex? index))
+                return index;
+
+            index = new TileIndex();
+            const int Tile = SegmentationTileGrid.TileSize;
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                if (!TryGetShapeBounds(shapes[i], downsample, out long x0, out long x1, out long y0, out long y1))
+                    continue;
+
+                for (long row = FloorDivide(y0, Tile); row <= FloorDivide(y1, Tile); row++)
+                    for (long col = FloorDivide(x0, Tile); col <= FloorDivide(x1, Tile); col++)
+                        index.Shapes(new TileCell((int)row, (int)col)).Add(i);
+            }
+
+            for (int i = 0; i < bitmaps.Count; i++)
+            {
+                if (!TryGetBitmapBounds(bitmaps[i], downsample, out long x0, out long x1, out long y0, out long y1))
+                    continue;
+
+                for (long row = FloorDivide(y0, Tile); row <= FloorDivide(y1, Tile); row++)
+                    for (long col = FloorDivide(x0, Tile); col <= FloorDivide(x1, Tile); col++)
+                        index.Bitmaps(new TileCell((int)row, (int)col)).Add(i);
+            }
+
+            tileIndexes[downsample] = index;
+            return index;
+        }
+
+        /// <summary>
+        /// The tiles of the grid at <paramref name="downsample"/> that some shape or set bitmap pixel can reach, in row then
+        /// column order. A tile listed may still rasterize to nothing (a shape's bounding box touches it but the shape does not).
+        /// </summary>
+        public IReadOnlyList<TileCell> TilesTouched(int downsample)
+        {
+            if (IsEmpty || downsample <= 0)
+                return [];
+
+            return [.. IndexFor(downsample).Cells.Keys.OrderBy(cell => cell.Row).ThenBy(cell => cell.Col)];
+        }
+
+        /// <summary>How many shapes and bitmaps can reach <paramref name="cell"/>: what <see cref="RasterizeTile"/> would draw.</summary>
+        internal int ShapesReaching(int downsample, TileCell cell)
+        {
+            if (IsEmpty || downsample <= 0 || !IndexFor(downsample).Cells.TryGetValue(cell, out var entry))
+                return 0;
+
+            return entry.Shapes.Count + entry.Bitmaps.Count;
+        }
+
+        /// <summary>
+        /// Rasterizes the union into one grid tile at full resolution: <see cref="SegmentationTileGrid.TileSize"/> square, row 0
+        /// the highest mosaic y of the tile (Y down, like the image tile), 255 set. Only the shapes that reach the tile are
+        /// drawn, found through an index built once per downsample, so a tile far from most shapes costs almost nothing.
+        /// Null when nothing in the tile is set.
+        /// </summary>
+        /// <param name="holePointsVolume">Each clears a disc of <paramref name="holeRadiusPixels"/> mosaic pixels, as in <see cref="ToMask"/>.</param>
+        public byte[]? RasterizeTile(
+            int downsample,
+            TileCell cell,
+            IReadOnlyList<Vector2>? holePointsVolume = null,
+            double holeRadiusPixels = 0)
+        {
+            if (IsEmpty || downsample <= 0 || !IndexFor(downsample).Cells.TryGetValue(cell, out var entry))
+                return null;
+
+            const int Tile = SegmentationTileGrid.TileSize;
+            MaskLayout layout = new(cell.Col * Tile, cell.Row * Tile + Tile - 1, Tile, Tile, 1);
+            byte[] pixels = new byte[Tile * Tile];
+            bool any = false;
+            foreach (int i in entry.Shapes)
+                any |= Fill(pixels, layout, downsample, shapes[i]);
+
+            foreach (int i in entry.Bitmaps)
+                any |= Blit(pixels, layout, downsample, bitmaps[i]);
+
+            if (any && holePointsVolume is { Count: > 0 } && holeRadiusPixels > 0)
+                any = CutHoles(pixels, layout, downsample, holePointsVolume, holeRadiusPixels);
+
+            return any ? pixels : null;
         }
 
         /// <summary>
@@ -281,15 +429,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 rows[row] = TargetRange(bottom, top, downsample, layout.YMin, layout.YMax, layout.YMax, layout.Scale, reverse: true);
             }
 
+            // Target ranges grow monotonically along each axis, so the rows and columns that reach the layout are contiguous.
+            int sourceFirstRow = Array.FindIndex(rows, range => range.First <= range.Last);
+            if (sourceFirstRow < 0)
+                return false;
+
+            int sourceLastRow = Array.FindLastIndex(rows, range => range.First <= range.Last);
+            int sourceFirstColumn = Array.FindIndex(columns, range => range.First <= range.Last);
+            if (sourceFirstColumn < 0)
+                return false;
+
+            int sourceLastColumn = Array.FindLastIndex(columns, range => range.First <= range.Last);
+
             bool any = false;
-            for (int row = 0; row < bitmap.Height; row++)
+            for (int row = sourceFirstRow; row <= sourceLastRow; row++)
             {
                 (int firstRow, int lastRow) = rows[row];
                 if (firstRow > lastRow)
                     continue;
 
                 int sourceOffset = row * bitmap.Width;
-                for (int column = 0; column < bitmap.Width; column++)
+                for (int column = sourceFirstColumn; column <= sourceLastColumn; column++)
                 {
                     (int firstColumn, int lastColumn) = columns[column];
                     if (firstColumn > lastColumn || bitmap.Pixels[sourceOffset + column] == 0)
