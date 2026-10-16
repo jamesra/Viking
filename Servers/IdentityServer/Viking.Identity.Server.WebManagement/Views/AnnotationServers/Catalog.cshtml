@@ -26,12 +26,7 @@
         <div class="d-flex gap-2">
             <form asp-action="SyncAll" method="post" onsubmit="return confirm('Read the VikingXML of every volume now? This can take a few minutes.');">
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-arrow-repeat"></i> 1. Sync all volumes
-                </button>
-            </form>
-            <form asp-action="CopyGrants" method="post" onsubmit="return confirm('Copy every volume grant to its annotation server? Volume grants are kept.');">
-                <button type="submit" class="btn btn-warning">
-                    <i class="bi bi-shield-check"></i> 2. Copy volume grants to annotation servers
+                    <i class="bi bi-arrow-repeat"></i> Sync all volumes
                 </button>
             </form>
         </div>
@@ -46,7 +41,7 @@
 else
 {
     <p class="text-muted small">
-        These keep using their own volume grants. Image-only volumes are expected here; fetch failures usually mean
+        These have no annotation server, so users can open them with Access but hold no annotation rights. Image-only volumes are expected here; fetch failures usually mean
         the host is unreachable from the server or is on a private network that is not listed in
         <code>VikingXmlCatalog:AllowedInternalHosts</code>.
     </p>

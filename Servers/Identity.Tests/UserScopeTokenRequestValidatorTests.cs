@@ -23,12 +23,12 @@ namespace TestIdentityModel
         {
             await using var db = CreateDb();
             var userId = db.CreateUser("launch-user", "x");
-            var volume = new AnnotationContext { Name = "RC2", ResourceTypeId = nameof(AnnotationContext) };
-            db.AnnotationContexts.Add(volume);
+            var volume = new AnnotationServer { Name = "RC2", ResourceTypeId = nameof(AnnotationServer) };
+            db.AnnotationServers.Add(volume);
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.AnnotationContext.Read,
+                PermissionId = Special.Permissions.AnnotationServer.Read,
                 ResourceId = volume.Id,
                 UserId = userId
             });
@@ -45,7 +45,7 @@ namespace TestIdentityModel
         public async Task VolumeScope_ExtensionGrant_NoSubject_UserNotFound()
         {
             await using var db = CreateDb();
-            db.AnnotationContexts.Add(new AnnotationContext { Name = "RC2", ResourceTypeId = nameof(AnnotationContext) });
+            db.AnnotationServers.Add(new AnnotationServer { Name = "RC2", ResourceTypeId = nameof(AnnotationServer) });
             await db.SaveChangesAsync();
 
             var validator = new UserScopeTokenRequestValidator(db);
@@ -61,12 +61,12 @@ namespace TestIdentityModel
         {
             await using var db = CreateDb();
             var userId = db.CreateUser("ropc-user", "x");
-            var volume = new AnnotationContext { Name = "RC2", ResourceTypeId = nameof(AnnotationContext) };
-            db.AnnotationContexts.Add(volume);
+            var volume = new AnnotationServer { Name = "RC2", ResourceTypeId = nameof(AnnotationServer) };
+            db.AnnotationServers.Add(volume);
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.AnnotationContext.Read,
+                PermissionId = Special.Permissions.AnnotationServer.Read,
                 ResourceId = volume.Id,
                 UserId = userId
             });

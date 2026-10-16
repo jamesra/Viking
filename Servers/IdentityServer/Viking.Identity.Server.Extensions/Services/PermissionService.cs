@@ -65,7 +65,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypeIds);
 
-            // Volumes reached only through their annotation server are listed too.
+            // Contexts the user holds Access on are listed with the rights of their annotation server.
             foreach (var volume in await _context.UserAnnotationContextPermissionsAsync(userId))
                 userPermittedResources[volume.Key] = volume.Value;
 

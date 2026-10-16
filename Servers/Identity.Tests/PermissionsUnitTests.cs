@@ -46,41 +46,41 @@ namespace TestIdentityModel
             var testUserId = _dbContext.CreateUser("Test", "None");
             await _dbContext.SaveChangesAsync();
 
-            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(AnnotationContext));
+            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(AnnotationServer));
 
-            var allowedVolume = new AnnotationContext()
+            var allowedVolume = new AnnotationServer()
             {
                 Name = "Allowed Volume",
                 ParentID = null,
             };
 
-            _dbContext.AnnotationContexts.Add(allowedVolume);
+            _dbContext.AnnotationServers.Add(allowedVolume);
 
             _dbContext.GrantedUserPermissions.Add(new GrantedUserPermission()
             {
-                PermissionId = Special.Permissions.AnnotationContext.Review,
+                PermissionId = Special.Permissions.AnnotationServer.Review,
                 Resource = allowedVolume,
                 UserId = testUserId
             });
 
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
 
             ////////////////////////////////////////////////
-            //Add a second volume and ensure the user does not have permissions there.
-            var deniedVolume = new AnnotationContext()
+            //Add a second annotation server and ensure the user does not have permissions there.
+            var deniedVolume = new AnnotationServer()
             {
                 Name = "Denied Volume",
                 ParentID = null,
             };
-            _dbContext.AnnotationContexts.Add(deniedVolume);
+            _dbContext.AnnotationServers.Add(deniedVolume);
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
             
             ////////////////////////////////////////////////
             //Add a second user, give it read on both volumes, and make sure it does not have extra permissions
@@ -89,47 +89,47 @@ namespace TestIdentityModel
 
             _dbContext.GrantedUserPermissions.Add(new GrantedUserPermission()
             {
-                PermissionId = Special.Permissions.AnnotationContext.Read,
+                PermissionId = Special.Permissions.AnnotationServer.Read,
                 Resource = allowedVolume,
                 UserId = testUserBId
             });
 
             _dbContext.GrantedUserPermissions.Add(new GrantedUserPermission()
             {
-                PermissionId = Special.Permissions.AnnotationContext.Read,
+                PermissionId = Special.Permissions.AnnotationServer.Read,
                 Resource = deniedVolume,
                 UserId = testUserBId
             });
              
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
 
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserBId, Special.Permissions.AnnotationContext.Review));
-            Assert.True(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserBId, Special.Permissions.AnnotationContext.Read));
-            Assert.True(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserBId, Special.Permissions.AnnotationContext.Read));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserBId, Special.Permissions.AnnotationServer.Review));
+            Assert.True(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserBId, Special.Permissions.AnnotationServer.Read));
+            Assert.True(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserBId, Special.Permissions.AnnotationServer.Read));
 
             //List the volumes each user has access to 
-            var permittedReview = _dbContext.GetPermittedUsers(allowedVolume.Id, Special.Permissions.AnnotationContext.Review);
+            var permittedReview = _dbContext.GetPermittedUsers(allowedVolume.Id, Special.Permissions.AnnotationServer.Review);
 
             Assert.Equal(1, permittedReview.Count());
             Assert.True(permittedReview.Any(p => p.Id == testUserId));
 
             //List the volumes each user has access to 
-            var permittedAnnotate = _dbContext.GetPermittedUsers(allowedVolume.Id, Special.Permissions.AnnotationContext.Annotate);
+            var permittedAnnotate = _dbContext.GetPermittedUsers(allowedVolume.Id, Special.Permissions.AnnotationServer.Annotate);
 
             Assert.False(permittedAnnotate.Any()); 
 
             //List the volumes each user has access to 
-            var permittedRead = _dbContext.GetPermittedUsers(allowedVolume.Id, Special.Permissions.AnnotationContext.Read);
+            var permittedRead = _dbContext.GetPermittedUsers(allowedVolume.Id, Special.Permissions.AnnotationServer.Read);
 
             Assert.Equal(1, permittedReview.Count());
             Assert.True(permittedRead.Any(p => p.Id == testUserBId));
 
             //List the volumes UserB can read, which should be both
-            var userBPermits = await _dbContext.UserResourcePermissionsByType(testUserBId, new string[] { nameof(AnnotationContext) });
+            var userBPermits = await _dbContext.UserResourcePermissionsByType(testUserBId, new string[] { nameof(AnnotationServer) });
 
             Assert.Equal(2,userBPermits.Count);
             Assert.True(userBPermits.ContainsKey(allowedVolume.Id));
@@ -166,40 +166,40 @@ namespace TestIdentityModel
 
             _dbContext.OrgUnit.Add(orgUnit);
               
-            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(AnnotationContext));
+            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(AnnotationServer));
 
-            var allowedVolume = new AnnotationContext()
+            var allowedVolume = new AnnotationServer()
             {
                 Name = "Allowed Volume",
                 Parent = orgUnit,
             };
 
-            _dbContext.AnnotationContexts.Add(allowedVolume);
+            _dbContext.AnnotationServers.Add(allowedVolume);
 
             _dbContext.GrantedUserPermissions.Add(new GrantedUserPermission()
             {
-                PermissionId = Special.Permissions.AnnotationContext.Review,
+                PermissionId = Special.Permissions.AnnotationServer.Review,
                 Resource = allowedVolume,
                 UserId = testUserId
             });
 
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
 
-            //Add a second volume and ensure the user does not have permissions there.
-            var deniedVolume = new AnnotationContext()
+            //Add a second annotation server and ensure the user does not have permissions there.
+            var deniedVolume = new AnnotationServer()
             {
                 Name = "Denied Volume",
                 Parent = orgUnit
             };
-            _dbContext.AnnotationContexts.Add(deniedVolume);
+            _dbContext.AnnotationServers.Add(deniedVolume);
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
         } 
     }
 
@@ -232,28 +232,28 @@ namespace TestIdentityModel
 
             _dbContext.Group.Add(group);
               
-            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(AnnotationContext));
+            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(AnnotationServer));
 
-            var allowedVolume = new AnnotationContext()
+            var allowedVolume = new AnnotationServer()
             {
                 Name = "Allowed Volume",
                 ParentID = null,
             };
 
-            _dbContext.AnnotationContexts.Add(allowedVolume);
+            _dbContext.AnnotationServers.Add(allowedVolume);
             await _dbContext.SaveChangesAsync();
 
             var groupPermission = _dbContext.GrantedGroupPermissions.Add(new GrantedGroupPermission()
             {
-                PermissionId = Special.Permissions.AnnotationContext.Review,
+                PermissionId = Special.Permissions.AnnotationServer.Review,
                 Resource = allowedVolume,
                 GroupId = group.Id
             });
 
             await _dbContext.SaveChangesAsync();
 
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
 
             var groupAssignment = new UserToGroupAssignment()
             {
@@ -265,14 +265,14 @@ namespace TestIdentityModel
 
             await _dbContext.SaveChangesAsync(); 
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
 
             _dbContext.UserToGroupAssignments.Remove(groupAssignment);
             await _dbContext.SaveChangesAsync(); 
              
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
              
             _dbContext.Add(groupAssignment);
 
@@ -295,21 +295,21 @@ namespace TestIdentityModel
             await _dbContext.SaveChangesAsync();
 
             //See if we have access to the volume because we are members of a parent group that has access
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
 
-            //Add a second volume and ensure the user does not have permissions there.
-            var deniedVolume = new AnnotationContext()
+            //Add a second annotation server and ensure the user does not have permissions there.
+            var deniedVolume = new AnnotationServer()
             {
                 Name = "Denied Volume",
                 ParentID = null
             };
-            _dbContext.AnnotationContexts.Add(deniedVolume);
+            _dbContext.AnnotationServers.Add(deniedVolume);
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationContext.Read));
+            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Review));
+            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.AnnotationServer.Read));
         } 
     }
 }

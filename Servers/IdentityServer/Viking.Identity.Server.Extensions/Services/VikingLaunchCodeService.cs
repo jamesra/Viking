@@ -53,7 +53,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
         /// <summary>
         /// Same access rule as the management CreateCode action: site admin, parent OrgUnit admin,
-        /// or any direct/group grant on the connectome or on its annotation server.
+        /// or the Access permission on the annotation context (direct or through a group).
         /// </summary>
         public async Task<bool> UserCanAccessVolumeAsync(AnnotationContext connectome, ClaimsPrincipal user, string userId)
         {
@@ -67,8 +67,7 @@ namespace Viking.Identity.Server.Extensions.Services
             if (user != null && await _authorization.IsParentOrgUnitAdminAsync(user, connectome))
                 return true;
 
-            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, connectome);
-            return permissions.Length > 0;
+            return await _context.UserHasContextAccessAsync(userId, connectome);
         }
 
         /// <summary>

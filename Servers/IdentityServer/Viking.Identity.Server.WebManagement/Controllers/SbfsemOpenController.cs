@@ -119,8 +119,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, connectome))
                 return true;
 
-            var permissions = await _context.UserEffectiveResourcePermissionsAsync(userId, connectome);
-            return permissions.Length > 0;
+            return await _context.UserHasContextAccessAsync(userId, connectome);
         }
     }
 }

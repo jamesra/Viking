@@ -244,7 +244,6 @@ namespace Viking.Identity.Server.WebManagement
                 });
             services.AddTransient<IVikingXmlSource>(sp => sp.GetRequiredService<VikingXmlMetadataService>());
             services.AddScoped<AnnotationServerCatalogSync>();
-            services.AddScoped<AnnotationServerGrantCopy>();
 
             // Add HTTP context accessor
             services.AddHttpContextAccessor();

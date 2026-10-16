@@ -292,9 +292,7 @@ namespace Viking.Identity.Data
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Connectome) });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationContext) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Read });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Annotate });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Review });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Access, Description = "See this context in Viking and open it; data rights come from its annotation server" });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationServer) });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Read, Description = "View annotations and the images of every linked volume" });

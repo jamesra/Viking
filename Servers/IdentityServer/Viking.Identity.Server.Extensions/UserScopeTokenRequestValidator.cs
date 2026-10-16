@@ -47,8 +47,8 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                 ResourceName = parts[0];
                 ScopeName = parts[1];
 
-                // Prefer API-facing types when names collide with Group/OrgUnit (e.g. "Yiu"). A volume name
-                // still works as a scope prefix: its annotation server's grants are checked too.
+                // Prefer API-facing types when names collide with Group/OrgUnit (e.g. "Yiu"). Scopes are named for the
+                // annotation server ({Server}.Read|Annotate|Review); a context carries only Access and has no data scopes.
                 var resource = await _context.FindApiFacingResourceAsync(ResourceName);
                 if (resource == null || !Special.ResourceTypes.ApiFacing.Contains(resource.ResourceTypeId))
                     continue;

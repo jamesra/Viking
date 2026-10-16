@@ -64,24 +64,25 @@ namespace Viking.Identity.Models
             }
 
             /// <summary>
-            /// Legacy annotation-context permission names. Same strings as <see cref="AnnotationServer"/> so
-            /// token scopes ({Name}.Annotate) keep their shape; new grants go on the annotation server.
+            /// The only permission on an annotation context. It decides whether the context is listed when a user
+            /// launches Viking, and is required to open it. Rights to the data (Read / Annotate / Review) live on the
+            /// context's <see cref="AnnotationServer"/>.
             /// </summary>
             public static class AnnotationContext
+            {
+                public const string Access = "Access";
+
+                public static readonly string[] All = { Access };
+            }
+
+            /// <summary>
+            /// Rights to one annotation database. Token scopes ({ServerName}.Annotate) are built from these.
+            /// </summary>
+            public static class AnnotationServer
             {
                 public const string Read = "Read";
                 public const string Annotate = "Annotate";
                 public const string Review = "Review";
-            }
-
-            /// <summary>
-            /// Same names as <see cref="AnnotationContext"/> so token scopes ({Name}.Annotate) keep their shape.
-            /// </summary>
-            public static class AnnotationServer
-            {
-                public const string Read = AnnotationContext.Read;
-                public const string Annotate = AnnotationContext.Annotate;
-                public const string Review = AnnotationContext.Review;
 
                 public static readonly string[] All = { Read, Annotate, Review };
             }

@@ -90,8 +90,8 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Grants Read, Annotate, and Review. The grant goes on the context's annotation server so it covers
-        /// every copy of the images; a context without one (images only) gets the grant directly.
+        /// Grants Access on the context, and Read, Annotate, and Review on its annotation server so the rights cover
+        /// every context that uses the database. A context without a server (images only) gets Access alone.
         /// </summary>
         public async Task GrantUserAnnotationContextFullAccessAsync(string userId, long annotationContextId)
         {
@@ -99,10 +99,14 @@ namespace Viking.Identity.Server.Extensions.Services
                 .Where(v => v.Id == annotationContextId)
                 .Select(v => v.AnnotationServerId)
                 .FirstOrDefaultAsync();
-            var resourceId = annotationServerId ?? annotationContextId;
 
-            foreach (var permissionId in Special.Permissions.AnnotationServer.All)
-                await GrantUserPermissionIfMissingAsync(userId, resourceId, permissionId);
+            await GrantUserPermissionIfMissingAsync(userId, annotationContextId, Special.Permissions.AnnotationContext.Access);
+
+            if (annotationServerId.HasValue)
+            {
+                foreach (var permissionId in Special.Permissions.AnnotationServer.All)
+                    await GrantUserPermissionIfMissingAsync(userId, annotationServerId.Value, permissionId);
+            }
 
             await _context.SaveChangesAsync();
         }

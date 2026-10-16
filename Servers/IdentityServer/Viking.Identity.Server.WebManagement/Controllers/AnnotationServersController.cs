@@ -22,18 +22,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IAuthorizationService _authorization;
         private readonly AnnotationServerCatalogSync _catalogSync;
-        private readonly AnnotationServerGrantCopy _grantCopy;
 
         public AnnotationServersController(
             ApplicationDbContext context,
             IAuthorizationService authorization,
-            AnnotationServerCatalogSync catalogSync,
-            AnnotationServerGrantCopy grantCopy)
+            AnnotationServerCatalogSync catalogSync)
         {
             _context = context;
             _authorization = authorization;
             _catalogSync = catalogSync;
-            _grantCopy = grantCopy;
         }
 
         // GET: AnnotationServers
@@ -198,14 +195,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var results = await _catalogSync.SyncAllVolumesAsync(cancellationToken);
             ViewData["Title"] = "Volume catalog sync";
             return View("SyncResults", results);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = Special.Roles.Admin)]
-        public async Task<IActionResult> CopyGrants(CancellationToken cancellationToken)
-        {
-            return View("GrantCopyReport", await _grantCopy.CopyVolumeGrantsAsync(cancellationToken));
         }
     }
 }

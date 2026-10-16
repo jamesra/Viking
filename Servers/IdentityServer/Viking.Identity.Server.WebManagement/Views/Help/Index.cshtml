@@ -38,10 +38,10 @@
             "Belongs to one volume. Never differs in content from its volume."),
         ("Annotation Server", "AnnotationServers",
             "One annotation SQL database exposed at a service URL, with its annotation, OData and export endpoints derived from that URL.",
-            "Where Read, Annotate and Review are granted. Every annotation context linked to the server inherits those grants. Servers are normally created by the Volume Catalog Sync from each volume's VikingXML; choosing one by hand on a context pins it so the sync leaves it alone."),
+            "The only place Read, Annotate and Review are granted. Every annotation context linked to the server uses those rights. Servers are normally created by the Volume Catalog Sync from each volume's VikingXML; choosing one by hand on a context pins it so the sync leaves it alone."),
         ("Annotation Context", "AnnotationContexts",
             "The thing a user opens in Viking: one volume bound to one or more annotation servers, plus its registration and optional correction service.",
-            "Lives in a connectome. Its default annotation server supplies the annotation, OData and export URLs; alternates are offered at login. Effective access is its own grants plus those on its annotation server. New grants belong on the annotation server."),
+            "Lives in a connectome. Its default annotation server supplies the annotation, OData and export URLs; alternates are offered at login. Its only permission is Access, which decides whether a user sees it when launching Viking. What the user can do inside it comes from the Read, Annotate and Review grants on its annotation server."),
         ("Registration (StosGroup)", null,
             "The slice-to-slice transform group that aligns the volume's images with the annotation database. Set per annotation context.",
             "Empty uses the VikingXML default; None means the images are already in volume space. Together with the annotation database it identifies a published set of section corrections.")

@@ -11,8 +11,8 @@ namespace Viking.Identity.Server.Authorization
 {
     /// <summary>
     /// Index/Details visibility: grants (user, recursive groups, site admin via
-    /// <see cref="ApplicationDBContextExtensions.UserResourcePermissionsByType"/>; for volumes also the
-    /// annotation server's grants via <see cref="ApplicationDBContextExtensions.UserAnnotationContextPermissionsAsync"/>)
+    /// <see cref="ApplicationDBContextExtensions.UserResourcePermissionsByType"/>; annotation contexts are visible
+    /// through the Access permission via <see cref="ApplicationDBContextExtensions.UserAnnotationContextPermissionsAsync"/>)
     /// or parent-org administration. Mutate actions must keep using
     /// <see cref="AuthorizationServiceExtensions.IsParentOrgUnitAdminAsync"/>.
     /// </summary>

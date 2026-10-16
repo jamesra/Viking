@@ -291,78 +291,72 @@ namespace TestIdentityModel
         }
     }
 
-    public class AnnotationServerGrantCopyTests
-    {
-        [Fact]
-        public async Task Copy_UnionsVolumeGrantsOntoServer_AndReportsWidenedAccess()
-        {
-            await using var db = CatalogDb.Create();
-            var (server, rc1, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
-            var alice = db.CreateUser("alice", "x");
-            var group = new Group { Name = "Lab" };
-            db.Group.Add(group);
-            await db.SaveChangesAsync();
-
-            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = rc1.Id, PermissionId = "Annotate", UserId = alice });
-            db.GrantedGroupPermissions.Add(new GrantedGroupPermission { ResourceId = rc1.Id, PermissionId = "Read", GroupId = group.Id });
-            db.GrantedGroupPermissions.Add(new GrantedGroupPermission { ResourceId = internalCopy.Id, PermissionId = "Read", GroupId = group.Id });
-            await db.SaveChangesAsync();
-
-            var report = await new AnnotationServerGrantCopy(db).CopyVolumeGrantsAsync();
-
-            Assert.Equal(1, report.UserGrantsAdded);
-            Assert.Equal(1, report.GroupGrantsAdded);
-            Assert.True(await db.GrantedUserPermissions.AnyAsync(g => g.ResourceId == server.Id && g.UserId == alice && g.PermissionId == "Annotate"));
-            Assert.True(await db.GrantedGroupPermissions.AnyAsync(g => g.ResourceId == server.Id && g.GroupId == group.Id && g.PermissionId == "Read"));
-
-            // Volume rows are kept for rollback.
-            Assert.True(await db.GrantedUserPermissions.AnyAsync(g => g.ResourceId == rc1.Id && g.UserId == alice));
-
-            // Alice was only granted RC1; the group already had both volumes.
-            var widened = Assert.Single(report.WidenedAccess);
-            Assert.Equal("alice", widened.PrincipalName);
-            Assert.Equal(new[] { "RC1" }, widened.SourceVolumes);
-            Assert.Equal(new[] { "RC1-Internal" }, widened.NewlyReachableVolumes);
-
-            var again = await new AnnotationServerGrantCopy(db).CopyVolumeGrantsAsync();
-            Assert.Equal(0, again.UserGrantsAdded + again.GroupGrantsAdded);
-        }
-    }
-
     public class EffectiveVolumePermissionTests
     {
+        static GrantedUserPermission Grant(long resourceId, string permission, string userId) =>
+            new GrantedUserPermission { ResourceId = resourceId, PermissionId = permission, UserId = userId };
+
         [Fact]
-        public async Task ServerGrant_ReachesEveryLinkedVolume_WithReadImplied()
+        public async Task ContextAccess_ListsOnlyThatContext_WithServerRightsAndReadImplied()
         {
             await using var db = CatalogDb.Create();
             var (server, rc1, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
             var userId = db.CreateUser("annotator", "x");
             await db.SaveChangesAsync();
-            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Annotate", UserId = userId });
+            db.GrantedUserPermissions.Add(Grant(server.Id, "Annotate", userId));
+            db.GrantedUserPermissions.Add(Grant(rc1.Id, "Access", userId));
             await db.SaveChangesAsync();
 
             var volumes = await db.UserAnnotationContextPermissionsAsync(userId);
 
             Assert.Equal(new[] { "Read", "Annotate" }, volumes[rc1.Id]);
-            Assert.Equal(new[] { "Read", "Annotate" }, volumes[internalCopy.Id]);
+            Assert.False(volumes.ContainsKey(internalCopy.Id), "A server grant alone does not list a sibling context.");
             Assert.Equal(new[] { "Read", "Annotate" }, await db.UserEffectiveResourcePermissionsAsync(userId, server));
         }
 
         [Fact]
-        public async Task ImageOnlyVolume_UsesItsOwnGrant()
+        public async Task ServerRightsWithoutAccess_ListNothing()
+        {
+            await using var db = CatalogDb.Create();
+            var (server, _, _) = await CatalogDb.AddSharedServerAsync(db);
+            var userId = db.CreateUser("no-access", "x");
+            await db.SaveChangesAsync();
+            db.GrantedUserPermissions.Add(Grant(server.Id, "Review", userId));
+            await db.SaveChangesAsync();
+
+            Assert.Empty(await db.UserAnnotationContextPermissionsAsync(userId));
+        }
+
+        [Fact]
+        public async Task DataRightsGrantedOnAContext_AreIgnored()
+        {
+            await using var db = CatalogDb.Create();
+            var (server, rc1, _) = await CatalogDb.AddSharedServerAsync(db);
+            var userId = db.CreateUser("old-grant", "x");
+            await db.SaveChangesAsync();
+            db.GrantedUserPermissions.Add(Grant(rc1.Id, "Annotate", userId));
+            await db.SaveChangesAsync();
+
+            Assert.Empty(await db.UserAnnotationContextPermissionsAsync(userId));
+            Assert.False(await db.UserHasContextAccessAsync(userId, rc1));
+            Assert.Empty(await db.UserEffectiveResourcePermissionsAsync(userId, server));
+        }
+
+        [Fact]
+        public async Task ImageOnlyContext_AccessListsItWithNoRights()
         {
             await using var db = CatalogDb.Create();
             var mosaics = CatalogDb.AddVolume(db, "Mosaics", "http://rogue1/Mosaic.VikingXML");
             var userId = db.CreateUser("viewer", "x");
             await db.SaveChangesAsync();
-            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = mosaics.Id, PermissionId = "Read", UserId = userId });
+            db.GrantedUserPermissions.Add(Grant(mosaics.Id, "Access", userId));
             await db.SaveChangesAsync();
 
             var volumes = await db.UserAnnotationContextPermissionsAsync(userId);
 
-            Assert.Equal(new[] { "Read" }, volumes[mosaics.Id]);
-            Assert.True(await db.IsUserPermittedEffectiveAsync(mosaics, userId, "Read"));
-            Assert.False(await db.IsUserPermittedEffectiveAsync(mosaics, userId, "Annotate"));
+            Assert.Empty(volumes[mosaics.Id]);
+            Assert.True(await db.UserHasContextAccessAsync(userId, mosaics));
+            Assert.False(await db.IsUserPermittedEffectiveAsync(mosaics, userId, "Read"));
         }
 
         [Fact]
@@ -377,16 +371,33 @@ namespace TestIdentityModel
         }
 
         [Fact]
-        public async Task AnonymousServerGrant_ListsLinkedVolumes()
+        public async Task SiteAdministrator_SeesEveryContext()
         {
             await using var db = CatalogDb.Create();
-            var (server, rc1, _) = await CatalogDb.AddSharedServerAsync(db);
+            var (_, rc1, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
+            var admin = db.GetUsersInAdminRole().FirstOrDefault();
+            if (admin == null)
+                return; // The in-memory fixture seeds no administrator; covered by the SQL-backed suite.
+
+            var volumes = await db.UserAnnotationContextPermissionsAsync(admin.Id);
+
+            Assert.Equal(new[] { "Read", "Annotate", "Review" }, volumes[rc1.Id]);
+            Assert.True(volumes.ContainsKey(internalCopy.Id));
+        }
+
+        [Fact]
+        public async Task AnonymousAccess_ListsContextWithServerRights()
+        {
+            await using var db = CatalogDb.Create();
+            var (server, rc1, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
             db.GrantedGroupPermissions.Add(new GrantedGroupPermission { ResourceId = server.Id, PermissionId = "Read", GroupId = Special.Groups.Anonymous.Id });
+            db.GrantedGroupPermissions.Add(new GrantedGroupPermission { ResourceId = rc1.Id, PermissionId = "Access", GroupId = Special.Groups.Anonymous.Id });
             await db.SaveChangesAsync();
 
             var volumes = await db.AnonymousVolumePermissionsAsync();
 
             Assert.Equal(new[] { "Read" }, volumes[rc1.Id]);
+            Assert.False(volumes.ContainsKey(internalCopy.Id));
         }
 
         [Fact]
@@ -402,34 +413,61 @@ namespace TestIdentityModel
         }
 
         [Fact]
-        public async Task LaunchAccess_ServerGrantOpensSiblingVolume()
+        public async Task LaunchAccess_RequiresAccessOnTheContext()
         {
             await using var db = CatalogDb.Create();
             var (server, _, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
             var userId = db.CreateUser("launcher", "x");
             await db.SaveChangesAsync();
-            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Read", UserId = userId });
+            db.GrantedUserPermissions.Add(Grant(server.Id, "Read", userId));
             await db.SaveChangesAsync();
 
             var service = new VikingLaunchCodeService(db, new CatalogDenyAllAuthorization());
             var volume = await service.ResolveVolumeAsync("RC1-Internal");
 
+            Assert.False(await service.UserCanAccessVolumeAsync(volume, new ClaimsPrincipal(), userId), "Server rights do not open a context.");
+
+            db.GrantedUserPermissions.Add(Grant(internalCopy.Id, "Access", userId));
+            await db.SaveChangesAsync();
+
             Assert.True(await service.UserCanAccessVolumeAsync(volume, new ClaimsPrincipal(), userId));
         }
 
         [Fact]
-        public async Task GrantFullAccess_LandsOnAnnotationServerWhenLinked()
+        public async Task GrantFullAccess_AccessOnContext_RightsOnServer()
         {
             await using var db = CatalogDb.Create();
             var (server, rc1, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
             var userId = db.CreateUser("collaborator", "x");
             await db.SaveChangesAsync();
 
-            await new ResourceProvisioningService(db).GrantUserAnnotationContextFullAccessAsync(userId, internalCopy.Id);
+            var provisioning = new ResourceProvisioningService(db);
+            await provisioning.GrantUserAnnotationContextFullAccessAsync(userId, internalCopy.Id);
+            await provisioning.GrantUserAnnotationContextFullAccessAsync(userId, internalCopy.Id);
 
             Assert.Equal(3, await db.GrantedUserPermissions.CountAsync(g => g.UserId == userId && g.ResourceId == server.Id));
-            Assert.False(await db.GrantedUserPermissions.AnyAsync(g => g.UserId == userId && g.ResourceId == internalCopy.Id));
-            Assert.Equal(new[] { "Read", "Annotate", "Review" }, (await db.UserAnnotationContextPermissionsAsync(userId))[rc1.Id]);
+            var onContext = await db.GrantedUserPermissions.Where(g => g.UserId == userId && g.ResourceId == internalCopy.Id).ToListAsync();
+            Assert.Equal("Access", Assert.Single(onContext).PermissionId);
+
+            var volumes = await db.UserAnnotationContextPermissionsAsync(userId);
+            Assert.Equal(new[] { "Read", "Annotate", "Review" }, volumes[internalCopy.Id]);
+            Assert.False(volumes.ContainsKey(rc1.Id), "Access was granted on the Internal copy only.");
+        }
+
+        [Fact]
+        public async Task GrantFullAccess_ContextWithoutServer_GetsAccessOnly()
+        {
+            await using var db = CatalogDb.Create();
+            var mosaics = CatalogDb.AddVolume(db, "Mosaics", "http://rogue1/Mosaic.VikingXML");
+            var userId = db.CreateUser("imageonly", "x");
+            await db.SaveChangesAsync();
+
+            await new ResourceProvisioningService(db).GrantUserAnnotationContextFullAccessAsync(userId, mosaics.Id);
+
+            var grants = await db.GrantedUserPermissions.Where(g => g.UserId == userId).ToListAsync();
+            var grant = Assert.Single(grants);
+            Assert.Equal(mosaics.Id, grant.ResourceId);
+            Assert.Equal("Access", grant.PermissionId);
         }
 
         [Fact]
@@ -444,7 +482,8 @@ namespace TestIdentityModel
             rc1.Volume = imageSet;
             var userId = db.CreateUser("reader", "x");
             await db.SaveChangesAsync();
-            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Read", UserId = userId });
+            db.GrantedUserPermissions.Add(Grant(server.Id, "Read", userId));
+            db.GrantedUserPermissions.Add(Grant(rc1.Id, "Access", userId));
             await db.SaveChangesAsync();
 
             var service = new PermissionService(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<PermissionService>.Instance, new NoDebugLogging());
@@ -465,10 +504,10 @@ namespace TestIdentityModel
         }
     }
 
-    public class LegacyVolumeScopeTests
+    public class ServerScopeTests
     {
         [Fact]
-        public async Task VolumeNameScope_AuthorizedByAnnotationServerGrant()
+        public async Task ServerNameScope_AuthorizedByAnnotationServerGrant()
         {
             await using var db = CatalogDb.Create();
             var (server, _, _) = await CatalogDb.AddSharedServerAsync(db);
@@ -477,7 +516,7 @@ namespace TestIdentityModel
             db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Annotate", UserId = userId });
             await db.SaveChangesAsync();
 
-            foreach (var scope in new[] { "RC1-Internal.Annotate", "RC1-Internal.Read", "RC1.Annotate", "RC1.Read" })
+            foreach (var scope in new[] { "RC1.Annotate", "RC1.Read" })
             {
                 var context = TokenContext.Create(userId, scope);
                 await new UserScopeTokenRequestValidator(db).ValidateAsync(context);
@@ -486,7 +525,24 @@ namespace TestIdentityModel
         }
 
         [Fact]
-        public async Task VolumeNameScope_DeniedWithoutTheGrant()
+        public async Task ContextNameScope_IsDenied_EvenWithServerRightsAndAccess()
+        {
+            await using var db = CatalogDb.Create();
+            var (server, _, internalCopy) = await CatalogDb.AddSharedServerAsync(db);
+            var userId = db.CreateUser("by-context", "x");
+            await db.SaveChangesAsync();
+            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Annotate", UserId = userId });
+            db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = internalCopy.Id, PermissionId = "Access", UserId = userId });
+            await db.SaveChangesAsync();
+
+            var context = TokenContext.Create(userId, "RC1-Internal.Read");
+            await new UserScopeTokenRequestValidator(db).ValidateAsync(context);
+
+            Assert.True(context.Result.IsError, "Data scopes are named for the annotation server, not the context.");
+        }
+
+        [Fact]
+        public async Task ServerScope_DeniedWithoutTheGrant()
         {
             await using var db = CatalogDb.Create();
             var (server, _, _) = await CatalogDb.AddSharedServerAsync(db);
@@ -495,7 +551,7 @@ namespace TestIdentityModel
             db.GrantedUserPermissions.Add(new GrantedUserPermission { ResourceId = server.Id, PermissionId = "Read", UserId = userId });
             await db.SaveChangesAsync();
 
-            var context = TokenContext.Create(userId, "RC1-Internal.Review");
+            var context = TokenContext.Create(userId, "RC1.Review");
             await new UserScopeTokenRequestValidator(db).ValidateAsync(context);
 
             Assert.True(context.Result.IsError);

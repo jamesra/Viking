@@ -41,7 +41,7 @@ namespace TestIdentityModel
         }
 
         [Fact]
-        public async Task UserCanAccessVolume_DirectGrant_Succeeds()
+        public async Task UserCanAccessVolume_DirectAccessGrant_Succeeds()
         {
             await using var db = CreateDb();
             var userId = db.CreateUser("granted", "x");
@@ -50,7 +50,7 @@ namespace TestIdentityModel
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.AnnotationContext.Read,
+                PermissionId = Special.Permissions.AnnotationContext.Access,
                 ResourceId = volume.Id,
                 UserId = userId
             });

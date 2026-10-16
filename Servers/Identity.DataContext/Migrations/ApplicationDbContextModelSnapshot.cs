@@ -498,17 +498,8 @@ namespace Viking.Identity.Data.Migrations
                         new
                         {
                             ResourceTypeId = "AnnotationContext",
-                            PermissionId = "Read"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "AnnotationContext",
-                            PermissionId = "Annotate"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "AnnotationContext",
-                            PermissionId = "Review"
+                            PermissionId = "Access",
+                            Description = "See this context in Viking and open it; data rights come from its annotation server"
                         },
                         new
                         {
