@@ -249,6 +249,8 @@ Optional arguments:
 
 The server can serve a browser page on HTTPS port **8443** (Compose publishes host **40444**). It is off unless `--demo-site` is passed or `SEGMENTATION_DEMO_SITE=1`. The page uses the same Let's Encrypt files as gRPC TLS (`SSL_CERT_PATH` and `SSL_KEY_PATH`). The server will not start without those files, so the page is always available when it is enabled. `segmentation-certbot-renewer` (Compose profile `letsencrypt`) obtains the certificate for `segmentation.codepharm.net` and restarts this process on renewal.
 
+Behind a reverse proxy that terminates TLS, set `SEGMENTATION_DEMO_PLAINTEXT=1` (or pass `--demo-plaintext`) to serve the page as plain HTTP instead. It then needs no certificate and listens on port **80** unless `--demo-port` says otherwise. It has no login unless `SEGMENTATION_DEMO_TOKEN` is set, so publish it only to the proxy. `rebuild-and-start.ps1` turns this on for every model container and publishes it on host port gRPC port + 100 (v4: 40546).
+
 With the site enabled, open `https://segmentation.codepharm.net:40444`. Left-click is foreground, right-click is background. The page calls `UploadImage` once, then `SegmentImage` on that id.
 
 The page is cautious by default because it has no login of its own:

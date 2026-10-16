@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from segmentation_grpc.generate_grpc import generate_grpc_code
 from segmentation_server.compile_config import env_compile_image_encoder_enabled
-from segmentation_server.demo_site import DEFAULT_DEMO_PORT, demo_enabled
+from segmentation_server.demo_site import DEFAULT_DEMO_PORT, demo_enabled, demo_plaintext, demo_port_for
 from segmentation_server.healthcheck import tls_port
 from segmentation_server.image_cache import (
     DEFAULT_MAX_ENTRIES,
@@ -35,6 +35,7 @@ class CLIArgs:
     demo_site: bool
     demo_port: int
     demo_bind: str | None = None
+    demo_plaintext: bool = False
 
 
 async def main() -> None:
@@ -96,8 +97,17 @@ async def main() -> None:
     parser.add_argument(
         '--demo-port',
         type=int,
-        default=DEFAULT_DEMO_PORT,
-        help=f'HTTPS port for the demo page (default: {DEFAULT_DEMO_PORT})',
+        default=None,
+        help=f'Port for the demo page (default: 80 with --demo-plaintext, else {DEFAULT_DEMO_PORT})',
+    )
+    parser.add_argument(
+        '--demo-plaintext',
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            'Serve the demo page as plain HTTP, for a reverse proxy that terminates TLS '
+            '(default: SEGMENTATION_DEMO_PLAINTEXT, off). Needs no certificate.'
+        ),
     )
     parser.add_argument(
         '--demo-bind',
@@ -130,8 +140,9 @@ async def main() -> None:
         cache_max_images=args.cache_max_images,
         compile_image_encoder=compile_image_encoder,
         demo_site=demo_enabled(args.demo_site),
-        demo_port=args.demo_port,
+        demo_port=demo_port_for(args.demo_port, demo_plaintext(args.demo_plaintext)),
         demo_bind=args.demo_bind,
+        demo_plaintext=demo_plaintext(args.demo_plaintext),
     )
 
     if cli_args.generate_grpc:
@@ -167,6 +178,7 @@ async def main() -> None:
         demo_site=cli_args.demo_site,
         demo_port=cli_args.demo_port,
         demo_bind=cli_args.demo_bind,
+        demo_plaintext=cli_args.demo_plaintext,
     )
 
 

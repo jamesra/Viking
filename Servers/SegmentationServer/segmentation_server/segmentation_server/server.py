@@ -2439,6 +2439,7 @@ async def serve(
     demo_site: bool = False,
     demo_port: int = 8443,
     demo_bind: Optional[str] = None,
+    demo_plaintext: Optional[bool] = None,
 ) -> None:
     """Listen for gRPC over TLS on ``[::]:port``. There is no cleartext listener.
 
@@ -2504,6 +2505,7 @@ async def serve(
             loop=loop,
             pem_paths=pem_paths,
             bind=demo_bind,
+            plaintext=demo_plaintext,
         )
         await server.wait_for_termination()
     except asyncio.CancelledError:

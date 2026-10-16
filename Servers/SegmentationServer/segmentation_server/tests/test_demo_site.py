@@ -20,6 +20,8 @@ from segmentation_server.demo_site import (
     DemoHttpsServer,
     demo_bind_address,
     demo_enabled,
+    demo_plaintext,
+    demo_port_for,
     handle_demo_request,
     start_demo_site,
 )
@@ -163,6 +165,43 @@ def test_known_missing_certificates_do_not_bind(monkeypatch) -> None:
             pem_paths=None,
         ) is None
     finally:
+        loop.close()
+
+def test_plaintext_flag_and_default_port(monkeypatch) -> None:
+    monkeypatch.delenv("SEGMENTATION_DEMO_PLAINTEXT", raising=False)
+    assert demo_plaintext(None) is False
+    monkeypatch.setenv("SEGMENTATION_DEMO_PLAINTEXT", "1")
+    assert demo_plaintext(None) is True
+    assert demo_plaintext(False) is False
+    assert demo_port_for(None, plaintext=True) == 80
+    assert demo_port_for(None, plaintext=False) == 8443
+    assert demo_port_for(9000, plaintext=True) == 9000
+
+
+def test_plaintext_site_serves_http_without_certificates(monkeypatch) -> None:
+    monkeypatch.delenv("SSL_CERT_PATH", raising=False)
+    monkeypatch.delenv("SSL_KEY_PATH", raising=False)
+    loop = asyncio.new_event_loop()
+    loop_thread = threading.Thread(target=loop.run_forever, name="demo-test-loop", daemon=True)
+    loop_thread.start()
+    site = start_demo_site(
+        enabled=True,
+        port=0,
+        servicer=FakeServicer(),
+        loop=loop,
+        bind="127.0.0.1",
+        plaintext=True,
+    )
+    try:
+        assert site is not None
+        status, _headers, page = _request(site.port, "/")
+        assert status == 200
+        assert b"foreground" in page
+    finally:
+        if site is not None:
+            site.close()
+        loop.call_soon_threadsafe(loop.stop)
+        loop_thread.join(timeout=5)
         loop.close()
 
 

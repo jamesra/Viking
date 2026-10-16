@@ -56,7 +56,10 @@ _UNSET = object()
 DEMO_SITE_ENV = "SEGMENTATION_DEMO_SITE"
 DEMO_BIND_ENV = "SEGMENTATION_DEMO_BIND"
 DEMO_TOKEN_ENV = "SEGMENTATION_DEMO_TOKEN"
+DEMO_PLAINTEXT_ENV = "SEGMENTATION_DEMO_PLAINTEXT"
 DEFAULT_DEMO_PORT = 8443
+# Plain HTTP is for a reverse proxy that terminates TLS in front of the container.
+DEFAULT_PLAINTEXT_DEMO_PORT = 80
 DEFAULT_DEMO_BIND = "127.0.0.1"
 CLIENT_HEADER = "X-Demo-Client"
 TOKEN_HEADER = "X-Demo-Token"
@@ -220,6 +223,20 @@ def demo_enabled(cli_value: Optional[bool]) -> bool:
     return env_flag_enabled(DEMO_SITE_ENV, default=False)
 
 
+def demo_plaintext(cli_value: Optional[bool] = None) -> bool:
+    """True when the page is served as plain HTTP. CLI flag wins; SEGMENTATION_DEMO_PLAINTEXT defaults off."""
+    if cli_value is not None:
+        return cli_value
+    return env_flag_enabled(DEMO_PLAINTEXT_ENV, default=False)
+
+
+def demo_port_for(cli_value: Optional[int], plaintext: bool) -> int:
+    """The demo port: the argument, else 80 for plain HTTP, else 8443 for HTTPS."""
+    if cli_value is not None:
+        return cli_value
+    return DEFAULT_PLAINTEXT_DEMO_PORT if plaintext else DEFAULT_DEMO_PORT
+
+
 def demo_bind_address(cli_value: Optional[str] = None) -> str:
     """Address the demo listens on: the argument, SEGMENTATION_DEMO_BIND, or loopback only."""
     if cli_value:
@@ -240,8 +257,12 @@ def start_demo_site(
     loop: asyncio.AbstractEventLoop,
     pem_paths: Any = _UNSET,
     bind: Optional[str] = None,
+    plaintext: Optional[bool] = None,
 ) -> Optional[DemoSite]:
-    """Bind the HTTPS demo site, or return None when it must stay down.
+    """Bind the demo site, or return None when it must stay down.
+
+    ``plaintext`` (or SEGMENTATION_DEMO_PLAINTEXT) serves plain HTTP and needs no certificate; use it
+    only behind a reverse proxy that terminates TLS.
 
     Pass pem_paths from the gRPC listener's lookup. None means the certificate
     files are already known to be missing. Omit pem_paths to look them up here.
@@ -253,34 +274,38 @@ def start_demo_site(
             DEMO_SITE_ENV,
         )
         return None
-    if pem_paths is _UNSET:
-        pem_paths = resolve_tls_pem_paths()
-    if pem_paths is None:
-        logger.info(
-            "Demo HTTPS site is enabled but TLS certificates are not available; listener not started"
-        )
-        return None
-    cert_path, key_path = pem_paths
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    try:
-        context.load_cert_chain(certfile=cert_path, keyfile=key_path)
-    except OSError as exc:
-        logger.error("Demo HTTPS certificate could not be loaded: %s", exc)
-        return None
+    scheme = "HTTP" if demo_plaintext(plaintext) else "HTTPS"
+    context: Optional[ssl.SSLContext] = None
+    if scheme == "HTTPS":
+        if pem_paths is _UNSET:
+            pem_paths = resolve_tls_pem_paths()
+        if pem_paths is None:
+            logger.info(
+                "Demo HTTPS site is enabled but TLS certificates are not available; listener not started"
+            )
+            return None
+        cert_path, key_path = pem_paths
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        try:
+            context.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        except OSError as exc:
+            logger.error("Demo HTTPS certificate could not be loaded: %s", exc)
+            return None
     address = demo_bind_address(bind)
     token = demo_token()
     try:
         httpd = DemoHttpsServer((address, port), servicer, loop, context, token=token)
     except OSError:
-        logger.exception("Demo HTTPS site could not bind %s:%s", address, port)
+        logger.exception("Demo %s site could not bind %s:%s", scheme, address, port)
         return None
     thread = threading.Thread(target=httpd.serve_forever, name="demo-https", daemon=True)
     thread.start()
-    logger.info("Demo HTTPS site listening on %s:%s (token %s)", address, port, "required" if token else "not set")
+    logger.info("Demo %s site listening on %s:%s (token %s)", scheme, address, port, "required" if token else "not set")
     if address not in ("127.0.0.1", "::1", "localhost") and token is None:
         logger.warning(
-            "Demo HTTPS site is reachable beyond this host and has no login. Set %s to require a shared "
+            "Demo %s site is reachable beyond this host and has no login. Set %s to require a shared "
             "secret, or leave %s unset to keep it on loopback.",
+            scheme,
             DEMO_TOKEN_ENV,
             DEMO_BIND_ENV,
         )
