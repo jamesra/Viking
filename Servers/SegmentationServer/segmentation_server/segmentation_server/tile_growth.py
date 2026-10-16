@@ -49,7 +49,7 @@ import logging
 import os
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Callable, Deque, Dict, Iterable, Iterator, List, Mapping, Optional, Protocol, Sequence, Set, Tuple
+from typing import Any, Callable, Deque, Dict, Iterable, Iterator, List, Mapping, Optional, Protocol, Sequence, Set, Tuple
 
 import cv2
 import numpy as np
@@ -289,6 +289,7 @@ def grow_segmentation(
     hint_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
     background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
     background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+    prompt_encoder: Optional[Any] = None,
 ) -> GrowthResult:
     """One pass of ``GrowthWalk``: walk outward from the clicks with the tiles ``predict`` has.
 
@@ -312,6 +313,7 @@ def grow_segmentation(
         hint_boxes=hint_boxes,
         background_masks=background_masks,
         background_rects=background_rects,
+        prompt_encoder=prompt_encoder,
     )
     walk.advance()
     return walk.result()
@@ -349,6 +351,9 @@ class GrowthWalk:
     ``background_masks`` are rectangles that are all background: every window's mask prompt is
     strongly negative there and they are cleared from the answer. ``background_rects`` are
     rectangles the background is most likely inside: a weak negative in the mask prompt only.
+    ``prompt_encoder`` (see ``prompt_encodings``) builds the mask prompt of a start window that has a client mask,
+    background included, as the model was trained on it. None keeps the legacy flat prompt below. Windows the walk
+    grows into are prompted with their neighbours' fused logits whichever encoder this is.
     """
 
     def __init__(
@@ -368,7 +373,9 @@ class GrowthWalk:
         hint_boxes: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         background_masks: Optional[Sequence[MaskShape | Tuple[int, int, int, int]]] = None,
         background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
+        prompt_encoder: Optional[Any] = None,
     ) -> None:
+        self._prompt_encoder = prompt_encoder
         self._started = False
         self._assume_boxes = assume_boxes
         # Cells the client's prompt starts the walk in, and the first answer that no mask fit one
@@ -804,9 +811,13 @@ class GrowthWalk:
         # A continuation window is told what the windows around it have found, so it continues that
         # object instead of choosing one from its prompt alone. A start window has nothing to be told.
         mask_logits = self._canvas.window_logits(cell) if attempt.kind in ("edge", "frontier") else None
-        if attempt.kind == "user" and masked:
-            mask_logits = mask_prompt_logits(cell, mask_shape)
-        mask_logits = self._with_background(cell, mask_logits)
+        if attempt.kind == "user" and masked and self._prompt_encoder is not None:
+            # The model's own encoding builds the whole start prompt, background included.
+            mask_logits = self._prompt_encoder.start_window(cell, mask_shape, self._background_masks)
+        else:
+            if attempt.kind == "user" and masked:
+                mask_logits = mask_prompt_logits(cell, mask_shape)
+            mask_logits = self._with_background(cell, mask_logits)
         outcome = self._call_predict(cell, points, labels, box, mask_logits)
         if outcome is None:
             return False

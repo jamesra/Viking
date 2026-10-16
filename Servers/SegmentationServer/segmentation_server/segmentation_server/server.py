@@ -12,7 +12,7 @@ import signal
 import threading
 import time
 from concurrent import futures
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
 
 import grpc
@@ -24,6 +24,7 @@ from numpy.typing import NDArray
 from segmentation_grpc import (
     DeleteImageRequest,
     DeleteImageResponse,
+    MaskRole,
     MultiSegmentationRequest,
     SegmentationRequest,
     SegmentationResponse,
@@ -34,6 +35,7 @@ from segmentation_grpc import (
     SegmentTilesStreamResponse,
     ServerStatusRequest,
     ServerStatusResponse,
+    SubmissionMode,
     TileCoord,
     TilesNeeded,
     UploadImageRequest,
@@ -56,6 +58,9 @@ from segmentation_server.circle_boxes import find_circles, outer_ring_box_enable
 from segmentation_server.healthcheck import forget_listening_port, record_listening_port
 from segmentation_server.responses import ResponseOptions, build_segmentation_response, choose_frame
 from segmentation_server.prompt_log import describe_prompts
+from segmentation_server.model_manifest import UNKNOWN as _UNKNOWN_MODEL
+from segmentation_server.model_manifest import ModelManifest, default_manifest
+from segmentation_server.prompt_encodings import encoder_for
 from segmentation_server.mask_utils import (
     DEFAULT_MASK_THRESHOLD,
     NoMatchingMask,
@@ -530,6 +535,12 @@ class SegmentationServicer(SegmentationServiceServicer):
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
             model = _SegmentationModel(compile_image_encoder=compile_image_encoder)
         self.model = model
+        # What the model's manifest says it is and how it is fed. A model without one (a test fake, or weights
+        # with no manifest file) is the legacy tiled model, as before manifests existed.
+        manifest = getattr(model, "manifest", None)
+        self._manifest: ModelManifest = manifest if isinstance(manifest, ModelManifest) else default_manifest()
+        self._prompt_encoder = encoder_for(self._manifest)
+        self._warned_missing_model_id = False
         self.inference_executor = inference_executor
         self._inference_workers = max(1, inference_workers)
         self._exit_process = exit_process
@@ -1063,6 +1074,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         context: ServicerContext,
     ) -> UploadImageResponse:
         """Cache image bytes and return an ID after the predictor is ready."""
+        if not await self._submission_ok("UploadImage", False, context):
+            return UploadImageResponse()
         image_data: bytes = request.image_data
         width: int = request.width
         height: int = request.height
@@ -1121,6 +1134,71 @@ class SegmentationServicer(SegmentationServiceServicer):
         logger.info("DeleteImage ID=%s success=%s in %.3fs", image_id, success, time.perf_counter() - start_time)
         return DeleteImageResponse(success=success)
 
+    def _model_id_required(self) -> bool:
+        """True when a request must name the model: ``SEGMENTATION_REQUIRE_MODEL_ID`` (1 or 0), else the manifest."""
+        flag = os.environ.get("SEGMENTATION_REQUIRE_MODEL_ID", "").strip()
+        if flag in ("0", "1"):
+            return flag == "1"
+        return self._manifest.requires_model_id
+
+    async def _model_id_ok(self, request: Any, context: ServicerContext) -> bool:
+        """Check the model a request says it was built for against the one this server serves.
+
+        A different ``model_id`` is refused with ``FAILED_PRECONDITION``: its masks were built for another model, and
+        the answer would be quietly worse. An unset one is refused only when the model requires it. A server whose model
+        has no manifest does not know its own id, so it has nothing to compare and accepts any.
+        """
+        manifest = self._manifest
+        has_field = getattr(request, "HasField", None)
+        sent = getattr(request, "model_id", None) if callable(has_field) and has_field("model_id") else None
+        if not isinstance(sent, str):
+            sent = None
+        if sent is None:
+            if self._model_id_required():
+                await context.abort(
+                    grpc.StatusCode.FAILED_PRECONDITION,
+                    f"This server serves model {manifest.model_id!r} and requires model_id on every request.",
+                )
+                return False
+            if manifest.model_id != _UNKNOWN_MODEL and not self._warned_missing_model_id:
+                self._warned_missing_model_id = True
+                logger.warning(
+                    "A request did not name its model_id; this server serves %s. Accepted, since it is not required.",
+                    manifest.model_id,
+                )
+            return True
+        if manifest.model_id != _UNKNOWN_MODEL and sent != manifest.model_id:
+            await context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                f"This server serves model {manifest.model_id!r} ({manifest.model_version}); "
+                f"the request was built for {sent!r}.",
+            )
+            return False
+        return True
+
+    async def _submission_ok(self, rpc: str, tiled: bool, context: ServicerContext) -> bool:
+        """Refuse an RPC the model is not meant to be fed through.
+
+        A whole-screen model (``FULL_VIEWPORT``) refuses the tile RPCs: tile growth on a model trained on whole screens
+        gives poor masks. A tiled model keeps accepting the whole-screen RPCs, which older callers still use, unless
+        ``SEGMENTATION_STRICT_SUBMISSION_MODE=1``.
+        """
+        mode = getattr(self.model.capabilities, "submission_mode", None)
+        wrong = (tiled and mode == SubmissionMode.SUBMISSION_MODE_FULL_VIEWPORT) or (
+            not tiled
+            and mode == SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID
+            and os.environ.get("SEGMENTATION_STRICT_SUBMISSION_MODE", "").strip() == "1"
+        )
+        if not wrong:
+            return True
+        name = "whole-screen" if tiled else "tiled"
+        await context.abort(
+            grpc.StatusCode.FAILED_PRECONDITION,
+            f"{rpc} is not available: model {self._manifest.model_id!r} takes {name} submissions only "
+            f"(see GetServerStatus.capabilities).",
+        )
+        return False
+
     async def GetServerStatus(
         self,
         request: ServerStatusRequest,
@@ -1154,6 +1232,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             recent_latency_ms=recent_latency_ms,
             inference_workers=self._inference_workers,
             capabilities=self.model.capabilities,
+            model=self._manifest.to_model_info(),
         )
 
     async def UploadTile(
@@ -1162,6 +1241,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         context: ServicerContext,
     ) -> UploadTileResponse:
         """Cache one grid cell. Identical bytes for the same coord skip set_image()."""
+        if not await self._submission_ok("UploadTile", True, context):
+            return UploadTileResponse()
         coord = request.coord
         if coord is None or coord.downsample <= 0:
             await context.abort(
@@ -1320,6 +1401,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 hint_boxes=prompts.hint_boxes,
                 background_masks=prompts.background_masks,
                 background_rects=prompts.background_rects,
+                prompt_encoder=self._prompt_encoder,
             )
             loop = asyncio.get_running_loop()
             cancel_watch = asyncio.create_task(self._watch_rpc_cancel(context, stop_growth))
@@ -1407,6 +1489,10 @@ class SegmentationServicer(SegmentationServiceServicer):
         self, request: SegmentTilesRequest, context: ServicerContext
     ) -> Optional[TileCoord]:
         """Check a ``start`` message. Returns the tiles' shared identity, or None after an abort."""
+        if not await self._submission_ok("SegmentTilesStream", True, context):
+            return None
+        if not await self._model_id_ok(request, context):
+            return None
         if len(request.tiles) == 0:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentTiles requires at least one tile.")
             return None
@@ -1843,6 +1929,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         context: ServicerContext,
     ) -> SegmentationResponse:
         """Segment from coordinates/labels using image_id or inline image_data."""
+        if not await self._submission_ok("SegmentImage", False, context) or not await self._model_id_ok(request, context):
+            return SegmentationResponse()
         coordinates, labels = self._extract_coordinates_and_labels_from_segment_request(request)
         self._load.begin()
         start = time.perf_counter()
@@ -1868,6 +1956,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         context: ServicerContext,
     ) -> SegmentationResponse:
         """Segment from a point-id map; id 0 is background, other ids are foreground."""
+        if not await self._submission_ok("MultiSegmentImage", False, context) or not await self._model_id_ok(request, context):
+            return SegmentationResponse()
         coordinates, labels = self._extract_coordinates_and_labels_from_multi_request(request)
         self._load.begin()
         start = time.perf_counter()
@@ -1893,9 +1983,13 @@ class SegmentationServicer(SegmentationServiceServicer):
         Auto-segmentation clients Delaunay-decimate one object at a time. Reading the
         stream incrementally lets the GPU run set k while the client prepares set k+1.
         """
+        if not await self._submission_ok("SegmentImageSets", False, context):
+            return
         image_id = 0
         sets_seen = 0
         async for request in request_iterator:
+            if not await self._model_id_ok(request, context):
+                return
             sets_seen += 1
             if sets_seen > self._limits.max_sets:
                 await self._abort_over_limit(
@@ -1979,6 +2073,8 @@ def _prompts_from(request: Any) -> _Prompts:
         feature_sent = True
         foreground.extend((point.x, point.y) for point in request.foreground_feature.points)
         hint_boxes, masks = shapes(request.foreground_feature)
+        role = "correction" if request.foreground_feature.mask_role == MaskRole.MASK_ROLE_CORRECTION else "seed"
+        masks = [replace(shape, role=role) for shape in masks]
         if masks:
             # A foreground mask is the prompt; boxes (legacy or a Feature's rectangle) add nothing to it.
             boxes, hint_boxes = [], []

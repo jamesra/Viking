@@ -278,6 +278,48 @@ The server only listens with TLS; there is no cleartext gRPC port. Docker publis
 
 Fine-tuned weights: put a Meta-format checkpoint at `D:\Docker\Run\segmentation-server\best_TEM_model.pt`. Compose mounts that folder at `/models` and sets `SAM2_CHECKPOINT=/models/best_TEM_model.pt` (override with `SEGMENTATION_MODEL_HOST` or `SAM2_CHECKPOINT`). Trainer `best_model.pt` is a raw state dict; convert it with `sam2-em-export-serve` before copying it here. Recreate the container after replacing the file. Eager and compiled encoders both load this checkpoint.
 
+### Model manifest and serving several models
+
+A model is more than weights: it was trained on one mask-prompt encoding, takes tiles or the whole screen, and saw one
+version of the training data. That travels with the weights as `<stem>.model.json`, next to the checkpoint
+(`v4.3.pt` and `v4.3.model.json`). A model is named `v<VERSION>.<EPOCH>` (`v4.3` is model 4 after trainer epoch 3,
+counted from 0) and its id is `v<VERSION>`; the training data has its own numbering (`v3`, `v3.1`), reported
+separately. The trainer writes it for every export. A model that predates the
+exporter (v2, v3) gets a hand-written one; the trainer repository documents the format (`docs/model_manifest.md`),
+ships examples, and checks them with `python -m sam2_segmentation_trainer.model_manifest check <file>`.
+
+At start-up the server reads the manifest and:
+- logs the model, its version, its training-data set and its encoding;
+- reports them in `GetServerStatus.model` (`ModelInfo`: `model_id`, `model_version`, `training_data_set`,
+  `training_data_fingerprint`, `prompt_encoding`, the operator's `description` of the model, and the manifest's
+  `client_contract` as `contract_json`) and fills
+  `capabilities` from it, so a client learns whether to send tiles or the whole screen and what it must do to its masks
+  before sending them (the circle diameter scale, the `mask_role` of a foreground mask, whether it must send `model_id`);
+- builds the start window's `mask_input` with the encoding the manifest names: `legacy-flat-v1` is the original flat
+  +8/-8/-2 scheme, `edge-confidence-v6` is the trainer's encoding (`trainer_prompt_encoding.py`, a byte-for-byte copy
+  of the trainer's `annotation_crops/prompt_encoding.py`, kept in step by a test). Windows the walk grows into are
+  still prompted with their neighbours' fused logits;
+- **refuses to start** if the manifest names an encoding or capability it does not implement, since serving a model
+  with a prompt it was not trained on degrades masks without any error.
+
+Without a manifest the model is treated as a tiled model with the legacy encoding, and a warning says so; a
+`<stem>.prompt_encoding.json` alone still names the encoding.
+
+Requests carry an optional `model_id` (`SegmentTilesRequest`, `SegmentationRequest`, `MultiSegmentationRequest`,
+`SegmentImageSetRequest`). A different id is refused with `FAILED_PRECONDITION`, naming both models; an unset one is
+refused only when the manifest says `requires_model_id` (`SEGMENTATION_REQUIRE_MODEL_ID=1` or `0` overrides it). A
+whole-screen model (`FULL_VIEWPORT`) refuses `UploadTile` and `SegmentTilesStream`; a tiled model keeps accepting the
+whole-screen RPCs unless `SEGMENTATION_STRICT_SUBMISSION_MODE=1`.
+
+**Several models at once** run as separate containers of the same image, each reached by its own host name that the
+reverse proxy routes by SNI. The compose profile `segmentation-v4` adds `segmentation-server-v4` (host port 40445,
+`SEGMENTATION_V4_CHECKPOINT`, default `/models/sam2_em_v4.pt`; name the file for the release, e.g. `/models/v4.3.pt`), reached as `v4.segmentation.codepharm.net`; the first
+container also answers as `v3.segmentation.codepharm.net`. Each container needs its own embedding cache folder, because
+the server deletes the other checkpoint folders it finds in its cache at start-up. The certificate carries every name
+(`LETSENCRYPT_ADDITIONAL_DOMAINS`), and the renewer restarts every model container when it renews
+(`CERTBOT_RESTART_CONTAINER`, comma separated). Start both with
+`D:\Docker\Builds\SegmentationServer\rebuild-and-start.ps1 -WithV4`.
+
 `SegmentVolumes` is the auto-segmentation stream. The client sends one foreground/background set at a time for a cached `image_id`, and the server writes one `SegmentationResponse` per set. Interactive clicks stay on unary `SegmentImage`.
 
 Optional arguments:

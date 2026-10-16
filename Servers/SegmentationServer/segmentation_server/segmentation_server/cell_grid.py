@@ -200,10 +200,14 @@ class MaskShape:
     ``box`` is ``(x_min, y_min, x_max, y_max)``, Y up, inclusive. ``bitmap_up`` is None for a filled
     rectangle; otherwise a boolean array of shape ``(y_max - y_min + 1, x_max - x_min + 1)`` in Y-up
     order (row 0 is ``y_min``), true where the pixel is in the mask.
+
+    ``role`` is what a foreground mask is: ``"seed"`` (a trusted starting shape) or ``"correction"`` (an existing mask
+    to correct). A model whose encoding tells them apart reads it; the legacy encoding ignores it.
     """
 
     box: Box
     bitmap_up: Optional[MaskArray] = None
+    role: str = "seed"
 
     def covers_core(self, cell: "Cell") -> bool:
         """True when every pixel of ``cell``'s core is in the mask."""
@@ -254,6 +258,27 @@ class MaskShape:
         pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
         samples = pixels.reshape(LOGIT_WINDOW, LOGIT_SCALE, LOGIT_WINDOW, LOGIT_SCALE).any(axis=(1, 3))
         return samples if samples.any() else None
+
+    def window_full(self, cell: "Cell") -> Optional[NDArray[np.bool_]]:
+        """The mask over ``cell``'s window at full resolution, ``CELL_SIZE`` square (Y-down), or None when it misses.
+
+        The same pixels :meth:`window_samples` reduces by ``LOGIT_SCALE``, before that reduction. An encoding that
+        needs each pixel's distance to the mask's edge reads this.
+        """
+        x0, y0, x1, y1 = self.box
+        wx0, wy0 = window_origin(cell)
+        xa, xb = max(x0, wx0), min(x1, wx0 + CELL_SIZE - 1)
+        ya, yb = max(y0, wy0), min(y1, wy0 + CELL_SIZE - 1)
+        if xa > xb or ya > yb:
+            return None
+        rows = slice(wy0 + CELL_SIZE - 1 - yb, wy0 + CELL_SIZE - 1 - ya + 1)
+        cols = slice(xa - wx0, xb - wx0 + 1)
+        pixels = np.zeros((CELL_SIZE, CELL_SIZE), dtype=np.bool_)
+        if self.bitmap_up is None:
+            pixels[rows, cols] = True
+        else:
+            pixels[rows, cols] = np.flipud(self.bitmap_up[ya - y0:yb - y0 + 1, xa - x0:xb - x0 + 1])
+        return pixels if pixels.any() else None
 
 
 class Canvas:

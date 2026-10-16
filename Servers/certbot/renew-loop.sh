@@ -79,15 +79,44 @@ fi
 remove_empty_renewal_confs "${LETSENCRYPT_PRIMARY_DOMAIN}"
 
 DOMAIN_ARGS=(-d "${LETSENCRYPT_PRIMARY_DOMAIN}")
+WANTED_DOMAINS=("${LETSENCRYPT_PRIMARY_DOMAIN}")
 if [ -n "${LETSENCRYPT_ADDITIONAL_DOMAINS}" ]; then
   IFS=',' read -ra EXTRA_DOMAINS <<< "${LETSENCRYPT_ADDITIONAL_DOMAINS}"
   for domain in "${EXTRA_DOMAINS[@]}"; do
     trimmed="$(echo "${domain}" | xargs)"
     if [ -n "${trimmed}" ]; then
       DOMAIN_ARGS+=(-d "${trimmed}")
+      WANTED_DOMAINS+=("${trimmed}")
     fi
   done
 fi
+
+# True when the certificate in $1 lists $2 as a subject alternative name (an exact match, not a prefix).
+certificate_lists_name() {
+  openssl x509 -in "$1" -noout -ext subjectAltName 2>/dev/null \
+    | tr -d '\r' | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/^DNS://' | grep -Fxq -- "$2"
+}
+
+# `certbot renew` never changes the names on a certificate, so a name added to LETSENCRYPT_ADDITIONAL_DOMAINS
+# after the certificate was issued (for example another model's hostname) would otherwise be ignored for good.
+# When the live certificate lacks a configured name, ask for a certificate that has all of them.
+expand_missing_names() {
+  local pem="$1" name missing=0
+  [ -f "${pem}" ] || return 0
+  for name in "${WANTED_DOMAINS[@]}"; do
+    if ! certificate_lists_name "${pem}" "${name}"; then
+      echo "[certbot] The certificate does not list ${name}."
+      missing=1
+    fi
+  done
+  [ "${missing}" -eq 1 ] || return 0
+  echo "[certbot] Requesting a certificate with all of: ${WANTED_DOMAINS[*]}"
+  if certbot certonly --expand "${AUTH_ARGS[@]}" "${COMMON_ARGS[@]}" "${CERT_NAME_ARGS[@]}" "${DOMAIN_ARGS[@]}"; then
+    bash /opt/identity-certbot/reload-identity.sh || true
+  else
+    echo "[certbot] Could not add the missing names; keeping the current certificate. Retrying at the next start."
+  fi
+}
 
 COMMON_ARGS=(
   --non-interactive
@@ -160,6 +189,12 @@ elif [ -f "${cert_path}" ] && ! openssl x509 -in "${cert_path}" -checkend 0 >/de
   bash /opt/identity-certbot/reload-identity.sh
 else
   echo "[certbot] Existing certificate is currently valid; running startup renew check."
+fi
+
+if [ -f "${managed_live_path}" ]; then
+  expand_missing_names "${managed_live_path}"
+elif [ -f "${cert_path}" ]; then
+  expand_missing_names "${cert_path}"
 fi
 
 echo "[certbot] Starting renewal loop every ${CERTBOT_RENEW_INTERVAL_HOURS} hours."

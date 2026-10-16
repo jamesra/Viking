@@ -7,6 +7,8 @@ grpcio>=1.84.0
 grpcio-tools>=1.84.0
 protobuf>=7.35.1,<8
 numpy
+# The trainer's edge-confidence mask-prompt encoding needs scipy's distance transform.
+scipy
 pillow
 opencv-python-headless
 torch==2.14.0+cu132

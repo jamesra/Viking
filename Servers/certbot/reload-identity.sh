@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# One name, or several separated by commas (each a container name or compose service) to restart them all.
 CONTAINER_NAME="${CERTBOT_RESTART_CONTAINER:-${IDENTITY_CONTAINER_NAME:-identity-all-services}}"
 LETSENCRYPT_PRIMARY_DOMAIN="${LETSENCRYPT_PRIMARY_DOMAIN:-}"
 
@@ -91,19 +92,20 @@ promote_newest_live_cert() {
 }
 
 find_identity_container() {
+  local wanted="${1:-${CONTAINER_NAME}}"
   local id
-  if docker container inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
-    echo "${CONTAINER_NAME}"
+  if docker container inspect "${wanted}" >/dev/null 2>&1; then
+    echo "${wanted}"
     return 0
   fi
 
-  id="$(docker ps -q --filter "label=com.docker.compose.service=${CONTAINER_NAME}" | head -n 1 || true)"
+  id="$(docker ps -q --filter "label=com.docker.compose.service=${wanted}" | head -n 1 || true)"
   if [ -n "${id}" ]; then
     echo "${id}"
     return 0
   fi
 
-  id="$(docker ps -q --filter "name=${CONTAINER_NAME}" | head -n 1 || true)"
+  id="$(docker ps -q --filter "name=${wanted}" | head -n 1 || true)"
   if [ -n "${id}" ]; then
     echo "${id}"
     return 0
@@ -164,9 +166,14 @@ if [ "${needs_restart}" -eq 0 ]; then
   exit 0
 fi
 
-if target="$(find_identity_container)"; then
-  echo "[certbot] Certificate changed; restarting ${target} to pick up new files..."
-  docker restart "${target}" >/dev/null
-else
-  echo "[certbot] No running container matched CERTBOT_RESTART_CONTAINER/IDENTITY_CONTAINER_NAME=${CONTAINER_NAME} (compose service or name)."
-fi
+IFS=',' read -ra RESTART_NAMES <<< "${CONTAINER_NAME}"
+for restart_name in "${RESTART_NAMES[@]}"; do
+  restart_name="$(echo "${restart_name}" | xargs)"
+  [ -n "${restart_name}" ] || continue
+  if target="$(find_identity_container "${restart_name}")"; then
+    echo "[certbot] Certificate changed; restarting ${target} to pick up new files..."
+    docker restart "${target}" >/dev/null
+  else
+    echo "[certbot] No running container matched ${restart_name} from CERTBOT_RESTART_CONTAINER/IDENTITY_CONTAINER_NAME (compose service or name)."
+  fi
+done

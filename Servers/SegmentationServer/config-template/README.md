@@ -26,6 +26,21 @@ docker compose --env-file D:/Docker/Builds/SegmentationServer/.env --profile let
 
 `segmentation-server` only listens with TLS, so it needs the certificate files. At start it waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for `SSL_CERT_PATH` and `SSL_KEY_PATH` to appear, then exits with a message naming the missing files; `restart: unless-stopped` starts it again. Bring it up together with the renewer (`--profile letsencrypt`) the first time, or provide the PEM files some other way. For a local run without Let's Encrypt, generate a self-signed pair with `python -m segmentation_server.dev_cert --out ./dev-cert` and point `SSL_CERT_PATH` and `SSL_KEY_PATH` at it.
 
+## Several models (v3 and v4)
+
+Each model is its own container with its own host name, routed by SNI in the reverse proxy:
+
+1. Copy each model and its `.model.json` into `D:\Docker\Run\segmentation-server` (same stem). v2 and v3 need
+   hand-written manifests; see the trainer repository's `docs/model_manifest.md`.
+2. In `.env`, set `LETSENCRYPT_ADDITIONAL_DOMAINS=v3.segmentation.codepharm.net,v4.segmentation.codepharm.net`. On its
+   next start the renewer notices the certificate lacks those names and asks for one that has them (`certbot certonly
+   --expand`); it needs the DNS records first.
+3. Create the DNS records for `v3.` and `v4.segmentation.codepharm.net` (DNS only, not proxied).
+4. Run `rebuild-and-start.ps1 -WithV4`. `SEGMENTATION_V4_CHECKPOINT` picks the v4 file; name it for the
+   release (`/models/v4.3.pt`, with `v4.3.model.json` beside it).
+5. Add `v3.` and `v4.segmentation.codepharm.net` to the SNI map in the proxy's `stream.conf` (v3 shares the first
+   container's upstream, v4 is `:40445`) and `nginx -s reload`.
+
 ## Fine-tuned checkpoint
 
 Compose bind-mounts the host folder `D:\Docker\Run\segmentation-server` at `/models` (override with `SEGMENTATION_MODEL_HOST`). The service loads `SAM2_CHECKPOINT`, default `/models/best_TEM_model.pt`.

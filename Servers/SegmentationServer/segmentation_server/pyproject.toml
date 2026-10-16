@@ -17,6 +17,8 @@ dependencies = [
     "grpcio-tools>=1.84.0",
     "protobuf>=7.35.1,<8",
     "numpy",
+    # The trainer's edge-confidence mask-prompt encoding (trainer_prompt_encoding.py) needs its distance transform.
+    "scipy",
     "pillow",
     "opencv-python",
     # Same torch and SAM2 commit as the Dockerfile (SAM2_GIT_SHA), so a local install runs the

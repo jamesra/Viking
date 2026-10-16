@@ -32,6 +32,8 @@ from segmentation_server.embedding_store import EmbeddingRamCache, EmbeddingStor
 from segmentation_server.cuda_errors import raise_if_cuda_lost
 from segmentation_server.encoder_parity import EncoderParityError, compare_feature_maps
 from segmentation_server.model_capabilities import SAM2_CAPABILITIES
+from segmentation_server.model_manifest import ModelManifest, default_manifest, load_model_manifest
+from segmentation_server.prompt_encodings import encoder_for
 from segmentation_server.mask_utils import (
     DEFAULT_MASK_THRESHOLD,
     LabeledImage,
@@ -84,6 +86,8 @@ class SegmentationModel:
     """
 
     capabilities = SAM2_CAPABILITIES
+    # What the model's manifest says (set per instance in ``__init__``); the legacy default until then.
+    manifest: ModelManifest = default_manifest()
     # Host-memory embeddings for offset windows; None until ``__init__`` opens it (or when turned off).
     _ram_embeddings: Optional[EmbeddingRamCache] = None
 
@@ -126,6 +130,12 @@ class SegmentationModel:
 
         # Always load eager first so gRPC can serve while compile/warmup runs.
         model_cfg, sam2_checkpoint = _resolve_sam2_paths()
+        # The manifest next to the checkpoint says what this model is and how it is fed. Read it before the
+        # slow load, and refuse a model whose encoding this server does not implement.
+        self.manifest = load_model_manifest(sam2_checkpoint)
+        encoder_for(self.manifest)
+        self.capabilities = self.manifest.capabilities()
+        logger.info("Serving %s", self.manifest.describe())
         self._model_cfg = model_cfg
         self._sam2_checkpoint = sam2_checkpoint
         logger.info("Loading SAM2 checkpoint %s (config %s)", sam2_checkpoint, model_cfg)
