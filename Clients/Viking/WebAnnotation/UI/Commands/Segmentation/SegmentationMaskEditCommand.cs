@@ -40,8 +40,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly PenCancelButton cancelButton;
 
         private float[]? signedDistance;
-        private byte[] editedPixels = new byte[RasterMask.Size * RasterMask.Size];
-        private Microsoft.Xna.Framework.Color[] colors = new Microsoft.Xna.Framework.Color[RasterMask.Size * RasterMask.Size];
+        private readonly byte[] editedPixels;
+        private readonly Microsoft.Xna.Framework.Color[] colors;
         private Texture2D? texture;
         private TextureOverlayView? overlayView;
         private bool textureDirty = true;
@@ -63,6 +63,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             : base(parent)
         {
             input = mask ?? throw new ArgumentNullException(nameof(mask));
+            editedPixels = new byte[mask.Pixels.Length];
+            colors = new Microsoft.Xna.Framework.Color[mask.Pixels.Length];
             this.onFinished = onFinished ?? throw new ArgumentNullException(nameof(onFinished));
             penButtons = new SegmentationPenButtons(parent);
             cancelButton = new PenCancelButton(parent);
@@ -111,7 +113,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             base.OnActivate();
 
-            signedDistance = SegmentationMaskEdit.SignedDistance(input.Pixels, RasterMask.Size, RasterMask.Size);
+            signedDistance = SegmentationMaskEdit.SignedDistance(input.Pixels, input.Width, input.Height);
             if (signedDistance is null)
             {
                 // Nothing to edit; report it as a cancel rather than showing an empty overlay.
@@ -120,7 +122,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             minRadius = SegmentationMaskEdit.MinRadius(signedDistance);
-            maxRadius = SegmentationMaskEdit.MaxRadius(input.Pixels, RasterMask.Size, RasterMask.Size);
+            maxRadius = SegmentationMaskEdit.MaxRadius(input.Pixels, input.Width, input.Height);
             debouncer = new PanZoomDebouncer(SettleDelayMs, RaiseSettled, post => Parent.BeginInvoke(post));
             ApplyRadius(0);
         }
@@ -156,7 +158,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double change = SegmentationMaskEdit.RadiusChange(
                 e.Delta / 120.0,
                 StepNanometers / nmPerWorld,
-                input.Downsample,
+                input.WorldPerPixel,
                 (Control.ModifierKeys & Keys.Shift) != 0);
             ApplyRadius(radiusPixels + change);
             debouncer?.Restart();
@@ -230,7 +232,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (texture is null || texture.IsDisposed)
             {
                 texture?.Dispose();
-                texture = new Texture2D(device, RasterMask.Size, RasterMask.Size);
+                texture = new Texture2D(device, input.Width, input.Height);
                 overlayView = new TextureOverlayView(texture, input.WorldBounds, Microsoft.Xna.Framework.Color.White);
             }
 

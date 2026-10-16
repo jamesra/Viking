@@ -8,37 +8,47 @@ using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// A square bitmap mask placed in volume space: the input and output of <see cref="SegmentationMaskEditCommand"/>.
+    /// A rectangular bitmap mask placed in volume space: the input and output of <see cref="SegmentationMaskEditCommand"/>.
     /// </summary>
     /// <remarks>
-    /// Same layout as the wire mask built by <see cref="SegmentationMaskUnion"/>: <see cref="SegmentationMaskUnion.WindowSize"/>
-    /// pixels square, each pixel <see cref="Downsample"/> volume units wide, row 0 at mosaic row <see cref="YMax"/> (Y up in
-    /// the volume, so rows run downwards), pixel value 255 inside the mask and 0 outside. Immutable once built;
-    /// <see cref="Pixels"/> must not be modified by callers.
+    /// Same placement as the wire mask built by <see cref="SegmentationMaskUnion"/> (see <see cref="MaskLayout"/>): raster
+    /// pixel (column, row) stands for the <see cref="Scale"/> x <see cref="Scale"/> block of mosaic pixels whose low-x, high-y
+    /// corner is (<see cref="XMin"/> + column * Scale, <see cref="YMax"/> - row * Scale); a mosaic pixel is
+    /// <see cref="Downsample"/> volume units wide and rows run downwards (Y up in the volume). Pixel value 255 is inside the
+    /// mask and 0 outside. The raster is <see cref="Width"/> x <see cref="Height"/> pixels of any size: scale 1 for a region
+    /// that fits one SAM2 window, coarser blocks for a large region (see <see cref="MaskScalePolicy"/>). Immutable once
+    /// built; <see cref="Pixels"/> must not be modified by callers.
     /// </remarks>
     internal sealed class RasterMask
     {
-        /// <summary>Side of the bitmap in pixels.</summary>
-        public const int Size = SegmentationMaskUnion.WindowSize;
-
-        /// <param name="downsample">Volume units per pixel.</param>
+        /// <param name="downsample">Volume units per mosaic pixel, the tiles' downsample.</param>
         /// <param name="xMin">Mosaic pixel column of the left edge.</param>
         /// <param name="yMax">Mosaic pixel row of the top edge (row 0).</param>
-        /// <param name="pixels"><see cref="Size"/> x <see cref="Size"/> bytes, 255 inside the mask.</param>
-        public RasterMask(int downsample, int xMin, int yMax, byte[] pixels)
+        /// <param name="width">Raster width in pixels.</param>
+        /// <param name="height">Raster height in pixels.</param>
+        /// <param name="pixels"><paramref name="width"/> x <paramref name="height"/> bytes, 255 inside the mask.</param>
+        /// <param name="scale">Mosaic pixels per raster pixel; 1 for full resolution.</param>
+        public RasterMask(int downsample, int xMin, int yMax, int width, int height, byte[] pixels, int scale = 1)
         {
             if (downsample <= 0)
                 throw new ArgumentOutOfRangeException(nameof(downsample));
-            if (pixels is null || pixels.Length != Size * Size)
-                throw new ArgumentException($"A mask is {Size} x {Size} pixels.", nameof(pixels));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentOutOfRangeException(nameof(width), "A mask has at least one pixel.");
+            if (scale < 1)
+                throw new ArgumentOutOfRangeException(nameof(scale));
+            if (pixels is null || pixels.Length != (long)width * height)
+                throw new ArgumentException($"A mask is {width} x {height} pixels.", nameof(pixels));
 
             Downsample = downsample;
             XMin = xMin;
             YMax = yMax;
+            Width = width;
+            Height = height;
+            Scale = scale;
             Pixels = pixels;
         }
 
-        /// <summary>Volume units per pixel.</summary>
+        /// <summary>Volume units per mosaic pixel.</summary>
         public int Downsample { get; }
 
         /// <summary>Mosaic pixel column of the left edge.</summary>
@@ -47,38 +57,96 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>Mosaic pixel row of the top edge.</summary>
         public int YMax { get; }
 
+        /// <summary>Raster width in pixels.</summary>
+        public int Width { get; }
+
+        /// <summary>Raster height in pixels.</summary>
+        public int Height { get; }
+
+        /// <summary>Mosaic pixels per raster pixel along both axes.</summary>
+        public int Scale { get; }
+
+        /// <summary>Volume units per raster pixel.</summary>
+        public double WorldPerPixel => (double)Downsample * Scale;
+
         /// <summary>The bitmap, row major, 255 inside the mask and 0 outside.</summary>
         public byte[] Pixels { get; }
 
-        /// <summary>The square the bitmap covers, volume space.</summary>
+        /// <summary>The raster's placement as a wire layout: every block is whole, so the bounds are exactly the raster.</summary>
+        public MaskLayout Layout => new(XMin, YMax, Width * Scale, Height * Scale, Scale);
+
+        /// <summary>The rectangle the bitmap covers, volume space.</summary>
         public Rectangle WorldBounds => new(
-            new Vector2(XMin * (double)Downsample, (YMax + 1 - Size) * (double)Downsample),
-            new Vector2((XMin + Size) * (double)Downsample, (YMax + 1) * (double)Downsample));
+            new Vector2(XMin * (double)Downsample, (YMax + 1 - Height * Scale) * (double)Downsample),
+            new Vector2((XMin + Width * Scale) * (double)Downsample, (YMax + 1) * (double)Downsample));
 
         /// <summary>True when no pixel is inside the mask.</summary>
         public bool IsEmpty => Array.TrueForAll(Pixels, value => value == 0);
 
         /// <summary>This mask's pixels replaced by <paramref name="pixels"/>, same placement.</summary>
-        public RasterMask WithPixels(byte[] pixels) => new(Downsample, XMin, YMax, pixels);
+        public RasterMask WithPixels(byte[] pixels) => new(Downsample, XMin, YMax, Width, Height, pixels, Scale);
 
         /// <summary>The mask as the segmentation server's foreground-mask prompt.</summary>
-        public SegmentationServiceTypes.Mask ToWireMask() => SegmentationMaskUnion.EncodeMask(Pixels, XMin, YMax);
+        public SegmentationServiceTypes.Mask ToWireMask() => SegmentationMaskUnion.EncodeMask(Pixels, Layout);
 
         /// <summary>
-        /// Rasterizes a polygon (exterior ring followed by holes, volume space, even-odd fill) into a mask centred on its
-        /// bounding box. Returns null when the rings are unusable or the polygon covers no pixel centre.
+        /// The smallest volume-space rectangle holding every set pixel, or false when the mask is empty. Unlike
+        /// <see cref="WorldBounds"/> it leaves out the margin left for dilating.
+        /// </summary>
+        public bool TryGetSetWorldBounds(out Rectangle bounds)
+        {
+            int minColumn = int.MaxValue, maxColumn = -1, minRow = int.MaxValue, maxRow = -1;
+            for (int row = 0; row < Height; row++)
+            {
+                int offset = row * Width;
+                for (int column = 0; column < Width; column++)
+                {
+                    if (Pixels[offset + column] == 0)
+                        continue;
+
+                    minColumn = Math.Min(minColumn, column);
+                    maxColumn = Math.Max(maxColumn, column);
+                    minRow = Math.Min(minRow, row);
+                    maxRow = Math.Max(maxRow, row);
+                }
+            }
+
+            if (maxColumn < 0)
+            {
+                bounds = default;
+                return false;
+            }
+
+            bounds = new Rectangle(
+                new Vector2((XMin + minColumn * Scale) * (double)Downsample, (YMax + 1 - (maxRow + 1) * Scale) * (double)Downsample),
+                new Vector2((XMin + (maxColumn + 1) * Scale) * (double)Downsample, (YMax + 1 - minRow * Scale) * (double)Downsample));
+            return true;
+        }
+
+        /// <summary>
+        /// Rasterizes a polygon (exterior ring followed by holes, volume space, even-odd fill) into a mask over its bounding
+        /// box with <paramref name="marginPixels"/> raster pixels free on every side, so it can be dilated. The scale comes
+        /// from <see cref="MaskScalePolicy"/>. Returns null when the rings are unusable, the polygon covers no pixel centre,
+        /// or it is wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> mosaic pixels at this downsample.
         /// </summary>
         /// <param name="rings">Exterior ring first; each ring needs at least three vertices.</param>
-        /// <param name="downsample">Volume units per pixel.</param>
-        public static RasterMask? FromRings(IReadOnlyList<Vector2[]> rings, int downsample)
+        /// <param name="downsample">Volume units per mosaic pixel: the tile level of the view, not a size fitted to the shape.</param>
+        /// <param name="marginPixels">Raster pixels left free around the polygon.</param>
+        public static RasterMask? FromRings(IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0)
         {
-            if (rings is null || rings.Count == 0 || rings[0] is null || rings[0].Length < 3)
+            if (rings is null || rings.Count == 0 || rings[0] is null || rings[0].Length < 3 || downsample <= 0)
+                return null;
+
+            Rectangle bounds = BoundsOf(rings[0]);
+            if (bounds.Width / downsample > MaskScalePolicy.MaxBoundsSide || bounds.Height / downsample > MaskScalePolicy.MaxBoundsSide)
                 return null;
 
             SegmentationMaskUnion union = new();
             union.Add(rings);
-            byte[]? pixels = union.Rasterize(downsample, BoundsOf(rings[0]).Center, out int xMin, out int yMax);
-            return pixels is null ? null : new RasterMask(downsample, xMin, yMax, pixels);
+            byte[]? pixels = union.Rasterize(downsample, bounds.Center, out MaskLayout layout, marginRasterPixels: marginPixels);
+            return pixels is null
+                ? null
+                : new RasterMask(downsample, layout.XMin, layout.YMax, layout.RasterWidth, layout.RasterHeight, pixels, layout.Scale);
         }
 
         /// <summary>
@@ -89,10 +157,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             double sumRow = 0, sumColumn = 0;
             long count = 0;
-            for (int row = 0; row < Size; row++)
+            for (int row = 0; row < Height; row++)
             {
-                int offset = row * Size;
-                for (int column = 0; column < Size; column++)
+                int offset = row * Width;
+                for (int column = 0; column < Width; column++)
                 {
                     if (Pixels[offset + column] == 0)
                         continue;
@@ -109,10 +177,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double centreRow = sumRow / count, centreColumn = sumColumn / count;
             double best = double.MaxValue;
             int bestRow = 0, bestColumn = 0;
-            for (int row = 0; row < Size; row++)
+            for (int row = 0; row < Height; row++)
             {
-                int offset = row * Size;
-                for (int column = 0; column < Size; column++)
+                int offset = row * Width;
+                for (int column = 0; column < Width; column++)
                 {
                     if (Pixels[offset + column] == 0)
                         continue;
@@ -127,22 +195,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            return new Vector2((XMin + bestColumn + 0.5) * Downsample, (YMax - bestRow + 0.5) * Downsample);
-        }
-
-        /// <summary>
-        /// The smallest power-of-two downsample at which a shape of <paramref name="bounds"/> still leaves
-        /// <paramref name="marginPixels"/> free on every side of the <see cref="Size"/> square, so it can be dilated.
-        /// </summary>
-        public static int ChooseDownsample(Rectangle bounds, int marginPixels)
-        {
-            double longest = Math.Max(bounds.Width, bounds.Height);
-            double usable = Math.Max(1, Size - 2 * marginPixels);
-            int downsample = 1;
-            while (longest / downsample > usable && downsample < (1 << 20))
-                downsample *= 2;
-
-            return downsample;
+            return new Vector2(
+                (XMin + (bestColumn + 0.5) * Scale) * Downsample,
+                (YMax + 1 - (bestRow + 0.5) * Scale) * Downsample);
         }
 
         /// <summary>Axis-aligned bounds of a ring.</summary>

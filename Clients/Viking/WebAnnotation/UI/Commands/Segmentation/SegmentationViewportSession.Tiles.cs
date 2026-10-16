@@ -221,9 +221,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
-            // The seeds (a circle's inscribed square, a group's inscribed rectangle) are the foreground mask:
+            // The seeds (a circle's disc, a polygon, an edited mask) are the foreground mask:
             // "everything inside is object, grow beyond it". The server takes one mask, so they are summed here
-            // into a 1-bit window-sized bitmap centred on the seeds.
+            // into one 1-bit bitmap over their combined bounds, which may span many windows.
             Geometry.Vector2 seedCentre = default;
             if (foregroundBoxes is { Count: > 0 })
             {
@@ -259,7 +259,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (backgroundMaskMessage is not null)
                 request.BackgroundFeature = new SegmentationServiceTypes.Feature { Mask = backgroundMaskMessage };
             else if (backgroundMask is { IsEmpty: false })
-                SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: none reaches the {SegmentationMaskUnion.WindowSize} px window around the seed at ds={signature.Downsample}");
+                SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: nothing of it is left at ds={signature.Downsample}");
 
 
             CallOptions callOptions = new(

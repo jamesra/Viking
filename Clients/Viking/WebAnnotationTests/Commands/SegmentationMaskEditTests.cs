@@ -13,7 +13,8 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class SegmentationMaskEditTests
     {
-        private const int Size = RasterMask.Size;
+        /// <summary>Side of the square rasters these tests build by hand.</summary>
+        private const int Size = 1024;
 
         /// <summary>A mask with a filled axis-aligned square of side <paramref name="side"/> whose top-left pixel is (left, top).</summary>
         private static byte[] Square(int left, int top, int side)
@@ -37,21 +38,22 @@ namespace WebAnnotationTests.Commands
 
             SegmentationMaskUnion union = new();
             union.Add(seed.Value);
-            byte[] pixels = union.Rasterize(downsample: 2, seed.Value.Center, out int xMin, out int yMax);
+            byte[] pixels = union.Rasterize(downsample: 2, seed.Value.Center, out MaskLayout layout);
 
             Assert.IsNotNull(pixels);
+            Assert.AreEqual(1, layout.Scale);
             // 400 x 400 volume units at 2 units per pixel is 200 x 200 pixels, give or take the edge.
             Assert.AreEqual(200 * 200, Count(pixels), 200 * 4);
             Vector2 inside = seed.Value.Center;
-            int column = (int)Math.Floor(inside.X / 2) - xMin;
-            int row = yMax - (int)Math.Floor(inside.Y / 2);
-            Assert.AreEqual(255, pixels[row * Size + column]);
+            int column = (int)Math.Floor(inside.X / 2) - layout.XMin;
+            int row = layout.YMax - (int)Math.Floor(inside.Y / 2);
+            Assert.AreEqual(255, pixels[row * layout.RasterWidth + column]);
         }
 
         [TestMethod]
         public void MaskSeed_EmptyMaskHasNoSeed()
         {
-            RasterMask empty = new(downsample: 1, xMin: 0, yMax: 0, pixels: new byte[Size * Size]);
+            RasterMask empty = new(downsample: 1, xMin: 0, yMax: 0, width: Size, height: Size, pixels: new byte[Size * Size]);
             Assert.IsNull(SegmentationSeed.FromMask(empty));
         }
 
@@ -63,7 +65,7 @@ namespace WebAnnotationTests.Commands
             for (int y = 150; y < 350; y++)
                 for (int x = 150; x < 350; x++)
                     pixels[y * Size + x] = 0;
-            RasterMask ring = new(downsample: 1, xMin: 0, yMax: Size - 1, pixels: pixels);
+            RasterMask ring = new(downsample: 1, xMin: 0, yMax: Size - 1, width: Size, height: Size, pixels: pixels);
 
             Vector2 point = ring.InteriorPoint().Value;
             int column = (int)Math.Floor(point.X);
@@ -164,7 +166,7 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(100 * 100, Count(mask.Pixels));
             Assert.AreEqual(1050, mask.WorldBounds.Center.X, 1);
             Assert.AreEqual(2050, mask.WorldBounds.Center.Y, 1);
-            Assert.AreEqual(Size, mask.WorldBounds.Width);
+            Assert.AreEqual(100, mask.WorldBounds.Width, "no margin was asked for");
         }
 
         [TestMethod]
@@ -179,10 +181,16 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void TheDownsampleLeavesRoomToGrow()
+        public void TheMarginLeavesRoomToGrow()
         {
-            Assert.AreEqual(1, RasterMask.ChooseDownsample(new Rectangle(new Vector2(0, 0), new Vector2(800, 100)), 64));
-            Assert.AreEqual(4, RasterMask.ChooseDownsample(new Rectangle(new Vector2(0, 0), new Vector2(2000, 100)), 64));
+            Vector2[] ring = [new(1000, 2000), new(1100, 2000), new(1100, 2100), new(1000, 2100)];
+
+            RasterMask mask = RasterMask.FromRings([ring], downsample: 1, marginPixels: 64)!;
+
+            Assert.AreEqual(100 + 2 * 64, mask.Width);
+            Assert.AreEqual(100 + 2 * 64, mask.Height);
+            Assert.AreEqual(1, mask.Scale);
+            Assert.AreEqual(100 * 100, Count(mask.Pixels));
         }
     }
 }

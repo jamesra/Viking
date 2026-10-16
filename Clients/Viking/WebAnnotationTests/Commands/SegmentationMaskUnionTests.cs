@@ -8,8 +8,8 @@ using Rectangle = Geometry.Rectangle;
 namespace WebAnnotationTests.Commands
 {
     /// <summary>
-    /// The background mask sums squares and polygons into one 1-bit, 1024-square PNG centred on the seed,
-    /// image row 0 at the highest y.
+    /// A union sums squares and polygons into one 1-bit PNG over their combined bounds, image row 0 at the
+    /// highest y. Scale 1 and the exact shape when the bounds fit one window; see <see cref="SegmentationMaskScaleTests"/> for larger regions.
     /// </summary>
     [TestClass]
     public class SegmentationMaskUnionTests
@@ -20,13 +20,14 @@ namespace WebAnnotationTests.Commands
             => Image.Load<L8>(mask.Png.ToByteArray());
 
         private static bool On(Image<L8> image, Viking.gRPC.SegmentationServiceTypes.V1.Mask mask, int mosaicX, int mosaicY)
-            => image[mosaicX - mask.Bounds.XMin, mask.Bounds.YMax - mosaicY].PackedValue == 255;
+            => mosaicX >= mask.Bounds.XMin && mosaicX <= mask.Bounds.XMax && mosaicY >= mask.Bounds.YMin && mosaicY <= mask.Bounds.YMax &&
+               image[(mosaicX - mask.Bounds.XMin) / (mask.HasScale ? (int)mask.Scale : 1), (mask.Bounds.YMax - mosaicY) / (mask.HasScale ? (int)mask.Scale : 1)].PackedValue == 255;
 
         [TestMethod]
         public void AnEmptyUnionHasNoMask() => Assert.IsNull(new SegmentationMaskUnion().ToMask(1, Centre));
 
         [TestMethod]
-        public void TheMaskIsAlwaysTheWindowSquareCentredOnTheSeed()
+        public void TheMaskCoversTheShapesBoundsAtFullResolution()
         {
             SegmentationMaskUnion union = new();
             union.Add(new Rectangle(new Vector2(480, 490), new Vector2(520, 510)));
@@ -34,13 +35,15 @@ namespace WebAnnotationTests.Commands
             var mask = union.ToMask(1, Centre)!;
             using Image<L8> image = Decode(mask);
 
-            Assert.AreEqual(1024, mask.Bounds.XMax - mask.Bounds.XMin + 1);
-            Assert.AreEqual(1024, mask.Bounds.YMax - mask.Bounds.YMin + 1);
-            Assert.AreEqual(500 - 512, mask.Bounds.XMin);
-            Assert.AreEqual(1024, image.Width);
-            Assert.AreEqual(1024, image.Height);
+            Assert.IsFalse(mask.HasScale, "a region within one window is sent at full resolution");
+            Assert.AreEqual(480, mask.Bounds.XMin);
+            Assert.AreEqual(519, mask.Bounds.XMax, "the last pixel whose centre is inside the 480..520 shape");
+            Assert.AreEqual(490, mask.Bounds.YMin);
+            Assert.AreEqual(509, mask.Bounds.YMax);
+            Assert.AreEqual(mask.Bounds.XMax - mask.Bounds.XMin + 1, image.Width);
+            Assert.AreEqual(mask.Bounds.YMax - mask.Bounds.YMin + 1, image.Height);
             Assert.IsTrue(On(image, mask, 500, 500));
-            Assert.IsFalse(On(image, mask, 600, 600));
+            Assert.IsFalse(On(image, mask, 600, 600), "outside the bounds is outside the mask");
         }
 
         [TestMethod]
@@ -94,30 +97,33 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void DownsampleScalesTheWindowToMosaicPixels()
+        public void DownsampleScalesTheBoundsToMosaicPixels()
         {
             SegmentationMaskUnion union = new();
             union.Add(new Rectangle(new Vector2(1900, 1900), new Vector2(2100, 2100)));
 
             var mask = union.ToMask(4, new Vector2(2000, 2000))!;
 
-            Assert.AreEqual(500 - 512, mask.Bounds.XMin);
-            Assert.AreEqual(500 - 512 + 1023, mask.Bounds.XMax);
+            Assert.AreEqual(475, mask.Bounds.XMin);
+            Assert.AreEqual(524, mask.Bounds.XMax);
         }
 
         [TestMethod]
-        public void ShapesOutsideTheWindowAreDroppedAndAShapeThatStraddlesItIsClipped()
+        public void AFarShapeIsMaskedWhereItIsAndAShapeBeyondTheLimitIsCutDownAroundTheSeed()
         {
             SegmentationMaskUnion far = new();
             far.Add(new Rectangle(new Vector2(100000, 100000), new Vector2(100010, 100010)));
-            Assert.IsNull(far.ToMask(1, Centre));
+            var farMask = far.ToMask(1, Centre)!;
+            Assert.AreEqual(100000, farMask.Bounds.XMin);
+            Assert.AreEqual(100009, farMask.Bounds.XMax);
 
             SegmentationMaskUnion straddle = new();
             straddle.Add(new Rectangle(new Vector2(400, 400), new Vector2(100000, 100000)));
             var mask = straddle.ToMask(1, Centre)!;
             using Image<L8> image = Decode(mask);
             Assert.IsTrue(On(image, mask, 500, 500));
-            Assert.AreEqual(1024, image.Width);
+            Assert.IsTrue(mask.Bounds.XMax - mask.Bounds.XMin + 1 <= MaskScalePolicy.MaxBoundsSide, "within the server's pixel budget");
+            Assert.IsTrue(image.Width <= MaskScalePolicy.MaxPngSide);
         }
 
         [TestMethod]

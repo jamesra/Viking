@@ -106,13 +106,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Radius change for <paramref name="notches"/> wheel notches (positive grows). A notch is
-        /// <paramref name="stepWorld"/> volume units, but never less than one pixel of <paramref name="downsample"/>
-        /// so a notch always moves the edge visibly; <paramref name="fine"/> takes a quarter of that.
+        /// <paramref name="stepWorld"/> volume units, but never less than one raster pixel (<paramref name="worldPerPixel"/>
+        /// volume units) so a notch always moves the edge visibly; <paramref name="fine"/> takes a quarter of that.
         /// </summary>
-        /// <returns>Pixels.</returns>
-        public static double RadiusChange(double notches, double stepWorld, int downsample, bool fine)
+        /// <returns>Raster pixels.</returns>
+        public static double RadiusChange(double notches, double stepWorld, double worldPerPixel, bool fine)
         {
-            double stepPixels = Math.Max(stepWorld / downsample, 1.0);
+            double stepPixels = Math.Max(stepWorld / worldPerPixel, 1.0);
             return notches * stepPixels * (fine ? 0.25 : 1.0);
         }
     }

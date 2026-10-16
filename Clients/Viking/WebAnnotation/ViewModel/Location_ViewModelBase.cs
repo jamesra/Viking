@@ -725,6 +725,9 @@ namespace WebAnnotation.ViewModel
         /// starting mask by a new <see cref="SegmentationCommand"/>, whose result the user accepts or declines; only an
         /// accepted result changes this location. Cancelling the edit changes nothing.
         /// </summary>
+        /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
+        private const int EditMaskMarginPixels = 128;
+
         protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
         {
             try
@@ -750,11 +753,12 @@ namespace WebAnnotation.ViewModel
                     volumeRings.Add(volumeRing);
                 }
 
-                int downsample = RasterMask.ChooseDownsample(RasterMask.BoundsOf(volumeRings[0]), marginPixels: 128);
-                RasterMask mask = RasterMask.FromRings(volumeRings, downsample);
+                // The mask is at the view's tile level, like every other prompt; a large polygon becomes a coarse mask.
+                int downsample = SegmentationViewportSession.ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+                RasterMask mask = RasterMask.FromRings(volumeRings, downsample, marginPixels: EditMaskMarginPixels);
                 if (mask is null)
                 {
-                    MessageBox.Show("This polygon is too small to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("This polygon is too small, or too large at this zoom, to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
