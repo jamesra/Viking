@@ -26,20 +26,18 @@ docker compose --env-file D:/Docker/Builds/SegmentationServer/.env --profile let
 
 `segmentation-server` only listens with TLS, so it needs the certificate files. At start it waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for `SSL_CERT_PATH` and `SSL_KEY_PATH` to appear, then exits with a message naming the missing files; `restart: unless-stopped` starts it again. Bring it up together with the renewer (`--profile letsencrypt`) the first time, or provide the PEM files some other way. For a local run without Let's Encrypt, generate a self-signed pair with `python -m segmentation_server.dev_cert --out ./dev-cert` and point `SSL_CERT_PATH` and `SSL_KEY_PATH` at it.
 
-## Several models (v3 and v4)
+## Several models
 
-Each model is its own container with its own host name, routed by SNI in the reverse proxy:
+Each model is its own container with its own host name, routed by SNI in the reverse proxy. `models.json` (template in
+`build/`, live copy in `D:\Docker\Builds\SegmentationServer`) maps DNS prefix to weights file.
 
 1. Copy each model and its `.model.json` into `D:\Docker\Run\segmentation-server` (same stem). v2 and v3 need
    hand-written manifests; see the trainer repository's `docs/model_manifest.md`.
-2. In `.env`, set `LETSENCRYPT_ADDITIONAL_DOMAINS=v3.segmentation.codepharm.net,v4.segmentation.codepharm.net`. On its
-   next start the renewer notices the certificate lacks those names and asks for one that has them (`certbot certonly
-   --expand`); it needs the DNS records first.
-3. Create the DNS records for `v3.` and `v4.segmentation.codepharm.net` (DNS only, not proxied).
-4. Run `rebuild-and-start.ps1 -WithV4`. `SEGMENTATION_V4_CHECKPOINT` picks the v4 file; name it for the
-   release (`/models/v4.3.pt`, with `v4.3.model.json` beside it).
-5. Add `v3.` and `v4.segmentation.codepharm.net` to the SNI map in the proxy's `stream.conf` (v3 shares the first
-   container's upstream, v4 is `:40445`) and `nginx -s reload`.
+2. Create the DNS record for `<prefix>.segmentation.codepharm.net` (DNS only, not proxied).
+3. Run `rebuild-and-start.ps1 <prefix> <file.pt>` (for example `v3 sam2_em_v3_epoch_9.pt`), or with no arguments to
+   rebuild every row. `-h` prints usage. The script updates `models.json`, the `.env` certificate names (the renewer
+   then runs `certbot certonly --expand`), and the managed block of the proxy's `stream.conf`, and reloads nginx. The
+   certificate and proxy steps only report failures.
 
 ## Fine-tuned checkpoint
 
