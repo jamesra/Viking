@@ -17,6 +17,20 @@ namespace Viking.SectionCorrection
 
         [JsonPropertyName("z")]
         public List<long> Z { get; set; }
+
+        /// <summary>
+        /// Version of the build algorithm that wrote the sections; 0 when the manifest predates incremental publishing.
+        /// A different version forces a full rebuild.
+        /// </summary>
+        [JsonPropertyName("builder_version")]
+        public int BuilderVersion { get; set; }
+
+        /// <summary>
+        /// What each published section was built from, keyed by Z. Null for manifests written before incremental
+        /// publishing, which forces one full rebuild.
+        /// </summary>
+        [JsonPropertyName("section_fingerprints")]
+        public Dictionary<long, SectionFingerprintDto> SectionFingerprints { get; set; }
     }
 
     public sealed class CorrectionProvenanceDto
@@ -35,6 +49,10 @@ namespace Viking.SectionCorrection
 
         [JsonPropertyName("min_annotation_votes")]
         public int MinAnnotationVotes { get; set; }
+
+        /// <summary>Smallest structure (location count) that contributed residuals; 0 when not recorded.</summary>
+        [JsonPropertyName("min_locations")]
+        public int MinLocations { get; set; }
 
         [JsonPropertyName("residual_window")]
         public ResidualWindowDto ResidualWindow { get; set; }

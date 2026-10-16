@@ -60,7 +60,7 @@ namespace SectionCorrection.Tests
                 Assert.AreEqual(a.X, b.X, 1e-3);
                 Assert.AreEqual(a.Y, b.Y, 1e-3);
                 Assert.IsTrue(File.Exists(Path.Combine(dir, "42.vfield.npz")));
-                Assert.IsTrue(File.Exists(Path.Combine(dir, "volume.npz")));
+                Assert.IsFalse(File.Exists(Path.Combine(dir, "volume.npz")), "volume.npz is built on request, not at publish");
             }
             finally
             {

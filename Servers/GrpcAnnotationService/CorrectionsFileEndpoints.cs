@@ -27,9 +27,20 @@ namespace gRPCAnnotationService
                 await SendFile(context, groupFile(context, PublishedCorrectionSet.ManifestFileName), "application/json");
             }).RequireAuthorization(policy);
 
+            // Not stored at publish: built from the section files on first request and cached until the next publish.
             endpoints.MapGet("/corrections/{group}/volume.npz", async context =>
             {
-                await SendFile(context, groupFile(context, PublishedCorrectionSet.VolumeFileName), "application/octet-stream");
+                string manifest = groupFile(context, PublishedCorrectionSet.ManifestFileName);
+                if (!IsUnderRoot(context, manifest))
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                string archive = await System.Threading.Tasks.Task.Run(
+                    () => VolumeArchiveCache.EnsureArchive(Path.GetDirectoryName(manifest)),
+                    context.RequestAborted);
+                await SendFile(context, archive, "application/octet-stream");
             }).RequireAuthorization(policy);
 
             endpoints.MapGet("/corrections/{group}/{file}", async context =>
@@ -94,19 +105,24 @@ namespace gRPCAnnotationService
                 return;
             }
 
-            string fullRoot = Path.GetFullPath(context.RequestServices.GetService(typeof(CorrectionCatalog)) is CorrectionCatalog c
-                ? c.RootDirectory ?? ""
-                : "");
-            string fullPath = Path.GetFullPath(path);
-            if (!string.IsNullOrEmpty(fullRoot) &&
-                !fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
+            if (!IsUnderRoot(context, path))
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
             }
 
             context.Response.ContentType = contentType;
-            await context.Response.SendFileAsync(fullPath);
+            await context.Response.SendFileAsync(Path.GetFullPath(path));
+        }
+
+        /// <summary>True when <paramref name="path"/> resolves beneath the catalog root (or no root is configured).</summary>
+        static bool IsUnderRoot(HttpContext context, string path)
+        {
+            string fullRoot = Path.GetFullPath(context.RequestServices.GetService(typeof(CorrectionCatalog)) is CorrectionCatalog c
+                ? c.RootDirectory ?? ""
+                : "");
+            return string.IsNullOrEmpty(fullRoot) ||
+                Path.GetFullPath(path).StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

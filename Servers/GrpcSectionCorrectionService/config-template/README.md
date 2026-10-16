@@ -59,9 +59,24 @@ docker compose stop section-correction-certbot-renewer
 
 ## Rebuild
 
-`Rebuild__Cron` is a 5-field cron in UTC. Default `0 2 * * 0` is Sunday 02:00.
 `Rebuild__RunOnStartup=true` publishes every Identity volume that has a VikingXML
 Endpoint and an `AnnotationConnections__{VolumeName}` SQL mapping.
+
+After startup the service checks for annotation changes every `Rebuild__CheckInterval`
+(`d.hh:mm:ss`, default `24:00:00`; `00:00:00` turns the check off). A check reads one
+fingerprint per section (row count, newest edit, ID sums, stos file time) and recomputes
+only the sections that changed and the sections their structures' chains reach. An edit
+waits for a later check until it is `Rebuild__QuietMinutes` old (default 60), so an editing
+session is not rebuilt halfway through. If more than `Rebuild__MaxIncrementalFraction`
+(default 0.3) of the sections are affected, or the builder version, `MinLocations` or the
+residual window changed, the whole group is rebuilt instead.
+
+`Rebuild__Cron` is a 5-field cron in UTC that forces a full rebuild, as a safety net for
+changes an incremental update cannot see (such as a deletion in a chain that skips many
+sections). Default `0 2 * * 0` is Sunday 02:00.
+
+`volume.npz` is no longer written at publish. `GET /corrections/{group}/volume.npz` builds
+it from the section files on first request and caches it until the next publish.
 
 ## Console menu (status and manual refresh)
 

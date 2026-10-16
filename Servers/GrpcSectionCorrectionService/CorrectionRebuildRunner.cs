@@ -236,6 +236,9 @@ namespace Viking.GrpcSectionCorrectionService
                 Force = force || rebuild.GetValue("Force", false),
                 SkipQuiver = rebuild.GetValue("SkipQuiver", false),
                 MinLocations = rebuild.GetValue("MinLocations", 3),
+                // Edits newer than this wait for a later check, so an editing session is not rebuilt halfway through.
+                QuietPeriod = TimeSpan.FromMinutes(Math.Max(0, rebuild.GetValue("QuietMinutes", 60.0))),
+                MaxIncrementalFraction = rebuild.GetValue("MaxIncrementalFraction", 0.3),
                 // An unset group follows the global setting, then the VikingXML default.
                 StosGroups = string.IsNullOrEmpty(stosGroup) ? rebuild["StosGroups"] : stosGroup,
                 PublicVolumeUrl = source.VikingXmlEndpoint,

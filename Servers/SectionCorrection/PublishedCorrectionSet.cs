@@ -10,7 +10,8 @@ using Path = System.IO.Path;
 namespace Viking.SectionCorrection
 {
     /// <summary>
-    /// One published StosGroup directory: manifest, per-Z npz, optional volume.npz.
+    /// One published StosGroup directory: manifest and per-Z npz. The aggregate volume.npz is built on demand by
+    /// <see cref="VolumeArchiveCache"/>.
     /// </summary>
     public sealed class PublishedCorrectionSet
     {
@@ -55,13 +56,7 @@ namespace Viking.SectionCorrection
 
         public static PublishedCorrectionSet LoadDirectory(string directory)
         {
-            string manifestPath = Path.Combine(directory, ManifestFileName);
-            if (!File.Exists(manifestPath))
-                throw new FileNotFoundException("Correction manifest not found.", manifestPath);
-
-            CorrectionManifestDto manifest = JsonSerializer.Deserialize<CorrectionManifestDto>(
-                File.ReadAllText(manifestPath), JsonOptions)
-                ?? throw new InvalidDataException("Correction manifest was empty.");
+            CorrectionManifestDto manifest = LoadManifest(directory);
 
             Dictionary<long, SectionVectorField> sections = [];
             IEnumerable<long> zList = manifest.Z ?? [];
@@ -76,16 +71,36 @@ namespace Viking.SectionCorrection
             return new PublishedCorrectionSet(manifest, sections);
         }
 
+        /// <summary>
+        /// Writes the manifest and one npz per section. The aggregate <c>volume.npz</c> is not written here; it is
+        /// generated on first request by <see cref="VolumeArchiveCache"/>.
+        /// </summary>
         public void WriteDirectory(string directory)
         {
             Directory.CreateDirectory(directory);
             Manifest.Z = [.. Sections.Keys.OrderBy(z => z)];
-            File.WriteAllText(Path.Combine(directory, ManifestFileName), JsonSerializer.Serialize(Manifest, JsonOptions));
+            WriteManifest(directory);
 
             foreach (KeyValuePair<long, SectionVectorField> kv in Sections)
                 WriteSectionNpz(Path.Combine(directory, SectionFileName(kv.Key)), kv.Value);
+        }
 
-            WriteVolumeNpz(Path.Combine(directory, VolumeFileName));
+        /// <summary>Writes only <c>manifest.json</c>, using the Z list already on <see cref="Manifest"/>.</summary>
+        public void WriteManifest(string directory)
+        {
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, ManifestFileName), JsonSerializer.Serialize(Manifest, JsonOptions));
+        }
+
+        /// <summary>Reads <c>manifest.json</c> from a published directory without loading any section.</summary>
+        public static CorrectionManifestDto LoadManifest(string directory)
+        {
+            string manifestPath = Path.Combine(directory, ManifestFileName);
+            if (!File.Exists(manifestPath))
+                throw new FileNotFoundException("Correction manifest not found.", manifestPath);
+
+            return JsonSerializer.Deserialize<CorrectionManifestDto>(File.ReadAllText(manifestPath), JsonOptions)
+                ?? throw new InvalidDataException("Correction manifest was empty.");
         }
 
         public static void WriteSectionNpz(string path, SectionVectorField field)
@@ -168,9 +183,14 @@ namespace Viking.SectionCorrection
             return new SectionVectorField(z, pitch, kernel, nodes);
         }
 
-        void WriteVolumeNpz(string path)
+        /// <summary>
+        /// Writes the aggregate volume archive (dense when small, otherwise COO) for <paramref name="sections"/>.
+        /// </summary>
+        /// <param name="path">Destination npz.</param>
+        /// <param name="allSections">Every published section of the set.</param>
+        public static void WriteVolumeNpz(string path, IEnumerable<SectionVectorField> allSections)
         {
-            List<SectionVectorField> fields = [.. Sections.Values.OrderBy(s => s.Z)];
+            List<SectionVectorField> fields = [.. allSections.OrderBy(s => s.Z)];
             if (fields.Count == 0)
             {
                 NumpyNpz.Write(path, new Dictionary<string, NumpyArray>
