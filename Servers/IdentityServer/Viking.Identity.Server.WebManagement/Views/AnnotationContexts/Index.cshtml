@@ -198,18 +198,18 @@
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm" role="group">
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Details" aria-label="Details">
                                 <i class="bi bi-info-circle"></i>
                             </a>
                             @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, item)))
                             {
-                                <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                                <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Permissions" aria-label="Permissions">
                                     <i class="bi bi-shield-check"></i>
                                 </a>
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Edit" aria-label="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete" aria-label="Delete">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             }

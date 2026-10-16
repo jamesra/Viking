@@ -89,7 +89,7 @@
                         </a>
                         @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
                         {
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Edit">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Edit" aria-label="Edit">
                                 <i class="bi bi-pencil"></i>
                             </a>
                             @if (this.User.IsInRole(Special.Roles.Admin))
