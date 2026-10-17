@@ -771,7 +771,21 @@ namespace WebAnnotation.ViewModel
                     }
                 }
 
-                RasterMask mask = RasterMask.FromRings(volumeRings, downsample, marginPixels: EditMaskMarginPixels, wholeRegion: tiled);
+                // The raster is drawn as one texture, so a polygon too big for the GPU is downsampled until it fits.
+                RasterMask mask = RasterMask.FromRings(
+                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, wholeRegion: tiled, maxRasterSide: parent.MaxTextureSide);
+
+                // Dilating can only grow the mask as far as the raster's margin, so the raster's bounds are the most tiles the accepted
+                // mask can reach: refuse here rather than after the user has edited.
+                if (tiled && mask is not null &&
+                    SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, downsample) > SegmentationMaskTiles.MaxForegroundTiles)
+                {
+                    MessageBox.Show(
+                        $"This polygon, with room to dilate it, would span {SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, downsample)} tiles at this zoom. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles.",
+                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 if (mask is null)
                 {
                     MessageBox.Show(

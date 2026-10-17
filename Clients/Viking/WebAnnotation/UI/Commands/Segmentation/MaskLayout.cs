@@ -119,10 +119,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         /// <remarks>
         /// Scale 1 when the region and its margin fit one window; otherwise <see cref="LargeRegionScale"/>, doubled while the
-        /// PNG would exceed <see cref="MaxPngSide"/>. The margin is added after the scale is known, so it is always that many
-        /// PNG pixels.
+        /// raster would exceed <paramref name="maxRasterSide"/> (<see cref="MaxPngSide"/> for a PNG on the wire; a raster that is
+        /// drawn as a texture passes the GPU's limit, so a mask too big for it is simply downsampled until it fits). The margin is
+        /// added after the scale is known, so it is always that many raster pixels.
         /// </remarks>
-        public static MaskLayout Plan(long xMin, long xMax, long yMin, long yMax, int marginRasterPixels = 0)
+        public static MaskLayout Plan(long xMin, long xMax, long yMin, long yMax, int marginRasterPixels = 0, int maxRasterSide = MaxPngSide)
         {
             long width = xMax - xMin + 1 + 2L * marginRasterPixels;
             long height = yMax - yMin + 1 + 2L * marginRasterPixels;
@@ -131,7 +132,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 long margin = (long)marginRasterPixels * scale;
                 MaskLayout layout = MaskLayout.ForRegion(xMin - margin, xMax + margin, yMin - margin, yMax + margin, scale);
-                if (layout.RasterWidth <= MaxPngSide && layout.RasterHeight <= MaxPngSide)
+                if (layout.RasterWidth <= maxRasterSide && layout.RasterHeight <= maxRasterSide)
                     return layout;
 
                 scale *= 2;

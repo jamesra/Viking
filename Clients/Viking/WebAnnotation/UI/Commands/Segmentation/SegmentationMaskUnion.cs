@@ -138,6 +138,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// True (the single-<c>Mask</c> wire) cuts a union wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> down
         /// around <paramref name="centreVolume"/>. False keeps the whole region, for a raster that is edited in memory and sent as tiles.
         /// </param>
+        /// <param name="maxRasterSide">The most pixels the raster may have along a side; the scale doubles until it fits.</param>
         public byte[]? Rasterize(
             int downsample,
             Vector2 centreVolume,
@@ -145,7 +146,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Vector2>? holePointsVolume = null,
             double holeRadiusPixels = 0,
             int marginRasterPixels = 0,
-            bool cutToLimit = true)
+            bool cutToLimit = true,
+            int maxRasterSide = MaskScalePolicy.MaxPngSide)
         {
             layout = default;
             if (IsEmpty || downsample <= 0 || !TryGetMosaicBounds(downsample, out long xMin, out long xMax, out long yMin, out long yMax))
@@ -156,7 +158,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 (xMin, xMax) = CutToLimit(xMin, xMax, (long)Math.Floor(centreVolume.X / downsample));
                 (yMin, yMax) = CutToLimit(yMin, yMax, (long)Math.Floor(centreVolume.Y / downsample));
             }
-            layout = MaskScalePolicy.Plan(xMin, xMax, yMin, yMax, marginRasterPixels);
+            layout = MaskScalePolicy.Plan(xMin, xMax, yMin, yMax, marginRasterPixels, maxRasterSide);
 
             byte[] pixels = new byte[layout.RasterWidth * layout.RasterHeight];
             bool any = false;

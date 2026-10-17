@@ -280,6 +280,46 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void AMaskTooBigForTheGpuIsDownsampledUntilItFitsTheTexture()
+        {
+            Vector2[] ring = [new(0, 0), new(12000, 0), new(12000, 3000), new(0, 3000)];
+
+            RasterMask roomy = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, wholeRegion: true, maxRasterSide: 4096)!;
+            RasterMask tight = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, wholeRegion: true, maxRasterSide: 2048)!;
+
+            Assert.AreEqual(4, roomy.Scale, "3000 raster pixels plus the margin fit a 4096 texture at scale 4");
+            Assert.IsTrue(roomy.Width <= 4096 && roomy.Height <= 4096);
+            Assert.AreEqual(8, tight.Scale, "the same polygon is downsampled once more for a 2048 texture");
+            Assert.IsTrue(tight.Width <= 2048 && tight.Height <= 2048, $"{tight.Width} x {tight.Height} must fit a 2048 texture");
+            Assert.IsTrue(tight.TryGetSetWorldBounds(out Rectangle set));
+            Assert.AreEqual(0, set.Left, tight.Scale);
+            Assert.AreEqual(12000, set.Right, tight.Scale, "downsampling loses no extent");
+        }
+
+        [TestMethod]
+        public void AcceptingADownsampledEditSendsOnlyTheTilesThePolygonTouchesNotTheDilateMargin()
+        {
+            Vector2[] ring = [new(0, 0), new(12000, 0), new(12000, 3000), new(0, 3000)];
+            RasterMask mask = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, wholeRegion: true, maxRasterSide: 2048)!;
+            SegmentationMaskUnion seeds = new();
+            seeds.Add(SegmentationSeed.FromMask(mask)!.Value);
+
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(seeds, Template, null, 0, 1);
+            Func<int, int, bool> on = Rebuild(tiles);
+
+            // 12000 x 3000 reaches 12 columns by 3 rows of tiles. The raster's margin (128 pixels of 8 each side, a whole tile) reaches more,
+            // and none of those tiles is sent.
+            Assert.AreEqual(12 * 3, tiles.Count);
+            Assert.IsTrue(tiles.All(tile => tile.Coord.Row >= 0 && tile.Coord.Row <= 2 && tile.Coord.Col >= 0 && tile.Coord.Col <= 11), "no tile of the margin");
+            Assert.IsTrue(SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, 1) >= tiles.Count, "the guard's bound covers what is sent");
+            Assert.IsTrue(SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, 1) > tiles.Count, "and the margin is why it is larger");
+            for (int y = 0; y < 3000; y += 37)
+                for (int x = 0; x < 12000; x += 37)
+                    if (!on(x, y))
+                        Assert.Fail($"({x}, {y}) of the edited mask is not in the tiles");
+        }
+
+        [TestMethod]
         public void TheTilesAreSentInMessagesOfAtMostEight()
         {
             List<MaskTile> tiles = Enumerable.Range(0, 20).Select(i => new MaskTile { Coord = Coord(0, i) }).ToList();

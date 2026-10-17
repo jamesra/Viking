@@ -1116,6 +1116,13 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// The largest texture side this viewer's graphics device can create: 4096 for the HiDef profile, 2048 for Reach. Anything drawn
+        /// as one texture, such as a mask being edited, is downsampled to fit.
+        /// </summary>
+        public int MaxTextureSide =>
+            graphicsDeviceService?.GraphicsDevice?.GraphicsProfile == GraphicsProfile.HiDef ? 4096 : 2048;
+
         public async Task ExportImage(string Filename, Geometry.Rectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
         {
             Debug.Assert(MyRect.Left < MyRect.Right);

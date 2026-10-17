@@ -138,7 +138,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// True when the mask goes to the server as tiles, which have no bounds limit: the polygon is rasterized whole, never cut
         /// or refused for its size (the caller checks the server's tile limit). False keeps the single-<c>Mask</c> wire's limit.
         /// </param>
-        public static RasterMask? FromRings(IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0, bool wholeRegion = false)
+        /// <param name="maxRasterSide">
+        /// The most pixels the raster may have along a side: the GPU's texture limit when the raster is drawn for editing. A polygon too big
+        /// for it is downsampled (the scale doubles) until it fits.
+        /// </param>
+        public static RasterMask? FromRings(
+            IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0, bool wholeRegion = false,
+            int maxRasterSide = MaskScalePolicy.MaxPngSide)
         {
             if (rings is null || rings.Count == 0 || rings[0] is null || rings[0].Length < 3 || downsample <= 0)
                 return null;
@@ -149,7 +155,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             SegmentationMaskUnion union = new();
             union.Add(rings);
-            byte[]? pixels = union.Rasterize(downsample, bounds.Center, out MaskLayout layout, marginRasterPixels: marginPixels, cutToLimit: !wholeRegion);
+            byte[]? pixels = union.Rasterize(downsample, bounds.Center, out MaskLayout layout, marginRasterPixels: marginPixels, cutToLimit: !wholeRegion, maxRasterSide: maxRasterSide);
             return pixels is null
                 ? null
                 : new RasterMask(downsample, layout.XMin, layout.YMax, layout.RasterWidth, layout.RasterHeight, pixels, layout.Scale);
