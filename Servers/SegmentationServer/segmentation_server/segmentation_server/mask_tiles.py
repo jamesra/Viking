@@ -12,7 +12,7 @@ window covers before it predicts that window, so a tile the server has not been 
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
 
 import cv2
 import numpy as np
@@ -228,15 +228,12 @@ class TiledMaskShape(MaskShape):
 class MaskTileCollector:
     """One request's mask tiles: the foreground and the on-demand background, with their duplicate and count rules.
 
-    ``enabled`` is whether the request set ``foreground_mask_tile_count`` at all, even to 0: the client then sends its masks
-    as tiles and serves BACKGROUND tiles on request. ``announced`` is that count, how many FOREGROUND tiles follow
-    ``start`` (0 for a request with no foreground mask, such as clicks only). A request that did not set it is an older
-    client: it gets no background requests and may not send mask tiles.
+    ``announced`` is ``SegmentTilesRequest.foreground_mask_tile_count``, how many FOREGROUND tiles follow ``start`` (0 for a
+    request with no foreground mask, such as clicks only). Every request serves BACKGROUND tiles on request.
     """
 
-    def __init__(self, announced: int = 0, enabled: bool = True) -> None:
+    def __init__(self, announced: int = 0) -> None:
         self.announced = int(announced)
-        self.enabled = bool(enabled)
         self.foreground = TiledMaskShape(complete=False)
         self.background = TiledMaskShape(complete=False)
         self.foreground_received = 0

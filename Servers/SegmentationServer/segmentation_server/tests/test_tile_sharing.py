@@ -11,6 +11,10 @@ import numpy as np
 import pytest
 
 from segmentation_grpc import (
+    Feature,
+    MaskKind,
+    MaskTile,
+    MaskTiles,
     Point,
     SegmentTilesRequest,
     SegmentTilesStreamRequest,
@@ -29,7 +33,7 @@ NEIGHBOURS = {(-1, -1), (-1, 0), (0, -1)}
 
 def _request() -> SegmentTilesRequest:
     """A click at (10, 10), owned by an offset cell that needs the three neighbours of tile (0, 0)."""
-    return SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    return SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
 
 
 class _Client:
@@ -54,7 +58,12 @@ class _Client:
         async for update in servicer.SegmentTilesStream(self._incoming(), self.context):
             self.updates.append(update)
             if update.WhichOneof("update") == "needed":
-                self.needed.put_nowait({(tile.row, tile.col) for tile in update.needed.tiles})
+                if update.needed.masks:
+                    # No neighbouring annotations: every BACKGROUND tile asked for is empty, sent at once.
+                    empty = [MaskTile(coord=coord, kind=MaskKind.MASK_KIND_BACKGROUND) for coord in update.needed.masks]
+                    self._inbox.put_nowait(SegmentTilesStreamRequest(mask_tiles=MaskTiles(tiles=empty)))
+                if update.needed.tiles:
+                    self.needed.put_nowait({(tile.row, tile.col) for tile in update.needed.tiles})
 
     async def next_needed(self, timeout: float = 5.0) -> set:
         return await asyncio.wait_for(self.needed.get(), timeout)

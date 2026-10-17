@@ -12,11 +12,10 @@ import signal
 import threading
 import time
 from concurrent import futures
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Tuple
 
 import grpc
-import cv2
 import numpy as np
 from grpc.aio import ServicerContext
 from numpy.typing import NDArray
@@ -54,7 +53,6 @@ from segmentation_server.image_cache import (
     TileCacheKey,
 )
 from segmentation_server.debug_dump import dump_enabled, dump_growth
-from segmentation_server.circle_boxes import find_circles, outer_ring_box_enabled
 from segmentation_server.healthcheck import forget_listening_port, record_listening_port
 from segmentation_server.responses import ResponseOptions, build_segmentation_response, choose_frame
 from segmentation_server.prompt_log import describe_prompts
@@ -68,7 +66,7 @@ from segmentation_server.mask_utils import (
     combined_mask_to_segments,
     prepare_image_for_sam2,
 )
-from segmentation_server.mask_tiles import MaskTileCollector, MaskTileError, png_size as _png_size
+from segmentation_server.mask_tiles import MaskTileCollector, MaskTileError
 from segmentation_server.tile_requests import TileRequestRegistry
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
@@ -436,36 +434,6 @@ class _PredictSettings:
             ),
             use_mask_input=bool(request.use_mask_input),
         )
-
-
-def _resolve_boxes(
-    request: SegmentTilesRequest, foreground: List[Tuple[int, int]]
-) -> Tuple[List[Tuple[int, int, int, int]], List[Tuple[int, int]], bool]:
-    """The boxes the starting cells get, the clicks a boxed prompt leaves out, and who chose the boxes.
-
-    A client that sends boxes chose them and the clicks that go with them, so nothing is inferred
-    and no click is left out; the third value is True and the boxes are taken as object. Otherwise
-    nine-click circles are recognised and boxed from inside, and the third value is False.
-    """
-    client_boxes = _client_boxes(request.foreground_boxes)
-    if client_boxes:
-        logger.info(
-            "SegmentTiles client boxes (x0,y0,x1,y1 mosaic, Y up): %s; %d foreground click(s) sent as given",
-            client_boxes,
-            len(foreground),
-        )
-        return client_boxes, [], True
-    circles = find_circles(foreground) if outer_ring_box_enabled() else []
-    boxes = [circle.box for circle in circles]
-    omit_with_box = [click for circle in circles for click in circle.ring_clicks]
-    if boxes:
-        logger.info(
-            "SegmentTiles circle boxes (x0,y0,x1,y1 mosaic, Y up): %s; "
-            "ring clicks left out of boxed prompts (box + center only): %d",
-            boxes,
-            len(omit_with_box),
-        )
-    return boxes, omit_with_box, False
 
 
 def _session_tag(
@@ -1245,7 +1213,6 @@ class SegmentationServicer(SegmentationServiceServicer):
                 f"{cache_stats['total_memory_mb']:.1f} MiB"
             ),
             in_flight_requests=in_flight,
-            mask_tiles=True,
             cached_images=int(cache_stats["total_images"]),
             cache_memory_bytes=int(cache_stats["total_memory_bytes"]),
             recent_latency_ms=recent_latency_ms,
@@ -1363,10 +1330,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return
         request: SegmentTilesRequest = first.start
-        mask_tiles = MaskTileCollector(
-            request.foreground_mask_tile_count, enabled=request.HasField("foreground_mask_tile_count")
-        )
-        if mask_tiles.enabled and not await self._read_foreground_mask_tiles(request, request_iterator, mask_tiles, context):
+        mask_tiles = MaskTileCollector(request.foreground_mask_tile_count)
+        if not await self._read_foreground_mask_tiles(request, request_iterator, mask_tiles, context):
             return
         identity = await self._validate_stream_start(request, context, mask_tiles)
         if identity is None:
@@ -1382,7 +1347,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return
 
-        session = _TileSession(identity=identity, masks=mask_tiles if mask_tiles.enabled else None)
+        session = _TileSession(identity=identity, masks=mask_tiles)
         reader = _StreamReader(request_iterator)
         self._active_streams += 1
         self._load.begin()
@@ -1393,22 +1358,17 @@ class SegmentationServicer(SegmentationServiceServicer):
             background = prompts.background
             if not await self._pin_start_tiles(session, request, foreground, context):
                 return
-            if mask_tiles.enabled:
-                try:
-                    await self._absorb_early_mask_tiles(reader, session)
-                except _ProtocolError as e:
-                    await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
-                    return
+            try:
+                await self._absorb_early_mask_tiles(reader, session)
+            except _ProtocolError as e:
+                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+                return
             settings = _PredictSettings.from_request(request)
             try:
                 options = ResponseOptions.from_flags(request.response_content)
             except ValueError as e:
                 await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
                 return
-            if prompts.client_chose:
-                boxes, omit_with_box = prompts.boxes, []
-            else:
-                boxes, omit_with_box, _client_chose = _resolve_boxes(request, foreground)
             tag = _session_tag(identity, foreground, background)
             logger.info(
                 "SegmentTiles mask_threshold=%.3f use_mask_input=%s",
@@ -1424,9 +1384,6 @@ class SegmentationServicer(SegmentationServiceServicer):
                 max_requested=self._max_requested_tiles,
                 should_stop=stop_growth.is_set,
                 logit_iso=settings.mask_threshold,
-                boxes=boxes,
-                omit_with_box=omit_with_box,
-                assume_boxes=False,
                 masks=prompts.masks,
                 hint_boxes=prompts.hint_boxes,
                 background_masks=prompts.background_masks,
@@ -1606,7 +1563,12 @@ class SegmentationServicer(SegmentationServiceServicer):
     async def _validate_stream_start(
         self, request: SegmentTilesRequest, context: ServicerContext, mask_tiles: Optional[MaskTileCollector] = None
     ) -> Optional[TileCoord]:
-        """Check a ``start`` message. Returns the tiles' shared identity, or None after an abort."""
+        """Check a ``start`` message. Returns the tiles' shared identity, or None after an abort.
+
+        ``mask_tiles`` holds the FOREGROUND tiles already read; None checks the request as if it had none.
+        """
+        if mask_tiles is None:
+            mask_tiles = MaskTileCollector(request.foreground_mask_tile_count)
         if not await self._submission_ok("SegmentTilesStream", True, context):
             return None
         if not await self._model_id_ok(request, context):
@@ -1622,7 +1584,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         if len(prompts.foreground) == 0:
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                "SegmentTiles requires at least one foreground point, rectangle or mask.",
+                "SegmentTiles requires a foreground click, a foreground rectangle or a FOREGROUND mask tile.",
             )
             return None
         if len(request.tiles) > self._limits.max_tiles:
@@ -1636,13 +1598,10 @@ class SegmentationServicer(SegmentationServiceServicer):
                 context, "prompt points", prompt_points, self._limits.max_points, "SEGMENTATION_MAX_POINTS"
             )
             return None
-        box_count = (
-            len(prompts.boxes) + len(prompts.hint_boxes) + len(prompts.masks)
-            + len(prompts.background_masks) + len(prompts.background_rects)
-        )
-        if box_count > self._limits.max_boxes:
+        rectangle_count = len(prompts.hint_boxes) + len(prompts.background_rects)
+        if rectangle_count > self._limits.max_boxes:
             await self._abort_over_limit(
-                context, "boxes and masks", box_count, self._limits.max_boxes, "SEGMENTATION_MAX_BOXES"
+                context, "rectangles", rectangle_count, self._limits.max_boxes, "SEGMENTATION_MAX_BOXES"
             )
             return None
         identity = request.tiles[0]
@@ -1993,8 +1952,6 @@ class SegmentationServicer(SegmentationServiceServicer):
         """
         if message.WhichOneof("body") != "mask_tiles":
             return await self._apply_answer(message, session, wait)
-        if session.masks is None:
-            raise _ProtocolError("This request did not set foreground_mask_tile_count, so it cannot send mask tiles.")
         try:
             self._check_mask_message(message.mask_tiles)
             session.masks.add(message.mask_tiles, session.identity, _same_tile_identity)
@@ -2178,127 +2135,62 @@ class SegmentationServicer(SegmentationServiceServicer):
 
 @dataclass(frozen=True)
 class _Prompts:
-    """Everything a ``SegmentTilesRequest`` says about the object, the legacy fields and the Features merged.
+    """Everything a ``SegmentTilesRequest`` says about the object: its two Features and its mask tiles.
 
     Points are mosaic ``(x, y)``; every rectangle is ``(x_min, y_min, x_max, y_max)``, corners ordered,
-    Y up. ``boxes`` are the legacy ``foreground_boxes`` (taken as object, as before); ``hint_boxes`` are
-    a foreground Feature's rectangle ("most likely inside"); ``masks`` are its mask ("everything inside
-    is object, grow beyond"); the ``background_*`` pair is the same for the background Feature.
-    ``client_chose`` is True when the client sent boxes or a Feature, so nothing is inferred from the clicks.
+    Y up. ``hint_boxes`` are the foreground Feature's rectangles ("most likely inside", never taken as
+    object); ``masks`` is the FOREGROUND tiled mask ("everything inside is object, grow beyond"), empty when
+    the request has none; ``background_rects`` are the background Feature's rectangles (a weak negative) and
+    ``background_masks`` is the on-demand BACKGROUND tiled mask (the neighbours).
     """
 
     foreground: List[Tuple[int, int]]
     background: List[Tuple[int, int]]
-    boxes: List[Tuple[int, int, int, int]]
     hint_boxes: List[Tuple[int, int, int, int]]
     masks: List[MaskShape]
     background_masks: List[MaskShape]
     background_rects: List[Tuple[int, int, int, int]]
-    client_chose: bool
 
 
-def _prompts_from(request: Any, mask_tiles: Optional[MaskTileCollector] = None) -> _Prompts:
-    """Merge the request's legacy prompt fields with its foreground and background ``Feature`` and its mask tiles.
+def _prompts_from(request: Any, mask_tiles: MaskTileCollector) -> _Prompts:
+    """The prompt of ``request``: its foreground and background ``Feature`` and its mask tiles.
 
-    A foreground Feature with a mask or rectangle but no points still starts the walk: the center of
-    the mask (else the rectangle) becomes the foreground click.
-
-    Raises:
-        ValueError: A ``Mask`` is larger than the server accepts or its ``png`` does not match its bounds and ``scale``,
-            or one side's mask is given both as ``Feature.mask`` and as mask tiles.
+    A foreground with FOREGROUND mask tiles or a rectangle but no clicks still starts the walk: a point inside the
+    mask (else the rectangle's centre) becomes the foreground click. The rectangles are dropped when there is a
+    foreground mask, which is the prompt. The background mask is always the request's on-demand tiled one.
     """
-    foreground = [(point.x, point.y) for point in request.foreground]
-    background = [(point.x, point.y) for point in request.background]
-    boxes = _client_boxes(request.foreground_boxes)
+    foreground: List[Tuple[int, int]] = []
+    background: List[Tuple[int, int]] = []
     hint_boxes: List[Tuple[int, int, int, int]] = []
     masks: List[MaskShape] = []
-    background_masks: List[MaskShape] = []
     background_rects: List[Tuple[int, int, int, int]] = []
-    feature_sent = False
-
-    def shapes(feature: Any) -> Tuple[List[Tuple[int, int, int, int]], List[MaskShape]]:
-        rectangles = _client_boxes(feature.rectangles)
-        return rectangles, [_mask_shape(feature.mask)] if feature.HasField("mask") else []
-
     if request.HasField("foreground_feature"):
-        feature_sent = True
         foreground.extend((point.x, point.y) for point in request.foreground_feature.points)
-        hint_boxes, masks = shapes(request.foreground_feature)
-        role = "correction" if request.foreground_feature.mask_role == MaskRole.MASK_ROLE_CORRECTION else "seed"
-        masks = [replace(shape, role=role) for shape in masks]
-        if masks:
-            # A foreground mask is the prompt; boxes (legacy or a Feature's rectangle) add nothing to it.
-            boxes, hint_boxes = [], []
+        hint_boxes = _client_boxes(request.foreground_feature.rectangles)
     if request.HasField("background_feature"):
-        feature_sent = True
         background.extend((point.x, point.y) for point in request.background_feature.points)
-        background_rects, background_masks = shapes(request.background_feature)
-    if mask_tiles is not None and mask_tiles.enabled:
-        tiled_foreground = mask_tiles.foreground_shape()
-        if tiled_foreground is not None:
-            if masks:
-                raise ValueError("The foreground mask was sent both as Feature.mask and as mask tiles; send one.")
-            role = "correction" if request.foreground_feature.mask_role == MaskRole.MASK_ROLE_CORRECTION else "seed"
-            masks = [tiled_foreground.with_role(role)]
-            boxes, hint_boxes = [], []
-        if background_masks:
-            raise ValueError("The background mask was sent both as Feature.mask and as mask tiles; send one.")
-        # The background is asked for tile by tile as the walk enters windows, so it is a mask the walk can wait on.
-        background_masks = [mask_tiles.background]
-        feature_sent = True
+        background_rects = _client_boxes(request.background_feature.rectangles)
+    tiled_foreground = mask_tiles.foreground_shape()
+    if tiled_foreground is not None:
+        role = "correction" if request.foreground_feature.mask_role == MaskRole.MASK_ROLE_CORRECTION else "seed"
+        masks = [tiled_foreground.with_role(role)]
+        # A foreground mask is the prompt; a rectangle hint adds nothing to it.
+        hint_boxes = []
     if not foreground:
         if masks:
             foreground.append(masks[0].interior_point())
-        elif hint_boxes or boxes:
-            anchor = (hint_boxes or boxes)[0]
+        elif hint_boxes:
+            anchor = hint_boxes[0]
             foreground.append(((anchor[0] + anchor[2]) // 2, (anchor[1] + anchor[3]) // 2))
     return _Prompts(
         foreground=foreground,
         background=background,
-        boxes=boxes,
         hint_boxes=hint_boxes,
         masks=masks,
-        background_masks=background_masks,
+        # The background is asked for tile by tile as the walk enters windows, so it is a mask the walk can wait on.
+        background_masks=[mask_tiles.background],
         background_rects=background_rects,
-        client_chose=feature_sent or bool(boxes),
     )
-
-
-MAX_MASK_PIXELS = 1 << 26
-
-
-def _mask_shape(mask: Any) -> MaskShape:
-    """One ``Mask`` message as a :class:`MaskShape`.
-
-    A ``png`` is ``ceil(width / scale)`` by ``ceil(height / scale)``; each of its pixels is expanded to a
-    ``scale`` x ``scale`` block of mosaic pixels (nearest neighbour), clipped to the bounds.
-
-    Raises:
-        ValueError: The bounds are larger than ``MAX_MASK_PIXELS``, or the PNG does not decode to the size
-            the bounds and ``scale`` call for.
-    """
-    x0, x1 = sorted((int(mask.bounds.x_min), int(mask.bounds.x_max)))
-    y0, y1 = sorted((int(mask.bounds.y_min), int(mask.bounds.y_max)))
-    width, height = x1 - x0 + 1, y1 - y0 + 1
-    if width * height > MAX_MASK_PIXELS:
-        raise ValueError(f"Mask bounds {width}x{height} exceed {MAX_MASK_PIXELS} pixels.")
-    if not mask.png:
-        return MaskShape((x0, y0, x1, y1))
-    scale = max(int(mask.scale), 1) if mask.HasField("scale") else 1
-    want_width, want_height = -(-width // scale), -(-height // scale)
-    declared = _png_size(mask.png)
-    if declared is not None and declared != (want_width, want_height):
-        raise ValueError(f"Mask.png must be {want_width}x{want_height} for bounds {width}x{height} at scale {scale}, got {declared[0]}x{declared[1]}.")
-    image = cv2.imdecode(np.frombuffer(mask.png, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
-    if image is None or image.shape != (want_height, want_width):
-        got = None if image is None else f"{image.shape[1]}x{image.shape[0]}"
-        raise ValueError(f"Mask.png must decode to {want_width}x{want_height} for bounds {width}x{height} at scale {scale}, got {got}.")
-    bitmap = image > 0
-    if scale > 1:
-        # Block (0, 0) is anchored at the image's top-left (x_min, y_max), so edge blocks are cut on the
-        # right and bottom of the image, i.e. at x_max and y_min.
-        bitmap = np.repeat(np.repeat(bitmap, scale, axis=0), scale, axis=1)[:height, :width]
-    return MaskShape((x0, y0, x1, y1), np.flipud(bitmap))
 
 
 def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:

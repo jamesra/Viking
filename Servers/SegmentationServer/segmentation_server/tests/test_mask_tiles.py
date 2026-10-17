@@ -295,25 +295,13 @@ def test_an_explicitly_empty_tile_is_known_but_has_no_pixels() -> None:
     assert [(t.row, t.col) for t in collector.background.unknown_tiles(Cell(0, 1))] == [(0, 1)]  # tiles (0,0) and (0,1)
 
 
-def test_a_mask_sent_both_as_feature_mask_and_as_tiles_is_refused_for_that_kind_only() -> None:
-    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=9, y_max=9)
-    collector = collector_for([pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, full=True)])
-    with pytest.raises(ValueError, match="foreground"):
-        _prompts_from(pb.SegmentTilesRequest(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds))), collector)
-    with pytest.raises(ValueError, match="background"):
-        _prompts_from(pb.SegmentTilesRequest(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds))), collector)
-    # With tiles for one kind only conflicting, the other kind's Feature.mask is still what it is.
-    prompts = _prompts_from(pb.SegmentTilesRequest(), collector)
-    assert len(prompts.masks) == 1 and prompts.background_masks == [collector.background]
-
-
 def test_the_foreground_role_stays_in_the_feature_and_the_click_comes_from_the_tiles() -> None:
     collector = collector_for([pb.MaskTile(coord=_tile(1, 2), kind=FOREGROUND, full=True)])
     request = pb.SegmentTilesRequest(foreground_feature=pb.Feature(mask_role=pb.MASK_ROLE_CORRECTION))
 
     prompts = _prompts_from(request, collector)
 
-    assert prompts.masks[0].role == "correction" and prompts.client_chose
+    assert prompts.masks[0].role == "correction"
     assert prompts.foreground == [(2 * 1024 + 512, 1024 + 512)]
 
 
@@ -579,11 +567,13 @@ def test_a_soma_sized_correction_mask_about_4000_px_across_completes_with_every_
     assert answer[cy, cx] and asked, "and the walk asked for background tiles as it entered windows"
 
 
-# ---- presence of foreground_mask_tile_count ------------------------------------------------------------------------
+# ---- click-only requests ---------------------------------------------------------------------------------------------
 
 def _clicked(**fields) -> pb.SegmentTilesRequest:
     """A click-only request inside tile (0, 0), as the new client sends it: no foreground mask."""
-    return pb.SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[pb.Point(x=300, y=600)], **fields)
+    return pb.SegmentTilesRequest(
+        tiles=[_tile(0, 0)], foreground_feature=pb.Feature(points=[pb.Point(x=300, y=600)]), **fields
+    )
 
 
 def _result_pixels(updates: List[pb.SegmentTilesStreamResponse]) -> int:
@@ -631,48 +621,49 @@ async def test_a_zero_count_still_gets_the_background_asked_for_on_demand() -> N
     assert updates[-1].WhichOneof("update") == "result" and (0, 0) in client.asked_masks
 
 
+def test_the_collector_is_done_at_once_for_a_zero_count() -> None:
+    assert MaskTileCollector(0).foreground_done and not MaskTileCollector(3).foreground_done
+
+
+def test_a_click_only_request_uses_the_tiled_background_and_the_clicks() -> None:
+    collector = MaskTileCollector(0)
+    request = pb.SegmentTilesRequest(foreground_feature=pb.Feature(points=[pb.Point(x=5, y=6)]))
+    prompts = _prompts_from(request, collector)
+    assert prompts.masks == [] and prompts.background_masks == [collector.background] and prompts.foreground == [(5, 6)]
+
+
 @pytest.mark.asyncio
-async def test_mask_tiles_from_a_request_that_did_not_set_the_count_are_refused() -> None:
+async def test_a_request_with_no_foreground_at_all_is_invalid_argument() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
     context = _context()
-    # A click near the corner makes the walk ask for neighbouring tiles, so the stream reads the stray message.
-    request = pb.SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[pb.Point(x=10, y=10)])
-    stray = pb.MaskTiles(tiles=[pb.MaskTile(coord=_tile(0, 0), kind=BACKGROUND)])
+    request = pb.SegmentTilesRequest(
+        tiles=[_tile(0, 0)], background_feature=pb.Feature(points=[pb.Point(x=300, y=600)])
+    )
 
-    await asyncio.wait_for(_stream(servicer, request, [stray], context), timeout=30)
+    updates = await asyncio.wait_for(_stream(servicer, request, [], context), timeout=30)
 
-    assert _aborted_with(context) == grpc.StatusCode.INVALID_ARGUMENT
-    assert "foreground_mask_tile_count" in context.abort.await_args.args[1]
+    assert updates == [] and _aborted_with(context) == grpc.StatusCode.INVALID_ARGUMENT
+    servicer.model.predict_tile.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_a_request_without_the_count_and_without_mask_tiles_takes_the_old_path() -> None:
+async def test_a_rectangle_only_foreground_starts_the_walk_from_its_centre() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
     context = _context()
-    client = Client()
+    request = pb.SegmentTilesRequest(
+        tiles=[_tile(0, 0)],
+        foreground_feature=pb.Feature(rectangles=[pb.BoundingBox(x_min=260, y_min=520, x_max=500, y_max=760)]),
+    )
 
-    updates = await asyncio.wait_for(_stream(servicer, _clicked(), [], context, client), timeout=30)
+    updates = await asyncio.wait_for(_stream(servicer, request, [], context, Client()), timeout=30)
 
     context.abort.assert_not_awaited()
-    assert _result_pixels(updates) == 256 * 256
-    assert client.asked_masks == [] and all(not u.needed.masks for u in updates if u.WhichOneof("update") == "needed")
-
-
-def test_the_collector_is_done_at_once_for_a_zero_count_and_enabled_follows_presence() -> None:
-    assert MaskTileCollector(0, enabled=True).foreground_done and MaskTileCollector(0, enabled=True).enabled
-    assert not MaskTileCollector(0, enabled=False).enabled and not MaskTileCollector(3).foreground_done
-
-
-def test_a_background_only_request_uses_the_tiled_background_and_the_clicks() -> None:
-    collector = MaskTileCollector(0, enabled=True)
-    prompts = _prompts_from(pb.SegmentTilesRequest(foreground=[pb.Point(x=5, y=6)]), collector)
-    assert prompts.masks == [] and prompts.background_masks == [collector.background] and prompts.foreground == [(5, 6)]
-    plain = _prompts_from(pb.SegmentTilesRequest(foreground=[pb.Point(x=5, y=6)]), MaskTileCollector(0, enabled=False))
-    assert plain.background_masks == [] and not plain.client_chose
+    assert updates[-1].WhichOneof("update") == "result"
+    assert servicer.model.predict_tile.call_args.args[5] is not None, "the rectangle is the box prompt"
 
 
 # ---- a budget that stops the walk ----------------------------------------------------------------------------------

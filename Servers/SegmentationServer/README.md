@@ -1,6 +1,6 @@
 # Segmentation server
 
-A gRPC service that serves Meta's [Segment Anything 2](https://github.com/facebookresearch/sam2) to the Viking annotation clients. A client uploads image tiles (or a whole viewport), sends foreground and background clicks and optional boxes, and gets masks and polygons back. It runs on an NVIDIA GPU in Docker and **only speaks TLS**.
+A gRPC service that serves Meta's [Segment Anything 2](https://github.com/facebookresearch/sam2) to the Viking annotation clients. A client uploads image tiles (or a whole viewport), sends foreground and background clicks, optional rectangles and mask tiles, and gets masks and polygons back. It runs on an NVIDIA GPU in Docker and **only speaks TLS**.
 
 The project has three parts:
 
@@ -65,42 +65,38 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
 (its embedding is still cached on disk by image digest).
 
 1. Start the walk in **the fewest windows that between them see the whole prompt**. The prompt
-   is every box (`foreground_boxes` and a foreground `Feature`'s rectangle), every mask (a
-   `Feature`'s mask) and every foreground point. A modern client sends a circle seed as the foreground `Feature`'s **mask**, the disc of the circle itself, (the start window gets it as SAM2 `mask_input`
-   plus a click on the mask; every mask pixel is taken as object and the mask grows
-   beyond it), plus four foreground clicks on the axes at 95% of the radius (just inside the circle's edge). A `Feature`'s rectangle is only a "most likely inside"
-   box hint; no box is ever taken as object, and a foreground mask replaces the boxes. A background `Feature` adds background clicks, a
-   background mask (strongly negative in every window's `mask_input`, and cleared from the
-   answer) and a background rectangle (weakly negative in `mask_input` where nothing positive is
-   known, never cleared). Every mask, foreground or background, is a bitmap of any shape (`Mask.png`, 1-bit, any size up to the server's pixel limit on the bounds; `Mask.scale` n sends one PNG pixel per n x n mosaic pixels for a region too large to send at full resolution) over its bounds; the client sums its shapes into one mask per side. Every pixel of a foreground mask is returned as object, and a core wholly inside it is taken as object without a prediction (a bitmap that leaves part of a core out is predicted, then its pixels are pinned). The candidates are the cells the prompt touches (each whose core holds part of a
-   box, each that owns a point). The candidate whose window holds the most of the prompt starts
+   is the two `Feature`s and the mask tiles: foreground clicks (`foreground_feature.points`), foreground
+   rectangles (`foreground_feature.rectangles`) and the FOREGROUND mask tiles. A circle seed is a FOREGROUND mask,
+   the disc itself (the start window gets it as SAM2 `mask_input` plus a click on the mask; every mask pixel is taken
+   as object and the mask grows beyond it). A rectangle is only a "most likely inside" box hint: it is never taken as
+   object, and a foreground mask replaces it. Anything that is object is sent as a mask, never as a box. The
+   background `Feature` adds background clicks and background rectangles (weakly negative in `mask_input` where
+   nothing positive is known, never cleared); the neighbours are BACKGROUND mask tiles (strongly negative in every
+   window's `mask_input`, and cleared from the answer). Every pixel of a foreground mask is returned as object, and a
+   core wholly inside it is taken as object without a prediction (a mask that leaves part of a core out is predicted,
+   then its pixels are pinned). A request with no foreground click, rectangle or mask tile is `INVALID_ARGUMENT`.
+   The candidates are the cells the prompt touches (each whose core holds part of a
+   rectangle or mask, each that owns a click). The candidate whose window holds the most of the prompt starts
    first, with ties going to the window with the most room round it; that repeats for what is
-   still unseen. A window holds a box only when the whole box reaches its core and sits clear of
-   the window border, so a prompt that fits one window is predicted once, with all of it. A box
-   bigger than any window is cut to its overlap with each core it touches, which lies inside
-   the object and at least 256 px from the window border, where a mask can cover it, and every
+   still unseen. A window holds a rectangle or mask only when the whole of it reaches its core and sits clear of
+   the window border, so a prompt that fits one window is predicted once, with all of it. A mask
+   bigger than any window is read through each core it touches, at least 256 px from the window border, and every
    one of those cores starts. Cells the prompt touches that were not needed start only if the
-   chosen windows find nothing, and a click the mask does not reach starts its own cell. A core
-   the box covers entirely is taken as object without a prediction (its tiles are not needed).
-   Edge crossings then carry the walk outward. A box the client sent is the user's statement
-   that its region is the structure, so it is added to the finished mask whole: what SAM2
-   leaves out of it (an organelle, a pale compartment) is not left as a hole. Only the result
-   is changed: the walk, and whether the request found anything, ignore the box. Boxes the
-   server inferred from nine-click circles are not added.
+   chosen windows find nothing, and a click the mask does not reach starts its own cell.
+   Edge crossings then carry the walk outward.
 
-   **Mask tiles** let a mask of any size be sent. A request that sets `foreground_mask_tile_count` sends that many
-   FOREGROUND `MaskTile`s after `start` (in `mask_tiles` stream messages): every 1024 tile the seed or correction
-   touches, as `full`, a 1-bit PNG (1024x1024, or 256x256 at `scale` 4), or an empty tile. The server waits for all of
-   them (the `TilesAnswer` idle limit; `DEADLINE_EXCEEDED` otherwise) before growth starts, and refuses a repeated
-   (coord, kind), a wrong-sized PNG, a tile at another downsample, or more tiles than announced (`INVALID_ARGUMENT`), and a count
-   over `SEGMENTATION_MAX_MASK_TILES` (default 256, `RESOURCE_EXHAUSTED`). The BACKGROUND (neighbors) is asked for on
-   demand: before it predicts a window the walk needs that window's background tiles, so `TilesNeeded.masks` lists
-   every tile a window it is about to predict covers whose background it does not hold, whether or not the image is
-   cached. The client answers with `mask_tiles` (an empty tile where there are no neighbors), then the `TilesAnswer`
-   (`masks_unavailable` for any it cannot supply, treated as no neighbors). Background tiles sent early are not asked
-   for again. Mask tiles are per request and never enter the image cache. A mask given as tiles is not capped at 64
-   cores the way a box is. `Feature.mask` is still accepted, but not for the same kind as mask tiles. `GetServerStatus`
-   reports `mask_tiles = true`.
+   **Mask tiles** carry every mask, so a mask can be any size. `foreground_mask_tile_count` is how many FOREGROUND
+   `MaskTile`s follow `start` (in `mask_tiles` stream messages), 0 for clicks or rectangles only: every 1024 tile the
+   seed or correction touches, as `full`, a 1-bit PNG (1024x1024, or 256x256 at `scale` 4), or an empty tile. The
+   server waits for all of them (the `TilesAnswer` idle limit; `DEADLINE_EXCEEDED` otherwise) before growth starts,
+   and refuses a repeated (coord, kind), a wrong-sized PNG, a tile at another downsample, or more tiles than announced
+   (`INVALID_ARGUMENT`), and a count over `SEGMENTATION_MAX_MASK_TILES` (default 256, `RESOURCE_EXHAUSTED`). The
+   BACKGROUND (neighbours) is asked for on demand, from every request: before it predicts a window the walk needs that
+   window's background tiles, so `TilesNeeded.masks` lists every tile a window it is about to predict covers whose
+   background it does not hold, whether or not the image is cached. The client answers with `mask_tiles` (an empty
+   tile where there are no neighbours), then the `TilesAnswer` (`masks_unavailable` for any it cannot supply, treated
+   as no neighbours). Background tiles sent early, such as the start windows', are not asked for again. Mask tiles are
+   per request and never enter the image cache.
 
    The mask that answers a prompt is chosen by one rule for every RPC, with no combining of
    masks: with a box, the highest-scoring candidate that has a pixel inside it (how much of the
@@ -119,11 +115,6 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    past it is chosen (the second `use_mask_input` pass is skipped then). It is off by default;
    each candidate's score, pixel count and verdict is logged on one `Box prompt ... candidates`
    line so the setting can be judged from real requests.
-
-   *Legacy prompt.* The production client sends nine clicks (the center, four at half the radius
-   rotated 45 degrees, four at 0.8 on the axes) and no box. The server infers the inscribed box
-   from them (`circle_boxes.find_circles`) and leaves the ring clicks out of the SAM2 prompt. That
-   inference exists only for that client and is deleted when it is retired.
 2. Blend the answer into the result as logits. SAM2's mask decoder emits logits at 1/4 of the
    window, 256x256 samples (four pixels each) for a 1024 window, and each core owns 128x128 of
    them. A prediction speaks only for the piece of its answer that holds a positive click and
@@ -209,7 +200,7 @@ Set `SEGMENTATION_DEBUG_DUMP=1` to write one `.npz` per call (fused mask, every 
 cell's raw answer, kept pieces and SAM2 logits, and the prompts) under the embedding cache mount
 for offline inspection.
 
-Request limits: a request over a limit is refused with `RESOURCE_EXHAUSTED`, naming the limit. `SEGMENTATION_MAX_TILES` (default 64) caps tiles on a `SegmentTilesStream` start, `SEGMENTATION_MAX_POINTS` (512) caps the prompt points on any segment request, `SEGMENTATION_MAX_BOXES` (16) caps boxes, `SEGMENTATION_MAX_SETS` (5000) caps prompt sets on one `SegmentVolumes` stream, and `SEGMENTATION_MAX_ANSWER_TILES` (4096) caps the tiles one `TilesAnswer` may list (over it is `INVALID_ARGUMENT`). `SEGMENTATION_MAX_CONCURRENT_STREAMS` (32) caps `SegmentTilesStream` calls running at once, since each holds cache pins while it waits for tiles, and `SEGMENTATION_MAX_CONCURRENT_RPCS` (256) caps every call in flight; a call over either is `RESOURCE_EXHAUSTED` and can be retried. An image is refused when its declared size is over `SEGMENTATION_MAX_IMAGE_PIXELS` (100 million), before it is decoded. An upload that cannot fit under the cache byte cap, because every other entry is held by a running request, is `RESOURCE_EXHAUSTED`; the client can retry.
+Request limits: a request over a limit is refused with `RESOURCE_EXHAUSTED`, naming the limit. `SEGMENTATION_MAX_TILES` (default 64) caps tiles on a `SegmentTilesStream` start, `SEGMENTATION_MAX_POINTS` (512) caps the prompt points on any segment request, `SEGMENTATION_MAX_BOXES` (16) caps the foreground and background rectangles, `SEGMENTATION_MAX_SETS` (5000) caps prompt sets on one `SegmentVolumes` stream, and `SEGMENTATION_MAX_ANSWER_TILES` (4096) caps the tiles one `TilesAnswer` may list (over it is `INVALID_ARGUMENT`). `SEGMENTATION_MAX_CONCURRENT_STREAMS` (32) caps `SegmentTilesStream` calls running at once, since each holds cache pins while it waits for tiles, and `SEGMENTATION_MAX_CONCURRENT_RPCS` (256) caps every call in flight; a call over either is `RESOURCE_EXHAUSTED` and can be retried. An image is refused when its declared size is over `SEGMENTATION_MAX_IMAGE_PIXELS` (100 million), before it is decoded. An upload that cannot fit under the cache byte cap, because every other entry is held by a running request, is `RESOURCE_EXHAUSTED`; the client can retry.
 
 Cache defaults: 5 minute idle TTL for ad-hoc uploads (grid tiles do not expire), 16 GiB of encoded image bytes, and 4096 ad-hoc uploads. Grid tiles have no count cap. Every cached image holds about 9 MiB of GPU embedding, so the GPU is the real limit: when free CUDA memory drops below max(1 GiB, 10% of the card), the least recently used idle entry is dropped, tile or ad-hoc. The client re-uploads the PNG and the disk embedding cache below skips the encoder. Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`; missing tiles return `TILE_NOT_FOUND` with row/col so the client can re-upload.
 

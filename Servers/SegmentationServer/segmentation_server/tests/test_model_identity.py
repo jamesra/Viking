@@ -16,12 +16,13 @@ from segmentation_grpc import (
     TileCoord,
     UploadTileRequest,
 )
-from segmentation_grpc.segmentation_pb2 import Feature, Mask
+from segmentation_grpc.segmentation_pb2 import Feature, MaskKind, MaskTile, MaskTiles
+from segmentation_server.mask_tiles import MaskTileCollector
 
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.model_manifest import ManifestError, ModelManifest, default_manifest, parse_manifest
 from segmentation_server.prompt_encodings import EdgeConfidenceEncoder
-from segmentation_server.server import SegmentationServicer, _prompts_from
+from segmentation_server.server import SegmentationServicer, _prompts_from, _same_tile_identity
 from test_model_manifest import v4_manifest
 
 FAILED = grpc.StatusCode.FAILED_PRECONDITION
@@ -189,19 +190,29 @@ async def test_a_tiled_model_keeps_accepting_the_whole_screen_rpcs_unless_strict
 
 
 def mask_request(role: int | None) -> SegmentTilesRequest:
-    feature = Feature(mask=Mask(bounds=BoundingBox(x_min=10, y_min=10, x_max=40, y_max=40)))
+    feature = Feature()
     if role is not None:
         feature.mask_role = role
-    return SegmentTilesRequest(tiles=[TileCoord(volume="V", downsample=1)], foreground_feature=feature)
+    return SegmentTilesRequest(
+        tiles=[TileCoord(volume="V", downsample=1)], foreground_feature=feature, foreground_mask_tile_count=1
+    )
+
+
+def one_full_tile() -> MaskTileCollector:
+    """The collector of a request whose FOREGROUND mask is one full tile."""
+    collector = MaskTileCollector(1)
+    tile = MaskTile(coord=TileCoord(volume="V", downsample=1), kind=MaskKind.MASK_KIND_FOREGROUND, full=True)
+    collector.add(MaskTiles(tiles=[tile]), TileCoord(volume="V", downsample=1), _same_tile_identity)
+    return collector
 
 
 def test_the_mask_role_the_client_sent_reaches_the_mask_shape() -> None:
-    assert _prompts_from(mask_request(MaskRole.MASK_ROLE_CORRECTION)).masks[0].role == "correction"
-    assert _prompts_from(mask_request(MaskRole.MASK_ROLE_SEED)).masks[0].role == "seed"
+    assert _prompts_from(mask_request(MaskRole.MASK_ROLE_CORRECTION), one_full_tile()).masks[0].role == "correction"
+    assert _prompts_from(mask_request(MaskRole.MASK_ROLE_SEED), one_full_tile()).masks[0].role == "seed"
 
 
 def test_an_unspecified_mask_role_is_a_seed() -> None:
-    assert _prompts_from(mask_request(None)).masks[0].role == "seed"
+    assert _prompts_from(mask_request(None), one_full_tile()).masks[0].role == "seed"
 
 
 def test_the_servicer_builds_the_encoder_the_manifest_names() -> None:

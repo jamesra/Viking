@@ -61,48 +61,32 @@ def _world_with_a_hole_in_the_box():
     return _RecordingWorld(truth), hole
 
 
-def test_a_client_box_is_taken_as_object_so_a_hole_inside_it_is_filled() -> None:
+def test_a_rectangle_mask_is_taken_as_object_so_a_hole_inside_it_is_filled() -> None:
     world, hole = _world_with_a_hole_in_the_box()
     box, points = client_prompt(2304, 2304, 300)
 
     plain = world.to_truth_frame(grow_segmentation(points, [], world.predict, boxes=[box]))
-    assumed = world.to_truth_frame(grow_segmentation(points, [], world.predict, boxes=[box], assume_boxes=True))
+    masked = world.to_truth_frame(grow_segmentation(points, [], world.predict, masks=[box]))
 
     interior = (slice(hole[0].start + 4, hole[0].stop - 4), slice(hole[1].start + 4, hole[1].stop - 4))
-    assert not plain[interior].any(), "SAM2 leaves the hole out, as it does in the field"
-    assert assumed[hole].all()
-    assert iou(assumed, ellipse(2304, 2304, 300, 300, 0.0)) >= 0.97
+    assert not plain[interior].any(), "SAM2 leaves the hole out, as it does in the field, and a box is never object"
+    assert masked[hole].all()
+    assert iou(masked, ellipse(2304, 2304, 300, 300, 0.0)) >= 0.97
 
 
-def test_only_boxes_the_client_sent_are_taken_as_object() -> None:
-    from types import SimpleNamespace
-
-    from segmentation_server.server import _resolve_boxes
-
-    sent = SimpleNamespace(
-        foreground_boxes=[SimpleNamespace(x_min=10, y_min=20, x_max=110, y_max=140)]
-    )
-    boxes, omit, client_chose = _resolve_boxes(sent, [(60, 80)])
-    assert boxes == [(10, 20, 110, 140)] and omit == [] and client_chose is True
-
-    none_sent = SimpleNamespace(foreground_boxes=[])
-    _boxes, _omit, client_chose = _resolve_boxes(none_sent, [(60, 80)])
-    assert client_chose is False
-
-
-def test_a_box_taken_as_object_is_not_an_answer_when_every_start_is_rejected() -> None:
-    def refuse(row, col, points, labels, box=None):
+def test_a_mask_is_not_an_answer_when_every_start_is_rejected() -> None:
+    def refuse(row, col, points, labels, box=None, mask_logits=None):
         raise NoMatchingMask("nothing fits")
 
     box, points = client_prompt(2304, 2304, 300)
-    walk = GrowthWalk(points, [], refuse, boxes=[box], assume_boxes=True)
+    walk = GrowthWalk(points, [], refuse, masks=[box])
     walk.advance()
 
     with pytest.raises(NoMatchingMask):
         walk.result()
 
 
-def test_reserve_cells_still_start_when_a_box_taken_as_object_is_all_the_canvas_holds() -> None:
+def test_reserve_cells_still_start_when_a_mask_is_all_the_canvas_holds() -> None:
     world = _RecordingWorld(ellipse(2304, 2304, 100, 100, 0.0))
     box, points = client_prompt(2304, 2304, 100)
     refused = []
@@ -111,9 +95,9 @@ def test_reserve_cells_still_start_when_a_box_taken_as_object_is_all_the_canvas_
         if not refused:
             refused.append(Cell(row, col))
             raise NoMatchingMask("the best window finds nothing")
-        return world.predict(row, col, pts, lbls, box=box)
+        return world.predict(row, col, pts, lbls, box=box, mask_logits=mask_logits)
 
-    result = grow_segmentation(points, [], refuse_the_first_window, boxes=[box], assume_boxes=True)
+    result = grow_segmentation(points, [], refuse_the_first_window, masks=[box])
 
     starts = _user_starts(result)
     assert starts[0].outcome == "rejected" and len(starts) >= 2
@@ -279,49 +263,101 @@ def _request(**fields):
     return segmentation_pb2.SegmentTilesRequest(**fields)
 
 
-def test_features_merge_with_the_legacy_prompt_fields() -> None:
+_IDENTITY = dict(volume="V", section=1, channel="TEM", transform="T", downsample=1)
+
+
+def _mask_tiles(bitmap_up: np.ndarray, x0: int, y0: int, kind: int):
+    """A Y-up boolean mask placed at mosaic (x0, y0), cut into the MaskTile messages of the 1024 grid it touches."""
+    import cv2
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    height, width = bitmap_up.shape
+    tiles = []
+    for row in range(y0 // 1024, (y0 + height - 1) // 1024 + 1):
+        for col in range(x0 // 1024, (x0 + width - 1) // 1024 + 1):
+            tile = np.zeros((1024, 1024), dtype=bool)
+            ya, yb = max(y0, row * 1024), min(y0 + height, (row + 1) * 1024)
+            xa, xb = max(x0, col * 1024), min(x0 + width, (col + 1) * 1024)
+            tile[ya - row * 1024:yb - row * 1024, xa - col * 1024:xb - col * 1024] = bitmap_up[ya - y0:yb - y0, xa - x0:xb - x0]
+            if not tile.any():
+                continue
+            ok, png = cv2.imencode(".png", np.flipud(tile).astype(np.uint8) * 255)
+            assert ok
+            coord = pb.TileCoord(row=row, col=col, **_IDENTITY)
+            tiles.append(pb.MaskTile(coord=coord, kind=kind, png=png.tobytes()))
+    return tiles
+
+
+def _collector(tiles=()):
+    """The MaskTileCollector of a request whose FOREGROUND tiles are ``tiles`` (in one message)."""
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.mask_tiles import MaskTileCollector
+    from segmentation_server.server import _same_tile_identity
+
+    foreground = [tile for tile in tiles if tile.kind == pb.MASK_KIND_FOREGROUND]
+    collector = MaskTileCollector(len(foreground))
+    if tiles:
+        collector.add(pb.MaskTiles(tiles=list(tiles)), pb.TileCoord(**_IDENTITY), _same_tile_identity)
+    return collector
+
+
+def test_the_prompt_is_the_two_features_and_the_mask_tiles() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
     from segmentation_server.server import _prompts_from
 
+    square = np.ones((41, 21), dtype=bool)  # x 20..40, y 20..60
+    collector = _collector(_mask_tiles(square, 20, 20, pb.MASK_KIND_FOREGROUND))
     request = _request(
-        foreground=[pb.Point(x=1, y=2)],
         foreground_feature=pb.Feature(
             points=[pb.Point(x=3, y=4)],
             rectangles=[pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)],
-            mask=pb.Mask(bounds=pb.BoundingBox(x_min=20, y_min=20, x_max=40, y_max=60)),
         ),
         background_feature=pb.Feature(
             points=[pb.Point(x=9, y=9)],
             rectangles=[pb.BoundingBox(x_min=100, y_min=100, x_max=110, y_max=110)],
-            mask=pb.Mask(bounds=pb.BoundingBox(x_min=200, y_min=200, x_max=220, y_max=220)),
         ),
+        foreground_mask_tile_count=1,
     )
-    prompts = _prompts_from(request)
+    prompts = _prompts_from(request, collector)
 
-    assert prompts.foreground == [(1, 2), (3, 4)] and prompts.background == [(9, 9)]
-    assert prompts.hint_boxes == [] and prompts.boxes == [], "a foreground mask replaces the boxes"
+    assert prompts.foreground == [(3, 4)] and prompts.background == [(9, 9)]
+    assert prompts.hint_boxes == [], "a foreground mask replaces the rectangle hints"
     assert [shape.box for shape in prompts.masks] == [(20, 20, 40, 60)]
-    assert prompts.background_rects == [(100, 100, 110, 110)] and [shape.box for shape in prompts.background_masks] == [(200, 200, 220, 220)]
-    assert prompts.client_chose is True
+    assert prompts.background_rects == [(100, 100, 110, 110)]
+    assert prompts.background_masks == [collector.background], "the neighbours are always the on-demand tiled mask"
 
 
-def test_a_feature_with_only_a_mask_starts_the_walk_from_the_mask_center_and_png_is_refused() -> None:
+def test_a_foreground_with_only_mask_tiles_starts_the_walk_from_a_point_inside_the_mask() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
     from segmentation_server.server import _prompts_from
 
-    bounds = pb.BoundingBox(x_min=20, y_min=20, x_max=40, y_max=60)
-    assert _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds)))).foreground == [(30, 40)]
-    with pytest.raises(ValueError):
-        _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=b"x"))))
+    square = np.ones((41, 21), dtype=bool)
+    collector = _collector(_mask_tiles(square, 20, 20, pb.MASK_KIND_FOREGROUND))
+    prompts = _prompts_from(_request(foreground_mask_tile_count=1), collector)
+
+    assert prompts.foreground == [(30, 40)]
+
+
+def test_clicks_alone_have_no_foreground_mask_but_still_the_tiled_background() -> None:
+    from segmentation_grpc import segmentation_pb2 as pb
+
+    from segmentation_server.server import _prompts_from
+
+    collector = _collector()
+    prompts = _prompts_from(_request(foreground_feature=pb.Feature(points=[pb.Point(x=5, y=6)])), collector)
+
+    assert prompts.foreground == [(5, 6)] and prompts.masks == []
+    assert prompts.background_masks == [collector.background]
 
 
 def test_a_hint_box_is_prompted_as_a_box_but_not_taken_as_object() -> None:
     world, hole = _world_with_a_hole_in_the_box()
     square, points = client_prompt(2304, 2304, 300)
 
-    result = grow_segmentation(points, [], world.predict, hint_boxes=[square], assume_boxes=True)
+    result = grow_segmentation(points, [], world.predict, hint_boxes=[square])
 
     assert world.mask_prompts[0] is None, "a rectangle is a box prompt, not mask_input"
     interior = (slice(hole[0].start + 4, hole[0].stop - 4), slice(hole[1].start + 4, hole[1].stop - 4))
@@ -360,155 +396,13 @@ def test_a_foreground_rectangle_without_a_mask_stays_a_hint_box() -> None:
     from segmentation_server.server import _prompts_from
 
     request = _request(
-        foreground_boxes=[pb.BoundingBox(x_min=1, y_min=1, x_max=5, y_max=5)],
         foreground_feature=pb.Feature(
             points=[pb.Point(x=3, y=3)], rectangles=[pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)]
         ),
     )
-    prompts = _prompts_from(request)
+    prompts = _prompts_from(request, _collector())
 
-    assert prompts.hint_boxes == [(0, 0, 10, 10)] and prompts.boxes == [(1, 1, 5, 5)] and prompts.masks == []
-
-
-def test_a_background_png_mask_is_decoded_y_up_and_only_its_pixels_are_cleared() -> None:
-    import cv2
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.cell_grid import Canvas
-    from segmentation_server.server import _prompts_from
-
-    image = np.zeros((40, 50), dtype=np.uint8)  # 50 wide, 40 high; row 0 is y_max
-    image[:20, :] = 255  # the top half of the image is the high-y half
-    ok, png = cv2.imencode(".png", image)
-    bounds = pb.BoundingBox(x_min=2200, y_min=2200, x_max=2249, y_max=2239)
-    prompts = _prompts_from(_request(
-        foreground=[pb.Point(x=1, y=2)], background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))
-    ))
-    shape = prompts.background_masks[0]
-    assert shape.bitmap_up.shape == (40, 50) and shape.bitmap_up[39, 0] and not shape.bitmap_up[0, 0]
-
-    canvas = Canvas()
-    canvas.assume_box((2200, 2200, 2249, 2239))
-    canvas.deny_mask(shape)
-    core = canvas.decided_core(cell_of_point(2200, 2200))
-    bx, by = core_origin(cell_of_point(2200, 2200))
-    assert not core[2239 - by, 2210 - bx], "high-y half is cleared"
-    assert core[2200 - by, 2210 - bx], "low-y half is still object"
-
-
-def test_a_png_that_does_not_match_its_bounds_or_a_foreground_png_is_refused() -> None:
-    import cv2
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    ok, png = cv2.imencode(".png", np.full((5, 5), 255, dtype=np.uint8))
-    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=9, y_max=9)
-    with pytest.raises(ValueError):
-        _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
-    with pytest.raises(ValueError):
-        _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
-
-
-def _one_bit_png(rows) -> bytes:
-    """A 1-bit greyscale PNG built by hand, the way the client sends a mask."""
-    import struct
-    import zlib
-
-    height, width = len(rows), len(rows[0])
-    raw = b"".join(bytes(1) + np.packbits(np.array(row, dtype=np.uint8)).tobytes() for row in rows)
-
-    def chunk(kind: bytes, data: bytes) -> bytes:
-        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
-
-    return (
-        bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 1, 0, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(raw))
-        + chunk(b"IEND", b"")
-    )
-
-
-def test_a_one_bit_png_foreground_mask_decodes() -> None:
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    rows = [[1, 0, 0, 0], [1, 1, 0, 0]]  # 4 wide, 2 high; row 0 is y_max
-    bounds = pb.BoundingBox(x_min=10, y_min=20, x_max=13, y_max=21)
-    prompts = _prompts_from(_request(
-        foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=_one_bit_png(rows)))
-    ))
-    assert prompts.masks[0].bitmap_up.tolist() == [[True, True, False, False], [True, False, False, False]]
-    assert prompts.foreground == [prompts.masks[0].interior_point()], "the click lands on the mask"
-
-
-def test_a_png_larger_than_one_sam2_window_is_accepted() -> None:
-    import cv2
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    width, height = 3000, 1500  # several cells across, well past 1024 on both sides
-    image = np.zeros((height, width), dtype=np.uint8)
-    image[0, 2999] = 255  # top-right pixel: (x_max, y_max)
-    ok, png = cv2.imencode(".png", image)
-    bounds = pb.BoundingBox(x_min=1000, y_min=2000, x_max=1000 + width - 1, y_max=2000 + height - 1)
-    prompts = _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes()))))
-
-    bitmap = prompts.masks[0].bitmap_up
-    assert bitmap.shape == (height, width) and bitmap.sum() == 1 and bitmap[height - 1, width - 1]
-    assert prompts.foreground == [(1000 + width - 1, 2000 + height - 1)]
-
-
-def test_a_scaled_png_is_expanded_to_blocks_anchored_at_x_min_and_y_max_and_clipped_to_the_bounds() -> None:
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    # 7 wide x 5 high at scale 3 -> a 3x2 PNG. Row 0 is y_max; the last column and row are partial blocks.
-    rows = [[1, 0, 0], [0, 0, 1]]
-    bounds = pb.BoundingBox(x_min=100, y_min=200, x_max=106, y_max=204)
-    mask = pb.Mask(bounds=bounds, png=_one_bit_png(rows), scale=3)
-    shape = _prompts_from(_request(foreground_feature=pb.Feature(mask=mask))).masks[0]
-
-    expected_down = np.zeros((5, 7), dtype=bool)  # image order, row 0 is y_max
-    expected_down[0:3, 0:3] = True  # PNG pixel (0, 0)
-    expected_down[3:5, 6:7] = True  # PNG pixel (2, 1): a 1-wide, 2-high clipped block
-    assert shape.bitmap_up.tolist() == np.flipud(expected_down).tolist()
-
-
-@pytest.mark.parametrize("set_scale", [None, 0, 1])
-def test_an_unset_zero_or_one_scale_means_one_png_pixel_per_mosaic_pixel(set_scale) -> None:
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    rows = [[1, 0], [0, 1]]
-    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=1, y_max=1)
-    mask = pb.Mask(bounds=bounds, png=_one_bit_png(rows))
-    if set_scale is not None:
-        mask.scale = set_scale
-    shape = _prompts_from(_request(background_feature=pb.Feature(mask=mask))).background_masks[0]
-    assert shape.bitmap_up.tolist() == [[False, True], [True, False]]
-
-
-def test_a_png_that_does_not_match_the_bounds_at_its_scale_is_refused_before_it_is_decoded() -> None:
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server import server
-    from segmentation_server.server import _prompts_from
-
-    bounds = pb.BoundingBox(x_min=0, y_min=0, x_max=6, y_max=4)  # 7 x 5
-    png = _one_bit_png([[1, 0, 0], [0, 0, 1]])  # 3 x 2: right for scale 3 only
-    for scale in (1, 2, 4):
-        with pytest.raises(ValueError, match="3x2"):
-            _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png, scale=scale))))
-    _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png, scale=3))))
-
-    huge = pb.BoundingBox(x_min=0, y_min=0, x_max=server.MAX_MASK_PIXELS, y_max=1)
-    with pytest.raises(ValueError, match="exceed"):
-        _prompts_from(_request(background_feature=pb.Feature(mask=pb.Mask(bounds=huge, png=b"x", scale=2))))
+    assert prompts.hint_boxes == [(0, 0, 10, 10)] and prompts.masks == []
 
 
 def test_every_pixel_of_a_foreground_bitmap_mask_is_returned_as_object_even_where_sam2_left_a_hole() -> None:
@@ -541,27 +435,24 @@ def test_a_mask_that_wholly_covers_a_core_takes_it_as_object_without_predicting_
     assert full.covers_core(cell) and not partial.covers_core(cell)
 
 
-def test_a_scaled_png_mask_wider_than_a_window_is_tiled_out_across_cells_and_returned_as_object() -> None:
-    import cv2
+def test_a_tiled_mask_wider_than_a_window_spans_cells_and_is_returned_as_object() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
     from segmentation_server.server import _prompts_from
 
-    # A 1400 x 1400 disc (more than one 1024 window) sent as a 700 x 700 PNG at scale 2.
+    # A 1400 x 1400 disc, more than one 1024 window, sent as the four mask tiles it touches.
     cx, cy, radius = 2048, 2048, 700
     side = 2 * radius
-    yy, xx = np.mgrid[0:side // 2, 0:side // 2]
-    coarse = ((xx - (side // 2 - 0.5) / 2) ** 2 + (yy - (side // 2 - 0.5) / 2) ** 2 <= (radius / 2) ** 2)
-    ok, png = cv2.imencode(".png", coarse.astype(np.uint8) * 255)
-    bounds = pb.BoundingBox(x_min=cx - radius, y_min=cy - radius, x_max=cx + radius - 1, y_max=cy + radius - 1)
-    prompts = _prompts_from(_request(foreground_feature=pb.Feature(mask=pb.Mask(bounds=bounds, png=png.tobytes(), scale=2))))
+    yy, xx = np.mgrid[0:side, 0:side]
+    disc = (xx - (side - 1) / 2) ** 2 + (yy - (side - 1) / 2) ** 2 <= radius ** 2
+    tiles = _mask_tiles(disc, cx - radius, cy - radius, pb.MASK_KIND_FOREGROUND)
+    assert len(tiles) == 4
+    prompts = _prompts_from(_request(foreground_mask_tile_count=len(tiles)), _collector(tiles))
     shape = prompts.masks[0]
-    assert shape.bitmap_up.shape == (side, side)
+    assert shape.box == (cx - radius, cy - radius, cx + radius - 1, cy + radius - 1)
 
     world = _RecordingWorld(ellipse(cx, cy, radius + 100, radius + 100, 0.0))
     answer = world.to_truth_frame(grow_segmentation(prompts.foreground, [], world.predict, masks=[shape]))
 
-    x0, y0, x1, y1 = shape.box
-    inside = shape.bitmap_up
-    assert answer[y0:y1 + 1, x0:x1 + 1][inside].all(), "every pixel of the large mask is object"
+    assert answer[cy - radius:cy + radius, cx - radius:cx + radius][disc].all(), "every pixel of the large mask is object"
     assert len({call[0] for call in world.given}) > 1, "more than one cell took part"

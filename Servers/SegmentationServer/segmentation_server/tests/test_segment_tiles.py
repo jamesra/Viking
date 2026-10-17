@@ -13,6 +13,7 @@ import pytest
 
 from segmentation_grpc import (
     BoundingBox,
+    Feature,
     Point,
     SegmentTilesRequest,
     SegmentTilesStreamRequest,
@@ -107,6 +108,10 @@ async def _converse(
         updates.append(update)
         if update.WhichOneof("update") == "needed":
             answer = answer_for(update.needed)
+            if answer is not None:
+                # This client has no neighbouring annotations: every BACKGROUND tile the server asks for is unavailable.
+                listed = {(coord.row, coord.col) for coord in answer.masks_unavailable}
+                answer.masks_unavailable.extend(c for c in update.needed.masks if (c.row, c.col) not in listed)
             await inbox.put(None if answer is None else SegmentTilesStreamRequest(answer=answer))
     return updates
 
@@ -118,10 +123,11 @@ def _result(updates: List[SegmentTilesStreamResponse]):
 
 
 def _needed_tiles(updates: List[SegmentTilesStreamResponse]) -> List[set]:
+    """The image tiles of each TilesNeeded that asked for any (a round that asked only for BACKGROUND masks is left out)."""
     return [
         {(tile.row, tile.col) for tile in update.needed.tiles}
         for update in updates
-        if update.WhichOneof("update") == "needed"
+        if update.WhichOneof("update") == "needed" and update.needed.tiles
     ]
 
 
@@ -132,7 +138,7 @@ async def test_missing_tile_without_foreground_does_not_abort() -> None:
     servicer = _servicer(cache)
     request = SegmentTilesRequest(
         tiles=[_tile(0, 0), _tile(0, 1)],
-        foreground=[Point(x=300, y=723)],
+        foreground_feature=Feature(points=[Point(x=300, y=723)]),
     )
     context = _context()
 
@@ -145,13 +151,13 @@ async def test_missing_tile_without_foreground_does_not_abort() -> None:
     assert all(entry.in_use == 0 for entry in cache._cache.values())
 
 
-async def _call_sent_to_the_model(**request_fields):
+async def _call_sent_to_the_model(rectangles=(), **request_fields):
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
     request = SegmentTilesRequest(
         tiles=[_tile(0, 0)],
-        foreground=[Point(x=300, y=723)],
+        foreground_feature=Feature(points=[Point(x=300, y=723)], rectangles=list(rectangles)),
         **request_fields,
     )
 
@@ -165,9 +171,9 @@ async def _threshold_sent_to_the_model(**request_fields) -> float:
 
 
 @pytest.mark.asyncio
-async def test_client_boxes_become_the_box_prompt_and_every_click_is_sent() -> None:
+async def test_a_foreground_rectangle_becomes_the_box_prompt_and_every_click_is_sent() -> None:
     call = await _call_sent_to_the_model(
-        foreground_boxes=[BoundingBox(x_min=200, y_min=600, x_max=500, y_max=900)],
+        rectangles=[BoundingBox(x_min=200, y_min=600, x_max=500, y_max=900)],
     )
 
     assert call.args[5] is not None
@@ -175,16 +181,16 @@ async def test_client_boxes_become_the_box_prompt_and_every_click_is_sent() -> N
 
 
 @pytest.mark.asyncio
-async def test_without_client_boxes_a_lone_click_gets_no_box() -> None:
+async def test_without_a_rectangle_a_lone_click_gets_no_box() -> None:
     call = await _call_sent_to_the_model()
 
     assert call.args[5] is None
 
 
 @pytest.mark.asyncio
-async def test_a_client_box_with_no_area_is_ignored() -> None:
+async def test_a_rectangle_with_no_area_is_ignored() -> None:
     call = await _call_sent_to_the_model(
-        foreground_boxes=[BoundingBox(x_min=200, y_min=600, x_max=200, y_max=900)],
+        rectangles=[BoundingBox(x_min=200, y_min=600, x_max=200, y_max=900)],
     )
 
     assert call.args[5] is None
@@ -194,7 +200,7 @@ async def _response_for(**request_fields):
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=300, y=723)], **request_fields)
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=300, y=723)]), **request_fields)
     return _result(await _converse(servicer, request))
 
 
@@ -233,7 +239,7 @@ async def test_click_near_a_tile_corner_asks_for_the_neighbor_tiles_instead_of_a
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
     context = _context()
 
     updates = await _converse(servicer, request, context)
@@ -254,7 +260,7 @@ async def test_uploaded_tiles_let_the_same_walk_continue_and_finish() -> None:
         await _upload(cache, row, col, png)
     servicer = _servicer(cache)
     servicer.model.predict_ephemeral.return_value = (np.ones((4, 4), dtype=np.bool_), None, 0.8)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
     context = _context()
 
     updates = await _converse(servicer, request, context, answer_for=_all_ready)
@@ -271,7 +277,7 @@ async def test_a_tile_reported_ready_but_not_cached_does_not_stall_the_walk() ->
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
 
     updates = await _converse(servicer, request, answer_for=_all_ready)
 
@@ -284,7 +290,7 @@ async def test_a_tile_asked_for_once_is_not_asked_for_again() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
 
     updates = await _converse(servicer, request, answer_for=_all_unavailable)
 
@@ -297,7 +303,7 @@ async def test_a_client_that_ends_its_stream_while_tiles_are_awaited_gets_no_res
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
 
     updates = await _converse(servicer, request, answer_for=lambda _needed: None)
 
@@ -325,7 +331,7 @@ async def test_a_message_other_than_an_answer_while_tiles_are_awaited_is_rejecte
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
     context = _context()
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
 
     async def incoming():
         yield SegmentTilesStreamRequest(start=request)
@@ -333,7 +339,8 @@ async def test_a_message_other_than_an_answer_while_tiles_are_awaited_is_rejecte
 
     updates = [update async for update in servicer.SegmentTilesStream(incoming(), context)]
 
-    assert [update.WhichOneof("update") for update in updates] == ["needed"]
+    # Refused when the second start is read: before the first TilesNeeded or while it is awaited.
+    assert all(update.WhichOneof("update") == "needed" for update in updates)
     assert context.abort.await_args.args[0] == grpc.StatusCode.INVALID_ARGUMENT
     assert all(entry.in_use == 0 for entry in cache._cache.values())
 
@@ -345,7 +352,7 @@ async def test_missing_foreground_tile_is_not_found() -> None:
     servicer = _servicer(cache)
     request = SegmentTilesRequest(
         tiles=[_tile(0, 0), _tile(0, 1)],
-        foreground=[Point(x=1034, y=10)],
+        foreground_feature=Feature(points=[Point(x=1034, y=10)]),
     )
     context = _context()
 
@@ -364,7 +371,7 @@ async def test_a_client_that_goes_quiet_after_tiles_are_requested_times_out_and_
     servicer = _servicer(cache)
     servicer._tile_answer_timeout = 0.2
     context = _context()
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
 
     async def incoming():
         yield SegmentTilesStreamRequest(start=request)
@@ -409,7 +416,7 @@ async def test_a_client_cancel_ends_the_stream_with_no_result_and_no_status(monk
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
     context = _context()
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=300, y=723)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=300, y=723)]))
 
     updates = await _converse(servicer, request, context)
 
@@ -427,11 +434,12 @@ async def test_no_matching_mask_for_the_starting_cell_fails_the_stream_with_fail
     servicer = _servicer(cache)
     servicer.model.predict_tile.side_effect = NoMatchingMask("None of the 3 candidate mask(s) covers any ...")
     context = _context()
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=300, y=723)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=300, y=723)]))
 
     updates = await _converse(servicer, request, context)
 
-    assert updates == []
+    # The only round before the prediction asks for the start window's BACKGROUND tiles.
+    assert all(update.WhichOneof("update") == "needed" and not update.needed.tiles for update in updates)
     code, message = context.abort.await_args.args
     assert code == grpc.StatusCode.FAILED_PRECONDITION
     assert message.startswith("NO_MATCHING_MASK ")
@@ -450,9 +458,9 @@ def _limited(**limits):
 @pytest.mark.parametrize(
     "limits,request_fields,named",
     [
-        ({"max_tiles": 2}, {"tiles": [_tile(0, 0), _tile(0, 1), _tile(1, 0)], "foreground": [Point(x=1, y=1)]}, "SEGMENTATION_MAX_TILES"),
-        ({"max_points": 3}, {"tiles": [_tile(0, 0)], "foreground": [Point(x=i, y=i) for i in range(2)], "background": [Point(x=9, y=9), Point(x=8, y=8)]}, "SEGMENTATION_MAX_POINTS"),
-        ({"max_boxes": 1}, {"tiles": [_tile(0, 0)], "foreground": [Point(x=1, y=1)], "foreground_boxes": [BoundingBox(x_min=0, y_min=0, x_max=5, y_max=5)] * 2}, "SEGMENTATION_MAX_BOXES"),
+        ({"max_tiles": 2}, {"tiles": [_tile(0, 0), _tile(0, 1), _tile(1, 0)], "foreground_feature": Feature(points=[Point(x=1, y=1)])}, "SEGMENTATION_MAX_TILES"),
+        ({"max_points": 3}, {"tiles": [_tile(0, 0)], "foreground_feature": Feature(points=[Point(x=i, y=i) for i in range(2)]), "background_feature": Feature(points=[Point(x=9, y=9), Point(x=8, y=8)])}, "SEGMENTATION_MAX_POINTS"),
+        ({"max_boxes": 1}, {"tiles": [_tile(0, 0)], "foreground_feature": Feature(points=[Point(x=1, y=1)], rectangles=[BoundingBox(x_min=0, y_min=0, x_max=5, y_max=5)] * 2)}, "SEGMENTATION_MAX_BOXES"),
     ],
     ids=["tiles", "points", "boxes"],
 )
@@ -478,7 +486,7 @@ async def test_a_request_at_the_limit_is_served() -> None:
     from segmentation_server.server import RequestLimits
 
     servicer._limits = RequestLimits(max_tiles=1, max_points=1, max_boxes=1)
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=300, y=723)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=300, y=723)]))
 
     assert _result(await _converse(servicer, request)) is not None
 
@@ -495,7 +503,7 @@ async def test_an_answer_listing_more_tiles_than_the_limit_is_rejected() -> None
 
     updates = await _converse(
         servicer,
-        SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)]),
+        SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)])),
         context,
         answer_for=lambda _needed: TilesAnswer(ready=[_tile(7, c) for c in range(5)]),
     )
@@ -561,7 +569,7 @@ async def test_a_walk_over_aligned_cells_never_decodes_a_tile(monkeypatch) -> No
     await _upload(cache, 0, 0, _png())
     servicer = _servicer(cache)
     servicer.model.predict_tile.return_value = (np.zeros((4, 4), dtype=np.bool_), None, 0.8)  # nothing to continue into
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=300, y=723)])
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=300, y=723)]))
 
     assert _result(await _converse(servicer, request)) is not None
     assert calls == []
@@ -588,7 +596,7 @@ async def test_an_offset_cell_decodes_each_tile_it_is_cropped_from_once() -> Non
     try:
         await _converse(
             servicer,
-            SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=10, y=10)]),
+            SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)])),
             answer_for=_all_ready,
         )
     finally:
@@ -616,7 +624,7 @@ async def _logit_response(response_content: int):
     servicer = _logit_servicer(cache)
     request = SegmentTilesRequest(
         tiles=[_tile(0, 0)],
-        foreground=[Point(x=512, y=512)],
+        foreground_feature=Feature(points=[Point(x=512, y=512)]),
         response_content=response_content,
     )
     return _result(await _converse(servicer, request))
@@ -664,7 +672,7 @@ async def test_unknown_response_content_bits_are_refused_before_any_prediction()
     await _upload(cache, 0, 0)
     servicer = _logit_servicer(cache)
     context = _context()
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[Point(x=512, y=512)], response_content=64)
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=512, y=512)]), response_content=64)
 
     await _converse(servicer, request, context)
 
