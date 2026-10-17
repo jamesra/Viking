@@ -16,12 +16,19 @@ namespace Geometry.Meshing
         readonly int[] _triangles;
         readonly Dictionary<(int A, int B), List<int>> _edgeToTriangles;
 
-        PolygonCutFill(Vector2[] positions, int[] triangles, Dictionary<(int A, int B), List<int>> edgeToTriangles)
+        PolygonCutFill(Vector2[] positions, int[] triangles, Dictionary<(int A, int B), List<int>> edgeToTriangles, Vector2 centroid)
         {
             _positions = positions;
             _triangles = triangles;
             _edgeToTriangles = edgeToTriangles;
+            Centroid = centroid;
         }
+
+        /// <summary>
+        /// The polygon's centroid, which the triangulation was centered on. Subtract it from <see cref="Positions"/>
+        /// to get small coordinates for a renderer that positions the mesh with a translation.
+        /// </summary>
+        public Vector2 Centroid { get; }
 
         /// <summary>Vertex positions in polygon space. Index order matches the triangulation.</summary>
         public IReadOnlyList<Vector2> Positions => _positions;
@@ -62,7 +69,7 @@ namespace Geometry.Meshing
             }
 
             int[] triangleArray = [.. triangles];
-            return new PolygonCutFill(positions, triangleArray, BuildAdjacency(triangleArray));
+            return new PolygonCutFill(positions, triangleArray, BuildAdjacency(triangleArray), centroid);
         }
 
         /// <summary>

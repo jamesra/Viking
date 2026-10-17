@@ -73,7 +73,8 @@ namespace WebAnnotationModel
                 //case "VolumeShape":
                 //  return true;
                 "MosaicShape" => true,
-                "Radius" => true,
+                // Radius is derived from the shape and always changes together with MosaicShape, which already
+                // reported the geometry change. Counting it here made every shape edit rebuild each view twice.
                 "Width" => true,
                 _ => false,
             };
@@ -315,10 +316,11 @@ namespace WebAnnotationModel
                 //Data.MosaicShape = newValue;
                 Data.MosaicShapeWKB = value.AsBinary();
                 _MosaicShape = null;
+                // Update the radius before the shape change is announced: the views built in response read it.
+                _Radius = CalculateRadius(value);
                 OnPropertyChanged("MosaicShape");
 
                 OnPropertyChanging("Radius");
-                _Radius = CalculateRadius(value);
                 OnPropertyChanged("Radius");
 
                 SetDBActionForChange();

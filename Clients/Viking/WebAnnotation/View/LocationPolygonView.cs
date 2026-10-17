@@ -290,13 +290,14 @@ namespace WebAnnotation.View
 
             long smoothTicks = Stopwatch.GetTimestamp() - smoothStart;
 
-            SolidPolygonView mesh = new(SmoothedVolumePolygon, HSLColor);
-            // Must be set before polygonMesh is published: the triangulation starts on the first draw.
+            // Warm the cut-fill cache while the cell is on screen so a later retrace does not triangulate it on the pen thread.
+            // The render mesh is built from this same triangulation, so the ring is triangulated once.
+            Task<Geometry.Meshing.PolygonCutFill> triangulation = WebAnnotation.UI.Commands.PolygonCutFillCache.Begin(SmoothedVolumePolygon);
+            SolidPolygonView mesh = new(SmoothedVolumePolygon, HSLColor, sharedTriangulation: triangulation);
+            // Must be set before polygonMesh is published: the mesh build starts on the first draw.
             mesh.MeshBuildCompleted = timing is null ? null : timing.RecordTriangulation;
             mesh.MeshBuildStarted = timing is null ? null : timing.RecordTriangulationStarted;
             polygonMesh = mesh;
-            // Warm the cut-fill cache while the cell is on screen so a later retrace does not triangulate it on the pen thread.
-            WebAnnotation.UI.Commands.PolygonCutFillCache.Begin(SmoothedVolumePolygon);
             CreateLabelObjects();
 
             InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];

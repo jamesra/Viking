@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
+        <Compile Include="View\LocationShapeChangeEventTests.cs" />
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="ChannelPoolTests.cs" />
         <Compile Include="Commands\SegmentationPenButtonsTests.cs" />

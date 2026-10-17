@@ -36,6 +36,31 @@ namespace GeometryTests
         }
 
         /// <summary>
+        /// A renderer positions the mesh by the centroid and draws positions relative to it, so the centroid must be
+        /// the polygon's and the fill must cover the polygon: its triangle areas add up to the polygon's area.
+        /// </summary>
+        [TestMethod]
+        public void FillExposesPolygonCentroidAndCoversPolygon()
+        {
+            Polygon ring = Circle(64, 100).Translate(new Vector2(5000, -3000));
+            PolygonCutFill fill = PolygonCutFill.Create(ring);
+
+            Assert.AreEqual(ring.Centroid.X, fill.Centroid.X, 1e-9);
+            Assert.AreEqual(ring.Centroid.Y, fill.Centroid.Y, 1e-9);
+
+            double triangleArea = 0;
+            for (int i = 0; i < fill.TriangleIndices.Count; i += 3)
+            {
+                Vector2 a = fill.Positions[fill.TriangleIndices[i]] - fill.Centroid;
+                Vector2 b = fill.Positions[fill.TriangleIndices[i + 1]] - fill.Centroid;
+                Vector2 c = fill.Positions[fill.TriangleIndices[i + 2]] - fill.Centroid;
+                triangleArea += Math.Abs((b.X - a.X) * (c.Y - a.Y) - (c.X - a.X) * (b.Y - a.Y)) / 2.0;
+            }
+
+            Assert.AreEqual(ring.Area, triangleArea, ring.Area * 1e-9);
+        }
+
+        /// <summary>
         /// A short chord must leave vertices on the far side of the ring bitwise unchanged.
         /// This is the contract the choice fill relies on after it stopped curve-fitting the whole cut.
         /// </summary>

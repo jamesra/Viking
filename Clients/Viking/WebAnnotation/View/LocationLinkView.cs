@@ -356,7 +356,13 @@ namespace WebAnnotation.ViewModel
         {
             IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
             bool onViewedSection = location.Z == Z;
-            if (!onViewedSection && IsPolygonType(location.TypeCode))
+            // On the viewed section a polygon view reports its mapped polygon as VolumeShapeAsRendered, so map the
+            // shape directly and skip a view that smooths and triangulates the ring in the background. A closed
+            // curve view builds its rendered shape from its own control points, so it still goes through the view.
+            bool mapDirectly = onViewedSection
+                ? location.TypeCode is LocationType.POLYGON or LocationType.CURVEPOLYGON
+                : IsPolygonType(location.TypeCode);
+            if (mapDirectly)
             {
                 try
                 {
