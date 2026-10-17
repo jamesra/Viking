@@ -227,6 +227,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             //
             // A server that takes mask tiles gets them as the grid tiles the seeds touch, however large the seeds are, and asks
             // for the background tiles it needs as the walk grows. Any other server gets the single Mask of the older protocol.
+            // The first request after the app starts may get here before the status query a connection started has answered.
+            await WhenCapabilitiesKnownAsync().ConfigureAwait(false);
             bool maskTiles = ServerSupportsMaskTiles;
             int maskTileScale = SegmentationMaskTiles.ConfiguredScale;
             double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;

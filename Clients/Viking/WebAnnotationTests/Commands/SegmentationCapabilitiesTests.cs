@@ -67,6 +67,18 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public async System.Threading.Tasks.Task WaitingForCapabilitiesReturnsAtOnceWhenNoQueryWasStarted()
+        {
+            SegmentationViewportSession.ResetModelProfile();
+
+            System.Threading.Tasks.Task waiting = SegmentationViewportSession.WhenCapabilitiesKnownAsync(timeoutSeconds: 30);
+
+            Assert.IsTrue(waiting.IsCompleted, "nothing to wait for: a server that was never asked is not known to support mask tiles");
+            await waiting;
+            Assert.IsFalse(SegmentationViewportSession.ServerSupportsMaskTiles);
+        }
+
+        [TestMethod]
         public void MissingCapabilitiesKeepTheCurrentProfile()
         {
             Assert.IsNull(SegmentationViewportSession.ProfileToAdopt(null, 1));

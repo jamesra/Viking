@@ -728,7 +728,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
         private const int EditMaskMarginPixels = 128;
 
-        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        protected async void ContextMenu_EditPolygonMask(object sender, EventArgs e)
         {
             try
             {
@@ -738,6 +738,9 @@ namespace WebAnnotation.ViewModel
                     MessageBox.Show("There is no open section viewer.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
+
+                // No segmentation session may have connected yet, so the server's capabilities (mask tile support) may not be known.
+                await SegmentationViewportSession.EnsureServerCapabilitiesAsync(parent);
 
                 Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
                 List<Geometry.Vector2[]> volumeRings = [];
@@ -791,7 +794,7 @@ namespace WebAnnotation.ViewModel
                     MessageBox.Show(
                         tiled
                             ? "This polygon is too small to make a mask."
-                            : "This polygon is too small, or too large at this zoom, to make a mask.",
+                            : "This polygon is too small, or wider than about 8000 pixels at this zoom, to make a mask. A segmentation server that supports mask tiles has no such limit; this one did not report that it does.",
                         "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
