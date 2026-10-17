@@ -121,6 +121,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public static string? ServerModelId => Volatile.Read(ref serverModelId);
 
+        /// <summary>The GetServerStatus query in flight or finished for the current endpoint; null until a session has connected.</summary>
+        private static Task? capabilitiesRefresh;
+
         /// <summary>
         /// How the model in use wants its input: fixed grid tiles or the whole screen, and whether the
         /// tile level follows zoom. Starts as <see cref="SegmentationModelProfile.Default"/> (fixed tiles,
@@ -194,6 +197,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             Volatile.Write(ref modelProfile, SegmentationModelProfile.Default);
             Volatile.Write(ref serverModelId, null);
+            Volatile.Write(ref capabilitiesRefresh, null);
+        }
+
+        /// <summary>
+        /// Waits (at most <paramref name="timeoutSeconds"/>) for the GetServerStatus query a connection started, so
+        /// <see cref="ServerModelId"/> and the model profile are known before a request is built from them. Returns at once when the
+        /// query has finished or none was started, and never throws: a server that does not answer leaves the defaults.
+        /// </summary>
+        public static async Task WhenCapabilitiesKnownAsync(int timeoutSeconds = 6)
+        {
+            Task? refresh = Volatile.Read(ref capabilitiesRefresh);
+            if (refresh is null || refresh.IsCompleted)
+                return;
+
+            await Task.WhenAny(refresh, Task.Delay(TimeSpan.FromSeconds(timeoutSeconds))).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -221,7 +239,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 capabilitiesEndpoint = endpoint;
             }
 
-            _ = RefreshModelCapabilitiesAsync(client, endpoint);
+            Volatile.Write(ref capabilitiesRefresh, RefreshModelCapabilitiesAsync(client, endpoint));
         }
 
         /// <summary>

@@ -155,5 +155,50 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(256, SegmentationMaskTiles.TilesSpanned(Box(0, 0, 16 * 1024, 16 * 1024), 1), "exactly 16 x 16 tiles, not 17 x 17");
             Assert.IsTrue(SegmentationMaskTiles.TilesSpanned(Box(0, 0, 17 * 1024, 16 * 1024), 1) > SegmentationMaskTiles.MaxForegroundTiles);
         }
+
+        [TestMethod]
+        public void ARasterIsTopDownSoRowZeroIsTheHighestY()
+        {
+            // An L: the lower-left 100 x 50 plus the upper-right 50 x 50. The upper-left corner of the bounds is empty.
+            Vector2[] ring = [new(0, 0), new(100, 0), new(100, 100), new(50, 100), new(50, 50), new(0, 50)];
+
+            RasterMask mask = RasterMask.FromRings([ring], downsample: 1)!;
+
+            Assert.AreEqual(1, mask.Scale);
+            Assert.AreEqual(100, mask.Width);
+            Assert.AreEqual(100, mask.Height);
+            Assert.AreEqual(99, mask.YMax, "row 0 is the highest mosaic row");
+            Assert.AreEqual(0, mask.Pixels[0 * mask.Width + 0], "top left is empty");
+            Assert.AreNotEqual(0, mask.Pixels[0 * mask.Width + 99], "top right is set");
+            Assert.AreNotEqual(0, mask.Pixels[(mask.Height - 1) * mask.Width + 0], "bottom left is set");
+            Assert.AreEqual(100 * 50 + 50 * 50, mask.Pixels.Count(p => p != 0));
+        }
+
+        [TestMethod]
+        public void SeveralShapesAreOneRasterOverTheirCombinedBounds()
+        {
+            SegmentationMaskUnion union = new();
+            union.Add(Box(0, 0, 200, 200));
+            union.Add(Box(3000, 1500, 3200, 1700));
+
+            byte[] raster = union.Rasterize(1, out MaskLayout layout)!;
+
+            Assert.AreEqual(1, layout.Scale, "3200 x 1700 fits a 4096 raster at full resolution");
+            Assert.IsTrue(layout.Width >= 3200 && layout.Height >= 1700);
+            bool On(int x, int y) => raster[(layout.YMax - y) * layout.RasterWidth + (x - layout.XMin)] != 0;
+            Assert.IsTrue(On(100, 100));
+            Assert.IsTrue(On(3100, 1600));
+            Assert.IsFalse(On(1600, 800), "the gap between the shapes stays off");
+            Assert.AreEqual(200 * 200 + 200 * 200, raster.Count(p => p != 0));
+        }
+
+        [TestMethod]
+        public void ARasterCutEntirelyAwayByBackgroundPointsIsNull()
+        {
+            SegmentationMaskUnion union = new();
+            union.Add(Box(495, 495, 505, 505));
+
+            Assert.IsNull(union.Rasterize(1, out _, holePointsVolume: [new Vector2(500, 500)], holeRadiusPixels: 20));
+        }
     }
 }

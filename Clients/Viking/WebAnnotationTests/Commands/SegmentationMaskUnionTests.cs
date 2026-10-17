@@ -186,5 +186,26 @@ namespace WebAnnotationTests.Commands
 
             CollectionAssert.AreEqual(new[] { new TileCell(0, 0), new TileCell(0, 1) }, touched.ToArray());
         }
+
+        [TestMethod]
+        public void ACoarseBitmapBecomesWholeFullResolutionBlocksInATile()
+        {
+            // A raster at scale 4 with a 10 x 10 block of set pixels is 40 x 40 mosaic pixels; nothing is lost and nothing is added.
+            byte[] pixels = new byte[300 * 300];
+            for (int row = 100; row < 110; row++)
+                for (int column = 100; column < 110; column++)
+                    pixels[row * 300 + column] = 255;
+            RasterMask coarse = new(downsample: 1, xMin: 0, yMax: 1199, width: 300, height: 300, pixels: pixels, scale: 4);
+            SegmentationMaskUnion union = new();
+            union.Add(SegmentationSeed.FromMask(coarse)!.Value);
+
+            byte[] tile = DrawTile(union)!;
+
+            Assert.AreEqual(40 * 40, tile.Count(p => p != 0));
+            Assert.IsTrue(On(tile, 400, 760));
+            Assert.IsTrue(On(tile, 439, 799));
+            Assert.IsFalse(On(tile, 440, 799));
+            Assert.IsFalse(On(tile, 439, 800));
+        }
     }
 }

@@ -71,5 +71,17 @@ namespace WebAnnotationTests.Commands
         {
             Assert.IsNull(SegmentationViewportSession.ProfileToAdopt(null, 1));
         }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task WaitingForCapabilitiesReturnsAtOnceWhenNoQueryWasStarted()
+        {
+            SegmentationViewportSession.ResetModelProfile();
+
+            System.Threading.Tasks.Task waiting = SegmentationViewportSession.WhenCapabilitiesKnownAsync(timeoutSeconds: 30);
+
+            Assert.IsTrue(waiting.IsCompleted, "nothing to wait for: the model id is simply not known yet");
+            await waiting;
+            Assert.IsNull(SegmentationViewportSession.ServerModelId);
+        }
     }
 }

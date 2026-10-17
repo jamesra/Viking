@@ -19,6 +19,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// the server tells apart from a tile that was never sent. Nothing is merged across tiles, so there is no combined
     /// bounds to cut down, no PNG side to fit and no scale to raise: a region of any size is only more tiles. The PNG is full
     /// resolution (1024 square) unless <see cref="ConfiguredScale"/> asks for 4 (256 square blocks of 4 x 4 pixels).
+    /// Mask tiles are the only way a mask reaches the server: protocol aac7308 removed the single <c>Mask</c>.
     /// </remarks>
     internal static class SegmentationMaskTiles
     {

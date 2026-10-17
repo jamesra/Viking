@@ -208,7 +208,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (request.Tiles.Count == 0)
                 throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
 
-            // Unset when the server has not reported a model yet: it accepts that unless the model's manifest requires an id.
+            // The model id comes from the status query a connection starts. The first request after the app starts, or the first after
+            // a model change reset what was known, may get here before it has answered, so (re)start it if nothing is known and wait.
+            // Unset when the server reported none: it accepts that unless the model's manifest requires an id.
+            BeginModelCapabilitiesRefresh(grpcClient);
+            await WhenCapabilitiesKnownAsync().ConfigureAwait(false);
             if (ServerModelId is { } modelId)
                 request.ModelId = modelId;
 
