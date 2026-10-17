@@ -433,6 +433,32 @@ def test_the_decoded_image_is_not_decoded_again_when_the_caller_has_it(monkeypat
     assert calls == [1]
 
 
+def test_an_uploaded_tile_does_not_wait_for_its_disk_write(monkeypatch) -> None:
+    model = _model_with_store(monkeypatch)
+    store = model._embedding_store
+    recorded_save = store.save
+    writing = threading.Event()
+    release = threading.Event()
+
+    def slow_save(digest, blob, mode):
+        writing.set()
+        release.wait(5)
+        return recorded_save(digest, blob, mode)
+
+    store.save = slow_save
+    monkeypatch.setattr(SegmentationModel, "_export_payload", staticmethod(lambda predictor: {"image_embed": "cpu copy"}))
+    monkeypatch.setattr(SegmentationModel, "_serialize_payload", staticmethod(lambda payload: b"blob"))
+    pixels = np.random.default_rng(2).integers(0, 255, (16, 16, 3), dtype=np.uint8)
+
+    model.create_initialized_predictor(b"", pixels)
+
+    assert writing.wait(5), "the write is handed to the disk-writer thread"
+    assert store.saved == [], "the upload returned while its write was still in progress"
+    release.set()
+    svc._disk_writer().submit(lambda: None).result(5)
+    assert store.saved == [(svc._image_digest(pixels), "compiled")]
+
+
 def test_the_embedding_key_scheme_is_part_of_the_stamp_so_old_folders_are_purged(tmp_path) -> None:
     from segmentation_server import embedding_store
 

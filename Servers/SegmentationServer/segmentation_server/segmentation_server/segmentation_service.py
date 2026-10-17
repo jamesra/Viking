@@ -318,7 +318,9 @@ class SegmentationModel:
         The embedding is filed under a hash of the decoded pixels (:func:`_image_digest`), the
         same key an offset cell window gets in :meth:`predict_ephemeral`, so identical pixels
         reload from disk whichever way they arrived. A miss runs set_image() and stores the
-        feature maps for the next process. ``image_np`` is the already decoded image when the
+        feature maps for the next process on the disk-writer thread, so an UploadTile does not
+        wait for the serialize and the write (about 0.2 s per tile on a bind-mounted store).
+        ``image_np`` is the already decoded image when the
         caller has one (the upload path decodes to validate), which saves decoding it again.
         The encoder generation (eager or compiled) is captured with the model so a compile swap
         cannot file an eager embedding under the compiled namespace.
@@ -334,7 +336,7 @@ class SegmentationModel:
         if self._try_load_disk_embedding(predictor, digest, mode):
             return predictor
         self._encode_image(predictor, image_np)
-        self._save_disk_embedding(predictor, digest, mode)
+        self._save_disk_embedding_later(predictor, digest, mode, self._export_payload_for_disk(predictor, digest, mode))
         return predictor
 
     def note_disk_embedding_used(self, image_data: bytes, image_np: Optional[NDArray] = None) -> None:
@@ -414,6 +416,21 @@ class SegmentationModel:
             ram.put(digest, mode, payload)
         return payload
 
+    def _export_payload_for_disk(self, predictor: SAM2ImagePredictor, digest: str, mode: str) -> Optional[dict]:
+        """The predictor's embedding as a CPU tensor dict for the disk store only; None when the store is off or the export fails.
+
+        Unlike :meth:`_export_payload_for_cache` nothing is filed in the in-memory cache: a tile's predictor is pinned in
+        the image cache, so a second copy there would only use memory. With None, :meth:`_save_disk_embedding_later`
+        falls back to the inline write.
+        """
+        if self._embedding_store is None or predictor._features is None or not predictor._orig_hw:
+            return None
+        try:
+            return self._export_payload(predictor)
+        except Exception:
+            logger.exception("Embedding export failed sha=%s mode=%s", digest[:12], mode)
+            return None
+
     def _save_disk_embedding(
         self,
         predictor: SAM2ImagePredictor,
@@ -443,7 +460,7 @@ class SegmentationModel:
     ) -> None:
         """Serialize and write ``payload`` on the disk-writer thread so the prediction does not wait for it.
 
-        Called from inference threads. The CPU payload is already detached from the predictor, so
+        Called from inference and upload threads. The CPU payload is already detached from the predictor, so
         the predictor can be released before the write runs. Without a payload the write needs the
         predictor's features, so it runs inline. Failures are logged by :meth:`_save_disk_embedding`.
         """
