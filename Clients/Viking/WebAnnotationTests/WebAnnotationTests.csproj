@@ -44,6 +44,7 @@
         <Compile Include="Commands\SegmentationMaskUnionTests.cs" />
         <Compile Include="Commands\SegmentationMaskScaleTests.cs" />
         <Compile Include="Commands\SegmentationMaskTilesTests.cs" />
+        <Compile Include="View\LocationIndexDiagTests.cs" />
         <Compile Include="Commands\PolygonCutMeshBuilderTests.cs" />
         <Compile Include="Commands\PenModeContactTests.cs" />
         <Compile Include="View\LocationLineHitTestTests.cs" />

@@ -23,13 +23,23 @@ namespace WebAnnotationModel
         {
             RTree.Rectangle bbox = obj.MosaicShape.BoundingBox().ToRTreeRect((float)obj.Z);
 
+            if (SpatialSearch.Contains(obj.ID))
+            {
+                // Logged before the assertion, which blocks this thread on a dialog: the history says how the ID got here.
+                LocationIndexDiag.ReportDuplicate(
+                    obj.ID,
+                    $"Adding section={obj.Section} z={obj.Z} type={obj.TypeCode} bbox={bbox}; the index holds {SpatialSearch.Count} locations.");
+            }
+
             Debug.Assert(!SpatialSearch.Contains(obj.ID));
             SpatialSearch.Add(bbox, obj.ID);
+            LocationIndexDiag.Record(obj.ID, "index add");
         }
 
         public void RemoveObject(long key)
         {
-            SpatialSearch.Delete(key, out var removedID);
+            bool deleted = SpatialSearch.Delete(key, out var removedID);
+            LocationIndexDiag.Record(key, deleted ? "index delete" : "index delete missed (not in the index)");
             return;
         }
 
@@ -222,6 +232,7 @@ namespace WebAnnotationModel
         protected override bool TryAddObject(LocationObj newObj)
         {
             bool added = IDToObject.TryAdd(newObj.ID, newObj);
+            LocationIndexDiag.Record(newObj.ID, added ? "store add" : "store add rejected (already in the store)");
             if (added)
             {
                 newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
@@ -235,6 +246,7 @@ namespace WebAnnotationModel
         protected override LocationObj TryRemoveObject(long key)
         {
             bool success = IDToObject.TryRemove(key, out var existingObj);
+            LocationIndexDiag.Record(key, success ? "store remove" : "store remove missed (not in the store)");
             if (success)
             {
                 existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
