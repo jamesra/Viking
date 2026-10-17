@@ -228,22 +228,21 @@ class TiledMaskShape(MaskShape):
 class MaskTileCollector:
     """One request's mask tiles: the foreground and the on-demand background, with their duplicate and count rules.
 
-    ``announced`` is ``SegmentTilesRequest.foreground_mask_tile_count``. A request that announced none has no mask
-    tiles at all (``enabled`` is False), and the background is not asked for.
+    ``enabled`` is whether the request set ``foreground_mask_tile_count`` at all, even to 0: the client then sends its masks
+    as tiles and serves BACKGROUND tiles on request. ``announced`` is that count, how many FOREGROUND tiles follow
+    ``start`` (0 for a request with no foreground mask, such as clicks only). A request that did not set it is an older
+    client: it gets no background requests and may not send mask tiles.
     """
 
-    def __init__(self, announced: int = 0) -> None:
+    def __init__(self, announced: int = 0, enabled: bool = True) -> None:
         self.announced = int(announced)
+        self.enabled = bool(enabled)
         self.foreground = TiledMaskShape(complete=False)
         self.background = TiledMaskShape(complete=False)
         self.foreground_received = 0
         # Background tiles the server has asked the client for, and those it let a client answer after sending early.
         self.asked_background: Set[TileKey] = set()
         self._tolerated: Set[TileKey] = set()
-
-    @property
-    def enabled(self) -> bool:
-        return self.announced > 0
 
     @property
     def foreground_done(self) -> bool:

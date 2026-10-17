@@ -383,6 +383,9 @@ class GrowthWalk:
         self._holds_image = holds_image
         self._pending_masks: List[TileIndex] = []
         self._masks_asked: Set[TileIndex] = set()
+        # Cores the mask prompts touch without covering whole: each must be predicted for the walk to be complete at
+        # the mask's edge. Used to say so when a budget stops the walk first.
+        self._mask_boundary: Set[Cell] = set()
         self._started = False
         self._assume_boxes = assume_boxes
         # Cells the client's prompt starts the walk in, and the first answer that no mask fit one
@@ -522,7 +525,30 @@ class GrowthWalk:
         """
         if self._start_rejection is not None and not self._canvas.cells() and not self._deferred:
             raise self._start_rejection
+        self._warn_if_budget_left_mask_edge_unpredicted()
         return self._finish()
+
+    def _warn_if_budget_left_mask_edge_unpredicted(self) -> None:
+        """Log when ``max_cells`` or ``max_predictions`` stopped the walk with mask-boundary cores never predicted.
+
+        The mask's own pixels are still returned, but the object's edge beyond those cores is not found, so the answer
+        stops at the mask there.
+        """
+        if not self._mask_boundary:
+            return
+        limit = None
+        if self._predictions >= self._max_predictions:
+            limit = f"max_predictions={self._max_predictions}"
+        elif len(self._states) >= self._max_cells:
+            limit = f"max_cells={self._max_cells}"
+        if limit is None:
+            return
+        left = [cell for cell in self._mask_boundary if cell not in self._states and cell not in self._assumed]
+        if left:
+            logger.warning(
+                "SegmentTiles stopped at %s with %d of %d mask-boundary cores unpredicted; the answer stops at the mask there",
+                limit, len(left), len(self._mask_boundary),
+            )
 
     def _seed_start_cells(self) -> None:
         """Start the walk in the fewest windows that between them see the whole prompt.
@@ -576,6 +602,8 @@ class GrowthWalk:
                 # A box is a hint, not a claim about every pixel, so a core it covers is predicted like any other.
                 touched = list(full) + touched
             box_cells[box] = touched
+            if box in self._masks:
+                self._mask_boundary.update(touched)
             for cell in touched:
                 start(cell)
         for point in self._fg:

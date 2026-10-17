@@ -1363,7 +1363,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return
         request: SegmentTilesRequest = first.start
-        mask_tiles = MaskTileCollector(request.foreground_mask_tile_count)
+        mask_tiles = MaskTileCollector(
+            request.foreground_mask_tile_count, enabled=request.HasField("foreground_mask_tile_count")
+        )
         if mask_tiles.enabled and not await self._read_foreground_mask_tiles(request, request_iterator, mask_tiles, context):
             return
         identity = await self._validate_stream_start(request, context, mask_tiles)
@@ -1992,7 +1994,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         if message.WhichOneof("body") != "mask_tiles":
             return await self._apply_answer(message, session, wait)
         if session.masks is None:
-            raise _ProtocolError("This request announced no foreground mask tiles, so it cannot send mask tiles.")
+            raise _ProtocolError("This request did not set foreground_mask_tile_count, so it cannot send mask tiles.")
         try:
             self._check_mask_message(message.mask_tiles)
             session.masks.add(message.mask_tiles, session.identity, _same_tile_identity)

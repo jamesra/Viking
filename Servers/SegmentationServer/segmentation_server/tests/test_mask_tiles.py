@@ -577,3 +577,119 @@ def test_a_soma_sized_correction_mask_about_4000_px_across_completes_with_every_
     x0, y0, x1, y1 = shape.box
     assert answer[y0:y1 + 1, x0:x1 + 1][covered].all(), "every pixel of the mask is object"
     assert answer[cy, cx] and asked, "and the walk asked for background tiles as it entered windows"
+
+
+# ---- presence of foreground_mask_tile_count ------------------------------------------------------------------------
+
+def _clicked(**fields) -> pb.SegmentTilesRequest:
+    """A click-only request inside tile (0, 0), as the new client sends it: no foreground mask."""
+    return pb.SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[pb.Point(x=300, y=600)], **fields)
+
+
+def _result_pixels(updates: List[pb.SegmentTilesStreamResponse]) -> int:
+    assert updates and updates[-1].WhichOneof("update") == "result"
+    return sum(
+        int(np.count_nonzero(cv2.imdecode(np.frombuffer(segment.mask, np.uint8), cv2.IMREAD_GRAYSCALE)))
+        for segment in updates[-1].result.segments
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_click_only_request_with_a_zero_count_and_early_background_tiles_completes_and_clears_the_neighbours() -> None:
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _servicer(cache)  # its model answers a 256 x 256 block in the window: x 256..511, y 512..767
+    plain = _result_pixels(await asyncio.wait_for(_stream(servicer, _clicked(), [], _context()), timeout=30))
+    assert plain == 256 * 256
+
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _servicer(cache)
+    neighbour = np.ones((TILE_SIZE, 128), dtype=bool)  # x 256..383 over the whole tile: the left half of the answer
+    early = pb.MaskTiles(tiles=[_one_tile(neighbour, 256, 0, 0, 0, BACKGROUND)])
+    context = _context()
+    client = Client()
+
+    updates = await asyncio.wait_for(
+        _stream(servicer, _clicked(foreground_mask_tile_count=0), [early], context, client), timeout=30
+    )
+
+    context.abort.assert_not_awaited()
+    assert (0, 0) not in client.asked_masks, "sent early, so not asked for"
+    assert _result_pixels(updates) == 256 * 128, "the neighbour's pixels are cleared from the result"
+
+
+@pytest.mark.asyncio
+async def test_a_zero_count_still_gets_the_background_asked_for_on_demand() -> None:
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _servicer(cache)
+    client = Client()
+
+    updates = await asyncio.wait_for(_stream(servicer, _clicked(foreground_mask_tile_count=0), [], _context(), client), timeout=30)
+
+    assert updates[-1].WhichOneof("update") == "result" and (0, 0) in client.asked_masks
+
+
+@pytest.mark.asyncio
+async def test_mask_tiles_from_a_request_that_did_not_set_the_count_are_refused() -> None:
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _servicer(cache)
+    context = _context()
+    # A click near the corner makes the walk ask for neighbouring tiles, so the stream reads the stray message.
+    request = pb.SegmentTilesRequest(tiles=[_tile(0, 0)], foreground=[pb.Point(x=10, y=10)])
+    stray = pb.MaskTiles(tiles=[pb.MaskTile(coord=_tile(0, 0), kind=BACKGROUND)])
+
+    await asyncio.wait_for(_stream(servicer, request, [stray], context), timeout=30)
+
+    assert _aborted_with(context) == grpc.StatusCode.INVALID_ARGUMENT
+    assert "foreground_mask_tile_count" in context.abort.await_args.args[1]
+
+
+@pytest.mark.asyncio
+async def test_a_request_without_the_count_and_without_mask_tiles_takes_the_old_path() -> None:
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _servicer(cache)
+    context = _context()
+    client = Client()
+
+    updates = await asyncio.wait_for(_stream(servicer, _clicked(), [], context, client), timeout=30)
+
+    context.abort.assert_not_awaited()
+    assert _result_pixels(updates) == 256 * 256
+    assert client.asked_masks == [] and all(not u.needed.masks for u in updates if u.WhichOneof("update") == "needed")
+
+
+def test_the_collector_is_done_at_once_for_a_zero_count_and_enabled_follows_presence() -> None:
+    assert MaskTileCollector(0, enabled=True).foreground_done and MaskTileCollector(0, enabled=True).enabled
+    assert not MaskTileCollector(0, enabled=False).enabled and not MaskTileCollector(3).foreground_done
+
+
+def test_a_background_only_request_uses_the_tiled_background_and_the_clicks() -> None:
+    collector = MaskTileCollector(0, enabled=True)
+    prompts = _prompts_from(pb.SegmentTilesRequest(foreground=[pb.Point(x=5, y=6)]), collector)
+    assert prompts.masks == [] and prompts.background_masks == [collector.background] and prompts.foreground == [(5, 6)]
+    plain = _prompts_from(pb.SegmentTilesRequest(foreground=[pb.Point(x=5, y=6)]), MaskTileCollector(0, enabled=False))
+    assert plain.background_masks == [] and not plain.client_chose
+
+
+# ---- a budget that stops the walk ----------------------------------------------------------------------------------
+
+def test_a_walk_stopped_by_max_cells_logs_the_mask_boundary_cores_it_never_predicted(caplog) -> None:
+    import logging
+
+    radius = 700
+    corrected, x0, y0 = disc_truth(2048, 2048, radius)
+    shape = shape_from(mask_tiles_for(corrected, x0, y0))
+    background = background_from([])
+    world = World(ellipse(2048, 2048, radius + 150, radius + 150, 0.0))
+    walk = GrowthWalk([shape.interior_point()], [], world.predict, masks=[shape], background_masks=[background], max_cells=2)
+
+    with caplog.at_level(logging.WARNING, logger="segmentation_server.tile_growth"):
+        walk.advance()
+        walk.result()
+
+    assert any("mask-boundary cores unpredicted" in record.getMessage() and "max_cells=2" in record.getMessage()
+               for record in caplog.records)
