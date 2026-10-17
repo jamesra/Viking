@@ -274,7 +274,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // serves mask tiles, so it asks for the background.
                 startTiles = await Task.Run(
                     () => SegmentationMaskTiles.PrepareStart(
-                        request, seedUnion, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, backgroundMask, maskTileScale),
+                        request, seedUnion, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, backgroundMask, maskTileScale,
+                        SegmentationMaskTiles.ScaleFor(seedUnion, signature.Downsample)),
                     token).ConfigureAwait(false);
                 if (startTiles.Foreground.Count > 0)
                     request.ForegroundFeature = new SegmentationServiceTypes.Feature { MaskRole = SegmentationServiceTypes.MaskRole.Seed };

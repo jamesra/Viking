@@ -360,6 +360,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return [.. IndexFor(downsample).Cells.Keys.OrderBy(cell => cell.Row).ThenBy(cell => cell.Col)];
         }
 
+        /// <summary>
+        /// The longest side, in mosaic pixels at <paramref name="downsample"/>, of the set pixels of any bitmap in the union; 0 when there
+        /// is none. A bitmap is an edited mask, so this says how large the edit was.
+        /// </summary>
+        public long LargestBitmapSide(int downsample)
+        {
+            long largest = 0;
+            foreach (RasterMask bitmap in bitmaps)
+            {
+                if (TryGetBitmapBounds(bitmap, downsample, out long x0, out long x1, out long y0, out long y1))
+                    largest = Math.Max(largest, Math.Max(x1 - x0 + 1, y1 - y0 + 1));
+            }
+
+            return largest;
+        }
+
         /// <summary>How many shapes and bitmaps can reach <paramref name="cell"/>: what <see cref="RasterizeTile"/> would draw.</summary>
         internal int ShapesReaching(int downsample, TileCell cell)
         {
@@ -370,24 +386,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Rasterizes the union into one grid tile at full resolution: <see cref="SegmentationTileGrid.TileSize"/> square, row 0
-        /// the highest mosaic y of the tile (Y down, like the image tile), 255 set. Only the shapes that reach the tile are
+        /// Rasterizes the union into one grid tile: row 0 the highest mosaic y of the tile (Y down, like the image tile), 255 set.
+        /// At <paramref name="scale"/> 1 the tile is <see cref="SegmentationTileGrid.TileSize"/> square; at 4 it is 256 square and a
+        /// pixel is set when any of its 4 x 4 mosaic pixels is. A coarse tile is drawn directly from the shapes and bitmaps, never
+        /// from a full-size tile, and a bitmap coarser than the tile is expanded only here. Only the shapes that reach the tile are
         /// drawn, found through an index built once per downsample, so a tile far from most shapes costs almost nothing.
         /// Null when nothing in the tile is set.
         /// </summary>
         /// <param name="holePointsVolume">Each clears a disc of <paramref name="holeRadiusPixels"/> mosaic pixels, as in <see cref="ToMask"/>.</param>
+        /// <param name="scale">Mosaic pixels per tile pixel; it must divide the tile size (1 or 4).</param>
         public byte[]? RasterizeTile(
             int downsample,
             TileCell cell,
             IReadOnlyList<Vector2>? holePointsVolume = null,
-            double holeRadiusPixels = 0)
+            double holeRadiusPixels = 0,
+            int scale = 1)
         {
             if (IsEmpty || downsample <= 0 || !IndexFor(downsample).Cells.TryGetValue(cell, out var entry))
                 return null;
 
             const int Tile = SegmentationTileGrid.TileSize;
-            MaskLayout layout = new(cell.Col * Tile, cell.Row * Tile + Tile - 1, Tile, Tile, 1);
-            byte[] pixels = new byte[Tile * Tile];
+            MaskLayout layout = new(cell.Col * Tile, cell.Row * Tile + Tile - 1, Tile, Tile, scale);
+            byte[] pixels = new byte[layout.RasterWidth * layout.RasterHeight];
             bool any = false;
             foreach (int i in entry.Shapes)
                 any |= Fill(pixels, layout, downsample, shapes[i]);

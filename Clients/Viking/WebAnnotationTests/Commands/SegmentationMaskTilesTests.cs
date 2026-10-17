@@ -319,6 +319,106 @@ namespace WebAnnotationTests.Commands
                         Assert.Fail($"({x}, {y}) of the edited mask is not in the tiles");
         }
 
+        private static SegmentationMaskUnion SeedOf(RasterMask edited)
+        {
+            SegmentationMaskUnion seeds = new();
+            seeds.Add(SegmentationSeed.FromMask(edited)!.Value);
+            return seeds;
+        }
+
+        [TestMethod]
+        public void AnEditedMaskTallerThanOneWindowIsCutIntoOneByFour256SquareTiles()
+        {
+            // About 1000 x 4080 mosaic pixels: the edit raster is downsampled by 4, and on accept it is cut along the tile grid.
+            Vector2[] ring = [new(10, 10), new(1000, 10), new(1000, 4090), new(10, 4090)];
+            RasterMask edited = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, wholeRegion: true, maxRasterSide: 4096)!;
+            SegmentationMaskUnion seeds = SeedOf(edited);
+
+            int scale = SegmentationMaskTiles.ScaleFor(seeds, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(seeds, Template, null, 0, scale);
+
+            Assert.AreEqual(4, edited.Scale, "downsampled by 4, as the editor draws it");
+            Assert.AreEqual(4, scale);
+            Assert.AreEqual(4, tiles.Count, "a 1 x 4 grid of tiles");
+            Assert.IsTrue(tiles.All(tile => tile.Coord.Col == 0 && tile.Coord.Row >= 0 && tile.Coord.Row <= 3));
+            foreach (MaskTile tile in tiles)
+            {
+                Assert.AreEqual(4u, tile.Scale);
+                using Image<L8> png = Image.Load<L8>(tile.Png.ToByteArray());
+                Assert.AreEqual(256, png.Width);
+                Assert.AreEqual(256, png.Height);
+            }
+
+            Func<int, int, bool> on = Rebuild(tiles);
+            for (int y = 10; y < 4090; y += 13)
+                for (int x = 10; x < 1000; x += 13)
+                    if (!on(x, y))
+                        Assert.Fail($"({x}, {y}) of the edited mask is not in the tiles");
+        }
+
+        [TestMethod]
+        public void ARasterCoarserThanFourIsUpscaledOnlyWhenItsTilesAreMade()
+        {
+            // The screen's texture forces the raster to scale 16: each of its pixels is 4 pixels of a 256 x 256 tile.
+            Vector2[] ring = [new(0, 0), new(4000, 0), new(4000, 3000), new(0, 3000)];
+            RasterMask edited = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, wholeRegion: true, maxRasterSide: 512)!;
+            SegmentationMaskUnion seeds = SeedOf(edited);
+
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(seeds, Template, null, 0, SegmentationMaskTiles.ScaleFor(seeds, 1));
+            Func<int, int, bool> on = Rebuild(tiles);
+
+            Assert.IsTrue(edited.Scale > 4, $"raster scale {edited.Scale}");
+            Assert.IsTrue(edited.Width <= 512 && edited.Height <= 512);
+            Assert.AreEqual(4 * 3, tiles.Count);
+            Assert.IsTrue(tiles.Where(tile => !tile.Full).All(tile => tile.Scale == 4));
+            for (int y = 0; y < 3000; y += 17)
+                for (int x = 0; x < 4000; x += 17)
+                    if (!on(x, y))
+                        Assert.Fail($"({x}, {y}) is lost by the downsampled raster");
+
+            // The tile is drawn straight from the raster at 256 x 256, not from a 1024 x 1024 tile.
+            byte[]? pixels = seeds.RasterizeTile(1, new TileCell(0, 0), null, 0, 4);
+            Assert.AreEqual(256 * 256, pixels!.Length);
+        }
+
+        [TestMethod]
+        public void ACoarseTileIsExactlyTheFullResolutionTileReducedToFourByFourBlocks()
+        {
+            SegmentationMaskUnion union = UnionOf(Box(503, 501, 1500, 1203));
+            TileCell cell = new(0, 0);
+
+            byte[] fine = union.RasterizeTile(1, cell, null, 0, 1)!;
+            byte[] coarse = union.RasterizeTile(1, cell, null, 0, 4)!;
+
+            for (int row = 0; row < 256; row++)
+            {
+                for (int column = 0; column < 256; column++)
+                {
+                    bool any = false;
+                    for (int dy = 0; dy < 4; dy++)
+                        for (int dx = 0; dx < 4; dx++)
+                            any |= fine[(row * 4 + dy) * 1024 + column * 4 + dx] != 0;
+
+                    if (any != (coarse[row * 256 + column] != 0))
+                        Assert.Fail($"block ({column}, {row}) differs from the reduced full-resolution tile");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void AnEditedMaskWithinOneWindowKeepsFullResolutionAndOtherSeedsFollowTheSetting()
+        {
+            Vector2[] small = [new(100, 100), new(900, 100), new(900, 800), new(100, 800)];
+            SegmentationMaskUnion editedSmall = SeedOf(RasterMask.FromRings([small], downsample: 1, marginPixels: 128, wholeRegion: true)!);
+            Vector2[] large = [new(0, 0), new(3000, 0), new(3000, 1500), new(0, 1500)];
+            SegmentationMaskUnion editedLarge = SeedOf(RasterMask.FromRings([large], downsample: 1, marginPixels: 128, wholeRegion: true)!);
+
+            Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(editedSmall, 1), "a mask that fits one window keeps its edge exact");
+            Assert.AreEqual(4, SegmentationMaskTiles.ScaleFor(editedLarge, 1));
+            Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(UnionOf(Box(0, 0, 3000, 1500)), 1), "a polygon seed is not an edit: it follows the setting");
+            Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(null, 1));
+        }
+
         [TestMethod]
         public void TheTilesAreSentInMessagesOfAtMostEight()
         {

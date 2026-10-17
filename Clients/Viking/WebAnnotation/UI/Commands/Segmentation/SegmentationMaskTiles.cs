@@ -58,6 +58,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return columns * rows;
         }
 
+        /// <summary>
+        /// The tile scale for the seeds: <see cref="CoarseScale"/> (a 256 x 256 PNG per tile) when <see cref="ConfiguredScale"/> asks for it
+        /// or the seeds hold an edited mask larger than one SAM2 window, otherwise 1. An edit is made on a raster that was already
+        /// downsampled to fit the screen's texture, so a large mask loses nothing it still had by going out at one pixel per 4 x 4 block;
+        /// a mask within one window keeps full resolution.
+        /// </summary>
+        public static int ScaleFor(SegmentationMaskUnion? seeds, int downsample) =>
+            ConfiguredScale == CoarseScale || (seeds is not null && seeds.LargestBitmapSide(downsample) > MaskScalePolicy.SingleWindowSide)
+                ? CoarseScale
+                : 1;
+
         /// <summary>True when the server's status says it accepts mask tiles.</summary>
         public static bool IsSupported(SegmentationServiceTypes.ServerStatusResponse? status) => status?.MaskTiles == true;
 
@@ -78,7 +89,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int scale,
             bool sendEmpty)
         {
-            byte[]? pixels = union.RasterizeTile(coord.Downsample, new TileCell(coord.Row, coord.Col), holePointsVolume, holeRadiusPixels);
+            int tileScale = scale == CoarseScale ? CoarseScale : 1;
+            byte[]? pixels = union.RasterizeTile(
+                coord.Downsample, new TileCell(coord.Row, coord.Col), holePointsVolume, holeRadiusPixels, tileScale);
             SegmentationServiceTypes.MaskTile tile = new() { Coord = coord, Kind = kind };
             if (pixels is null)
                 return sendEmpty ? tile : null;
@@ -89,39 +102,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return tile;
             }
 
-            if (scale == CoarseScale)
-            {
-                tile.Png = Google.Protobuf.ByteString.CopyFrom(
-                    SegmentationMaskUnion.EncodePng(Reduce(pixels), TileSize / CoarseScale, TileSize / CoarseScale));
+            int side = TileSize / tileScale;
+            tile.Png = Google.Protobuf.ByteString.CopyFrom(SegmentationMaskUnion.EncodePng(pixels, side, side));
+            if (tileScale == CoarseScale)
                 tile.Scale = CoarseScale;
-            }
-            else
-            {
-                tile.Png = Google.Protobuf.ByteString.CopyFrom(SegmentationMaskUnion.EncodePng(pixels, TileSize, TileSize));
-            }
 
             return tile;
-        }
-
-        /// <summary>
-        /// A tile reduced to 4 x 4 blocks: a block is set when any of its pixels is, so a coarse tile never loses mask.
-        /// </summary>
-        internal static byte[] Reduce(byte[] pixels)
-        {
-            const int Side = TileSize / CoarseScale;
-            byte[] reduced = new byte[Side * Side];
-            for (int row = 0; row < TileSize; row++)
-            {
-                int target = row / CoarseScale * Side;
-                int source = row * TileSize;
-                for (int column = 0; column < TileSize; column++)
-                {
-                    if (pixels[source + column] != 0)
-                        reduced[target + column / CoarseScale] = 255;
-                }
-            }
-
-            return reduced;
         }
 
         /// <summary>
@@ -214,6 +200,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <param name="seeds">The seed or correction shapes, or null for a click-only request.</param>
         /// <param name="template">Names the volume, section, channel, transform and downsample of every tile.</param>
         /// <param name="neighbours">The neighbouring annotations, or null when there are none; every start tile still gets a (possibly empty) tile.</param>
+        /// <param name="scale">The scale of the BACKGROUND tiles (and of the FOREGROUND ones unless <paramref name="foregroundScale"/> is given).</param>
+        /// <param name="foregroundScale">The scale of the FOREGROUND tiles, when it differs: see <see cref="ScaleFor"/>.</param>
         public static StartTiles PrepareStart(
             SegmentationServiceTypes.SegmentTilesRequest request,
             SegmentationMaskUnion? seeds,
@@ -221,11 +209,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Vector2>? backgroundPoints,
             double holeRadiusPixels,
             SegmentationMaskUnion? neighbours,
-            int scale)
+            int scale,
+            int? foregroundScale = null)
         {
             List<SegmentationServiceTypes.MaskTile> foreground = seeds is null
                 ? []
-                : BuildForeground(seeds, template, backgroundPoints, holeRadiusPixels, scale);
+                : BuildForeground(seeds, template, backgroundPoints, holeRadiusPixels, foregroundScale ?? scale);
             request.ForegroundMaskTileCount = (uint)foreground.Count;
             return new StartTiles(foreground, BuildBackground(neighbours, request.Tiles, scale));
         }
