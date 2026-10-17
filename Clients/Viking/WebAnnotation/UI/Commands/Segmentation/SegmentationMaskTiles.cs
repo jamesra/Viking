@@ -4,6 +4,7 @@ using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
@@ -169,6 +170,52 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             return tiles;
+        }
+
+        /// <summary>The mask tiles a tiled request writes right after <c>start</c>.</summary>
+        public readonly struct StartTiles
+        {
+            public StartTiles(List<SegmentationServiceTypes.MaskTile> foreground, List<SegmentationServiceTypes.MaskTile> background)
+            {
+                Foreground = foreground;
+                Background = background;
+            }
+
+            /// <summary>The FOREGROUND tiles, the count the start announces. Empty for a click-only request.</summary>
+            public List<SegmentationServiceTypes.MaskTile> Foreground { get; }
+
+            /// <summary>The BACKGROUND tiles of the start windows, one for every image tile of the start, empty ones included.</summary>
+            public List<SegmentationServiceTypes.MaskTile> Background { get; }
+
+            /// <summary>The stream messages to write after <c>start</c>, foreground first: the server waits for every announced foreground tile.</summary>
+            public IEnumerable<SegmentationServiceTypes.SegmentTilesStreamRequest> Messages() =>
+                Chunk(Foreground).Concat(Chunk(Background)).Select(tiles => new SegmentationServiceTypes.SegmentTilesStreamRequest { MaskTiles = tiles });
+        }
+
+        /// <summary>
+        /// What a request on the tiled path sends with <c>start</c>: sets <paramref name="request"/>'s
+        /// <c>foreground_mask_tile_count</c> to the number of FOREGROUND tiles, <b>including 0</b> for a click-only request with
+        /// no seed mask (the count's presence is what tells the server this client sends mask tiles, so it asks for the background), and
+        /// builds the BACKGROUND tiles of the start windows (<paramref name="request"/>.Tiles) so the server need not ask for them.
+        /// </summary>
+        /// <param name="request">The start request, with its image tiles already listed; its count is set here.</param>
+        /// <param name="seeds">The seed or correction shapes, or null for a click-only request.</param>
+        /// <param name="template">Names the volume, section, channel, transform and downsample of every tile.</param>
+        /// <param name="neighbours">The neighbouring annotations, or null when there are none; every start tile still gets a (possibly empty) tile.</param>
+        public static StartTiles PrepareStart(
+            SegmentationServiceTypes.SegmentTilesRequest request,
+            SegmentationMaskUnion? seeds,
+            SegmentationServiceTypes.TileCoord template,
+            IReadOnlyList<Vector2>? backgroundPoints,
+            double holeRadiusPixels,
+            SegmentationMaskUnion? neighbours,
+            int scale)
+        {
+            List<SegmentationServiceTypes.MaskTile> foreground = seeds is null
+                ? []
+                : BuildForeground(seeds, template, backgroundPoints, holeRadiusPixels, scale);
+            request.ForegroundMaskTileCount = (uint)foreground.Count;
+            return new StartTiles(foreground, BuildBackground(neighbours, request.Tiles, scale));
         }
 
         /// <summary>The tiles split into <c>MaskTiles</c> messages of at most <see cref="TilesPerMessage"/>.</summary>

@@ -230,7 +230,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool maskTiles = ServerSupportsMaskTiles;
             int maskTileScale = SegmentationMaskTiles.ConfiguredScale;
             double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
-            List<SegmentationServiceTypes.MaskTile> foregroundMaskTiles = [];
+            SegmentationMaskUnion? seedUnion = null;
             Geometry.Vector2 seedCentre = default;
             if (foregroundBoxes is { Count: > 0 })
             {
@@ -238,16 +238,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 foreach (SegmentationSeed seed in foregroundBoxes)
                     seeds.Add(seed);
 
+                seedUnion = seeds;
                 seedCentre = new Geometry.Vector2(foregroundBoxes.Average(seed => seed.Center.X), foregroundBoxes.Average(seed => seed.Center.Y));
-                if (maskTiles)
-                {
-                    foregroundMaskTiles = await Task.Run(
-                        () => SegmentationMaskTiles.BuildForeground(seeds, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, maskTileScale),
-                        token).ConfigureAwait(false);
-                    if (foregroundMaskTiles.Count > 0)
-                        request.ForegroundFeature = new SegmentationServiceTypes.Feature { MaskRole = SegmentationServiceTypes.MaskRole.Seed };
-                }
-                else
+                if (!maskTiles)
                 {
                     SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(
                         signature.Downsample,
@@ -272,10 +265,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
             }
 
+            SegmentationMaskTiles.StartTiles startTiles = default;
             if (maskTiles)
             {
-                // Setting the count, even to 0, tells the server this client serves mask tiles: it will ask for the background.
-                request.ForegroundMaskTileCount = (uint)foregroundMaskTiles.Count;
+                // PrepareStart sets the count, even to 0 for a click-only request: that is what tells the server this client
+                // serves mask tiles, so it asks for the background.
+                startTiles = await Task.Run(
+                    () => SegmentationMaskTiles.PrepareStart(
+                        request, seedUnion, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, backgroundMask, maskTileScale),
+                    token).ConfigureAwait(false);
+                if (startTiles.Foreground.Count > 0)
+                    request.ForegroundFeature = new SegmentationServiceTypes.Feature { MaskRole = SegmentationServiceTypes.MaskRole.Seed };
             }
             else
             {
@@ -300,19 +300,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 HashSet<TileCell> backgroundSent = [];
                 if (maskTiles)
                 {
-                    // The seed's tiles first: the server starts growing only when all the announced ones have arrived.
-                    await WriteMaskTilesAsync(call.RequestStream, foregroundMaskTiles).ConfigureAwait(false);
-
-                    // The background of the start windows' tiles up front. The server needs it before it predicts them, so asking
-                    // would only cost a round trip.
-                    List<SegmentationServiceTypes.MaskTile> startBackground = await Task.Run(
-                        () => SegmentationMaskTiles.BuildBackground(backgroundMask, request.Tiles, maskTileScale),
-                        token).ConfigureAwait(false);
-                    foreach (SegmentationServiceTypes.MaskTile tile in startBackground)
+                    // The seed's tiles first (the server starts growing only when all the announced ones have arrived), then the
+                    // background of the start windows' tiles, which the server needs before it predicts them: asking would only cost
+                    // a round trip.
+                    foreach (SegmentationServiceTypes.MaskTile tile in startTiles.Background)
                         backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
 
-                    await WriteMaskTilesAsync(call.RequestStream, startBackground).ConfigureAwait(false);
-                    SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={foregroundMaskTiles.Count} startBackground={startBackground.Count} scale={maskTileScale}");
+                    foreach (SegmentTilesStreamRequest message in startTiles.Messages())
+                        await call.RequestStream.WriteAsync(message).ConfigureAwait(false);
+
+                    SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={startTiles.Foreground.Count} startBackground={startTiles.Background.Count} scale={maskTileScale}");
                 }
 
                 while (response is null && await call.ResponseStream.MoveNext(token).ConfigureAwait(false))

@@ -308,6 +308,68 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(SegmentationMaskTiles.IsSupported(new Viking.gRPC.SegmentationServiceTypes.V1.ServerStatusResponse { MaskTiles = true }));
         }
 
+        private static Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest StartRequest(params TileCoord[] startTiles)
+        {
+            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = new();
+            request.Tiles.AddRange(startTiles);
+            return request;
+        }
+
+        [TestMethod]
+        public void AClickOnlyRequestAnnouncesZeroForegroundTilesAndStillSendsTheStartWindowsBackground()
+        {
+            // Two start windows' image tiles, no seed mask: the user only clicked.
+            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = StartRequest(Coord(2, 3), Coord(2, 4));
+            SegmentationMaskUnion neighbours = UnionOf(Box(4 * Tile + 100, 2 * Tile + 100, 4 * Tile + 400, 2 * Tile + 400));
+
+            SegmentationMaskTiles.StartTiles start = SegmentationMaskTiles.PrepareStart(request, null, Template, null, 0, neighbours, 1);
+
+            Assert.IsTrue(request.HasForegroundMaskTileCount, "the count is sent even for a click-only request: it is the signal to ask for the background");
+            Assert.AreEqual(0u, request.ForegroundMaskTileCount);
+            Assert.AreEqual(0, start.Foreground.Count);
+            Assert.AreEqual(2, start.Background.Count, "one background tile for each start window's image tile");
+            CollectionAssert.AreEqual(new[] { (2, 3), (2, 4) }, start.Background.Select(tile => (tile.Coord.Row, tile.Coord.Col)).ToArray());
+            Assert.IsTrue(start.Background.All(tile => tile.Kind == MaskKind.Background));
+            Assert.IsTrue(start.Background[0].Png.IsEmpty && !start.Background[0].Full, "tile (2, 3) has no neighbour and is sent empty");
+            Assert.IsFalse(start.Background[1].Png.IsEmpty, "tile (2, 4) holds the neighbour");
+        }
+
+        [TestMethod]
+        public void AClickOnlyRequestWithNoNeighboursSendsEmptyBackgroundTilesAndNoForegroundMessage()
+        {
+            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = StartRequest(Coord(0, 0), Coord(0, 1), Coord(1, 0));
+
+            SegmentationMaskTiles.StartTiles start = SegmentationMaskTiles.PrepareStart(request, null, Template, null, 0, null, 1);
+            List<Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest> messages = start.Messages().ToList();
+
+            Assert.IsTrue(request.HasForegroundMaskTileCount);
+            Assert.AreEqual(0u, request.ForegroundMaskTileCount);
+            Assert.AreEqual(1, messages.Count, "only the background tiles are written");
+            Assert.IsTrue(messages.All(message => message.BodyCase == Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest.BodyOneofCase.MaskTiles));
+            Assert.AreEqual(3, messages[0].MaskTiles.Tiles.Count);
+            Assert.IsTrue(messages[0].MaskTiles.Tiles.All(tile => tile.Kind == MaskKind.Background && !tile.Full && tile.Png.IsEmpty),
+                "an empty tile is sent, so 'no neighbour' differs from 'not sent yet'");
+        }
+
+        [TestMethod]
+        public void ASeededRequestAnnouncesItsTileCountAndWritesTheForegroundBeforeTheBackground()
+        {
+            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = StartRequest(Coord(0, 0), Coord(0, 1));
+
+            SegmentationMaskTiles.StartTiles start = SegmentationMaskTiles.PrepareStart(
+                request, UnionOf(Box(100, 100, 2500, 800)), Template, null, 0, null, 1);
+            List<Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest> messages = start.Messages().ToList();
+
+            Assert.AreEqual(3u, request.ForegroundMaskTileCount, "the seed touches tiles (0, 0), (0, 1) and (0, 2)");
+            Assert.AreEqual(3, start.Foreground.Count);
+            Assert.AreEqual(2, start.Background.Count);
+            IEnumerable<MaskKind> kinds = messages.SelectMany(message => message.MaskTiles.Tiles.Select(tile => tile.Kind));
+            CollectionAssert.AreEqual(
+                new[] { MaskKind.Foreground, MaskKind.Foreground, MaskKind.Foreground, MaskKind.Background, MaskKind.Background },
+                kinds.ToArray(),
+                "the server waits for every announced foreground tile, so they come first");
+        }
+
         [TestMethod]
         public void TheStartRequestSetsTheForegroundCountEvenWhenItIsZero()
         {
