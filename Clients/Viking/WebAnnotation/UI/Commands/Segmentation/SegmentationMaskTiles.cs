@@ -46,6 +46,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         internal static int ReadScale(string? setting) =>
             int.TryParse(setting, out int scale) && scale == CoarseScale ? CoarseScale : 1;
 
+        /// <summary>
+        /// How many grid tiles the volume-space rectangle reaches at <paramref name="downsample"/>: an upper bound on the
+        /// FOREGROUND tiles a shape inside it sends, for refusing a mask the server would not accept before it is built.
+        /// </summary>
+        public static long TilesSpanned(Rectangle volumeBounds, int downsample)
+        {
+            double tileWorld = TileSize * (double)downsample;
+            long columns = (long)Math.Floor(volumeBounds.Right / tileWorld) - (long)Math.Floor(volumeBounds.Left / tileWorld) + 1;
+            long rows = (long)Math.Floor(volumeBounds.Top / tileWorld) - (long)Math.Floor(volumeBounds.Bottom / tileWorld) + 1;
+            return columns * rows;
+        }
+
         /// <summary>True when the server's status says it accepts mask tiles.</summary>
         public static bool IsSupported(SegmentationServiceTypes.ServerStatusResponse? status) => status?.MaskTiles == true;
 

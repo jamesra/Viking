@@ -324,6 +324,45 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void APolygonWiderThanTheWireLimitIsRasterizedWholeForTheTiledPath()
+        {
+            Vector2[] ring = [new(0, 0), new(20000, 0), new(20000, 100), new(0, 100)];
+
+            RasterMask mask = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, wholeRegion: true)!;
+
+            Assert.IsNotNull(mask, "the tiled path has no bounds limit");
+            Assert.IsTrue(mask.Width <= MaskScalePolicy.MaxPngSide && mask.Height <= MaskScalePolicy.MaxPngSide, "the raster stays editable in memory");
+            Assert.IsTrue(mask.Scale > MaskScalePolicy.LargeRegionScale, "the scale doubles until the raster fits");
+            Assert.IsTrue(mask.TryGetSetWorldBounds(out Rectangle set));
+            Assert.AreEqual(0, set.Left, mask.Scale);
+            Assert.AreEqual(20000, set.Right, mask.Scale, "nothing is cut off around the centre");
+        }
+
+        [TestMethod]
+        public void TheOldWireStillCutsAnOversizedUnionAroundTheCentre()
+        {
+            SegmentationMaskUnion union = new();
+            union.Add(Box(0, 0, 20000, 100));
+
+            Assert.IsNotNull(union.Rasterize(1, new Vector2(10000, 50), out MaskLayout cut));
+            Assert.IsTrue(cut.Width <= MaskScalePolicy.MaxBoundsSide + MaskScalePolicy.LargeRegionScale);
+
+            Assert.IsNotNull(union.Rasterize(1, new Vector2(10000, 50), out MaskLayout whole, cutToLimit: false));
+            Assert.IsTrue(whole.Width >= 20000);
+        }
+
+        [TestMethod]
+        public void TilesSpannedCountsTheGridTilesARectangleReaches()
+        {
+            Assert.AreEqual(6, SegmentationMaskTiles.TilesSpanned(Box(0, 0, 3000, 1500), 1), "3 columns by 2 rows");
+            Assert.AreEqual(1, SegmentationMaskTiles.TilesSpanned(Box(100, 100, 900, 900), 1));
+            Assert.AreEqual(4, SegmentationMaskTiles.TilesSpanned(Box(-10, -10, 10, 10), 1), "straddling the origin");
+            Assert.AreEqual(2, SegmentationMaskTiles.TilesSpanned(Box(0, 0, 3000, 1500), 2), "at downsample 2 a tile is 2048 world units: 2 columns by 1 row");
+            Assert.AreEqual(1, SegmentationMaskTiles.TilesSpanned(Box(0, 0, 3000, 1500), 4), "at downsample 4 a tile is 4096 world units wide");
+            Assert.IsTrue(SegmentationMaskTiles.TilesSpanned(Box(0, 0, 17 * 1024, 16 * 1024), 1) > SegmentationMaskTiles.MaxForegroundTiles);
+        }
+
+        [TestMethod]
         public void AnEditedCoarseMaskSentAsASeedCoversEveryPixelItMarked()
         {
             Vector2[] ring = [new(0, 0), new(3000, 0), new(3000, 1500), new(0, 1500)];

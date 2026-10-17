@@ -753,12 +753,32 @@ namespace WebAnnotation.ViewModel
                     volumeRings.Add(volumeRing);
                 }
 
-                // The mask is at the view's tile level, like every other prompt; a large polygon becomes a coarse mask.
+                // The mask is at the view's tile level, like every other prompt; a large polygon becomes a coarse raster.
                 int downsample = SegmentationViewportSession.ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
-                RasterMask mask = RasterMask.FromRings(volumeRings, downsample, marginPixels: EditMaskMarginPixels);
+
+                // A server that takes mask tiles has no limit on the mask's bounds, only on how many tiles it touches; any other server
+                // gets the single Mask, which cannot go beyond the bounds the client cuts it to.
+                bool tiled = SegmentationViewportSession.ServerSupportsMaskTiles;
+                if (tiled)
+                {
+                    long spanned = SegmentationMaskTiles.TilesSpanned(RasterMask.BoundsOf(volumeRings[0]), downsample);
+                    if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
+                    {
+                        MessageBox.Show(
+                            $"This polygon spans {spanned} tiles at this zoom. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
+                            "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                }
+
+                RasterMask mask = RasterMask.FromRings(volumeRings, downsample, marginPixels: EditMaskMarginPixels, wholeRegion: tiled);
                 if (mask is null)
                 {
-                    MessageBox.Show("This polygon is too small, or too large at this zoom, to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        tiled
+                            ? "This polygon is too small to make a mask."
+                            : "This polygon is too small, or too large at this zoom, to make a mask.",
+                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 

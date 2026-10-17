@@ -126,24 +126,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Rasterizes a polygon (exterior ring followed by holes, volume space, even-odd fill) into a mask over its bounding
         /// box with <paramref name="marginPixels"/> raster pixels free on every side, so it can be dilated. The scale comes
-        /// from <see cref="MaskScalePolicy"/>. Returns null when the rings are unusable, the polygon covers no pixel centre,
-        /// or it is wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> mosaic pixels at this downsample.
+        /// from <see cref="MaskScalePolicy"/>, so the raster never exceeds <see cref="MaskScalePolicy.MaxPngSide"/> on a side however large
+        /// the polygon is. Returns null when the rings are unusable or the polygon covers no pixel centre, and, unless
+        /// <paramref name="wholeRegion"/>, when it is wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> mosaic pixels at
+        /// this downsample (the limit of the single-<c>Mask</c> wire).
         /// </summary>
         /// <param name="rings">Exterior ring first; each ring needs at least three vertices.</param>
         /// <param name="downsample">Volume units per mosaic pixel: the tile level of the view, not a size fitted to the shape.</param>
         /// <param name="marginPixels">Raster pixels left free around the polygon.</param>
-        public static RasterMask? FromRings(IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0)
+        /// <param name="wholeRegion">
+        /// True when the mask goes to the server as tiles, which have no bounds limit: the polygon is rasterized whole, never cut
+        /// or refused for its size (the caller checks the server's tile limit). False keeps the single-<c>Mask</c> wire's limit.
+        /// </param>
+        public static RasterMask? FromRings(IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0, bool wholeRegion = false)
         {
             if (rings is null || rings.Count == 0 || rings[0] is null || rings[0].Length < 3 || downsample <= 0)
                 return null;
 
             Rectangle bounds = BoundsOf(rings[0]);
-            if (bounds.Width / downsample > MaskScalePolicy.MaxBoundsSide || bounds.Height / downsample > MaskScalePolicy.MaxBoundsSide)
+            if (!wholeRegion && (bounds.Width / downsample > MaskScalePolicy.MaxBoundsSide || bounds.Height / downsample > MaskScalePolicy.MaxBoundsSide))
                 return null;
 
             SegmentationMaskUnion union = new();
             union.Add(rings);
-            byte[]? pixels = union.Rasterize(downsample, bounds.Center, out MaskLayout layout, marginRasterPixels: marginPixels);
+            byte[]? pixels = union.Rasterize(downsample, bounds.Center, out MaskLayout layout, marginRasterPixels: marginPixels, cutToLimit: !wholeRegion);
             return pixels is null
                 ? null
                 : new RasterMask(downsample, layout.XMin, layout.YMax, layout.RasterWidth, layout.RasterHeight, pixels, layout.Scale);

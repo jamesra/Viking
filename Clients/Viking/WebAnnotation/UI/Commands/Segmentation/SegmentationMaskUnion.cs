@@ -134,20 +134,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <param name="holePointsVolume">See <see cref="ToMask"/>.</param>
         /// <param name="holeRadiusPixels">See <see cref="ToMask"/>.</param>
         /// <param name="marginRasterPixels">Raster pixels left free on every side of the bounds (room to dilate an edited mask).</param>
+        /// <param name="cutToLimit">
+        /// True (the single-<c>Mask</c> wire) cuts a union wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> down
+        /// around <paramref name="centreVolume"/>. False keeps the whole region, for a raster that is edited in memory and sent as tiles.
+        /// </param>
         public byte[]? Rasterize(
             int downsample,
             Vector2 centreVolume,
             out MaskLayout layout,
             IReadOnlyList<Vector2>? holePointsVolume = null,
             double holeRadiusPixels = 0,
-            int marginRasterPixels = 0)
+            int marginRasterPixels = 0,
+            bool cutToLimit = true)
         {
             layout = default;
             if (IsEmpty || downsample <= 0 || !TryGetMosaicBounds(downsample, out long xMin, out long xMax, out long yMin, out long yMax))
                 return null;
 
-            (xMin, xMax) = CutToLimit(xMin, xMax, (long)Math.Floor(centreVolume.X / downsample));
-            (yMin, yMax) = CutToLimit(yMin, yMax, (long)Math.Floor(centreVolume.Y / downsample));
+            if (cutToLimit)
+            {
+                (xMin, xMax) = CutToLimit(xMin, xMax, (long)Math.Floor(centreVolume.X / downsample));
+                (yMin, yMax) = CutToLimit(yMin, yMax, (long)Math.Floor(centreVolume.Y / downsample));
+            }
             layout = MaskScalePolicy.Plan(xMin, xMax, yMin, yMax, marginRasterPixels);
 
             byte[] pixels = new byte[layout.RasterWidth * layout.RasterHeight];
