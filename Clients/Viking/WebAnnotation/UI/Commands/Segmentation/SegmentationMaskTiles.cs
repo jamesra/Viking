@@ -19,7 +19,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// the server tells apart from a tile that was never sent. Nothing is merged across tiles, so there is no combined
     /// bounds to cut down, no PNG side to fit and no scale to raise: a region of any size is only more tiles. The PNG is full
     /// resolution (1024 square) unless <see cref="ConfiguredScale"/> asks for 4 (256 square blocks of 4 x 4 pixels).
-    /// Servers that do not report <c>mask_tiles</c> get the single <c>Mask</c> of <see cref="SegmentationMaskUnion.ToMask"/> instead.
     /// </remarks>
     internal static class SegmentationMaskTiles
     {
@@ -31,6 +30,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>Tiles per <c>MaskTiles</c> message, so one message stays well under gRPC's message size limit.</summary>
         public const int TilesPerMessage = 8;
+
+        /// <summary>An edited mask whose longest side is more than this many mosaic pixels (one SAM2 window) is sent as coarse tiles.</summary>
+        public const int LargeMaskSide = SegmentationMaskUnion.WindowSize;
 
         /// <summary>Mosaic pixels per PNG pixel when <see cref="ConfiguredScale"/> asks for coarse tiles.</summary>
         public const int CoarseScale = 4;
@@ -52,9 +54,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public static long TilesSpanned(Rectangle volumeBounds, int downsample)
         {
+            // The right and top edges are exclusive: a rectangle that ends exactly on a tile boundary does not reach the next tile.
             double tileWorld = TileSize * (double)downsample;
-            long columns = (long)Math.Floor(volumeBounds.Right / tileWorld) - (long)Math.Floor(volumeBounds.Left / tileWorld) + 1;
-            long rows = (long)Math.Floor(volumeBounds.Top / tileWorld) - (long)Math.Floor(volumeBounds.Bottom / tileWorld) + 1;
+            long firstColumn = (long)Math.Floor(volumeBounds.Left / tileWorld);
+            long firstRow = (long)Math.Floor(volumeBounds.Bottom / tileWorld);
+            long columns = Math.Max(firstColumn, (long)Math.Ceiling(volumeBounds.Right / tileWorld) - 1) - firstColumn + 1;
+            long rows = Math.Max(firstRow, (long)Math.Ceiling(volumeBounds.Top / tileWorld) - 1) - firstRow + 1;
             return columns * rows;
         }
 
@@ -65,12 +70,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// a mask within one window keeps full resolution.
         /// </summary>
         public static int ScaleFor(SegmentationMaskUnion? seeds, int downsample) =>
-            ConfiguredScale == CoarseScale || (seeds is not null && seeds.LargestBitmapSide(downsample) > MaskScalePolicy.SingleWindowSide)
+            ConfiguredScale == CoarseScale || (seeds is not null && seeds.LargestBitmapSide(downsample) > LargeMaskSide)
                 ? CoarseScale
                 : 1;
-
-        /// <summary>True when the server's status says it accepts mask tiles.</summary>
-        public static bool IsSupported(SegmentationServiceTypes.ServerStatusResponse? status) => status?.MaskTiles == true;
 
         /// <summary>
         /// One tile of <paramref name="union"/>, or null when the tile is empty and <paramref name="sendEmpty"/> is false.
@@ -192,9 +194,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// What a request on the tiled path sends with <c>start</c>: sets <paramref name="request"/>'s
-        /// <c>foreground_mask_tile_count</c> to the number of FOREGROUND tiles, <b>including 0</b> for a click-only request with
-        /// no seed mask (the count's presence is what tells the server this client sends mask tiles, so it asks for the background), and
-        /// builds the BACKGROUND tiles of the start windows (<paramref name="request"/>.Tiles) so the server need not ask for them.
+        /// <c>foreground_mask_tile_count</c> to the number of FOREGROUND tiles (0 for a request with no seed mask, which the server
+        /// reads as clicks or rectangles only), and builds the BACKGROUND tiles of the start windows (<paramref name="request"/>.Tiles)
+        /// so the server need not ask for them. The server asks for BACKGROUND tiles on every request.
         /// </summary>
         /// <param name="request">The start request, with its image tiles already listed; its count is set here.</param>
         /// <param name="seeds">The seed or correction shapes, or null for a click-only request.</param>

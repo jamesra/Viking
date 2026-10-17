@@ -10,16 +10,14 @@ using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// The union of several volume-space shapes (squares, polygon rings and edited bitmaps) that become one SAM2 mask prompt.
+    /// The union of several volume-space shapes (squares, polygon rings and edited bitmaps) that make one mask prompt: the foreground
+    /// seeds, or the background (the inscribed squares of other structures' circles and the polygons of other structures).
     /// </summary>
     /// <remarks>
-    /// The segmentation server accepts one mask per <c>Feature</c>, so a client that has several shapes sums
-    /// them here into one 1-bit bitmap over their combined bounds. Used for the foreground seeds and for the background: the
-    /// inscribed squares of other structures' circles and the polygons of other structures. A shape is a list of rings filled
-    /// with the even-odd rule, so a polygon's holes stay open. The bitmap is sent whole, at one scale (see
-    /// <see cref="MaskScalePolicy"/>): full resolution when the combined bounds fit one SAM2 window, coarse blocks above that.
-    /// The server crops it per window, so a region may span many cells. Not thread safe; build it, then call
-    /// <see cref="ToMask"/> from one thread.
+    /// A shape is a list of rings filled with the even-odd rule, so a polygon's holes stay open. The union is drawn a grid tile at a
+    /// time (<see cref="RasterizeTile"/>, through an index of which shapes reach which tile), which is how a mask reaches the server;
+    /// <see cref="Rasterize"/> draws it as one raster over its bounds, for the dilate/erode editor. Not thread safe; build it, then
+    /// draw from one thread.
     /// </remarks>
     internal sealed class SegmentationMaskUnion
     {
@@ -29,8 +27,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly List<IReadOnlyList<Vector2[]>> shapes = [];
         private readonly List<RasterMask> bitmaps = [];
 
-        /// <summary>Per downsample, which shapes and bitmaps touch which tile. Dropped whenever something is added.</summary>
+        /// <summary>
+        /// Per downsample, which shapes and bitmaps touch which tile. Dropped whenever something is added. Built on first use under
+        /// <see cref="indexGate"/>, because a union is shared by the requests of a command and an abandoned request's task may still be
+        /// drawing from it when the next one starts; once built an index is only read.
+        /// </summary>
         private readonly Dictionary<int, TileIndex> tileIndexes = [];
+
+        private readonly object indexGate = new();
 
         /// <summary>Number of shapes and bitmaps added.</summary>
         public int Count => shapes.Count + bitmaps.Count;
@@ -38,13 +42,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>True when nothing has been added.</summary>
         public bool IsEmpty => Count == 0;
 
-        /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegments"/> vertices), a polygon with its holes, an edited bitmap, or a rectangle.</summary>
+        /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegmentsFor"/> vertices), a polygon with its holes, an edited bitmap, or a rectangle.</summary>
         public void Add(SegmentationSeed seed)
         {
             if (seed.Mask is not null)
             {
                 bitmaps.Add(seed.Mask);
-                tileIndexes.Clear();
+                lock (indexGate)
+                lock (indexGate)
+                    tileIndexes.Clear();
+
                 return;
             }
 
@@ -60,7 +67,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            Vector2[] ring = new Vector2[CircleSegments];
+            Vector2[] ring = new Vector2[CircleSegmentsFor(circle.Radius)];
             for (int i = 0; i < ring.Length; i++)
             {
                 double angle = 2 * Math.PI * i / ring.Length;
@@ -70,8 +77,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Add([ring]);
         }
 
-        /// <summary>Vertices of the polygon that stands in for a circle: at 1024 px the edge is within half a pixel of the true circle.</summary>
-        private const int CircleSegments = 180;
+        private const int MinCircleSegments = 180;
+        private const int MaxCircleSegments = 4096;
+
+        /// <summary>
+        /// Vertices of the polygon that stands in for a circle of <paramref name="radius"/> volume units: enough that the polygon's edge
+        /// is within a quarter of a unit of the true circle (so within a quarter of a pixel at any downsample), however large the circle.
+        /// </summary>
+        internal static int CircleSegmentsFor(double radius)
+        {
+            if (!(radius > 0.25))
+                return MinCircleSegments;
+
+            int segments = (int)Math.Ceiling(Math.PI / Math.Acos(1 - 0.25 / radius));
+            return Math.Max(MinCircleSegments, Math.Min(MaxCircleSegments, segments));
+        }
 
         /// <summary>Adds an axis-aligned rectangle, volume space.</summary>
         public void Add(Rectangle rectangle)
@@ -83,7 +103,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 new Vector2(rectangle.Right, rectangle.Top),
                 new Vector2(rectangle.Left, rectangle.Top),
             ]]);
-            tileIndexes.Clear();
+            lock (indexGate)
+                tileIndexes.Clear();
         }
 
         /// <summary>
@@ -96,74 +117,42 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
 
             shapes.Add(rings);
-            tileIndexes.Clear();
+            lock (indexGate)
+                tileIndexes.Clear();
         }
 
         /// <summary>
-        /// Rasterizes the union over its combined bounds and returns it as the wire <c>Mask</c>, or null when it is empty or
-        /// nothing is left of it.
-        /// </summary>
-        /// <remarks>
-        /// <c>Bounds</c> are mosaic pixels (world divided by downsample, floored, Y up) and cover every shape, snapped
-        /// outward for the scale. The PNG is a 1-bit greyscale bitmap with image row 0 at <c>YMax</c>, as the proto requires,
-        /// and <c>Scale</c> is set only above 1. A pixel is in the mask when its centre is inside a shape; at a scale above 1
-        /// a block is in the mask when any mosaic pixel centre in it is, so snapping never shrinks a shape. Each point in
-        /// <paramref name="holePointsVolume"/> clears a disc of <paramref name="holeRadiusPixels"/> mosaic pixels from the
-        /// mask, so a background click inside a foreground mask is not overruled by it (the server returns every foreground
-        /// mask pixel as object). A union wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> is cut down to
-        /// that around <paramref name="centreVolume"/>, normally the seed's centre.
-        /// </remarks>
-        public SegmentationServiceTypes.Mask? ToMask(
-            int downsample,
-            Vector2 centreVolume,
-            IReadOnlyList<Vector2>? holePointsVolume = null,
-            double holeRadiusPixels = 0)
-        {
-            byte[]? pixels = Rasterize(downsample, centreVolume, out MaskLayout layout, holePointsVolume, holeRadiusPixels);
-            return pixels is null ? null : EncodeMask(pixels, layout);
-        }
-
-        /// <summary>
-        /// Rasterizes the union exactly as <see cref="ToMask"/> does, but returns the pixels (row 0 is mosaic
-        /// <see cref="MaskLayout.YMax"/>, set pixels are 255) and their placement instead of a PNG. Null when the union is
-        /// empty or nothing remains of it.
+        /// Rasterizes the union over its combined bounds into one raster: row 0 is mosaic <see cref="MaskLayout.YMax"/>, set pixels
+        /// are 255, and <paramref name="layout"/> says where the pixels sit and at which scale. A pixel (at a scale above 1, a block) is
+        /// set when its centre is inside a shape, so the raster is the shapes themselves at that resolution, neither grown nor
+        /// shrunk. Null when the union is empty or nothing remains of it.
         /// </summary>
         /// <param name="downsample">Mosaic pixel size in volume units.</param>
-        /// <param name="centreVolume">Volume-space point an oversized union is cut down around.</param>
         /// <param name="layout">Where the pixels sit and at which scale.</param>
-        /// <param name="holePointsVolume">See <see cref="ToMask"/>.</param>
-        /// <param name="holeRadiusPixels">See <see cref="ToMask"/>.</param>
+        /// <param name="holePointsVolume">Each clears a disc of <paramref name="holeRadiusPixels"/> mosaic pixels from the raster.</param>
+        /// <param name="holeRadiusPixels">Radius of those discs, in mosaic pixels.</param>
         /// <param name="marginRasterPixels">Raster pixels left free on every side of the bounds (room to dilate an edited mask).</param>
-        /// <param name="cutToLimit">
-        /// True (the single-<c>Mask</c> wire) cuts a union wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> down
-        /// around <paramref name="centreVolume"/>. False keeps the whole region, for a raster that is edited in memory and sent as tiles.
-        /// </param>
         /// <param name="maxRasterSide">The most pixels the raster may have along a side; the scale doubles until it fits.</param>
         public byte[]? Rasterize(
             int downsample,
-            Vector2 centreVolume,
             out MaskLayout layout,
             IReadOnlyList<Vector2>? holePointsVolume = null,
             double holeRadiusPixels = 0,
             int marginRasterPixels = 0,
-            bool cutToLimit = true,
-            int maxRasterSide = MaskScalePolicy.MaxPngSide)
+            int maxRasterSide = MaskScalePolicy.DefaultMaxRasterSide)
         {
             layout = default;
             if (IsEmpty || downsample <= 0 || !TryGetMosaicBounds(downsample, out long xMin, out long xMax, out long yMin, out long yMax))
                 return null;
 
-            if (cutToLimit)
-            {
-                (xMin, xMax) = CutToLimit(xMin, xMax, (long)Math.Floor(centreVolume.X / downsample));
-                (yMin, yMax) = CutToLimit(yMin, yMax, (long)Math.Floor(centreVolume.Y / downsample));
-            }
             layout = MaskScalePolicy.Plan(xMin, xMax, yMin, yMax, marginRasterPixels, maxRasterSide);
 
             byte[] pixels = new byte[layout.RasterWidth * layout.RasterHeight];
             bool any = false;
+            // A raster that is edited is unbiased: a block is set when its centre is inside the shape, so radius 0 is the polygon itself
+            // at any scale. (A mask that is sent to the server covers instead: see RasterizeTile.)
             foreach (IReadOnlyList<Vector2[]> shape in shapes)
-                any |= Fill(pixels, layout, downsample, shape);
+                any |= FillCentres(pixels, layout, downsample, shape);
 
             foreach (RasterMask bitmap in bitmaps)
                 any |= Blit(pixels, layout, downsample, bitmap);
@@ -172,34 +161,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 any = CutHoles(pixels, layout, downsample, holePointsVolume, holeRadiusPixels);
 
             return any ? pixels : null;
-        }
-
-        /// <summary>
-        /// Wraps raster pixels (0/255, row 0 at <see cref="MaskLayout.YMax"/>) as the wire <c>Mask</c>: a 1-bit greyscale PNG
-        /// of <see cref="MaskLayout.RasterWidth"/> x <see cref="MaskLayout.RasterHeight"/>, the layout's inclusive mosaic
-        /// bounds, and <c>Scale</c> when it is above 1.
-        /// </summary>
-        public static SegmentationServiceTypes.Mask EncodeMask(byte[] pixels, MaskLayout layout)
-        {
-            int width = layout.RasterWidth, height = layout.RasterHeight;
-            if (pixels is null || pixels.Length != (long)width * height)
-                throw new ArgumentException($"The layout needs {width} x {height} pixels.", nameof(pixels));
-
-            SegmentationServiceTypes.Mask mask = new()
-            {
-                Bounds = new SegmentationServiceTypes.BoundingBox
-                {
-                    XMin = layout.XMin,
-                    YMin = layout.YMin,
-                    XMax = layout.XMax,
-                    YMax = layout.YMax
-                },
-                Png = Google.Protobuf.ByteString.CopyFrom(EncodePng(pixels, width, height))
-            };
-            if (layout.Scale > 1)
-                mask.Scale = (uint)layout.Scale;
-
-            return mask;
         }
 
         /// <summary>A 1-bit greyscale PNG of <paramref name="width"/> x <paramref name="height"/> pixels, 255 (or any non-zero) set.</summary>
@@ -319,6 +280,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private TileIndex IndexFor(int downsample)
         {
+            lock (indexGate)
+                return IndexForLocked(downsample);
+        }
+
+        private TileIndex IndexForLocked(int downsample)
+        {
             if (tileIndexes.TryGetValue(downsample, out TileIndex? index))
                 return index;
 
@@ -407,7 +374,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             const int Tile = SegmentationTileGrid.TileSize;
             MaskLayout layout = new(cell.Col * Tile, cell.Row * Tile + Tile - 1, Tile, Tile, scale);
-            byte[] pixels = new byte[layout.RasterWidth * layout.RasterHeight];
+
+            // Most tiles in a shape's bounding box turn out empty, so draw into a per-thread scratch raster and copy only a tile that
+            // has something in it, instead of allocating a megabyte for every candidate.
+            int length = layout.RasterWidth * layout.RasterHeight;
+            byte[] pixels = ScratchFor(length);
+            Array.Clear(pixels, 0, length);
             bool any = false;
             foreach (int i in entry.Shapes)
                 any |= Fill(pixels, layout, downsample, shapes[i]);
@@ -418,21 +390,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (any && holePointsVolume is { Count: > 0 } && holeRadiusPixels > 0)
                 any = CutHoles(pixels, layout, downsample, holePointsVolume, holeRadiusPixels);
 
-            return any ? pixels : null;
+            if (!any)
+                return null;
+
+            byte[] drawn = new byte[length];
+            Buffer.BlockCopy(pixels, 0, drawn, 0, length);
+            return drawn;
         }
 
-        /// <summary>
-        /// <paramref name="min"/>..<paramref name="max"/> unchanged when it is within <see cref="MaskScalePolicy.MaxBoundsSide"/>,
-        /// otherwise that many pixels placed around <paramref name="centre"/> and kept inside the original range.
-        /// </summary>
-        private static (long Min, long Max) CutToLimit(long min, long max, long centre)
-        {
-            const int Side = MaskScalePolicy.MaxBoundsSide;
-            if (max - min + 1 <= Side)
-                return (min, max);
+        [ThreadStatic]
+        private static byte[]? scratchFull;
 
-            long start = Math.Max(min, Math.Min(centre - Side / 2, max - Side + 1));
-            return (start, start + Side - 1);
+        [ThreadStatic]
+        private static byte[]? scratchCoarse;
+
+        /// <summary>A per-thread raster of <paramref name="length"/> pixels (a full or a coarse tile), reused between calls.</summary>
+        private static byte[] ScratchFor(int length)
+        {
+            const int Full = SegmentationTileGrid.TileSize * SegmentationTileGrid.TileSize;
+            if (length == Full)
+                return scratchFull ??= new byte[Full];
+
+            if (scratchCoarse is null || scratchCoarse.Length != length)
+                scratchCoarse = new byte[length];
+
+            return scratchCoarse;
         }
 
         /// <summary>
@@ -551,10 +533,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return Array.Exists(pixels, value => value != 0);
         }
 
+        /// <summary>The non-horizontal edges of the rings, in mosaic units (world divided by the downsample).</summary>
+        private static (double Ax, double Ay, double Bx, double By)[] EdgesOf(IReadOnlyList<Vector2[]> rings, int downsample)
+        {
+            List<(double, double, double, double)> edges = [];
+            foreach (Vector2[] ring in rings)
+            {
+                for (int i = 0; i < ring.Length; i++)
+                {
+                    Vector2 a = ring[i];
+                    Vector2 b = ring[(i + 1) % ring.Length];
+                    if (a.Y != b.Y)
+                        edges.Add((a.X / downsample, a.Y / downsample, b.X / downsample, b.Y / downsample));
+                }
+            }
+
+            return [.. edges];
+        }
+
+        /// <summary>The x of every edge that crosses the horizontal line at mosaic <paramref name="y"/>, sorted (even-odd pairs are inside).</summary>
+        private static void CrossingsAt(double y, (double Ax, double Ay, double Bx, double By)[] edges, List<double> crossings)
+        {
+            crossings.Clear();
+            foreach ((double ax, double ay, double bx, double by) in edges)
+            {
+                if ((ay <= y) == (by <= y))
+                    continue;
+
+                crossings.Add(ax + (y - ay) / (by - ay) * (bx - ax));
+            }
+
+            crossings.Sort();
+        }
+
         /// <summary>
-        /// Even-odd scanline fill of one shape into the raster. Works a mosaic pixel row at a time and sets the raster block of
-        /// every mosaic pixel whose centre is inside the shape, so at scale 1 it is the exact fill and above 1 the blocks cover the
-        /// shape. Returns whether any pixel was set.
+        /// Even-odd scanline fill of one shape into the raster, covering: it works a mosaic pixel row at a time and sets the raster
+        /// block of every mosaic pixel whose centre is inside the shape, so at scale 1 it is the exact fill and above 1 the blocks
+        /// cover the shape and never lose any of it. Returns whether any pixel was set.
         /// </summary>
         private static bool Fill(byte[] pixels, MaskLayout layout, int downsample, IReadOnlyList<Vector2[]> rings)
         {
@@ -567,6 +582,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             int width = layout.RasterWidth;
             int scale = layout.Scale;
+            var edges = EdgesOf(rings, downsample);
 
             // Mosaic row m has its centre at y = m + 0.5.
             long firstRow = Math.Max(layout.YMin, (long)Math.Floor(shapeMinY - 0.5));
@@ -575,24 +591,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             List<double> crossings = [];
             for (long mosaicRow = firstRow; mosaicRow <= lastRow; mosaicRow++)
             {
-                double y = mosaicRow + 0.5;
-                crossings.Clear();
-                foreach (Vector2[] ring in rings)
-                {
-                    for (int i = 0; i < ring.Length; i++)
-                    {
-                        Vector2 a = ring[i];
-                        Vector2 b = ring[(i + 1) % ring.Length];
-                        double ay = a.Y / downsample, by = b.Y / downsample;
-                        if ((ay <= y) == (by <= y))
-                            continue;
-
-                        double t = (y - ay) / (by - ay);
-                        crossings.Add((a.X + t * (b.X - a.X)) / downsample);
-                    }
-                }
-
-                crossings.Sort();
+                CrossingsAt(mosaicRow + 0.5, edges, crossings);
                 int rasterRow = (int)((layout.YMax - mosaicRow) / scale);
                 for (int i = 0; i + 1 < crossings.Count; i += 2)
                 {
@@ -608,6 +607,47 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         pixels[rasterRow * width + column] = 255;
 
                     any = true;
+                }
+            }
+
+            return any;
+        }
+
+        /// <summary>
+        /// Even-odd scanline fill of one shape into the raster, sampling: a raster pixel (a block, above scale 1) is set when its centre is
+        /// inside the shape. At scale 1 this is <see cref="Fill"/>; above it the result is the shape at that resolution rather than a
+        /// grown copy. Returns whether any pixel was set.
+        /// </summary>
+        private static bool FillCentres(byte[] pixels, MaskLayout layout, int downsample, IReadOnlyList<Vector2[]> rings)
+        {
+            double shapeMinY = double.MaxValue, shapeMaxY = double.MinValue;
+            foreach (Vector2 vertex in rings[0])
+            {
+                shapeMinY = Math.Min(shapeMinY, vertex.Y / downsample);
+                shapeMaxY = Math.Max(shapeMaxY, vertex.Y / downsample);
+            }
+
+            int width = layout.RasterWidth, height = layout.RasterHeight;
+            int scale = layout.Scale;
+            var edges = EdgesOf(rings, downsample);
+
+            // Raster row r has its centre at mosaic y = YMax + 1 - (r + 0.5) * scale; raster column c at x = XMin + (c + 0.5) * scale.
+            int firstRow = Math.Max(0, (int)Math.Floor((layout.YMax + 1 - shapeMaxY) / scale - 0.5));
+            int lastRow = Math.Min(height - 1, (int)Math.Ceiling((layout.YMax + 1 - shapeMinY) / scale - 0.5));
+            bool any = false;
+            List<double> crossings = [];
+            for (int row = firstRow; row <= lastRow; row++)
+            {
+                CrossingsAt(layout.YMax + 1 - (row + 0.5) * scale, edges, crossings);
+                for (int i = 0; i + 1 < crossings.Count; i += 2)
+                {
+                    int first = Math.Max(0, (int)Math.Ceiling((crossings[i] - layout.XMin) / scale - 0.5));
+                    int last = Math.Min(width - 1, (int)Math.Floor((crossings[i + 1] - layout.XMin) / scale - 0.5));
+                    for (int column = first; column <= last; column++)
+                    {
+                        pixels[row * width + column] = 255;
+                        any = true;
+                    }
                 }
             }
 

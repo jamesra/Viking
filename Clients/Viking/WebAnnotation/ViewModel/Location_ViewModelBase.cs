@@ -753,15 +753,15 @@ namespace WebAnnotation.ViewModel
                     volumeRings.Add(volumeRing);
                 }
 
-                // The mask is at the view's tile level, like every other prompt; a large polygon becomes a coarse raster.
-                int downsample = SegmentationViewportSession.ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+                // The raster has the resolution of the view (a mosaic pixel is at least one volume unit), whatever the segmentation tile level.
+                int downsample = Math.Max(1, (int)Math.Ceiling(parent.Camera?.Downsample ?? parent.Downsample));
 
                 // The raster is edited in memory and drawn as one texture, so only the GPU limits it: a polygon too big for the
                 // texture is downsampled until it fits. The server's limits apply when the mask is sent (SubmitEditedMask).
                 Geometry.Rectangle polygonBounds = RasterMask.BoundsOf(volumeRings[0]);
                 SegmentationDiag.Log($"EditMask start ds={downsample} polygon={polygonBounds.Width:0}x{polygonBounds.Height:0} maxTexture={parent.MaxTextureSide}");
                 RasterMask mask = RasterMask.FromRings(
-                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, wholeRegion: true, maxRasterSide: parent.MaxTextureSide);
+                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, maxRasterSide: parent.MaxTextureSide);
                 SegmentationDiag.Log(mask is null
                     ? "EditMask raster is null: the polygon covers no pixel centre"
                     : $"EditMask raster {mask.Width}x{mask.Height} scale={mask.Scale}");
@@ -799,7 +799,7 @@ namespace WebAnnotation.ViewModel
         /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
         /// shape, declining leaves it as it was.
         /// </summary>
-        private async void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
+        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
         {
             try
             {
@@ -810,26 +810,20 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                // What the server accepts is only known here, where the mask is sent. A server that takes mask tiles has no limit on the
-                // mask's bounds, only on how many tiles it touches; any other server gets the single Mask, which is cut to
-                // MaskScalePolicy.MaxBoundsSide pixels around the seed.
-                await SegmentationViewportSession.EnsureServerCapabilitiesAsync(parent);
-                if (SegmentationViewportSession.ServerSupportsMaskTiles)
+                if (!Global.IsSegmentationServiceAvailable)
                 {
-                    long spanned = SegmentationMaskTiles.TilesSpanned(setBounds, edited.Downsample);
-                    if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
-                    {
-                        MessageBox.Show(
-                            $"The edited mask spans {spanned} tiles. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
-                            "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
+                    MessageBox.Show("There is no segmentation service to send the edited mask to.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
-                else if (Math.Max(setBounds.Width, setBounds.Height) / edited.Downsample > MaskScalePolicy.MaxBoundsSide)
+
+                // The mask reaches the server as grid tiles, and the server accepts at most MaxForegroundTiles of them.
+                long spanned = SegmentationMaskTiles.TilesSpanned(setBounds, edited.Downsample);
+                if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
                 {
-                    parent.ShowTransientStatus(
-                        $"This segmentation server does not take mask tiles, so only about {MaskScalePolicy.MaxBoundsSide} pixels of the mask around its centre are sent.",
-                        durationMs: 10000);
+                    MessageBox.Show(
+                        $"The edited mask spans {spanned} tiles. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
+                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
                 // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.

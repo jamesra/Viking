@@ -21,7 +21,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     internal sealed partial class SegmentationViewportSession
     {
-        private readonly struct TileSignature
+        internal readonly struct TileSignature
         {
             public TileSignature(string volume, int section, string channel, string transform, int downsample)
             {
@@ -212,84 +212,32 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (ServerModelId is { } modelId)
                 request.ModelId = modelId;
 
-            if (foregroundPoints is not null)
-            {
-                foreach (Geometry.Vector2 point in foregroundPoints)
-                {
-                    (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
-                    request.Foreground.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
-                }
-            }
+            // The clicks are the points of the two Features; whatever is object beyond them is a FOREGROUND mask tile, and the
+            // neighbouring annotations are BACKGROUND mask tiles the server asks for as its walk grows.
+            (SegmentationServiceTypes.Feature foregroundFeature, SegmentationServiceTypes.Feature? backgroundFeature) =
+                ClickFeatures(foregroundPoints, backgroundPoints, signature.Downsample);
 
-            // The seeds (a circle's disc, a polygon, an edited mask) are the foreground mask:
-            // "everything inside is object, grow beyond it". The server takes one mask, so they are summed here
-            // into one 1-bit bitmap over their combined bounds, which may span many windows.
-            //
-            // A server that takes mask tiles gets them as the grid tiles the seeds touch, however large the seeds are, and asks
-            // for the background tiles it needs as the walk grows. Any other server gets the single Mask of the older protocol.
-            // The first request after the app starts may get here before the status query a connection started has answered.
-            await WhenCapabilitiesKnownAsync().ConfigureAwait(false);
-            bool maskTiles = ServerSupportsMaskTiles;
+            // The seeds (a circle's disc, a polygon, an edited mask) are the foreground mask: "everything inside is object, grow
+            // beyond it". They go out as the grid tiles they touch, however large they are.
             int maskTileScale = SegmentationMaskTiles.ConfiguredScale;
             double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
             SegmentationMaskUnion? seedUnion = null;
-            Geometry.Vector2 seedCentre = default;
             if (foregroundBoxes is { Count: > 0 })
             {
-                SegmentationMaskUnion seeds = new();
+                seedUnion = new SegmentationMaskUnion();
                 foreach (SegmentationSeed seed in foregroundBoxes)
-                    seeds.Add(seed);
-
-                seedUnion = seeds;
-                seedCentre = new Geometry.Vector2(foregroundBoxes.Average(seed => seed.Center.X), foregroundBoxes.Average(seed => seed.Center.Y));
-                if (!maskTiles)
-                {
-                    SegmentationServiceTypes.Mask? foregroundMask = seeds.ToMask(
-                        signature.Downsample,
-                        seedCentre,
-                        backgroundPoints,
-                        pointRadius);
-                    if (foregroundMask is not null)
-                        request.ForegroundFeature = new SegmentationServiceTypes.Feature { Mask = foregroundMask, MaskRole = SegmentationServiceTypes.MaskRole.Seed };
-                }
-            }
-            else if (foregroundPoints is { Count: > 0 })
-            {
-                seedCentre = new Geometry.Vector2(foregroundPoints.Average(p => p.X), foregroundPoints.Average(p => p.Y));
+                    seedUnion.Add(seed);
             }
 
-            if (backgroundPoints is not null)
-            {
-                foreach (Geometry.Vector2 point in backgroundPoints)
-                {
-                    (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
-                    request.Background.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
-                }
-            }
-
-            SegmentationMaskTiles.StartTiles startTiles = default;
-            if (maskTiles)
-            {
-                // PrepareStart sets the count, even to 0 for a click-only request: that is what tells the server this client
-                // serves mask tiles, so it asks for the background.
-                startTiles = await Task.Run(
-                    () => SegmentationMaskTiles.PrepareStart(
-                        request, seedUnion, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, backgroundMask, maskTileScale,
-                        SegmentationMaskTiles.ScaleFor(seedUnion, signature.Downsample)),
-                    token).ConfigureAwait(false);
-                if (startTiles.Foreground.Count > 0)
-                    request.ForegroundFeature = new SegmentationServiceTypes.Feature { MaskRole = SegmentationServiceTypes.MaskRole.Seed };
-            }
-            else
-            {
-                // Other structures' circles (inscribed squares) and polygons, summed into the one mask the server takes.
-                SegmentationServiceTypes.Mask? backgroundMaskMessage = backgroundMask?.ToMask(signature.Downsample, seedCentre);
-                if (backgroundMaskMessage is not null)
-                    request.BackgroundFeature = new SegmentationServiceTypes.Feature { Mask = backgroundMaskMessage };
-                else if (backgroundMask is { IsEmpty: false })
-                    SegmentationDiag.Log($"Background mask of {backgroundMask.Count} shapes not sent: nothing of it is left at ds={signature.Downsample}");
-            }
-
+            // PrepareStart sets the count of FOREGROUND tiles, 0 for a click-only request.
+            SegmentationMaskTiles.StartTiles startTiles = await Task.Run(
+                () => SegmentationMaskTiles.PrepareStart(
+                    request, seedUnion, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, backgroundMask, maskTileScale,
+                    SegmentationMaskTiles.ScaleFor(seedUnion, signature.Downsample)),
+                token).ConfigureAwait(false);
+            request.ForegroundFeature = foregroundFeature;
+            if (backgroundFeature is not null)
+                request.BackgroundFeature = backgroundFeature;
 
             CallOptions callOptions = new(
                 deadline: DateTime.UtcNow.AddSeconds(SegmentStreamDeadlineSeconds),
@@ -300,20 +248,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 grpcClient.SegmentTilesStream(callOptions))
             {
                 await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Start = request }).ConfigureAwait(false);
+                // The seed's tiles first (the server starts growing only when all the announced ones have arrived), then the
+                // background of the start windows' tiles, which the server needs before it predicts them: asking would only cost
+                // a round trip.
                 HashSet<TileCell> backgroundSent = [];
-                if (maskTiles)
-                {
-                    // The seed's tiles first (the server starts growing only when all the announced ones have arrived), then the
-                    // background of the start windows' tiles, which the server needs before it predicts them: asking would only cost
-                    // a round trip.
-                    foreach (SegmentationServiceTypes.MaskTile tile in startTiles.Background)
-                        backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
+                foreach (SegmentationServiceTypes.MaskTile tile in startTiles.Background)
+                    backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
 
-                    foreach (SegmentTilesStreamRequest message in startTiles.Messages())
-                        await call.RequestStream.WriteAsync(message).ConfigureAwait(false);
+                foreach (SegmentTilesStreamRequest message in startTiles.Messages())
+                    await call.RequestStream.WriteAsync(message).ConfigureAwait(false);
 
-                    SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={startTiles.Foreground.Count} startBackground={startTiles.Background.Count} scale={maskTileScale}");
-                }
+                SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={startTiles.Foreground.Count} startBackground={startTiles.Background.Count} scale={maskTileScale}");
 
                 while (response is null && await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
                 {
@@ -354,6 +299,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return response;
         }
 
+        /// <summary>
+        /// The clicks as the points of the request's two Features, in mosaic pixels at <paramref name="downsample"/> (X right, Y up). The
+        /// foreground Feature always exists and carries the role of the FOREGROUND mask tiles; the background one is null without clicks.
+        /// </summary>
+        internal static (SegmentationServiceTypes.Feature Foreground, SegmentationServiceTypes.Feature? Background) ClickFeatures(
+            IReadOnlyList<Geometry.Vector2>? foregroundPoints, IReadOnlyList<Geometry.Vector2>? backgroundPoints, int downsample)
+        {
+            SegmentationServiceTypes.Feature foreground = new() { MaskRole = SegmentationServiceTypes.MaskRole.Seed };
+            foreach (Geometry.Vector2 point in foregroundPoints ?? [])
+            {
+                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, downsample);
+                foreground.Points.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+            }
+
+            SegmentationServiceTypes.Feature? background = null;
+            foreach (Geometry.Vector2 point in backgroundPoints ?? [])
+            {
+                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, downsample);
+                background ??= new SegmentationServiceTypes.Feature();
+                background.Points.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+            }
+
+            return (foreground, background);
+        }
+
         /// <summary>Sends <paramref name="tiles"/> as <c>MaskTiles</c> messages. Nothing is sent for an empty list.</summary>
         private static async Task WriteMaskTilesAsync(
             IClientStreamWriter<SegmentTilesStreamRequest> stream,
@@ -368,7 +338,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// included, rasterizing only the neighbour shapes that reach each tile. A tile at another downsample is listed in
         /// <c>masks_unavailable</c>; one already sent (the start windows') is not sent twice, which the server refuses.
         /// </summary>
-        private static async Task AnswerNeededMasksAsync(
+        internal static async Task AnswerNeededMasksAsync(
             IClientStreamWriter<SegmentTilesStreamRequest> stream,
             TilesNeeded needed,
             TilesAnswer answer,

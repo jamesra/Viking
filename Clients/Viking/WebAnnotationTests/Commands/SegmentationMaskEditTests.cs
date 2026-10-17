@@ -38,7 +38,7 @@ namespace WebAnnotationTests.Commands
 
             SegmentationMaskUnion union = new();
             union.Add(seed.Value);
-            byte[] pixels = union.Rasterize(downsample: 2, seed.Value.Center, out MaskLayout layout);
+            byte[] pixels = union.Rasterize(downsample: 2, out MaskLayout layout)!;
 
             Assert.IsNotNull(pixels);
             Assert.AreEqual(1, layout.Scale);
@@ -191,6 +191,48 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(100 + 2 * 64, mask.Height);
             Assert.AreEqual(1, mask.Scale);
             Assert.AreEqual(100 * 100, Count(mask.Pixels));
+        }
+
+        [TestMethod]
+        public void TheInteriorPointOfARingIsOnTheBandAtItsDeepestNotOnItsEdge()
+        {
+            byte[] pixels = Square(100, 100, 300);
+            for (int y = 150; y < 350; y++)
+                for (int x = 150; x < 350; x++)
+                    pixels[y * Size + x] = 0;     // a ring with a 50 pixel band
+            RasterMask ring = new(downsample: 1, xMin: 0, yMax: Size - 1, width: Size, height: Size, pixels: pixels);
+
+            Vector2 point = ring.InteriorPoint()!.Value;
+            int column = (int)Math.Floor(point.X), row = ring.YMax - (int)Math.Floor(point.Y);
+
+            Assert.AreEqual(255, pixels[row * Size + column]);
+            double depth = Math.Min(Math.Min(column - 100, 399 - column), Math.Min(row - 100, 399 - row));
+            double holeDx = Math.Max(0, Math.Max(150 - column, column - 349)), holeDy = Math.Max(0, Math.Max(150 - row, row - 349));
+            double depthFromHole = Math.Sqrt(holeDx * holeDx + holeDy * holeDy);
+            Assert.IsTrue(Math.Min(depth, depthFromHole) >= 24, $"the point is in the middle of the 50 pixel band, not on its edge ({column}, {row})");
+        }
+
+        [TestMethod]
+        public void TheInteriorPointOfASplitMaskIsInTheLargerPiece()
+        {
+            byte[] pixels = Square(100, 100, 60);
+            byte[] big = Square(400, 400, 300);
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = (byte)Math.Max(pixels[i], big[i]);
+            RasterMask split = new(downsample: 1, xMin: 0, yMax: Size - 1, width: Size, height: Size, pixels: pixels);
+
+            Vector2 point = split.InteriorPoint()!.Value;
+
+            Assert.IsTrue(point.X >= 400 && point.X < 700, $"x {point.X}");
+            Assert.IsTrue(point.Y >= Size - 700 && point.Y < Size - 400, $"y {point.Y}");
+        }
+
+        [TestMethod]
+        public void AnEmptyMaskHasNoInteriorPoint()
+        {
+            RasterMask empty = new(downsample: 1, xMin: 0, yMax: 0, width: 8, height: 8, pixels: new byte[64]);
+
+            Assert.IsNull(empty.InteriorPoint());
         }
     }
 }

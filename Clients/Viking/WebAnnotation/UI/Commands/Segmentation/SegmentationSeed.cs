@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// The shape that starts a segmentation, in volume space: a circle's disc, or a rectangle (a group's
-    /// inscribed rectangle). Sent to the server as the foreground mask: everything inside is object.
+    /// The shape that starts a segmentation, in volume space: a circle's disc, a polygon with its holes, an edited mask bitmap,
+    /// or a rectangle (a group's inscribed rectangle). Sent to the server as FOREGROUND mask tiles: everything inside is object.
     /// </summary>
     /// <remarks>
     /// A circle annotation is masked as the circle itself, not its inscribed square, and a polygon as its rings

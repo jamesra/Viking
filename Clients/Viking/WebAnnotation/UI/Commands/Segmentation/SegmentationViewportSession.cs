@@ -121,18 +121,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public static string? ServerModelId => Volatile.Read(ref serverModelId);
 
-        private static bool serverMaskTiles;
-
-        /// <summary>The GetServerStatus query in flight or finished for the current endpoint; null until a session has connected.</summary>
-        private static Task? capabilitiesRefresh;
-
-        /// <summary>
-        /// True when the server said in GetServerStatus that SegmentTilesStream takes mask prompts as tiles. Until it has
-        /// answered (and for a server that does not say so) masks go out as the single <c>Mask</c> of the older protocol.
-        /// Cleared with the profile when the endpoint changes.
-        /// </summary>
-        public static bool ServerSupportsMaskTiles => Volatile.Read(ref serverMaskTiles);
-
         /// <summary>
         /// How the model in use wants its input: fixed grid tiles or the whole screen, and whether the
         /// tile level follows zoom. Starts as <see cref="SegmentationModelProfile.Default"/> (fixed tiles,
@@ -206,36 +194,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             Volatile.Write(ref modelProfile, SegmentationModelProfile.Default);
             Volatile.Write(ref serverModelId, null);
-            Volatile.Write(ref serverMaskTiles, false);
-            Volatile.Write(ref capabilitiesRefresh, null);
-        }
-
-        /// <summary>
-        /// Waits (at most <paramref name="timeoutSeconds"/>) for the GetServerStatus query a session started, so
-        /// <see cref="ServerSupportsMaskTiles"/> and the model profile are known before something decides by them. Returns at once
-        /// when the query has finished or none was started, and never throws: a server that does not answer is simply not known to
-        /// support mask tiles.
-        /// </summary>
-        public static async Task WhenCapabilitiesKnownAsync(int timeoutSeconds = 6)
-        {
-            Task? refresh = Volatile.Read(ref capabilitiesRefresh);
-            if (refresh is null || refresh.IsCompleted)
-                return;
-
-            await Task.WhenAny(refresh, Task.Delay(TimeSpan.FromSeconds(timeoutSeconds))).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Makes sure the server's capabilities have been asked for and waits for the answer. For something that runs before any
-        /// segmentation session has connected, such as the dilate/erode editor, which would otherwise see "no mask tiles" on a
-        /// freshly started app and apply the limits of the single-<c>Mask</c> wire.
-        /// </summary>
-        public static async Task EnsureServerCapabilitiesAsync(SectionViewerControl parent)
-        {
-            if (Volatile.Read(ref capabilitiesRefresh) is null)
-                new SegmentationViewportSession(parent).TryInitializeClient();
-
-            await WhenCapabilitiesKnownAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -263,7 +221,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 capabilitiesEndpoint = endpoint;
             }
 
-            Volatile.Write(ref capabilitiesRefresh, RefreshModelCapabilitiesAsync(client, endpoint));
+            _ = RefreshModelCapabilitiesAsync(client, endpoint);
         }
 
         /// <summary>
@@ -292,12 +250,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     // The model identity is independent of the capabilities: a server whose capabilities we ignore still
                     // refuses prompts built for a different model.
                     Volatile.Write(ref serverModelId, modelId);
-                    Volatile.Write(ref serverMaskTiles, SegmentationMaskTiles.IsSupported(status));
                     if (profile is not null)
                         Volatile.Write(ref modelProfile, profile);
                 }
 
-                SegmentationDiag.Log($"GetServerStatus: mask tiles {(SegmentationMaskTiles.IsSupported(status) ? "supported" : "not supported")}");
                 if (status?.Model is { } model)
                     SegmentationDiag.Log($"GetServerStatus: model={model.ModelId} version={model.ModelVersion} encoding={model.PromptEncoding} data={model.TrainingDataSet} contract={model.ContractJson}");
 

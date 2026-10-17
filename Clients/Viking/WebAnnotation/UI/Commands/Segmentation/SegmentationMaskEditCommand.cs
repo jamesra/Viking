@@ -14,24 +14,21 @@ using GeometryVector2 = Geometry.Vector2;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// Shows a mask over the section and lets the user grow or shrink it with the mouse wheel. Nothing else: it does not
-    /// call the segmentation server and does not touch any annotation. Another command supplies the input and consumes the
-    /// output.
+    /// Shows a mask over the section and lets the user grow or shrink it (dilate or erode) with the mouse wheel. It is an image
+    /// operation on a bitmap and nothing more: it does not know about segmentation or the server and does not touch any annotation.
+    /// Another command supplies the input and consumes the output.
     /// </summary>
     /// <remarks>
     /// Input is a <see cref="RasterMask"/> (a rasterized polygon comes from <see cref="RasterMask.FromRings"/>). Output is
     /// a <see cref="RasterMask"/> too, delivered once: the edited mask when the user accepts (Enter or the pen's check
     /// button), or null when they cancel (Escape, the pen's X, or any other way the command is deactivated).
-    /// <see cref="MaskSettled"/> fires after the wheel has been still for <see cref="SettleDelayMs"/> so a caller can
-    /// submit intermediate results without a request per notch.
     /// Wheel up grows, wheel down shrinks; Shift takes quarter steps; Ctrl+wheel zooms the view as usual.
     /// The edit is one number, the radius, applied to a signed distance field computed at activation
     /// (<see cref="SegmentationMaskEdit"/>), so a tick re-thresholds the bitmap and re-uploads one texture; there is no
-    /// polygon rebuild. All members are used on the UI thread, except that <see cref="MaskSettled"/> is raised on it too.
+    /// polygon rebuild. All members are used on the UI thread.
     /// </remarks>
     internal sealed class SegmentationMaskEditCommand : Command, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        private const int DefaultSettleDelayMs = 400;
         private const double DefaultStepNanometers = 20;
 
         private readonly RasterMask input;
@@ -49,7 +46,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private double maxRadius;
         private double radiusPixels;
         private bool finished;
-        private PanZoomDebouncer? debouncer;
 
         /// <summary>Colour and opacity of the mask overlay (straight, not premultiplied, alpha).</summary>
         public static readonly Microsoft.Xna.Framework.Color OverlayColor = new(255, 190, 0, 120);
@@ -69,17 +65,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             penButtons = new SegmentationPenButtons(parent);
             cancelButton = new PenCancelButton(parent);
             StepNanometers = DefaultStepNanometers;
-            SettleDelayMs = DefaultSettleDelayMs;
         }
-
-        /// <summary>Raised after the wheel has been still for <see cref="SettleDelayMs"/>, with the mask as it now stands.</summary>
-        public event Action<RasterMask>? MaskSettled;
 
         /// <summary>One wheel notch in nanometres. A notch is never less than one mask pixel.</summary>
         public double StepNanometers { get; set; }
-
-        /// <summary>Quiet time after the last wheel notch before <see cref="MaskSettled"/> is raised. Set before activation.</summary>
-        public int SettleDelayMs { get; set; }
 
         /// <summary>Current edit in mask pixels: positive grows the input, negative shrinks it, zero is the input.</summary>
         public double RadiusPixels => radiusPixels;
@@ -123,15 +112,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             minRadius = SegmentationMaskEdit.MinRadius(signedDistance);
             maxRadius = SegmentationMaskEdit.MaxRadius(input.Pixels, input.Width, input.Height);
-            debouncer = new PanZoomDebouncer(SettleDelayMs, RaiseSettled, post => Parent.BeginInvoke(post));
             ApplyRadius(0);
         }
 
         /// <inheritdoc />
         protected override void OnDeactivate()
         {
-            debouncer?.Dispose();
-            debouncer = null;
             overlayView = null;
             texture?.Dispose();
             texture = null;
@@ -161,7 +147,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 input.WorldPerPixel,
                 (Control.ModifierKeys & Keys.Shift) != 0);
             ApplyRadius(radiusPixels + change);
-            debouncer?.Restart();
         }
 
         /// <inheritdoc />
@@ -208,12 +193,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             SegmentationMaskEdit.Threshold(signedDistance, radiusPixels, editedPixels);
             textureDirty = true;
             Parent.Invalidate();
-        }
-
-        private void RaiseSettled()
-        {
-            if (!finished)
-                MaskSettled?.Invoke(CurrentMask());
         }
 
         private void Accept()

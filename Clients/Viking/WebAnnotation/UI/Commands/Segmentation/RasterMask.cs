@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using Geometry;
-using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -86,9 +85,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>This mask's pixels replaced by <paramref name="pixels"/>, same placement.</summary>
         public RasterMask WithPixels(byte[] pixels) => new(Downsample, XMin, YMax, Width, Height, pixels, Scale);
 
-        /// <summary>The mask as the segmentation server's foreground-mask prompt.</summary>
-        public SegmentationServiceTypes.Mask ToWireMask() => SegmentationMaskUnion.EncodeMask(Pixels, Layout);
-
         /// <summary>
         /// The smallest volume-space rectangle holding every set pixel, or false when the mask is empty. Unlike
         /// <see cref="WorldBounds"/> it leaves out the margin left for dilating.
@@ -126,90 +122,51 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Rasterizes a polygon (exterior ring followed by holes, volume space, even-odd fill) into a mask over its bounding
         /// box with <paramref name="marginPixels"/> raster pixels free on every side, so it can be dilated. The scale comes
-        /// from <see cref="MaskScalePolicy"/>, so the raster never exceeds <see cref="MaskScalePolicy.MaxPngSide"/> on a side however large
-        /// the polygon is. Returns null when the rings are unusable or the polygon covers no pixel centre, and, unless
-        /// <paramref name="wholeRegion"/>, when it is wider or taller than <see cref="MaskScalePolicy.MaxBoundsSide"/> mosaic pixels at
-        /// this downsample (the limit of the single-<c>Mask</c> wire).
+        /// from <see cref="MaskScalePolicy"/>, so the raster never exceeds <paramref name="maxRasterSide"/> on a side however large
+        /// the polygon is. Returns null when the rings are unusable or the polygon covers no pixel centre.
         /// </summary>
         /// <param name="rings">Exterior ring first; each ring needs at least three vertices.</param>
-        /// <param name="downsample">Volume units per mosaic pixel: the tile level of the view, not a size fitted to the shape.</param>
+        /// <param name="downsample">Volume units per mosaic pixel.</param>
         /// <param name="marginPixels">Raster pixels left free around the polygon.</param>
-        /// <param name="wholeRegion">
-        /// True when the mask goes to the server as tiles, which have no bounds limit: the polygon is rasterized whole, never cut
-        /// or refused for its size (the caller checks the server's tile limit). False keeps the single-<c>Mask</c> wire's limit.
-        /// </param>
         /// <param name="maxRasterSide">
         /// The most pixels the raster may have along a side: the GPU's texture limit when the raster is drawn for editing. A polygon too big
         /// for it is downsampled (the scale doubles) until it fits.
         /// </param>
         public static RasterMask? FromRings(
-            IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0, bool wholeRegion = false,
-            int maxRasterSide = MaskScalePolicy.MaxPngSide)
+            IReadOnlyList<Vector2[]> rings, int downsample, int marginPixels = 0, int maxRasterSide = MaskScalePolicy.DefaultMaxRasterSide)
         {
             if (rings is null || rings.Count == 0 || rings[0] is null || rings[0].Length < 3 || downsample <= 0)
                 return null;
 
-            Rectangle bounds = BoundsOf(rings[0]);
-            if (!wholeRegion && (bounds.Width / downsample > MaskScalePolicy.MaxBoundsSide || bounds.Height / downsample > MaskScalePolicy.MaxBoundsSide))
-                return null;
-
             SegmentationMaskUnion union = new();
             union.Add(rings);
-            byte[]? pixels = union.Rasterize(downsample, bounds.Center, out MaskLayout layout, marginRasterPixels: marginPixels, cutToLimit: !wholeRegion, maxRasterSide: maxRasterSide);
+            byte[]? pixels = union.Rasterize(downsample, out MaskLayout layout, marginRasterPixels: marginPixels, maxRasterSide: maxRasterSide);
             return pixels is null
                 ? null
                 : new RasterMask(downsample, layout.XMin, layout.YMax, layout.RasterWidth, layout.RasterHeight, pixels, layout.Scale);
         }
 
         /// <summary>
-        /// A volume-space point inside the mask: the set pixel nearest the centroid of the set pixels, so a concave or
-        /// eroded shape still gets a point that is on the object. Null when the mask is empty.
+        /// A volume-space point well inside the mask: the pixel deepest from the edge (the first, when several tie), so it lies on the
+        /// object even for a ring or a mask that was split into pieces, and never on a boundary pixel. Null when the mask is empty.
         /// </summary>
         public Vector2? InteriorPoint()
         {
-            double sumRow = 0, sumColumn = 0;
-            long count = 0;
-            for (int row = 0; row < Height; row++)
-            {
-                int offset = row * Width;
-                for (int column = 0; column < Width; column++)
-                {
-                    if (Pixels[offset + column] == 0)
-                        continue;
-
-                    sumRow += row;
-                    sumColumn += column;
-                    count++;
-                }
-            }
-
-            if (count == 0)
+            float[]? signedDistance = SegmentationMaskEdit.SignedDistance(Pixels, Width, Height);
+            if (signedDistance is null)
                 return null;
 
-            double centreRow = sumRow / count, centreColumn = sumColumn / count;
-            double best = double.MaxValue;
-            int bestRow = 0, bestColumn = 0;
-            for (int row = 0; row < Height; row++)
+            int deepest = 0;
+            for (int i = 1; i < signedDistance.Length; i++)
             {
-                int offset = row * Width;
-                for (int column = 0; column < Width; column++)
-                {
-                    if (Pixels[offset + column] == 0)
-                        continue;
-
-                    double distance = (row - centreRow) * (row - centreRow) + (column - centreColumn) * (column - centreColumn);
-                    if (distance < best)
-                    {
-                        best = distance;
-                        bestRow = row;
-                        bestColumn = column;
-                    }
-                }
+                if (signedDistance[i] < signedDistance[deepest])
+                    deepest = i;
             }
 
+            int row = deepest / Width, column = deepest % Width;
             return new Vector2(
-                (XMin + (bestColumn + 0.5) * Scale) * Downsample,
-                (YMax + 1 - (bestRow + 0.5) * Scale) * Downsample);
+                (XMin + (column + 0.5) * Scale) * Downsample,
+                (YMax + 1 - (row + 0.5) * Scale) * Downsample);
         }
 
         /// <summary>Axis-aligned bounds of a ring.</summary>

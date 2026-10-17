@@ -89,45 +89,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
     }
 
     /// <summary>
-    /// How a mask region is sent: at full resolution when it fits one SAM2 window, otherwise as coarse blocks.
+    /// How large a mask raster is, and so how coarse: full resolution unless the region does not fit the largest raster the caller can
+    /// hold, in which case the scale doubles until it does.
     /// </summary>
     /// <remarks>
-    /// Full resolution keeps the mask edge exact for the encodings that read edge distances. A coarse mask turns the
-    /// edge into blocks and the server pins every pixel of a set block as object, so it is used only for regions too big to
-    /// send whole. The server has no side limit on the PNG beyond <see cref="MaxBoundsSide"/>'s pixel budget.
+    /// A raster is held in memory (the dilate/erode editor draws it as one texture), so its side is limited by what the caller can
+    /// hold, not by anything the server accepts: masks reach the server as grid tiles. Full resolution keeps the mask edge exact; blocks
+    /// make the edge blocky, so they are used only for a region too big to hold at full resolution.
     /// </remarks>
     internal static class MaskScalePolicy
     {
-        /// <summary>Side of one SAM2 window in mosaic pixels. A region within this is sent at full resolution.</summary>
-        public const int SingleWindowSide = SegmentationMaskUnion.WindowSize;
-
-        /// <summary>Mosaic pixels per PNG pixel for a region larger than one window. Divides the 512-pixel cell grid.</summary>
-        public const int LargeRegionScale = 4;
-
-        /// <summary>Largest PNG side the client sends; the scale doubles until the PNG fits.</summary>
-        public const int MaxPngSide = 4096;
-
-        /// <summary>
-        /// Largest bounds side the client sends, in mosaic pixels. The server refuses bounds above 1 &lt;&lt; 26 pixels
-        /// (8192 x 8192); this leaves room for the outward snap.
-        /// </summary>
-        public const int MaxBoundsSide = 8000;
+        /// <summary>The largest raster side when the caller has no tighter limit (a GPU texture passes its own).</summary>
+        public const int DefaultMaxRasterSide = 4096;
 
         /// <summary>
         /// The layout for the inclusive mosaic region, with <paramref name="marginRasterPixels"/> free on every side
         /// (room to dilate an edited mask).
         /// </summary>
         /// <remarks>
-        /// Scale 1 when the region and its margin fit one window; otherwise <see cref="LargeRegionScale"/>, doubled while the
-        /// raster would exceed <paramref name="maxRasterSide"/> (<see cref="MaxPngSide"/> for a PNG on the wire; a raster that is
-        /// drawn as a texture passes the GPU's limit, so a mask too big for it is simply downsampled until it fits). The margin is
-        /// added after the scale is known, so it is always that many raster pixels.
+        /// Scale 1 when the region and its margin fit <paramref name="maxRasterSide"/> pixels on a side; otherwise the scale doubles until
+        /// they do (a raster drawn as a texture passes the GPU's limit, so a mask too big for it is simply downsampled). The margin is added
+        /// after the scale is known, so it is always that many raster pixels.
         /// </remarks>
-        public static MaskLayout Plan(long xMin, long xMax, long yMin, long yMax, int marginRasterPixels = 0, int maxRasterSide = MaxPngSide)
+        public static MaskLayout Plan(long xMin, long xMax, long yMin, long yMax, int marginRasterPixels = 0, int maxRasterSide = DefaultMaxRasterSide)
         {
-            long width = xMax - xMin + 1 + 2L * marginRasterPixels;
-            long height = yMax - yMin + 1 + 2L * marginRasterPixels;
-            int scale = width <= SingleWindowSide && height <= SingleWindowSide ? 1 : LargeRegionScale;
+            int scale = 1;
             while (true)
             {
                 long margin = (long)marginRasterPixels * scale;
