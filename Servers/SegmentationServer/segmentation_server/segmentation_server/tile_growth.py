@@ -409,6 +409,7 @@ class GrowthWalk:
         ]
         self._background_rects = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_rects or ()]
         self._background_patches: Dict[Cell, Optional[Tuple[Optional[NDArray], Optional[NDArray]]]] = {}
+        self._encoded_backgrounds: Dict[Cell, Optional[NDArray]] = {}
         self._omit_with_box = {(int(x), int(y)) for x, y in omit_with_box or ()}
         self._logit_iso = float(logit_iso)
         self._fg = [(int(x), int(y)) for x, y in foreground]
@@ -914,9 +915,10 @@ class GrowthWalk:
     def _with_background(self, cell: Cell, mask_logits: Optional[NDArray]) -> Optional[NDArray]:
         """``mask_logits`` with the client's background rectangles and masks painted into ``cell``'s window.
 
-        A background mask is ``-MASK_PROMPT_LOGIT`` wherever it covers; a background rectangle is only
-        ``-BACKGROUND_RECT_LOGIT`` and only where nothing positive is already known, because it says the
-        background is likely there, not certain. The input is not modified. Returns it unchanged when no
+        A background mask is ``-MASK_PROMPT_LOGIT`` wherever it covers, or, for a model with a prompt encoder, the
+        encoder's own negative (scaled by distance from the mask's edge, as the model was trained); a background
+        rectangle is only ``-BACKGROUND_RECT_LOGIT`` and only where nothing positive is already known, because it says
+        the background is likely there, not certain. The input is not modified. Returns it unchanged when no
         background shape reaches the window.
         """
         patch = self._background_patch(cell)
@@ -927,9 +929,25 @@ class GrowthWalk:
         if weak is not None:
             free = weak & (out <= 0)
             out[free] = np.minimum(out[free], -BACKGROUND_RECT_LOGIT)
-        if strong is not None:
+        if self._prompt_encoder is not None:
+            encoded = self._encoded_background(cell)
+            if encoded is not None:
+                negative = encoded < 0
+                out[negative] = encoded[negative]
+        elif strong is not None:
             out[strong] = -MASK_PROMPT_LOGIT
         return out
+
+    def _encoded_background(self, cell: Cell) -> Optional[NDArray]:
+        """The prompt encoder's negatives for the client's background masks in ``cell``'s window, or None when none reach it.
+
+        A ``LOGIT_WINDOW`` square of values <= 0. Worked out once per cell, since the encoding includes a distance transform.
+        """
+        if cell not in self._encoded_backgrounds:
+            self._encoded_backgrounds[cell] = (
+                self._prompt_encoder.background_logits(cell, self._background_masks) if self._prompt_encoder is not None else None
+            )
+        return self._encoded_backgrounds[cell]
 
     def _background_patch(self, cell: Cell) -> Optional[Tuple[Optional[NDArray], Optional[NDArray]]]:
         """Where the background rectangles (weak) and masks (strong) fall in ``cell``'s window, or None when neither does.
