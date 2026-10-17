@@ -728,7 +728,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
         private const int EditMaskMarginPixels = 128;
 
-        protected async void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
         {
             try
             {
@@ -738,9 +738,6 @@ namespace WebAnnotation.ViewModel
                     MessageBox.Show("There is no open section viewer.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-
-                // No segmentation session may have connected yet, so the server's capabilities (mask tile support) may not be known.
-                await SegmentationViewportSession.EnsureServerCapabilitiesAsync(parent);
 
                 Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
                 List<Geometry.Vector2[]> volumeRings = [];
@@ -759,43 +756,19 @@ namespace WebAnnotation.ViewModel
                 // The mask is at the view's tile level, like every other prompt; a large polygon becomes a coarse raster.
                 int downsample = SegmentationViewportSession.ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
 
-                // A server that takes mask tiles has no limit on the mask's bounds, only on how many tiles it touches; any other server
-                // gets the single Mask, which cannot go beyond the bounds the client cuts it to.
-                bool tiled = SegmentationViewportSession.ServerSupportsMaskTiles;
-                if (tiled)
-                {
-                    long spanned = SegmentationMaskTiles.TilesSpanned(RasterMask.BoundsOf(volumeRings[0]), downsample);
-                    if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
-                    {
-                        MessageBox.Show(
-                            $"This polygon spans {spanned} tiles at this zoom. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
-                            "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-                }
-
-                // The raster is drawn as one texture, so a polygon too big for the GPU is downsampled until it fits.
+                // The raster is edited in memory and drawn as one texture, so only the GPU limits it: a polygon too big for the
+                // texture is downsampled until it fits. The server's limits apply when the mask is sent (SubmitEditedMask).
+                Geometry.Rectangle polygonBounds = RasterMask.BoundsOf(volumeRings[0]);
+                SegmentationDiag.Log($"EditMask start ds={downsample} polygon={polygonBounds.Width:0}x{polygonBounds.Height:0} maxTexture={parent.MaxTextureSide}");
                 RasterMask mask = RasterMask.FromRings(
-                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, wholeRegion: tiled, maxRasterSide: parent.MaxTextureSide);
-
-                // Dilating can only grow the mask as far as the raster's margin, so the raster's bounds are the most tiles the accepted
-                // mask can reach: refuse here rather than after the user has edited.
-                if (tiled && mask is not null &&
-                    SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, downsample) > SegmentationMaskTiles.MaxForegroundTiles)
-                {
-                    MessageBox.Show(
-                        $"This polygon, with room to dilate it, would span {SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, downsample)} tiles at this zoom. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles.",
-                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
+                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, wholeRegion: true, maxRasterSide: parent.MaxTextureSide);
+                SegmentationDiag.Log(mask is null
+                    ? "EditMask raster is null: the polygon covers no pixel centre"
+                    : $"EditMask raster {mask.Width}x{mask.Height} scale={mask.Scale}");
 
                 if (mask is null)
                 {
-                    MessageBox.Show(
-                        tiled
-                            ? "This polygon is too small to make a mask."
-                            : "This polygon is too small, or wider than about 8000 pixels at this zoom, to make a mask. A segmentation server that supports mask tiles has no such limit; this one did not report that it does.",
-                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("This polygon is too small to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -816,6 +789,7 @@ namespace WebAnnotation.ViewModel
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error launching mask edit: {ex.Message}");
+                SegmentationDiag.Log($"EditMask failed: {ex}");
                 MessageBox.Show($"Failed to launch mask edit: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -825,15 +799,37 @@ namespace WebAnnotation.ViewModel
         /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
         /// shape, declining leaves it as it was.
         /// </summary>
-        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
+        private async void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
         {
             try
             {
                 SegmentationSeed? seed = SegmentationSeed.FromMask(edited);
-                if (seed is null)
+                if (seed is null || !edited.TryGetSetWorldBounds(out Geometry.Rectangle setBounds))
                 {
                     MessageBox.Show("The edited mask is empty, so there is nothing to segment from.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
+                }
+
+                // What the server accepts is only known here, where the mask is sent. A server that takes mask tiles has no limit on the
+                // mask's bounds, only on how many tiles it touches; any other server gets the single Mask, which is cut to
+                // MaskScalePolicy.MaxBoundsSide pixels around the seed.
+                await SegmentationViewportSession.EnsureServerCapabilitiesAsync(parent);
+                if (SegmentationViewportSession.ServerSupportsMaskTiles)
+                {
+                    long spanned = SegmentationMaskTiles.TilesSpanned(setBounds, edited.Downsample);
+                    if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
+                    {
+                        MessageBox.Show(
+                            $"The edited mask spans {spanned} tiles. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
+                            "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                }
+                else if (Math.Max(setBounds.Width, setBounds.Height) / edited.Downsample > MaskScalePolicy.MaxBoundsSide)
+                {
+                    parent.ShowTransientStatus(
+                        $"This segmentation server does not take mask tiles, so only about {MaskScalePolicy.MaxBoundsSide} pixels of the mask around its centre are sent.",
+                        durationMs: 10000);
                 }
 
                 // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.
