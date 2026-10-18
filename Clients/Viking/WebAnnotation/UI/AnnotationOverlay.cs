@@ -64,7 +64,6 @@ namespace WebAnnotation
 
         //private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
         private static readonly SectionAnnotationsViewModelCache cacheSectionAnnotations = new();
-        //private static LocationLinksViewModel linksView;
 
         private static AnnotationOverlay _CurrentOverlay = null;
         public static AnnotationOverlay CurrentOverlay => _CurrentOverlay;
@@ -767,7 +766,6 @@ namespace WebAnnotation
 
 
             _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
-            //linksView = new LocationLinksViewModel(parent); 
 
             autoPolygonizeController = new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
             cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
