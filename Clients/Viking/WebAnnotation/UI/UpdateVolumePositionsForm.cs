@@ -6,7 +6,8 @@ namespace WebAnnotation.UI
 {
     /// <summary>
     /// Chooses the volume transform and section ranges for a volume-position correction.
-    /// Cancel closes the dialog without starting a job. Start returns only after the range text parses and every number is in the volume.
+    /// Cancel closes the dialog without starting a job. Start is enabled when the range text parses and at least one requested section exists in the volume
+    /// (or the box is blank and the volume has sections). Requested numbers missing from the volume are skipped and reported in the dialog; <see cref="Sections"/> holds only the ones that exist.
     /// </summary>
     internal sealed class UpdateVolumePositionsForm : Form
     {
