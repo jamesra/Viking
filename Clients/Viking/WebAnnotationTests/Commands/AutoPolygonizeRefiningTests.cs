@@ -92,34 +92,37 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void TheHatchIsStripesInsideTheMaskAndNothingOutsideIt()
+        public void TheShimmerBandEntersBeforeThePolygonAndLeavesAfterIt()
         {
-            const int width = 8;
-            const int height = 8;
-            byte[] bytes = new byte[width * height];
-            for (int y = 2; y < 6; y++)
-            {
-                for (int x = 2; x < 6; x++)
-                    bytes[(y * width) + x] = 255;
-            }
+            (float startCenter, float halfWidth) = AutoPolygonizeProposal.ShimmerBand(10, 30, 0);
+            (float endCenter, _) = AutoPolygonizeProposal.ShimmerBand(10, 30, 1);
 
-            AutoPolygonizeMaskOverlay overlay = new(bytes, width, height, new Geometry.Rectangle(new Geometry.Vector2(0, 0), new Geometry.Vector2(32, 32)), 4);
-            Color white = Color.White;
+            Assert.IsTrue(halfWidth > 0, "the band has a width");
+            Assert.AreEqual(10 - halfWidth, startCenter, 1e-4, "at the start the band ends where the polygon begins");
+            Assert.AreEqual(30 + halfWidth, endCenter, 1e-4, "at the end the band starts where the polygon ends");
+        }
 
-            Color[] pixels = AutoPolygonizeProposal.HatchPixels(overlay, white);
+        [TestMethod]
+        public void TheShimmerClipIsRasterizedFinerThanTheMask()
+        {
+            AutoPolygonizeMaskOverlay overlay = new(new byte[8 * 8], 8, 8, new Geometry.Rectangle(new Geometry.Vector2(0, 0), new Geometry.Vector2(32, 32)), 4);
+            Polygon square = new(
+            [
+                new Geometry.Vector2(8, 8),
+                new Geometry.Vector2(24, 8),
+                new Geometry.Vector2(24, 24),
+                new Geometry.Vector2(8, 24),
+                new Geometry.Vector2(8, 8)
+            ]);
 
-            Assert.AreEqual(width * height, pixels.Length);
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                if (bytes[i] == 0)
-                    Assert.AreEqual(Color.Transparent, pixels[i], $"outside the mask at {i}");
-            }
+            int supersample = AutoPolygonizeProposal.ShimmerClipSupersample(overlay);
+            bool[] coarse = AutoPolygonizeProposal.RasterizePolygon(square, overlay, out _, out _);
+            bool[] fine = AutoPolygonizeProposal.RasterizePolygon(square, overlay, out _, out _, supersample);
 
-            Color[] inside = [.. Enumerable.Range(0, pixels.Length).Where(i => bytes[i] != 0).Select(i => pixels[i])];
-            Assert.IsTrue(inside.Contains(white), "some inside pixels carry the hatch");
-            Assert.IsTrue(inside.Contains(Color.Transparent), "and the stripes between them are clear");
-            Assert.AreEqual(white, pixels[(2 * width) + 2]);
-            Assert.AreEqual(Color.Transparent, pixels[(2 * width) + 4], "stripes are two texels wide along a row");
+            Assert.AreEqual(8, supersample, "two clip texels per image pixel, capped at eight per mask texel");
+            Assert.AreEqual(coarse.Length * supersample * supersample, fine.Length);
+            Assert.AreEqual(coarse.Count(inside => inside) * supersample * supersample, fine.Count(inside => inside),
+                "the square covers the same area at both resolutions");
         }
     }
 }

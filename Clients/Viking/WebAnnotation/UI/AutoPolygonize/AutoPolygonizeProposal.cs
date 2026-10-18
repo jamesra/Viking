@@ -390,6 +390,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Texels per line of the shimmer. Lines run perpendicular to the sweep direction.</summary>
         private const int ShimmerLineTexels = 2;
 
+        /// <summary>Most clip texels per mask texel along each axis when the shimmer clip is rasterized from the polygon.</summary>
+        private const int ShimmerClipMaxSupersample = 8;
+
+        /// <summary>Largest shimmer clip texture side, in texels.</summary>
+        private const int ShimmerClipMaxTexels = 4096;
+
         /// <summary>
         /// Depth test always passes and stencil is off. <see cref="DepthStencilState.None"/> drops
         /// the draw: the texture shader writes SV_Depth, and a disabled depth buffer discards those pixels.
@@ -427,12 +433,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         private bool shimmerDone;
         private int shimmerDurationMs;
         private float shimmerPeakAlpha;
-        private Texture2D? shimmerTexture;
+        private Texture2D? shimmerClipTexture;
         private TextureOverlayView? shimmerView;
-        private Color[]? shimmerPixels;
-        private bool[]? shimmerInside;
-        private int shimmerDiagonalLow;
-        private int shimmerDiagonalHigh;
+        private AutoPolygonizeMaskOverlay? shimmerClipSource;
+        private float shimmerDiagonalLow;
+        private float shimmerDiagonalHigh;
 
         public AutoPolygonizeProposal(
             AutoCirclePolygonizeController controller,
@@ -774,24 +779,23 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (graphicsDevice is null || shown?.MaskData is null)
                     return;
 
-                Color hatch = Color.White.SetAlpha(RefiningHatchAlpha);
-                hatchTexture = CreateHatchTexture(graphicsDevice, shown, hatch);
+                hatchTexture = CreateClipTexture(graphicsDevice, shown);
                 if (hatchTexture is null)
                     return;
 
-                hatchView = new TextureOverlayView(hatchTexture, shown.WorldBounds, hatch);
+                hatchView = new TextureOverlayView(hatchTexture, shown.WorldBounds, Color.White);
             }
 
-            DepthStencilState previous = graphicsDevice.DepthStencilState;
-            graphicsDevice.DepthStencilState = MaskOverlayDepthState;
-            try
-            {
-                hatchView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, MaskOverlayDepthState);
-            }
-            finally
-            {
-                graphicsDevice.DepthStencilState = previous;
-            }
+            DrawStripes(
+                graphicsDevice,
+                scene,
+                hatchView,
+                new Vector2(hatchTexture!.Width, hatchTexture.Height),
+                new Vector2(1, 1),
+                2 * RefiningHatchStripeTexels,
+                Vector2.Zero,
+                SegmentationMaskPolygonizer.SoftMaskForeground / 255f,
+                RefiningHatchAlpha);
         }
 
         /// <summary>
@@ -842,24 +846,28 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             try
             {
-                if (shimmerTexture is null || shimmerTexture.Width != shown.Width || shimmerTexture.Height != shown.Height)
-                {
-                    shimmerTexture?.Dispose();
-                    shimmerTexture = new Texture2D(graphicsDevice, shown.Width, shown.Height);
-                    shimmerPixels = new Color[shown.MaskData.Length];
-                    shimmerView = new TextureOverlayView(shimmerTexture, shown.WorldBounds, Color.White);
-                    shimmerInside = null;
-                }
-
                 // The ring is the traced polygon, which can be much smaller than the raw mask (stray blobs,
-                // filled holes), so clip to the polygon rather than to the mask.
-                if (shimmerInside is null)
+                // filled holes), so clip to the polygon rather than to the mask. The clip is rasterized finer than
+                // the mask so its edge follows the polygon closely once the shader filters it.
+                if (shimmerView is null || !ReferenceEquals(shimmerClipSource, shown))
                 {
-                    shimmerInside = RasterizePolygon(Polygon, shown, out shimmerDiagonalLow, out shimmerDiagonalHigh);
-                }
+                    DisposeShimmer();
+                    int supersample = ShimmerClipSupersample(shown);
+                    bool[] inside = RasterizePolygon(Polygon, shown, out int low, out int high, supersample);
+                    byte[] clip = new byte[inside.Length];
+                    for (int i = 0; i < inside.Length; i++)
+                        clip[i] = inside[i] ? byte.MaxValue : byte.MinValue;
 
-                ShimmerPixels(shown, shimmerInside, shimmerDiagonalLow, shimmerDiagonalHigh, progress, shimmerPeakAlpha, shimmerPixels!);
-                shimmerTexture.SetData(shimmerPixels);
+                    shimmerClipTexture = new Texture2D(
+                        graphicsDevice, shown.Width * supersample, shown.Height * supersample, false, SurfaceFormat.Alpha8);
+                    shimmerClipTexture.SetData(clip);
+                    shimmerView = new TextureOverlayView(shimmerClipTexture, shown.WorldBounds, Color.White);
+                    shimmerClipSource = shown;
+
+                    // The shader measures from texel corners, so a texel centre's x + y is its index sum plus one.
+                    shimmerDiagonalLow = (low + 1f) / supersample;
+                    shimmerDiagonalHigh = (high + 1f) / supersample;
+                }
             }
             catch (Exception)
             {
@@ -868,26 +876,26 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            DepthStencilState previous = graphicsDevice.DepthStencilState;
-            graphicsDevice.DepthStencilState = MaskOverlayDepthState;
-            try
-            {
-                shimmerView!.Draw(graphicsDevice, scene, OverlayStyle.Alpha, MaskOverlayDepthState);
-            }
-            finally
-            {
-                graphicsDevice.DepthStencilState = previous;
-            }
+            (float center, float halfWidth) = ShimmerBand(shimmerDiagonalLow, shimmerDiagonalHigh, progress);
+            DrawStripes(
+                graphicsDevice,
+                scene,
+                shimmerView!,
+                new Vector2(shown.Width, shown.Height),
+                new Vector2(1, -1),
+                2 * ShimmerLineTexels,
+                new Vector2(center, halfWidth),
+                0.5f,
+                shimmerPeakAlpha);
         }
 
-        /// <summary>Releases the shimmer texture. Does not rearm the shimmer.</summary>
+        /// <summary>Releases the shimmer clip texture. Does not rearm the shimmer.</summary>
         private void DisposeShimmer()
         {
             shimmerView = null;
-            shimmerTexture?.Dispose();
-            shimmerTexture = null;
-            shimmerPixels = null;
-            shimmerInside = null;
+            shimmerClipTexture?.Dispose();
+            shimmerClipTexture = null;
+            shimmerClipSource = null;
         }
 
         /// <summary>
@@ -895,16 +903,19 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// minus holes, even-odd). Texel centres map to world space exactly as the merged mask does: row 0 is the top
         /// of <see cref="AutoPolygonizeMaskOverlay.WorldBounds"/>. <paramref name="diagonalLow"/> and
         /// <paramref name="diagonalHigh"/> are the smallest and largest x+y of any marked texel, so the shimmer sweeps
-        /// only across the polygon (both 0 when nothing is marked).
+        /// only across the polygon (both 0 when nothing is marked). With <paramref name="supersample"/> above 1 the grid
+        /// has that many texels per mask texel along each axis, and the diagonals are in those finer texels.
         /// </summary>
         internal static bool[] RasterizePolygon(
             Polygon polygon,
             AutoPolygonizeMaskOverlay overlay,
             out int diagonalLow,
-            out int diagonalHigh)
+            out int diagonalHigh,
+            int supersample = 1)
         {
-            int width = overlay.Width;
-            int height = overlay.Height;
+            supersample = Math.Max(1, supersample);
+            int width = overlay.Width * supersample;
+            int height = overlay.Height * supersample;
             bool[] inside = new bool[width * height];
             diagonalLow = int.MaxValue;
             diagonalHigh = int.MinValue;
@@ -957,41 +968,68 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Fills <paramref name="pixels"/> with one frame of the shimmer: lines along the x-y diagonal, visible only
-        /// where <paramref name="inside"/> is set and only within a band centred on the x+y diagonal. The band moves
-        /// from the lower-left (<paramref name="progress"/> 0) to the upper-right (1) across
-        /// <paramref name="diagonalLow"/> to <paramref name="diagonalHigh"/>, the span of the inside texels.
-        /// <paramref name="peakAlpha"/> is the alpha at the centre of the band. Separate from the draw so it needs no GPU.
+        /// Centre and half width, in mask texels along x + y, of the shimmer band at <paramref name="progress"/>.
+        /// The band starts just before <paramref name="diagonalLow"/> (progress 0) and ends just past
+        /// <paramref name="diagonalHigh"/> (progress 1), so it enters and leaves the polygon fully.
         /// </summary>
-        internal static void ShimmerPixels(
-            AutoPolygonizeMaskOverlay overlay,
-            bool[] inside,
-            int diagonalLow,
-            int diagonalHigh,
-            double progress,
-            float peakAlpha,
-            Color[] pixels)
+        internal static (float Center, float HalfWidth) ShimmerBand(float diagonalLow, float diagonalHigh, double progress)
         {
             double span = Math.Max(1, diagonalHigh - diagonalLow);
             double halfBand = Math.Max(2.0, span * ShimmerBandFraction / 2.0);
             double center = diagonalLow - halfBand + (progress * (span + (2.0 * halfBand)));
+            return ((float)center, (float)halfBand);
+        }
 
-            for (int y = 0; y < overlay.Height; y++)
+        /// <summary>
+        /// Clip texels per mask texel for the shimmer: two per image pixel, at most
+        /// <see cref="ShimmerClipMaxSupersample"/>, and small enough that no side passes <see cref="ShimmerClipMaxTexels"/>.
+        /// </summary>
+        internal static int ShimmerClipSupersample(AutoPolygonizeMaskOverlay overlay)
+        {
+            int wanted = Math.Max(1, Math.Min(ShimmerClipMaxSupersample, overlay.PixelScale * 2));
+            int largest = Math.Max(1, Math.Max(overlay.Width, overlay.Height));
+            return Math.Max(1, Math.Min(wanted, ShimmerClipMaxTexels / largest));
+        }
+
+        /// <summary>
+        /// Draws white stripes over <paramref name="view"/> with the stripe shader, inside the area where the view's
+        /// texture alpha is above <paramref name="clipLevel"/>. The shader anti-aliases the stripe and clip edges per
+        /// pixel. <paramref name="texelCount"/> is the mask size the other lengths are measured in; see
+        /// <see cref="OverlayShaderEffect.Techniques.StripeOverlayEffect"/>.
+        /// </summary>
+        private static void DrawStripes(
+            GraphicsDevice graphicsDevice,
+            VikingXNA.Scene scene,
+            TextureOverlayView view,
+            Vector2 texelCount,
+            Vector2 direction,
+            float period,
+            Vector2 band,
+            float clipLevel,
+            float alpha)
+        {
+            OverlayShaderEffect? effect = DeviceEffectsStore<OverlayShaderEffect>.TryGet(graphicsDevice);
+            if (effect is null || view.Texture is null)
+                return;
+
+            effect.Technique = OverlayShaderEffect.Techniques.StripeOverlayEffect;
+            effect.StripeClipTexture = view.Texture;
+            effect.StripeTexelCount = texelCount;
+            effect.StripeDirection = direction;
+            effect.StripePeriod = period;
+            effect.StripeBand = band;
+            effect.StripeClipLevel = clipLevel;
+            effect.StripeAlpha = alpha;
+
+            DepthStencilState previous = graphicsDevice.DepthStencilState;
+            graphicsDevice.DepthStencilState = MaskOverlayDepthState;
+            try
             {
-                for (int x = 0; x < overlay.Width; x++)
-                {
-                    int index = (y * overlay.Width) + x;
-                    double distance = Math.Abs(x + y - center);
-                    bool line = (((x - y + overlay.Height) / ShimmerLineTexels) & 1) == 0;
-                    if (!inside[index] || !line || distance >= halfBand)
-                    {
-                        pixels[index] = Color.Transparent;
-                        continue;
-                    }
-
-                    double falloff = 1.0 - (distance / halfBand);
-                    pixels[index] = Color.White.SetAlpha((float)(peakAlpha * falloff * falloff * (3.0 - (2.0 * falloff))));
-                }
+                TextureOverlayView.Draw(graphicsDevice, scene, effect, [view], MaskOverlayDepthState);
+            }
+            finally
+            {
+                graphicsDevice.DepthStencilState = previous;
             }
         }
 
@@ -1004,47 +1042,24 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Diagonal stripes over the inside of the mask: every other stripe is <paramref name="color"/>, the rest
-        /// and the outside are transparent.
+        /// The mask's soft field as an Alpha8 texture, for the stripe shader to clip to. The shader filters it
+        /// linearly, so the clip edge is a smooth contour through the field rather than a staircase of texels.
         /// </summary>
-        internal static Texture2D? CreateHatchTexture(
-            GraphicsDevice graphicsDevice,
-            AutoPolygonizeMaskOverlay overlay,
-            Color color)
+        internal static Texture2D? CreateClipTexture(GraphicsDevice graphicsDevice, AutoPolygonizeMaskOverlay overlay)
         {
             if (overlay.MaskData.Length != overlay.Width * overlay.Height)
                 return null;
 
             try
             {
-                Texture2D texture = new(graphicsDevice, overlay.Width, overlay.Height);
-                texture.SetData(HatchPixels(overlay, color));
+                Texture2D texture = new(graphicsDevice, overlay.Width, overlay.Height, false, SurfaceFormat.Alpha8);
+                texture.SetData(overlay.MaskData);
                 return texture;
             }
             catch (Exception)
             {
                 return null;
             }
-        }
-
-        /// <summary>
-        /// The pixels of <see cref="CreateHatchTexture"/>, separate so the pattern can be tested without a GPU.
-        /// </summary>
-        internal static Color[] HatchPixels(AutoPolygonizeMaskOverlay overlay, Color color)
-        {
-            Color[] pixels = new Color[overlay.MaskData.Length];
-            for (int y = 0; y < overlay.Height; y++)
-            {
-                for (int x = 0; x < overlay.Width; x++)
-                {
-                    int index = (y * overlay.Width) + x;
-                    bool inside = overlay.MaskData[index] >= SegmentationMaskPolygonizer.SoftMaskForeground;
-                    bool stripe = (((x + y) / RefiningHatchStripeTexels) & 1) == 0;
-                    pixels[index] = inside && stripe ? color : Color.Transparent;
-                }
-            }
-
-            return pixels;
         }
 
         /// <summary>

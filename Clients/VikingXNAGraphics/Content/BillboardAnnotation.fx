@@ -721,3 +721,77 @@ technique CircleRingOverlayEffect
 		PixelShader = compile ps_4_0 CircleRingPixelShaderFunction();
 	}
 }
+
+
+////////////////////////////////////////
+// Stripe effect (StripeOverlayEffect)
+////////////////////////////////////////
+
+//White diagonal stripes inside a clip mask, worked out per pixel so stripe and clip edges stay smooth at any zoom.
+//Positions are measured in mask texels (TexCoord * stripeTexelCount), so the stripes are tied to the image and scale with zoom.
+uniform const texture StripeClipTexture;
+
+//Linear filtering makes the clip edge a smooth curve through the mask instead of texel-sized steps.
+uniform const sampler StripeClipSampler : register(s2) = sampler_state
+{
+    Texture = (StripeClipTexture);
+    MipFilter = POINT;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+};
+
+//Mask texels across and down the quad. Every other stripe size below is in these texels.
+uniform const float2 stripeTexelCount = float2(1, 1);
+//The stripes run perpendicular to this direction, e.g. (1, 1) or (1, -1).
+uniform const float2 stripeDirection = float2(1, 1);
+//Distance along stripeDirection from one stripe to the next: a lit stripe and a clear gap of equal width.
+uniform const float stripePeriod = 4;
+//Optional band across x + y that limits the lit stripes: x is its centre, y its half width. y <= 0 lights them all.
+uniform const float2 stripeBand = float2(0, 0);
+//Clip texture alpha (0..1) at the edge of the clipped area.
+uniform const float stripeClipLevel = 0.5;
+//Alpha of a fully lit stripe.
+uniform const float stripeAlpha = 1;
+
+PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
+{
+	PixelShaderOutput output;
+	output.Depth = saturate((input.CenterDistance.x + input.CenterDistance.y) * 0.5 + 0.5);
+
+	float2 texel = input.TexCoord * stripeTexelCount;
+
+	//Clip edge, faded over about one screen pixel.
+	float clipValue = tex2D(StripeClipSampler, input.TexCoord).a - stripeClipLevel;
+	float clipCoverage = saturate(clipValue / max(fwidth(clipValue), 1e-5) + 0.5);
+
+	//Stripes: edge is the distance to the nearest stripe edge in periods, positive on a stripe and negative in a gap.
+	float u = dot(texel, stripeDirection) / stripePeriod;
+	float uWidth = max(fwidth(u), 1e-5);
+	float edge = 0.25 - abs(frac(u + 0.25) - 0.5);
+	float stripe = saturate(edge / uWidth + 0.5);
+	//Stripes only a few pixels apart would alias, so fade them toward their average coverage.
+	stripe = lerp(stripe, 0.5, saturate((uWidth * 4.0) - 1.0));
+
+	float band = 1;
+	if (stripeBand.y > 0)
+	{
+		band = 1 - saturate(abs(texel.x + texel.y - stripeBand.x) / stripeBand.y);
+		band = band * band * (3 - (2 * band));
+	}
+
+	float alpha = stripeAlpha * clipCoverage * stripe * band;
+	clip(alpha <= 0.0 ? -1.0 : 1.0);
+	output.Color = float4(1, 1, 1, alpha);
+	return output;
+}
+
+technique StripeOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 StripePixelShaderFunction();
+	}
+}

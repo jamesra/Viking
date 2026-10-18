@@ -143,7 +143,14 @@ namespace VikingXNAGraphics
             /// The band is dark over bright background and light over dark background, so the background texture must be set.
             /// Output limited to unit circle
             /// </summary>
-            CircleRingOverlayEffect
+            CircleRingOverlayEffect,
+
+            /// <summary>
+            /// Procedural white stripes inside the alpha of <see cref="OverlayShaderEffect.StripeClipTexture"/>, anti-aliased per pixel.
+            /// Sizes are in the mask texels given by <see cref="OverlayShaderEffect.StripeTexelCount"/>, so the stripes scale with zoom.
+            /// Normal alpha blending
+            /// </summary>
+            StripeOverlayEffect
         };
 
         public Effect effect;
@@ -168,6 +175,14 @@ namespace VikingXNAGraphics
         private EffectParameter _RingContrast;
         private EffectParameter _RingOpacity;
         private EffectParameter _RingAdaptMid;
+
+        private EffectParameter _StripeClipTexture;
+        private EffectParameter _StripeTexelCount;
+        private EffectParameter _StripeDirection;
+        private EffectParameter _StripePeriod;
+        private EffectParameter _StripeBand;
+        private EffectParameter _StripeClipLevel;
+        private EffectParameter _StripeAlpha;
 
         private EffectParameter _InputLumaAlpha;
 
@@ -264,6 +279,53 @@ namespace VikingXNAGraphics
             set => _RingOpacity.SetValue(value);
         }
 
+        /// <summary>
+        /// Texture whose alpha clips <see cref="Techniques.StripeOverlayEffect"/>. Sampled with linear filtering.
+        /// </summary>
+        public Texture StripeClipTexture
+        {
+            set => _StripeClipTexture.SetValue(value);
+        }
+
+        /// <summary>Mask texels across and down the quad; the other stripe sizes are in these texels.</summary>
+        public Vector2 StripeTexelCount
+        {
+            set => _StripeTexelCount.SetValue(value);
+        }
+
+        /// <summary>Stripes run perpendicular to this direction, in texels, e.g. (1, 1) or (1, -1).</summary>
+        public Vector2 StripeDirection
+        {
+            set => _StripeDirection.SetValue(value);
+        }
+
+        /// <summary>Distance along <see cref="StripeDirection"/> from one stripe to the next. Stripe and gap are equal.</summary>
+        public float StripePeriod
+        {
+            set => _StripePeriod.SetValue(value);
+        }
+
+        /// <summary>
+        /// Band across x + y that limits the stripes: X is its centre and Y its half width, in texels.
+        /// A half width of zero or less lights every stripe.
+        /// </summary>
+        public Vector2 StripeBand
+        {
+            set => _StripeBand.SetValue(value);
+        }
+
+        /// <summary>Clip texture alpha (0..1) at the edge of the striped area.</summary>
+        public float StripeClipLevel
+        {
+            set => _StripeClipLevel.SetValue(value);
+        }
+
+        /// <summary>Alpha of a fully lit stripe.</summary>
+        public float StripeAlpha
+        {
+            set => _StripeAlpha.SetValue(value);
+        }
+
         public float InputLumaAlphaValue
         {
             get => _InputLumaAlpha.GetValueSingle();
@@ -326,6 +388,14 @@ namespace VikingXNAGraphics
             _RingContrast = effect.Parameters["ringContrast"];
             _RingOpacity = effect.Parameters["ringOpacity"];
             _RingAdaptMid = effect.Parameters["ringAdaptMid"];
+
+            _StripeClipTexture = effect.Parameters["StripeClipTexture"];
+            _StripeTexelCount = effect.Parameters["stripeTexelCount"];
+            _StripeDirection = effect.Parameters["stripeDirection"];
+            _StripePeriod = effect.Parameters["stripePeriod"];
+            _StripeBand = effect.Parameters["stripeBand"];
+            _StripeClipLevel = effect.Parameters["stripeClipLevel"];
+            _StripeAlpha = effect.Parameters["stripeAlpha"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
             _AnnotationHSLColor = effect.Parameters["AnnotationHSLColor"];
