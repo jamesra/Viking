@@ -211,54 +211,5 @@ namespace WebAnnotation
                 DrawTypeBucket(typeGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
             }
         }
-
-        /// <summary>
-        /// Divide the label into two lines
-        /// </summary>
-        /// <param name="label"></param>
-        /// <returns></returns>
-        public static string[] SplitLabel(string label)
-        {
-            //Split the string at the first space before the midpoint
-            string topRow = "";
-            string bottomRow = "";
-            string[] labelParts = label.Split();
-
-            if (labelParts.Length <= 2)
-            {
-                return labelParts;
-            }
-
-            foreach (string word in labelParts)
-            {
-                if (topRow.Length + word.Length + 1 <= (label.Length / 2))
-                {
-                    if (topRow.Length == 0)
-                    {
-                        topRow += word;
-                    }
-                    else
-                    {
-                        topRow += " " + word;
-                    }
-                }
-                else
-                {
-                    if (bottomRow.Length == 0)
-                    {
-                        bottomRow += word;
-                    }
-                    else
-                    {
-                        bottomRow += " " + word;
-                    }
-                }
-            }
-
-            topRow = topRow.TrimEnd();
-            bottomRow = bottomRow.TrimEnd();
-
-            return [topRow, bottomRow];
-        }
     }
 }
