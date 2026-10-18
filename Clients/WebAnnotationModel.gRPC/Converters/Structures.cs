@@ -124,8 +124,15 @@ namespace WebAnnotationModel.gRPC.Converters
                 nameof(update));
         }
 
+        /// <summary>
+        /// Copies the server's values onto a cached structure. The setters mark the object for Save, so a structure
+        /// that had no pending edit is set back to <see cref="DBACTION.NONE"/>: it mirrors the server, as after the
+        /// WCF store's InternalUpdate. Pending local edits keep their DBAction.
+        /// </summary>
+        /// <returns>True if any property changed.</returns>
         public async Task<bool> Update(StructureObj obj, Structure update)
         {
+            DBACTION before = obj.DBAction;
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
             try
@@ -146,7 +153,10 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.PropertyChanged -= OnPropertyChanged;
             }
 
+            if (before == DBACTION.NONE && obj.DBAction != DBACTION.NONE)
+                obj.DBAction = DBACTION.NONE;
+
             return updated;
-        } 
+        }
     }
 }

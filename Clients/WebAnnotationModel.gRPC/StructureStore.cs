@@ -33,7 +33,7 @@ namespace WebAnnotationModel.gRPC
                 IObjectUpdater<StructureObj, IStructure> objUpdater,
                 IObjectConverter<ILocation, LocationObj> serverLocationObjToObjConverter,
                 IStructureLinkStore structureLinkStore)
-            : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter)
+            : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter, objUpdater)
         {
             StructureClientFactory = structureClientFactory;
             ServerLocationObjToObjConverter = serverLocationObjToObjConverter;

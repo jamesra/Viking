@@ -47,11 +47,15 @@ namespace WebAnnotationModel.gRPC
           
         public event PropertyChangedEventHandler PropertyChanged;
 
+        /// <param name="objUpdater">Applies server values to an object already cached. Used by the handler built when
+        /// <paramref name="serverQueryResultsHandler"/> is null; without it, cached objects returned by a server
+        /// query are reported Unchanged and keep their old values.</param>
         protected StoreBaseWithKeyAndParent(IServerAnnotationsClientFactory<IServerAnnotationsClient<KEY, SERVER_OBJECT, CREATION_DATA_PARAM, CREATION_RESULT>> clientFactory,
             IStoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT> serverQueryResultsHandler,
             IObjectConverter<OBJECT, SERVER_OBJECT> objToServerObjConverter,
-            IObjectConverter<SERVER_OBJECT, OBJECT> serverObjToObjConverter) : base(clientFactory, serverQueryResultsHandler, objToServerObjConverter,
-            serverObjToObjConverter)
+            IObjectConverter<SERVER_OBJECT, OBJECT> serverObjToObjConverter,
+            IObjectUpdater<OBJECT, SERVER_OBJECT> objUpdater = null) : base(clientFactory, serverQueryResultsHandler, objToServerObjConverter,
+            serverObjToObjConverter, objUpdater: objUpdater)
         {
             RootObjects = new ReadOnlyObservableCollection<KEY>(_rootObjects);
         }
