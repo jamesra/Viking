@@ -119,11 +119,8 @@ namespace WebAnnotation.ViewModel
         {
             get => _Color.GetAlpha();
 
-            set
-            {
-                _Color.SetAlpha(value);
-                lineView?.Color = lineView.Color.SetAlpha(value);
-            }
+            // SetAlpha returns a new colour, so assign it back; the mouse-over effect halves the link's alpha here.
+            set => Color = _Color.SetAlpha(value);
         }
 
         public int MinSection { get; private set; }

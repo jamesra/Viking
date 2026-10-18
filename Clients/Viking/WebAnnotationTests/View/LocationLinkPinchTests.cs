@@ -61,5 +61,25 @@ namespace WebAnnotationTests
             Assert.AreEqual(3, LocationLinkView.HalfWidthAt(50, 100, 10, 3, 8), Tolerance);
             Assert.AreEqual(3, LocationLinkView.HalfWidthAt(100, 100, 10, 3, 8), Tolerance);
         }
+
+        /// <summary>
+        /// The mouse-over effect halves an <see cref="VikingXNAGraphics.IColorView"/>'s alpha and restores it on
+        /// leave. The link's Alpha setter used to discard the colour SetAlpha returned, so hovering a link did nothing.
+        /// </summary>
+        [TestMethod]
+        public void HoveringALinkHalvesItsAlphaAndLeavingRestoresIt()
+        {
+            // The constructors read the location store; the colour is all this test needs.
+            LocationLinkView link = (LocationLinkView)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(LocationLinkView));
+            link.Color = new Microsoft.Xna.Framework.Color((byte)200, (byte)100, (byte)50, (byte)64);
+            WebAnnotation.Actions.MouseOverLocationCanvasViewEffect effect = new();
+
+            effect.viewObj = link;
+            Assert.AreEqual(32, link.Color.A, 1, "hovered");
+            Assert.AreEqual(200, link.Color.R, "only the alpha changes");
+
+            effect.viewObj = null;
+            Assert.AreEqual(64, link.Color.A, "left");
+        }
     }
 }
