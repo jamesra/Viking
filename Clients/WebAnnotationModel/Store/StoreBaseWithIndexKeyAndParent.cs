@@ -247,12 +247,8 @@ namespace WebAnnotationModel
             foreach (OBJECT newObj in listObjNeedingParents)
             {
                 //Added the false for dynamic structure loading change, may cause bugs
+                //Parent stays null if it is not cached, e.g. it was deleted from the server; the object is kept.
                 newObj.Parent = GetObjectByID(newObj.ParentID.Value, false);
-                if (newObj.Parent != null)
-                {
-                    //TODO: This shouldn't happen unless the parent was somehow deleted from the server...
-                    //InternalDelete(newObj.ID);
-                }
             }
 
             return inventory;
