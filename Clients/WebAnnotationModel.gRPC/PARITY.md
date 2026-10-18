@@ -5,7 +5,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | WCF member | gRPC equivalent | Status | Test | Benchmark |
 |---|---|---|---|---|
 | StoreBaseWithKey.GetObjectsForSection / GetObjectsForSectionAsynch | `GetObjectsForSectionAsync` | done | | |
-| GetLocalObjectsForSection (all stores) | `SectionIndexedStore.GetLocalObjectsForSection` | done | | |
+| GetLocalObjectsForSection (all stores) | `LocationStore.GetLocalObjectsForSection` (section index); `StoreBaseWithKey` section queries read the same-named store member | done | | |
 | GetLastQueryTimeForSection / AdvanceLastQueryTimeForSection | `GetLastQueryTimeForSection`, `AdvanceSectionQueryTime`, `TouchSectionQueryTime` | done | | |
 | HasOutstandingSectionQuery, RemoveSection, FreeExcessSections | same names (plus `CancelExcessSectionQueries`) | done | | |
 | ProxyGetByID / ProxyGetByIDs | `TryGetObjectByID`, `TryGetObjectsByIDs` | done | | |

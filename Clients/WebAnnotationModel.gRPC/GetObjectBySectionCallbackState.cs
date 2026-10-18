@@ -1,52 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace WebAnnotationModel
 {
-    /// <summary>
-    /// In-flight section query plus its cancellation source. Presence of a key in OutstandingSectionQueries means a query is running.
-    /// </summary>
-    readonly struct TaskAndToken<T>
-    {
-        public readonly System.Threading.Tasks.Task<T> Task;
-        public readonly CancellationTokenSource TokenSource;
-        public readonly DateTime CreationTime;
-
-        public TaskAndToken(System.Threading.Tasks.Task<T> task, CancellationTokenSource source)
-        {
-            Task = task;
-            TokenSource = source;
-            CreationTime = DateTime.UtcNow;
-        }
-
-        public static int CompareByTime(TaskAndToken<T> x, TaskAndToken<T> y)
-        { 
-            return x.CreationTime.CompareTo(y.CreationTime);
-        }
-    }
-
-    readonly struct KeyedTaskAndToken<KEY, T>
-    {
-        public readonly KEY Key;
-        public readonly System.Threading.Tasks.Task<T> Task;
-        public readonly CancellationTokenSource TokenSource;
-        public readonly DateTime CreationTime;
-
-        public KeyedTaskAndToken(KEY k, System.Threading.Tasks.Task<T> task, CancellationTokenSource source)
-        {
-            Key = k;
-            Task = task;
-            TokenSource = source;
-            CreationTime = DateTime.UtcNow;
-        }
-
-        public static int CompareByTime(TaskAndToken<T> x, TaskAndToken<T> y)
-        {
-            return x.CreationTime.CompareTo(y.CreationTime);
-        }
-    }
-
     /// <summary>
     /// WCF-era async callback bag for a section query.
     /// </summary>
