@@ -31,6 +31,7 @@
         <Compile Include="View\LocationLinkPinchTests.cs" />
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="ChannelPoolTests.cs" />
+        <Compile Include="UndoManagerTests.cs" />
         <Compile Include="Commands\SegmentationPenButtonsTests.cs" />
         <Compile Include="Commands\PenCancelButtonTests.cs" />
         <Compile Include="Commands\SegmentationMaskEditTests.cs" />
