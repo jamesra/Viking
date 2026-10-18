@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="WebAnnotationModel.gRPC.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
     <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj" />
