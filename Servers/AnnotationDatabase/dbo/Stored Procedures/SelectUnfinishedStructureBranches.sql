@@ -1,4 +1,10 @@
-﻿
+﻿-- SelectUnfinishedStructureBranches: IDs of the locations of structure @StructureID that have
+-- exactly one location link and are neither Terminal nor OffEdge (open branch ends), by ID.
+-- Locations with no links are not returned.
+-- @StructureID: Structure.ID whose locations are checked.
+-- Callers: gRPC StructureService.GetUnfinishedLocations and WCF AnnotateService.GetUnfinishedLocations.
+-- A copy lives in scripts/minimal-schema.sql; keep the two in step.
+
 			 CREATE PROCEDURE [SelectUnfinishedStructureBranches]
 				@StructureID bigint
 			 AS

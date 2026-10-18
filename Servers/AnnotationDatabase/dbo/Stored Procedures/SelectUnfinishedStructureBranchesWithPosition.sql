@@ -1,4 +1,10 @@
-﻿
+﻿-- SelectUnfinishedStructureBranchesWithPosition: same rows as dbo.SelectUnfinishedStructureBranches,
+-- with each location's X, Y, Z and Radius.
+-- @StructureID: Structure.ID whose locations are checked.
+-- Callers: gRPC StructureService.GetUnfinishedLocationsWithPosition and
+-- WCF AnnotateService.GetUnfinishedLocationsWithPosition.
+-- A copy lives in scripts/minimal-schema.sql; keep the two in step.
+
 			 CREATE PROCEDURE [dbo].[SelectUnfinishedStructureBranchesWithPosition]
 				@StructureID bigint
 			 AS

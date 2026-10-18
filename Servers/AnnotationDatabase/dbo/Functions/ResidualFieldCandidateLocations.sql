@@ -1,3 +1,9 @@
+-- ResidualFieldCandidateLocations: every Location row whose structure (ParentID) has at least
+-- @MinLocations locations; a lossy prefilter for residual-field section correction.
+-- @MinLocations: minimum location count per structure; NULL or 0 means 3 (the default).
+-- Callers: dbo.SelectResidualFieldCandidateLocations; AnnotationContext.ResidualFieldCandidateLocations
+-- (ConnectomeDataModelCore); ConnectomeEntities.SelectResidualFieldCandidateLocations
+-- (ConnectomeDataModel), used by the OData ResidualFieldLocations endpoint.
 
 		    CREATE FUNCTION [dbo].[ResidualFieldCandidateLocations]
 			(

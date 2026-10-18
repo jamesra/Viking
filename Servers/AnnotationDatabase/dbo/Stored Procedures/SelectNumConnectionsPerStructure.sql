@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[SelectNumConnectionsPerStructure]
+﻿-- SelectNumConnectionsPerStructure: for each parent structure, the number of its child structures
+-- that are the source or target of a StructureLink. Returns StructureID (the parent), Label (the
+-- parent's label) and NumConnections, ordered by NumConnections descending.
+-- Parameters: none.
+-- Callers: WCF AnnotateService.getTopConnectedStructures (num = 1) through EF6
+-- ConnectomeEntities.SelectNumConnectionsPerStructure; AnnotationContextProcedures wrapper.
+CREATE PROCEDURE [dbo].[SelectNumConnectionsPerStructure]
 			AS
 			 (
  select CS.ParentID as StructureID, ParentStructure.Label as Label, COUNT(CS.ParentID) as NumConnections 
