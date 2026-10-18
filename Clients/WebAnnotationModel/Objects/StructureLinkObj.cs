@@ -44,55 +44,34 @@ namespace WebAnnotationModel
             return ((IStructureLink)this).Equals(other);
         }
 
-        public override int GetHashCode() => (int)(SourceID % int.MaxValue);
+        /// <summary>
+        /// The first endpoint in the key's canonical order: the lower ID of a bidirectional link, else <see cref="SourceID"/>.
+        /// A bidirectional link (A,B) is the same link as (B,A), so equality, hashing and ordering all use this canonical pair.
+        /// </summary>
+        private long First => Bidirectional ? Math.Min(SourceID, TargetID) : SourceID;
 
-        public bool Equals(StructureLinkKey other)
-        {
-            if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
-            {
-                if (SourceID == other.SourceID &&
-                    TargetID == other.TargetID)
-                    return true;
-                else if (SourceID == other.TargetID &&
-                         TargetID == other.SourceID)
-                    return true;
+        /// <summary>The second endpoint in canonical order: the higher ID of a bidirectional link, else <see cref="TargetID"/>.</summary>
+        private long Second => Bidirectional ? Math.Max(SourceID, TargetID) : TargetID;
 
-                return false;
-            }
-            else
-                return this.SourceID == other.SourceID && this.TargetID == other.TargetID && this.Bidirectional == other.Bidirectional;
-        }
+        /// <summary>Hashes the canonical pair, so keys that compare equal (including reversed bidirectional keys) hash alike.</summary>
+        public override int GetHashCode() => unchecked((First.GetHashCode() * 397) ^ Second.GetHashCode() ^ (Bidirectional ? 1 : 0));
 
+        /// <summary>True for the same link: same endpoints and direction, or swapped endpoints when both keys are bidirectional.</summary>
+        public bool Equals(StructureLinkKey other) =>
+            First == other.First && Second == other.Second && Bidirectional == other.Bidirectional;
+
+        /// <summary>Orders by the canonical pair, then directional before bidirectional; returns 0 exactly when <see cref="Equals(StructureLinkKey)"/> is true.</summary>
         public int CompareTo(StructureLinkKey other)
         {
-            if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
-            {
-                var A_Low = Math.Min(SourceID, TargetID);
-                var A_High = Math.Max(SourceID, TargetID);
+            int firstCompare = First.CompareTo(other.First);
+            if (firstCompare != 0)
+                return firstCompare;
 
-                var B_Low = Math.Min(other.SourceID, other.TargetID);
-                var B_High = Math.Max(other.SourceID, other.TargetID);
+            int secondCompare = Second.CompareTo(other.Second);
+            if (secondCompare != 0)
+                return secondCompare;
 
-                int LowCompare = A_Low.CompareTo(B_Low);
-                if (LowCompare != 0)
-                    return LowCompare;
-
-                int HighCompare = B_High.CompareTo(B_High);
-                if (HighCompare != 0)
-                    return HighCompare;
-            }
-            else
-            {
-                int SourceCompare = this.SourceID.CompareTo(other.SourceID);
-                if (SourceCompare != 0)
-                    return SourceCompare;
-
-                int TargetCompare = this.TargetID.CompareTo(other.TargetID);
-                if (TargetCompare != 0)
-                    return TargetCompare;
-            }
-
-            return this.Bidirectional.CompareTo(other.Bidirectional);
+            return Bidirectional.CompareTo(other.Bidirectional);
         }
 
         bool IEquatable<IStructureLink>.Equals(IStructureLink other)
@@ -117,46 +96,16 @@ namespace WebAnnotationModel
                    other.Directional == !this.Bidirectional;
         }
 
-        public static bool operator ==(StructureLinkKey A, StructureLinkKey B)
-        {
-            if (A.Bidirectional == B.Bidirectional && A.Bidirectional)
-            {
-                if (A.SourceID == B.SourceID &&
-                    A.TargetID == B.TargetID)
-                    return true;
-                else if (A.SourceID == B.TargetID &&
-                         A.TargetID == B.SourceID)
-                    return true;
+        public static bool operator ==(StructureLinkKey A, StructureLinkKey B) => A.Equals(B);
 
-                return false;
-            }
-            else
-                return (A.SourceID == B.SourceID) && (A.TargetID == B.TargetID) && (A.Bidirectional == B.Bidirectional);
-        }
-
-        public static bool operator !=(StructureLinkKey A, StructureLinkKey B)
-        {
-            if (A.Bidirectional == B.Bidirectional && A.Bidirectional)
-            {
-                if (A.SourceID == B.SourceID &&
-                    A.TargetID == B.TargetID)
-                    return false;
-                else if (A.SourceID == B.TargetID &&
-                         A.TargetID == B.SourceID)
-                    return false;
-
-                return true;
-            }
-            else
-                return !((A.SourceID == B.SourceID) && (A.TargetID == B.TargetID) && (A.Bidirectional == B.Bidirectional));
-        }
+        public static bool operator !=(StructureLinkKey A, StructureLinkKey B) => !A.Equals(B);
     }
 
     public class StructureLinkObj : WCFObjBaseWithKey<StructureLinkKey, StructureLink>
     {
         public override StructureLinkKey ID => new(this);
 
-        protected override int GenerateHashCode() => (int)(SourceID % int.MaxValue);
+        protected override int GenerateHashCode() => ID.GetHashCode();
 
         public long SourceID => Data.SourceID;
 

@@ -58,55 +58,28 @@ namespace WebAnnotationModel.Objects
             return ((IPermittedStructureLinkReadOnly)this).Equals(other);
         }
 
-        public override int GetHashCode() => (int)(SourceTypeID % int.MaxValue);
+        /// <summary>
+        /// Hashes both endpoints. The constructor stores a bidirectional key lowest ID first, so (A,B) and (B,A)
+        /// are already the same fields and equality, hashing and ordering can compare them directly.
+        /// </summary>
+        public override int GetHashCode() => unchecked((SourceTypeID.GetHashCode() * 397) ^ TargetTypeID.GetHashCode() ^ (Bidirectional ? 1 : 0));
 
-        public bool Equals(PermittedStructureLinkKey other)
-        {
-            if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
-            {
-                if (SourceTypeID == other.SourceTypeID &&
-                    TargetTypeID == other.TargetTypeID)
-                    return true;
-                else if (SourceTypeID == other.TargetTypeID &&
-                         TargetTypeID == other.SourceTypeID)
-                    return true;
+        /// <summary>True for the same link: same endpoints (bidirectional keys are stored lowest ID first) and direction.</summary>
+        public bool Equals(PermittedStructureLinkKey other) =>
+            SourceTypeID == other.SourceTypeID && TargetTypeID == other.TargetTypeID && Bidirectional == other.Bidirectional;
 
-                return false;
-            }
-            else
-                return this.SourceTypeID == other.SourceTypeID && this.TargetTypeID == other.TargetTypeID && this.Bidirectional == other.Bidirectional;
-        }
-
+        /// <summary>Orders by source, then target, then directional before bidirectional; returns 0 exactly when <see cref="Equals(PermittedStructureLinkKey)"/> is true.</summary>
         public int CompareTo(PermittedStructureLinkKey other)
         {
-            if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
-            {
-                var A_Low = Math.Min(SourceTypeID, TargetTypeID);
-                var A_High = Math.Max(SourceTypeID, TargetTypeID);
+            int sourceCompare = SourceTypeID.CompareTo(other.SourceTypeID);
+            if (sourceCompare != 0)
+                return sourceCompare;
 
-                var B_Low = Math.Min(other.SourceTypeID, other.TargetTypeID);
-                var B_High = Math.Max(other.SourceTypeID, other.TargetTypeID);
+            int targetCompare = TargetTypeID.CompareTo(other.TargetTypeID);
+            if (targetCompare != 0)
+                return targetCompare;
 
-                int LowCompare = A_Low.CompareTo(B_Low);
-                if (LowCompare != 0)
-                    return LowCompare;
-
-                int HighCompare = B_High.CompareTo(B_High);
-                if (HighCompare != 0)
-                    return HighCompare;
-            }
-            else
-            {
-                int SourceCompare = this.SourceTypeID.CompareTo(other.SourceTypeID);
-                if (SourceCompare != 0)
-                    return SourceCompare;
-
-                int TargetCompare = this.TargetTypeID.CompareTo(other.TargetTypeID);
-                if (TargetCompare != 0)
-                    return TargetCompare;
-            }
-
-            return this.Bidirectional.CompareTo(other.Bidirectional);
+            return Bidirectional.CompareTo(other.Bidirectional);
         }
 
         bool IEquatable<IPermittedStructureLinkReadOnly>.Equals(IPermittedStructureLinkReadOnly other)
@@ -131,40 +104,9 @@ namespace WebAnnotationModel.Objects
                    other.Directional == !this.Bidirectional;
         }
 
-        public static bool operator ==(PermittedStructureLinkKey A, PermittedStructureLinkKey B)
-        {
-            if (A.Bidirectional == B.Bidirectional && A.Bidirectional)
-            {
-                if (A.SourceTypeID == B.SourceTypeID &&
-                    A.TargetTypeID == B.TargetTypeID)
-                    return true;
-                else if (A.SourceTypeID == B.TargetTypeID &&
-                         A.TargetTypeID == B.SourceTypeID)
-                    return true;
+        public static bool operator ==(PermittedStructureLinkKey A, PermittedStructureLinkKey B) => A.Equals(B);
 
-                return false;
-            }
-            else
-                return (A.SourceTypeID == B.SourceTypeID) && (A.TargetTypeID == B.TargetTypeID) && (A.Bidirectional == B.Bidirectional);
-
-        }
-
-        public static bool operator !=(PermittedStructureLinkKey A, PermittedStructureLinkKey B)
-        {
-            if (A.Bidirectional == B.Bidirectional && A.Bidirectional)
-            {
-                if (A.SourceTypeID == B.SourceTypeID &&
-                    A.TargetTypeID == B.TargetTypeID)
-                    return false;
-                else if (A.SourceTypeID == B.TargetTypeID &&
-                         A.TargetTypeID == B.SourceTypeID)
-                    return false;
-
-                return true;
-            }
-            else
-                return !((A.SourceTypeID == B.SourceTypeID) && (A.TargetTypeID == B.TargetTypeID) && (A.Bidirectional == B.Bidirectional));
-        }
+        public static bool operator !=(PermittedStructureLinkKey A, PermittedStructureLinkKey B) => !A.Equals(B);
     }
 
     public class PermittedStructureLinkObj : WCFObjBaseWithKey<PermittedStructureLinkKey,
@@ -173,7 +115,7 @@ namespace WebAnnotationModel.Objects
     {
         public override PermittedStructureLinkKey ID => new(this);
 
-        protected override int GenerateHashCode() => (int)(SourceTypeID % int.MaxValue);
+        protected override int GenerateHashCode() => ID.GetHashCode();
 
         public long SourceTypeID => Data.SourceTypeID;
 
