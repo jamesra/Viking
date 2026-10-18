@@ -136,8 +136,11 @@ namespace WebAnnotation.ViewModel
         /// <summary>The larger endpoint radius: the widest the pinched link gets.</summary>
         public double MaxRadius => Math.Max(A.Radius, B.Radius);
 
-        /// <summary>How much more opaque the link is at its waist than at full width: alpha * (1 + boost).</summary>
-        internal const float WaistOpacityBoost = 0.35f;
+        /// <summary>
+        /// Opacity at the link's waist as a fraction of its opacity at full width. The shader fades alpha linearly
+        /// with how far the local width has narrowed from full width toward the waist.
+        /// </summary>
+        internal const float WaistOpacity = 0.5f;
 
         /// <summary>
         /// Waist half width in world units at the zoom links were last drawn at. Hit tests have no scene, and every
@@ -611,7 +614,7 @@ namespace WebAnnotation.ViewModel
                     (float)Math.Min(waistRadius, Math.Min(l.A.Radius, l.B.Radius)),
                     0f))];
 
-                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacityBoost);
+                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacity);
             }
         }
 

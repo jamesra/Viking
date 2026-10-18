@@ -17,8 +17,9 @@ float4 instanceShape[200];
 // 1 draws a round end the size of each marker under it, 0 draws nothing beyond the marker centres.
 float pinchedDrawCaps = 0;
 
-// How much more opaque the line is at the waist than at full width: alpha * (1 + boost * squeeze).
-float pinchedOpacityBoost = 0.35;
+// Opacity at the waist as a fraction of the opacity at full width. Alpha runs from alpha at full width to
+// alpha * pinchedWaistOpacity at the waist, linearly in squeeze, so the link fades where it narrows.
+float pinchedWaistOpacity = 0.5;
 
 //NOTE: THE VERTEX SHADER OUTPUT AND PIXEL SHADER INPUT MUST MATCH EXACTLY WHEN USING MONOGAME
 struct PINCHED_VS_OUTPUT
@@ -166,11 +167,11 @@ Color_Depth_Output MyPSPinchedHSV(PINCHED_PS_INPUT input)
 	float coverage = saturate((d / max(fwidth(d), 1e-6)) + 0.5);
 	clip(coverage - 0.001);
 
-	float alpha = saturate(lineColor.a * (1 + (pinchedOpacityBoost * squeeze)));
+	float alpha = saturate(lineColor.a * lerp(1, pinchedWaistOpacity, squeeze));
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	Color_Depth_Output output;
-	// Blend the colour exactly as the Standard line does; only the coverage alpha is boosted toward the waist.
+	// Blend the colour exactly as the Standard line does; only the coverage alpha fades toward the waist.
 	output.Color = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
 	output.Color.a = alpha * coverage;
 	output.Depth = 0;

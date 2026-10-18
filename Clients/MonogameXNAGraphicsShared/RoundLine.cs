@@ -132,7 +132,7 @@ namespace RoundLineCode
         protected EffectParameter maxTextureCoordinateParameter; //The texture coordinate at the end of the curve
         protected EffectParameter instanceShapeParameter; //Per-line (start radius, end radius, waist half width, unused) for the Pinched technique
         protected EffectParameter pinchedDrawCapsParameter;
-        protected EffectParameter pinchedOpacityBoostParameter;
+        protected EffectParameter pinchedWaistOpacityParameter;
         protected VertexBuffer vb;
         protected IndexBuffer ib;
         protected VertexDeclaration vdecl;
@@ -194,7 +194,7 @@ namespace RoundLineCode
             maxTextureCoordinateParameter = e.Parameters["texture_x_max"];
             instanceShapeParameter = e.Parameters["instanceShape"];
             pinchedDrawCapsParameter = e.Parameters["pinchedDrawCaps"];
-            pinchedOpacityBoostParameter = e.Parameters["pinchedOpacityBoost"];
+            pinchedWaistOpacityParameter = e.Parameters["pinchedWaistOpacity"];
         }
 
         /// <summary>True when the loaded effect has the Pinched technique (RoundLineHSV does, RoundLine does not).</summary>
@@ -515,10 +515,10 @@ namespace RoundLineCode
         /// <paramref name="shapes"/> holds one (start radius, end radius, waist half width, 0) per line, in world units;
         /// each side reaches the waist one diameter of its end from that end's centre.
         /// <paramref name="drawCaps"/> draws a round end the size of each radius beyond the line's ends.
-        /// <paramref name="opacityBoost"/> makes the waist that much more opaque than the full width (alpha * (1 + boost)).
+        /// <paramref name="waistOpacity"/> is the waist's opacity as a fraction of the full width's; alpha fades linearly between them.
         /// </summary>
         public void DrawPinched(IReadOnlyList<RoundLine> roundLines, IReadOnlyList<Vector4> shapes, Color lineColor,
-            Matrix viewProjMatrix, float time, bool drawCaps, float opacityBoost)
+            Matrix viewProjMatrix, float time, bool drawCaps, float waistOpacity)
         {
             if (roundLines.Count != shapes.Count)
                 throw new ArgumentException("Every line needs a shape", nameof(shapes));
@@ -532,7 +532,7 @@ namespace RoundLineCode
             timeParameter?.SetValue(time);
             lineColorParameter.SetValue(lineColor.ToVector4());
             pinchedDrawCapsParameter?.SetValue(drawCaps ? 1f : 0f);
-            pinchedOpacityBoostParameter?.SetValue(opacityBoost);
+            pinchedWaistOpacityParameter?.SetValue(waistOpacity);
 
             effect.CurrentTechnique = effect.Techniques["Pinched"];
 

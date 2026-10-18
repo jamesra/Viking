@@ -52,6 +52,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * The Review change feed structure/label filter no longer hides every row when the text is only separators such as a lone comma; it now shows all rows, as the server query already did.
 * When only some corners of the visible area map into a section (view near the edge of the aligned data), the region loaded for annotations and tiles no longer treats two corners on the same side as opposite corners, which shrank the loaded region to a square on that side and could leave part of the view without annotations.
 * Hovering or clicking near a link that was just removed no longer risks an error: link hit-testing skips links deleted at the same moment.
+* Location links to the adjacent section fade where they narrow: the thin middle of the link is drawn at half the opacity of its wide ends.
 
 ## 1.2.77 — 2026-09-30
 
