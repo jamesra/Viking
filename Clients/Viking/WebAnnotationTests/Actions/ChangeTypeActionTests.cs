@@ -27,7 +27,7 @@ namespace WebAnnotationTests.Actions
         /// <summary>
         /// A 3x3 grid covering section and volume 0..200; volume points far outside it cannot be mapped.
         /// </summary>
-        private static IVolumeToSectionTransform CreateBoundedTransform()
+        internal static IVolumeToSectionTransform CreateBoundedTransform()
         {
             MappingVector2[] points = new MappingVector2[9];
             for (int y = 0; y < 3; y++)
@@ -42,7 +42,7 @@ namespace WebAnnotationTests.Actions
             return new VolumeToSectionTransform("grid", new GridTransform(points, new Rectangle(0, 200, 0, 200), 3, 3, new TransformBasicInfo()));
         }
 
-        private static LocationObj NewLocation(LocationType type, string wkt)
+        internal static LocationObj NewLocation(LocationType type, string wkt)
         {
             SqlGeometry shape = SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(wkt), 0);
             Location data = new()
@@ -56,7 +56,7 @@ namespace WebAnnotationTests.Actions
             return new LocationObj(data);
         }
 
-        private static Vector2[] UnmappableRing() =>
+        internal static Vector2[] UnmappableRing() =>
             [new(-1000, -1000), new(-900, -1000), new(-900, -900), new(-1000, -900), new(-1000, -1000)];
 
         [TestMethod]

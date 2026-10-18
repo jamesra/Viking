@@ -175,10 +175,21 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
+        /// <summary>
+        /// Maps the new volume polyline to the section, replaces the location's shape with it, and saves it.
+        /// Changes nothing, and writes a trace line, when any vertex of the polyline cannot be mapped to the section.
+        /// On a save fault the location's original shape is restored.
+        /// </summary>
         public void OnExecute()
         {
             Microsoft.SqlServer.Types.SqlGeometry originalShape = Location.MosaicShape;
             Polyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            if (mosaic_shape is null)
+            {
+                Trace.WriteLine("Change1DContourAction: new polyline crosses an unmapped region of the section; location " + Location.ID + " unchanged.", "WebAnnotation");
+                return;
+            }
+
             Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
 
             try
