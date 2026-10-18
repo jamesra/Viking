@@ -125,36 +125,42 @@ namespace WebAnnotationModel.gRPC.Converters
         }
 
         /// <summary>
-        /// Copies the server's values onto a cached structure. The setters mark the object for Save, so a structure
-        /// that had no pending edit is set back to <see cref="DBACTION.NONE"/>: it mirrors the server, as after the
-        /// WCF store's InternalUpdate. Pending local edits keep their DBAction.
+        /// Copies the server's values onto a cached structure, except fields the user edited and has not saved yet
+        /// (<see cref="StructureObj.IsLocallyEdited"/>), which keep the user's value. Applied values are not local
+        /// edits, so DBAction is left as it was: an unedited structure stays <see cref="DBACTION.NONE"/> and mirrors
+        /// the server, as after the WCF store's InternalUpdate, and a queued UPDATE or DELETE stays queued.
+        /// LastModified, Created, and attributes always take the server's value.
         /// </summary>
         /// <returns>True if any property changed.</returns>
         public async Task<bool> Update(StructureObj obj, Structure update)
         {
-            DBACTION before = obj.DBAction;
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
             try
             {
                 obj.PropertyChanged += OnPropertyChanged; //Record change events so we know if an update occurred.
 
-                obj.Confidence = update.Confidence;
-                obj.Username = update.Username;
-                obj.Label = update.Label;
-                obj.Notes = update.Notes;
-                obj.ParentID = update.HasParentId ? (long?)update.ParentId : (long?)null;
-                obj.LastModified = update.LastModified.ToDateTime();
-                obj.Created = update.Created.ToDateTime();
+                obj.ApplyServerValues(() =>
+                {
+                    if (!obj.IsLocallyEdited(nameof(StructureObj.Confidence)))
+                        obj.Confidence = update.Confidence;
+                    if (!obj.IsLocallyEdited(nameof(StructureObj.Username)))
+                        obj.Username = update.Username;
+                    if (!obj.IsLocallyEdited(nameof(StructureObj.Label)))
+                        obj.Label = update.Label;
+                    if (!obj.IsLocallyEdited(nameof(StructureObj.Notes)))
+                        obj.Notes = update.Notes;
+                    if (!obj.IsLocallyEdited(nameof(StructureObj.ParentID)))
+                        obj.ParentID = update.HasParentId ? (long?)update.ParentId : (long?)null;
+                    obj.LastModified = update.LastModified.ToDateTime();
+                    obj.Created = update.Created.ToDateTime();
+                });
                 await obj.SetAttributes(update.Attributes.ParseAttributes());
             }
             finally
             {
                 obj.PropertyChanged -= OnPropertyChanged;
             }
-
-            if (before == DBACTION.NONE && obj.DBAction != DBACTION.NONE)
-                obj.DBAction = DBACTION.NONE;
 
             return updated;
         }

@@ -61,8 +61,19 @@ namespace WebAnnotationModel.Objects
 
                 _DBAction = value;
 
+                if (value == Viking.AnnotationServiceTypes.Interfaces.DBACTION.NONE)
+                    OnDBActionCleared();
+
                 OnPropertyChanged(nameof(DBAction));
             }
+        }
+
+        /// <summary>
+        /// Called when DBAction is set to NONE (after a save, or when the object is made to mirror the server), before
+        /// the DBAction change event. Overrides forget per-field edit tracking here.
+        /// </summary>
+        protected virtual void OnDBActionCleared()
+        {
         }
 
         /// <summary>Marks a local edit for the next save. No-op when DBAction is already INSERT.</summary>
