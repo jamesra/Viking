@@ -92,9 +92,51 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
+        /// By-ID fetch that also fetches every uncached ancestor of the returned objects, as the WCF InternalAdd
+        /// did, so the notify step of each fetch adopts the children waiting on it.
+        /// </summary>
+        public override async Task<GetByIDResult<KEY, OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token = default)
+        {
+            GetByIDResult<KEY, OBJECT> result = await base.GetObjectsByIDs(IDs, token);
+            await FetchMissingAncestorsAsync(result.Found, token);
+            return result;
+        }
+
+        /// <summary>
+        /// Fetches by ID the uncached parents (and their uncached ancestors) of the objects a server batch added
+        /// or updated, so the children <see cref="WireParentsAndRoots"/> left waiting are adopted. Call after
+        /// <see cref="CallOnCollectionChanged"/>, never inside it: it calls the server and re-enters the notify step.
+        /// </summary>
+        internal Task FetchMissingParentsAsync(ChangeInventory<OBJECT> inventory, CancellationToken token = default) =>
+            FetchMissingAncestorsAsync(inventory.AddedObjects.Concat(inventory.UpdatedObjects), token);
+
+        /// <summary>
+        /// One by-ID request per generation: the uncached parents of <paramref name="objects"/>, then the uncached
+        /// parents of what came back. An ID is requested at most once per call, so a parent the server does not
+        /// return, or cyclic ParentID data, ends the loop.
+        /// </summary>
+        private async Task FetchMissingAncestorsAsync(IEnumerable<OBJECT> objects, CancellationToken token)
+        {
+            var requested = new HashSet<KEY>();
+            while (true)
+            {
+                KEY[] missing = objects
+                    .Where(obj => obj != null && obj.ParentID.HasValue && !IDToObject.ContainsKey(obj.ParentID.Value))
+                    .Select(obj => obj.ParentID.Value)
+                    .Where(requested.Add)
+                    .ToArray();
+                if (missing.Length == 0)
+                    return;
+
+                objects = (await base.GetObjectsByIDs(missing, token)).Found;
+            }
+        }
+
+        /// <summary>
         /// ParentID == null → RootObjects. Otherwise set Parent (which AddChilds).
-        /// A parent not yet in IDToObject is not fetched (the WCF InternalAdd fetched it); the child waits in
-        /// <see cref="_childrenAwaitingParent"/> until a later batch adds that parent.
+        /// A parent not yet in IDToObject is not fetched here; the child waits in
+        /// <see cref="_childrenAwaitingParent"/> until a later batch adds that parent, normally the
+        /// <see cref="FetchMissingParentsAsync"/> fetch its caller runs after the notify step.
         /// Setting Parent when ParentID already matches does not mark DBAction.UPDATE.
         /// </summary>
         void WireParentsAndRoots(IEnumerable<OBJECT> objects)

@@ -14,7 +14,7 @@ namespace WebAnnotationModel.gRPC.Converters
 {
     /// <summary>
     /// Merges an AnnotationSet (structures, then locations, then Location.Links) into the stores.
-    /// Missing parent structures are fetched once per set via GetObjectsByIDs.
+    /// Missing parent structures of its locations and structures are fetched once per set via GetObjectsByIDs.
     /// </summary>
     class ProcessorForServerAnnotationSets :
         IServerQuerySingleAddOrUpdateHandler<AnnotationSet>,
@@ -106,9 +106,13 @@ namespace WebAnnotationModel.gRPC.Converters
             await ((StructureLinkStore)_structureLinkStore).CallOnCollectionChanged(structureLinkChanges).ConfigureAwait(false);
             await ((LocationLinkStore)_locationLinkStore).CallOnCollectionChanged(locationLinkChanges).ConfigureAwait(false);
 
+            // After the notify step: one by-ID fetch for the uncached parents of the set's locations and structures.
+            // The structure store also fetches their uncached ancestors, and each fetch adopts the waiting children.
             var missingParents = locations
-                .Where(l => l != null && l.HasParentId && !_structureStore.Contains(l.ParentId))
+                .Where(l => l != null && l.HasParentId)
                 .Select(l => l.ParentId)
+                .Concat(structures.Where(s => s != null && s.HasParentId).Select(s => s.ParentId))
+                .Where(id => !_structureStore.Contains(id))
                 .Distinct()
                 .ToArray();
             if (missingParents.Length > 0)

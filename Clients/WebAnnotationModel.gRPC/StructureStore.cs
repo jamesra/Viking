@@ -92,10 +92,7 @@ namespace WebAnnotationModel.gRPC
 
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetAll();
-            var queryTime = DateTime.UtcNow;
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
-            await CallOnCollectionChanged(changes).ConfigureAwait(false);
-            await OnServerObjectsLoaded(result, queryTime);
+            var changes = await MergeServerStructuresAsync(result, Array.Empty<long>(), DateTime.UtcNow);
             return changes.ObjectsInStore;
         }
 
@@ -198,10 +195,7 @@ namespace WebAnnotationModel.gRPC
         {
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetChildStructures(ID);
-            var queryTime = DateTime.UtcNow;
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
-            await CallOnCollectionChanged(changes).ConfigureAwait(false);
-            await OnServerObjectsLoaded(result, queryTime);
+            var changes = await MergeServerStructuresAsync(result, Array.Empty<long>(), DateTime.UtcNow);
             return changes.ObjectsInStore;
         }
 
@@ -246,10 +240,7 @@ namespace WebAnnotationModel.gRPC
         {
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetStructuresOfType(StructureTypeID);
-            var queryTime = DateTime.UtcNow;
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
-            await CallOnCollectionChanged(changes).ConfigureAwait(false);
-            await OnServerObjectsLoaded(result, queryTime);
+            var changes = await MergeServerStructuresAsync(result, Array.Empty<long>(), DateTime.UtcNow);
             return changes.ObjectsInStore;
         }
 
@@ -281,12 +272,21 @@ namespace WebAnnotationModel.gRPC
                 .GetAsync(SectionNumber, regionWkt, MinRadius, LastQueryUtc, CancellationToken.None, null)
                 .ConfigureAwait(false);
 
-            var changes = await ServerQueryResultsHandler
-                .ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(update.QueryTime, update.NewOrUpdated, update.DeletedIDs))
-                .ConfigureAwait(false);
-            await CallOnCollectionChanged(changes).ConfigureAwait(false);
-            await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime).ConfigureAwait(false);
+            var changes = await MergeServerStructuresAsync(update.NewOrUpdated, update.DeletedIDs, update.QueryTime).ConfigureAwait(false);
             return (changes.ObjectsInStore, update.QueryTime);
+        }
+
+        /// <summary>
+        /// Applies one structure query result: merges it into the cache, runs the notify step (which wires parents
+        /// and RootObjects), fetches parents still missing (as the WCF InternalAdd did), then hydrates embedded links.
+        /// </summary>
+        private async Task<ChangeInventory<StructureObj>> MergeServerStructuresAsync(IStructure[] structures, long[] deletedIds, DateTime queryTime)
+        {
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, structures, deletedIds));
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            await FetchMissingParentsAsync(changes).ConfigureAwait(false);
+            await OnServerObjectsLoaded(structures, queryTime).ConfigureAwait(false);
+            return changes;
         }
 
         /// <summary>

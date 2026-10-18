@@ -374,7 +374,11 @@ namespace WebAnnotationModel.gRPC
             Task.CompletedTask;
          
 
-        public async Task<GetByIDResult<KEY, OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token = default)
+        /// <summary>
+        /// Returns the cached objects for <paramref name="IDs"/>, fetching the uncached ones from the server and
+        /// raising collection events for them. Virtual so parent/child stores can also fetch missing parents.
+        /// </summary>
+        public virtual async Task<GetByIDResult<KEY, OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token = default)
         {
             if (IDs == null || IDs.Count == 0)
                 return GetByIDResult<KEY, OBJECT>.Empty;

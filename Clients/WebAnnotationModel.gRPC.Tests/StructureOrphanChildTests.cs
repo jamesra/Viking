@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using NUnit.Framework;
+using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
@@ -18,8 +19,10 @@ namespace WebAnnotationModel.gRPC.Tests
     /// (for example a region query returns a synapse before its cell is loaded). When the parent arrives in a
     /// later batch, the store must attach the waiting child to <see cref="AnnotationModelObjBaseWithParent{KEY,SERVER_INTERFACE,THISTYPE}.Parent"/>
     /// and to the parent's <see cref="AnnotationModelObjBaseWithParent{KEY,SERVER_INTERFACE,THISTYPE}.Children"/>,
-    /// as the WCF client's tree ends up after its InternalAdd fetched the missing parent.
-    /// Runs without a server; the client factory is never used.
+    /// as the WCF client's tree ends up after its InternalAdd fetched the missing parent. A parent in no batch is
+    /// fetched by ID after the notify step, like that InternalAdd.
+    /// Runs without a server: the notify-step tests never touch the client factory, and the fetch tests use a fake
+    /// by-ID client.
     /// </summary>
     [TestFixture]
     public class StructureOrphanChildTests
@@ -122,8 +125,12 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(Cached(SecondChildId).Parent, Is.SameAs(parent));
         }
 
+        /// <summary>
+        /// The notify step alone never calls the server: a child whose parent is in no batch waits, unwired, until
+        /// a caller runs the fetch (see the FetchesMissing tests below).
+        /// </summary>
         [Test]
-        public async Task ParentNeverArrives_ChildKeepsParentIdAndStaysUnwired()
+        public async Task ParentInNoBatch_NotifyStepAloneLeavesChildWaiting()
         {
             await ServerSends(ServerStructure(ChildId, ParentId));
             await ServerSends(ServerStructure(OtherParentId, null));
@@ -133,6 +140,190 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(child.Parent, Is.Null);
             Assert.That(Cached(OtherParentId).Children, Is.Empty);
             Assert.That(_structures.RootObjects, Is.EqualTo(new[] { OtherParentId }));
+        }
+
+        /// <summary>
+        /// A region or section set holding a child whose parent (and grandparent) are in no batch: the processor
+        /// fetches the parent by ID after the notify step, the store then fetches the grandparent, and both
+        /// waiting children are adopted, as the WCF InternalAdd left the tree.
+        /// </summary>
+        [Test]
+        public async Task AnnotationSetChildWithUncachedAncestors_ProcessorFetchesThemAndWiresTree()
+        {
+            const long grandparentId = 5;
+            var server = new FakeStructureServer(ServerStructure(ParentId, grandparentId), ServerStructure(grandparentId, null));
+            var structures = server.CreateStore();
+            var processor = CreateProcessor(structures);
+
+            var set = new AnnotationSet();
+            set.Structures.Add(ServerStructure(ChildId, ParentId));
+            set.Structures.Add(ServerStructure(OtherParentId, null));
+            await processor.ProcessServerResult(DateTime.UtcNow, set);
+
+            Assert.That(structures.TryGetObjectByID(ChildId, out StructureObj child), Is.True);
+            Assert.That(structures.TryGetObjectByID(ParentId, out StructureObj parent), Is.True);
+            Assert.That(structures.TryGetObjectByID(grandparentId, out StructureObj grandparent), Is.True);
+            Assert.That(child.Parent, Is.SameAs(parent));
+            Assert.That(parent.Parent, Is.SameAs(grandparent));
+            Assert.That(parent.Children, Is.EqualTo(new[] { child }));
+            Assert.That(grandparent.Children, Is.EqualTo(new[] { parent }));
+            Assert.That(structures.RootObjects, Is.EquivalentTo(new[] { OtherParentId, grandparentId }));
+            Assert.That(child.DBAction, Is.EqualTo(DBACTION.NONE), "adoption mirrors the server; nothing to save");
+            Assert.That(server.Requests, Is.EqualTo(new[] { new[] { ParentId }, new[] { grandparentId } }),
+                "one by-ID request per generation, each ID asked for once");
+        }
+
+        /// <summary>
+        /// A by-ID fetch (the path LocationStore uses for a location's parent) also fetches the returned
+        /// structure's uncached parent, so a synapse fetched for its location is wired under its cell.
+        /// </summary>
+        [Test]
+        public async Task GetObjectsByIDs_FetchesMissingParentOfReturnedStructure()
+        {
+            var server = new FakeStructureServer(ServerStructure(ChildId, ParentId), ServerStructure(ParentId, null));
+            var structures = server.CreateStore();
+
+            var result = await structures.GetObjectsByIDs(new[] { ChildId });
+
+            Assert.That(result.Found.Select(s => s.ID), Is.EqualTo(new[] { ChildId }));
+            Assert.That(structures.TryGetObjectByID(ParentId, out StructureObj parent), Is.True);
+            Assert.That(result.Found[0].Parent, Is.SameAs(parent));
+            Assert.That(structures.RootObjects, Is.EqualTo(new[] { ParentId }));
+        }
+
+        /// <summary>
+        /// GetChildStructures returns children whose parent is not cached (the caller asked by ID only): the
+        /// store fetches the parent after the notify step, wires the children under it, and still loads the links
+        /// embedded on the children.
+        /// </summary>
+        [Test]
+        public async Task GetChildStructures_ParentNotCached_FetchedAndChildrenWired()
+        {
+            var server = new FakeStructureServer(ServerStructure(ParentId, null));
+            var link = new StructureLink { SourceId = ChildId, TargetId = SecondChildId, Username = "user" };
+            var repository = StructureStoreRegionQueryTests.FakeInterface<IStructureRepository>.Create(
+                nameof(IStructureRepository.GetChildStructures),
+                args =>
+                {
+                    var linked = ServerStructure(ChildId, (long)args[0]);
+                    linked.Links.Add(link);
+                    return Task.FromResult(new IStructure[] { linked, ServerStructure(SecondChildId, (long)args[0]) });
+                });
+            var structures = server.CreateStore(StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClientFactory<IStructureRepository>>
+                .Create("GetOrCreate", _ => repository));
+
+            var children = await structures.GetChildStructures(ParentId);
+
+            Assert.That(structures.TryGetObjectByID(ParentId, out StructureObj parent), Is.True);
+            Assert.That(parent.Children, Is.EquivalentTo(children));
+            Assert.That(children.Select(c => c.Parent), Is.All.SameAs(parent));
+            Assert.That(server.Requests, Is.EqualTo(new[] { new[] { ParentId } }));
+            Assert.That(server.Links.TryGetObjectByID(new StructureLinkKey(ChildId, SecondChildId, false), out _), Is.True, "embedded link loaded");
+        }
+
+        /// <summary>
+        /// A batch that re-parents a cached structure under an uncached parent reports it in UpdatedObjects; the
+        /// fetch covers those as well as added objects.
+        /// </summary>
+        [Test]
+        public async Task FetchMissingParents_UpdatedObjectWithUncachedParent_ParentFetched()
+        {
+            var server = new FakeStructureServer(ServerStructure(ParentId, null));
+            var structures = server.CreateStore();
+            var moved = new StructureObj(ChildId, TypeId) { ParentID = ParentId };
+            var inventory = new ChangeInventory<StructureObj>();
+            inventory.UpdatedObjects.Add(moved);
+
+            await structures.FetchMissingParentsAsync(inventory);
+
+            Assert.That(server.Requests, Is.EqualTo(new[] { new[] { ParentId } }));
+            Assert.That(structures.TryGetObjectByID(ParentId, out _), Is.True);
+        }
+
+        /// <summary>
+        /// Parent missing on the server (deleted meanwhile): asked for once, the child keeps its ParentID and
+        /// stays unwired, and the fetch ends instead of asking again.
+        /// </summary>
+        [Test]
+        public async Task ParentNotOnServer_RequestedOnceAndChildStaysUnwired()
+        {
+            var server = new FakeStructureServer();
+            var structures = server.CreateStore();
+            var processor = CreateProcessor(structures);
+
+            var set = new AnnotationSet();
+            set.Structures.Add(ServerStructure(ChildId, ParentId));
+            await processor.ProcessServerResult(DateTime.UtcNow, set);
+
+            Assert.That(structures.TryGetObjectByID(ChildId, out StructureObj child), Is.True);
+            Assert.That(child.ParentID, Is.EqualTo(ParentId));
+            Assert.That(child.Parent, Is.Null);
+            Assert.That(server.Requests, Is.EqualTo(new[] { new[] { ParentId } }));
+        }
+
+        /// <summary>
+        /// Bad server data where the fetched parent names the child's own subtree as its parent (A→B→A). The
+        /// fetch must end once every ID was asked for, without asking again.
+        /// </summary>
+        [Test]
+        public async Task FetchedParentsFormCycle_EachRequestedOnce()
+        {
+            const long grandparentId = 5;
+            var server = new FakeStructureServer(ServerStructure(ParentId, grandparentId), ServerStructure(grandparentId, ParentId));
+            var structures = server.CreateStore();
+
+            await structures.GetObjectsByIDs(new[] { ParentId });
+
+            Assert.That(server.Requests, Is.EqualTo(new[] { new[] { ParentId }, new[] { grandparentId } }));
+            Assert.That(structures.TryGetObjectByID(grandparentId, out StructureObj grandparent), Is.True);
+            Assert.That(structures.TryGetObjectByID(ParentId, out StructureObj parent), Is.True);
+            Assert.That(parent.Parent, Is.SameAs(grandparent));
+        }
+
+        /// <summary>Processor wired to <paramref name="structures"/> and empty location and link stores; no server.</summary>
+        private static ProcessorForServerAnnotationSets CreateProcessor(StructureStore structures)
+        {
+            var locationLinks = new LocationLinkStore(null, null, null, null);
+            var locations = new LocationStore(null, null, null, new LocationServerToClientConverter(), structures, locationLinks);
+            return new ProcessorForServerAnnotationSets(locations, structures, locationLinks, new StructureLinkStore(null, null, null),
+                new LocationServerToClientConverter(), new LocationServerToClientUpdater(),
+                new StructureServerToClientConverter(), new StructureServerToClientUpdater(),
+                new LocationLinkServerToClientConverter(), new StructureLinkServerToClientConverter());
+        }
+
+        /// <summary>
+        /// Structure client whose by-ID GetAsync returns the structures it was built with and records each
+        /// request. GetOrCreate fails after a few calls so a fetch that never ends fails the test instead of hanging.
+        /// </summary>
+        private sealed class FakeStructureServer
+        {
+            private const int MaxClientRequests = 10;
+            private readonly IStructure[] _structures;
+            private int _clientRequests;
+
+            public FakeStructureServer(params IStructure[] structures) => _structures = structures;
+
+            /// <summary>Link store the created structure store hydrates from embedded links.</summary>
+            public StructureLinkStore Links { get; } = new StructureLinkStore(null, null, new StructureLinkServerToClientConverter());
+
+            /// <summary>IDs of each by-ID request, in order.</summary>
+            public System.Collections.Generic.List<long[]> Requests { get; } = new System.Collections.Generic.List<long[]>();
+
+            public StructureStore CreateStore(IServerAnnotationsClientFactory<IStructureRepository> repositoryFactory = null)
+            {
+                var client = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>
+                    .Create("GetAsync", args =>
+                    {
+                        long[] ids = ((System.Collections.Generic.IEnumerable<long>)args[0]).ToArray();
+                        Requests.Add(ids);
+                        return Task.FromResult<System.Collections.Generic.IList<IStructure>>(_structures.Where(s => ids.Contains(s.ID)).ToList());
+                    });
+                var factory = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>>
+                    .Create("GetOrCreate", _ => ++_clientRequests <= MaxClientRequests
+                        ? client
+                        : throw new InvalidOperationException("parent fetch did not end"));
+                return new StructureStore(factory, repositoryFactory, null, new StructureServerToClientConverter(), null, null, Links);
+            }
         }
 
         [Test]
