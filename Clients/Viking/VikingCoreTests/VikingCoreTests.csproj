@@ -19,6 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MeasurementExtension\Measurement.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
   </ItemGroup>
