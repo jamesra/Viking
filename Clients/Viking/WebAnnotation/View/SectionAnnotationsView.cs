@@ -496,10 +496,8 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            if (LocationsForStructure.ContainsKey(s.ID))
+            if (LocationsForStructure.TryGetValue(s.ID, out KeyTracker<long> locIDs))
             {
-                KeyTracker<long> locIDs = LocationsForStructure[s.ID];
-
                 foreach (long locID in locIDs.ValuesCopy())
                 {
                     if (LocationViews.TryGetValue(locID, out LocationCanvasView locView))
@@ -940,9 +938,8 @@ namespace WebAnnotation.ViewModel
                 //long[] overlapped_links = loc.LinksCopy.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
                 if (overlapped_links.Count > 0)
                 {
-                    if (LocationViews.ContainsKey(loc.ID))
+                    if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                     {
-                        LocationCanvasView locView = LocationViews[loc.ID];
                         locView.OverlappedLinks = [.. overlapped_links.Select(linkKey => linkKey.A == loc.ID ? linkKey.B : linkKey.A)];
                     }
                     else
@@ -957,9 +954,8 @@ namespace WebAnnotation.ViewModel
         {
             foreach (LocationObj loc in locs)
             {
-                if (LocationViews.ContainsKey(loc.ID))
+                if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                 {
-                    LocationCanvasView locView = LocationViews[loc.ID];
                     locView.OverlappedLinks = Array.Empty<long>();
                 }
             }
