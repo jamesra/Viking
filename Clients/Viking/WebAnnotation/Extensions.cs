@@ -550,6 +550,35 @@ namespace WebAnnotation
     }
 
     /// <summary>
+    /// Lookups that map spatial-index keys to the views stored for them.
+    /// </summary>
+    internal static class ConcurrentDictionaryExtensions
+    {
+        /// <summary>
+        /// Returns the values stored for <paramref name="keys"/>, in key order, skipping keys that are not in
+        /// <paramref name="dictionary"/>. The section link view models remove a link from their dictionary before
+        /// its R-tree entry and readers take no lock, so a key just read from the tree can already be gone; the
+        /// indexer would throw <see cref="KeyNotFoundException"/> there.
+        /// </summary>
+        /// <param name="dictionary">The views by key.</param>
+        /// <param name="keys">Keys to look up, usually an R-tree query result.</param>
+        /// <returns>A new list holding the value of each key still present.</returns>
+        internal static List<TValue> ValuesForKeys<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, IEnumerable<TKey> keys)
+        {
+            List<TValue> values = keys is ICollection<TKey> collection ? new(collection.Count) : [];
+            foreach (TKey key in keys)
+            {
+                if (dictionary.TryGetValue(key, out TValue value))
+                {
+                    values.Add(value);
+                }
+            }
+
+            return values;
+        }
+    }
+
+    /// <summary>
     /// <c>ForEach</c> helpers for sequences. Arrays use the <see cref="IEnumerable{T}"/> overloads; the indexed overload passes a zero-based position. A null <c>source</c> or <c>action</c> throws <see cref="ArgumentNullException"/>.
     /// </summary>
     public static class LINQLikeExtensions

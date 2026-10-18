@@ -28,11 +28,9 @@ namespace WebAnnotation.ViewModel
         /// Return all the line segments visible in the passed bounds. A link removed on another thread leaves the
         /// spatial index after the dictionary, so a key it returns can already be gone; those are skipped.
         /// </summary>
-        /// <param name="bounds"></param>
-        /// <returns></returns>
-        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber))
-            .Select((sl_key) => StructureLinks.TryGetValue(sl_key, out StructureLinkViewModelBase link) ? link : null)
-            .Where(sl => sl != null && sl.IsVisible(scene))];
+        /// <param name="scene">The scene whose visible world bounds are queried.</param>
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)))
+            .Where(sl => sl.IsVisible(scene))];
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)
         {
@@ -195,23 +193,18 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => StructureLinks.Values;
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Rectangle bounds)
-        {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return [.. intersectingIDs.Select(id => StructureLinks[id])];
-        }
+        /// <summary>
+        /// Links whose bounding box intersects <paramref name="bounds"/>. Like every query here, it skips links
+        /// removed on another thread between the R-tree read and the dictionary lookup.
+        /// </summary>
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Rectangle bounds) =>
+            StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber)));
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Vector2 point)
-        {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point))];
-        }
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Vector2 point) =>
+            [.. StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber))).Where(sl => sl.Contains(point))];
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line)
-        {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line))];
-        }
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line) =>
+            [.. StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber))).Where(sl => sl.Intersects(line))];
     }
 
 

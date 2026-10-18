@@ -158,19 +158,7 @@ namespace WebAnnotation.ViewModel
         /// <see cref="RemoveLocationLink"/> drops the <see cref="LocationLinks"/> entry before the R-tree entry
         /// and readers take no lock, so a key from the tree can already be gone from the dictionary.
         /// </summary>
-        private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys)
-        {
-            List<LocationLinkView> listLocLinkView = new(listKeys.Count);
-            foreach (LocationLinkKey linkKey in listKeys)
-            {
-                if (LocationLinks.TryGetValue(linkKey, out LocationLinkView locLinkView))
-                {
-                    listLocLinkView.Add(locLinkView);
-                }
-            }
-
-            return listLocLinkView;
-        }
+        private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys) => LocationLinks.ValuesForKeys(listKeys);
 
         public ICollection<LocationLinkView> NonOverlappedLinks => KeysToViews(NonOverlappedLinksSearch.Items);
 
