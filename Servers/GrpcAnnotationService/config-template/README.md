@@ -39,11 +39,11 @@ the filled-in copy.
 ## Deploy one annotation database (in progress)
 
 `scripts/Deploy-AnnotationGrpc.ps1` prepares a deployment per annotation
-database as compose project `viking-annotation-<database>`. It does not start
-containers yet; the compose files now take the per-project values from the
-variables listed under [Compose variables](#compose-variables), and passing
-them is the script's next step. It also does not choose an Identity Server;
-the env file keeps the template's identity values.
+database as compose project `viking-annotation-<database>`. It prints the
+project's `GRPC_ANNOTATION_*` [compose variables](#compose-variables) and
+checks them with the read-only `docker compose config --quiet`; it does not
+start containers yet. It also does not choose an Identity Server; the env
+file keeps the template's identity values.
 
 1. Preview (writes nothing):
 
@@ -55,7 +55,8 @@ the env file keeps the template's identity values.
    **D:\Docker\Builds\GrpcAnnotationService\RC3.env** from
    `build/docker-env-template.txt` with `Database=` (and `Server=` if given)
    filled in, then lists the keys still holding `REPLACE_WITH_` values. Fill
-   them in; never copy the file into the repo.
+   them in; never copy the file into the repo. Re-run: it prints the compose
+   variables and reports whether the configuration is valid.
 3. `-Status` lists `viking-annotation-*` projects; `-Database RC3 -Remove`
    runs `docker compose down` for that project (volumes kept).
 
@@ -68,6 +69,7 @@ Production` is refused without `-Confirm`.
 | `Refusing a Production deployment without -Confirm` | Add `-Confirm`. |
 | `EnvFile must be outside the repo` | Point `-EnvFile` under `D:\Docker\Builds\`. |
 | `Port N or N+1 is already in use` | Pick another `-Port` or omit it. |
+| `docker compose config failed` | Read the compose message above it (often `env file ... not found`). |
 
 ## Why an external env file?
 
@@ -91,9 +93,13 @@ stack. Set them in the shell or in the file given to `docker compose --env-file`
 | `GRPC_ANNOTATION_ENV_FILE` | `D:/Docker/Builds/GrpcAnnotationService/.env.Docker` | Env file for `grpc-annotation-service` (connection string, Identity). |
 | `GRPC_ANNOTATION_HTTP_PORT` | `5010` | Host port for container port 80 (HTTP/2 cleartext). |
 | `GRPC_ANNOTATION_HTTPS_PORT` | `5011` | Host port for container port 443 (HTTPS, the Viking endpoint). |
-| `GRPC_ANNOTATION_CORRECTIONS_PATH` | `D:/Docker/Builds/GrpcAnnotationService/corrections` | Host folder mounted at `/corrections`. |
+| `GRPC_ANNOTATION_CORRECTIONS_PATH` | `\\wsl.localhost\Ubuntu\srv\viking\section-correction` | Host folder whose `corrections` subfolder is mounted at `/corrections` (shared with `section-correction-service`). |
 | `ANNOTATION_SQL_CONTAINER_NAME` | `viking-annotation-sql` | `annotation-sql` container name (`docker-compose.annotation-db.yml` only). |
 | `ANNOTATION_SQL_HOST_PORT` | `1433` | Host port for that SQL container (`docker-compose.annotation-db.yml` only). |
+
+`Deploy-AnnotationGrpc.ps1` sets the env file and both ports; it leaves the
+corrections folder shared and does not use the SQL overlay, since each
+deployment names its database in the env file's connection string.
 
 `Start-AnnotationTestStack.ps1` assumes, and `Apply-MinimalSchema.ps1`
 defaults to, the `viking-annotation-sql` container name.

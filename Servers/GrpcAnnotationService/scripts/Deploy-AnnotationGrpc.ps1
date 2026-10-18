@@ -14,11 +14,11 @@
         config-template/build/docker-env-template.txt (outside the repo, by default under
         D:\Docker\Builds\GrpcAnnotationService\), fills in the database name and, when given,
         the SQL server, then stops and lists the keys that still need real values.
-      - Later runs: checks that no placeholder is left and prints the deployment plan.
-        It does not start containers yet. The compose files now read the host ports, env
-        file path, corrections folder and SQL container name from GRPC_ANNOTATION_* and
-        ANNOTATION_SQL_* variables (see the README's "Compose variables"); passing them
-        from this script is the next step.
+      - Later runs: checks that no placeholder is left, prints the deployment plan and the
+        GRPC_ANNOTATION_* compose variables for the project (see the README's "Compose
+        variables"), then checks the configuration with the read-only
+        `docker compose config --quiet`, with those variables set only for that call.
+        It does not start containers yet.
       - -Status lists deployed viking-annotation-* projects with their containers and ports.
       - -Remove stops and removes one project's containers and network (volumes are kept).
 
@@ -165,6 +165,55 @@ function Get-UnfilledKeys([string[]] $Lines) {
 
 <#
 .SYNOPSIS
+    Returns the compose variables docker-compose.yml reads for one per-database project.
+.DESCRIPTION
+    Pure: maps the host port pair and env file to GRPC_ANNOTATION_HTTP_PORT (Port),
+    GRPC_ANNOTATION_HTTPS_PORT (Port + 1) and GRPC_ANNOTATION_ENV_FILE (forward slashes,
+    as compose files write paths). GRPC_ANNOTATION_CORRECTIONS_PATH is left unset so every
+    project mounts the shared corrections folder. The ANNOTATION_SQL_* variables are not
+    set: they belong to docker-compose.annotation-db.yml, the local test SQL overlay, which
+    a per-database deployment does not use; its database is named in the env file's
+    connection string.
+#>
+function Get-ComposeVariables([int] $HttpPort, [string] $EnvFilePath) {
+    return [ordered]@{
+        GRPC_ANNOTATION_HTTP_PORT  = [string]$HttpPort
+        GRPC_ANNOTATION_HTTPS_PORT = [string]($HttpPort + 1)
+        GRPC_ANNOTATION_ENV_FILE   = $EnvFilePath.Replace('\', '/')
+    }
+}
+
+<#
+.SYNOPSIS
+    Runs the read-only `docker compose config --quiet` for grpc-annotation-service.
+.DESCRIPTION
+    Sets the given variables in this process only for the duration of the call and
+    restores their previous values afterwards. `config --quiet` resolves and validates the
+    compose file without printing it (so env file values are not shown) and starts,
+    stops, or builds nothing. Throws when compose reports an invalid configuration.
+#>
+function Test-ComposeConfig([string] $ProjectName, [System.Collections.IDictionary] $Variables) {
+    $saved = @{}
+    foreach ($name in $Variables.Keys) {
+        $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+        [Environment]::SetEnvironmentVariable($name, $Variables[$name], 'Process')
+    }
+    try {
+        docker compose --project-name $ProjectName --project-directory $repoRoot `
+            -f (Join-Path $repoRoot 'docker-compose.yml') config --quiet grpc-annotation-service
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose config failed for $ProjectName (exit $LASTEXITCODE)."
+        }
+    }
+    finally {
+        foreach ($name in $saved.Keys) {
+            [Environment]::SetEnvironmentVariable($name, $saved[$name], 'Process')
+        }
+    }
+}
+
+<#
+.SYNOPSIS
     Throws unless docker is on PATH.
 #>
 function Assert-Docker {
@@ -272,5 +321,10 @@ if ($unfilled.Count -gt 0) {
     throw "Fill in $envFull, then re-run."
 }
 
-Write-Warning ("Env file is ready, but starting $project is not implemented yet: this script does " +
-    'not yet pass the GRPC_ANNOTATION_* compose variables, so the defaults would clash with the running stack.')
+$composeVars = Get-ComposeVariables $Port $envFull
+Write-Host 'Compose variables:'
+$composeVars.GetEnumerator() | ForEach-Object { Write-Host "  $($_.Key)=$($_.Value)" }
+
+Assert-Docker
+Test-ComposeConfig $project $composeVars
+Write-Host "Compose configuration for $project is valid. Starting it is not implemented yet."
