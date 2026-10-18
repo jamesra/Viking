@@ -45,24 +45,6 @@ namespace WebAnnotationModel
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>, ILocationReadOnly
     {
-        public static bool IsPositionProperty(string propertyName)
-        {
-            if (string.IsNullOrEmpty(propertyName))
-                return true;
-
-            return propertyName switch
-            {
-                "Position" => true,
-                "WorldPosition" => true,
-                //case "VolumePosition":
-                //    return true;
-                //case "VolumeShape":
-                //  return true;
-                "MosaicShape" => true,
-                _ => false,
-            };
-        }
-
         public static bool IsGeometryProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -76,20 +58,6 @@ namespace WebAnnotationModel
                 // Radius is derived from the shape and always changes together with MosaicShape, which already
                 // reported the geometry change. Counting it here made every shape edit rebuild each view twice.
                 "Width" => true,
-                _ => false,
-            };
-        }
-
-        public static bool IsTerminalProperty(string propertyName)
-        {
-            if (string.IsNullOrEmpty(propertyName))
-                return true;
-
-            return propertyName switch
-            {
-                "Terminal" => true,
-                "OffEdge" => true,
-                "Attributes" => true,
                 _ => false,
             };
         }
