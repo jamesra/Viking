@@ -11,7 +11,7 @@ Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with th
 | ProxyGetByID / ProxyGetByIDs | `TryGetObjectByID`, `TryGetObjectsByIDs` | done | | |
 | ProxyGetBySection / Begin/Callback | `LocationsClient` `GetLocationChanges*` (async) | done | | |
 | ProxyGetBySectionRegion (+ Begin/Callback) | `LocationRegionLoader.GetObjectsInRegionAsync`, `GetLocationChangesInMosaicRegion` | partial: region cell cache semantics differ; unverified vs WCF MinRadius filtering | | |
-| ProxyUpdate (batched save) | `Save` on stores and updaters | done | | |
+| ProxyUpdate (batched save; afterwards every saved object's DBAction is reset to NONE and the server's returned objects replace the cached ones) | `Save` on stores and updaters | partial: after the update RPC returns, `StoreBaseWithKey.Save` resets every saved object to NONE (which also forgets a structure's per-field edit tracking); the returned objects are not yet applied to the cache | `StoreSaveSuccessTests` | |
 | RestoreChangedObjects | `StoreBaseWithKey.RestoreChangedObjects` (called when the update RPC fails) | done: a failed update RPC requeues objects and `Save` returns false (WCF rethrows and rolls back INSERTs). When `GetOrCreate` throws, objects are requeued unchanged and the exception is rethrown (WCF `CreateProxy` parity). Not yet parity when conversion throws before the RPC: that outer catch still resets every `DBAction` to NONE (decision D-SaveOuterCatch) | `StoreSaveFailureTests` | |
 | IsProxyBroken, CreateProxy, GetProxy | client factory / channel reuse | n/a: WCF proxy lifecycle | | |
 | TraceQueryDetails | `QueryLogger` | done | | |

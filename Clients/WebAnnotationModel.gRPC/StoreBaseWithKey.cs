@@ -815,6 +815,12 @@ namespace WebAnnotationModel.gRPC
 
                 //var inventory = await ProcessServerObjects(updateResults);
                 //CallOnCollectionChanged(inventory);
+
+                // The server accepted the batch, so each object mirrors it and is no longer queued, as after the
+                // WCF store's ProxyUpdate. NONE also clears per-field edit tracking (OnDBActionCleared), so the
+                // next server refresh may overwrite the fields that were just saved.
+                foreach (OBJECT dbObj in changedObjects)
+                    dbObj.DBAction = DBACTION.NONE;
             }
             catch(Exception e)
             {
