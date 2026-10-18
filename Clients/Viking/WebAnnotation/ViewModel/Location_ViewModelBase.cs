@@ -23,7 +23,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener, IContextMenu
+    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, System.Windows.IWeakEventListener, IContextMenu
     {
         public readonly LocationObj modelObj;
 
@@ -963,16 +963,6 @@ namespace WebAnnotation.ViewModel
         }
 
         public int GetHashCode(LocationObj obj) => obj.GetHashCode();
-
-        int IComparable<Location_ViewModelBase>.CompareTo(Location_ViewModelBase other)
-        {
-            if (other is null)
-            {
-                return 1;
-            }
-
-            return (int)(ID - other.ID);
-        }
 
         #region WeakEvents
 
