@@ -39,6 +39,21 @@ namespace Viking.Identity.Server
         /// </summary>
         public string CorrectionServiceClientSecret { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Confidential secret for the "sam2-gallery-tem" client (https://tem.gallery.codepharm.net, SAM2 annotation
+        /// gallery for TEM). When empty the client is not served at all.
+        /// </summary>
+        public string GalleryTemClientSecret { get; set; } = string.Empty;
+
+        /// <summary>Same for "sam2-gallery-sem" (https://sem.gallery.codepharm.net).</summary>
+        public string GallerySemClientSecret { get; set; } = string.Empty;
+
+        /// <summary>Redirect URIs accepted for the sam2-gallery-tem authorization code flow.</summary>
+        public string[] GalleryTemRedirectUris { get; set; } = new[] { "https://tem.gallery.codepharm.net/callback" };
+
+        /// <summary>Redirect URIs accepted for the sam2-gallery-sem authorization code flow.</summary>
+        public string[] GallerySemRedirectUris { get; set; } = new[] { "https://sem.gallery.codepharm.net/callback" };
+
         /// <summary>Redirect URIs accepted for the sbfsem-tools authorization code flow.</summary>
         public string[] SbfsemToolsRedirectUris { get; set; } = new[]
         {
@@ -109,6 +124,8 @@ namespace Viking.Identity.Server
                 "ro.viking" => (RoVikingSecret, nameof(RoVikingSecret)),
                 "sbfsem-tools" => (SbfsemToolsClientSecret, nameof(SbfsemToolsClientSecret)),
                 "correction" => (CorrectionServiceClientSecret, nameof(CorrectionServiceClientSecret)),
+                "sam2-gallery-tem" => (GalleryTemClientSecret, nameof(GalleryTemClientSecret)),
+                "sam2-gallery-sem" => (GallerySemClientSecret, nameof(GallerySemClientSecret)),
                 _ => throw new InvalidOperationException($"Unknown OAuth client id '{clientId}'.")
             };
 

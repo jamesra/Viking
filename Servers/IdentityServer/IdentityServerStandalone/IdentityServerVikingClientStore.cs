@@ -27,6 +27,10 @@ namespace Viking.Identity
         /// </summary>
         public const string CorrectionClientId = "correction";
 
+        /// <summary>Client ids of the SAM2 annotation galleries: confidential web apps that sign users in.</summary>
+        public const string GalleryTemClientId = "sam2-gallery-tem";
+        public const string GallerySemClientId = "sam2-gallery-sem";
+
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
         private readonly VikingIdentityServerOptions _options;
@@ -43,7 +47,8 @@ namespace Viking.Identity
         public async Task<Client> FindClientByIdAsync(string clientId)
         {
             if (clientId != "ro.viking" && clientId != "mvc" && clientId != "Viking" && clientId != "api" &&
-                clientId != SbfsemToolsClientId && clientId != CorrectionClientId)
+                clientId != SbfsemToolsClientId && clientId != CorrectionClientId &&
+                clientId != GalleryTemClientId && clientId != GallerySemClientId)
                 return null;
 
             // GetClientSecret throws when a secret is unconfigured. For the third-party client that
@@ -51,6 +56,10 @@ namespace Viking.Identity
             if (clientId == SbfsemToolsClientId && string.IsNullOrWhiteSpace(_options.SbfsemToolsClientSecret))
                 return null;
             if (clientId == CorrectionClientId && string.IsNullOrWhiteSpace(_options.CorrectionServiceClientSecret))
+                return null;
+            if (clientId == GalleryTemClientId && string.IsNullOrWhiteSpace(_options.GalleryTemClientSecret))
+                return null;
+            if (clientId == GallerySemClientId && string.IsNullOrWhiteSpace(_options.GallerySemClientSecret))
                 return null;
 
             // Rebuild AllowedScopes from the live resource store on every lookup so newly
@@ -114,6 +123,28 @@ namespace Viking.Identity
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
                     ClientSecrets = { clientSecret },
                     AllowedScopes = IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name).ToList(),
+                    AccessTokenType = AccessTokenType.Reference
+                };
+            }
+            else if (clientId == GalleryTemClientId || clientId == GallerySemClientId) /* SAM2 annotation galleries */
+            {
+                var isTem = clientId == GalleryTemClientId;
+                return new Client
+                {
+                    ClientId = clientId,
+                    ClientName = isTem ? "SAM2 Annotation Gallery (TEM)" : "SAM2 Annotation Gallery (SEM)",
+                    AllowedGrantTypes = new[] { GrantType.AuthorizationCode },
+                    // The gallery's backend authenticates with the client secret; it does not send a PKCE challenge.
+                    RequirePkce = false,
+                    RequireConsent = false,
+                    ClientSecrets = { clientSecret },
+                    RedirectUris = (isTem ? _options.GalleryTemRedirectUris : _options.GallerySemRedirectUris) ?? Array.Empty<string>(),
+                    // Volume scopes are omitted: the Permissions API authorizes on the user, not the scope.
+                    AllowedScopes = new List<string>
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile
+                    }.Concat(IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name)).ToList(),
                     AccessTokenType = AccessTokenType.Reference
                 };
             }
