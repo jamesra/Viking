@@ -760,7 +760,6 @@ namespace Viking
             Trace.Listeners.Add(Listener);
 
             Trace.UseGlobalLock = true;
-            TestCultureNumberParsing();
         }
 
         /// <summary>
@@ -780,31 +779,6 @@ namespace Viking
             catch (Exception ex)
             {
                 Trace.WriteLine("[Viking] Could not append debug_output.txt: " + ex.Message, "Viking");
-            }
-        }
-
-        private static void TestCultureNumberParsing()
-        {
-            NumberFormatInfo current1 = CultureInfo.CurrentCulture.NumberFormat;
-
-            Debug.WriteLine("Decimal separator: " + current1.NumberDecimalSeparator);
-            Debug.WriteLine("Group separator:   " + current1.NumberGroupSeparator);
-
-            string[] testStrings = ["3,800000000000e+01",
-                                    "3.800000000000e+01",
-                                    "3.80e+01",
-                                    "38"];
-
-            foreach (string number in testStrings)
-            {
-                try
-                {
-                    Debug.WriteLine($"Parsing {number} yields {System.Convert.ToDouble(number)}");
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine($"Could not parse {number}\n{e}");
-                }
             }
         }
 
