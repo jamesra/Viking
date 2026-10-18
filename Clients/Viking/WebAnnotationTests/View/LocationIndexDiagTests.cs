@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using SqlGeometryUtils;
 using WebAnnotationModel;
 
 namespace WebAnnotationTests.View
@@ -93,6 +94,76 @@ namespace WebAnnotationTests.View
             {
                 LocationIndexDiag.LogPath = realLog;
                 File.Delete(testLog);
+            }
+        }
+
+        private static LocationObj SquareLocation(long id)
+        {
+            var shape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(
+                new System.Data.SqlTypes.SqlChars("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"), 0);
+            return new LocationObj(new AnnotationService.Types.Location
+            {
+                ID = id,
+                TypeCode = (short)Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON,
+                Section = 1,
+                MosaicShapeWKB = shape.AsBinary(),
+                VolumeShapeWKB = shape.AsBinary()
+            });
+        }
+
+        [TestMethod]
+        public void AddingALocationTheIndexAlreadyHoldsReplacesItInsteadOfThrowing()
+        {
+            string realLog = LocationIndexDiag.LogPath;
+            LocationIndexDiag.LogPath = Path.Combine(Path.GetTempPath(), "viking-location-index-test-" + System.Guid.NewGuid().ToString("N") + ".log");
+            try
+            {
+                var index = new LocationRTree(null);
+                var location = SquareLocation(42);
+
+                index.AddObject(location);
+                index.AddObject(location);
+
+                Assert.AreEqual(1, index.SpatialSearch.Count);
+                Assert.IsTrue(index.SpatialSearch.Contains(42));
+            }
+            finally
+            {
+                File.Delete(LocationIndexDiag.LogPath);
+                LocationIndexDiag.LogPath = realLog;
+            }
+        }
+
+        [TestMethod]
+        public void ConcurrentAddsAndRemovesOfTheSameIdsNeverThrow()
+        {
+            string realLog = LocationIndexDiag.LogPath;
+            LocationIndexDiag.LogPath = Path.Combine(Path.GetTempPath(), "viking-location-index-test-" + System.Guid.NewGuid().ToString("N") + ".log");
+            try
+            {
+                var index = new LocationRTree(null);
+                var locations = Enumerable.Range(1, 50).Select(i => SquareLocation(i)).ToArray();
+
+                System.Threading.Tasks.Parallel.For(0, 8, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 8 }, worker =>
+                {
+                    for (int round = 0; round < 400; round++)
+                    {
+                        foreach (var location in locations)
+                        {
+                            if ((round + worker) % 2 == 0)
+                                index.AddObject(location);
+                            else
+                                index.RemoveObject(location.ID);
+                        }
+                    }
+                });
+
+                Assert.IsTrue(index.SpatialSearch.Count <= locations.Length, "an ID is never indexed twice");
+            }
+            finally
+            {
+                File.Delete(LocationIndexDiag.LogPath);
+                LocationIndexDiag.LogPath = realLog;
             }
         }
     }

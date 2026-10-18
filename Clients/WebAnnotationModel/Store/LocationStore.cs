@@ -19,28 +19,43 @@ namespace WebAnnotationModel
 
         readonly LocationStore Store = store;
 
+        /// <summary>Makes the check-then-add and the delete in this class one step, so two threads cannot interleave them.</summary>
+        private readonly object indexLock = new();
+
+        /// <summary>
+        /// Puts the location in the index. A location that is already indexed has its entry replaced, so the index never holds
+        /// an ID twice and the add cannot throw on a duplicate key.
+        /// </summary>
         public void AddObject(LocationObj obj)
         {
             RTree.Rectangle bbox = obj.MosaicShape.BoundingBox().ToRTreeRect((float)obj.Z);
 
-            if (SpatialSearch.Contains(obj.ID))
+            lock (indexLock)
             {
-                // Logged before the assertion, which blocks this thread on a dialog: the history says how the ID got here.
-                LocationIndexDiag.ReportDuplicate(
-                    obj.ID,
-                    $"Adding section={obj.Section} z={obj.Z} type={obj.TypeCode} bbox={bbox}; the index holds {SpatialSearch.Count} locations.");
+                if (SpatialSearch.Contains(obj.ID))
+                {
+                    // Logged before the entry is replaced: the history says how the ID got here.
+                    LocationIndexDiag.ReportDuplicate(
+                        obj.ID,
+                        $"Adding section={obj.Section} z={obj.Z} type={obj.TypeCode} bbox={bbox}; the index holds {SpatialSearch.Count} locations.");
+                    SpatialSearch.Delete(obj.ID, out _);
+                }
+
+                SpatialSearch.Add(bbox, obj.ID);
             }
 
-            Debug.Assert(!SpatialSearch.Contains(obj.ID));
-            SpatialSearch.Add(bbox, obj.ID);
             LocationIndexDiag.Record(obj.ID, "index add");
         }
 
         public void RemoveObject(long key)
         {
-            bool deleted = SpatialSearch.Delete(key, out var removedID);
+            bool deleted;
+            lock (indexLock)
+            {
+                deleted = SpatialSearch.Delete(key, out var removedID);
+            }
+
             LocationIndexDiag.Record(key, deleted ? "index delete" : "index delete missed (not in the index)");
-            return;
         }
 
         public ICollection<LocationObj> Intersects(Rectangle bbox, float SectionNumber)
@@ -229,38 +244,51 @@ namespace WebAnnotationModel
         }
 
 
+        /// <summary>
+        /// Held while a location enters or leaves the store, its section list and the spatial index. Each of those is safe alone,
+        /// but a remove that landed between another thread's store add and its index add left the index entry behind, and the next
+        /// add of that ID then threw on a duplicate key and ended the process.
+        /// </summary>
+        private readonly object membershipLock = new();
+
         protected override bool TryAddObject(LocationObj newObj)
         {
-            bool added = IDToObject.TryAdd(newObj.ID, newObj);
-            LocationIndexDiag.Record(newObj.ID, added ? "store add" : "store add rejected (already in the store)");
-            if (added)
+            lock (membershipLock)
             {
-                newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
-                TryAddLocationToSection(newObj);
-                SpatialSearch.AddObject(newObj);
-            }
+                bool added = IDToObject.TryAdd(newObj.ID, newObj);
+                LocationIndexDiag.Record(newObj.ID, added ? "store add" : "store add rejected (already in the store)");
+                if (added)
+                {
+                    newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
+                    TryAddLocationToSection(newObj);
+                    SpatialSearch.AddObject(newObj);
+                }
 
-            return added;
+                return added;
+            }
         }
 
         protected override LocationObj TryRemoveObject(long key)
         {
-            bool success = IDToObject.TryRemove(key, out var existingObj);
-            LocationIndexDiag.Record(key, success ? "store remove" : "store remove missed (not in the store)");
-            if (success)
+            lock (membershipLock)
             {
-                existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
-                //existingObj.Dispose(); 
+                bool success = IDToObject.TryRemove(key, out var existingObj);
+                LocationIndexDiag.Record(key, success ? "store remove" : "store remove missed (not in the store)");
+                if (success)
+                {
+                    existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
+                    //existingObj.Dispose();
 
-                TryRemoveLocationFromSection(existingObj);
-                SpatialSearch.RemoveObject(key);
-            }
-            else
-            {
-                existingObj = null;
-            }
+                    TryRemoveLocationFromSection(existingObj);
+                    SpatialSearch.RemoveObject(key);
+                }
+                else
+                {
+                    existingObj = null;
+                }
 
-            return existingObj;
+                return existingObj;
+            }
         }
 
 
