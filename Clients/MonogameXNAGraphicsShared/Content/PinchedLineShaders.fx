@@ -21,6 +21,9 @@ float pinchedDrawCaps = 0;
 // alpha * pinchedWaistOpacity at the waist, linearly in squeeze, so the link fades where it narrows.
 float pinchedWaistOpacity = 0.5;
 
+// Width in screen pixels over which the outline fades from opaque to clear, half inside it and half outside.
+static const float pinchedFeatherPixels = 3;
+
 //NOTE: THE VERTEX SHADER OUTPUT AND PIXEL SHADER INPUT MUST MATCH EXACTLY WHEN USING MONOGAME
 struct PINCHED_VS_OUTPUT
 {
@@ -163,8 +166,8 @@ Color_Depth_Output MyPSPinchedHSV(PINCHED_PS_INPUT input)
 {
 	float squeeze;
 	float d = PinchedDistance(input, squeeze);
-	// Fade the outline over about one screen pixel.
-	float coverage = saturate((d / max(fwidth(d), 1e-6)) + 0.5);
+	// Feather the outline over pinchedFeatherPixels screen pixels, centred on it, so the edge looks soft.
+	float coverage = saturate((d / (pinchedFeatherPixels * max(fwidth(d), 1e-6))) + 0.5);
 	clip(coverage - 0.001);
 
 	float alpha = saturate(lineColor.a * lerp(1, pinchedWaistOpacity, squeeze));

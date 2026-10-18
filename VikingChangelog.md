@@ -16,6 +16,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Copy-link URLs for bookmarks now write coordinates with the invariant culture. On a PC set to a comma-decimal locale (for example German), X, Y, and DS were written as 123456,8, which broke the link.
 * Geometry sent to or read from SQL as WKT (points, lines, circles, polygons) now uses the invariant culture. On a comma-decimal locale the text was written as 10,50 20,25, which SQL Server rejects or misreads.
 * Export Frames no longer adds an extra 512 x 512 frame at X 0, Y 0, section 0 for the grid's empty last row, and a row with X, Y, or Z left blank is reported as unparseable instead of being exported at 0.
+* Clicking on the middle of a polyline annotation now selects it. A wide line scored the centre as farther away than its edge, so a click there could pick a circle on the adjacent section, or a more distant line, instead.
 * Pasting coordinates into Go To Location (Ctrl+V) keeps the minus sign of negative X or Y and a leading decimal point (.5), and a comma-separated list such as 100, 200, 34 no longer sets Z to 0.
 * Two bidirectional structure links that share the same lower structure ID (for example 5 <-> 10 and 5 <-> 20) are now both drawn on a section; before, only the first one loaded was shown. The pen tool also recognizes an existing bidirectional link that was created from the other structure, instead of offering to create it again.
 * The pen tool's structure-link scribble (passing three or four times between two structures) now counts passes per structure. When the other structure had two locations on the section and the scribble crossed both, the passes were split and no link was offered, or the same link was offered twice.
@@ -52,7 +53,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * The Review change feed structure/label filter no longer hides every row when the text is only separators such as a lone comma; it now shows all rows, as the server query already did.
 * When only some corners of the visible area map into a section (view near the edge of the aligned data), the region loaded for annotations and tiles no longer treats two corners on the same side as opposite corners, which shrank the loaded region to a square on that side and could leave part of the view without annotations.
 * Hovering or clicking near a link that was just removed no longer risks an error: link hit-testing skips links deleted at the same moment.
-* Location links to the adjacent section fade where they narrow: the thin middle of the link is drawn at half the opacity of its wide ends.
+* Location links to the adjacent section fade where they narrow: the thin middle of the link is drawn at half the opacity of its wide ends. Its edges are also softer, fading out over about three screen pixels instead of one.
 
 ## 1.2.77 — 2026-09-30
 
