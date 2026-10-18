@@ -1204,10 +1204,13 @@ namespace Viking.UI.Controls
                 System.IO.DirectoryInfo dirInfo = System.IO.Directory.Exists(path) == false ? System.IO.Directory.CreateDirectory(path) : new System.IO.DirectoryInfo(path);
                 dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
-                //this.Section = S;
+                //Get the boundaries of the exported section S, not the section on screen; this runs off the UI thread,
+                //so this.Section is not switched here (RenderSceneToTexture switches it per tile).
+                MappingBase mapping = S.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, S.Number, this.CurrentChannel, this.CurrentTransform);
 
-                //Get the boundaries of the section
-                MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+                //A section without this channel or transform has nothing to export
+                if (mapping is null)
+                    continue;
 
                 //Figure out how much we need to capture
                 Size TileImageSize = new(512, 512);
