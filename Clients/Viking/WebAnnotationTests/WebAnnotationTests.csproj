@@ -40,6 +40,7 @@
         <Compile Include="StructureIdTextTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="HiddenStructuresTests.cs" />
+        <Compile Include="ObjAttributeTests.cs" />
         <Compile Include="View\PolygonViewTimingLogTests.cs" />
         <Compile Include="Commands\PolygonHoleFillTests.cs" />
         <Compile Include="Commands\SegmentationMaskUnionTests.cs" />
