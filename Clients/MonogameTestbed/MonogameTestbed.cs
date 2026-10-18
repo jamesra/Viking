@@ -104,7 +104,7 @@ namespace MonogameTestbed
 
         public MonoTestbed()
         {
-            SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             // Preload MonoGame native DLLs for Visual Studio debugger
             LoadMonoGameNativeLibraries();

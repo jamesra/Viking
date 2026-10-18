@@ -88,6 +88,7 @@
 		<ProjectReference Include="..\..\MIConvexHullExtensions\MIConvexHullExtensions.csproj" />
 		<ProjectReference Include="..\..\MorphologyMesh\MorphologyMesh.csproj" />
 		<ProjectReference Include="..\..\RTree\RTree.csproj" />
+		<ProjectReference Include="..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
 		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
 		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />
 		<ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
