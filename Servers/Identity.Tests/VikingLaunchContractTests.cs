@@ -63,5 +63,17 @@ namespace TestIdentityModel
             }));
             Assert.False(OAuthTokenClient.IsSbfsemTools(viking));
         }
+
+        [Theory]
+        [InlineData(VikingOAuthClients.SbfsemTools, true)]
+        [InlineData(VikingOAuthClients.GalleryTem, true)]
+        [InlineData(VikingOAuthClients.GallerySem, true)]
+        [InlineData("Viking", false)]
+        [InlineData("correction", false)]
+        public void OAuthTokenClient_OnlyTrustedWebClientsMintLaunchCodes(string clientId, bool allowed)
+        {
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("client_id", clientId) }));
+            Assert.Equal(allowed, OAuthTokenClient.CanMintLaunchCodes(user));
+        }
     }
 }

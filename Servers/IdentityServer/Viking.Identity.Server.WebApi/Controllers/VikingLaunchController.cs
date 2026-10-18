@@ -18,7 +18,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
 {
     /// <summary>
     /// viking://open launch codes: anonymous exchange for the desktop client, and
-    /// bearer minting for sbfsem-tools (POST launch-code).
+    /// bearer minting for sbfsem-tools and the SAM2 galleries (POST launch-code).
     /// </summary>
     [ApiController]
     [Route("api/viking")]
@@ -49,16 +49,16 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         }
 
         /// <summary>
-        /// Mints a one-use launch code for the token subject. Restricted to the sbfsem-tools
-        /// client so a generic Viking.Annotation token cannot open a desktop session.
+        /// Mints a one-use launch code for the token subject. Restricted to the sbfsem-tools and
+        /// SAM2 gallery clients so a generic Viking.Annotation token cannot open a desktop session.
         /// Callers append <c>&amp;location=</c> to <c>viking_url</c> themselves.
         /// </summary>
         [HttpPost("launch-code")]
         public async Task<IActionResult> CreateLaunchCode([FromBody] LaunchCodeRequest request)
         {
-            if (!OAuthTokenClient.IsSbfsemTools(User))
+            if (!OAuthTokenClient.CanMintLaunchCodes(User))
             {
-                _logger.LogWarning("launch-code refused: client {ClientId} is not sbfsem-tools",
+                _logger.LogWarning("launch-code refused: client {ClientId} may not mint launch codes",
                     OAuthTokenClient.GetClientId(User) ?? "(none)");
                 return Forbid();
             }

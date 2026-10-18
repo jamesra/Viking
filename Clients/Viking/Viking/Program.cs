@@ -65,6 +65,13 @@ namespace Viking
             // Note: Velopack version 0.0.1298 doesn't have OnFirstRun/OnAfterUpdate hooks
             // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version
             VelopackApp.Build().Run();
+
+            // A viking:// link goes to a Viking that is already open on that volume, if there is one: it jumps to the
+            // position and this process exits. Otherwise this process opens the volume as usual.
+            string? deepLink = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(deepLink) && VikingDeeplinkInstances.TryForward(deepLink))
+                return;
+            VikingDeeplinkInstances.StartListening();
             
             // Upgrade settings from previous versions (preserves user settings across updates)
             SettingsManager.UpgradeSettingsIfNeeded();
@@ -250,7 +257,7 @@ namespace Viking
         /// Copies location / coordinate query params into StartupArguments for post-load navigation.
         /// Location ID wins over coordinates when both are present.
         /// </summary>
-        private static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
+        internal static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
         {
             UI.State.StartupArguments = [];
 
@@ -288,7 +295,7 @@ namespace Viking
                 UI.State.StartupArguments[startupKey] = value.Trim();
         }
 
-        private static Dictionary<string, string> ParseQueryString(string query)
+        internal static Dictionary<string, string> ParseQueryString(string query)
         {
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(query) || query[0] != '?')

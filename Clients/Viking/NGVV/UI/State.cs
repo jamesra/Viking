@@ -208,5 +208,11 @@ namespace Viking.UI
         /// </summary>
         public static System.Collections.Specialized.NameValueCollection StartupArguments = [];
 
+        /// <summary>
+        /// Jumps the open viewer to a Location ID. Set by the annotation module once its overlay exists; used when a
+        /// viking://open?location=... link is handed to a Viking that is already running.
+        /// </summary>
+        public static Func<long, System.Threading.Tasks.Task>? GoToLocationIdHandler { get; set; }
+
     }
 }

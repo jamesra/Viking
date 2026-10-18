@@ -126,6 +126,7 @@ namespace WebAnnotation
 
             //    AnnotationCache.AnnotationChanged += AnnotationChangedEventHandler;      
             _CurrentOverlay = this;
+            Viking.UI.State.GoToLocationIdHandler = locationId => GoToLocation(locationId);
         }
 
         /// <summary>
