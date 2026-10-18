@@ -749,6 +749,8 @@ uniform const float2 stripeDirection = float2(1, 1);
 //Distance along stripeDirection from one stripe to the next: a lit stripe and a clear gap of equal width.
 uniform const float stripePeriod = 4;
 //Optional band across x + y that limits the lit stripes: x is its centre, y its half width. y <= 0 lights them all.
+//While a band is set, the stripes are shifted back by its centre. With stripeDirection (1, 1) both are measured along x + y,
+//so a moving band drags the stripes the other way at its own speed.
 uniform const float2 stripeBand = float2(0, 0);
 //Clip texture alpha (0..1) at the edge of the clipped area.
 uniform const float stripeClipLevel = 0.5;
@@ -767,7 +769,7 @@ PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 	float clipCoverage = saturate(clipValue / max(fwidth(clipValue), 1e-5) + 0.5);
 
 	//Stripes: edge is the distance to the nearest stripe edge in periods, positive on a stripe and negative in a gap.
-	float u = dot(texel, stripeDirection) / stripePeriod;
+	float u = (dot(texel, stripeDirection) + (stripeBand.y > 0 ? stripeBand.x : 0)) / stripePeriod;
 	float uWidth = max(fwidth(u), 1e-5);
 	float edge = 0.25 - abs(frac(u + 0.25) - 0.5);
 	float stripe = saturate(edge / uWidth + 0.5);
