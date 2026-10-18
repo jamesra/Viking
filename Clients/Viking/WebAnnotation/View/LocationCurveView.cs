@@ -14,21 +14,6 @@ namespace WebAnnotation.View
         public abstract Color Color { get; set; }
         public abstract float Alpha { get; set; }
 
-        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
-        {
-            if (PointIntersectsAnyControlPoint(Position))
-            {
-                return VolumeControlPoints.Select(p => Geometry.Vector2.Distance(p, Position) / ControlPointRadius).Min();
-            }
-            else
-            {
-                //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-                LineSegment[] segs = LineSegment.SegmentsFromPoints(VolumeCurveControlPoints);
-                double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-                return MinDistance / (LineWidth / 2.0);
-            }
-        }
-
         protected override Geometry.Vector2[] HitTestPoints => VolumeCurveControlPoints;
     }
 }

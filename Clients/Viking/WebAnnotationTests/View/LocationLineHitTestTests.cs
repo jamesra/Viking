@@ -48,6 +48,61 @@ namespace WebAnnotationTests.View
             Assert.IsFalse(view.Hit(new GridVector2(5, 0)), "on the control polyline, far from the curve");
         }
 
+        /// <summary>
+        /// Hit ranking reads <see cref="LocationCanvasView.DistanceFromCenterNormalized"/> as 0 on the centreline and 1 at the
+        /// line's edge. A line used to return half-width minus distance, so with a width over 2 a click on the centreline scored
+        /// above 1 and the line fell out of the "mouse is over it" set.
+        /// </summary>
+        [TestMethod]
+        public void LineDistanceIsZeroOnTheCentrelineAndGrowsToOneAtTheEdge()
+        {
+            StubLine view = Create<StubLine>(Control, lineWidth: 4);
+
+            Assert.AreEqual(0.0, view.DistanceFromCenterNormalized(new GridVector2(5, 0)), 1e-12);
+            Assert.AreEqual(0.5, view.DistanceFromCenterNormalized(new GridVector2(5, 1)), 1e-12);
+            Assert.AreEqual(0.95, view.DistanceFromCenterNormalized(new GridVector2(5, -1.9)), 1e-12);
+        }
+
+        [TestMethod]
+        public void CurveDistanceIsMeasuredFromTheInterpolatedCurve()
+        {
+            StubCurve view = Create<StubCurve>(Control, lineWidth: 4);
+            view.CurvePoints = Curve;
+
+            Assert.AreEqual(0.0, view.DistanceFromCenterNormalized(new GridVector2(5, 5)), 1e-12);
+            Assert.AreEqual(0.5, view.DistanceFromCenterNormalized(new GridVector2(5, 6)), 1e-12);
+        }
+
+        /// <summary>
+        /// A wide line clicked on its centreline is picked over a circle on the adjacent section, and the nearer of two lines wins.
+        /// </summary>
+        [TestMethod]
+        public void LineClickedOnItsCentrelineIsSelectedOnTheCurrentSection()
+        {
+            const int section = 10;
+            // Long enough that the click is outside the control point circles and scores against the segment.
+            GridVector2[] longLine = [new(-50, 0), new(50, 0)];
+            StubLine line = Create<StubLine>(longLine, lineWidth: 16);
+            StubLine adjacent = Create<StubLine>(longLine, lineWidth: 16);
+            GridVector2 click = new(5, 0);
+
+            HitTestResult hit = new List<HitTestResult>
+            {
+                new(adjacent, section + 1, 0, 0),
+                new(line, section, 0, line.DistanceFromCenterNormalized(click)),
+            }.NearestObjectOnCurrentSectionThenAdjacent(section);
+            Assert.AreSame(line, hit.obj);
+
+            StubLine nearer = Create<StubLine>([new(-50, 1), new(50, 1)], lineWidth: 16);
+            StubLine farther = Create<StubLine>([new(-50, 6), new(50, 6)], lineWidth: 16);
+            hit = new List<HitTestResult>
+            {
+                new(farther, section, 0, farther.DistanceFromCenterNormalized(click)),
+                new(nearer, section, 0, nearer.DistanceFromCenterNormalized(click)),
+            }.NearestObjectOnCurrentSectionThenAdjacent(section);
+            Assert.AreSame(nearer, hit.obj);
+        }
+
         private static T Create<T>(GridVector2[] controlPoints, double lineWidth) where T : LocationLineViewBase
         {
             T view = (T)FormatterServices.GetUninitializedObject(typeof(T));
