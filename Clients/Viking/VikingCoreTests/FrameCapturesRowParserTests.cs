@@ -47,6 +47,40 @@ namespace VikingCoreTests
             Assert.AreEqual(1744.0, frame.Rect.Bottom);
         }
 
+        /// <summary>
+        /// Pasting "1000\t2000\t12\t\t\t" from a spreadsheet stores "" (not null) in the trailing cells;
+        /// those must default like null cells instead of failing to parse.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("")]
+        [DataRow(" ")]
+        public void BlankStringOptionalCells_Default(string blank)
+        {
+            FrameCapture frame = FrameCapturesForm.ParseFrameRow(new object?[] { "1000", "2000", "12", blank, blank, blank }, true, File)!.Value;
+
+            Assert.AreEqual(1.0, frame.downsample);
+            Assert.AreEqual(512.0, frame.Rect.Width);
+            Assert.AreEqual(512.0, frame.Rect.Height);
+            Assert.AreEqual(744.0, frame.Rect.Left);
+            Assert.AreEqual(1744.0, frame.Rect.Bottom);
+        }
+
+        /// <summary>Each optional cell defaults on its own when only it is blank.</summary>
+        [DataTestMethod]
+        [DataRow(3, 512.0, 50.0, 4.0)]
+        [DataRow(4, 100.0, 512.0, 4.0)]
+        [DataRow(5, 100.0, 50.0, 1.0)]
+        public void SingleBlankOptionalCell_Defaults(int blankColumn, double width, double height, double downsample)
+        {
+            object?[] cells = { "0", "0", "1", "100", "50", "4" };
+            cells[blankColumn] = "";
+            FrameCapture frame = FrameCapturesForm.ParseFrameRow(cells, false, File)!.Value;
+
+            Assert.AreEqual(downsample, frame.downsample);
+            Assert.AreEqual(width * downsample, frame.Rect.Width);
+            Assert.AreEqual(height * downsample, frame.Rect.Height);
+        }
+
         [TestMethod]
         public void ExplicitSizeAndDownsample_ScaleRegionCenteredOnPoint()
         {

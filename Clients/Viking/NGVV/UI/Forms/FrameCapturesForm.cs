@@ -146,7 +146,7 @@ namespace Viking.UI.Forms
         /// <param name="filename">Full path of the PNG the frame is written to.</param>
         /// <returns>The frame, or <c>null</c> when every cell is blank (the grid's new-row placeholder or an empty row).</returns>
         /// <exception cref="FormatException">X, Y, or Z is blank while another cell is not, or a cell is not a number.</exception>
-        /// <remarks>Width and height default to 512 and downsample to 1 when their cells are empty.</remarks>
+        /// <remarks>Width and height default to 512 and downsample to 1 when their cells are null, empty, or white space.</remarks>
         internal static FrameCapture? ParseFrameRow(IReadOnlyList<object?> cells, bool includeOverlay, string filename)
         {
             static bool IsBlank(object? value) => value is null || (value is string s && string.IsNullOrWhiteSpace(s));
@@ -162,9 +162,12 @@ namespace Viking.UI.Forms
 
             double X = Required(iX);
             double Y = Required(iY);
-            double Width = Cell(iWidth) is null ? 512 : System.Convert.ToDouble(Cell(iWidth));
-            double Height = Cell(iHeight) is null ? 512 : System.Convert.ToDouble(Cell(iHeight));
-            double downsample = Cell(iDownsample) is null ? 1 : System.Convert.ToDouble(Cell(iDownsample));
+            //A pasted spreadsheet row leaves trailing optional cells as "", which Convert.ToDouble rejects
+            double Optional(int i, double defaultValue) => IsBlank(Cell(i)) ? defaultValue : System.Convert.ToDouble(Cell(i));
+
+            double Width = Optional(iWidth, 512);
+            double Height = Optional(iHeight, 512);
+            double downsample = Optional(iDownsample, 1);
 
             //Width and Height are the target image width and height.  Figure out what the ROI Width and Height should be
             double ROIWidth = Width * downsample;
