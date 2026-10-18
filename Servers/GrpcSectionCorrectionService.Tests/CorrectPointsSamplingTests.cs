@@ -107,6 +107,87 @@ namespace GrpcSectionCorrectionService.Tests
             }
         }
 
+        /// <summary>Asserts every output point is the input point with zero offset and not trusted.</summary>
+        static void AssertUnshifted(CorrectedSection section, SectionPoints input)
+        {
+            Assert.AreEqual(input.Points.Count, section.Points.Count);
+            for (int i = 0; i < input.Points.Count; i++)
+            {
+                Assert.AreEqual(input.Points[i].X, section.Points[i].X);
+                Assert.AreEqual(input.Points[i].Y, section.Points[i].Y);
+                Assert.AreEqual(0, section.Points[i].Dx);
+                Assert.AreEqual(0, section.Points[i].Dy);
+                Assert.IsFalse(section.Points[i].Trusted);
+            }
+        }
+
+        static async Task<CorrectedSection> CorrectOneSectionAsync(CorrectionMode? mode, long z)
+        {
+            const string volume = "RC1";
+            const string stos = "SliceToVolume";
+            string root = Path.Combine(Path.GetTempPath(), "grpc-corr-" + Guid.NewGuid().ToString("N"));
+            string dest = Path.Combine(root, volume, stos);
+            Directory.CreateDirectory(dest);
+            try
+            {
+                new PublishedCorrectionSet(
+                    new CorrectionManifestDto { StosGroup = stos, Provenance = Provenance() },
+                    new Dictionary<long, SectionVectorField>
+                    {
+                        [5] = new SectionVectorField(5, 2000, 8000, FourCorners())
+                    }).WriteDirectory(dest);
+
+                using VolumeCorrectionCatalog catalog = new(root);
+                catalog.Load();
+                SectionCorrectionsService service = new(
+                    catalog,
+                    new StaticIdentityVolumeSource([]),
+                    new AnnotationConnectionResolver(new Dictionary<string, string>(), null),
+                    new ConfigurationBuilder().Build(),
+                    new RebuildStatusStore(),
+                    NullLogger<SectionCorrectionsService>.Instance);
+
+                CorrectPointsRequest request = new() { VolumeName = volume, StosGroup = stos };
+                if (mode.HasValue)
+                    request.Correction = mode.Value;
+                request.Sections.Add(new SectionPoints
+                {
+                    Z = z,
+                    Points = { new VolumeXY { X = 1000, Y = 1000 }, new VolumeXY { X = -3.5f, Y = 2500 } }
+                });
+                CorrectPointsResponse response = await service.CorrectPoints(request, null);
+                Assert.AreEqual(1, response.Sections.Count);
+                Assert.AreEqual(z, response.Sections[0].Z);
+                return response.Sections[0];
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        [TestMethod]
+        public async Task CorrectPoints_WithoutNeighborMode_ReturnsUnshiftedPointsAsFound()
+        {
+            CorrectedSection section = await CorrectOneSectionAsync(CorrectionMode.CurveFit, 5);
+            Assert.IsTrue(section.FoundSection);
+            AssertUnshifted(section, new SectionPoints
+            {
+                Points = { new VolumeXY { X = 1000, Y = 1000 }, new VolumeXY { X = -3.5f, Y = 2500 } }
+            });
+        }
+
+        [TestMethod]
+        public async Task CorrectPoints_NeighborModeSectionAbsentFromSet_ReturnsUnshiftedPointsAsNotFound()
+        {
+            CorrectedSection section = await CorrectOneSectionAsync(CorrectionMode.Neighbor, 7);
+            Assert.IsFalse(section.FoundSection);
+            AssertUnshifted(section, new SectionPoints
+            {
+                Points = { new VolumeXY { X = 1000, Y = 1000 }, new VolumeXY { X = -3.5f, Y = 2500 } }
+            });
+        }
+
         [TestMethod]
         public async Task CorrectPoints_UnknownVolume_NotFound()
         {

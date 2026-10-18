@@ -243,32 +243,12 @@ namespace Viking.GrpcSectionCorrectionService
                 if (!sampleField)
                 {
                     outSection.FoundSection = true;
-                    foreach (VolumeXY p in section.Points)
-                    {
-                        outSection.Points.Add(new CorrectedXY
-                        {
-                            X = p.X,
-                            Y = p.Y,
-                            Dx = 0,
-                            Dy = 0,
-                            Trusted = false
-                        });
-                    }
+                    AddUnshiftedPoints(outSection, section);
                 }
                 else if (!set.TryGetSection(section.Z, out SectionVectorField field))
                 {
                     outSection.FoundSection = false;
-                    foreach (VolumeXY p in section.Points)
-                    {
-                        outSection.Points.Add(new CorrectedXY
-                        {
-                            X = p.X,
-                            Y = p.Y,
-                            Dx = 0,
-                            Dy = 0,
-                            Trusted = false
-                        });
-                    }
+                    AddUnshiftedPoints(outSection, section);
                 }
                 else
                 {
@@ -291,6 +271,25 @@ namespace Viking.GrpcSectionCorrectionService
             }
 
             return Task.FromResult(response);
+        }
+
+        /// <summary>
+        /// Fills <paramref name="outSection"/> with <paramref name="section"/>'s points unchanged: zero offset,
+        /// not trusted. Used by <see cref="CorrectPoints"/> when no field is sampled or the section has none.
+        /// </summary>
+        static void AddUnshiftedPoints(CorrectedSection outSection, SectionPoints section)
+        {
+            foreach (VolumeXY p in section.Points)
+            {
+                outSection.Points.Add(new CorrectedXY
+                {
+                    X = p.X,
+                    Y = p.Y,
+                    Dx = 0,
+                    Dy = 0,
+                    Trusted = false
+                });
+            }
         }
 
         public override async Task<CorrectStructuresResponse> CorrectStructures(
