@@ -679,6 +679,53 @@ namespace WebAnnotation
             return (ICanvasView)bestHit.obj;
         }
 
+        /// <summary>
+        /// Finds the circle annotations on one section whose volume circle intersects <paramref name="bounds"/> or lies inside it.
+        /// </summary>
+        /// <param name="CurrentSectionNumber">Section whose cached annotations are searched.</param>
+        /// <param name="bounds">Closed pen loop in volume coordinates.</param>
+        /// <returns>The matching circles, or null when the section's annotations are not loaded.</returns>
+        public static List<LocationCircleView> IntersectedCirclesOnSection(int CurrentSectionNumber, Polygon bounds)
+        {
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView is null)
+            {
+                return null;
+            }
+
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == LocationType.CIRCLE);
+
+            IEnumerable<LocationCircleView> listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
+
+            return [.. listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle))];
+        }
+
+        /// <summary>
+        /// Finds the polygon annotations on one section that allow interior holes and whose rendered volume shape
+        /// intersects or covers <paramref name="bounds"/>.
+        /// </summary>
+        /// <param name="CurrentSectionNumber">Section whose cached annotations are searched.</param>
+        /// <param name="bounds">Closed pen loop in volume coordinates.</param>
+        /// <returns>The matching polygons, or null when the section's annotations are not loaded.</returns>
+        public static List<LocationPolygonView> IntersectedPolygonsOnSection(int CurrentSectionNumber, Polygon bounds)
+        {
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView is null)
+            {
+                return null;
+            }
+
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
+
+            IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
+
+            return [.. listPolygons.Where(o =>
+            {
+                Polygon poly = o.VolumeShapeAsRendered.ToPolygon();
+                return poly.Intersects(bounds) || poly.Covers(bounds);
+            })];
+        }
+
         public static List<HitTestResult> GetAnnotations(LineSegment line, int CurrentSectionNumber)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
@@ -1333,7 +1380,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// This is called when a AnnotationOverlayPenFreeDrawCommand is completed.  The overlay checks all of the shapes 
+        /// This is called when a AnnotationOverlayPenFreeDrawCommandV2 is completed.  The overlay checks all of the shapes 
         /// intersected to determine the possible interactions.  We then present the options to the user to confirm.
         /// </summary>
         /// <param name="path"></param>
@@ -1420,7 +1467,7 @@ namespace WebAnnotation
                 return;
 
             Polygon loop = new(sender.Path.SimplifiedFirstLoop);
-            List<LocationCircleView> circles = AnnotationOverlayPenFreeDrawCommand.IntersectedCirclesOnSection(CurrentSectionNumber, loop);
+            List<LocationCircleView> circles = IntersectedCirclesOnSection(CurrentSectionNumber, loop);
             if (circles is null)
                 return;
 
@@ -1450,7 +1497,7 @@ namespace WebAnnotation
                 return;
 
             Polygon loop = new(sender.Path.SimplifiedFirstLoop);
-            List<LocationPolygonView> polygons = AnnotationPenFreeDrawCommand.IntersectedPolygonsOnSection(CurrentSectionNumber, loop);
+            List<LocationPolygonView> polygons = IntersectedPolygonsOnSection(CurrentSectionNumber, loop);
             if (polygons is null)
                 return;
 
