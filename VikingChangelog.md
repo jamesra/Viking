@@ -25,6 +25,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Redrawing a polyline (open curve) with the pen where the new line reaches past the section's mapped area no longer throws a NullReferenceException; the polyline keeps its shape.
 * Adding, removing or dragging a polygon vertex where the edited polygon reaches past the section's mapped area no longer throws a NullReferenceException; the polygon keeps its shape.
 * A pen stroke over a circle from the adjacent section that reaches past this section's mapped area no longer offers a **Linked location** choice that threw a NullReferenceException when picked; no linked location is offered for that stroke.
+* Clicking a line, closed curve or polygon from the adjacent section (or continuing the last trace) where its shape reaches past either section's mapped area no longer throws a NullReferenceException; no linked location is started.
 * Pen and touch input no longer throws an unhandled exception on 64-bit Windows when the pointer is above or left of the primary monitor (negative coordinates).
 * Section view no longer throws a KeyNotFoundException when a location is removed at the same moment its overlapped-link highlight is updated.
 * Choosing an Open Connectome Project server whose public-token list is valid JSON of the wrong shape (for example an error object) now shows the parser message in the volume list instead of throwing an unhandled exception.

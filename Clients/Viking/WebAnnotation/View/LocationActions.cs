@@ -235,9 +235,9 @@ namespace WebAnnotation
                     IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                     Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-
+                    SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition), out SqlGeometry VolumeShape);
+                    if (MosaicShape is null)
+                        return null;
 
                     return new TranslateOpenCurveCommand(Parent,
                                                              volumePosition,
@@ -317,8 +317,9 @@ namespace WebAnnotation
                     IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                     Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+                    SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition), out SqlGeometry VolumeShape);
+                    if (MosaicShape is null)
+                        return null;
 
                     return new TranslateClosedCurveCommand(Parent,
                                                              MosaicShape.Centroid(),
@@ -519,7 +520,9 @@ namespace WebAnnotation
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                         Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
+                        SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition), out _);
+                        if (MosaicShape is null)
+                            return null;
 
                         Polygon mosaicPolygon = MosaicShape.ToPolygon();
                         Microsoft.Xna.Framework.Color color = WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f);
@@ -665,21 +668,25 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Warp a shape from the source section's mosaic space to the destination sections mosaic space
+        /// Warps a shape from the source section's mosaic space to the destination section's mosaic space, through volume space.
+        /// Returns null, with a trace line, when any vertex of the shape lies outside either mapping, so a linked-location command is not created for a shape it cannot place.
         /// </summary>
-        /// <param name="SourceShape"></param>
-        /// <param name="SourceSection"></param>
-        /// <param name="DestinationSection"></param>
-        private static Microsoft.SqlServer.Types.SqlGeometry TransformMosaicShapeToSection(Viking.ViewModels.VolumeViewModel volume,
-                                                                                           Microsoft.SqlServer.Types.SqlGeometry SourceShape,
-                                                                                           int SourceSection,
-                                                                                           int DestinationSection,
-                                                                                           out Microsoft.SqlServer.Types.SqlGeometry VolumeShape)
+        /// <param name="source">Section-to-volume transform of the section the shape comes from.</param>
+        /// <param name="destination">Section-to-volume transform of the section the linked location is placed on.</param>
+        /// <param name="sourceShape">The shape in the source section's mosaic space.</param>
+        /// <param name="volumeShape">The shape in volume space, or null when <paramref name="sourceShape"/> lies partly outside <paramref name="source"/>.</param>
+        /// <returns>The shape in the destination section's mosaic space, or null when it cannot be mapped.</returns>
+        internal static SqlGeometry TryTransformMosaicShapeToSection(IVolumeToSectionTransform source,
+                                                                     IVolumeToSectionTransform destination,
+                                                                     SqlGeometry sourceShape,
+                                                                     out SqlGeometry volumeShape)
         {
-            Viking.VolumeModel.IVolumeToSectionTransform SourceSectionTransform = volume.GetSectionToVolumeTransform(SourceSection);
-            Viking.VolumeModel.IVolumeToSectionTransform DestinationSectionTransform = volume.GetSectionToVolumeTransform(DestinationSection);
-            VolumeShape = SourceSectionTransform.TryMapShapeSectionToVolume(SourceShape);
-            return DestinationSectionTransform.TryMapShapeVolumeToSection(VolumeShape);
+            volumeShape = source.TryMapShapeSectionToVolume(sourceShape);
+            SqlGeometry mosaicShape = volumeShape is null ? null : destination.TryMapShapeVolumeToSection(volumeShape);
+            if (mosaicShape is null)
+                System.Diagnostics.Trace.WriteLine("Linked location: shape lies partly outside the section mapping; no command created.", "WebAnnotation");
+
+            return mosaicShape;
         }
 
         private static bool IsClosedCurve(LocationObj loc) => loc.TypeCode == LocationType.CLOSEDCURVE;

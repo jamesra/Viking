@@ -31,6 +31,7 @@
         <Compile Include="Actions\ChangeTypeActionTests.cs" />
         <Compile Include="Actions\ChangeContourActionTests.cs" />
         <Compile Include="Actions\CreateNewLinkedLocationActionTests.cs" />
+        <Compile Include="View\LinkedLocationShapeMappingTests.cs" />
         <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
         <Compile Include="Commands\PolygonVertexCommandMappingTests.cs" />
         <Compile Include="View\LocationLinkPinchTests.cs" />
