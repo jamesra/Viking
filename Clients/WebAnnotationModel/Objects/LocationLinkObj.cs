@@ -47,14 +47,6 @@ namespace WebAnnotationModel
             return !((A.ID == B.ID));
             */
 
-        public int CompareTo(LocationLinkKey other)
-        {
-            if (A != other.A)
-                return (int)(other.A - A);
-            else
-                return (int)(other.B - B);
-        }
-
         bool IEquatable<ILocationLink>.Equals(ILocationLink other) => throw new NotImplementedException();
 
         public long A => Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID;
