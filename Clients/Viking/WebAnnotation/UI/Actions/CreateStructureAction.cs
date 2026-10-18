@@ -1,6 +1,7 @@
 using Geometry;
 using SqlGeometryUtils;
 using System;
+using System.Diagnostics;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using WebAnnotation.UI.Commands;
@@ -22,6 +23,10 @@ namespace WebAnnotation.UI.Actions
 
         public readonly int SectionNumber = SectionNumber;
 
+        /// <summary>
+        /// Maps the drawn volume shape to the section and queues creation of the new structure and its location.
+        /// Creates nothing, and writes a trace line, when any vertex of the shape cannot be mapped to the section.
+        /// </summary>
         public abstract void OnExecute();
     }
 
@@ -58,6 +63,11 @@ namespace WebAnnotation.UI.Actions
             }
 
             Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            if (mosaic_polygon is null)
+            {
+                Trace.WriteLine("Create2DStructureAction: drawn polygon crosses an unmapped region of section " + SectionNumber + "; no structure created.", "WebAnnotation");
+                return;
+            }
 
             StructureObj newStruct = new(TypeObj);
 
@@ -134,6 +144,11 @@ namespace WebAnnotation.UI.Actions
             }
 
             Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumeShape);
+            if (mosaic_polygon is null)
+            {
+                Trace.WriteLine("Create1DStructureAction: drawn line crosses an unmapped region of section " + SectionNumber + "; no structure created.", "WebAnnotation");
+                return;
+            }
 
             StructureObj newStruct = new(TypeObj);
 
