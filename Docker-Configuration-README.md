@@ -19,7 +19,7 @@ The Docker setup has been updated to map `appsettings.json` files from the proje
 - **Development Config**: `Servers/GrpcAnnotation/appsettings.Development.json`
 
 ### 3. SegmentationServer (SAM2)
-- **Ports**: Web (8080), gRPC (50051)
+- **Ports**: gRPC (50051) with Docker Compose; `run-with-config.cmd` also publishes web (8080 to container port 80) and debug (5678)
 - **Configuration**: Uses Python-based configuration
 
 ## Running Services
@@ -37,21 +37,10 @@ docker-compose logs -f
 docker-compose down
 ```
 
-### Option 2: Using Individual Run Scripts
+### Option 2: Using the SegmentationServer Run Script
 
-#### GrpcAnnotationService
-```bash
-cd Servers/GrpcAnnotationService
-run-with-config.cmd
-```
+Only `Servers/SegmentationServer` has run scripts (`run-with-config.cmd`, `run-with-debug.cmd`, `run-with-pycharm.cmd`). The two gRPC annotation services have none; use Option 1 or 3 for them.
 
-#### GrpcAnnotation
-```bash
-cd Servers/GrpcAnnotation
-run-with-config.cmd
-```
-
-#### SegmentationServer
 ```bash
 cd Servers/SegmentationServer
 run-with-config.cmd
@@ -118,8 +107,8 @@ Once containers are running, access the services at:
   - HTTP: http://localhost:5000
   - HTTPS: https://localhost:5003
 - **SegmentationServer**: 
-  - Web: http://localhost:8080
   - gRPC: localhost:50051
+  - Web: http://localhost:8080 (only when started with `run-with-config.cmd`; Docker Compose does not publish it)
 
 ## Troubleshooting
 
@@ -131,7 +120,8 @@ Once containers are running, access the services at:
 ### Port Conflicts
 If you get port binding errors, modify the port mappings in:
 - `docker-compose.yml` for compose-based deployment
-- Run scripts for individual container deployment
+- `Servers/SegmentationServer/run-with-config.cmd` for the SegmentationServer script
+- The `-p` options of the manual `docker run` commands
 
 ### Container Not Starting
 1. Check Docker logs: `docker logs <container-name>`
@@ -148,20 +138,3 @@ All services are connected to a custom bridge network (`viking-network`) for int
 - Services run with appropriate environment variables
 - Network isolation is maintained through Docker networks
 - GPU access is properly configured for the SegmentationServer
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
