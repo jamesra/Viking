@@ -45,7 +45,7 @@ namespace WebAnnotationTests
         /// <summary>
         /// Global's type initializer reads <see cref="State.VolumeCachePath"/>, which requires a volume name.
         /// </summary>
-        private static void EnsureVolumeCachePathAvailable()
+        internal static void EnsureVolumeCachePathAvailable()
         {
             if (State.volume != null)
                 return;
