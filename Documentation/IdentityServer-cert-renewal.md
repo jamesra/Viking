@@ -112,7 +112,7 @@ docker exec identity-certbot-renewer certbot renew \
   - Confirm `CERTBOT_WEBROOT_PATH` is `/var/www/certbot`.
   - Confirm `identity-acme-webroot` is mounted in both services.
   - Confirm the challenge path is reachable on the public domain over HTTP.
-  - Confirm `identity-all-services` owns host port `80` (or `IDENTITY_ACME_HTTP_PORT=80`).
+  - Confirm public port `80` reaches the identity container's HTTP listener. `docker-compose-all.yml` does not publish port `80` itself (it maps only the `IDENTITY_*_HTTP(S)_PORT` ports), so a reverse proxy or an added port mapping must forward `/.well-known/acme-challenge/` there.
 - Renewal succeeds but old cert is still served:
   - Verify `IDENTITY_CONTAINER_NAME` matches the running identity container.
   - Check renewer logs for deploy hook output.
