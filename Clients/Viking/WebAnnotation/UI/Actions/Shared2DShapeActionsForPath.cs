@@ -222,7 +222,7 @@ namespace WebAnnotation.UI.Actions
         /// </summary>
         /// <returns>The piece, or null with <paramref name="problem"/> set when that side is not a valid polygon
         /// (for example because the source ring crosses itself on that side).</returns>
-        private static Polygon TryCutSide(Polygon polyToCut, RotationDirection direction, Vector2[] subpath, double reduceTolerance, out string problem)
+        internal static Polygon TryCutSide(Polygon polyToCut, RotationDirection direction, Vector2[] subpath, double reduceTolerance, out string problem)
         {
             try
             {
@@ -240,7 +240,7 @@ namespace WebAnnotation.UI.Actions
         /// Grow cuts keep the larger piece. A side that failed validation has no area to compare, so a lone valid
         /// piece is only taken when it is larger than the polygon being grown (the discarded lobe never is).
         /// </summary>
-        private static bool TryChooseGrownSide(Polygon source, Polygon clockwise, Polygon counterClockwise, out bool useCounterClockwise)
+        internal static bool TryChooseGrownSide(Polygon source, Polygon clockwise, Polygon counterClockwise, out bool useCounterClockwise)
         {
             useCounterClockwise = false;
             if (clockwise is not null && counterClockwise is not null)

@@ -30,6 +30,7 @@
         <Compile Include="View\LocationShapeChangeEventTests.cs" />
         <Compile Include="Actions\ChangeTypeActionTests.cs" />
         <Compile Include="Actions\ChangeContourActionTests.cs" />
+        <Compile Include="Actions\PolygonCutTests.cs" />
         <Compile Include="Actions\CreateNewLinkedLocationActionTests.cs" />
         <Compile Include="View\LinkedLocationShapeMappingTests.cs" />
         <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
