@@ -31,6 +31,7 @@
         <Compile Include="Actions\ChangeTypeActionTests.cs" />
         <Compile Include="Actions\ChangeContourActionTests.cs" />
         <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
+        <Compile Include="Commands\PolygonVertexCommandMappingTests.cs" />
         <Compile Include="View\LocationLinkPinchTests.cs" />
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="ChannelPoolTests.cs" />
