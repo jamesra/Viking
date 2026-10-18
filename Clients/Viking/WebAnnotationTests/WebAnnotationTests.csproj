@@ -32,6 +32,8 @@
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="ChannelPoolTests.cs" />
         <Compile Include="UndoManagerTests.cs" />
+        <Compile Include="DelegateCommandTests.cs" />
+        <Compile Include="FavoriteStructureIDsViewModelTests.cs" />
         <Compile Include="Commands\SegmentationPenButtonsTests.cs" />
         <Compile Include="Commands\PenCancelButtonTests.cs" />
         <Compile Include="Commands\SegmentationMaskEditTests.cs" />
