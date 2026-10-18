@@ -233,50 +233,6 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseUp(sender, e);
         }
 
-        public static bool TryCreateLink(SectionAnnotationsView sectionView, Geometry.Vector2 WorldPos, LocationObj OriginObj)
-        {
-            //Find if we are close enough to a location to "snap" the line to the target
-            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out Geometry.Rectangle _);
-            LocationObj NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
-            if (NearestTarget is null)
-            {
-                return false;
-            }
-
-            if (LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
-            {
-                try
-                {
-                    Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
-                    return true;
-                }
-                catch (Exception except)
-                {
-                    ExceptionReport.Show("Could not create link between locations.", except);
-                }
-            }
-            else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
-            {
-                try
-                {
-                    bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
-                    StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
-                    linkStruct = Store.StructureLinks.Create(linkStruct);
-                    return true;
-                }
-                catch (Exception except)
-                {
-                    ExceptionReport.Show("Could not create link between structures.", except);
-                }
-
-                //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...
-                //sectionAnnotations.AddStructureLinks(OriginObj.Parent);
-                //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
-            }
-
-            return false;
-        }
-
         protected override void Execute()
         {
             try
