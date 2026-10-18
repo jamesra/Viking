@@ -87,7 +87,8 @@ namespace Geometry
 
         /// <summary>
         /// Drops exterior vertices that sit within <paramref name="tolerance"/> of the chord between neighbors.
-        /// Surviving vertices keep their original coordinates. Interior rings are copied.
+        /// Surviving vertices keep their original coordinates; the last vertex before the closing point is always kept.
+        /// Interior rings are copied.
         /// A pen cut walks the smoothed display ring, which inserts several samples between each control point.
         /// This removes those samples before the ring is saved, without a Catmull-Rom refit of the far side.
         /// Returns <paramref name="polygon"/> when the shorter ring is not a valid polygon.
@@ -99,7 +100,9 @@ namespace Geometry
             if (tolerance <= 0 || polygon.ExteriorRing.Length < 5)
                 return polygon;
 
-            List<Vector2> reduced = polygon.ExteriorRing.DouglasPeuckerReduction(tolerance);
+            // The ring repeats its first point at the end, so the reduction stops at the last distinct vertex and would
+            // drop it whatever its distance; it is a ring vertex like any other, so it is preserved.
+            List<Vector2> reduced = polygon.ExteriorRing.DouglasPeuckerReduction(tolerance, [polygon.ExteriorRing.Length - 2]);
             if (reduced.Count < 3 || reduced.Count >= polygon.ExteriorRing.Length)
                 return polygon;
 
