@@ -27,6 +27,54 @@ namespace Viking.SectionCorrection
 
         public string RootDirectory => _root;
 
+        /// <summary>
+        /// Combines <paramref name="relativeParts"/> beneath <paramref name="root"/> and returns the full path,
+        /// or null when the result does not lie strictly inside the root folder.
+        /// </summary>
+        /// <param name="root">Catalog root folder; null or blank means nothing can be resolved.</param>
+        /// <param name="relativeParts">Caller-supplied path segments, such as a route's group and file name.</param>
+        /// <returns>
+        /// The full path, or null when <paramref name="root"/> is blank, a part is null or not a valid path,
+        /// or the combined path escapes the root through "..", a rooted part, or a sibling folder whose name
+        /// starts with the root's name (root "C:\corr" never admits "C:\corr-private").
+        /// </returns>
+        /// <remarks>
+        /// Pure string work: the file system is not touched, so callers still check that the file exists.
+        /// Comparison ignores case on Windows and is ordinal elsewhere, matching the host file system.
+        /// </remarks>
+        public static string ResolveInsideRoot(string root, params string[] relativeParts)
+        {
+            if (string.IsNullOrWhiteSpace(root) || relativeParts == null)
+                return null;
+
+            try
+            {
+                string fullRoot = Path.GetFullPath(root);
+                string fullPath = Path.GetFullPath(Path.Combine([fullRoot, .. relativeParts]));
+                return IsStrictlyInside(fullRoot, fullPath) ? fullPath : null;
+            }
+            catch (Exception e) when (e is ArgumentException || e is NotSupportedException || e is PathTooLongException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// True when <paramref name="fullPath"/> lies beneath <paramref name="fullRoot"/>; both are already full paths.
+        /// The root is compared with a trailing separator so a sibling sharing its name prefix does not match.
+        /// </summary>
+        static bool IsStrictlyInside(string fullRoot, string fullPath)
+        {
+            StringComparison comparison = Path.DirectorySeparatorChar == '\\'
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            string rootPrefix = fullRoot.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) ||
+                                fullRoot.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? fullRoot
+                : fullRoot + Path.DirectorySeparatorChar;
+            return fullPath.Length > rootPrefix.Length && fullPath.StartsWith(rootPrefix, comparison);
+        }
+
         public IReadOnlyCollection<PublishedCorrectionSet> Sets
         {
             get

@@ -257,6 +257,77 @@ namespace SectionCorrection.Tests
         }
 
         [TestMethod]
+        public void ResolveInsideRoot_ReturnsFullPathOfFileInGroupFolder()
+        {
+            string root = NewRoot("resolve");
+            string expected = Path.Combine(Path.GetFullPath(root), "grid16", PublishedCorrectionSet.ManifestFileName);
+            Assert.AreEqual(expected, CorrectionCatalog.ResolveInsideRoot(root, "grid16", PublishedCorrectionSet.ManifestFileName));
+        }
+
+        [TestMethod]
+        public void ResolveInsideRoot_AcceptsRootWithTrailingSeparator()
+        {
+            string root = NewRoot("resolve-slash");
+            string expected = Path.Combine(Path.GetFullPath(root), "grid16", "a.npz");
+            Assert.AreEqual(expected, CorrectionCatalog.ResolveInsideRoot(root + Path.DirectorySeparatorChar, "grid16", "a.npz"));
+        }
+
+        /// <summary>Regression: root "corr" must not admit the sibling folder "corr-private" that shares its name prefix.</summary>
+        [TestMethod]
+        public void ResolveInsideRoot_RejectsSiblingFolderSharingRootPrefix()
+        {
+            string root = NewRoot("resolve-sibling");
+            string sibling = Path.GetFileName(root) + "-private";
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root, "..", sibling, "secret.json"));
+        }
+
+        [TestMethod]
+        public void ResolveInsideRoot_RejectsParentTraversalInGroup()
+        {
+            string root = NewRoot("resolve-dotdot");
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root, "..", "manifest.json"));
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root, "grid16", "..", "..", "manifest.json"));
+        }
+
+        [TestMethod]
+        public void ResolveInsideRoot_RejectsRootItself()
+        {
+            string root = NewRoot("resolve-self");
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root, "grid16", ".."));
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root));
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root, "grid16" + Path.DirectorySeparatorChar + ".." + Path.DirectorySeparatorChar));
+        }
+
+        [TestMethod]
+        public void ResolveInsideRoot_RejectsRootedPart()
+        {
+            string root = NewRoot("resolve-rooted");
+            string outside = Path.Combine(Path.GetTempPath(), "elsewhere", "manifest.json");
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(root, outside));
+        }
+
+        [TestMethod]
+        public void ResolveInsideRoot_RejectsBlankRootAndNullPart()
+        {
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(null, "grid16", "manifest.json"));
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot("  ", "grid16", "manifest.json"));
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(NewRoot("resolve-null"), "grid16", null));
+            Assert.IsNull(CorrectionCatalog.ResolveInsideRoot(NewRoot("resolve-null-array"), null));
+        }
+
+        [TestMethod]
+        public void ResolveInsideRoot_RejectsDifferentCaseOnlyOnCaseSensitivePlatforms()
+        {
+            string root = NewRoot("resolve-case");
+            string upper = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(root)), Path.GetFileName(root).ToUpperInvariant());
+            string resolved = CorrectionCatalog.ResolveInsideRoot(root, "..", Path.GetFileName(upper), "manifest.json");
+            if (Path.DirectorySeparatorChar == '\\')
+                Assert.IsNotNull(resolved);
+            else
+                Assert.IsNull(resolved);
+        }
+
+        [TestMethod]
         public void Load_MissingRootGivesEmptyCatalog()
         {
             using CorrectionCatalog catalog = new(NewRoot("missing"));

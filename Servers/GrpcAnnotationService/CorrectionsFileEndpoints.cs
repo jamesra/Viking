@@ -13,7 +13,8 @@ namespace gRPCAnnotationService
     /// </summary>
     /// <remarks>
     /// Every route requires the caller-supplied authorization policy. Files are only served from beneath
-    /// the catalog root: <see cref="SendFile"/> answers 404 for anything missing or resolving outside it.
+    /// the catalog root: <see cref="CorrectionCatalog.ResolveInsideRoot"/> rejects route values that escape it,
+    /// and <see cref="SendFile"/> answers 404 for those and for missing files.
     /// </remarks>
     static class CorrectionsFileEndpoints
     {
@@ -41,10 +42,7 @@ namespace gRPCAnnotationService
                     return;
                 }
 
-                string contentType = file.EndsWith(".npz", StringComparison.OrdinalIgnoreCase)
-                    ? "application/octet-stream"
-                    : "application/octet-stream";
-                await SendFile(context, groupFile(context, file), contentType);
+                await SendFile(context, groupFile(context, file), "application/octet-stream");
             }).RequireAuthorization(policy);
 
             endpoints.MapGet("/corrections/{group}/preview/{file}", async context =>
@@ -56,12 +54,7 @@ namespace gRPCAnnotationService
                     return;
                 }
 
-                CorrectionCatalog catalog = context.RequestServices.GetService(typeof(CorrectionCatalog)) as CorrectionCatalog;
-                string path = Path.Combine(catalog?.RootDirectory ?? "",
-                    context.Request.RouteValues["group"]?.ToString() ?? "",
-                    PublishedCorrectionSet.PreviewFolderName,
-                    file);
-                await SendFile(context, path, PreviewContentType(file));
+                await SendFile(context, groupFile(context, PublishedCorrectionSet.PreviewFolderName, file), PreviewContentType(file));
             }).RequireAuthorization(policy);
         }
 
@@ -75,31 +68,24 @@ namespace gRPCAnnotationService
             return "application/octet-stream";
         }
 
-        /// <summary>Builds the path of a file inside the requested group's folder under the catalog root.</summary>
-        static string groupFile(HttpContext context, string fileName)
+        /// <summary>
+        /// Resolves a file inside the requested group's folder under the catalog root, or null when the
+        /// catalog is not registered, has no root, or the route values resolve outside the root.
+        /// </summary>
+        static string groupFile(HttpContext context, params string[] pathInGroup)
         {
             CorrectionCatalog catalog = context.RequestServices.GetService(typeof(CorrectionCatalog)) as CorrectionCatalog;
             string group = context.Request.RouteValues["group"]?.ToString() ?? "";
-            return Path.Combine(catalog?.RootDirectory ?? "", group, fileName);
+            return CorrectionCatalog.ResolveInsideRoot(catalog?.RootDirectory, [group, .. pathInGroup]);
         }
 
         /// <summary>
-        /// Streams the file at <paramref name="path"/>, or sets 404 when it is missing or resolves outside the catalog root.
+        /// Streams the file at <paramref name="fullPath"/> (from <see cref="groupFile"/>), or sets 404 when it is
+        /// null, meaning it resolved outside the catalog root, or the file does not exist.
         /// </summary>
-        static async System.Threading.Tasks.Task SendFile(HttpContext context, string path, string contentType)
+        static async System.Threading.Tasks.Task SendFile(HttpContext context, string fullPath, string contentType)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
-
-            string fullRoot = Path.GetFullPath(context.RequestServices.GetService(typeof(CorrectionCatalog)) is CorrectionCatalog c
-                ? c.RootDirectory ?? ""
-                : "");
-            string fullPath = Path.GetFullPath(path);
-            if (!string.IsNullOrEmpty(fullRoot) &&
-                !fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
