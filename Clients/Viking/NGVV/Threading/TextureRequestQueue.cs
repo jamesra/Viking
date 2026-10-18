@@ -71,6 +71,24 @@ namespace Viking
         }
 
         /// <summary>
+        /// True if any TileView of <paramref name="section"/> has a request queued or being downloaded.
+        /// Requests whose section was left are dropped by the workers, so they do not count once cancelled.
+        /// </summary>
+        internal static bool HasPendingForSection(int section)
+        {
+            lock (_lock)
+            {
+                foreach (TileView tileView in _pendingTileViews)
+                {
+                    if (tileView.Section == section && !tileView.SectionLoadingCancelled)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Enqueue a texture load request. Returns the Task to await. Both HTTP and local paths go through the queue.
         /// </summary>
         public static Task<Texture2D> EnqueueRequest(TileView tileView, GraphicsDevice graphicsDevice, CancellationToken sectionToken)

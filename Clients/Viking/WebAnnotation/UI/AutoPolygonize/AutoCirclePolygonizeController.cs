@@ -42,6 +42,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private const int RegionPollMs = 150;
         private const int RegionWaitTimeoutMs = 10000;
+        private const int TileWaitTimeoutMs = 30000;
         private static long profileBatchSequence;
 
         private readonly SectionViewerControl parent;
@@ -1206,6 +1207,21 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (annotationWait != AnnotationWaitResult.Complete)
                     return;
 
+                // Capturing and segmenting competes with the viewer for the texture queues, so wait until the
+                // section's tiles are in. Otherwise the capture also records half-loaded tiles.
+                TileWaitResult tileWait = await WaitForSectionTilesLoadedAsync(parent.Section.Number, uploadToken).ConfigureAwait(false);
+                SegmentationDiag.Log($"RunBatch tileWait={tileWait} cancelled={uploadToken.IsCancellationRequested}");
+                if (tileWait == TileWaitResult.TimedOut)
+                {
+                    int viewAtTimeout = Volatile.Read(ref cameraGeneration);
+                    if (Interlocked.Exchange(ref tileTimeoutRetryGeneration, viewAtTimeout) != viewAtTimeout && enabled)
+                        RestartIdleTimer();
+                    return;
+                }
+
+                if (tileWait != TileWaitResult.Complete)
+                    return;
+
                 long annotationLoadMs = stepTimer.ElapsedMilliseconds;
                 if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
                 {
@@ -1709,6 +1725,46 @@ namespace WebAnnotation.UI.AutoPolygonize
             return token.IsCancellationRequested ? AnnotationWaitResult.Cancelled : AnnotationWaitResult.TimedOut;
         }
 
+        /// <summary>
+        /// Polls until every tile of <paramref name="sectionNumber"/> has finished downloading and become a texture.
+        /// </summary>
+        /// <returns>
+        /// <see cref="TileWaitResult.Complete"/> when no tile of the section is pending,
+        /// <see cref="TileWaitResult.TimedOut"/> when <see cref="TileWaitTimeoutMs"/> passed first, and
+        /// <see cref="TileWaitResult.Cancelled"/> when cancelled or the viewer moved to another section.
+        /// </returns>
+        private async Task<TileWaitResult> WaitForSectionTilesLoadedAsync(int sectionNumber, CancellationToken token)
+        {
+            Stopwatch wait = Stopwatch.StartNew();
+            while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < TileWaitTimeoutMs)
+            {
+                if (parent.Section is null || parent.Section.Number != sectionNumber)
+                    return TileWaitResult.Cancelled;
+
+                if (global::Viking.SectionTileLoadStatus.IsLoaded(sectionNumber))
+                    return TileWaitResult.Complete;
+
+                try
+                {
+                    await Task.Delay(RegionPollMs, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return TileWaitResult.Cancelled;
+                }
+            }
+
+            return token.IsCancellationRequested ? TileWaitResult.Cancelled : TileWaitResult.TimedOut;
+        }
+
+        /// <summary>Outcome of <see cref="WaitForSectionTilesLoadedAsync"/>.</summary>
+        private enum TileWaitResult
+        {
+            Complete,
+            TimedOut,
+            Cancelled
+        }
+
         /// <summary>Outcome of <see cref="WaitForAnnotationsLoadedAsync"/>.</summary>
         private enum AnnotationWaitResult
         {
@@ -1722,6 +1778,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// timeout. A second timeout on the same view gives up instead of looping on a store that never finishes.
         /// </summary>
         private int annotationTimeoutRetryGeneration = -1;
+
+        /// <summary>View generation for which <see cref="RunBatchBodyAsync"/> already retried after a tile-load timeout.</summary>
+        private int tileTimeoutRetryGeneration = -1;
 
         /// <summary>
         /// Circles whose center is at least 5% from each edge, whose disk is fully

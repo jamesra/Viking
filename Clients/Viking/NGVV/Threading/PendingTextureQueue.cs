@@ -112,6 +112,28 @@ namespace Viking
         }
 
         /// <summary>
+        /// True if any TileView of <paramref name="section"/> still has a texture waiting to be created on the main thread.
+        /// </summary>
+        internal static bool HasPendingForSection(int section)
+        {
+            _pendingLock.EnterReadLock();
+            try
+            {
+                foreach (TileView tileView in PendingTileViews)
+                {
+                    if (tileView.Section == section)
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                _pendingLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
         /// Fired when the queue has just become empty (after processing the last item). Viewer can invalidate to re-request loads for visible tiles.
         /// </summary>
         public static event Action? QueueBecameEmpty;
