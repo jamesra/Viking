@@ -1,0 +1,49 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using WebAnnotation.ViewModel;
+
+namespace WebAnnotationTests
+{
+    /// <summary>
+    /// The width profile of a link between locations on different sections: it narrows from each marker to a waist.
+    /// </summary>
+    [TestClass]
+    public class LocationLinkPinchTests
+    {
+        private const double Tolerance = 1e-9;
+
+        [TestMethod]
+        public void ALinkStartsAsWideAsEachMarker()
+        {
+            Assert.AreEqual(10, LocationLinkView.HalfWidthAt(0, 200, 10, 6, 2), Tolerance);
+            Assert.AreEqual(6, LocationLinkView.HalfWidthAt(200, 200, 10, 6, 2), Tolerance);
+        }
+
+        [TestMethod]
+        public void EachSideReachesTheWaistOneDiameterFromItsCentre()
+        {
+            Assert.AreEqual(2, LocationLinkView.HalfWidthAt(20, 200, 10, 6, 2), Tolerance, "two radii of A from A");
+            Assert.AreEqual(2, LocationLinkView.HalfWidthAt(200 - 12, 200, 10, 6, 2), Tolerance, "two radii of B from B");
+            Assert.AreEqual(2, LocationLinkView.HalfWidthAt(100, 200, 10, 6, 2), Tolerance, "the middle stays at the waist");
+            Assert.AreEqual(6, LocationLinkView.HalfWidthAt(10, 200, 10, 6, 2), Tolerance, "halfway down A's taper");
+        }
+
+        [TestMethod]
+        public void CloseMarkersBarelyNarrow()
+        {
+            double narrowest = double.MaxValue;
+            for (double x = 0; x <= 12; x += 0.01)
+                narrowest = System.Math.Min(narrowest, LocationLinkView.HalfWidthAt(x, 12, 6, 6, 1));
+
+            Assert.IsTrue(narrowest > 3, $"the tapers meet before the waist, narrowest {narrowest}");
+            Assert.AreEqual(6 - (5.0 / 12 * 6), LocationLinkView.HalfWidthAt(6, 12, 6, 6, 1), Tolerance, "they meet in the middle");
+        }
+
+        [TestMethod]
+        public void TheWaistIsNeverWiderThanTheSmallerMarker()
+        {
+            Assert.AreEqual(10, LocationLinkView.HalfWidthAt(0, 100, 10, 3, 8), Tolerance, "the larger marker still sets its end");
+            Assert.AreEqual(3, LocationLinkView.HalfWidthAt(50, 100, 10, 3, 8), Tolerance);
+            Assert.AreEqual(3, LocationLinkView.HalfWidthAt(100, 100, 10, 3, 8), Tolerance);
+        }
+    }
+}

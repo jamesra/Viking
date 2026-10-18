@@ -131,7 +131,80 @@ namespace WebAnnotation.ViewModel
 
         protected int LinkDirection => MinSection == MaxSection ? 0 : MinSection < Z ? -1 : 1;
 
-        public Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(LineSegment.BoundingBox, LineRadius);
+        public Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(LineSegment.BoundingBox, MaxRadius);
+
+        /// <summary>The larger endpoint radius: the widest the pinched link gets.</summary>
+        public double MaxRadius => Math.Max(A.Radius, B.Radius);
+
+        /// <summary>How much more opaque the link is at its waist than at full width: alpha * (1 + boost).</summary>
+        internal const float WaistOpacityBoost = 1.0f;
+
+        /// <summary>
+        /// Waist half width in world units at the zoom links were last drawn at. Hit tests have no scene, and every
+        /// link is drawn with the same camera, so they use this.
+        /// </summary>
+        internal static double LastDrawnWaistRadius { get; private set; } = Global.AnnotationSettings.DEFAULT_LOCATION_LINK_WAIST_PIXELS / 2.0;
+
+        /// <summary>
+        /// Half width of a pinched link <paramref name="x"/> world units from A's centre along a link of
+        /// <paramref name="length"/>. Each side narrows at a constant rate from its radius and reaches
+        /// <paramref name="waist"/> one diameter from its centre. The outline is the union of the two tapers, so when
+        /// the markers are close the two sides meet first and the link barely narrows. The waist is never wider than the smaller radius.
+        /// Matches PinchedHalfWidth in PinchedLineShaders.fx.
+        /// </summary>
+        internal static double HalfWidthAt(double x, double length, double radiusA, double radiusB, double waist)
+        {
+            double w = Math.Min(waist, Math.Min(radiusA, radiusB));
+            double kA = (radiusA - w) / (2 * radiusA);
+            double kB = (radiusB - w) / (2 * radiusB);
+            return Math.Max(w, Math.Max(radiusA - (kA * x), radiusB - (kB * (length - x))));
+        }
+
+        /// <summary>
+        /// <paramref name="position"/> in the link's own frame: <paramref name="along"/> from A's centre toward B,
+        /// <paramref name="across"/> the unsigned distance from the centre line.
+        /// </summary>
+        private void ToLinkFrame(Geometry.Vector2 position, out double along, out double across, out double length)
+        {
+            Geometry.Vector2 delta = B.Center - A.Center;
+            length = Math.Sqrt((delta.X * delta.X) + (delta.Y * delta.Y));
+            Geometry.Vector2 offset = position - A.Center;
+            if (length <= 0)
+            {
+                along = 0;
+                across = Math.Sqrt((offset.X * offset.X) + (offset.Y * offset.Y));
+                return;
+            }
+
+            along = ((offset.X * delta.X) + (offset.Y * delta.Y)) / length;
+            across = Math.Abs((offset.X * delta.Y) - (offset.Y * delta.X)) / length;
+        }
+
+        /// <summary>
+        /// Distance from <paramref name="position"/> to the drawn outline (0 inside), and the half width the
+        /// position is measured against for <see cref="DistanceFromCenterNormalized"/>.
+        /// </summary>
+        private double DistanceToOutline(Geometry.Vector2 position, double waist, bool drawCaps, out double normalized)
+        {
+            ToLinkFrame(position, out double along, out double across, out double length);
+            if (drawCaps && (along < 0 || along > length))
+            {
+                Circle end = along < 0 ? A : B;
+                double fromCentre = Geometry.Vector2.Distance(position, end.Center);
+                normalized = fromCentre / end.Radius;
+                return Math.Max(0, fromCentre - end.Radius);
+            }
+
+            double clamped = Math.Max(0, Math.Min(length, along));
+            double halfWidth = HalfWidthAt(clamped, length, A.Radius, B.Radius, waist);
+            double beyondEnd = along - clamped;
+            double beyondSide = Math.Max(0, across - halfWidth);
+            normalized = Math.Sqrt((beyondEnd * beyondEnd) + (across * across)) / halfWidth;
+            return Math.Sqrt((beyondEnd * beyondEnd) + (beyondSide * beyondSide));
+        }
+
+        private double DistanceToOutline(Geometry.Vector2 position, out double normalized) =>
+            DistanceToOutline(position, LastDrawnWaistRadius, Global.AnnotationSettings.LocationLinkDrawUnderMarkers, out normalized);
 
         public Geometry.LineSegment LineSegment => new(A.Center, B.Center);
 
@@ -452,23 +525,19 @@ namespace WebAnnotation.ViewModel
 
         public bool IsVisible(Scene scene) => Math.Min(LineSegment.Length, LineWidth) / scene.Camera.Downsample > 2.0;
 
-        public bool Contains(Geometry.Vector2 Position)
-        {
-            double d = LineSegment.DistanceToPoint(Position);
-            return (d - LineRadius) <= 0;
-        }
+        public bool Contains(Geometry.Vector2 Position) => DistanceToOutline(Position, out _) <= 0;
 
         public bool Intersects(LineSegment line) => LineSegment.Intersects(line);
 
-        public double Distance(Geometry.Vector2 Position)
-        {
-            double d = LineSegment.DistanceToPoint(Position) - LineRadius;
-            return d < 0 ? 0 : d;
-        }
+        public double Distance(Geometry.Vector2 Position) => DistanceToOutline(Position, out _);
 
         public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => LineSegment.ToSqlGeometry().STDistance(shape).Value;
 
-        public double DistanceFromCenterNormalized(Geometry.Vector2 Position) => LineSegment.DistanceToPoint(Position) / LineRadius;
+        public double DistanceFromCenterNormalized(Geometry.Vector2 Position)
+        {
+            DistanceToOutline(Position, out double normalized);
+            return normalized;
+        }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -477,9 +546,35 @@ namespace WebAnnotation.ViewModel
                           OverlayShaderEffect overlayEffect,
                           IEnumerable<LocationLinkView> listToDraw)
         {
-            LineView[] linesToDraw = [.. listToDraw.Select(l => l.lineView)];
+            LocationLinkView[] links = [.. listToDraw.Where(l => l is not null)];
+            if (links.Length == 0)
+                return;
 
-            LineView.Draw(device, scene, lineManager, linesToDraw);
+            if (!lineManager.SupportsPinched)
+            {
+                LineView.Draw(device, scene, lineManager, [.. links.Select(l => l.lineView)]);
+                return;
+            }
+
+            // The waist is a fixed number of screen pixels, so convert it to world units at this zoom.
+            double waistRadius = Global.AnnotationSettings.LocationLinkWaistPixels / 2.0 * scene.Camera.Downsample;
+            LastDrawnWaistRadius = waistRadius;
+            bool drawCaps = Global.AnnotationSettings.LocationLinkDrawUnderMarkers;
+            float time = (float)(DateTime.UtcNow.Millisecond / 1000.0);
+
+            foreach (IGrouping<Color, LocationLinkView> group in links.GroupBy(l => lineManager.UseHSLColor ? l.Color.ConvertToHCL() : l.Color))
+            {
+                RoundLineCode.RoundLine[] lines = [.. group.Select(l => new RoundLineCode.RoundLine(
+                    new Vector2((float)l.A.Center.X, (float)l.A.Center.Y),
+                    new Vector2((float)l.B.Center.X, (float)l.B.Center.Y)))];
+                Vector4[] shapes = [.. group.Select(l => new Vector4(
+                    (float)l.A.Radius,
+                    (float)l.B.Radius,
+                    (float)Math.Min(waistRadius, Math.Min(l.A.Radius, l.B.Radius)),
+                    0f))];
+
+                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacityBoost);
+            }
         }
 
         public bool Equals(LocationLinkView other)

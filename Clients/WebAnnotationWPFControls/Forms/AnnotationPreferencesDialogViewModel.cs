@@ -20,6 +20,8 @@ namespace WebAnnotation.WPF.Forms
         private double _originalDefaultClosedLineWidth;
         private double _originalDefaultLocationJumpDownsample;
         private double _originalAdjacentLocationRadiusScalar;
+        private int _originalLocationLinkWaistPixels;
+        private bool _originalLocationLinkDrawUnderMarkers;
         private uint _originalNumClosedCurveInterpolationPointsForDisplay;
         private int _originalPenSimplifyThreshold;
         private double _originalMinRadius;
@@ -152,6 +154,48 @@ namespace WebAnnotation.WPF.Forms
                 if (Math.Abs(_adjacentLocationRadiusScalar - value) > 0.01)
                 {
                     _adjacentLocationRadiusScalar = MathUtils.Clamp(value, 0.1, 2.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="LocationLinkWaistPixels"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultLocationLinkWaistPixels = 8;
+
+        /// <summary>Narrowest allowed <see cref="LocationLinkWaistPixels"/>.</summary>
+        public const int MinLocationLinkWaistPixels = 2;
+
+        /// <summary>Widest allowed <see cref="LocationLinkWaistPixels"/>.</summary>
+        public const int MaxLocationLinkWaistPixels = 32;
+
+        private int _locationLinkWaistPixels = DefaultLocationLinkWaistPixels;
+
+        /// <summary>Width in screen pixels of the narrowest part of a link line between locations on different sections.</summary>
+        public int LocationLinkWaistPixels
+        {
+            get => _locationLinkWaistPixels;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinLocationLinkWaistPixels, MaxLocationLinkWaistPixels);
+                if (_locationLinkWaistPixels != clampedValue)
+                {
+                    _locationLinkWaistPixels = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _locationLinkDrawUnderMarkers;
+
+        /// <summary>Also draws each location link under its two location markers, as a round end the size of each marker.</summary>
+        public bool LocationLinkDrawUnderMarkers
+        {
+            get => _locationLinkDrawUnderMarkers;
+            set
+            {
+                if (_locationLinkDrawUnderMarkers != value)
+                {
+                    _locationLinkDrawUnderMarkers = value;
                     OnPropertyChanged();
                 }
             }
@@ -844,7 +888,9 @@ namespace WebAnnotation.WPF.Forms
             bool autoPolygonizeShimmerEnabled = true,
             double autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness,
             int autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs,
-            bool segmentLinkedAnnotations = true)
+            bool segmentLinkedAnnotations = true,
+            int locationLinkWaistPixels = DefaultLocationLinkWaistPixels,
+            bool locationLinkDrawUnderMarkers = false)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -857,6 +903,8 @@ namespace WebAnnotation.WPF.Forms
             _defaultClosedLineWidth = defaultClosedLineWidth;
             _defaultLocationJumpDownsample = defaultLocationJumpDownsample;
             _adjacentLocationRadiusScalar = adjacentLocationRadiusScalar;
+            _locationLinkWaistPixels = locationLinkWaistPixels;
+            _locationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             _numClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = penSimplifyThreshold;
             _minRadius = minRadius;
@@ -887,6 +935,8 @@ namespace WebAnnotation.WPF.Forms
             _originalDefaultClosedLineWidth = defaultClosedLineWidth;
             _originalDefaultLocationJumpDownsample = defaultLocationJumpDownsample;
             _originalAdjacentLocationRadiusScalar = adjacentLocationRadiusScalar;
+            _originalLocationLinkWaistPixels = locationLinkWaistPixels;
+            _originalLocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             _originalNumClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = penSimplifyThreshold;
             _originalMinRadius = minRadius;
@@ -951,6 +1001,8 @@ namespace WebAnnotation.WPF.Forms
             SegmentLinkedAnnotations = segmentLinkedAnnotations;
             AutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             AutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
+            LocationLinkWaistPixels = locationLinkWaistPixels;
+            LocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             CorrectionShimEnabled = correctionShimEnabled;
             CorrectionShimShowOffset = correctionShimShowOffset;
             CorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -972,6 +1024,8 @@ namespace WebAnnotation.WPF.Forms
             _originalDefaultClosedLineWidth = _defaultClosedLineWidth;
             _originalDefaultLocationJumpDownsample = _defaultLocationJumpDownsample;
             _originalAdjacentLocationRadiusScalar = _adjacentLocationRadiusScalar;
+            _originalLocationLinkWaistPixels = _locationLinkWaistPixels;
+            _originalLocationLinkDrawUnderMarkers = _locationLinkDrawUnderMarkers;
             _originalNumClosedCurveInterpolationPointsForDisplay = _numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = _penSimplifyThreshold;
             _originalMinRadius = _minRadius;
@@ -1016,6 +1070,8 @@ namespace WebAnnotation.WPF.Forms
             _defaultClosedLineWidth = _originalDefaultClosedLineWidth;
             _defaultLocationJumpDownsample = _originalDefaultLocationJumpDownsample;
             _adjacentLocationRadiusScalar = _originalAdjacentLocationRadiusScalar;
+            _locationLinkWaistPixels = _originalLocationLinkWaistPixels;
+            _locationLinkDrawUnderMarkers = _originalLocationLinkDrawUnderMarkers;
             _numClosedCurveInterpolationPointsForDisplay = _originalNumClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = _originalPenSimplifyThreshold;
             _minRadius = _originalMinRadius;
@@ -1062,6 +1118,8 @@ namespace WebAnnotation.WPF.Forms
             _defaultClosedLineWidth = 24.0;
             _defaultLocationJumpDownsample = 4.0;
             _adjacentLocationRadiusScalar = 0.5;
+            _locationLinkWaistPixels = DefaultLocationLinkWaistPixels;
+            _locationLinkDrawUnderMarkers = false;
             _numClosedCurveInterpolationPointsForDisplay = 4;
             _penSimplifyThreshold = 4;
             _minRadius = 0.5;

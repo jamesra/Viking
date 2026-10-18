@@ -130,6 +130,9 @@ namespace RoundLineCode
         protected EffectParameter dashLengthParameter;
         protected EffectParameter minTextureCoordinateParameter; //The texture coordinate at the start of the curve
         protected EffectParameter maxTextureCoordinateParameter; //The texture coordinate at the end of the curve
+        protected EffectParameter instanceShapeParameter; //Per-line (start radius, end radius, waist half width, unused) for the Pinched technique
+        protected EffectParameter pinchedDrawCapsParameter;
+        protected EffectParameter pinchedOpacityBoostParameter;
         protected VertexBuffer vb;
         protected IndexBuffer ib;
         protected VertexDeclaration vdecl;
@@ -140,6 +143,7 @@ namespace RoundLineCode
         protected int numPrimitives;
         protected int bytesPerVertex;
         protected Vector4[] translationData;
+        protected Vector4[] shapeData;
 
         //public int NumLinesDrawn;
         public float DefaultBlurThreshold = 0.97f;
@@ -188,7 +192,13 @@ namespace RoundLineCode
             dashLengthParameter = e.Parameters["dashLength"];
             minTextureCoordinateParameter = e.Parameters["texture_x_min"];
             maxTextureCoordinateParameter = e.Parameters["texture_x_max"];
+            instanceShapeParameter = e.Parameters["instanceShape"];
+            pinchedDrawCapsParameter = e.Parameters["pinchedDrawCaps"];
+            pinchedOpacityBoostParameter = e.Parameters["pinchedOpacityBoost"];
         }
+
+        /// <summary>True when the loaded effect has the Pinched technique (RoundLineHSV does, RoundLine does not).</summary>
+        public bool SupportsPinched => instanceShapeParameter is not null && IsTechnique("Pinched");
 
         public string[] TechniqueNames
         {
@@ -234,6 +244,7 @@ namespace RoundLineCode
             bytesPerVertex = RoundLineVertex.SizeInBytes;
             RoundLineVertex[] tri = new RoundLineVertex[numVertices];
             translationData = new Vector4[MaxInstancesPerBatch]; // Used in Draw()
+            shapeData = new Vector4[MaxInstancesPerBatch]; // Used in DrawPinched()
 
             int iv = 0;
             int ii = 0;
@@ -497,6 +508,55 @@ namespace RoundLineCode
                 //NumLinesDrawn += numInstancesThisDraw;
             }
 
+        }
+
+        /// <summary>
+        /// Draws lines that narrow from the radius at each end to a waist, with the Pinched technique, in batches.
+        /// <paramref name="shapes"/> holds one (start radius, end radius, waist half width, 0) per line, in world units;
+        /// each side reaches the waist one diameter of its end from that end's centre.
+        /// <paramref name="drawCaps"/> draws a round end the size of each radius beyond the line's ends.
+        /// <paramref name="opacityBoost"/> makes the waist that much more opaque than the full width (alpha * (1 + boost)).
+        /// </summary>
+        public void DrawPinched(IReadOnlyList<RoundLine> roundLines, IReadOnlyList<Vector4> shapes, Color lineColor,
+            Matrix viewProjMatrix, float time, bool drawCaps, float opacityBoost)
+        {
+            if (roundLines.Count != shapes.Count)
+                throw new ArgumentException("Every line needs a shape", nameof(shapes));
+            if (roundLines.Count == 0 || !SupportsPinched)
+                return;
+
+            device.SetVertexBuffer(vb);
+            device.Indices = ib;
+
+            viewProjMatrixParameter.SetValue(viewProjMatrix);
+            timeParameter?.SetValue(time);
+            lineColorParameter.SetValue(lineColor.ToVector4());
+            pinchedDrawCapsParameter?.SetValue(drawCaps ? 1f : 0f);
+            pinchedOpacityBoostParameter?.SetValue(opacityBoost);
+
+            effect.CurrentTechnique = effect.Techniques["Pinched"];
+
+            int start = 0;
+            while (start < roundLines.Count)
+            {
+                int count = Math.Min(MaxInstancesPerBatch, roundLines.Count - start);
+                for (int i = 0; i < count; i++)
+                {
+                    RoundLine roundLine = roundLines[start + i];
+                    translationData[i] = new Vector4(roundLine.P0.X, roundLine.P0.Y, roundLine.Rho, roundLine.Theta);
+                    shapeData[i] = shapes[start + i];
+                }
+
+                instanceDataParameter.SetValue(translationData);
+                instanceShapeParameter.SetValue(shapeData);
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numPrimitivesPerInstance * count);
+                }
+
+                start += count;
+            }
         }
 
         /// <summary>

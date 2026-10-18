@@ -266,6 +266,52 @@
                                      Text="Size multiplier for annotations displayed on adjacent sections. Default 0.5 shows them at half size."/>
                         </Grid>
 
+                        <!-- Location Link Waist Width -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Link waist width (pixels):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding LocationLinkWaistPixels, Mode=TwoWay}"
+                                    Minimum="2"
+                                    Maximum="32"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding LocationLinkWaistPixels, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Screen width of the narrowest part of a link line between locations on different sections."/>
+                        </Grid>
+
+                        <!-- Location Link Under Markers -->
+                        <CheckBox IsChecked="{Binding LocationLinkDrawUnderMarkers, Mode=TwoWay}"
+                                  Content="Draw links under location markers"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
+
                         <!-- Num Curve Interpolation Points -->
                         <Grid>
                             <Grid.ColumnDefinitions>

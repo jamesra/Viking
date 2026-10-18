@@ -374,6 +374,49 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Narrowest accepted <see cref="LocationLinkWaistPixels"/>.</summary>
+            public const int MIN_LOCATION_LINK_WAIST_PIXELS = 2;
+
+            /// <summary>Widest accepted <see cref="LocationLinkWaistPixels"/>.</summary>
+            public const int MAX_LOCATION_LINK_WAIST_PIXELS = 32;
+
+            /// <summary>Starting <see cref="LocationLinkWaistPixels"/>. Must match the DefaultSettingValue in Settings.LocationLinks.cs.</summary>
+            public const int DEFAULT_LOCATION_LINK_WAIST_PIXELS = 8;
+
+            /// <summary>
+            /// Width in screen pixels of the narrowest part of a link line between two locations on different sections,
+            /// clamped to the MIN/MAX_LOCATION_LINK_WAIST_PIXELS range.
+            /// </summary>
+            public static int LocationLinkWaistPixels
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.LocationLinkWaistPixels,
+                    MIN_LOCATION_LINK_WAIST_PIXELS,
+                    MAX_LOCATION_LINK_WAIST_PIXELS);
+                set
+                {
+                    Properties.Settings.Default.LocationLinkWaistPixels = MathUtils.Clamp(
+                        value,
+                        MIN_LOCATION_LINK_WAIST_PIXELS,
+                        MAX_LOCATION_LINK_WAIST_PIXELS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Whether a location link is also drawn under its two location markers, as a round end the size of each marker.
+            /// False draws nothing under the markers.
+            /// </summary>
+            public static bool LocationLinkDrawUnderMarkers
+            {
+                get => Properties.Settings.Default.LocationLinkDrawUnderMarkers;
+                set
+                {
+                    Properties.Settings.Default.LocationLinkDrawUnderMarkers = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static uint NumClosedCurveInterpolationPointsForDisplay
             {
                 get => (uint)MathUtils.Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
@@ -1021,6 +1064,8 @@ namespace WebAnnotation
                 CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeStartDownsample;
                 CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeEndDownsample;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
+                Properties.Settings.Default.LocationLinkWaistPixels = DEFAULT_LOCATION_LINK_WAIST_PIXELS;
+                Properties.Settings.Default.LocationLinkDrawUnderMarkers = false;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 3;
                 Properties.Settings.Default.PenSimplifyThreshold = 3;
                 Properties.Settings.Default.MinRadius = 0.5;

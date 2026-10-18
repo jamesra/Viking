@@ -28,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
         <Compile Include="View\LocationShapeChangeEventTests.cs" />
+        <Compile Include="View\LocationLinkPinchTests.cs" />
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="ChannelPoolTests.cs" />
         <Compile Include="Commands\SegmentationPenButtonsTests.cs" />
