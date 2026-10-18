@@ -29,6 +29,7 @@
   <ItemGroup>
         <Compile Include="View\LocationShapeChangeEventTests.cs" />
         <Compile Include="Actions\ChangeTypeActionTests.cs" />
+        <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
         <Compile Include="View\LocationLinkPinchTests.cs" />
         <Compile Include="ExceptionReportTests.cs" />
         <Compile Include="ChannelPoolTests.cs" />
@@ -111,6 +112,8 @@
   </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	    <!-- Pen commands derive from types that touch WPF's DependencyObject; tests that call their static members need it to compile. -->
+	    <Reference Include="WindowsBase" />
     </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />

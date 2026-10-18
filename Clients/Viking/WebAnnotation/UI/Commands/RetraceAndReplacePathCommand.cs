@@ -185,11 +185,17 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 OutputVolumePolygon = original_copy;
-                OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
+                OutputMosaicPolygon = MapToSectionSimplified(mapping, OutputVolumePolygon, PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
             }
             catch (ArgumentException)
             {
                 Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
+                return;
+            }
+
+            if (OutputMosaicPolygon is null)
+            {
+                System.Diagnostics.Trace.WriteLine("RetraceAndReplacePathCommand: polygon with the new hole lies partly outside the section mapping; not applied.", "Command");
                 return;
             }
 
@@ -256,6 +262,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Maps the kept piece, and the other piece when <see cref="KeepBothPieces"/> is set, then completes.
         /// Called from mouse-up and pen-up on a finished cut.
+        /// When either piece has a vertex outside the section's mapping, nothing is applied and the command stays active.
         /// </summary>
         private void FinishCut()
         {
@@ -266,10 +273,10 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 double tolerance = PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample;
-                OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(tolerance);
+                OutputMosaicPolygon = MapToSectionSimplified(mapping, OutputVolumePolygon, tolerance);
                 SplitOffMosaicPolygon = discardedVolume is null
                     ? null
-                    : mapping.TryMapShapeVolumeToSection(discardedVolume).Simplify(tolerance);
+                    : MapToSectionSimplified(mapping, discardedVolume, tolerance);
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -277,8 +284,22 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
+            // A missing split-off piece would silently drop the part the user asked to keep, so it aborts the cut too.
+            if (OutputMosaicPolygon is null || (discardedVolume is not null && SplitOffMosaicPolygon is null))
+            {
+                System.Diagnostics.Trace.WriteLine("RetraceAndReplacePathCommand: cut lies partly outside the section mapping; not applied.", "Command");
+                return;
+            }
+
             Execute();
         }
+
+        /// <summary>
+        /// Maps <paramref name="volumePolygon"/> to section space and simplifies it to <paramref name="tolerance"/>.
+        /// </summary>
+        /// <returns>Null when any exterior or hole vertex falls outside <paramref name="mapping"/>.</returns>
+        internal static Polygon MapToSectionSimplified(IVolumeToSectionTransform mapping, Polygon volumePolygon, double tolerance) =>
+            mapping.TryMapShapeVolumeToSection(volumePolygon)?.Simplify(tolerance);
 
         /// <summary>
         /// Writes the kept piece onto <paramref name="location"/>. When Shift was held, also creates
