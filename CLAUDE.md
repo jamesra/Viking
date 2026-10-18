@@ -9,7 +9,8 @@ User-level rules are imported from `~/.claude/CLAUDE.md` (which links `~/.cursor
 @.cursor/rules/Solution-Overview.mdc
 @.cursor/rules/repo-roles.mdc
 @.cursor/rules/commenting-to-build.mdc
-@.cursor/rules/slack-ai-protocol.mdc
+Slack: post only to `#ai` or `#ai-requests`, never `#general` or other human channels. Read the `slack-ai-channel` skill
+(`.cursor/skills/slack-ai-channel/SKILL.md`) before posting; the full rule is `.cursor/rules/slack-ai-protocol.mdc`.
 
 ## Path-scoped rules (read the file before editing anything matching its globs)
 

@@ -8,10 +8,10 @@ alwaysApply: true
 **Where to edit:** Server and container work belongs in this repo. Client work belongs in VikingLegacy, with a best-effort mirror back into this repo's `Clients/` tree. See the repo-roles rule.
 
 **Clients**
-- **Viking** (`Clients/Viking/`) — .NET 4.8, Monogame 3.7.x; current production WinForms client. Keep working until Jotunn covers daily tracing.
+- **Viking** (`Clients/Viking/`) — current production WinForms client. Keep working until Jotunn covers daily tracing.
 - **VikingAU** (`Clients/VikingAU/`) — Same stack as Viking; auto-adjusts annotation positions in the DB.
-- **MonogameTestbed** (`Clients/MonogameTestbed/`) — .NET 9.0, latest Monogame; keep in sync with Viking where they share code.
-- **Jotunn** (`Clients/Jotunn/`) — Active .NET 10 WPF client and intended Viking successor. Shares `Viking.Scene` / `WebAnnotation` / MonoGame `SectionSceneRenderer` with Viking; do not add a second annotation renderer.
+- **MonogameTestbed** (`Clients/MonogameTestbed/`) — keep in sync with Viking where they share code.
+- **Jotunn** (`Clients/Jotunn/`) — Active WPF client and intended Viking successor. Shares `Viking.Scene` / `WebAnnotation` / MonoGame `SectionSceneRenderer` with Viking; do not add a second annotation renderer.
 
 **Servers**
 - **AnnotationService** — WCF; planned replacement by gRPC. Working gRPC implementation lives in the gRPC_Protos-based services (sibling to this solution folder).
