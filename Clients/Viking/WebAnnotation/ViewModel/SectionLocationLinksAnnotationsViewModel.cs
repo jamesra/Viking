@@ -148,12 +148,16 @@ namespace WebAnnotation.ViewModel
 
         public List<HitTestResult> GetAnnotationsAtPosition(Vector2 WorldPosition)
         {
-            IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(Section.Number));
-            IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Contains(WorldPosition));
+            IEnumerable<LocationLinkView> intersecting_objs = KeysToViews(NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(Section.Number))).Where(l => l.Contains(WorldPosition));
 
             return [.. intersecting_objs.Select(l => new HitTestResult(l, Section.Number, ((ICanvasView)l).VisualHeight, l.DistanceFromCenterNormalized(WorldPosition)))];
         }
 
+        /// <summary>
+        /// Maps R-tree keys to their views, skipping keys whose link was removed since the R-tree was read.
+        /// <see cref="RemoveLocationLink"/> drops the <see cref="LocationLinks"/> entry before the R-tree entry
+        /// and readers take no lock, so a key from the tree can already be gone from the dictionary.
+        /// </summary>
         private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys)
         {
             List<LocationLinkView> listLocLinkView = new(listKeys.Count);
@@ -178,47 +182,17 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationLinkView> GetLocationLinks(Vector2 point)
         {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)Section.Number));
-            return [.. intersectingIDs.Select(id =>
-            {
-                if (LocationLinks.ContainsKey(id))
-                {
-                    return LocationLinks[id];
-                }
-
-                return null;
-            }
-            ).Where(l => l != null && l.Contains(point))];
+            return [.. KeysToViews(NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)Section.Number))).Where(l => l.Contains(point))];
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(LineSegment line)
         {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
-            return [.. intersectingIDs.Select(id =>
-            {
-                if (LocationLinks.ContainsKey(id))
-                {
-                    return LocationLinks[id];
-                }
-
-                return null;
-            }
-            ).Where(l => l != null && l.Intersects(line))];
+            return [.. KeysToViews(NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number))).Where(l => l.Intersects(line))];
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(Rectangle rect)
         {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)Section.Number));
-            return [.. intersectingIDs.Select(id =>
-            {
-                if (LocationLinks.ContainsKey(id))
-                {
-                    return LocationLinks[id];
-                }
-
-                return null;
-            }
-            ).Where(l => l != null)];
+            return KeysToViews(NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)Section.Number)));
         }
     }
 }
