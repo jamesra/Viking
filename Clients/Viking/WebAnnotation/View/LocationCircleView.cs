@@ -225,24 +225,16 @@ namespace WebAnnotation.View
                 IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
                 //TODO: Check our location links to make sure the shape does not intersect an existing annotation of the same structure on this section
-                IShape2D mosaic_shape;
-                IShape2D volume_shape;
+                IShape2D volume_shape = path.HasSelfIntersection
+                    ? new Polygon(path.SimplifiedFirstLoop)
+                    : new Polyline(path.SimplifiedPath, false);
 
-                if (path.HasSelfIntersection)
+                //Null when the stroke reaches past the section's mapped area; offer no linked location then
+                CreateNewLinkedLocationAction NewLinkedLocationAction = CreateNewLinkedLocationAction.TryCreate(ID, volume_shape, VisibleSectionNumber, Transform);
+                if (NewLinkedLocationAction is not null)
                 {
-                    Polygon poly = new(path.SimplifiedFirstLoop);
-                    volume_shape = poly;
-                    mosaic_shape = Transform.TryMapShapeVolumeToSection(poly);
+                    list.Add(NewLinkedLocationAction);
                 }
-                else
-                {
-                    Polyline line = new(path.SimplifiedPath, false);
-                    volume_shape = line;
-                    mosaic_shape = Transform.TryMapShapeVolumeToSection(line);
-                }
-
-                CreateNewLinkedLocationAction NewLinkedLocationAction = new(ID, mosaic_shape, volume_shape, VisibleSectionNumber, Transform);
-                list.Add(NewLinkedLocationAction);
             }
 
             return list;
