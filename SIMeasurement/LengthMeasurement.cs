@@ -31,25 +31,18 @@ namespace SIMeasurement
 
         public override string ToString() => Length.ToString("#0.###") + " " + Units.ToString();
 
-        public string ToString(uint scale, bool PreserveNonSignificant = true)
-        {
-            if (PreserveNonSignificant)
-            {
-                return Length.ToString($"F{scale}") + " " + Units.ToString();
-            }
-
-            if (scale > 32)
-                throw new ArgumentException("Scale must be between 0 and 64");
-
-
-            string format = "#0.";
-            while (scale > 0)
-            {
-                format += '0';
-            }
-
-            return Length.ToString(format) + " " + Units.ToString();
-        }
+        /// <summary>
+        /// Formats the length with exactly <paramref name="scale"/> decimal places, keeping trailing zeros
+        /// (fixed-point <c>F</c> format in the current culture), followed by a space and the unit abbreviation.
+        /// Used for the measure tool labels.
+        /// </summary>
+        /// <param name="scale">Number of decimal places.</param>
+        /// <param name="PreserveNonSignificant">
+        /// Kept for source compatibility with existing callers, which all pass <c>true</c>. It has no effect:
+        /// trailing zeros are always kept. The former <c>false</c> branch never terminated and was removed.
+        /// </param>
+        /// <returns>For example <c>"1.500 um"</c> for 1.5 um and a scale of 3.</returns>
+        public string ToString(uint scale, bool PreserveNonSignificant = true) => Length.ToString($"F{scale}") + " " + Units.ToString();
 
         /// <summary>
         /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of at least 1 and less than 1,000.
