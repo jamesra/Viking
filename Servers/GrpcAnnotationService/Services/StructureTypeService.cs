@@ -3,6 +3,7 @@ using gRPCAnnotationService.Protos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
@@ -85,6 +86,7 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// One SaveChanges for the whole batch. A failed row sets Success=false and does not roll back the others.
+        /// Created rows are reported after the save, so each carries the Id the database assigned.
         /// </summary>
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
         {
@@ -93,6 +95,7 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 var username = AnnotationRpc.CallerName(context);
                 var response = new UpdateStructureTypesResponse();
+                var pendingCreates = new List<(StructureTypeChangeResponse Response, Viking.DataModel.Annotation.StructureType Entity)>();
 
                 foreach (var req in request.Objs)
                 {
@@ -107,7 +110,7 @@ namespace gRPCAnnotationService
                             ef_obj.LastModified = ef_obj.Created;
                             var insertResult = await _context.StructureTypes.AddAsync(ef_obj, ct);
                             row_response.Success = true;
-                            row_response.Created = insertResult.Entity.ToProtobufMessage();
+                            pendingCreates.Add((row_response, insertResult.Entity));
                             break;
                         case StructureTypeChangeRequest.ActionOneofCase.Update:
                             var obj = await _context.StructureTypes.FirstOrDefaultAsync(t => t.Id == req.Update.Id, ct);
@@ -146,6 +149,9 @@ namespace gRPCAnnotationService
                 }
 
                 await _context.SaveChangesAsync(ct);
+
+                foreach (var (rowResponse, entity) in pendingCreates)
+                    rowResponse.Created = entity.ToProtobufMessage();
 
                 return response;
             }
