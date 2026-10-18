@@ -3,9 +3,12 @@
 //
 // Positions are in the line's model space: x runs from the start marker's centre (0) to the end marker's centre
 // (the line length), y is the distance from the line, both in world units. The half width at x is
-//   h(x) = max(w, rA - kA * x, rB - kB * (L - x)),  kA = (rA - w) / (2 rA),  kB = (rB - w) / (2 rB)
-// so each side narrows at a constant rate and reaches the waist w one marker diameter from that marker's centre.
-// The outline is the union of the two funnels: markers closer than that meet before either reaches the waist.
+// Each side eases on a raised cosine from its marker radius down to the neck: flat at the marker, flat at the neck.
+// Far apart, the neck is the waist w, reached one marker diameter from each centre, with a straight run between.
+// Close together, the neck is where straight tapers of that rate would meet, (rA - kA m) at m with
+//   m = (rA - rB + kB L) / (kA + kB),  kA = (rA - w) / (2 rA),  kB = (rB - w) / (2 rB),
+// so close markers barely narrow, and the two curves meet at a rounded neck instead of a corner.
+// With pinchedDrawCaps off nothing is drawn inside either marker's circle.
 // Keep LocationLinkView.HalfWidthAt in step with PinchedHalfWidth.
 
 // Per-line shape, indexed like instanceData: (start radius, end radius, waist half width, unused).
@@ -15,7 +18,7 @@ float4 instanceShape[200];
 float pinchedDrawCaps = 0;
 
 // How much more opaque the line is at the waist than at full width: alpha * (1 + boost * squeeze).
-float pinchedOpacityBoost = 1;
+float pinchedOpacityBoost = 0.35;
 
 //NOTE: THE VERTEX SHADER OUTPUT AND PIXEL SHADER INPUT MUST MATCH EXACTLY WHEN USING MONOGAME
 struct PINCHED_VS_OUTPUT
@@ -71,6 +74,12 @@ PINCHED_VS_OUTPUT PinchedLineVertexShader(LINE_VS_INPUT In)
 	return Out;
 }
 
+// 1 at t = 0 and 0 at t = 1, with zero slope at both ends.
+float PinchedEase(float t)
+{
+	return 0.5 * (1 + cos(PI * saturate(t)));
+}
+
 float PinchedHalfWidth(float x, float4 shape)
 {
 	float rA = shape.x;
@@ -79,7 +88,27 @@ float PinchedHalfWidth(float x, float4 shape)
 	float L = shape.w;
 	float kA = (rA - w) / (2 * rA);
 	float kB = (rB - w) / (2 * rB);
-	return max(w, max(rA - (kA * x), rB - (kB * (L - x))));
+
+	float neck = w;
+	float taperA = 2 * rA;
+	float taperB = 2 * rB;
+	if (kA + kB > 0)
+	{
+		float m = clamp((rA - rB + (kB * L)) / (kA + kB), 0, L);
+		float meet = rA - (kA * m);
+		if (meet > w)
+		{
+			neck = meet;
+			taperA = m;
+			taperB = L - m;
+		}
+	}
+
+	if (x < taperA)
+		return neck + ((rA - neck) * PinchedEase(x / taperA));
+	if (x > L - taperB)
+		return neck + ((rB - neck) * PinchedEase((L - x) / taperB));
+	return neck;
 }
 
 // Signed distance to the outline in world units, positive inside. squeeze is 0 at full width and 1 at the waist.
@@ -91,16 +120,31 @@ float PinchedDistance(PINCHED_PS_INPUT input, out float squeeze)
 	float L = shape.w;
 	squeeze = 0;
 
-	if (x < 0)
-		return pinchedDrawCaps > 0.5 ? shape.x - length(input.posModelSpace) : -1e6;
-	if (x > L)
-		return pinchedDrawCaps > 0.5 ? shape.y - length(input.posModelSpace - float2(L, 0)) : -1e6;
+	float fromA = length(input.posModelSpace);
+	float fromB = length(input.posModelSpace - float2(L, 0));
+
+	if (pinchedDrawCaps > 0.5)
+	{
+		if (x < 0)
+			return shape.x - fromA;
+		if (x > L)
+			return shape.y - fromB;
+	}
+	else if (x < 0 || x > L)
+	{
+		return -1e6;
+	}
 
 	float h = PinchedHalfWidth(x, shape);
 	float full = max(shape.x, shape.y);
 	float w = min(shape.z, min(shape.x, shape.y));
 	squeeze = full > w ? saturate((full - h) / (full - w)) : 0;
-	return h - y;
+	float d = h - y;
+
+	// Without caps the markers cover their own circles, so keep the link out of them.
+	if (pinchedDrawCaps <= 0.5)
+		d = min(d, min(fromA - shape.x, fromB - shape.y));
+	return d;
 }
 
 Color_Depth_Output DepthOnlyPinchedShader(PINCHED_PS_INPUT input)
@@ -126,7 +170,8 @@ Color_Depth_Output MyPSPinchedHSV(PINCHED_PS_INPUT input)
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	Color_Depth_Output output;
-	output.Color = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - alpha);
+	// Blend the colour exactly as the Standard line does; only the coverage alpha is boosted toward the waist.
+	output.Color = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
 	output.Color.a = alpha * coverage;
 	output.Depth = 0;
 	return output;

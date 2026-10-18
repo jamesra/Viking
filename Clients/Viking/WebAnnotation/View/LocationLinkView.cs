@@ -137,7 +137,7 @@ namespace WebAnnotation.ViewModel
         public double MaxRadius => Math.Max(A.Radius, B.Radius);
 
         /// <summary>How much more opaque the link is at its waist than at full width: alpha * (1 + boost).</summary>
-        internal const float WaistOpacityBoost = 1.0f;
+        internal const float WaistOpacityBoost = 0.35f;
 
         /// <summary>
         /// Waist half width in world units at the zoom links were last drawn at. Hit tests have no scene, and every
@@ -147,9 +147,10 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Half width of a pinched link <paramref name="x"/> world units from A's centre along a link of
-        /// <paramref name="length"/>. Each side narrows at a constant rate from its radius and reaches
-        /// <paramref name="waist"/> one diameter from its centre. The outline is the union of the two tapers, so when
-        /// the markers are close the two sides meet first and the link barely narrows. The waist is never wider than the smaller radius.
+        /// <paramref name="length"/>. Each side eases on a raised cosine from its radius down to the neck, flat at
+        /// both ends of the curve. Far apart, the neck is <paramref name="waist"/>, reached one diameter from each
+        /// centre. Close together, the neck is where straight tapers at that rate would meet, so the link barely
+        /// narrows and the two curves meet smoothly. The waist is never wider than the smaller radius.
         /// Matches PinchedHalfWidth in PinchedLineShaders.fx.
         /// </summary>
         internal static double HalfWidthAt(double x, double length, double radiusA, double radiusB, double waist)
@@ -157,8 +158,31 @@ namespace WebAnnotation.ViewModel
             double w = Math.Min(waist, Math.Min(radiusA, radiusB));
             double kA = (radiusA - w) / (2 * radiusA);
             double kB = (radiusB - w) / (2 * radiusB);
-            return Math.Max(w, Math.Max(radiusA - (kA * x), radiusB - (kB * (length - x))));
+
+            double neck = w;
+            double taperA = 2 * radiusA;
+            double taperB = 2 * radiusB;
+            if (kA + kB > 0)
+            {
+                double m = Math.Max(0, Math.Min(length, (radiusA - radiusB + (kB * length)) / (kA + kB)));
+                double meet = radiusA - (kA * m);
+                if (meet > w)
+                {
+                    neck = meet;
+                    taperA = m;
+                    taperB = length - m;
+                }
+            }
+
+            if (x < taperA)
+                return neck + ((radiusA - neck) * Ease(x / taperA));
+            if (x > length - taperB)
+                return neck + ((radiusB - neck) * Ease((length - x) / taperB));
+            return neck;
         }
+
+        /// <summary>1 at <paramref name="t"/> = 0 and 0 at 1, with zero slope at both ends.</summary>
+        private static double Ease(double t) => 0.5 * (1 + Math.Cos(Math.PI * Math.Max(0, Math.Min(1, t))));
 
         /// <summary>
         /// <paramref name="position"/> in the link's own frame: <paramref name="along"/> from A's centre toward B,
@@ -187,6 +211,20 @@ namespace WebAnnotation.ViewModel
         private double DistanceToOutline(Geometry.Vector2 position, double waist, bool drawCaps, out double normalized)
         {
             ToLinkFrame(position, out double along, out double across, out double length);
+            if (!drawCaps)
+            {
+                // Nothing is drawn inside the markers, so a point there is not on the link.
+                foreach (Circle end in new[] { A, B })
+                {
+                    double fromCentre = Geometry.Vector2.Distance(position, end.Center);
+                    if (fromCentre < end.Radius)
+                    {
+                        normalized = double.MaxValue;
+                        return end.Radius - fromCentre;
+                    }
+                }
+            }
+
             if (drawCaps && (along < 0 || along > length))
             {
                 Circle end = along < 0 ? A : B;

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using WebAnnotation.ViewModel;
 
@@ -25,6 +26,21 @@ namespace WebAnnotationTests
             Assert.AreEqual(2, LocationLinkView.HalfWidthAt(200 - 12, 200, 10, 6, 2), Tolerance, "two radii of B from B");
             Assert.AreEqual(2, LocationLinkView.HalfWidthAt(100, 200, 10, 6, 2), Tolerance, "the middle stays at the waist");
             Assert.AreEqual(6, LocationLinkView.HalfWidthAt(10, 200, 10, 6, 2), Tolerance, "halfway down A's taper");
+            Assert.AreEqual(2 + (8 * 0.5 * (1 + Math.Cos(Math.PI / 4))), LocationLinkView.HalfWidthAt(5, 200, 10, 6, 2), Tolerance,
+                "the taper eases out of the marker on a cosine, above a straight ramp");
+        }
+
+        [TestMethod]
+        public void TheTaperIsFlatAtTheMarkerAndAtTheNeck()
+        {
+            const double step = 1e-4;
+            double atMarker = (LocationLinkView.HalfWidthAt(step, 200, 10, 6, 2) - LocationLinkView.HalfWidthAt(0, 200, 10, 6, 2)) / step;
+            double intoWaist = (LocationLinkView.HalfWidthAt(20, 200, 10, 6, 2) - LocationLinkView.HalfWidthAt(20 - step, 200, 10, 6, 2)) / step;
+            double atCloseNeck = (LocationLinkView.HalfWidthAt(6 + step, 12, 6, 6, 1) - LocationLinkView.HalfWidthAt(6 - step, 12, 6, 6, 1)) / (2 * step);
+
+            Assert.AreEqual(0, atMarker, 1e-3);
+            Assert.AreEqual(0, intoWaist, 1e-3);
+            Assert.AreEqual(0, atCloseNeck, 1e-3, "close markers meet at a rounded neck, not a corner");
         }
 
         [TestMethod]
