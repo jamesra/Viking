@@ -56,8 +56,7 @@ namespace GeometryTests
         [TestMethod]
         public void ConstructorSortsMapPointsByMappedXThenMappedY()
         {
-            // The MapPoints doc says "sorted by control point x", but MappingVector2.CompareTo compares mapped points.
-            // This pins what Array.Sort actually produces.
+            // MappingVector2.CompareTo compares mapped points; this pins what Array.Sort produces.
             MappingVector2[] input = FourPoints();
             var t = new PointsOnlyTransform([input[1], input[3], input[0], input[2]]);
             CollectionAssert.AreEqual(new[] { input[3], input[2], input[1], input[0] }, t.MapPoints);
@@ -125,6 +124,31 @@ namespace GeometryTests
             var t = new PointsOnlyTransform(input);
             Assert.AreEqual(4, t.MapPoints.Length);
             Assert.AreEqual(1, t.MapPoints.Count(p => p.MappedPoint == new Vector2(400000, 51500)));
+        }
+
+        [TestMethod]
+        public void ControlAndMappedDuplicatesInOneArrayAreBothRemoved()
+        {
+            // One extra point repeats A's control point; another repeats D's mapped point. Both passes must run, or the
+            // mapped duplicate survives and breaks the mapped-space triangulation.
+            MappingVector2[] input = [.. FourPoints(), MV(100000, 200000, 399000, 49000), MV(99000, 199000, 400000, 51500)];
+            var t = new PointsOnlyTransform(input);
+
+            Assert.AreEqual(4, t.MapPoints.Length);
+            Assert.AreEqual(4, t.MapPoints.Select(p => p.ControlPoint).Distinct().Count(), "control points unique");
+            Assert.AreEqual(4, t.MapPoints.Select(p => p.MappedPoint).Distinct().Count(), "mapped points unique");
+        }
+
+        [TestMethod]
+        public void DuplicateControlPointRemovalKeepsMappedXOrder()
+        {
+            // Removing a control-space duplicate must leave the points in the same mapped x order Array.Sort gives,
+            // not the control x order the control-space pass sorts into.
+            MappingVector2[] input = [.. FourPoints(), MV(100000, 200000, 399000, 49000)];
+            var t = new PointsOnlyTransform(input);
+
+            double[] mappedX = [.. t.MapPoints.Select(p => p.MappedPoint.X)];
+            CollectionAssert.AreEqual(mappedX.OrderBy(x => x).ToArray(), mappedX);
         }
 
         [TestMethod]
