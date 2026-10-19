@@ -180,7 +180,7 @@ namespace WebAnnotation.UI
             {
                 if (except.Message != null)
                 {
-                    MessageBox.Show("Split error", except.Message.ToString());
+                    MessageBox.Show(except.Message, "Split error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
                 return;

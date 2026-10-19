@@ -81,7 +81,7 @@ namespace WebAnnotation.UI
             }
             catch (Exception except)
             {
-                MessageBox.Show("Merge error", except.Message.ToString());
+                MessageBox.Show(except.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             Close();

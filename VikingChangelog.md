@@ -22,6 +22,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Dragging the polygon opacity slider in Annotation Preferences quickly, or moving it and the circle opacity slider together, no longer leaves some polygons at an earlier opacity than the slider shows, and no longer risks an error from two previews cancelling each other at the same moment.
 * **Flip** in the Split structure dialog (right-click a location link) now swaps the boxes when one is empty. Before, with Keep empty and a Split ID entered, Flip copied the Split ID into Keep, so both boxes showed the same ID and Split stayed disabled.
 * The stripes of the shimmer that sweeps across a new auto-polygonize proposal now glide sideways across their own length while the bright band sweeps, about two and a half stripe widths per sweep at any polygon size. Scrolling them along the sweep would not show, since they run parallel to it, and turning them to cross the sweep made them jump by more than a stripe each frame, so they looked still.
+* When Merge Structures or Split Structure fails for a reason other than a server error (for example the connection drops or the request times out), the error dialog now shows the actual error message with an error icon, titled "Merge error" or "Split error". Before, the dialog body only said "Merge error" or "Split error" and the real message was squeezed into the title bar, where longer messages were cut off.
 
 ## 1.2.109 — 2026-10-18 (Viking Test, unsigned)
 
