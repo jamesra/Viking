@@ -970,6 +970,7 @@
                     Width="80" 
                     Height="30" 
                     Margin="5"
+                    IsCancel="True"
                     Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>

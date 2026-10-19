@@ -110,5 +110,20 @@ namespace VikingCoreTests
             Assert.AreEqual(appliedMagnification, vm.SectionNumberOverlayCenterMagnification, Tolerance);
             Assert.AreEqual(0.2, vm.SectionNumberOverlayOpacity, Tolerance);
         }
+
+        /// <summary>
+        /// Closing the dialog after Cancel must not undo anything more: a second revert leaves the snapshot values.
+        /// </summary>
+        [TestMethod]
+        public void RevertToOriginal_RunTwice_LeavesLoadedValues()
+        {
+            var vm = LoadedViewModel();
+            ChangeEverything(vm);
+
+            vm.RevertToOriginal();
+            vm.RevertToOriginal();
+
+            AssertLoadedValues(vm);
+        }
     }
 }

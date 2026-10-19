@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.111 — unreleased
+
+* Closing Viewer Preferences or Annotation Preferences with the window's close box (X), Alt+F4 or Escape now works like Cancel: the live preview (section number overlay, polygon and circle opacity, segmentation sliders) goes back to the values from when the dialog opened (or the last Apply). Before, closing that way kept the previewed values in effect without OK or Apply (the overlay and opacities stayed changed on screen while reopening the dialog showed the old values), and Escape did nothing.
+
 ## 1.2.110 — 2026-10-19 (Viking Test, unsigned)
 
 * Auto-polygonize now groups two proposals of the same cell when one outline lies inside the other along its edge, including two identical outlines (two circles of one cell in the same blob that get the same mask). Before, those were left as separate proposals, so accepting them saved two stacked copies of the same polygon for one cell, and stacked saved copies were never offered for merging.
