@@ -14,7 +14,10 @@ namespace Viking.Common
         /// </summary>
         public const int SingleTileMaxPixels = 2048;
 
+        /// <summary>Number of tile columns in the grid; 1 when the frame is rendered in a single pass.</summary>
         public int NumTilesX { get; }
+
+        /// <summary>Number of tile rows in the grid; 1 when the frame is rendered in a single pass.</summary>
         public int NumTilesY { get; }
 
         /// <summary>World-space width of one tile (the requested width divided by <see cref="NumTilesX"/>, truncated).</summary>
@@ -38,6 +41,8 @@ namespace Viking.Common
         /// The frame is rendered in one pass when both captured dimensions fit in <see cref="SingleTileMaxPixels"/>;
         /// otherwise it is cut into the fewest equal tiles whose captured size is at most <paramref name="maxTilePixels"/> on each axis.
         /// </summary>
+        /// <param name="downsample">Volume-space pixels per output pixel; captured sizes are world sizes divided by this.</param>
+        /// <param name="maxTilePixels">Largest captured tile width or height, in output pixels, when the frame must be split (the device's maximum render target side).</param>
         public FrameExportPlan(double centerX, double centerY, double worldWidth, double worldHeight, double downsample, int maxTilePixels)
         {
             this.centerX = (int)Math.Floor(centerX);

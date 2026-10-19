@@ -1135,6 +1135,15 @@ namespace Viking.UI.Controls
         public int MaxTextureSide =>
             graphicsDeviceService?.GraphicsDevice?.GraphicsProfile == GraphicsProfile.HiDef ? 4096 : 2048;
 
+        /// <summary>
+        /// Exports the volume-space rectangle <paramref name="MyRect"/> of section <paramref name="Z"/> as PNG tiles next to
+        /// <paramref name="Filename"/>, rendered with <see cref="Viking.Common.FrameExportPlan"/>: one tile when the frame fits, otherwise a grid
+        /// whose tile size is capped at 4096 pixels on HiDef devices and 2048 otherwise. Each tile file name appends the section, tile center,
+        /// and downsample to the base name. A tile whose file already exists is skipped, not re-rendered. At most two tiles render and
+        /// save at a time. Called by the frame capture export.
+        /// </summary>
+        /// <param name="Downsample">Volume-space pixels per output pixel.</param>
+        /// <param name="IncludeOverlays">True to draw annotation overlays on each tile.</param>
         public async Task ExportImage(string Filename, Geometry.Rectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
         {
             Debug.Assert(MyRect.Left < MyRect.Right);
@@ -3022,7 +3031,6 @@ namespace Viking.UI.Controls
                 //       continue;
                 //  } 
                 await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
-                //var task = System.Threading.Tasks.Task.Run(() => this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay));
                 //task.Wait();
                 progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
                 //System.Windows.Forms.Application.DoEvents();

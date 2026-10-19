@@ -1260,16 +1260,6 @@ namespace WebAnnotation
                     break;
             }
 
-            /* The brute force approach */
-            /*
-            StringCollection newList = new System.Collections.Specialized.StringCollection();
-            foreach(long ID in _UserFavoriteStructureTypes)
-            {
-                newList.Add(string.Format("{0}", ID));
-            }
-
-            Properties.Settings.Default.FavoriteStructureIDs = newList;
-            */
             Properties.Settings.Default.Save(); //Persist the updated list
         }
 
