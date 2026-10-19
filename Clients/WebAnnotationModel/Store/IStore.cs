@@ -169,32 +169,6 @@ namespace WebAnnotationModel
     }
 
     /// <summary>
-    /// A store that can index its objects by section number
-    /// </summary>
-    /// <typeparam name="KEY"></typeparam>
-    /// <typeparam name="OBJECT"></typeparam>
-    internal interface ISectionIndexedStore<KEY, OBJECT>
-    {
-        Task<ConcurrentDictionary<KEY, OBJECT>> GetObjectsForSectionAsync(long SectionNumber, QueryTargets targets);
-
-        void CancelExcessSectionQueries(int LoadingSectionLimit);
-        /// <summary>
-        /// This is called to instruct the store to eliminate objects from the oldest section query.
-        /// This is done to save memory
-        /// </summary>
-        /// <param name="LoadedSectionLimit">Number of loaded sections we want in memory</param>
-        /// <param name="LoadingSectionLimit">Number of sections we want to be actively loading</param>
-        void FreeExcessSections(int LoadedSectionLimit, int LoadingSectionLimit);
-
-        /// <summary>
-        /// Free all resources and objects related to the section.
-        /// </summary>
-        /// <param name="SectionNumber"></param>
-        /// <returns>True if the section resources were freed.</returns>
-        bool RemoveSection(long SectionNumber);
-    }
-
-    /// <summary>
     /// Responsible for updating local resources with server objects
     /// Implemented to handle the interface between server objects loaded by requests and properly injecting them into IStore objects
     /// This version can handle results that have multiple object types embedded that need to be inserted into multiple stores
