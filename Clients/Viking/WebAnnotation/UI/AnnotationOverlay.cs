@@ -66,9 +66,22 @@ namespace WebAnnotation
 
         /// <summary>
         /// Section whose <see cref="SectionViewModel.TransformChanged"/> <see cref="OnSectionChanged"/> last subscribed to.
-        /// Written on the section-change worker and read by <see cref="Shutdown"/> on the UI thread.
+        /// Written on the section-change worker and read by <see cref="Shutdown"/> on the UI thread; guarded by <see cref="_transformSubscriptionLock"/>.
         /// </summary>
-        private volatile SectionViewModel? _transformSubscribedSection;
+        private SectionViewModel? _transformSubscribedSection;
+
+        /// <summary>
+        /// Guards <see cref="_transformSubscribedSection"/> and <see cref="_isShutdown"/> so a section-change worker cannot
+        /// subscribe to a section after <see cref="Shutdown"/> has unsubscribed. Only event add/remove runs under it; never raise
+        /// events or marshal to the UI thread while holding it.
+        /// </summary>
+        private readonly object _transformSubscriptionLock = new();
+
+        /// <summary>
+        /// Set by <see cref="Shutdown"/>; once true, <see cref="OnSectionChanged"/> no longer subscribes to section transforms.
+        /// Guarded by <see cref="_transformSubscriptionLock"/>.
+        /// </summary>
+        private bool _isShutdown;
 
         protected TransformChangedEventHandler SectionChangedEventHandler;
         private readonly EventHandler AnnotationChangedEventHandler;
@@ -913,10 +926,15 @@ namespace WebAnnotation
                 _subscribedVolume = null;
             }
 
-            SectionViewModel? transformSection = _transformSubscribedSection;
-            _transformSubscribedSection = null;
-            if (transformSection is not null)
-                transformSection.TransformChanged -= OnSectionTransformChanged;
+            lock (_transformSubscriptionLock)
+            {
+                _isShutdown = true;
+                if (_transformSubscribedSection is not null)
+                {
+                    _transformSubscribedSection.TransformChanged -= OnSectionTransformChanged;
+                    _transformSubscribedSection = null;
+                }
+            }
 
             StopStartupLocationRetry();
             StopSectionLocationPollTimer();
@@ -2356,9 +2374,17 @@ break;
             if (token.IsCancellationRequested)
                 return;
 
-            e.OldSection.TransformChanged -= OnSectionTransformChanged;
-            e.NewSection.TransformChanged += OnSectionTransformChanged;
-            _transformSubscribedSection = e.NewSection;
+            // The entry token check alone cannot stop a worker that is already past it when Shutdown runs; re-check under the lock
+            // Shutdown takes so the subscription is either tracked (and removed by Shutdown) or never made.
+            lock (_transformSubscriptionLock)
+            {
+                if (!_isShutdown)
+                {
+                    e.OldSection.TransformChanged -= OnSectionTransformChanged;
+                    e.NewSection.TransformChanged += OnSectionTransformChanged;
+                    _transformSubscribedSection = e.NewSection;
+                }
+            }
 
             int B = e.NewSection?.Number ?? 0;
             _currentSectionNumber = B;
