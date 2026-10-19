@@ -178,6 +178,60 @@ namespace WebAnnotationTests
             StringAssert.Contains(decoded, "tolower(Username) eq 'gnk19pitt'");
         }
 
+        /// <summary>
+        /// Regression: a numeric token must also match labels in the OData seed, because the live
+        /// <see cref="StructureOrLabelMatch"/> filter keeps a row whose label contains the number
+        /// ("Cell 12" for "12"). The seed replaces the feed list and the poll only admits rows newer
+        /// than the oldest seeded row, so a row the seed leaves out does not show until it is edited again.
+        /// </summary>
+        [TestMethod]
+        public void StructureFilter_NumericToken_MatchesParentIdOrLabel()
+        {
+            Assert.AreEqual(
+                "(ParentID eq 12 or contains(tolower(Parent/Label),'12'))",
+                ReviewChangeODataQuery.BuildStructureFilter("12"));
+
+            // The row the old ParentID-only seed dropped is one the live filter shows.
+            Assert.IsTrue(StructureOrLabelMatch.Matches(77, "Cell 12", "12"));
+        }
+
+        [TestMethod]
+        public void StructureFilter_TextToken_IsCaseInsensitiveLabelContains()
+        {
+            Assert.AreEqual(
+                "contains(tolower(Parent/Label),'cell')",
+                ReviewChangeODataQuery.BuildStructureFilter(" Cell "));
+        }
+
+        [TestMethod]
+        public void StructureFilter_MultipleTokens_AreOred()
+        {
+            Assert.AreEqual(
+                "(contains(tolower(Parent/Label),'c1') or contains(tolower(Parent/Label),'rod'))",
+                ReviewChangeODataQuery.BuildStructureFilter("c1, Rod"));
+            Assert.AreEqual(
+                "(ParentID eq 12 or contains(tolower(Parent/Label),'12') or contains(tolower(Parent/Label),'axon'))",
+                ReviewChangeODataQuery.BuildStructureFilter("12;axon"));
+        }
+
+        [TestMethod]
+        public void StructureFilter_QuoteIsDoubled_AndNonPositiveNumberIsText()
+        {
+            Assert.AreEqual(
+                "contains(tolower(Parent/Label),'o''brien')",
+                ReviewChangeODataQuery.BuildStructureFilter("O'Brien"));
+            Assert.AreEqual(
+                "contains(tolower(Parent/Label),'-5')",
+                ReviewChangeODataQuery.BuildStructureFilter("-5"));
+        }
+
+        [TestMethod]
+        public void StructureFilter_BlankOrSeparatorsOnly_IsNull()
+        {
+            Assert.IsNull(ReviewChangeODataQuery.BuildStructureFilter(null));
+            Assert.IsNull(ReviewChangeODataQuery.BuildStructureFilter(" , ; "));
+        }
+
         [TestMethod]
         public void SeedRecent_ReplacesPriorRows_WhenFilterChanges()
         {

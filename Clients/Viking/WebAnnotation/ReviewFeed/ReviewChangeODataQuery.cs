@@ -192,7 +192,12 @@ namespace WebAnnotation.ReviewFeed
         }
 
         /// <summary>
-        /// Structure id equality or case-insensitive label/id substring via <c>contains</c>.
+        /// OR of one clause per token: a case-insensitive <c>contains</c> on the parent label, plus
+        /// <c>ParentID eq N</c> for a positive integer token. A numeric token keeps the label clause
+        /// because the live <see cref="Viking.Common.StructureOrLabelMatch"/> filter also shows a
+        /// structure whose label contains the number ("Cell 12" for "12"), and this seed replaces
+        /// the feed list. The live filter's id-substring match ("112" for "12") stays client-side only.
+        /// Null when the text has no tokens.
         /// </summary>
         public static string BuildStructureFilter(string structureOrLabel)
         {
@@ -204,10 +209,7 @@ namespace WebAnnotation.ReviewFeed
             foreach (string token in tokens)
             {
                 if (long.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out long id) && id > 0)
-                {
                     parts.Add(FormattableString.Invariant($"ParentID eq {id}"));
-                    continue;
-                }
 
                 string escaped = EscapeODataString(token.ToLowerInvariant());
                 parts.Add($"contains(tolower(Parent/Label),'{escaped}')");
