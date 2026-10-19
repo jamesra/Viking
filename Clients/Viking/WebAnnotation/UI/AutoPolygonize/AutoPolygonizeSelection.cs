@@ -365,7 +365,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Merge when rings area-overlap. Uses <see cref="Polygon.Intersects"/> (the original
         /// sibling-merge criterion) so noisy SAM2 rings still group when
         /// <see cref="Polygon.GetRelation(in Polygon)"/> under-classifies the overlap.
-        /// Bare edge contact alone is not a sibling group.
+        /// A ring nested against the other's boundary, including an identical ring, is a group.
+        /// Bare edge contact from outside is not.
         /// </summary>
         internal static bool ShouldGroupSiblingPolygons(Polygon a, Polygon b)
         {
@@ -381,7 +382,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return true;
 
             // Shared edge/vertex only: Intersects can still be true via segment contact. External contact is reported as
-            // Touching | Exterior, so test the flag rather than equality.
+            // Touching | Exterior; plain Touching (nested) was grouped above.
             if ((ab & ShapeRelation.Touching) != 0 || (ba & ShapeRelation.Touching) != 0)
                 return false;
 
@@ -389,8 +390,13 @@ namespace WebAnnotation.UI.AutoPolygonize
             return true;
         }
 
+        /// <summary>
+        /// Contained or Intersecting, or Touching without Exterior: GetRelation reports a ring that lies inside the
+        /// other and shares part of its boundary (every vertex on it for identical rings) as plain Touching.
+        /// </summary>
         private static bool ShouldGroupSiblingRelation(ShapeRelation relation) =>
-            (relation & (ShapeRelation.Contained | ShapeRelation.Intersecting)) != 0;
+            (relation & (ShapeRelation.Contained | ShapeRelation.Intersecting)) != 0 ||
+            (relation & (ShapeRelation.Touching | ShapeRelation.Exterior)) == ShapeRelation.Touching;
 
         /// <summary>
         /// Volume-space polygon for a saved POLYGON or CURVEPOLYGON. Circles and curves are

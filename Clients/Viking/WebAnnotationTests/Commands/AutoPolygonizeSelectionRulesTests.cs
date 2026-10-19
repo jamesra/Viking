@@ -255,6 +255,45 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void IdenticalRingsAreGrouped()
+        {
+            // Two circles in one blob can get the same SAM2 mask and so the same ring; the overlap is the whole area 100.
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(0, 0, 10), Square(0, 0, 10)));
+        }
+
+        [TestMethod]
+        public void SameRingStartingAtAnotherVertexOrReversedIsGrouped()
+        {
+            Polygon rotated = new([
+                new Vector2(10, 10), new Vector2(0, 10), new Vector2(0, 0), new Vector2(10, 0), new Vector2(10, 10)]);
+            Polygon reversed = new([
+                new Vector2(0, 0), new Vector2(0, 10), new Vector2(10, 10), new Vector2(10, 0), new Vector2(0, 0)]);
+
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(0, 0, 10), rotated));
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(rotated, Square(0, 0, 10)));
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(0, 0, 10), reversed));
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(reversed, Square(0, 0, 10)));
+        }
+
+        [TestMethod]
+        public void HalfOfASquareWithEveryVertexOnItsBoundaryIsGroupedInEitherOrder()
+        {
+            // The triangle below the diagonal covers area 50 of the square; all three corners are square corners.
+            Polygon triangle = new([new Vector2(0, 0), new Vector2(10, 0), new Vector2(10, 10), new Vector2(0, 0)]);
+
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(0, 0, 10), triangle));
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(triangle, Square(0, 0, 10)));
+        }
+
+        [TestMethod]
+        public void RingAndASlightlyLargerRingAroundItAreGrouped()
+        {
+            // 0.5 wider on every side: the smaller ring is wholly inside, overlap area 100.
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(0, 0, 10), Square(-0.5, -0.5, 11)));
+            Assert.IsTrue(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(-0.5, -0.5, 11), Square(0, 0, 10)));
+        }
+
+        [TestMethod]
         public void DisjointPolygonsAreNotGrouped()
         {
             Assert.IsFalse(AutoPolygonizeSelection.ShouldGroupSiblingPolygons(Square(0, 0, 10), Square(100, 100, 10)));
