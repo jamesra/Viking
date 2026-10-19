@@ -3443,6 +3443,8 @@ namespace Viking.UI.Controls
             // Wire up event handlers to save settings
             _viewerPreferencesDialog.ApplyClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
             _viewerPreferencesDialog.OkClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
+            // Cancel has already reverted the view model; push those values back over the live preview.
+            _viewerPreferencesDialog.CancelClicked += (s, args) => ApplySectionNumberOverlaySettings(viewModel);
 
             _viewerPreferencesDialog.Show(); // Modeless dialog
         }

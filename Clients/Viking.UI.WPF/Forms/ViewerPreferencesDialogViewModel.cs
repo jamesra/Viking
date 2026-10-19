@@ -579,7 +579,9 @@ namespace Viking.UI.WPF.Forms
         }
 
         /// <summary>
-        /// Revert to original values (for Cancel)
+        /// Revert every value to the one captured by <see cref="LoadCurrentSettings"/> or the last <see cref="Apply"/> (for Cancel).
+        /// Does not raise <see cref="SectionNumberOverlaySettingsChanged"/>; the host re-applies the live preview from this
+        /// view model when the dialog's Cancel event fires.
         /// </summary>
         public void RevertToOriginal()
         {
@@ -588,6 +590,8 @@ namespace Viking.UI.WPF.Forms
             _sectionNumberOverlayAcceleration = _originalSectionNumberOverlayAcceleration;
             _sectionNumberOverlayEdge = _originalSectionNumberOverlayEdge;
             _sectionNumberOverlayOpacity = _originalSectionNumberOverlayOpacity;
+            _sectionNumberOverlayMinOpacityNonCenter = _originalSectionNumberOverlayMinOpacityNonCenter;
+            _sectionNumberOverlayCenterMagnification = _originalSectionNumberOverlayCenterMagnification;
             _pidProportionalGain = _originalPidProportionalGain;
             _pidDerivativeGain = _originalPidDerivativeGain;
             _pidIntegralGain = _originalPidIntegralGain;
