@@ -82,6 +82,7 @@
     <Compile Include="Commands\SegmentationResponseExtensionsTests.cs" />
     <Compile Include="Commands\SegmentationCapabilitiesTests.cs" />
     <Compile Include="Commands\LocationRefreshQueueTests.cs" />
+    <Compile Include="Commands\PolygonViewportClipTests.cs" />
     <Compile Include="Commands\PanZoomDebouncerTests.cs" />
     <Compile Include="Commands\TileUploadCacheTests.cs" />
     <Compile Include="Commands\CapturedPngTests.cs" />
