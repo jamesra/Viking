@@ -122,17 +122,6 @@ namespace Viking.UI
         public static double interactDistance = 50;
 
         /// <summary>
-        /// The distance we can erase in pixels at max pressure
-        /// </summary>
-        public static double maxEraseDistance = 50;
-
-        /// <summary>
-        /// The distance we can erase in pixels at min pressure
-        /// </summary>
-        public static double minEraseDistance = 5;
-
-
-        /// <summary>
         /// When set to true this property informs callers that the PenInputHelper will all ignore pen input until the pen is removed from the surface and touches within the interact distance.  
         /// 
         /// This allows other UI interactions to occur without affecting our path.
@@ -606,12 +595,6 @@ namespace Viking.UI
                 return downsample * resumeDistance.Value;
 
             return double.PositiveInfinity;
-        }
-
-        private static double EraseDistanceInPixels(double NormalizedPressure, double downsample)
-        {
-            double scalar = (minEraseDistance + ((maxEraseDistance - minEraseDistance) * NormalizedPressure));
-            return downsample * scalar;
         }
 
         private static double CompletionDistanceInPixels(double downsample) => downsample * completionDistance;
