@@ -72,6 +72,7 @@
         <Compile Include="Commands\SegmentationMaskTilesTests.cs" />
         <Compile Include="View\LocationIndexDiagTests.cs" />
         <Compile Include="Commands\PolygonCutMeshBuilderTests.cs" />
+        <Compile Include="Commands\PolygonCutFillCacheTests.cs" />
         <Compile Include="Commands\PenModeContactTests.cs" />
         <Compile Include="View\LocationLineHitTestTests.cs" />
         <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
