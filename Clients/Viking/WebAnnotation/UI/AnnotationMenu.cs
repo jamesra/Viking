@@ -27,7 +27,7 @@ namespace WebAnnotation
         private static ToolStripMenuItem menuShowPenActionButtons;
         private static ToolStripMenuItem menuAutoPolygonizeCircles;
         private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
-        private static System.Threading.Timer _circleOpacityUpdateTimer;
+        private static System.Threading.Timer? _circleOpacityUpdateTimer;
         private static readonly object _circleOpacityUpdateLock = new();
         private static double _pendingCircleOpacityParentless;
         private static double _pendingCircleOpacityWithParent;
@@ -244,9 +244,14 @@ namespace WebAnnotation
                     command.RefreshPromptPointViews(viewModel.SegmentationPointRadius);
             };
 
+            // Set once a slider has rewritten in-memory opacity, so Cancel knows a preview needs undoing.
+            bool opacityPreviewed = false;
+
             // Wire up real-time preview for polygon opacity changes
             viewModel.PolygonOpacityChanged += (parentlessOpacity, withParentOpacity) =>
             {
+                opacityPreviewed = true;
+
                 // Cancel previous task if running
                 _opacityUpdateCancellationTokenSource?.Cancel();
                 _opacityUpdateCancellationTokenSource?.Dispose();
@@ -278,6 +283,8 @@ namespace WebAnnotation
             // Wire up real-time preview for circle opacity changes
             viewModel.CircleOpacityChanged += (parentlessOpacity, withParentOpacity) =>
             {
+                opacityPreviewed = true;
+
                 // Use the same throttling mechanism as polygon opacity
                 lock (_circleOpacityUpdateLock)
                 {
@@ -285,10 +292,16 @@ namespace WebAnnotation
                     _pendingCircleOpacityWithParent = withParentOpacity;
 
                     _circleOpacityUpdateTimer?.Dispose();
-                    _circleOpacityUpdateTimer = new System.Threading.Timer(_ =>
+                    System.Threading.Timer? timer = null;
+                    timer = new System.Threading.Timer(_ =>
                     {
                         lock (_circleOpacityUpdateLock)
                         {
+                            // Disposing a timer does not stop a callback already queued; skip one that was
+                            // replaced by a newer slider change or stopped by Cancel.
+                            if (!ReferenceEquals(timer, _circleOpacityUpdateTimer))
+                                return;
+
                             _opacityUpdateCancellationTokenSource?.Cancel();
                             _opacityUpdateCancellationTokenSource?.Dispose();
                             _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
@@ -313,6 +326,7 @@ namespace WebAnnotation
                             });
                         }
                     }, null, 100, Timeout.Infinite);
+                    _circleOpacityUpdateTimer = timer;
                 }
             };
 
@@ -329,9 +343,36 @@ namespace WebAnnotation
                 Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
                 Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
                 Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+
+                // Opacity sliders preview by rewriting in-memory views; Global keeps the last applied values.
+                if (opacityPreviewed)
+                    RestoreOpacityPreview();
             };
 
             _preferencesDialog.Show(); // Modeless dialog
+        }
+
+        /// <summary>
+        /// Undoes the Annotation Preferences opacity preview: stops a pending circle debounce and any running
+        /// preview pass, then puts every polygon and circle in memory back to the opacities in
+        /// <see cref="Global.AnnotationSettings"/>. Called on the UI thread when the dialog is cancelled.
+        /// </summary>
+        private static void RestoreOpacityPreview()
+        {
+            lock (_circleOpacityUpdateLock)
+            {
+                _circleOpacityUpdateTimer?.Dispose();
+                _circleOpacityUpdateTimer = null;
+                // Cancel without replacing: a preview task that has not read the token yet sees it cancelled.
+                _opacityUpdateCancellationTokenSource?.Cancel();
+            }
+
+            UpdateAllPolygonOpacityInMemory(
+                Global.AnnotationSettings.PolygonOpacityParentless,
+                Global.AnnotationSettings.PolygonOpacityWithParent);
+            UpdateAllCircleOpacityInMemory(
+                Global.AnnotationSettings.CircleOpacityParentless,
+                Global.AnnotationSettings.CircleOpacityWithParent);
         }
 
         private static void SaveSettingsFromViewModel(WebAnnotation.WPF.Forms.AnnotationPreferencesDialogViewModel viewModel)
