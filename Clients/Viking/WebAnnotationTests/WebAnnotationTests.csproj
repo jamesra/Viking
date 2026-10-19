@@ -111,6 +111,7 @@
     <Compile Include="VikingDeepLinkParserTests.cs" />
     <Compile Include="VikingLaunchExchangeParserTests.cs" />
     <Compile Include="TokenResponseFactoryTests.cs" />
+    <Compile Include="GpuDeviceRemovedDiagnosticsTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
