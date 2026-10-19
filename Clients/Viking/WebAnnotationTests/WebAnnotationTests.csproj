@@ -114,6 +114,7 @@
     <Compile Include="TileGridMetricsTests.cs" />
     <Compile Include="GlobalShouldLoadTests.cs" />
     <Compile Include="VolumePathTests.cs" />
+    <Compile Include="ExportRequestTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
     <Compile Include="VikingDeepLinkParserTests.cs" />
