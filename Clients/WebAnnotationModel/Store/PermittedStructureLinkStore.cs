@@ -1,5 +1,6 @@
 using AnnotationService.Types;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ServiceModel;
 using WebAnnotationModel.Objects;
@@ -85,7 +86,28 @@ namespace WebAnnotationModel
                 ValidObjs.Add(link);
             }
 
-            return base.InternalAdd([.. ValidObjs]);
+            ChangeInventory<PermittedStructureLinkObj> inventory = base.InternalAdd([.. ValidObjs]);
+            QueueUnsavedLinks(inventory.AddedObjects, ChangedObjects);
+            return inventory;
+        }
+
+        /// <summary>
+        /// Puts links that are not on the server yet (DBAction other than NONE) on the dirty set so the next
+        /// <c>Save()</c> sends them.
+        /// A link built with the editor's constructor is already INSERT before the store subscribes to its
+        /// DBAction changes, so without this the structure type editor's Apply never created it on the server.
+        /// Links loaded from the server arrive with DBAction NONE and are skipped.
+        /// </summary>
+        /// <param name="addedLinks">Links that were newly added to the store.</param>
+        /// <param name="changedObjects">The store's dirty set, keyed by link.</param>
+        internal static void QueueUnsavedLinks(IEnumerable<PermittedStructureLinkObj> addedLinks,
+                                               ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> changedObjects)
+        {
+            foreach (PermittedStructureLinkObj link in addedLinks)
+            {
+                if (link.DBAction != DBACTION.NONE)
+                    changedObjects.TryAdd(link.ID, link);
+            }
         }
 
         protected override List<PermittedStructureLinkObj> InternalDelete(PermittedStructureLinkKey[] linkKeys)
