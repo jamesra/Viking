@@ -2380,9 +2380,13 @@ break;
             // The parent cancels but never awaits the previous worker, so workers can reach this block out of order. Sync to the
             // parent's current section rather than e.Old/NewSection: the newest worker starts after the last Section write and
             // always gets here, and any later stale worker sees the same section, so exactly that section stays subscribed.
+            // The section number and keep window below use the same current section: a stale worker trusting e.NewSection would
+            // overwrite _currentSectionNumber and cancel the newest section's loads as outside its old window, leaving the
+            // displayed section empty until the next camera or transform event.
+            SectionViewModel? current;
             lock (_transformSubscriptionLock)
             {
-                SectionViewModel? current = _Parent.Section;
+                current = _Parent.Section;
                 if (!_isShutdown && _transformSubscribedSection != current)
                 {
                     if (_transformSubscribedSection is not null)
@@ -2393,7 +2397,7 @@ break;
                 }
             }
 
-            int B = e.NewSection?.Number ?? 0;
+            int B = current?.Number ?? 0;
             _currentSectionNumber = B;
             autoPolygonizeController?.OnSectionChanged();
 
