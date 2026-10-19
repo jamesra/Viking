@@ -80,11 +80,6 @@ namespace WebAnnotation
         internal static ICanvasView LastMouseOverObject = null;
         private Viking.UI.PenInputHelper PenPath = null;
 
-        /// <summary>
-        /// The last object the mouse was over, if any
-        /// </summary>
-        internal static ICanvasGeometryView LastIntersectedObject = null;
-
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
         private AutoCirclePolygonizeController autoPolygonizeController;
 
