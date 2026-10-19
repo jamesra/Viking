@@ -35,7 +35,7 @@ Contents
 ========
 
 .. toctree::
-   User Documentation <client/toctree>
+   User Documentation <Client/toctree>
    Exporting Data <export/toctree>
    Developer Documentation <developerdocs/toctree>
    Server Operation Documentation <server/toctree>
