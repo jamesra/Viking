@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.110 — unreleased
 
+* The F1 help list now shows the Pen Mode toggle: **Numpad \*** or **Shift+8** turns Pen Mode on and off.
 * **Shift+=** and **Shift+-** (step ten sections) now stop at the last or first section when fewer than ten remain. Before, at section 295 of a volume ending at 300, Shift+= did nothing.
 * **Hotkey change: auto-polygonize resubmit moved from F8 to Shift+F8.** Shift+F8 sends every circle in view to auto-polygonize again, discarding the proposals shown for this section. **F8** now runs the **Toggle Done Tag** shortcut from your user settings, which the resubmit key had been blocking. F6 (favorite structure types) and F7 (structure type management) are unchanged. The F1 help list shows Shift+F8.
 * **Hotkey changes in the shared shortcuts file** (take effect once the updated `WebAnnotationUserSettings.xml` is on the server; each of these shortcuts never fired before): **Toggle In Progress Tag** F6 → **F4**; **Toggle Check Tag** F7 → **Shift+F4** (F6 and F7 keep opening favorite structure types and structure type management); **Annotate IPL-GCL Boundary** Ctrl+Z → **Ctrl+Shift+I** (Ctrl+Z stays Undo); **Toggle Cell Morphology Region Boundary Tag** Shift+R → **Ctrl+Shift+R** (Shift+R stays Toggle Ribbon Tag); **Toggle Marker Tag** Shift+M → **Ctrl+Shift+M** (Shift+M stays Toggle Marginal Triad Associated Tag).

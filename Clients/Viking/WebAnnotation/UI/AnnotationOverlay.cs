@@ -1554,7 +1554,8 @@ break;
                 "Back Key: Return to last edited location",
                 "F12: Open goto location ID dialog",
                 "F11: Open goto structure ID dialog",
-                "SHIFT + F8: Send the circles in view to auto-polygonize again"
+                "SHIFT + F8: Send the circles in view to auto-polygonize again",
+                "Numpad * or SHIFT + 8: Toggle Pen Mode"
             };
         }
 
