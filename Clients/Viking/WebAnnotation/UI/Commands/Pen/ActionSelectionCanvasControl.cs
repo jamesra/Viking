@@ -295,8 +295,6 @@ namespace WebAnnotation.UI.Commands
                     return "Linked location";
                 case CutHoleAction:
                     return "Cut hole";
-                case RemoveHoleAction:
-                    return "Remove hole";
                 case Change2DContourAction:
                     return "Replace boundary";
                 case Change1DContourAction:
@@ -732,18 +730,6 @@ namespace WebAnnotation.UI.Commands
                     LinkStructureAction action = a as LinkStructureAction;
 
                     LinkStructureActionView view = new(action);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
-                else if (a is RemoveHoleAction)
-                {
-                    RemoveHoleAction action = a as RemoveHoleAction;
-
-                    RemoveHoleActionView view = new(action);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(action.VolumePolygonToRemove, a.Execute);
-
-                    actionSelectors.Add(clickable);
                     actionViews.Add(view);
                     actionButtons[a] = view;
                 }
