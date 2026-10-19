@@ -21,17 +21,6 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
-    public interface ISectionAnnotationsView
-    {
-        void AddLocations(ICollection<LocationObj> locations);
-        void AddLocation(LocationObj loc);
-
-        bool RemoveLocations(ICollection<LocationObj> locations);
-        bool RemoveLocation(LocationObj loc);
-
-        List<HitTestResult> GetAnnotationsAtPosition(Geometry.Vector2 WorldPosition);
-    }
-
     internal abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener, ICanvasViewHitTesting
     {
         public abstract int SectionNumber { get; }
