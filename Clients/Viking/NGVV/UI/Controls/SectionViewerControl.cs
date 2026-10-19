@@ -284,13 +284,7 @@ namespace Viking.UI.Controls
                     StatusSection = value.Number;
                 }
 
-                if (OldSection != null)
-                {
-                    OldSection.OnReferenceSectionChanged -= this.InternalReferenceSectionChanged;
-                    OldSection.VolumeViewModel.TransformChanged -= this.OnVolumeTransformChanged;
-                    OldSection.TransformChanged -= this.OnSectionTransformChanged;
-                    OldSection.PropertyChanged -= this.OnSectionPropertyChanged;
-                }
+                UnsubscribeSection(OldSection);
 
                 _Section = value;
                 UpdateCorrectionShimSnapped();
@@ -506,7 +500,39 @@ namespace Viking.UI.Controls
             CommandQueue.OnQueueChanged += this.OnCommandQueueChanged;
             PendingTextureQueue.QueueBecameEmpty += this.OnPendingTextureQueueBecameEmpty;
 
-            this.Disposed += (_, _) => ReleaseSectionRenderTarget();
+            this.Disposed += (_, _) =>
+            {
+                ReleaseSectionRenderTarget();
+                UnsubscribeLongLivedEvents();
+            };
+        }
+
+        /// <summary>
+        /// Removes this control's handlers from publishers that outlive it: the static
+        /// <see cref="State.ItemSelected"/> and <see cref="PendingTextureQueue.QueueBecameEmpty"/> events and the
+        /// current section and volume view models. Without this, every viewer window the user closes stays rooted
+        /// and keeps receiving Invalidate calls.
+        /// </summary>
+        private void UnsubscribeLongLivedEvents()
+        {
+            State.ItemSelected -= ObjectSelectedHandler;
+            PendingTextureQueue.QueueBecameEmpty -= this.OnPendingTextureQueueBecameEmpty;
+            UnsubscribeSection(_Section);
+        }
+
+        /// <summary>
+        /// Removes the handlers the <see cref="Section"/> setter adds to <paramref name="section"/> and its volume view model.
+        /// </summary>
+        /// <param name="section">Section previously shown by this control; null does nothing.</param>
+        private void UnsubscribeSection(SectionViewModel? section)
+        {
+            if (section is null)
+                return;
+
+            section.OnReferenceSectionChanged -= this.InternalReferenceSectionChanged;
+            section.VolumeViewModel.TransformChanged -= this.OnVolumeTransformChanged;
+            section.TransformChanged -= this.OnSectionTransformChanged;
+            section.PropertyChanged -= this.OnSectionPropertyChanged;
         }
 
         protected override void OnHandleCreated(EventArgs e)
