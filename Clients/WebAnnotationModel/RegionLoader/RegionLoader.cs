@@ -317,16 +317,6 @@ namespace WebAnnotationModel
         }
 
 
-        private RegionRequestData<OBJECT> CreateRegionRequest(IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback, CancellationToken token = default)
-        {
-            //Create a new cell and hand it the callback
-            RegionRequestData<OBJECT> newCell = new();
-
-            AttachRequestForRegion(newCell, level, iCell, SectionNumber, OnLoadCompletedCallback, token);
-
-            return newCell;
-        }
-
         private void AttachRequestForRegion(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback, CancellationToken token = default)
         {
             // Check cancellation before starting a WCF request to avoid saturating the connection pool with stale requests
@@ -361,11 +351,6 @@ namespace WebAnnotationModel
 
                 cell.SetQuery(localObjects.ServerRequestResult);
             }
-
-#if DEBUG
-            //string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
-            //Trace.WriteLine(TraceString, "WebAnnotation");
-#endif
         }
 
         //How do we handle the CRUD of locations?
