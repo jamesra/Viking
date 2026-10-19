@@ -103,6 +103,19 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void TheShimmerBandTravelsTheSameNumberOfHalfWidthsWhateverThePolygonSize()
+        {
+            // The stripe shader drifts the shimmer stripes by band centre / half width, so the drift per sweep must
+            // not depend on how large the polygon is.
+            foreach (float span in new[] { 100f, 1000f })
+            {
+                (float startCenter, float halfWidth) = AutoPolygonizeProposal.ShimmerBand(0, span, 0);
+                (float endCenter, _) = AutoPolygonizeProposal.ShimmerBand(0, span, 1);
+                Assert.AreEqual(2 + (1 / 0.15), (endCenter - startCenter) / halfWidth, 1e-3, $"span {span}");
+            }
+        }
+
+        [TestMethod]
         public void TheShimmerClipIsRasterizedFinerThanTheMask()
         {
             AutoPolygonizeMaskOverlay overlay = new(new byte[8 * 8], 8, 8, new Geometry.Rectangle(new Geometry.Vector2(0, 0), new Geometry.Vector2(32, 32)), 4);

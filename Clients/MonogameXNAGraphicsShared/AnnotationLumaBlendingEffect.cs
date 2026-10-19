@@ -307,7 +307,7 @@ namespace VikingXNAGraphics
 
         /// <summary>
         /// Band across x + y that limits the stripes: X is its centre and Y its half width, in texels.
-        /// A half width of zero or less lights every stripe.
+        /// A half width of zero or less lights every stripe. While a band is set, the stripes drift sideways as X advances.
         /// </summary>
         public Vector2 StripeBand
         {

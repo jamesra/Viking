@@ -59,6 +59,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Location links to the adjacent section fade where they narrow: the thin middle of the link is drawn at half the opacity of its wide ends. Its edges are also softer, fading out over about three screen pixels instead of one.
 * Hovering the mouse over a location link now fades it like other annotations; before, the link's hover highlight had no effect.
 * **Flip** in the Split structure dialog (right-click a location link) now swaps the boxes when one is empty. Before, with Keep empty and a Split ID entered, Flip copied the Split ID into Keep, so both boxes showed the same ID and Split stayed disabled.
+* The stripes of the shimmer that sweeps across a new auto-polygonize proposal now glide sideways across their own length while the bright band sweeps, about two and a half stripe widths per sweep at any polygon size. Scrolling them along the sweep would not show, since they run parallel to it, and turning them to cross the sweep made them jump by more than a stripe each frame, so they looked still.
 
 ## 1.2.77 — 2026-09-30
 

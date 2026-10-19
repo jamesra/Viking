@@ -387,7 +387,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Width of the shimmer band as a fraction of the polygon's diagonal extent (its x+y span in texels).</summary>
         private const float ShimmerBandFraction = 0.3f;
 
-        /// <summary>Texels per line of the shimmer. Lines run perpendicular to the sweep direction.</summary>
+        /// <summary>
+        /// Texels per line of the shimmer. Lines run along the sweep direction, across the band, and the shader drifts
+        /// them sideways while the band sweeps.
+        /// </summary>
         private const int ShimmerLineTexels = 2;
 
         /// <summary>Most clip texels per mask texel along each axis when the shimmer clip is rasterized from the polygon.</summary>
