@@ -120,7 +120,6 @@ namespace WebAnnotationModel
             });
         }
 
-        // private StructureObj _Parent;
         /// <summary>
         /// The parent structure if it is in the local store, otherwise null.
         /// A null result with a <see cref="ParentID"/> starts a background fetch of the parent, at most one per ID at a time.
@@ -141,8 +140,6 @@ namespace WebAnnotationModel
                 if (_Parent is null)
                 {
                     RequestParentOnce(ParentID.Value, id => Store.Structures.GetObjectByID(id));
-                    //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
-                    //request.BeginInvoke(ParentID.Value, null, null); 
                 }
 
                 return _Parent;
