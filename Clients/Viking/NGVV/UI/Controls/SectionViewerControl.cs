@@ -1080,40 +1080,26 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Swaps the current section for the section above it
+        /// Moves up <paramref name="nSections"/> sections, skipping missing section numbers, and stops at the last
+        /// section when fewer than <paramref name="nSections"/> remain. See <see cref="SectionStepper.Target"/>.
         /// </summary>
-        public void StepUpNSections(int nSections)
+        public void StepUpNSections(int nSections) => StepNSections(nSections);
+
+        /// <summary>
+        /// Moves down <paramref name="nSections"/> sections, skipping missing section numbers, and stops at the first
+        /// section when fewer than <paramref name="nSections"/> remain. See <see cref="SectionStepper.Target"/>.
+        /// </summary>
+        public void StepDownNSections(int nSections) => StepNSections(-nSections);
+
+        /// <summary>Shows the section <see cref="SectionStepper.Target"/> picks for a signed step from the current section.</summary>
+        private void StepNSections(int signedSteps)
         {
             SortedList<int, SectionViewModel> sections = UI.State.volume.SectionViewModels;
+            int current = this.Section.Number;
 
-            /* find the next section */
-            int iStart = this.Section.Number + nSections;
-            while (iStart <= sections.Keys.Max())
-            {
-                if (sections.ContainsKey(iStart))
-                {
-                    this.Section = sections[iStart];
-                    break;
-                }
-                iStart++;
-            }
-        }
-
-        public void StepDownNSections(int nSections)
-        {
-            SortedList<int, SectionViewModel> sections = UI.State.volume.SectionViewModels;
-
-            /* find the next section */
-            int iStart = this.Section.Number - nSections;
-            while (iStart >= sections.Keys.Min())
-            {
-                if (sections.ContainsKey(iStart))
-                {
-                    this.Section = sections[iStart];
-                    break;
-                }
-                iStart--;
-            }
+            int target = SectionStepper.Target(sections.Keys, current, signedSteps);
+            if (target != current)
+                this.Section = sections[target];
         }
 
         /// <summary>
