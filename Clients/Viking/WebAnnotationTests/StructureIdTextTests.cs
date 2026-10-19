@@ -36,6 +36,25 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        [DataRow(1L, "1")]
+        [DataRow(200L, "200")]
+        [DataRow(2147483648L, "2147483648")]
+        [DataRow(long.MaxValue, "9223372036854775807")]
+        public void IdsAreWrittenAsTextThatParsesBack(long id, string expected)
+        {
+            string text = StructureIdText.ToText(id);
+            Assert.AreEqual(expected, text);
+            Assert.IsTrue(StructureIdText.TryParse(text, out long parsed));
+            Assert.AreEqual(id, parsed);
+        }
+
+        [TestMethod]
+        [DataRow(0L)]
+        [DataRow(-1L)]
+        [DataRow(long.MinValue)]
+        public void NoIdValuesAreWrittenAsAnEmptyBox(long id) => Assert.AreEqual("", StructureIdText.ToText(id));
+
+        [TestMethod]
         [DataRow("0", 0UL)]
         [DataRow(" 42 ", 42UL)]
         [DataRow("9223372036854775807", (ulong)long.MaxValue)]

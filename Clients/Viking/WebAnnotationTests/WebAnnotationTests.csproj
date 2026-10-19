@@ -51,6 +51,7 @@
         <Compile Include="ConcurrentDictionaryExtensionsTests.cs" />
         <Compile Include="ExtensionsTests.cs" />
         <Compile Include="StructureIdTextTests.cs" />
+        <Compile Include="SplitStructuresFormTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="HiddenStructuresTests.cs" />
         <Compile Include="ObjAttributeTests.cs" />

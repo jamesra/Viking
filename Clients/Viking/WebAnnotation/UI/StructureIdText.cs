@@ -3,7 +3,7 @@ using System.Globalization;
 namespace WebAnnotation.UI
 {
     /// <summary>
-    /// Reads the structure and location ID text boxes of the merge and split dialogs. The dialogs re-validate on every keystroke,
+    /// Reads and writes the structure and location ID text boxes of the merge and split dialogs. The dialogs re-validate on every keystroke,
     /// so a pasted number too large for the type must report "not a number" rather than throw out of the TextChanged handler.
     /// It also reads the persisted favorite structure type IDs, where a hand-edited or damaged user settings file must not throw.
     /// </summary>
@@ -15,6 +15,12 @@ namespace WebAnnotation.UI
         /// </summary>
         public static bool TryParse(string? text, out long id) =>
             long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out id);
+
+        /// <summary>
+        /// Text for an ID text box: the ID for a database ID (greater than 0), or empty for 0 or a negative "no ID" value such as
+        /// the -1 the split dialog's getters return for an empty box, so the dialog's Flip button can swap an empty box.
+        /// </summary>
+        public static string ToText(long id) => id > 0 ? id.ToString(CultureInfo.InvariantCulture) : "";
 
         /// <summary>
         /// Parses a persisted structure type ID, which the favorites list keeps as <see cref="ulong"/>. Surrounding white space is

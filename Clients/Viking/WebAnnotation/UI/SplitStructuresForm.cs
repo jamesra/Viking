@@ -7,29 +7,22 @@ namespace WebAnnotation.UI
 {
     public partial class SplitStructuresForm : Form
     {
+        /// <summary>
+        /// Location ID in the Keep box, or -1 when the box is empty or not a number. Setting a value of 0 or less empties the box.
+        /// </summary>
         public long KeepID
         {
             get => StructureIdText.TryParse(textKeepID.Text, out long id) ? id : -1;
-            set
-            {
-                textKeepID.Text = value > 0 ? value.ToString() : "";
-            }
+            set => textKeepID.Text = StructureIdText.ToText(value);
         }
 
+        /// <summary>
+        /// Location ID in the Split box, or -1 when the box is empty or not a number. Setting a value of 0 or less empties the box.
+        /// </summary>
         public long SplitID
         {
             get => StructureIdText.TryParse(textSplitID.Text, out long id) ? id : -1;
-            set
-            {
-                if (value > 0)
-                {
-                    textSplitID.Text = value.ToString();
-                }
-                else
-                {
-                    textKeepID.Text = "";
-                }
-            }
+            set => textSplitID.Text = StructureIdText.ToText(value);
         }
 
         public SplitStructuresForm()
