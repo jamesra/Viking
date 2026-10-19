@@ -1553,7 +1553,8 @@ break;
                 "F5 Key: Reload section annotations",
                 "Back Key: Return to last edited location",
                 "F12: Open goto location ID dialog",
-                "F11: Open goto structure ID dialog"
+                "F11: Open goto structure ID dialog",
+                "SHIFT + F8: Send the circles in view to auto-polygonize again"
             };
         }
 
@@ -1710,7 +1711,11 @@ break;
             }
         }
 
-        protected void OnKeyDown(object sender, KeyEventArgs e)
+        /// <summary>
+        /// Runs the overlay's own action for a key that <see cref="OverlayHotkeys.IsReserved"/> accepted.
+        /// Called only from <see cref="OnKeyDown"/>, which skips the user settings shortcuts afterwards.
+        /// </summary>
+        private void OnReservedKeyDown(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
             {
@@ -1724,6 +1729,7 @@ break;
                     ResetAnnotations();
                     return;
                 case Keys.F3:
+                case Keys.Enter:
                     OnContinueLastTrace();
                     return;
                 case Keys.F6:
@@ -1733,7 +1739,7 @@ break;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
                     StructureIDChoiceForm.Show();
                     return;
-                // Send every circle in view to auto-segmentation again, discarding what is shown for this section.
+                // Shift+F8: send every circle in view to auto-segmentation again, discarding what is shown for this section.
                 case Keys.F8:
                     autoPolygonizeController?.ResubmitVisible();
                     return;
@@ -1745,15 +1751,40 @@ break;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureTypeManagementForm);
                     StructureTypeManagementForm.Show();
                     return;
-                case Keys.Enter:
-                    OnContinueLastTrace();
-                    return;
                 case Keys.Back:
                     if (Global.LastEditedAnnotationID.HasValue)
                         GoToLocation(Global.LastEditedAnnotationID.Value);
                     else
                         GotoLastModifiedLocation();
                     return;
+                // Ctrl+Z: undo the last recorded annotation edit, unless another command (drag, pen stroke) is active.
+                case Keys.Z:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (IsCommandDefault())
+                        UndoManager.UndoLast();
+                    return;
+                // Pen Mode toggle: main-keyboard * (Shift+8) and numpad *.
+                case Keys.Multiply:
+                case Keys.D8:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
+                    return;
+            }
+        }
+
+        protected void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            // Keys the overlay owns never reach the user settings shortcuts (see OverlayHotkeys).
+            if (OverlayHotkeys.IsReserved(e.KeyData))
+            {
+                OnReservedKeyDown(sender, e);
+                return;
+            }
+
+            switch (e.KeyCode)
+            {
                 case Keys.ShiftKey:
                 case Keys.ControlKey:
                     //TODO: Track if the last input was from pen or mouse and update accordingly
@@ -1765,28 +1796,6 @@ break;
                     break;
                 case Keys.F11:
                     OpenGotoStructureForm();
-                    break;
-                // Undo the last recorded annotation edit, unless another command (drag, pen stroke) is active.
-                case Keys.Z when e.Control && !e.Shift && !e.Alt:
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                    if (IsCommandDefault())
-                        UndoManager.UndoLast();
-                    return;
-                // Pen Mode toggle: main-keyboard * (Shift+8) and numpad *. Free under default shortcuts.
-                case Keys.Multiply:
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                    AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
-                    return;
-                case Keys.D8:
-                    if (e.Shift && !e.Control && !e.Alt)
-                    {
-                        e.Handled = true;
-                        e.SuppressKeyPress = true;
-                        AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
-                        return;
-                    }
                     break;
             }
 
