@@ -116,13 +116,6 @@ namespace WebAnnotation
         LocationLinkKey Key { get; }
     }
 
-    /// <summary>An interface for views that represent a Structure model.</summary>
-    public interface IViewStructure
-    {
-        /// <summary>The ID of the Structure model the view represents.</summary>
-        long ID { get; }
-    }
-
     /// <summary>An interface for views that represent a StructureLink model.</summary>
     public interface IViewStructureLink
     {
@@ -187,21 +180,6 @@ namespace WebAnnotation
         /// <param name="Position"></param>
         /// <returns></returns>
         double Distance(Microsoft.SqlServer.Types.SqlGeometry Position);
-    }
-
-    /// <summary>
-    /// An interface for canvas views that represent any 2D shape we want to represent as a polygon
-    /// </summary>
-    public interface IPolygonShape
-    {
-        /// <summary>The shape in mosaic space, the coordinate space the annotation is stored in.</summary>
-        Polygon MosaicPolygon { get; }
-
-        /// <summary>The shape in volume space, after the section transform is applied.</summary>
-        Polygon VolumePolygon { get; }
-
-        /// <summary>The volume-space shape after curve smoothing.</summary>
-        Polygon SmoothedVolumePolygon { get; }
     }
 
 
