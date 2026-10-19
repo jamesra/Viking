@@ -23,15 +23,7 @@ namespace WebAnnotation.UI.Forms
             set
             {
                 SetValue(InputProperty, value);
-                try
-                {
-                    this.ID = System.Convert.ToInt64(this.NumberTextbox.Text);
-                }
-                catch (FormatException)
-                {
-                    ID = default;
-                    return;
-                }
+                TryReadID();
             }
         }
 
@@ -71,16 +63,29 @@ namespace WebAnnotation.UI.Forms
             InitializeComponent();
         }
 
+        /// <summary>
+        /// Sets <see cref="ID"/> from the text box. On invalid text, sets <see cref="ID"/> to 0, disables OK and Go,
+        /// and cancels a pending validity check so it cannot re-enable them for the previous ID.
+        /// </summary>
+        /// <returns>True if the text box holds a valid ID.</returns>
+        private bool TryReadID()
+        {
+            if (GoToActionIDText.TryParse(this.NumberTextbox.Text, out long id))
+            {
+                ID = id;
+                return true;
+            }
+
+            ID = default;
+            IsActionEnabled = false;
+            Interlocked.Exchange(ref cancelIDUpdateTokenSource, null)?.Cancel();
+            return false;
+        }
+
         private void OK_Button_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                this.ID = System.Convert.ToInt64(this.NumberTextbox.Text);
-            }
-            catch (FormatException)
-            {
+            if (!TryReadID())
                 return;
-            }
 
             if (IsValidInput(ID)) //Store.Locations.GetObjectByID(this.ID, true) != null)
             {
@@ -94,14 +99,8 @@ namespace WebAnnotation.UI.Forms
 
         private void Go_Button_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                this.ID = System.Convert.ToInt64(this.NumberTextbox.Text);
-            }
-            catch (FormatException)
-            {
+            if (!TryReadID())
                 return;
-            }
 
             OnGo?.Invoke(ID);
 
@@ -122,16 +121,8 @@ namespace WebAnnotation.UI.Forms
 
         private void NumberTextbox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            try
-            {
-                this.ID = System.Convert.ToInt64(this.NumberTextbox.Text);
-            }
-            catch (FormatException)
-            {
-                ID = default;
-                IsActionEnabled = false;
+            if (!TryReadID())
                 return;
-            }
 
             QueueEnabledCheck(ID);
         }
