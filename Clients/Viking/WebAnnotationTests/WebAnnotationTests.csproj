@@ -90,6 +90,7 @@
     <Compile Include="Commands\SegmentationThinFeatureCutTests.cs" />
     <Compile Include="Commands\AutoPolygonizeDissolveTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeSelectionRulesTests.cs" />
     <Compile Include="Properties\AutoPolygonizeMinRadiusSettingsTests.cs" />
     <Compile Include="Commands\AnnotationStatusChipsTests.cs" />
     <Compile Include="Commands\VolumeToSectionFallbackTests.cs" />
