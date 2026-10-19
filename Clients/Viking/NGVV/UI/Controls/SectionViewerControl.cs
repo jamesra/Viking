@@ -2896,11 +2896,6 @@ namespace Viking.UI.Controls
 
         }
 
-        private void menuSectionTransform_DropDownOpening(object sender, EventArgs e)
-        {
-
-        }
-
         private void AddTransformsToSectionChannelPyramidMenuItem(ToolStripMenuItem menuChannelPyramid)
         {
             //List all of the pyramid transforms available
@@ -2932,19 +2927,6 @@ namespace Viking.UI.Controls
             }
         }
 
-
-        /// <summary>
-        /// Sets the Section's channel without changing the transform
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnSectionChannelPyramidClick(object sender, EventArgs e)
-        {
-            ToolStripMenuItem menu = sender as ToolStripMenuItem;
-            Debug.Assert(menu != null);
-            this.CurrentChannel = menu.Text;
-            this.CurrentTransform = Section.DefaultPyramidTransform;
-        }
 
         private void OnSectionPyramidTransformClick(object sender, EventArgs e)
         {
