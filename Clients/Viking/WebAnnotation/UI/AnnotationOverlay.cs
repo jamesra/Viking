@@ -65,7 +65,8 @@ namespace WebAnnotation
         private VolumeViewModel? _subscribedVolume;
 
         /// <summary>
-        /// Section whose <see cref="SectionViewModel.TransformChanged"/> <see cref="OnSectionChanged"/> last subscribed to.
+        /// Section whose <see cref="SectionViewModel.TransformChanged"/> <see cref="OnSectionChanged"/> last subscribed to; the only
+        /// section subscribed, kept equal to the parent's current section until <see cref="Shutdown"/>.
         /// Written on the section-change worker and read by <see cref="Shutdown"/> on the UI thread; guarded by <see cref="_transformSubscriptionLock"/>.
         /// </summary>
         private SectionViewModel? _transformSubscribedSection;
@@ -2376,13 +2377,19 @@ break;
 
             // The entry token check alone cannot stop a worker that is already past it when Shutdown runs; re-check under the lock
             // Shutdown takes so the subscription is either tracked (and removed by Shutdown) or never made.
+            // The parent cancels but never awaits the previous worker, so workers can reach this block out of order. Sync to the
+            // parent's current section rather than e.Old/NewSection: the newest worker starts after the last Section write and
+            // always gets here, and any later stale worker sees the same section, so exactly that section stays subscribed.
             lock (_transformSubscriptionLock)
             {
-                if (!_isShutdown)
+                SectionViewModel? current = _Parent.Section;
+                if (!_isShutdown && _transformSubscribedSection != current)
                 {
-                    e.OldSection.TransformChanged -= OnSectionTransformChanged;
-                    e.NewSection.TransformChanged += OnSectionTransformChanged;
-                    _transformSubscribedSection = e.NewSection;
+                    if (_transformSubscribedSection is not null)
+                        _transformSubscribedSection.TransformChanged -= OnSectionTransformChanged;
+                    if (current is not null)
+                        current.TransformChanged += OnSectionTransformChanged;
+                    _transformSubscribedSection = current;
                 }
             }
 
