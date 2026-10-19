@@ -114,9 +114,11 @@ With the defaults above, the compose file maps:
 Viking is .NET 4.8 and uses `WinHttpHandler`, which **cannot** do unencrypted
 HTTP/2. Point VikingXML `Endpoint` at `https://localhost:5011` (not `:5010`).
 (5000/5001 are already used by the identity-server stack on this host.) If
-you change the HTTP port, also update the test endpoints in
-`gRPC_Tests/LocationTests.cs` and
-`Clients/WebAnnotationModel.gRPC.Tests/appsettings.json`.
+you change the ports (keep HTTPS = HTTP + 1, as `Deploy-AnnotationGrpc.ps1` does),
+update the endpoints the tests pin: `gRPC_Tests/LocationTests.cs` uses the
+HTTPS port (`https://localhost:5011`) and
+`Clients/WebAnnotationModel.gRPC.Tests/appsettings.json` uses the HTTP port
+(`http://localhost:5010`).
 
 Identity DevTest listens on host **5020**. Annotation SQL (override compose)
 publishes **1433**.
