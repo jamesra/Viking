@@ -516,6 +516,63 @@ namespace WebAnnotationTests
             Assert.AreEqual(9L, feed.Entries[0].LocationId);
         }
 
+        // Structure Merge/Split call Locations.Refresh: the store raises Remove (feed stamps the
+        // delete with the client's UtcNow) and then Add for the re-fetched location, whose server
+        // LastModified (the merge's trigger time) is a moment earlier than that delete stamp.
+        [TestMethod]
+        public void ApplyLocalUpserts_LiveRowReplacesNewerDeletedRow_AfterStoreRefresh()
+        {
+            var feed = new ReviewChangeFeed(maxEntries: 10);
+            DateTime mergedAt = new(2020, 1, 1, 10, 3, 0, DateTimeKind.Utc);
+            DateTime removeSeenAt = mergedAt.AddMinutes(2);
+
+            feed.ApplyDeletes([5], removeSeenAt);
+            feed.ApplyLocalUpserts([Entry(5, mergedAt)]);
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.IsFalse(feed.Entries[0].IsDeleted, "The location still exists; a merge is not a deletion");
+            Assert.AreEqual(mergedAt, feed.Entries[0].LastModifiedUtc);
+        }
+
+        [TestMethod]
+        public void ApplyUpserts_PollRowOlderThanDelete_DoesNotResurrectIt()
+        {
+            var feed = new ReviewChangeFeed(maxEntries: 10);
+            DateTime polledStamp = new(2020, 1, 1, 10, 3, 0, DateTimeKind.Utc);
+
+            feed.ApplyDeletes([5], polledStamp.AddMinutes(2));
+            feed.ApplyUpserts([Entry(5, polledStamp)]);
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.IsTrue(feed.Entries[0].IsDeleted);
+        }
+
+        [TestMethod]
+        public void ApplyDeletes_AfterLocalLiveRow_StillWins()
+        {
+            var feed = new ReviewChangeFeed(maxEntries: 10);
+            DateTime edited = new(2020, 1, 1, 10, 3, 0, DateTimeKind.Utc);
+
+            feed.ApplyLocalUpserts([Entry(5, edited)]);
+            feed.ApplyDeletes([5], edited.AddMinutes(2));
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.IsTrue(feed.Entries[0].IsDeleted);
+        }
+
+        [TestMethod]
+        public void ApplyLocalUpserts_OlderLiveRowOverLiveRow_IsIgnored()
+        {
+            var feed = new ReviewChangeFeed(maxEntries: 10);
+            DateTime newer = new(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc);
+
+            feed.ApplyLocalUpserts([Entry(5, newer)]);
+            feed.ApplyLocalUpserts([Entry(5, newer.AddHours(-1))]);
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.AreEqual(newer, feed.Entries[0].LastModifiedUtc);
+        }
+
         [TestMethod]
         public void SelectRecentWindow_DropsOlderThanLookback_CapsAtMax()
         {

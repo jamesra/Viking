@@ -214,10 +214,26 @@ namespace WebAnnotation.ReviewFeed
         /// Inserts or replaces each entry, then sorts newest-to-oldest.
         /// A later LastModified for the same id replaces an older row; an equal or older stamp is
         /// ignored when a row already exists (stops visible-section polls from re-raising
-        /// <see cref="Changed"/> for unchanged locations). Called by the poll path and
-        /// by <see cref="ReviewChangeFeedIngress"/>.
+        /// <see cref="Changed"/> for unchanged locations, and keeps a stale poll row from undoing a
+        /// delete). Called by the section poll via <see cref="ReviewChangeFeedIngress.PushUpsertsFromPoll"/>;
+        /// local store changes use <see cref="ApplyLocalUpserts"/>.
         /// </summary>
-        public void ApplyUpserts(IEnumerable<ReviewChangeEntry> incoming)
+        public void ApplyUpserts(IEnumerable<ReviewChangeEntry> incoming) =>
+            ApplyUpserts(incoming, liveReplacesDeleted: false);
+
+        /// <summary>
+        /// Same as <see cref="ApplyUpserts(IEnumerable{ReviewChangeEntry})"/>, except a live entry
+        /// also replaces a deleted row for its id whatever the stamps. For locations the local store
+        /// just added or replaced (<see cref="ReviewChangeFeedIngress.PushUpserts"/>): the store holds
+        /// the location, so it exists. Structure Merge and Split refresh their locations (store Remove,
+        /// recorded by <see cref="ApplyDeletes"/> at the client's current time, then Add with the
+        /// server's earlier modification time), which would otherwise leave a false deleted row.
+        /// Poll rows keep the stamp rule so a stale poll row cannot undo a real delete.
+        /// </summary>
+        public void ApplyLocalUpserts(IEnumerable<ReviewChangeEntry> incoming) =>
+            ApplyUpserts(incoming, liveReplacesDeleted: true);
+
+        void ApplyUpserts(IEnumerable<ReviewChangeEntry> incoming, bool liveReplacesDeleted)
         {
             if (incoming is null)
                 return;
@@ -229,7 +245,7 @@ namespace WebAnnotation.ReviewFeed
                 {
                     if (entry is null)
                         continue;
-                    if (ApplyUpsertLocked(entry))
+                    if (ApplyUpsertLocked(entry, liveReplacesDeleted))
                         changed = true;
                 }
 
@@ -264,7 +280,7 @@ namespace WebAnnotation.ReviewFeed
                         continue;
                     if (!oldest.HasValue || entry.LastModifiedUtc < oldest.Value)
                         oldest = entry.LastModifiedUtc;
-                    ApplyUpsertLocked(entry);
+                    ApplyUpsertLocked(entry, liveReplacesDeleted: false);
                 }
 
                 _pollIngressCutoffUtc = oldest
@@ -293,7 +309,7 @@ namespace WebAnnotation.ReviewFeed
                 {
                     if (id <= 0)
                         continue;
-                    if (ApplyUpsertLocked(ReviewChangeEntry.Deleted(id, deletedAtUtc)))
+                    if (ApplyUpsertLocked(ReviewChangeEntry.Deleted(id, deletedAtUtc), liveReplacesDeleted: false))
                         changed = true;
                 }
 
@@ -320,14 +336,20 @@ namespace WebAnnotation.ReviewFeed
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
-        bool ApplyUpsertLocked(ReviewChangeEntry entry)
+        /// <summary>
+        /// Inserts <paramref name="entry"/> unless a row for its id has an equal or newer stamp.
+        /// With <paramref name="liveReplacesDeleted"/>, a live entry replaces a deleted row regardless
+        /// of stamps (see <see cref="ApplyLocalUpserts"/>). Returns true when the list changed.
+        /// </summary>
+        bool ApplyUpsertLocked(ReviewChangeEntry entry, bool liveReplacesDeleted)
         {
             int existingIndex = IndexOfLocked(entry.LocationId);
             if (existingIndex >= 0)
             {
                 ReviewChangeEntry existing = _entries[existingIndex];
+                bool liveOverDeleted = liveReplacesDeleted && existing.IsDeleted && !entry.IsDeleted;
                 // Equal stamps are no-ops: section polls re-deliver the same locations often.
-                if (entry.LastModifiedUtc <= existing.LastModifiedUtc)
+                if (!liveOverDeleted && entry.LastModifiedUtc <= existing.LastModifiedUtc)
                     return false;
 
                 _entries.RemoveAt(existingIndex);

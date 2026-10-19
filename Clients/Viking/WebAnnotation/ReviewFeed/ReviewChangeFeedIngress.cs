@@ -14,7 +14,9 @@ namespace WebAnnotation.ReviewFeed
     {
         /// <summary>
         /// Forwards locations into <see cref="ReviewChangeFeed.Session"/> when the session has Review access.
-        /// Does not apply the poll watermark — use for local creates/updates the user just made.
+        /// Does not apply the poll watermark — use for local creates/updates the user just made and
+        /// for locations the store adds back after a refresh. A live row replaces a deleted row for
+        /// the same id (<see cref="ReviewChangeFeed.ApplyLocalUpserts"/>).
         /// </summary>
         public static void PushUpserts(IEnumerable<LocationObj> locations)
         {
@@ -64,8 +66,12 @@ namespace WebAnnotation.ReviewFeed
                 }
             }
 
-            if (entries.Count > 0)
+            if (entries.Count == 0)
+                return;
+            if (requirePollCutoff)
                 feed.ApplyUpserts(entries);
+            else
+                feed.ApplyLocalUpserts(entries);
         }
     }
 }
