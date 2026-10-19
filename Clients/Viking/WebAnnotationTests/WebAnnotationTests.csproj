@@ -99,6 +99,7 @@
     <Compile Include="Commands\AnnotationStatusChipsTests.cs" />
     <Compile Include="Commands\VolumeToSectionFallbackTests.cs" />
     <Compile Include="Commands\HitTestLocationLinkPreferenceTests.cs" />
+    <Compile Include="HitTestSelectionTests.cs" />
     <Compile Include="Commands\SegmentationUserFeedbackTests.cs" />
     <Compile Include="Commands\SegmentationRpcErrorsTests.cs" />
     <Compile Include="Commands\CircleStartingPromptTests.cs" />    <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
