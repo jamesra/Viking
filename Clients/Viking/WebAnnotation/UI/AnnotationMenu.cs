@@ -26,8 +26,10 @@ namespace WebAnnotation
         private static ToolStripMenuItem menuPenMode;
         private static ToolStripMenuItem menuShowPenActionButtons;
         private static ToolStripMenuItem menuAutoPolygonizeCircles;
-        private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
+        /// <summary>Cancels the running opacity preview pass. Read and replaced only under <see cref="_circleOpacityUpdateLock"/>.</summary>
+        private static CancellationTokenSource? _opacityUpdateCancellationTokenSource;
         private static System.Threading.Timer? _circleOpacityUpdateTimer;
+        /// <summary>Guards the circle debounce timer and pending values, and <see cref="_opacityUpdateCancellationTokenSource"/>.</summary>
         private static readonly object _circleOpacityUpdateLock = new();
         private static double _pendingCircleOpacityParentless;
         private static double _pendingCircleOpacityWithParent;
@@ -252,14 +254,9 @@ namespace WebAnnotation
             {
                 opacityPreviewed = true;
 
-                // Cancel previous task if running
-                _opacityUpdateCancellationTokenSource?.Cancel();
-                _opacityUpdateCancellationTokenSource?.Dispose();
+                // Cancel the previous pass; this pass keeps its own token with its own values.
+                CancellationToken token = StartNewOpacityPreviewPass();
 
-                // Create new cancellation token source
-                _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
-
-                // Start async update task
                 _ = Task.Run(() =>
                 {
                     try
@@ -267,7 +264,7 @@ namespace WebAnnotation
                         UpdateVisibleSectionPolygonOpacity(
                             parentlessOpacity,
                             withParentOpacity,
-                            _opacityUpdateCancellationTokenSource.Token);
+                            token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -302,9 +299,7 @@ namespace WebAnnotation
                             if (!ReferenceEquals(timer, _circleOpacityUpdateTimer))
                                 return;
 
-                            _opacityUpdateCancellationTokenSource?.Cancel();
-                            _opacityUpdateCancellationTokenSource?.Dispose();
-                            _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
+                            CancellationToken token = StartNewOpacityPreviewPass();
 
                             double parentless = _pendingCircleOpacityParentless;
                             double withParent = _pendingCircleOpacityWithParent;
@@ -316,7 +311,7 @@ namespace WebAnnotation
                                     UpdateVisibleSectionCircleOpacity(
                                         parentless,
                                         withParent,
-                                        _opacityUpdateCancellationTokenSource.Token);
+                                        token);
                                 }
                                 catch (OperationCanceledException) { }
                                 catch (Exception ex)
@@ -363,7 +358,8 @@ namespace WebAnnotation
             {
                 _circleOpacityUpdateTimer?.Dispose();
                 _circleOpacityUpdateTimer = null;
-                // Cancel without replacing: a preview task that has not read the token yet sees it cancelled.
+                // Cancel without replacing: the running pass holds this token. Under the lock, so it cannot
+                // race StartNewOpacityPreviewPass disposing the same source.
                 _opacityUpdateCancellationTokenSource?.Cancel();
             }
 
@@ -373,6 +369,25 @@ namespace WebAnnotation
             UpdateAllCircleOpacityInMemory(
                 Global.AnnotationSettings.CircleOpacityParentless,
                 Global.AnnotationSettings.CircleOpacityWithParent);
+        }
+
+        /// <summary>
+        /// Cancels the running opacity preview pass and returns the token for a new one. Swaps the shared
+        /// source under <see cref="_circleOpacityUpdateLock"/> so the polygon handler (UI thread) and the circle
+        /// debounce timer (threadpool) never cancel a source the other just disposed. Callers capture the
+        /// returned token before starting their task, so a task queued earlier cannot pick up a newer token
+        /// and then write its older opacity values after the newer pass.
+        /// </summary>
+        /// <returns>An uncancelled token owned by the caller's preview pass.</returns>
+        private static CancellationToken StartNewOpacityPreviewPass()
+        {
+            lock (_circleOpacityUpdateLock)
+            {
+                _opacityUpdateCancellationTokenSource?.Cancel();
+                _opacityUpdateCancellationTokenSource?.Dispose();
+                _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
+                return _opacityUpdateCancellationTokenSource.Token;
+            }
         }
 
         private static void SaveSettingsFromViewModel(WebAnnotation.WPF.Forms.AnnotationPreferencesDialogViewModel viewModel)
