@@ -63,5 +63,93 @@ namespace WebAnnotationTests
             Assert.AreSame(alreadyQueued, queue[alreadyQueued.ID]);
             Assert.IsFalse(queue.ContainsKey(loaded.ID));
         }
+
+        /// <summary>
+        /// Remove then re-add of a saved link before Apply: the queued DELETE is cancelled and the new link is left
+        /// NONE, so Save sends nothing and the server row stays. Before, the DELETE kept the slot, the INSERT was
+        /// dropped, and Apply deleted the row while the editor still showed the link.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(3L, 7L, false, DisplayName = "Directional")]
+        [DataRow(9L, 2L, true, DisplayName = "Bidirectional, higher ID first")]
+        public void ReAddAfterRemovingSavedLink_CancelsDelete(long source, long target, bool bidirectional)
+        {
+            PermittedStructureLinkObj saved = new(new PermittedStructureLink
+            {
+                SourceTypeID = bidirectional ? System.Math.Min(source, target) : source,
+                TargetTypeID = bidirectional ? System.Math.Max(source, target) : target,
+                Bidirectional = bidirectional
+            });
+            saved.DBAction = DBACTION.DELETE;
+            var queue = NewQueue();
+            queue.TryAdd(saved.ID, saved);
+
+            PermittedStructureLinkObj readded = new(source, target, bidirectional);
+            PermittedStructureLinkStore.QueueUnsavedLinks([readded], queue);
+
+            Assert.AreEqual(0, queue.Count);
+            Assert.AreEqual(DBACTION.NONE, readded.DBAction);
+        }
+
+        /// <summary>A queued DELETE for a different direction of the same types is a different key and is kept.</summary>
+        [TestMethod]
+        public void AddWithOtherDirection_KeepsDeleteOfOriginal()
+        {
+            PermittedStructureLinkObj saved = new(new PermittedStructureLink { SourceTypeID = 1, TargetTypeID = 2, Bidirectional = false });
+            saved.DBAction = DBACTION.DELETE;
+            var queue = NewQueue();
+            queue.TryAdd(saved.ID, saved);
+
+            PermittedStructureLinkObj added = new(1, 2, true);
+            PermittedStructureLinkStore.QueueUnsavedLinks([added], queue);
+
+            Assert.AreEqual(2, queue.Count);
+            Assert.AreEqual(DBACTION.INSERT, added.DBAction);
+            Assert.AreSame(saved, queue[saved.ID]);
+        }
+
+        /// <summary>Removing a link added since the last Save cancels its INSERT, so Apply sends nothing for it.</summary>
+        [TestMethod]
+        public void RemoveUnsavedLink_CancelsInsert()
+        {
+            PermittedStructureLinkObj added = new(6, 8, false);
+            var queue = NewQueue();
+            PermittedStructureLinkStore.QueueUnsavedLinks([added], queue);
+
+            Assert.IsTrue(PermittedStructureLinkStore.CancelUnsavedInsert(added, queue));
+            Assert.AreEqual(0, queue.Count);
+        }
+
+        /// <summary>Removing a saved link is not cancelled here; the store queues its DELETE.</summary>
+        [TestMethod]
+        public void RemoveSavedLink_IsNotCancelled()
+        {
+            PermittedStructureLinkObj saved = new(new PermittedStructureLink { SourceTypeID = 4, TargetTypeID = 5 });
+            PermittedStructureLinkObj other = new(6, 8, false);
+            var queue = NewQueue();
+            queue.TryAdd(other.ID, other);
+
+            Assert.IsFalse(PermittedStructureLinkStore.CancelUnsavedInsert(saved, queue));
+            Assert.AreEqual(1, queue.Count);
+        }
+
+        /// <summary>
+        /// Add, remove, re-add before Apply: the first INSERT is cancelled, so the re-added link is queued as INSERT
+        /// (not turned NONE as if a server row existed) and Apply creates it.
+        /// </summary>
+        [TestMethod]
+        public void AddRemoveReAdd_QueuesInsert()
+        {
+            var queue = NewQueue();
+            PermittedStructureLinkObj first = new(6, 8, false);
+            PermittedStructureLinkStore.QueueUnsavedLinks([first], queue);
+            PermittedStructureLinkStore.CancelUnsavedInsert(first, queue);
+
+            PermittedStructureLinkObj second = new(6, 8, false);
+            PermittedStructureLinkStore.QueueUnsavedLinks([second], queue);
+
+            Assert.AreEqual(DBACTION.INSERT, second.DBAction);
+            Assert.AreSame(second, queue[second.ID]);
+        }
     }
 }

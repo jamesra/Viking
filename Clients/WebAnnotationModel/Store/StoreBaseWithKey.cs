@@ -226,7 +226,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public bool Remove(KEY ID)
+        public virtual bool Remove(KEY ID)
         {
             //Default implementation
             if (IDToObject.TryGetValue(ID, out OBJECT obj))

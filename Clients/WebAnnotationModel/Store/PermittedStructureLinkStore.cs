@@ -97,6 +97,8 @@ namespace WebAnnotationModel
         /// A link built with the editor's constructor is already INSERT before the store subscribes to its
         /// DBAction changes, so without this the structure type editor's Apply never created it on the server.
         /// Links loaded from the server arrive with DBAction NONE and are skipped.
+        /// Re-adding a link whose removal is still queued cancels that DELETE and leaves the new link NONE, because
+        /// the server row still exists (a DELETE is only queued for saved links; see <see cref="Remove(PermittedStructureLinkKey)"/>).
         /// </summary>
         /// <param name="addedLinks">Links that were newly added to the store.</param>
         /// <param name="changedObjects">The store's dirty set, keyed by link.</param>
@@ -105,9 +107,55 @@ namespace WebAnnotationModel
         {
             foreach (PermittedStructureLinkObj link in addedLinks)
             {
-                if (link.DBAction != DBACTION.NONE)
-                    changedObjects.TryAdd(link.ID, link);
+                if (link.DBAction == DBACTION.NONE)
+                    continue;
+
+                if (link.DBAction == DBACTION.INSERT &&
+                    changedObjects.TryGetValue(link.ID, out PermittedStructureLinkObj queued) &&
+                    queued.DBAction == DBACTION.DELETE &&
+                    changedObjects.TryRemove(link.ID, out _))
+                {
+                    link.DBAction = DBACTION.NONE;
+                    continue;
+                }
+
+                changedObjects.TryAdd(link.ID, link);
             }
+        }
+
+        /// <summary>
+        /// Removes a link from the store. A link added since the last Save (DBAction INSERT) is not on the server,
+        /// so its queued INSERT is cancelled and nothing is sent; a saved link is queued for DELETE as usual.
+        /// </summary>
+        /// <param name="ID">Key of the link to remove.</param>
+        /// <returns>True if the link was in the store.</returns>
+        public override bool Remove(PermittedStructureLinkKey ID)
+        {
+            if (IDToObject.TryGetValue(ID, out PermittedStructureLinkObj link) && CancelUnsavedInsert(link, ChangedObjects))
+            {
+                PermittedStructureLinkObj deleted = InternalDelete(ID);
+                CallOnCollectionChangedForDelete(new[] { deleted });
+                return true;
+            }
+
+            return base.Remove(ID);
+        }
+
+        /// <summary>
+        /// Drops a never-saved link's pending INSERT from the dirty set. Sending a DELETE instead would hit whatever
+        /// server row shares its source and target (the server key ignores Bidirectional), or nothing at all.
+        /// </summary>
+        /// <param name="link">The link being removed.</param>
+        /// <param name="changedObjects">The store's dirty set, keyed by link.</param>
+        /// <returns>True if the link was unsaved (INSERT) and is no longer queued; false for a saved link.</returns>
+        internal static bool CancelUnsavedInsert(PermittedStructureLinkObj link,
+                                                 ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> changedObjects)
+        {
+            if (link.DBAction != DBACTION.INSERT)
+                return false;
+
+            changedObjects.TryRemove(link.ID, out _);
+            return true;
         }
 
         protected override List<PermittedStructureLinkObj> InternalDelete(PermittedStructureLinkKey[] linkKeys)

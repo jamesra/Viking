@@ -13,6 +13,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Changing sections in quick succession while the computer is busy no longer risks showing the new section without its annotations until you pan or zoom. Before, a late-running update for the previous section could cancel the new section's annotation load.
 * Structure Type Management (F7) no longer marks a structure type as changed when its color did not change, for example when you open the color picker's Advanced view or pick the color it already has. Before, any type with an opaque color was then shown as modified (the Close button became enabled) and the next Apply re-saved it to the server unchanged.
 * Structure Type Management (F7): changes on the Permitted Links tab are now saved when you click Apply. Before, an added link was never sent to the server, and a removed link was only removed on the server if a link had been added earlier in the same Viking session, so after restarting Viking added links were missing and removed links came back.
+* Structure Type Management (F7): removing a permitted link and adding it back before Apply now keeps the link. Before, Apply deleted it on the server while the editor still showed it, so it was gone after restarting Viking. Removing a link you added since the last Apply now simply cancels the add.
 
 ## 1.2.110 — 2026-10-19 (Viking Test, unsigned)
 
