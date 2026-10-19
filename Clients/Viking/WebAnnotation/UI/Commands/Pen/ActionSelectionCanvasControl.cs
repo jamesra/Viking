@@ -42,7 +42,6 @@ namespace WebAnnotation.UI.Commands
         private PenCancelButton? cancelButton;
         private readonly List<IAction> _labeledActions = [];
         private LabelView[] _buttonLabels = [];
-        private readonly Dictionary<IAction, IIconTexture> _ActionIcona = [];
 
         //        IReadOnlyDictionary<IAction, CircularButton> _actionButtons = new Dictionary<IAction, CircularButton>();
 
