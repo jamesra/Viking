@@ -59,6 +59,17 @@ namespace WebAnnotation
         private Viking.UI.Controls.SectionViewerControl _Parent;
         public Viking.UI.Controls.SectionViewerControl Parent => _Parent;
 
+        /// <summary>
+        /// Volume whose <see cref="VolumeViewModel.TransformChanged"/> <see cref="SetParent"/> subscribed to; <see cref="Shutdown"/> unsubscribes it.
+        /// </summary>
+        private VolumeViewModel? _subscribedVolume;
+
+        /// <summary>
+        /// Section whose <see cref="SectionViewModel.TransformChanged"/> <see cref="OnSectionChanged"/> last subscribed to.
+        /// Written on the section-change worker and read by <see cref="Shutdown"/> on the UI thread.
+        /// </summary>
+        private volatile SectionViewModel? _transformSubscribedSection;
+
         protected TransformChangedEventHandler SectionChangedEventHandler;
         private readonly EventHandler AnnotationChangedEventHandler;
 
@@ -744,7 +755,10 @@ namespace WebAnnotation
 
             //Load the locations for the current sections
             _Parent.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged);
-            Viking.UI.State.volume.TransformChanged += new TransformChangedEventHandler(OnVolumeTransformChanged);
+            if (_subscribedVolume is not null)
+                _subscribedVolume.TransformChanged -= OnVolumeTransformChanged;
+            _subscribedVolume = Viking.UI.State.volume;
+            _subscribedVolume.TransformChanged += new TransformChangedEventHandler(OnVolumeTransformChanged);
             _Parent.OnReferenceSectionChanged += new ReferenceSectionChangedEventHandler(OnReferenceSectionChanged);
 
             _Parent.MouseDown += new MouseEventHandler(OnMouseDown);
@@ -882,11 +896,27 @@ namespace WebAnnotation
 
         /// <summary>
         /// Stops auto-polygonize timers, the section location poller, and the annotation-load worker when the viewer is disposed.
+        /// Also removes this overlay's handlers from publishers that outlive the viewer (<see cref="Store.Locations"/>,
+        /// <see cref="Store.LocationLinks"/>, the volume and the last section subscribed); without this, every closed viewer
+        /// stays rooted and keeps processing each location add or remove.
         /// </summary>
         public void Shutdown()
         {
             if (_Parent != null)
                 _Parent.Disposed -= OnParentDisposed;
+
+            Store.Locations.OnCollectionChanged -= OnLocationCollectionChanged;
+            Store.LocationLinks.OnCollectionChanged -= OnLocationLinksCollectionChanged;
+            if (_subscribedVolume is not null)
+            {
+                _subscribedVolume.TransformChanged -= OnVolumeTransformChanged;
+                _subscribedVolume = null;
+            }
+
+            SectionViewModel? transformSection = _transformSubscribedSection;
+            _transformSubscribedSection = null;
+            if (transformSection is not null)
+                transformSection.TransformChanged -= OnSectionTransformChanged;
 
             StopStartupLocationRetry();
             StopSectionLocationPollTimer();
@@ -2328,6 +2358,7 @@ break;
 
             e.OldSection.TransformChanged -= OnSectionTransformChanged;
             e.NewSection.TransformChanged += OnSectionTransformChanged;
+            _transformSubscribedSection = e.NewSection;
 
             int B = e.NewSection?.Number ?? 0;
             _currentSectionNumber = B;
