@@ -550,7 +550,8 @@ namespace Viking.Common
         /// <param name="assembly">The assembly that failed to initialize</param>
         /// <param name="exception">The exception that occurred</param>
         /// <param name="customMessage">Optional custom message to include in the error dialog</param>
-        /// <returns>True if user chose to continue without the extension, false if user chose to exit</returns>
+        /// <returns>Always <c>false</c> when it returns: the user chose OK, so the caller skips this extension and Viking continues without it.</returns>
+        /// <exception cref="Exception">Thrown when the user chooses Cancel; the exception aborts Viking launch.</exception>
         private static bool HandleAssemblyInitializationError(Assembly assembly, Exception exception, string? customMessage)
         {
             VikingExtensionAttribute extension = GetAssemblyExtensionAttribute(assembly);
@@ -571,7 +572,7 @@ namespace Viking.Common
             }
             else
             {
-                //TODO: Exit the program
+                // The throw is the exit path: it propagates out of extension loading and aborts launch.
                 throw new Exception("User elected to cancel Viking Launch");
             }
         }
