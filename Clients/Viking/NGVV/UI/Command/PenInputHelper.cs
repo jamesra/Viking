@@ -23,14 +23,6 @@ namespace Viking.UI
         CUT_ERASE //Remove all verticies after a vertex
     };
 
-    [Flags]
-    public enum PenInputCompletionTriggers
-    {
-        None, //Never fire the OnPathComplete event
-        Closure, //Signal the path is complete when a closed path is formed
-        Tap, //Signal the path is complete when the pen is removed from the surface and contacts the path
-    }
-
 
     /// <summary>
     /// Collection-changed arguments for a pen path edit that also carry the pen state at the time of the change.
