@@ -109,6 +109,7 @@
     <Compile Include="SectionLocationPollPolicyTests.cs" />
     <Compile Include="ReviewChangeFeedTests.cs" />
     <Compile Include="RegionLoaderInvalidateSectionTests.cs" />
+    <Compile Include="RegionLoaderTests.cs" />
     <Compile Include="SectionRangeParserTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
     <Compile Include="GlobalShouldLoadTests.cs" />
