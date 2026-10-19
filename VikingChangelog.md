@@ -1,13 +1,13 @@
 # Viking changelog
 
-Committed application version: **1.2.109.0**  
+Committed application version: **1.2.110.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.110 — unreleased
+## 1.2.110 — 2026-10-19 (Viking Test, unsigned)
 
 * Auto-polygonize now groups two proposals of the same cell when one outline lies inside the other along its edge, including two identical outlines (two circles of one cell in the same blob that get the same mask). Before, those were left as separate proposals, so accepting them saved two stacked copies of the same polygon for one cell, and stacked saved copies were never offered for merging.
 * Review Changes: clicking Apply again before the previous filter's results arrive (or right after opening the tab) now always shows the results for the last filter applied. Before, if the earlier request was slower, its results arrived last and replaced the list, so the cards matched the old filter (and an earlier failure message could replace a newer success) until Apply was clicked again.
