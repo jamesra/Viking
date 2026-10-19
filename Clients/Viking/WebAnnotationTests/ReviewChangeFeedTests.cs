@@ -360,6 +360,76 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        public void TryApplySeed_SingleSeed_Applies()
+        {
+            var feed = new ReviewChangeFeed();
+            DateTime t0 = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            int ticket = feed.BeginSeed();
+            Assert.IsTrue(feed.TryApplySeed(ticket, () => feed.SeedRecent([Entry(1, t0)])));
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.AreEqual(t0, feed.PollIngressCutoffUtc);
+        }
+
+        [TestMethod]
+        public void TryApplySeed_OlderSeedFinishingAfterNewer_IsDropped()
+        {
+            // Tab load seeds alice's filter; the user Applies bob's before it returns.
+            // Bob's request finishes first; alice's slow request must not replace bob's rows.
+            var feed = new ReviewChangeFeed();
+            DateTime t0 = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            int older = feed.BeginSeed();
+            int newer = feed.BeginSeed();
+
+            Assert.IsTrue(feed.TryApplySeed(newer, () => feed.SeedRecent([Entry(2, t0.AddMinutes(5), username: "bob")])));
+            Assert.IsFalse(feed.TryApplySeed(older, () => feed.SeedRecent([Entry(1, t0, username: "alice")])));
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.AreEqual(2L, feed.Entries[0].LocationId);
+            Assert.AreEqual(t0.AddMinutes(5), feed.PollIngressCutoffUtc);
+        }
+
+        [TestMethod]
+        public void TryApplySeed_OlderSeedFinishingFirst_IsDropped_NewerApplies()
+        {
+            var feed = new ReviewChangeFeed();
+            DateTime t0 = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            int older = feed.BeginSeed();
+            int newer = feed.BeginSeed();
+
+            Assert.IsFalse(feed.TryApplySeed(older, () => feed.SeedRecent([Entry(1, t0, username: "alice")])));
+            Assert.AreEqual(0, feed.Count);
+            Assert.IsTrue(feed.TryApplySeed(newer, () => feed.SeedRecent([Entry(2, t0.AddMinutes(5), username: "bob")])));
+
+            Assert.AreEqual(1, feed.Count);
+            Assert.AreEqual(2L, feed.Entries[0].LocationId);
+        }
+
+        [TestMethod]
+        public void TryApplySeed_StaleFailure_DoesNotOverwriteNewerSuccess()
+        {
+            var feed = new ReviewChangeFeed();
+            DateTime t0 = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            int older = feed.BeginSeed();
+            int newer = feed.BeginSeed();
+
+            Assert.IsTrue(feed.TryApplySeed(newer, () => feed.SeedRecent([Entry(2, t0, username: "bob")])));
+            Assert.IsFalse(feed.TryApplySeed(older, () =>
+            {
+                feed.SetSeedStatus("OData recent-locations request failed: timeout");
+                feed.SetPollIngressCutoffUtc(DateTime.UtcNow - ReviewChangeFeed.DefaultLookback);
+            }));
+
+            Assert.AreEqual("", feed.SeedStatusMessage);
+            Assert.AreEqual(t0, feed.PollIngressCutoffUtc);
+            Assert.AreEqual(1, feed.Count);
+        }
+
+        [TestMethod]
         public void ChooseDownsampleLevel_PicksCoarsestFineEnough()
         {
             int level = ReviewChangeMosaicCropLoader.ChooseDownsampleLevel(

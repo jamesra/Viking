@@ -25,6 +25,8 @@ namespace WebAnnotation.ReviewFeed
         readonly int _maxEntries;
         DateTime? _pollIngressCutoffUtc;
         string _seedStatusMessage = "";
+        readonly object _seedTicketGate = new();
+        int _seedTicket;
 
         /// <summary>
         /// Shared session feed. AnnotationOverlay pushes poll arrivals; the Review tab binds to it.
@@ -80,6 +82,36 @@ namespace WebAnnotation.ReviewFeed
             }
 
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Starts a new OData seed for this feed and returns its ticket. Every earlier ticket
+        /// becomes stale, so only the most recent tab load or filter Apply may change the feed.
+        /// Called by <see cref="ReviewChangeFeedBackfill.StartAsync"/> on the UI thread.
+        /// </summary>
+        internal int BeginSeed()
+        {
+            lock (_seedTicketGate)
+                return ++_seedTicket;
+        }
+
+        /// <summary>
+        /// Runs <paramref name="apply"/> (a seed result: <see cref="SeedRecent"/>,
+        /// <see cref="SetSeedStatus"/>, <see cref="SetPollIngressCutoffUtc"/>) only when
+        /// <paramref name="ticket"/> is still the newest from <see cref="BeginSeed"/>; otherwise the
+        /// result belongs to a superseded filter and is dropped. The check and <paramref name="apply"/>
+        /// share one lock so a newer seed cannot start between them.
+        /// </summary>
+        /// <returns>True when <paramref name="apply"/> ran.</returns>
+        internal bool TryApplySeed(int ticket, Action apply)
+        {
+            lock (_seedTicketGate)
+            {
+                if (ticket != _seedTicket)
+                    return false;
+                apply();
+                return true;
+            }
         }
 
         /// <summary>

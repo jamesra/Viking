@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.110 — unreleased
 
+* Review Changes: clicking Apply again before the previous filter's results arrive (or right after opening the tab) now always shows the results for the last filter applied. Before, if the earlier request was slower, its results arrived last and replaced the list, so the cards matched the old filter (and an earlier failure message could replace a newer success) until Apply was clicked again.
 * Review Changes: a number in the structure filter now also brings in recent changes to structures whose label contains it. Before, typing **12** loaded only changes to structure 12 from the server, so a change to a structure labelled "Cell 12" was missing from the list even though the filter allows it, and showed up only if it was edited again later.
 * Viking no longer sends the server the same structure request many times over when annotations appear before their structure has loaded. Before, every location drawn for that structure asked for it two or three times, all at once, which slowed loading sections with many annotations whose structure was deleted or not yet loaded; now one request per structure is outstanding at a time.
 * The F1 help list now shows the Pen Mode toggle: **Numpad \*** or **Shift+8** turns Pen Mode on and off.
