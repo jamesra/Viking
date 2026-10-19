@@ -57,12 +57,18 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// ARGB color of the structure type. The WCF data stores it as a signed <c>int</c>, so colors with
+        /// alpha 0x80 or higher are negative there. Assigning the current value is a no-op: no change events
+        /// and no <see cref="DBACTION.UPDATE"/>.
+        /// </summary>
         public uint Color
         {
             get => (uint)Data.Color;
             set
             {
-                if (Data.Color == value)
+                //Compare as uint: int == uint widens both to long, so a negative stored color never equals itself
+                if ((uint)Data.Color == value)
                     return;
                 OnPropertyChanging("Color");
                 Data.Color = (int)value;

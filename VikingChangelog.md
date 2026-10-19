@@ -11,6 +11,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 * Closing Viewer Preferences or Annotation Preferences with the window's close box (X), Alt+F4 or Escape now works like Cancel: the live preview (section number overlay, polygon and circle opacity, segmentation sliders) goes back to the values from when the dialog opened (or the last Apply). Before, closing that way kept the previewed values in effect without OK or Apply (the overlay and opacities stayed changed on screen while reopening the dialog showed the old values), and Escape did nothing.
 * Changing sections in quick succession while the computer is busy no longer risks showing the new section without its annotations until you pan or zoom. Before, a late-running update for the previous section could cancel the new section's annotation load.
+* Structure Type Management (F7) no longer marks a structure type as changed when its color did not change, for example when you open the color picker's Advanced view or pick the color it already has. Before, any type with an opaque color was then shown as modified (the Close button became enabled) and the next Apply re-saved it to the server unchanged.
 
 ## 1.2.110 — 2026-10-19 (Viking Test, unsigned)
 
