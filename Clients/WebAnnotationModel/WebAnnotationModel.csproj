@@ -68,6 +68,9 @@
 		<ProjectReference Include="..\Common\Common.csproj" />
 		<ProjectReference Include="..\Viking\NGVV\VikingCore.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="WebAnnotationTests" />
+	</ItemGroup>
 	<!-- Conditional Package References for net48 -->
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="EntityFramework" Version="6.5.1" />

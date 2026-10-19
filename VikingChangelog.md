@@ -10,6 +10,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 ## 1.2.110 — unreleased
 
 * Review Changes: a number in the structure filter now also brings in recent changes to structures whose label contains it. Before, typing **12** loaded only changes to structure 12 from the server, so a change to a structure labelled "Cell 12" was missing from the list even though the filter allows it, and showed up only if it was edited again later.
+* Viking no longer sends the server the same structure request many times over when annotations appear before their structure has loaded. Before, every location drawn for that structure asked for it two or three times, all at once, which slowed loading sections with many annotations whose structure was deleted or not yet loaded; now one request per structure is outstanding at a time.
 * The F1 help list now shows the Pen Mode toggle: **Numpad \*** or **Shift+8** turns Pen Mode on and off.
 * **Shift+=** and **Shift+-** (step ten sections) now stop at the last or first section when fewer than ten remain. Before, at section 295 of a volume ending at 300, Shift+= did nothing.
 * **Hotkey change: auto-polygonize resubmit moved from F8 to Shift+F8.** Shift+F8 sends every circle in view to auto-polygonize again, discarding the proposals shown for this section. **F8** now runs the **Toggle Done Tag** shortcut from your user settings, which the resubmit key had been blocking. F6 (favorite structure types) and F7 (structure type management) are unchanged. The F1 help list shows Shift+F8.

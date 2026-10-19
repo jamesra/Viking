@@ -4,10 +4,12 @@ using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
@@ -87,7 +89,42 @@ namespace WebAnnotationModel
 
         public long? ParentID => Data.ParentID;
 
+        /// <summary>
+        /// Parent structure IDs with a background server fetch running. Shared by every location, so many
+        /// locations on one missing parent, each read several times while its views are built, ask the server once.
+        /// </summary>
+        private static readonly ConcurrentDictionary<long, byte> ParentFetchesInFlight = new();
+
+        /// <summary>
+        /// Runs <paramref name="fetch"/> for <paramref name="parentID"/> on the thread pool unless a fetch for the same ID is still running.
+        /// The ID is released when the fetch returns or throws, so a read after a miss or a failure asks again.
+        /// </summary>
+        /// <param name="parentID">Structure ID to fetch.</param>
+        /// <param name="fetch">Fetches the structure into the store. <see cref="Parent"/> passes the structure store's server lookup.</param>
+        /// <returns>The started fetch, or null when a fetch for <paramref name="parentID"/> is already running.</returns>
+        internal static Task RequestParentOnce(long parentID, Action<long> fetch)
+        {
+            if (!ParentFetchesInFlight.TryAdd(parentID, 0))
+                return null;
+
+            return Task.Run(() =>
+            {
+                try
+                {
+                    fetch(parentID);
+                }
+                finally
+                {
+                    ParentFetchesInFlight.TryRemove(parentID, out _);
+                }
+            });
+        }
+
         // private StructureObj _Parent;
+        /// <summary>
+        /// The parent structure if it is in the local store, otherwise null.
+        /// A null result with a <see cref="ParentID"/> starts a background fetch of the parent, at most one per ID at a time.
+        /// </summary>
         public StructureObj Parent
         {
             get
@@ -103,7 +140,7 @@ namespace WebAnnotationModel
                 //Queue a request for later
                 if (_Parent is null)
                 {
-                    System.Threading.Tasks.Task.Factory.StartNew(() => Store.Structures.GetObjectByID(ParentID.Value));
+                    RequestParentOnce(ParentID.Value, id => Store.Structures.GetObjectByID(id));
                     //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
                     //request.BeginInvoke(ParentID.Value, null, null); 
                 }

@@ -113,6 +113,7 @@
     <Compile Include="TokenResponseFactoryTests.cs" />
     <Compile Include="GpuDeviceRemovedDiagnosticsTests.cs" />
     <Compile Include="PidControllerTests.cs" />
+    <Compile Include="LocationParentFetchTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
