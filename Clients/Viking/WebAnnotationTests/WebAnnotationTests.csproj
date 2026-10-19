@@ -54,6 +54,7 @@
         <Compile Include="GoToActionFormIdTests.cs" />
         <Compile Include="SplitStructuresFormTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
+        <Compile Include="OverlayHotkeysTests.cs" />
         <Compile Include="HiddenStructuresTests.cs" />
         <Compile Include="ObjAttributeTests.cs" />
         <Compile Include="StructureLinkKeyTests.cs" />
