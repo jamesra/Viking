@@ -52,6 +52,7 @@
         <Compile Include="ExtensionsTests.cs" />
         <Compile Include="StructureIdTextTests.cs" />
         <Compile Include="GoToActionFormIdTests.cs" />
+        <Compile Include="AnnotationPreferencesResetToDefaultsTests.cs" />
         <Compile Include="SplitStructuresFormTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="OverlayHotkeysTests.cs" />

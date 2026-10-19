@@ -722,7 +722,13 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>
-        /// Coarsest camera downsample at which auto-segment still runs. Default 2.
+        /// Factory default for <see cref="AutoPolygonizeMaxDownsample"/>.
+        /// Keep in step with WebAnnotation.Properties.Settings.
+        /// </summary>
+        public const double DefaultAutoPolygonizeMaxDownsample = 2.0;
+
+        /// <summary>
+        /// Coarsest camera downsample at which auto-segment still runs. Default <see cref="DefaultAutoPolygonizeMaxDownsample"/>.
         /// The preference allows 1 to 4. The value itself still runs; anything coarser is not sent
         /// to the segmentation service.
         /// </summary>
@@ -1120,8 +1126,8 @@ namespace WebAnnotation.WPF.Forms
             _adjacentLocationRadiusScalar = 0.5;
             _locationLinkWaistPixels = DefaultLocationLinkWaistPixels;
             _locationLinkDrawUnderMarkers = false;
-            _numClosedCurveInterpolationPointsForDisplay = 4;
-            _penSimplifyThreshold = 4;
+            _numClosedCurveInterpolationPointsForDisplay = 3;
+            _penSimplifyThreshold = 3;
             _minRadius = 0.5;
             _polygonOpacityParentless = 0.5;
             _polygonOpacityWithParent = 0.33;
@@ -1137,7 +1143,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentationMinFeatureNanometers = DefaultSegmentationMinFeatureNanometers;
             _autoPolygonizeCircles = false;
             _autoPolygonizeMinRadiusNanometers = DefaultAutoPolygonizeMinRadiusNanometers;
-            _autoPolygonizeMaxDownsample = 8.0;
+            _autoPolygonizeMaxDownsample = DefaultAutoPolygonizeMaxDownsample;
 #if DEBUG
             _autoPolygonizeOverlayMasks = true;
             _autoPolygonizeOverlayPrompts = true;
