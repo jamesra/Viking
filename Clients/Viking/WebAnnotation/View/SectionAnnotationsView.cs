@@ -619,6 +619,8 @@ namespace WebAnnotation.ViewModel
                 case NotifyCollectionChangedAction.Remove:
                     listOldObjs = e.OldItems.Cast<LocationObj>();
                     RemoveLocationBatch(listOldObjs);
+                    //RemoveLocationBatch drops every link of the removed locations' structures. Add and Replace re-create them in AddLocationBatch; a delete has no Add, so restore them here.
+                    SectionStructureLinks.RestoreStructureLinksAfterRemoval(listOldObjs);
                     break;
 
                 default:

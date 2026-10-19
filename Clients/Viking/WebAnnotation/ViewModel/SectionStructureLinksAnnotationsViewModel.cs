@@ -111,6 +111,31 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        /// <summary>
+        /// Re-creates the link views that <see cref="RemoveStructureLinks(IEnumerable{LocationObj})"/> dropped when
+        /// <paramref name="removedLocations"/> left the section. That removal drops every link of each location's
+        /// structure, so call this after the locations are gone: a link whose structures both still have locations on
+        /// this section comes back between their nearest remaining locations, and a structure whose last location here
+        /// was removed creates no view.
+        /// </summary>
+        /// <param name="removedLocations">Locations just removed from the section's view; others are ignored.</param>
+        internal void RestoreStructureLinksAfterRemoval(IEnumerable<LocationObj> removedLocations)
+        {
+            AddStructureLinks(StructureIDsToRefreshAfterRemoval(removedLocations, PrimarySection.SectionNumber)
+                .Select(id => Store.Structures.GetObjectByID(id, false))
+                .Where(s => s is not null));
+        }
+
+        /// <summary>
+        /// The parents of the <paramref name="removedLocations"/> on <paramref name="sectionNumber"/>, once each, so a
+        /// batch delete of many locations of one structure rebuilds its links once. Removing a location on another
+        /// section drops no structure link here, so those locations are skipped.
+        /// </summary>
+        /// <param name="removedLocations">Locations removed from the store.</param>
+        /// <param name="sectionNumber">The section whose structure links are shown.</param>
+        internal static IEnumerable<long> StructureIDsToRefreshAfterRemoval(IEnumerable<LocationObj> removedLocations, int sectionNumber) =>
+            removedLocations.Where(l => l.Z == sectionNumber && l.ParentID.HasValue).Select(l => l.ParentID.Value).Distinct();
+
         internal void RemoveStructureLinks(IEnumerable<StructureObj> structures)
         {
             foreach (StructureObj structObj in structures)

@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.112 - unreleased
+
+* Deleting a location no longer hides the structure link lines of its structure on that section while the structure still has other locations there. Before, the lines between it and its linked structures disappeared until the section was reloaded; they now stay, drawn to the nearest remaining location. Deleting a structure's last location on the section still removes its link lines.
+
 ## 1.2.111 — 2026-10-19 (Viking Test, unsigned)
 
 * Closing Viewer Preferences or Annotation Preferences with the window's close box (X), Alt+F4 or Escape now works like Cancel: the live preview (section number overlay, polygon and circle opacity, segmentation sliders) goes back to the values from when the dialog opened (or the last Apply). Before, closing that way kept the previewed values in effect without OK or Apply (the overlay and opacities stayed changed on screen while reopening the dialog showed the old values), and Escape did nothing.
