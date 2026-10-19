@@ -1,13 +1,13 @@
 # Viking changelog
 
-Committed application version: **1.2.110.0**  
+Committed application version: **1.2.111.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.111 — unreleased
+## 1.2.111 — 2026-10-19 (Viking Test, unsigned)
 
 * Closing Viewer Preferences or Annotation Preferences with the window's close box (X), Alt+F4 or Escape now works like Cancel: the live preview (section number overlay, polygon and circle opacity, segmentation sliders) goes back to the values from when the dialog opened (or the last Apply). Before, closing that way kept the previewed values in effect without OK or Apply (the overlay and opacities stayed changed on screen while reopening the dialog showed the old values), and Escape did nothing.
 * Changing sections in quick succession while the computer is busy no longer risks showing the new section without its annotations until you pan or zoom. Before, a late-running update for the previous section could cancel the new section's annotation load.
