@@ -16,13 +16,5 @@ namespace Viking.DependencyInjection
         /// <returns>Endpoint in host:port format, or <c>null</c> if segmentation is disabled.</returns>
         string Endpoint();
     }
-
-    public class GrpcServiceConfiguration(string endpoint) : IGrpcServiceConfiguration
-    {
-        private readonly string _endpoint = endpoint;
-
-        /// <inheritdoc />
-        public string Endpoint() => _endpoint;
-    }
 }
 
