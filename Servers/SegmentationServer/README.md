@@ -281,7 +281,7 @@ To run the server:
 python -m segmentation_server
 ```
 
-The server only listens with TLS; there is no cleartext gRPC port. Docker publishes gRPC TLS as **40443:443** and the optional demo page as **40444:8443**, on loopback only until `SEGMENTATION_DEMO_HOST_BIND=0.0.0.0` is set, so a stack that does not run the page opens no second port on the network. Host ports 80 and 443 belong to the reverse proxy. The router forwards `segmentation.codepharm.net:443` to host port 40443. `SSL_CERT_PATH` and `SSL_KEY_PATH` must point at the certificate chain (`fullchain.pem`) and key; the server waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for them, then exits so the container restart policy retries. For local runs, `python -m segmentation_server.dev_cert --out ./dev-cert` writes a self-signed pair (needs the `cryptography` package). See [config-template/README.md](config-template/README.md) for Let's Encrypt enrollment. The demo page uses those same files and stays down until `SEGMENTATION_DEMO_SITE=1`.
+The server only listens with TLS; there is no cleartext gRPC port. Docker publishes gRPC TLS as **40443:443** and the optional demo page as **40444:8443**, on loopback only until `SEGMENTATION_DEMO_HOST_BIND=0.0.0.0` is set, so a stack that does not run the page opens no second port on the network. Host ports 80 and 443 belong to the reverse proxy. The proxy routes `VIKING_HOSTNAME_SEGMENTATION` (port 443, by SNI) to host port 40443. `SSL_CERT_PATH` and `SSL_KEY_PATH` must point at the certificate chain (`fullchain.pem`) and key; the server waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for them, then exits so the container restart policy retries. For local runs, `python -m segmentation_server.dev_cert --out ./dev-cert` writes a self-signed pair (needs the `cryptography` package). In the `viking-segmentation` stack the pair is the shared certificate from `viking-certs` (`/certs/<TLS_CERT_NAME>/`); see `Documentation/source/deployment/segmentation.rst` and `tls.rst`. The demo page uses those same files and stays down until `SEGMENTATION_DEMO_SITE=1`.
 
 Fine-tuned weights: put a Meta-format checkpoint at `D:\Docker\Run\segmentation-server\best_TEM_model.pt`. Compose mounts that folder at `/models` and sets `SAM2_CHECKPOINT=/models/best_TEM_model.pt` (override with `SEGMENTATION_MODEL_HOST` or `SAM2_CHECKPOINT`). Trainer `best_model.pt` is a raw state dict; convert it with `sam2-em-export-serve` before copying it here. Recreate the container after replacing the file. Eager and compiled encoders both load this checkpoint.
 
@@ -319,13 +319,12 @@ whole-screen model (`FULL_VIEWPORT`) refuses `UploadTile` and `SegmentTilesStrea
 whole-screen RPCs unless `SEGMENTATION_STRICT_SUBMISSION_MODE=1`.
 
 **Several models at once** run as separate containers of the same image, each reached by its own host name that the
-reverse proxy routes by SNI. The compose profile `segmentation-v4` adds `segmentation-server-v4` (host port 40445,
-`SEGMENTATION_V4_CHECKPOINT`, default `/models/sam2_em_v4.pt`; name the file for the release, e.g. `/models/v4.3.pt`), reached as `v4.segmentation.codepharm.net`; the first
-container also answers as `v3.segmentation.codepharm.net`. Each container needs its own embedding cache folder, because
-the server deletes the other checkpoint folders it finds in its cache at start-up. The certificate carries every name
-(`LETSENCRYPT_ADDITIONAL_DOMAINS`), and the renewer restarts every model container when it renews
-(`CERTBOT_RESTART_CONTAINER`, comma separated). Start both with
-`D:\Docker\Builds\SegmentationServer\rebuild-and-start.ps1 -WithV4`.
+reverse proxy routes by SNI. In `Servers/SegmentationServer/docker-compose.yml` the profiles `seg-v3`, `seg-v4` and
+`seg-sem-v1` (or `models` for all three) add `segmentation-v3` / `-v4` / `-sem-v1` on host ports 40445-40447, with
+weights from `SEG_V3_CHECKPOINT` etc. and host names `VIKING_HOSTNAME_SEG_*` (default `segmentation-v3.<domain>`...).
+Each container has its own cache folders, because the server deletes the other checkpoint folders it finds in its cache
+at start-up. The shared certificate carries every name, and `viking-certs` restarts every container labelled
+`viking.tls-reload` when it renews. See `Documentation/source/deployment/segmentation.rst`.
 
 `SegmentVolumes` is the auto-segmentation stream. The client sends one foreground/background set at a time for a cached `image_id`, and the server writes one `SegmentationResponse` per set. Interactive clicks stay on unary `SegmentImage`.
 

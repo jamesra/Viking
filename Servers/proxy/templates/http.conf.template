@@ -1,0 +1,84 @@
+# Rendered by the nginx image's envsubst into /etc/nginx/conf.d/http.conf and included inside
+# http {} by ../nginx.conf.
+#
+# Port 80 only. TLS is never terminated here (443 is SNI passthrough, see stream.conf.template).
+#   /.well-known/acme-challenge/  served from the webroot viking-certs writes (HTTP-01)
+#   /healthz                       container health check
+#   everything else                301 to https://$host$request_uri, except a host listed in
+#                                  $viking_http_backend, which is proxied as plain HTTP.
+
+resolver ${PROXY_RESOLVER} valid=30s ipv6=off;
+
+# Ported from the old proxy's custom/http.conf (tile traffic from the legacy IIS host).
+proxy_buffering on;
+proxy_buffer_size 4k;
+proxy_buffers 10 32k;
+proxy_busy_buffers_size 256k;
+proxy_max_temp_file_size 0;
+
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+# Text types only; images and archives are already compressed.
+gzip_types text/plain text/css text/xml application/json application/javascript application/xml+rss application/atom+xml image/svg+xml;
+
+# Optional plain-HTTP passthrough. Legacy Viking clients may still call the IIS WCF/tile
+# endpoints over http://; a 301 would turn their POSTs into GETs. Empty (the default) = redirect.
+map $host $viking_http_backend {
+    default                       "";
+    ${VIKING_HOSTNAME_WEBSVC}     "${VIKING_HTTP_UPSTREAM_WEBSVC}";
+}
+
+# The SAM2 galleries must not be indexed (from the old custom/http.conf).
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${VIKING_HOSTNAME_GALLERY} ${VIKING_HOSTNAME_TEM_GALLERY} ${VIKING_HOSTNAME_SEM_GALLERY};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        if ($viking_http_backend = "") {
+            return 301 https://$host$request_uri;
+        }
+        proxy_pass http://$viking_http_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto http;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        client_max_body_size 0;
+        proxy_read_timeout 300s;
+    }
+}

@@ -1,0 +1,162 @@
+# Stack: viking-segmentation  (registry: deploy/stacks.psd1; runs on the GPU compute host)
+#
+# segmentation-server is the bare VIKING_HOSTNAME_SEGMENTATION model (plus the optional demo page
+# behind VIKING_HOSTNAME_SEGMENTATIONDEMO). The extra models are profiles, one container each, routed
+# by SNI in viking-proxy:
+#   profile seg-v3      segmentation-v3      host port 40445   VIKING_HOSTNAME_SEG_V3
+#   profile seg-v4      segmentation-v4      host port 40446   VIKING_HOSTNAME_SEG_V4
+#   profile seg-sem-v1  segmentation-sem-v1  host port 40447   VIKING_HOSTNAME_SEG_SEM_V1
+#   profile models      all three
+# This replaces the docker-compose.models.yml that rebuild-and-start.ps1 used to generate from models.json.
+#
+#   stack.ps1 up viking-segmentation          (the registry turns on profile "models")
+#   docker compose -p viking-segmentation --env-file <host.env> --env-file <run.env> \
+#     -f Servers/SegmentationServer/docker-compose.yml --profile models up -d --build
+#
+# TLS: every container presents ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/ (mounted at /certs) and only
+# listens with TLS; it waits SEGMENTATION_TLS_WAIT_SECONDS (120) for the files, exits, and
+# `restart: unless-stopped` retries. viking-certs restarts them (label viking.tls-reload) on renewal.
+#
+# Host folders (defaults under STACK_DATA_DIR, override in the run env):
+#   SEGMENTATION_MODEL_HOST  weights + <stem>.model.json manifests, mounted read-only at /models
+#   SEGMENTATION_CACHE_DIR   per-model torch inductor and tile-embedding caches (each model needs its
+#                            own: a server deletes other checkpoints' folders it finds in its cache)
+
+x-segmentation-build: &segmentation-build
+  context: ../..
+  dockerfile: Servers/SegmentationServer/Dockerfile
+
+x-segmentation-common: &segmentation-common
+  build: *segmentation-build
+  image: ${SEGMENTATION_IMAGE:-viking-segmentation-server:latest}
+  restart: unless-stopped
+  cap_add:
+    - NET_BIND_SERVICE
+  gpus: all
+  labels:
+    viking.tls-reload: "true"
+  depends_on:
+    segmentation-init:
+      condition: service_completed_successfully
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+x-segmentation-env: &segmentation-env
+  TORCHINDUCTOR_CACHE_DIR: /home/user/.cache/torch_inductor
+  TORCHINDUCTOR_FX_GRAPH_CACHE: "1"
+  TRITON_CACHE_DIR: /home/user/.cache/torch_inductor/triton
+  TORCHINDUCTOR_PERSISTENT_AUTOTUNE_DIR: /home/user/.cache/torch_inductor/autotune
+  SSL_CERT_PATH: /certs/${TLS_CERT_NAME:-viking}/fullchain.pem
+  SSL_KEY_PATH: /certs/${TLS_CERT_NAME:-viking}/privkey.pem
+  SEGMENTATION_TLS_WAIT_SECONDS: ${SEGMENTATION_TLS_WAIT_SECONDS:-120}
+  # Tile embeddings (not weights). Survives eviction and container restart.
+  SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
+  SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES: ${SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES:-}
+  # 1 writes the newest 40 growth results to <embedding cache>/debug-dumps for offline inspection.
+  SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
+  # 1 asks SAM2 for three candidate masks on box prompts. Off until judged on real sections.
+  SEGMENTATION_BOX_MULTIMASK: ${SEGMENTATION_BOX_MULTIMASK:-0}
+
+services:
+  # One-shot: creates the cache folders and hands them to the image's non-root user, which a
+  # freshly created Linux bind mount (owned by root) would otherwise refuse. Harmless on Docker Desktop.
+  segmentation-init:
+    build: *segmentation-build
+    image: ${SEGMENTATION_IMAGE:-viking-segmentation-server:latest}
+    user: "0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        for d in default v3 v4 sem-v1; do
+        mkdir -p /cache/segmentation-$$d-inductor /cache/segmentation-$$d-embeddings;
+        done;
+        chown -R user:user /cache
+    volumes:
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR:?STACK_DATA_DIR must be set (stack.ps1 exports it)}/cache}:/cache
+    restart: "no"
+
+  segmentation-server:
+    <<: *segmentation-common
+    ports:
+      # gRPC over TLS (VIKING_UPSTREAM_SEGMENTATION).
+      - "${SEGMENTATION_HTTPS_PORT:-40443}:443"
+      # Optional demo page (SEGMENTATION_DEMO_SITE=1), same certificate (VIKING_UPSTREAM_SEGMENTATIONDEMO).
+      # Loopback unless SEGMENTATION_DEMO_HOST_BIND=0.0.0.0 (needed when the proxy is on another host).
+      - "${SEGMENTATION_DEMO_HOST_BIND:-127.0.0.1}:${SEGMENTATION_DEMO_PORT:-40444}:8443"
+    environment:
+      <<: *segmentation-env
+      SAM2_CHECKPOINT: ${SAM2_CHECKPOINT:-/models/best_TEM_model.pt}
+      SEGMENTATION_MODEL_NAME: ${SEGMENTATION_MODEL_NAME:-default}
+      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_DEMO_SITE:-0}
+      SEGMENTATION_DEMO_PLAINTEXT: ${SEGMENTATION_DEMO_PLAINTEXT:-0}
+      # The page listens on loopback inside the container unless set to 0.0.0.0; then also set a token.
+      SEGMENTATION_DEMO_BIND: ${SEGMENTATION_DEMO_BIND:-127.0.0.1}
+      SEGMENTATION_DEMO_TOKEN: ${SEGMENTATION_DEMO_TOKEN:-}
+    volumes:
+      - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-default-inductor:/home/user/.cache/torch_inductor
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-default-embeddings:/var/cache/segmentation-embeddings
+      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
+
+  segmentation-v3:
+    <<: *segmentation-common
+    profiles: ["seg-v3", "models"]
+    ports:
+      - "${SEG_V3_HTTPS_PORT:-40445}:443"
+      # Demo page as plain HTTP, no token: loopback only by default. Do not publish it to the internet.
+      - "${SEGMENTATION_MODEL_DEMO_HOST_BIND:-127.0.0.1}:${SEG_V3_DEMO_PORT:-40545}:80"
+    environment:
+      <<: *segmentation-env
+      SAM2_CHECKPOINT: ${SEG_V3_CHECKPOINT:-/models/sam2_em_v3_epoch_9.pt}
+      SEGMENTATION_MODEL_NAME: "v3"
+      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
+      SEGMENTATION_DEMO_PLAINTEXT: "1"
+      SEGMENTATION_DEMO_BIND: "0.0.0.0"
+    volumes:
+      - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v3-inductor:/home/user/.cache/torch_inductor
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v3-embeddings:/var/cache/segmentation-embeddings
+      - ${DOCKER_CERTS_DIR}:/certs:ro
+
+  segmentation-v4:
+    <<: *segmentation-common
+    profiles: ["seg-v4", "models"]
+    ports:
+      - "${SEG_V4_HTTPS_PORT:-40446}:443"
+      - "${SEGMENTATION_MODEL_DEMO_HOST_BIND:-127.0.0.1}:${SEG_V4_DEMO_PORT:-40546}:80"
+    environment:
+      <<: *segmentation-env
+      SAM2_CHECKPOINT: ${SEG_V4_CHECKPOINT:-/models/v4.epoch0.pt}
+      SEGMENTATION_MODEL_NAME: "v4"
+      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
+      SEGMENTATION_DEMO_PLAINTEXT: "1"
+      SEGMENTATION_DEMO_BIND: "0.0.0.0"
+    volumes:
+      - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v4-inductor:/home/user/.cache/torch_inductor
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v4-embeddings:/var/cache/segmentation-embeddings
+      - ${DOCKER_CERTS_DIR}:/certs:ro
+
+  segmentation-sem-v1:
+    <<: *segmentation-common
+    profiles: ["seg-sem-v1", "models"]
+    ports:
+      - "${SEG_SEM_V1_HTTPS_PORT:-40447}:443"
+      - "${SEGMENTATION_MODEL_DEMO_HOST_BIND:-127.0.0.1}:${SEG_SEM_V1_DEMO_PORT:-40547}:80"
+    environment:
+      <<: *segmentation-env
+      SAM2_CHECKPOINT: ${SEG_SEM_V1_CHECKPOINT:-/models/sem-v1.5.pt}
+      SEGMENTATION_MODEL_NAME: "sem-v1"
+      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
+      SEGMENTATION_DEMO_PLAINTEXT: "1"
+      SEGMENTATION_DEMO_BIND: "0.0.0.0"
+    volumes:
+      - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-sem-v1-inductor:/home/user/.cache/torch_inductor
+      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-sem-v1-embeddings:/var/cache/segmentation-embeddings
+      - ${DOCKER_CERTS_DIR}:/certs:ro

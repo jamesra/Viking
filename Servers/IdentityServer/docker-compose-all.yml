@@ -1,56 +1,108 @@
+# Stack: viking-identity  (registry: deploy/stacks.psd1; runs on the web host)
+#
+# Duende IdentityServer (OIDC issuer :5001), the permissions WebApi (:6001) and the management
+# site (:4001) in one container, under supervisor.
+#
+#   stack.ps1 up viking-identity
+#   docker compose -p viking-identity --env-file <host.env> --env-file <run.env> \
+#     -f Servers/IdentityServer/docker-compose-all.yml up -d --build
+#
+# Inputs (stack.ps1 exports the paths):
+#   ${STACK_RUN_DIR}/viking-identity.run.env   container environment and compose variables
+#                                              (deploy/examples/example.viking-identity.run.env)
+#   ${STACK_SECRETS_DIR}/secrets.json          management-site secrets (deploy/examples/example.secrets.json)
+#   ${STACK_SECRETS_DIR}/Duende_License.key    Duende license
+#   ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/      fullchain.pem + privkey.pem from viking-certs
+# State: ${STACK_DATA_DIR}/DataProtectionKeys (keep it: losing it signs everyone out and breaks
+# protected payloads) and logs under ${STACK_LOGS_DIR}.
+#
+# Public URLs: VIKING_HOSTNAME_IDENTITY replaces the identity.codepharm.net baked into the
+# appsettings files below (environment variables override them).
+
+x-identity-build: &identity-build
+  context: ${IDENTITY_BUILD_CONTEXT:-..}
+  dockerfile: IdentityServer.Dockerfile
+  args:
+    IDENTITY_STANDALONE_HTTP_PORT: ${IDENTITY_STANDALONE_HTTP_PORT:-5000}
+    IDENTITY_STANDALONE_HTTPS_PORT: ${IDENTITY_STANDALONE_HTTPS_PORT:-5001}
+    IDENTITY_WEBAPI_HTTP_PORT: ${IDENTITY_WEBAPI_HTTP_PORT:-6000}
+    IDENTITY_WEBAPI_HTTPS_PORT: ${IDENTITY_WEBAPI_HTTPS_PORT:-6001}
+    IDENTITY_MANAGEMENT_HTTP_PORT: ${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}
+    IDENTITY_MANAGEMENT_HTTPS_PORT: ${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
+    IDENTITY_ENABLE_REMOTE_DEBUG: ${IDENTITY_ENABLE_REMOTE_DEBUG:-false}
+    REMOTE_DEBUG_PORT: ${REMOTE_DEBUG_PORT:-4024}
+    ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+    HOSTING_ENVIRONMENT: ${HOSTING_ENVIRONMENT:-Docker}
+    BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
+    IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+
 services:
+  # One-shot: creates the bind-mounted state folders and gives them to the image's app user
+  # (uid 1654). A fresh Linux bind mount is root-owned and the app could not write its keys or logs.
+  identity-init:
+    platform: linux/amd64
+    build: *identity-build
+    image: ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
+    user: "0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mkdir -p /app/DataProtectionKeys /var/log/supervisor/identity-standalone
+        /var/log/supervisor/identity-webapi /var/log/supervisor/identity-server &&
+        chown -R app:app /app/DataProtectionKeys /var/log/supervisor
+    volumes:
+      - ${IDENTITY_DATA_PROTECTION_KEYS_DIR:-${STACK_DATA_DIR:?STACK_DATA_DIR must be set (stack.ps1 exports it)}/DataProtectionKeys}:/app/DataProtectionKeys
+      - ${STACK_LOGS_DIR:?STACK_LOGS_DIR must be set (stack.ps1 exports it)}:/var/log/supervisor
+    restart: "no"
+
   identity-all-services:
     platform: linux/amd64
     restart: unless-stopped
     env_file:
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.Docker
-    build:
-      context: ${IDENTITY_BUILD_CONTEXT:-..}
-      dockerfile: IdentityServer.Dockerfile
-      args:
-        IDENTITY_STANDALONE_HTTP_PORT: ${IDENTITY_STANDALONE_HTTP_PORT:-5000}
-        IDENTITY_STANDALONE_HTTPS_PORT: ${IDENTITY_STANDALONE_HTTPS_PORT:-5001}
-        IDENTITY_WEBAPI_HTTP_PORT: ${IDENTITY_WEBAPI_HTTP_PORT:-6000}
-        IDENTITY_WEBAPI_HTTPS_PORT: ${IDENTITY_WEBAPI_HTTPS_PORT:-6001}
-        IDENTITY_MANAGEMENT_HTTP_PORT: ${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}
-        IDENTITY_MANAGEMENT_HTTPS_PORT: ${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
-        IDENTITY_ENABLE_REMOTE_DEBUG: ${IDENTITY_ENABLE_REMOTE_DEBUG:-false}
-        REMOTE_DEBUG_PORT: ${REMOTE_DEBUG_PORT:-4024}
-        ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-        HOSTING_ENVIRONMENT: ${HOSTING_ENVIRONMENT:-Docker}
-        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
-        IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+      - ${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-identity}.run.env
+    build: *identity-build
     image: ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
+    labels:
+      viking.tls-reload: "true"
+    depends_on:
+      identity-init:
+        condition: service_completed_successfully
     ports:
-      # IdentityServerStandalone ports
+      # IdentityServerStandalone (OIDC issuer). VIKING_UPSTREAM_IDENTITY points at the HTTPS port.
       - "${IDENTITY_STANDALONE_HTTP_PORT:-5000}:${IDENTITY_STANDALONE_CONTAINER_HTTP_PORT:-5000}"
       - "${IDENTITY_STANDALONE_HTTPS_PORT:-5001}:${IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT:-5001}"
-      # WebApi ports  
+      # WebApi
       - "${IDENTITY_WEBAPI_HTTP_PORT:-6000}:${IDENTITY_WEBAPI_CONTAINER_HTTP_PORT:-6000}"
       - "${IDENTITY_WEBAPI_HTTPS_PORT:-6001}:${IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT:-6001}"
-      # IdentityServer (Management) ports
+      # IdentityServer (Management)
       - "${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}:${IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT:-4000}"
       - "${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}:${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}"
-      # Remote debugging port (single port for all services)
-      - "${REMOTE_DEBUG_PORT:-4024}:${REMOTE_DEBUG_CONTAINER_PORT:-4024}"
+      # Remote debugging port (single port for all services). Loopback unless overridden.
+      - "${REMOTE_DEBUG_HOST_BIND:-127.0.0.1}:${REMOTE_DEBUG_PORT:-4024}:${REMOTE_DEBUG_CONTAINER_PORT:-4024}"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - HOSTING_ENVIRONMENT=${HOSTING_ENVIRONMENT:-Docker}
       - ASPNETCORE_URLS=https://+:4001;https://+:5001;https://+:6001;http://+:4000;http://+:5000;http://+:6000;
       # Database connections
-      - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
-      - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
-      - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_GRANTS_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
-      # SSL Configuration
-      - SSL_CERT_PATH=${IDENTITY_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/fullchain.pem}
-      - SSL_KEY_PATH=${IDENTITY_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/privkey.pem}
-      - SSL__CertificatePath=${IDENTITY_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/fullchain.pem}
-      - SSL__KeyPath=${IDENTITY_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/privkey.pem}
+      - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_GRANTS_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      # TLS: the shared certificate published by viking-certs.
+      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
+      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
+      - SSL__CertificatePath=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
+      - SSL__KeyPath=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
       - SSL__Password=
+      # Public URLs. The appsettings files still name identity.codepharm.net; these win over them.
+      - AUTHORITY=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:?VIKING_DOMAIN must be set}}:${IDENTITY_STANDALONE_HTTPS_PORT:-5001}/}
+      - VikingIdentityServerOptions__Authority=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}:${IDENTITY_STANDALONE_HTTPS_PORT:-5001}/}
+      - VikingIdentityServerOptions__ManagementPublicUrl=${IDENTITY_MANAGEMENT_PUBLIC_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}:${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}/}
+      - JwtBearerOptions__Authority=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}:${IDENTITY_STANDALONE_HTTPS_PORT:-5001}/}
+      - OAuth2IntrospectionOptions__Authority=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}:${IDENTITY_STANDALONE_HTTPS_PORT:-5001}/}
+      - WebApiOptions__BaseUrl=${IDENTITY_WEBAPI_PUBLIC_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}:${IDENTITY_WEBAPI_HTTPS_PORT:-6001}/}
       # Explicit environment variables for configuration substitution
       - SQL_SERVER_HOST=${SQL_SERVER_HOST}
-      - SQL_SERVER_PORT=${SQL_SERVER_PORT}
+      - SQL_SERVER_PORT=${SQL_SERVER_PORT:-1433}
       - SQL_SERVER_USER=${SQL_SERVER_USER}
       - SQL_SERVER_PASSWORD=${SQL_SERVER_PASSWORD}
       - SQL_SERVER_IDENTITY_DB=${SQL_SERVER_IDENTITY_DB}
@@ -59,7 +111,6 @@ services:
       # How long to wait for the DB VM after host reboot (seconds)
       - SQL_WAIT_TIMEOUT_SECONDS=${SQL_WAIT_TIMEOUT_SECONDS:-900}
       - SQL_WAIT_INTERVAL_SECONDS=${SQL_WAIT_INTERVAL_SECONDS:-5}
-      - AUTHORITY=${AUTHORITY}
       - IDENTITY_SERVER_SECRET=${IDENTITY_SERVER_SECRET}
       - IDENTITY_SERVER_API_SECRET=${IDENTITY_SERVER_API_SECRET}
       - IDENTITY_SERVER_MVC_SECRET=${IDENTITY_SERVER_MVC_SECRET}
@@ -77,9 +128,10 @@ services:
       - IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT=${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}
       - IDENTITY_SERVER_HTTP_PORT=${IDENTITY_SERVER_HTTP_PORT:-5000}
       - IDENTITY_SERVER_HTTPS_PORT=${IDENTITY_SERVER_HTTPS_PORT:-5001}
+      - IDENTITY_STANDALONE_HTTPS_PORT=${IDENTITY_STANDALONE_HTTPS_PORT:-5001}
       # Remote debugging configuration
       - IDENTITY_ENABLE_REMOTE_DEBUG=${IDENTITY_ENABLE_REMOTE_DEBUG:-false}
-      - REMOTE_DEBUG_PORT=${REMOTE_DEBUG_PORT:-4024} 
+      - REMOTE_DEBUG_PORT=${REMOTE_DEBUG_PORT:-4024}
     volumes:
       # Configuration files
       - ./IdentityServerStandalone/appsettings.json:/app/identity-standalone/appsettings.json:ro
@@ -91,24 +143,18 @@ services:
       - ./Viking.Identity.Server.WebManagement/appsettings.json:/app/identity-server/appsettings.json:ro
       - ./Viking.Identity.Server.WebManagement/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:/app/identity-server/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:ro
       - ./Viking.Identity.Server.WebManagement/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:/app/identity-server/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:ro
-      # secrets.json from config folder (e.g. D:/Docker/mounted-configs/IdentityServer) - loaded at runtime, not baked into image
-      - ${IDENTITY_CONFIG_PATH:-D:/Docker/mounted-configs/IdentityServer}/secrets.json:/app/identity-server/secrets.json:ro
-      # Environment files
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All:/app/.env:ro
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.${ASPNETCORE_ENVIRONMENT:-Production}:/app/.env.${ASPNETCORE_ENVIRONMENT:-Production}:ro
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.${HOSTING_ENVIRONMENT:-Docker}:/app/.env.${HOSTING_ENVIRONMENT:-Docker}:ro
+      # Secrets, loaded at runtime and never baked into the image. The old .env.All mounts at /app/.env
+      # are gone: the run env reaches every process as container environment through env_file above.
+      - ${STACK_SECRETS_DIR:?STACK_SECRETS_DIR must be set (stack.ps1 exports it)}/secrets.json:/app/identity-server/secrets.json:ro
+      - ${DUENDE_KEY_PATH:-${STACK_SECRETS_DIR}/Duende_License.key}:/app/Duende_License.key:ro
       # Log files
-      - ./logs/identity-standalone:/var/log/supervisor/identity-standalone
-      - ./logs/identity-webapi:/var/log/supervisor/identity-webapi
-      - ./logs/identity-server:/var/log/supervisor/identity-server
-      # Data Protection Keys
-      - ./DataProtectionKeys:/app/DataProtectionKeys:rw
-      # Duende License (if available)
-      - ${DUENDE_KEY_PATH:-/dev/null}:/app/Duende_License.key:ro
-      # Certbot-managed certificates
-      - identity-letsencrypt:/etc/letsencrypt:ro
-      # ACME webroot for legacy HTTP-01 fallback
-      - identity-acme-webroot:/app/identity-server/wwwroot/.well-known/acme-challenge:ro
+      - ${STACK_LOGS_DIR}/identity-standalone:/var/log/supervisor/identity-standalone
+      - ${STACK_LOGS_DIR}/identity-webapi:/var/log/supervisor/identity-webapi
+      - ${STACK_LOGS_DIR}/identity-server:/var/log/supervisor/identity-server
+      # Data Protection Keys. Moving from the old ./DataProtectionKeys: copy its *.xml here first.
+      - ${IDENTITY_DATA_PROTECTION_KEYS_DIR:-${STACK_DATA_DIR}/DataProtectionKeys}:/app/DataProtectionKeys:rw
+      # Shared certificate (viking-certs). HTTP-01 is answered by viking-proxy, not by this container.
+      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
     networks:
       - identity-network
     healthcheck:
@@ -119,44 +165,6 @@ services:
       # Cover SQL wait (default 900s) plus app warm-up after host/DB VM reboot
       start_period: 960s
 
-  identity-certbot-renewer:
-    container_name: identity-certbot-renewer
-    build:
-      context: ../certbot
-      dockerfile: Dockerfile
-    image: ${IMAGE_REGISTRY:-}identity-certbot-renewer:${IMAGE_VERSION:-latest}
-    restart: unless-stopped
-    env_file:
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All
-      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.Docker
-    environment:
-      - CERTBOT_AUTH_METHOD=${CERTBOT_AUTH_METHOD:-dns-cloudflare}
-      - CF_DNS_API_CREDENTIALS_FILE=${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/cloudflare.ini}
-      - CF_DNS_PROPAGATION_SECONDS=${CF_DNS_PROPAGATION_SECONDS:-60}
-    volumes:
-      - identity-letsencrypt:/etc/letsencrypt
-      - identity-certbot-lib:/var/lib/letsencrypt
-      - identity-certbot-logs:/var/log/letsencrypt
-      - identity-acme-webroot:/var/www/certbot
-      - ./certs:/seed-certs:ro
-      - type: bind
-        source: ${CF_DNS_API_CREDENTIALS_HOST_PATH:-D:/Docker/Builds/cloudflare.ini}
-        target: /run/secrets/cloudflare.ini
-        read_only: true
-      - type: bind
-        source: ${DOCKER_SOCKET_PATH:-//var/run/docker.sock}
-        target: /var/run/docker.sock
-    entrypoint: ["bash", "/opt/identity-certbot/renew-loop.sh"]
-    networks:
-      - identity-network
-
 networks:
   identity-network:
     driver: bridge
-
-volumes:
-  identity-letsencrypt:
-  identity-certbot-lib:
-  identity-certbot-logs:
-  identity-acme-webroot:
-

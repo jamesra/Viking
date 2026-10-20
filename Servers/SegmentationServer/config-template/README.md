@@ -1,48 +1,10 @@
-# Segmentation server TLS environment template
+# Segmentation server config template
 
-This folder is a **template** for the Let's Encrypt env file. Copy it to the local build path and fill in real values. Do not commit the copy or `cloudflare.ini`.
+Deployment of the segmentation servers is the `viking-segmentation` stack
+(`Servers/SegmentationServer/docker-compose.yml`, registry `deploy/stacks.psd1`; GPU compute host).
+It replaces the per-service certbot renewer and the generated `docker-compose.models.yml`.
 
-| Folder | Contents | Copy to |
-|--------|----------|---------|
-| **build/** | docker-env-template.txt | **D:\Docker\Builds\SegmentationServer\.env** |
-
-1. Copy **config-template/build/docker-env-template.txt** to **D:\Docker\Builds\SegmentationServer\.env**.
-2. Set `LETSENCRYPT_EMAIL`, `LETSENCRYPT_PRIMARY_DOMAIN`, and the two `SEGMENTATION_SSL_*` paths so the domain matches.
-3. Cloudflare DNS credentials are the shared file `D:\Docker\Builds\cloudflare.ini` (`CF_DNS_API_CREDENTIALS_HOST_PATH`). Do not add a per-service copy.
-
-`CERTBOT_AUTH_METHOD` defaults to `dns-cloudflare`.
-
-PEM paths inside the container are `/etc/letsencrypt/live/<domain>/fullchain.pem` and `privkey.pem`.
-
-Docker publishes **40443:443** for gRPC over TLS. There is no cleartext gRPC port. Host ports 80 and 443 belong to the reverse proxy. Point the router’s `segmentation.codepharm.net:443` forward at host port 40443.
-
-The optional point-prompt page listens on container port **8443** (host **40444**) only when `SEGMENTATION_DEMO_SITE=1`. It uses the same PEM files as gRPC TLS. While the flag is off nothing accepts connections on 8443. Forward `segmentation.codepharm.net:40444` only if that page should be reachable. `segmentation-certbot-renewer` (profile `letsencrypt`) enrolls the certificate and restarts `segmentation-server` when it renews.
-
-Enrollment:
-
-```bash
-docker compose --env-file D:/Docker/Builds/SegmentationServer/.env --profile letsencrypt up -d
-```
-
-`segmentation-server` only listens with TLS, so it needs the certificate files. At start it waits up to `SEGMENTATION_TLS_WAIT_SECONDS` (default 120) for `SSL_CERT_PATH` and `SSL_KEY_PATH` to appear, then exits with a message naming the missing files; `restart: unless-stopped` starts it again. Bring it up together with the renewer (`--profile letsencrypt`) the first time, or provide the PEM files some other way. For a local run without Let's Encrypt, generate a self-signed pair with `python -m segmentation_server.dev_cert --out ./dev-cert` and point `SSL_CERT_PATH` and `SSL_KEY_PATH` at it.
-
-## Several models (v3 and v4)
-
-Each model is its own container with its own host name, routed by SNI in the reverse proxy:
-
-1. Copy each model and its `.model.json` into `D:\Docker\Run\segmentation-server` (same stem). v2 and v3 need
-   hand-written manifests; see the trainer repository's `docs/model_manifest.md`.
-2. In `.env`, set `LETSENCRYPT_ADDITIONAL_DOMAINS=v3.segmentation.codepharm.net,v4.segmentation.codepharm.net`. On its
-   next start the renewer notices the certificate lacks those names and asks for one that has them (`certbot certonly
-   --expand`); it needs the DNS records first.
-3. Create the DNS records for `v3.` and `v4.segmentation.codepharm.net` (DNS only, not proxied).
-4. Run `rebuild-and-start.ps1 -WithV4`. `SEGMENTATION_V4_CHECKPOINT` picks the v4 file; name it for the
-   release (`/models/v4.3.pt`, with `v4.3.model.json` beside it).
-5. Add `v3.` and `v4.segmentation.codepharm.net` to the SNI map in the proxy's `stream.conf` (v3 shares the first
-   container's upstream, v4 is `:40445`) and `nginx -s reload`.
-
-## Fine-tuned checkpoint
-
-Compose bind-mounts the host folder `D:\Docker\Run\segmentation-server` at `/models` (override with `SEGMENTATION_MODEL_HOST`). The service loads `SAM2_CHECKPOINT`, default `/models/best_TEM_model.pt`.
-
-That file must be Meta `build_sam2` format (`{"model": state_dict}`), not the trainer's raw `best_model.pt`. Produce it with `sam2-em-export-serve` in Sam2SegmentationTrainer, then recreate `segmentation-server`. Weights load only at process start.
+- Run env to fill in: `deploy/examples/example.viking-segmentation.run.env`
+  (copy to `<root>/Run/viking-segmentation/viking-segmentation.run.env`).
+- Models, profiles (`seg-v3`, `seg-v4`, `seg-sem-v1`, `models`), ports, TLS and caches:
+  `Documentation/source/deployment/segmentation.rst`.

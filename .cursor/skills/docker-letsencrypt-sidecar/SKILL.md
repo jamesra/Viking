@@ -1,25 +1,56 @@
 ---
 name: docker-letsencrypt-sidecar
 description: >-
-  Enroll and renew Let's Encrypt certificates for a Docker service with the
-  shared Servers/certbot sidecar. Use when adding HTTPS, TLS, Let's Encrypt,
-  or certificate auto-renewal to a container in this repo.
+  Give a Docker service in this repo HTTPS from the single viking-certs renewer
+  (Servers/certbot). Use when adding HTTPS, TLS, Let's Encrypt, ACME/EAB, or
+  certificate auto-renewal to a container, or when changing how certificates
+  are issued, published or reloaded.
 ---
 
-# Docker Let's Encrypt sidecar
+# Shared TLS from viking-certs
 
-Reuse `Servers/certbot`. Do not copy `renew-loop.sh` into the service. One renewer container and one letsencrypt volume per service. Do not share Identity Server's volume or domain.
+There is one renewer per host, the `viking-certs` stack (`Servers/certbot/docker-compose.yml`,
+`renew-loop.sh`). It keeps one certificate lineage, `TLS_CERT_NAME`, that covers every
+`VIKING_HOSTNAME_*` (or `TLS_HOSTNAMES`), and publishes it to the host's `DOCKER_CERTS_DIR`:
 
-Worked examples: `Servers/IdentityServer/docker-compose-all.yml` (`identity-certbot-renewer`) and root `docker-compose.yml` (`segmentation-certbot-renewer`).
+```text
+${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/fullchain.pem  privkey.pem  cert.pem  chain.pem  cert.pfx  .renewed-at
+```
 
-## Add it to a service
+Do not add a per-service certbot renewer, a per-service `*-letsencrypt` volume, or a copy of
+`renew-loop.sh`. Do not serve ACME challenges from the app: HTTP-01 is answered by `viking-proxy`
+from the webroot the renewer writes (`<root>/Data/viking-certs/webroot`).
 
-1. Build the existing image from `Servers/certbot`. Set `CERTBOT_RESTART_CONTAINER` to the compose service name (fallback is `IDENTITY_CONTAINER_NAME`, then `identity-all-services`).
-2. Give the renewer its own writable volume mounted at `/etc/letsencrypt`, plus certbot lib and log volumes, the Docker socket, and a read-only mount of the shared Cloudflare credentials file `D:\Docker\Builds\cloudflare.ini`. Do not copy that file per service.
-3. Mount that letsencrypt volume read-only into the app. The app reads `SSL_CERT_PATH` and `SSL_KEY_PATH` at process start. The sidecar restarts the app container only when the canonical PEM bytes change.
-4. Parameterize with `LETSENCRYPT_EMAIL`, `LETSENCRYPT_PRIMARY_DOMAIN`, and `CERTBOT_AUTH_METHOD` (default `dns-cloudflare`).
-5. Put the service env in `D:\Docker\Builds\<Service>` from a repo `config-template`. Never commit the filled env file. The Cloudflare token stays in the shared `D:\Docker\Builds\cloudflare.ini`. PEM paths inside the container are `/etc/letsencrypt/live/<domain>/fullchain.pem` and `privkey.pem`.
-6. Start the renewer with the service. Offer a disable path (`docker compose up -d --no-deps <service>` and `docker compose stop <renewer>`, or a script switch). Use a Compose profile only when the renewer must stay off unless asked for. Document `docker compose --env-file D:/Docker/Builds/<Service>/.env up -d`.
-7. Port 443 inside a non-root container needs `NET_BIND_SERVICE` (and file capability on the listener binary), or map host 443 to an unprivileged container port.
+Modes (`TLS_MODE`): `letsencrypt` (HTTP-01 webroot), `acme-eab` (`TLS_ACME_SERVER`, `TLS_EAB_KID`,
+`TLS_EAB_HMAC_KEY[_FILE]`, e.g. InCommon via Pitt IT), `manual` (PEMs dropped in by
+`stack.ps1 certs manual` or copied from the web host; the loop only derives `cert.pfx` and reloads).
+`renew-loop.sh --once` is the one-shot used by `stack.ps1 certs letsencrypt|acme-eab`. Old
+`LETSENCRYPT_*` / `CERTBOT_*` / `ACME_*` names still work with a deprecation warning.
 
-If the certificate files are missing, the app keeps its non-TLS listener and does not block startup. The first successful enroll restarts it onto the certificate.
+## Add TLS to a service
+
+1. Mount the published certificates read-only: `- ${DOCKER_CERTS_DIR:?...}:/certs:ro`.
+2. Point the app at the PEM pair: `SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem`,
+   `SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem` (Identity: `SSL__CertificatePath` /
+   `SSL__KeyPath`). .NET services load them with a `DockerTlsCertificate.TryLoad` helper
+   (`Servers/GrpcSectionCorrectionService`, `Servers/GrpcAnnotationService`): null when absent, so the
+   app keeps a cleartext or dev-cert listener instead of failing.
+3. Label the service `viking.tls-reload: "true"`. The renewer restarts every running container with
+   that label when the published bytes change; apps read the PEMs only at start.
+4. Add the service's hostname as `VIKING_HOSTNAME_<SERVICE>` (single label under `VIKING_DOMAIN`, so a
+   `*.<domain>` certificate also covers it) and its upstream to `Servers/proxy` (map line in
+   `templates/stream.conf.template`, env default in `Servers/proxy/docker-compose.yml`). Add the
+   hostname default to the `x-viking-hostnames` block in both `Servers/proxy` and `Servers/certbot`.
+5. Register the stack in `deploy/stacks.psd1` (`TLS_CERT_NAME` in `Required`) and add a run env
+   example under `deploy/examples/`.
+6. A non-root container on port 443 needs `NET_BIND_SERVICE`, or map host 443 to a high container port.
+   The files are world-readable (644) so any uid can read them.
+
+## Hosts
+
+- Web host: `viking-certs` in `letsencrypt` or `acme-eab`, beside `viking-proxy`.
+- Compute host (segmentation) and other hosts: copy the web host's `Certs/<TLS_CERT_NAME>/` and run
+  `viking-certs` with `TLS_MODE=manual`; it restarts the local labelled containers on change.
+- IIS host: import `cert.pfx` with `deploy/Install-IisCertificate.ps1`.
+
+Docs: `Documentation/source/deployment/tls.rst`.

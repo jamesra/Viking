@@ -1,0 +1,50 @@
+##################
+Section correction
+##################
+
+``viking-corrections`` runs ``Servers/GrpcSectionCorrectionService/docker-compose.yml`` on the web
+host. The service builds residual section-correction maps for every annotation volume assigned to
+it in Identity and serves them over gRPC at ``VIKING_HOSTNAME_CORRECTIONS``.
+
+=============  ======  ============================================================================
+Container      Host    Use
+=============  ======  ============================================================================
+80 (h2c)       41080   In-container ``correction-menu`` and local clients
+443 (TLS)      41443   ``VIKING_UPSTREAM_CORRECTIONS``. Bound only once the certificate files exist;
+                       until then the service serves cleartext only and logs it.
+=============  ======  ============================================================================
+
+Data (defaults under ``<root>/Data/viking-corrections``): ``corrections/`` is the published output,
+also mounted read-only by ``viking-annotation`` (keep both stacks on one host, or point
+``GRPC_ANNOTATION_CORRECTIONS_PATH`` at shared storage); ``cache/`` is the stos cache. Override with
+``GRPC_ANNOTATION_CORRECTIONS_PATH`` and ``SECTION_CORRECTION_CONFIG_PATH``.
+
+Identity setup
+==============
+
+#. In the viking-identity run env set ``CORRECTION_SERVICE_CLIENT_SECRET`` (generate it) and restart
+   Identity; this registers the ``correction`` client.
+#. Put the same value in ``IdentityServer__ClientSecret`` of the corrections run env.
+#. In the management site create a Correction Service resource, name it in
+   ``CorrectionService__Name`` and assign annotation contexts on each context's Edit page.
+
+SQL: ``AnnotationConnections__<Database>`` (or ``AnnotationConnectionTemplate``) gives direct SQL per
+annotation database; without it the service reads through the OData endpoint Identity reports
+(slower).
+
+Rebuilds
+========
+
+``Rebuild__Cron`` is a 5-field cron in UTC (default ``0 2 * * 0``, Sunday 02:00).
+``Rebuild__RunOnStartup=true`` rebuilds every assigned volume at start.
+
+Console menu (status and manual refresh)::
+
+   docker compose -p viking-corrections exec section-correction-service correction-menu
+
+*Status* shows the rebuild state and each volume's build time; *Refresh volume* rebuilds one volume
+(or all) with a progress bar. ``RebuildVolume`` is refused for any caller not on loopback, and only
+one rebuild runs at a time.
+
+TLS comes from ``viking-certs`` (label ``viking.tls-reload``); the old
+``section-correction-certbot-renewer`` and its Cloudflare DNS credentials are gone.

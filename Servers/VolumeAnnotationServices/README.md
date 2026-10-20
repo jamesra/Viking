@@ -215,7 +215,7 @@ This approach:
 
 ## Related Documentation
 
-- `../../DOCKER-COMBINED-QUICKSTART.md` - Quick start guide
+- `../../Documentation/source/deployment/iis_legacy_services.rst` - Production deployment of the IIS services (replaces the removed DOCKER-COMBINED-QUICKSTART.md)
 - `../../Scripts/BuildAndRunCombined.ps1` - Build automation script
 - `../../Scripts/ValidateDockerSetup.ps1` - Prerequisites validation
 - `../../Scripts/TestDockerImage.ps1` - Deployment testing

@@ -45,7 +45,7 @@ Same `SKILL.md` format as Claude skills. Read the SKILL.md when the task matches
 | `mesh-difficult-cases` | Maintaining and re-checking the DifficultCases regression list |
 | `sam2-grounding` | Planning/editing SAM2 integration in SegmentationServer |
 | `deploy-viking-test` | Publishing the VikingTest Velopack build and announcing in Slack #betatest |
-| `docker-letsencrypt-sidecar` | Adding HTTPS/Let's Encrypt to a container via the shared certbot sidecar |
+| `docker-letsencrypt-sidecar` | Adding HTTPS to a container from the single `viking-certs` renewer (`/certs`, `viking.tls-reload`) |
 | `slack-ai-channel` | Posting/reading Slack #ai with the `[Viking-Server]` protocol |
 | `viking-server-ai-watch` | Launching the self-pacing Slack #ai server watch |
 

@@ -52,7 +52,8 @@ WORKDIR /src/Servers/GrpcAnnotationService
 RUN --mount=type=cache,id=viking-nuget,target=/root/.nuget/packages \
     dotnet publish "GrpcAnnotationService.csproj" -c Release -o /app/publish --configfile nuget.docker.config
 
-# Self-signed localhost cert so Viking (.NET Framework / WinHttpHandler) can
+# Self-signed localhost cert, the fallback when /certs/${TLS_CERT_NAME}/ (SSL_CERT_PATH/SSL_KEY_PATH,
+# see Program.cs) is not mounted, so Viking (.NET Framework / WinHttpHandler) can
 # call gRPC over TLS. h2c on :80 remains for tests and modern .NET clients.
 RUN mkdir -p /https && dotnet dev-certs https -ep /https/aspnetapp.pfx -p GrpcDevCert
 

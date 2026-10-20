@@ -1,27 +1,35 @@
 ---
-description: Where Docker mounted config and build data are stored (D:\Docker) for containers in this repo
-globs: "**/docker-compose*.yml,**/*.dockerfile,**/Dockerfile*,**/config-template/**"
+description: Where Docker run config, secrets, data and certificates live on a host (stack layout) for containers in this repo
+globs: "**/docker-compose*.yml,**/*.dockerfile,**/Dockerfile*,**/config-template/**,deploy/**"
 alwaysApply: false
 ---
 
-# Docker mounted-config and builds location
+# Docker host layout for Viking stacks
 
-For Docker containers in this project, **do not store real secrets or filled-in config in the repo**. Use a single local root for all such data:
+Real secrets and filled-in config **must not** be stored in the repo. Every host uses one layout root,
+`NORNIR_DOCKER_USER_ROOT` (`D:\Docker` on Windows, `/srv/docker` on Ubuntu), shared with nornir and
+managed by nornir-docker's `stack.ps1` / `Initialize-DockerHost.ps1`:
 
-**Root:** `D:\Docker`
+| Path | Holds |
+|------|-------|
+| `Run/_host/host.env` | machine settings shared by all stacks (VIKING_DOMAIN, VIKING_HOSTNAME_*, TLS_*) |
+| `Run/<stack>/<stack>.run.env` | the stack's settings, copied from `deploy/examples/example.<stack>.run.env` |
+| `Run/<stack>/secrets/` | secret files (secrets.json, license keys, secrets.env) |
+| `Data/<stack>/` | persistent runtime data (DataProtection keys, models, caches, SQL data) |
+| `Certs/<TLS_CERT_NAME>/` | fullchain.pem, privkey.pem, cert.pfx, written by viking-certs or `stack.ps1 certs manual` |
+| `Logs/<stack>/` | logs |
 
-- **Mounted config (runtime, mapped into container):** `D:\Docker\mounted-configs\<ServiceName>\`  
-  - Certs, keys, secrets, and other runtime data mounted into the container.  
-  - User copies from the repo’s config-template (e.g. `config-template/mounted-config/`) to this path and replaces templates with real values.
+`<stack>` is the kebab-case key in `deploy/stacks.psd1` (e.g. `viking-identity`); it is also the compose project name.
 
-- **Builds (build/run-time env):** `D:\Docker\Builds\<ServiceName>\`  
-  - `.env` files and other env used by `docker-compose` and restart scripts.  
-  - User copies from the repo’s build templates (e.g. `config-template/build/`) to this path and fills in values.
+**Conventions for new or changed containers:**
 
-**Conventions for new containers:**
+- Register the stack in `deploy/stacks.psd1` (compose files, Required keys, Example, Secrets, HealthUrl).
+- Commit a template as `deploy/examples/example.<stack>.run.env` with every key marked `# REQUIRED` or `# OPTIONAL`; no real values.
+- Compose files reference host paths only through the exported contract variables
+  (`${STACK_RUN_DIR}`, `${STACK_SECRETS_DIR}`, `${STACK_DATA_DIR}`, `${STACK_LOGS_DIR}`, `${DOCKER_CERTS_DIR}`),
+  never a literal `D:/Docker/...` path, so the same file runs on Windows and Ubuntu.
+- TLS services mount `${DOCKER_CERTS_DIR}:/certs:ro`, read `/certs/${TLS_CERT_NAME}/{fullchain,privkey}.pem`,
+  and carry the label `viking.tls-reload: "true"`. Do not add per-service certbot containers.
+- Do **not** reintroduce `D:\Docker\Builds\<Service>` env files or `D:\Docker\mounted-configs\<Service>` mounts.
 
-- Put template files in the repo under something like `config-template/mounted-config/` and `config-template/build/` (or the service’s equivalent).
-- Document in a README that the user copies those to `D:\Docker\mounted-configs\<ServiceName>` and `D:\Docker\Builds\<ServiceName>` and does not commit the copies.
-- Point compose and scripts at the Builds path for `env_file` and .env mounts (e.g. via `IDENTITY_BUILD_ENV_PATH` or a similar variable for the service). Use a variable like `IDENTITY_MOUNTED_CONFIG_PATH` for the mounted-config path.
-
-Example for Identity Server: mounted-config = `D:\Docker\mounted-configs\IdentityServer`, Builds = `D:\Docker\Builds\IdentityServer`.
+Docs: `Documentation/source/deployment/` and https://nornir.github.io/deployment/ (host layout, stack.ps1).

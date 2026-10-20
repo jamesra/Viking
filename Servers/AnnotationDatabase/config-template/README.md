@@ -3,6 +3,9 @@
 Templates for a throwaway SQL Server used by gRPC annotation integration tests.
 Do **not** commit filled-in copies. Real env files live under `D:\Docker\Builds\`.
 
+Production SQL is external (see `Documentation/source/deployment/sql.rst`); this container is the
+`local-sql` profile of the `viking-annotation` stack and has no backups.
+
 ## Workflow
 
 1. Create `D:\Docker\Builds\AnnotationSql\` if needed.
@@ -14,13 +17,13 @@ Do **not** commit filled-in copies. Real env files live under `D:\Docker\Builds\
    .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -ApplySchema
    ```
 
-   Or manually:
+   Or manually (the viking-annotation stack with profile `local-sql`; the script also sets the stack
+   variables stack.ps1 normally exports):
 
    ```powershell
-   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env `
-     -f docker-compose.yml -f docker-compose.annotation-db.yml `
-     -f docker-compose.identity-devtest.yml `
-     up --build -d identity-devtest annotation-sql grpc-annotation-service
+   docker compose -p viking-annotation --env-file D:/Docker/Builds/AnnotationSql/.env `
+     -f Servers/GrpcAnnotationService/docker-compose.yml --profile local-sql `
+     up --build -d annotation-sql grpc-annotation-service
    ```
 
 4. Apply the minimal test schema (if you did not pass `-ApplySchema`):

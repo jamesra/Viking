@@ -6,17 +6,16 @@
 # `env_file:`), overriding appsettings.json via ASP.NET Core's double-underscore
 # configuration-key convention. Do not commit the filled-in copy.
 #
-# Start-AnnotationTestStack.ps1 applies docker-compose.annotation-db.yml (SQL)
-# and docker-compose.identity-devtest.yml (DevTest Identity). For Viking against
-# this gRPC container, omit the identity overlay so IdentityServer__* below are
-# used; a production JWT will 401 against DevTest Identity.
+# Production: use deploy/examples/example.viking-annotation.run.env instead (stack viking-annotation).
+# Start-AnnotationTestStack.ps1 runs the stack with profile local-sql (annotation-sql). The
+# DevTest Identity container (identity-devtest) is gone; a production JWT will 401 against a DevTest issuer.
 
 # --- SQL Server (annotation database) ---
 # SQL auth (not Windows/Trusted_Connection) because the container is Linux-based.
 #
 # Option A (local annotation-sql compose service — preferred for integration tests):
 # Use the compose service name when grpc-annotation-service is on viking-network
-# with annotation-sql (see docker-compose.annotation-db.yml). Password must match
+# with annotation-sql (profile local-sql of Servers/GrpcAnnotationService/docker-compose.yml). Password must match
 # D:\Docker\Builds\AnnotationSql\.env MSSQL_SA_PASSWORD.
 ConnectionStrings__AnnotationConnection=Server=annotation-sql,1433;Database=AnnotationTest;User ID=sa;Password=REPLACE_WITH_SA_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True
 #
@@ -46,5 +45,5 @@ IdentityServer__AllowHttpMetadata=true
 # IdentityServer__AllowHttpMetadata=false
 
 # Published residual-correction maps (SectionCorrectionBuilder output).
-# Mounted at /corrections in docker-compose.yml.
+# Mounted at /corrections by Servers/GrpcAnnotationService/docker-compose.yml.
 Corrections__RootDirectory=/corrections

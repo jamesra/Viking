@@ -1,0 +1,90 @@
+# Stack: viking-certs  (registry: deploy/stacks.psd1)
+#
+# The one certificate renewer for every Viking TLS service on a host. It writes
+#   ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/{fullchain.pem,privkey.pem,cert.pem,chain.pem,cert.pfx,.renewed-at}
+# and restarts containers labelled viking.tls-reload=true when the certificate changes.
+# See renew-loop.sh for the modes and Documentation/source/deployment/tls.rst for operations.
+#
+# Run through nornir-docker's stack.ps1, which exports NORNIR_DOCKER_USER_ROOT, STACK_* and
+# DOCKER_CERTS_DIR and passes Run/_host/host.env + Run/viking-certs/viking-certs.run.env:
+#   stack.ps1 up viking-certs
+#   stack.ps1 certs letsencrypt     (runs renew-loop.sh --once)
+# By hand (the same variables exported):
+#   docker compose -p viking-certs --env-file <host.env> --env-file <run.env> -f Servers/certbot/docker-compose.yml up -d
+#
+# Hosts: run it on the web host (letsencrypt / acme-eab; the proxy serves the HTTP-01 webroot).
+# On the compute host run it in TLS_MODE=manual against a copy of the web host's /certs: it then
+# only regenerates cert.pfx and restarts the local labelled services when the copied files change.
+
+x-viking-hostnames: &viking-hostnames
+  # Defaults are <label>.${VIKING_DOMAIN}; single-label so one *.${VIKING_DOMAIN} certificate covers all.
+  VIKING_HOSTNAME_IDENTITY: ${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:?VIKING_DOMAIN must be set}}
+  VIKING_HOSTNAME_WEBSVC: ${VIKING_HOSTNAME_WEBSVC:-websvc.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_ANNOTATION: ${VIKING_HOSTNAME_ANNOTATION:-annotation.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_CORRECTIONS: ${VIKING_HOSTNAME_CORRECTIONS:-corrections.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_SEGMENTATION: ${VIKING_HOSTNAME_SEGMENTATION:-segmentation.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_SEGMENTATIONDEMO: ${VIKING_HOSTNAME_SEGMENTATIONDEMO:-segmentationdemo.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_SEG_V3: ${VIKING_HOSTNAME_SEG_V3:-segmentation-v3.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_SEG_V4: ${VIKING_HOSTNAME_SEG_V4:-segmentation-v4.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_SEG_SEM_V1: ${VIKING_HOSTNAME_SEG_SEM_V1:-segmentation-sem-v1.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_GALLERY: ${VIKING_HOSTNAME_GALLERY:-gallery.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_TEM_GALLERY: ${VIKING_HOSTNAME_TEM_GALLERY:-gallery-tem.${VIKING_DOMAIN}}
+  VIKING_HOSTNAME_SEM_GALLERY: ${VIKING_HOSTNAME_SEM_GALLERY:-gallery-sem.${VIKING_DOMAIN}}
+
+services:
+  viking-certs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: viking-certs:latest
+    restart: unless-stopped
+    environment:
+      <<: *viking-hostnames
+      TLS_MODE: ${TLS_MODE:-manual}
+      TLS_EMAIL: ${TLS_EMAIL:-}
+      TLS_CERT_NAME: ${TLS_CERT_NAME:-viking}
+      # Comma list. Empty = every VIKING_HOSTNAME_* above.
+      TLS_HOSTNAMES: ${TLS_HOSTNAMES:-}
+      TLS_ACME_SERVER: ${TLS_ACME_SERVER:-}
+      TLS_EAB_KID: ${TLS_EAB_KID:-}
+      TLS_EAB_HMAC_KEY: ${TLS_EAB_HMAC_KEY:-}
+      # Path inside the container; STACK_SECRETS_DIR is mounted at /run/secrets/viking-certs.
+      TLS_EAB_HMAC_KEY_FILE: ${TLS_EAB_HMAC_KEY_FILE:-/run/secrets/viking-certs/eab_hmac_key}
+      TLS_RENEW_INTERVAL_HOURS: ${TLS_RENEW_INTERVAL_HOURS:-12}
+      TLS_STAGING: ${TLS_STAGING:-0}
+      TLS_KEY_TYPE: ${TLS_KEY_TYPE:-rsa}
+      TLS_PFX_PASSWORD: ${TLS_PFX_PASSWORD:-}
+      TLS_MANUAL_POLL_SECONDS: ${TLS_MANUAL_POLL_SECONDS:-300}
+      # Deprecated names, read by renew-loop.sh only when the TLS_* name is empty (it logs a warning).
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-}
+      LETSENCRYPT_PRIMARY_DOMAIN: ${LETSENCRYPT_PRIMARY_DOMAIN:-}
+      LETSENCRYPT_ADDITIONAL_DOMAINS: ${LETSENCRYPT_ADDITIONAL_DOMAINS:-}
+      CERTBOT_AUTH_METHOD: ${CERTBOT_AUTH_METHOD:-}
+      CERTBOT_STAGING: ${CERTBOT_STAGING:-}
+      CERTBOT_RENEW_INTERVAL_HOURS: ${CERTBOT_RENEW_INTERVAL_HOURS:-}
+      CERTBOT_KEY_TYPE: ${CERTBOT_KEY_TYPE:-}
+      CERTBOT_CERT_NAME: ${CERTBOT_CERT_NAME:-}
+      ACME_SERVER: ${ACME_SERVER:-}
+      ACME_EAB_KID: ${ACME_EAB_KID:-}
+      ACME_EAB_HMAC_KEY: ${ACME_EAB_HMAC_KEY:-}
+      # Undocumented legacy DNS-01 path (TLS_MODE=dns-cloudflare); token file in STACK_SECRETS_DIR.
+      CF_DNS_API_CREDENTIALS_FILE: ${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/viking-certs/cloudflare.ini}
+      CF_DNS_PROPAGATION_SECONDS: ${CF_DNS_PROPAGATION_SECONDS:-60}
+    volumes:
+      # Published certificates, read by every TLS service as /certs:ro.
+      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs
+      # HTTP-01 webroot. viking-proxy mounts the same host folder read-only.
+      - ${VIKING_ACME_WEBROOT:-${STACK_DATA_DIR:?STACK_DATA_DIR must be set (stack.ps1 exports it)}/webroot}:/var/www/certbot
+      # certbot's own state lives in named volumes: its live/ symlinks do not survive Windows bind mounts.
+      - letsencrypt:/etc/letsencrypt
+      - certbot-lib:/var/lib/letsencrypt
+      - ${STACK_LOGS_DIR:?STACK_LOGS_DIR must be set (stack.ps1 exports it)}:/var/log/letsencrypt
+      - ${STACK_SECRETS_DIR:?STACK_SECRETS_DIR must be set (stack.ps1 exports it)}:/run/secrets/viking-certs:ro
+      # Restarts labelled containers after a renewal. Same path on Linux and Docker Desktop.
+      - type: bind
+        source: ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}
+        target: /var/run/docker.sock
+
+volumes:
+  letsencrypt:
+  certbot-lib:

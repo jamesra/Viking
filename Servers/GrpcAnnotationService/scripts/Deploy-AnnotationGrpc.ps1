@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Step 1 of the per-database deploy script (see the "Deploy one annotation database"
-    section of Servers/GrpcAnnotationService/config-template/README.md). Each annotation
+    section of Documentation/source/deployment/annotation_grpc.rst). Each annotation
     database gets its own Docker Compose project, viking-annotation-<database>, so several
     databases can later run side by side without name clashes.
 
@@ -111,7 +111,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $templatePath = Join-Path $repoRoot 'Servers\GrpcAnnotationService\config-template\build\docker-env-template.txt'
 $defaultEnvDir = 'D:\Docker\Builds\GrpcAnnotationService'
 $firstPort = 5010
-# Identity DevTest publishes 5020 in docker-compose.yml.
+# 5020 was the DevTest Identity port (identity-devtest, since removed); still skipped so old test setups keep working.
 $reservedPorts = @(5020)
 
 <#
@@ -140,7 +140,7 @@ function Get-ListeningPorts {
 .SYNOPSIS
     Returns the first HTTP port at or above $firstPort where Port and Port + 1 are both free.
 .DESCRIPTION
-    Ports are taken in pairs (h2c, HTTPS) to match the 5010/5011 convention of docker-compose.yml.
+    Ports are taken in pairs (h2c, HTTPS) to match the 5010/5011 convention of Servers/GrpcAnnotationService/docker-compose.yml.
 #>
 function Find-FreePortPair([int[]] $InUse) {
     for ($p = $firstPort; $p -lt 65534; $p += 2) {
@@ -165,13 +165,13 @@ function Get-UnfilledKeys([string[]] $Lines) {
 
 <#
 .SYNOPSIS
-    Returns the compose variables docker-compose.yml reads for one per-database project.
+    Returns the compose variables Servers/GrpcAnnotationService/docker-compose.yml reads for one per-database project.
 .DESCRIPTION
     Pure: maps the host port pair and env file to GRPC_ANNOTATION_HTTP_PORT (Port),
     GRPC_ANNOTATION_HTTPS_PORT (Port + 1) and GRPC_ANNOTATION_ENV_FILE (forward slashes,
     as compose files write paths). GRPC_ANNOTATION_CORRECTIONS_PATH is left unset so every
     project mounts the shared corrections folder. The ANNOTATION_SQL_* variables are not
-    set: they belong to docker-compose.annotation-db.yml, the local test SQL overlay, which
+    set: they belong to the local-sql profile (annotation-sql), the local test SQL, which
     a per-database deployment does not use; its database is named in the env file's
     connection string.
 #>
@@ -193,14 +193,21 @@ function Get-ComposeVariables([int] $HttpPort, [string] $EnvFilePath) {
     stops, or builds nothing. Throws when compose reports an invalid configuration.
 #>
 function Test-ComposeConfig([string] $ProjectName, [System.Collections.IDictionary] $Variables) {
+    # Stack folders stack.ps1 would export; defaulted under D:\Docker only when unset.
+    $root = if ($env:NORNIR_DOCKER_USER_ROOT) { $env:NORNIR_DOCKER_USER_ROOT } else { 'D:\Docker' }
+    $Variables = [ordered]@{} + $Variables
+    foreach ($pair in @(@('NORNIR_DOCKER_USER_ROOT', $root), @('DOCKER_CERTS_DIR', (Join-Path $root 'Certs')), @('STACK_RUN_DIR', (Join-Path $root 'Run\viking-annotation')))) {
+        if (-not [Environment]::GetEnvironmentVariable($pair[0]) -and -not $Variables.Contains($pair[0])) { $Variables[$pair[0]] = $pair[1].Replace('\', '/') }
+    }
     $saved = @{}
     foreach ($name in $Variables.Keys) {
         $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         [Environment]::SetEnvironmentVariable($name, $Variables[$name], 'Process')
     }
     try {
-        docker compose --project-name $ProjectName --project-directory $repoRoot `
-            -f (Join-Path $repoRoot 'docker-compose.yml') config --quiet grpc-annotation-service
+        # The viking-annotation stack file; its relative paths resolve from its own folder.
+        docker compose --project-name $ProjectName `
+            -f (Join-Path $repoRoot 'Servers\GrpcAnnotationService\docker-compose.yml') config --quiet grpc-annotation-service
         if ($LASTEXITCODE -ne 0) {
             throw "docker compose config failed for $ProjectName (exit $LASTEXITCODE)."
         }
@@ -310,7 +317,7 @@ if (-not (Test-Path -LiteralPath $envFull)) {
     }
     Write-Host 'Fill in these keys in the env file, then re-run:'
     Get-UnfilledKeys $lines | ForEach-Object { Write-Host "  $_" }
-    Write-Host '  IdentityServer__* : review per config-template/README.md (template defaults are DevTest).'
+    Write-Host '  IdentityServer__* : point at the real Identity issuer (template defaults are the retired DevTest instance).'
     return
 }
 

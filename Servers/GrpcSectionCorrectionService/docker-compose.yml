@@ -1,0 +1,46 @@
+# Stack: viking-corrections  (registry: deploy/stacks.psd1; runs on the web host)
+#
+# section-correction-service: builds residual section-correction maps per annotation volume and
+# serves them over gRPC at VIKING_HOSTNAME_CORRECTIONS.
+#   container 80  -> host 41080  h2c (and the in-container correction-menu)
+#   container 443 -> host 41443  TLS (VIKING_UPSTREAM_CORRECTIONS). Bound only once
+#                                /certs/${TLS_CERT_NAME}/ exists; viking-certs restarts it then.
+#
+#   stack.ps1 up viking-corrections
+#   docker compose -p viking-corrections --env-file <host.env> --env-file <run.env> \
+#     -f Servers/GrpcSectionCorrectionService/docker-compose.yml up -d --build
+#
+# Data (defaults under STACK_DATA_DIR): <...>/corrections is the published output, also mounted by
+# viking-annotation; <...>/cache is the stos cache. The container environment is the stack run env.
+
+services:
+  section-correction-service:
+    build:
+      context: ../..
+      dockerfile: Servers/GrpcSectionCorrectionService/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${SECTION_CORRECTION_ENV_FILE:-${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-corrections}.run.env}
+    ports:
+      - "${SECTION_CORRECTION_HTTP_PORT:-41080}:80"
+      - "${SECTION_CORRECTION_HTTPS_PORT:-41443}:443"
+    cap_add:
+      - NET_BIND_SERVICE
+    labels:
+      viking.tls-reload: "true"
+    volumes:
+      - ./appsettings.json:/app/appsettings.json:ro
+      - ./appsettings.Development.json:/app/appsettings.Development.json:ro
+      - ${GRPC_ANNOTATION_CORRECTIONS_PATH:-${STACK_DATA_DIR:?STACK_DATA_DIR must be set (stack.ps1 exports it)}}/corrections:/corrections
+      - ${SECTION_CORRECTION_CONFIG_PATH:-${STACK_DATA_DIR}}/cache:/cache
+      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=
+      - ASPNETCORE_HTTP_PORTS=
+      - ASPNETCORE_HTTPS_PORTS=
+      - Kestrel__UseDockerPorts=true
+      - Corrections__RootDirectory=/corrections
+      - Corrections__CachePath=/cache
+      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
+      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem

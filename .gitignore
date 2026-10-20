@@ -83,3 +83,6 @@ debug-*.log
 /objects_files.txt
 /Clients/MonogameTestbed/_extract_poly_wkt.py
 *_wpftmp.csproj
+
+# Committed env templates for the deployment stacks (no secrets; see Documentation/source/deployment).
+!deploy/examples/*.env

@@ -1,0 +1,41 @@
+# Rendered by the nginx image's envsubst into /etc/nginx/conf.d/stream.conf and included inside
+# stream {} by ../nginx.conf. Every ${VIKING_*} value comes from docker-compose.yml (which supplies
+# defaults), so none is ever left unsubstituted.
+#
+# Ported from the hand-kept Nginx Proxy Manager stream.conf of the old single-host setup: one SNI
+# name per service, passed through to the service's own TLS port. Unknown names go to
+# VIKING_UPSTREAM_DEFAULT (the legacy IIS host unless set).
+
+# Upstreams are host:port strings, resolved per connection, so a host that is down or not yet in
+# DNS does not stop the proxy from starting.
+resolver ${PROXY_RESOLVER} valid=30s ipv6=off;
+resolver_timeout 5s;
+
+map $ssl_preread_server_name $viking_backend {
+    ${VIKING_HOSTNAME_IDENTITY}          ${VIKING_UPSTREAM_IDENTITY};
+    ${VIKING_HOSTNAME_WEBSVC}            ${VIKING_UPSTREAM_WEBSVC};
+    ${VIKING_HOSTNAME_ANNOTATION}        ${VIKING_UPSTREAM_ANNOTATION};
+    ${VIKING_HOSTNAME_CORRECTIONS}       ${VIKING_UPSTREAM_CORRECTIONS};
+    ${VIKING_HOSTNAME_SEGMENTATION}      ${VIKING_UPSTREAM_SEGMENTATION};
+    ${VIKING_HOSTNAME_SEGMENTATIONDEMO}  ${VIKING_UPSTREAM_SEGMENTATIONDEMO};
+    ${VIKING_HOSTNAME_SEG_V3}            ${VIKING_UPSTREAM_SEG_V3};
+    ${VIKING_HOSTNAME_SEG_V4}            ${VIKING_UPSTREAM_SEG_V4};
+    ${VIKING_HOSTNAME_SEG_SEM_V1}        ${VIKING_UPSTREAM_SEG_SEM_V1};
+    # gallery-router (sam2-gallery stack) terminates TLS for all three gallery names.
+    ${VIKING_HOSTNAME_GALLERY}           ${VIKING_UPSTREAM_GALLERY};
+    ${VIKING_HOSTNAME_TEM_GALLERY}       ${VIKING_UPSTREAM_TEM_GALLERY};
+    ${VIKING_HOSTNAME_SEM_GALLERY}       ${VIKING_UPSTREAM_SEM_GALLERY};
+    default                              ${VIKING_UPSTREAM_DEFAULT};
+}
+
+server {
+    listen 443;
+    listen [::]:443;
+    ssl_preread on;
+    proxy_pass $viking_backend;
+    proxy_protocol off;
+    proxy_connect_timeout 60s;
+    # gRPC streams and long exports stay open; match the old proxy.
+    proxy_timeout 24h;
+    proxy_socket_keepalive on;
+}

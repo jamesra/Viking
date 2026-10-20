@@ -1,0 +1,83 @@
+# Stack: viking-annotation  (registry: deploy/stacks.psd1; runs on the web host)
+#
+# grpc-annotation-service: the gRPC annotation API Viking calls at VIKING_HOSTNAME_ANNOTATION.
+#   container 80  -> host GRPC_ANNOTATION_HTTP_PORT  (5010)  h2c, tests and modern .NET clients
+#   container 443 -> host GRPC_ANNOTATION_HTTPS_PORT (5011)  TLS for Viking (.NET 4.8 WinHttpHandler);
+#                    the proxy's VIKING_UPSTREAM_ANNOTATION points here.
+# TLS uses ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/ (mounted at /certs) when present and otherwise the
+# image's self-signed localhost certificate, so a dev box without certificates still starts.
+#
+# annotation-sql (profile local-sql): a throwaway SQL Server for integration tests and dev. Production
+# points ConnectionStrings__AnnotationConnection at the external annotation SQL Server instead.
+#
+#   stack.ps1 up viking-annotation
+#   docker compose -p viking-annotation --env-file <host.env> --env-file <run.env> \
+#     -f Servers/GrpcAnnotationService/docker-compose.yml [--profile local-sql] up -d --build
+#
+# The service's container environment is the stack run env (GRPC_ANNOTATION_ENV_FILE overrides it;
+# scripts/Deploy-AnnotationGrpc.ps1 uses that for one compose project per annotation database).
+
+services:
+  grpc-annotation-service:
+    build:
+      context: ../..
+      dockerfile: Servers/GrpcAnnotationService/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${GRPC_ANNOTATION_ENV_FILE:-${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-annotation}.run.env}
+    ports:
+      - "${GRPC_ANNOTATION_HTTP_PORT:-5010}:80"
+      - "${GRPC_ANNOTATION_HTTPS_PORT:-5011}:443"
+    labels:
+      viking.tls-reload: "true"
+    volumes:
+      - ./appsettings.json:/app/appsettings.json:ro
+      - ./appsettings.Development.json:/app/appsettings.Development.json:ro
+      # Published residual-correction maps, written by viking-corrections on the same host.
+      - ${GRPC_ANNOTATION_CORRECTIONS_PATH:-${NORNIR_DOCKER_USER_ROOT:?NORNIR_DOCKER_USER_ROOT must be set (stack.ps1 exports it)}/Data/viking-corrections}/corrections:/corrections
+      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=
+      - ASPNETCORE_HTTP_PORTS=
+      - ASPNETCORE_HTTPS_PORTS=
+      - Kestrel__UseDockerPorts=true
+      - Corrections__RootDirectory=/corrections
+      # Program.cs loads this PEM pair for :443 when both files exist, else the image's dev certificate.
+      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
+      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
+    depends_on:
+      annotation-sql:
+        condition: service_healthy
+        # Only when profile local-sql is on.
+        required: false
+
+  annotation-sql:
+    profiles: ["local-sql"]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    # Fixed name: Start-AnnotationTestStack.ps1 and Apply-MinimalSchema.ps1 look for it.
+    container_name: ${ANNOTATION_SQL_CONTAINER_NAME:-viking-annotation-sql}
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-}
+    ports:
+      - "${ANNOTATION_SQL_HOST_PORT:-1433}:1433"
+    volumes:
+      # Named volume: SQL Server's file ownership does not survive a Windows bind mount. No backups.
+      - annotation-sql-data:/var/opt/mssql
+      - ../AnnotationDatabase/scripts:/scripts:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  annotation-sql-data:

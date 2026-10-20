@@ -1,3 +1,34 @@
+<#
+.SYNOPSIS
+    Configures IIS application pools and applications for the Viking combined services.
+
+.DESCRIPTION
+    Creates the AnnotationService (WCF, .NET 4.8), ConnectomeODataV4 (.NET 4.8) and DataExport
+    (ASP.NET Core) application pools and applications under one IIS site, sets MIME types and
+    folder permissions, then restarts IIS. Used by the VolumeAnnotationServices Windows container
+    and by deploy/Deploy-VikingIis.ps1 -Action ConfigureIIS. The defaults reproduce the original
+    hard-coded paths.
+
+.PARAMETER WebRoot
+    Folder holding the annotation, odata and dataexport application folders. Default C:\inetpub\wwwroot.
+
+.PARAMETER SiteName
+    IIS site that receives the applications. Default "Default Web Site".
+
+.EXAMPLE
+    .\ConfigureIIS.ps1
+    Configures C:\inetpub\wwwroot\{annotation,odata,dataexport} under Default Web Site.
+
+.EXAMPLE
+    .\ConfigureIIS.ps1 -WebRoot D:\inetpub\viking -SiteName "Viking"
+
+.NOTES
+    Run as Administrator on the IIS host. Removes and recreates the three pools and applications.
+#>
+param(
+    [string]$WebRoot = "C:\inetpub\wwwroot",
+    [string]$SiteName = "Default Web Site"
+)
 # Script to configure IIS for Viking Combined Services
 # This script sets up the three services under different application paths
 
@@ -9,14 +40,14 @@ Write-Host "Configuring IIS for Viking Combined Services..." -ForegroundColor Gr
 Start-Service W3SVC -ErrorAction SilentlyContinue
 
 # Application paths
-$annotationPath = "C:\inetpub\wwwroot\annotation"
-$odataPath = "C:\inetpub\wwwroot\odata"
-$dataexportPath = "C:\inetpub\wwwroot\dataexport"
+$annotationPath = Join-Path $WebRoot "annotation"
+$odataPath = Join-Path $WebRoot "odata"
+$dataexportPath = Join-Path $WebRoot "dataexport"
 
 # Remove default website content
 Write-Host "Cleaning up default website..." -ForegroundColor Yellow
-Remove-Item "C:\inetpub\wwwroot\iisstart.*" -Force -ErrorAction SilentlyContinue
-Remove-Item "C:\inetpub\wwwroot\index.html" -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $WebRoot "iisstart.*") -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $WebRoot "index.html") -Force -ErrorAction SilentlyContinue
 
 # Create Application Pools
 Write-Host "Creating Application Pools..." -ForegroundColor Yellow
@@ -53,20 +84,20 @@ Set-ItemProperty "IIS:\AppPools\DataExportPool" -Name "processModel.identityType
 Write-Host "Creating Web Applications..." -ForegroundColor Yellow
 
 # Remove existing applications if they exist
-if (Test-Path "IIS:\Sites\Default Web Site\annotation") {
-    Remove-WebApplication -Name "annotation" -Site "Default Web Site"
+if (Test-Path "IIS:\Sites\$SiteName\annotation") {
+    Remove-WebApplication -Name "annotation" -Site $SiteName
 }
-if (Test-Path "IIS:\Sites\Default Web Site\odata") {
-    Remove-WebApplication -Name "odata" -Site "Default Web Site"
+if (Test-Path "IIS:\Sites\$SiteName\odata") {
+    Remove-WebApplication -Name "odata" -Site $SiteName
 }
-if (Test-Path "IIS:\Sites\Default Web Site\dataexport") {
-    Remove-WebApplication -Name "dataexport" -Site "Default Web Site"
+if (Test-Path "IIS:\Sites\$SiteName\dataexport") {
+    Remove-WebApplication -Name "dataexport" -Site $SiteName
 }
 
 # Create new applications
-New-WebApplication -Name "annotation" -Site "Default Web Site" -PhysicalPath $annotationPath -ApplicationPool "AnnotationServicePool" -Force
-New-WebApplication -Name "odata" -Site "Default Web Site" -PhysicalPath $odataPath -ApplicationPool "ConnectomeODataPool" -Force
-New-WebApplication -Name "dataexport" -Site "Default Web Site" -PhysicalPath $dataexportPath -ApplicationPool "DataExportPool" -Force
+New-WebApplication -Name "annotation" -Site $SiteName -PhysicalPath $annotationPath -ApplicationPool "AnnotationServicePool" -Force
+New-WebApplication -Name "odata" -Site $SiteName -PhysicalPath $odataPath -ApplicationPool "ConnectomeODataPool" -Force
+New-WebApplication -Name "dataexport" -Site $SiteName -PhysicalPath $dataexportPath -ApplicationPool "DataExportPool" -Force
 
 # Configure MIME types for DataExport (ASP.NET Core)
 Write-Host "Configuring MIME types..." -ForegroundColor Yellow
@@ -89,7 +120,7 @@ $acl.SetAccessRule($accessRule)
 Set-Acl $dataexportPath $acl
 
 # Enable detailed errors for debugging (optional - remove in production)
-Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST/Default Web Site' -filter "system.webServer/httpErrors" -name "errorMode" -value "Detailed"
+Set-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST/$SiteName" -filter "system.webServer/httpErrors" -name "errorMode" -value "Detailed"
 
 # Restart IIS
 Write-Host "Restarting IIS..." -ForegroundColor Yellow
