@@ -57,18 +57,23 @@ namespace WebAnnotation.Tools
         }
 
         /// <summary>
-        /// Viking's "Segment" on a circle: starts from the circle's prompt (four clicks inside it and its disc as a seed,
-        /// as auto-polygonize sends) and, on accept, gives <paramref name="circle"/> the outline as its shape.
+        /// Viking's "Segment to Polygon" on a circle and "Resegment" on a polygon: starts from <paramref name="foreground"/>
+        /// (and <paramref name="seeds"/>) and, on accept, gives <paramref name="target"/> the outline as its shape.
         /// </summary>
         internal SegmentTool(AnnotationToolContext context, ISegmentationViewport viewport,
-            Viking.Services.Grpc.IGrpcChannelManager channels, LocationObj circle, CircleSegmentationPrompts.StartingPrompt prompt)
-            : this(context, viewport, channels, circle.Parent?.TypeID ?? 0)
+            Viking.Services.Grpc.IGrpcChannelManager channels, LocationObj target, IReadOnlyList<Vector2> foreground,
+            IReadOnlyList<SegmentationSeed> seeds = null)
+            : this(context, viewport, channels, target.Parent?.TypeID ?? 0)
         {
-            _target = circle;
-            _foreground.AddRange(prompt.Points);
-            _seeds = new[] { prompt.Seed };
+            _target = target;
+            _foreground.AddRange(foreground);
+            _seeds = seeds?.ToArray() ?? Array.Empty<SegmentationSeed>();
             RequestSegmentation();
         }
+
+        /// <summary>The clicks Viking sends to resegment a polygon: centroids of its large triangles, in volume space.</summary>
+        internal static IReadOnlyList<Vector2> PolygonPrompt(LocationObj polygon, Viking.VolumeModel.IVolumeToSectionTransform mapper) =>
+            PolygonSegmentationPrompts.CreateVolumeForegroundPoints(SqlGeometryUtils.Extensions.ToPolygon(polygon.MosaicShape), mapper);
 
         /// <summary>The prompt Viking sends for <paramref name="circle"/>; false when it cannot be mapped onto the volume.</summary>
         internal static bool TryCreateCirclePrompt(LocationObj circle, Viking.VolumeModel.IVolumeToSectionTransform mapper,

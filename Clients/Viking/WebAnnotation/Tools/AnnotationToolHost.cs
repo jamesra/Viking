@@ -294,12 +294,28 @@ namespace WebAnnotation.Tools
             StartTool(new SegmentTool(_context, viewport, channels, typeId.Value));
         }
 
-        /// <summary>Viking's "Segment" on a circle: segments from the circle's prompt and replaces its shape on accept.</summary>
+        /// <summary>
+        /// Viking's "Segment to Polygon" on a circle (its prompt) or "Resegment" on a polygon (its triangle centroids):
+        /// segments and replaces the location's shape on accept.
+        /// </summary>
         public void StartSegmentationOf(LocationObj circle, UI.Commands.Segmentation.ISegmentationViewport viewport,
             Viking.Services.Grpc.IGrpcChannelManager channels)
         {
             if (!IsIdle || circle == null)
                 return;
+
+            if (circle.TypeCode is LocationType.POLYGON or LocationType.CURVEPOLYGON)
+            {
+                IReadOnlyList<Vector2> clicks = SegmentTool.PolygonPrompt(circle, _context.Mapper);
+                if (clicks.Count == 0)
+                {
+                    StatusChanged?.Invoke(this, "This polygon could not be mapped onto the volume");
+                    return;
+                }
+
+                StartTool(new SegmentTool(_context, viewport, channels, circle, clicks));
+                return;
+            }
 
             if (!SegmentTool.TryCreateCirclePrompt(circle, _context.Mapper, out var prompt))
             {
@@ -307,8 +323,14 @@ namespace WebAnnotation.Tools
                 return;
             }
 
-            StartTool(new SegmentTool(_context, viewport, channels, circle, prompt));
+            StartTool(new SegmentTool(_context, viewport, channels, circle, prompt.Points, new[] { prompt.Seed }));
         }
+
+        public void ConvertToCircle(LocationObj location) => _ = ShapeActions.ConvertToCircleAsync(_context, location);
+
+        public void ConvertCircleToPolygon(LocationObj circle) => _ = ShapeActions.ConvertCircleToPolygonAsync(_context, circle);
+
+        public void SimplifyPolygon(LocationObj polygon) => _ = ShapeActions.SimplifyPolygonAsync(_context, polygon);
 
         /// <summary>Viking's Ctrl+Z: reverts the newest recorded edit and saves it. Only while no tool is active.</summary>
         public bool Undo()

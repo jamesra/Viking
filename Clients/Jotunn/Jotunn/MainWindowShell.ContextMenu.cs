@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
@@ -39,8 +40,7 @@ namespace Jotunn
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Terminal", () => _tools.ToggleTerminal(location), isChecked: location.Terminal));
             menu.Items.Add(Item("_Off edge", () => _tools.ToggleOffEdge(location), isChecked: location.OffEdge));
-            if (location.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
-                menu.Items.Add(Item("Se_gment into a polygon", () => SegmentCircle(location)));
+            menu.Items.Add(ShapeMenu(location));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Copy _location ID", () => Clipboard.SetText(location.ID.ToString())));
             menu.Items.Add(Item("Copy _structure ID", () => Clipboard.SetText(location.ParentID.ToString()), isEnabled: location.ParentID.HasValue));
@@ -51,6 +51,29 @@ namespace Jotunn
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Delete…", () => ConfirmAndDelete(location)));
             return menu;
+        }
+
+        /// <summary>Viking's "Change Shape" submenu, plus "Simplify Shape" for polygons.</summary>
+        MenuItem ShapeMenu(LocationObj location)
+        {
+            MenuItem shape = new() { Header = "Change s_hape" };
+            bool circle = location.TypeCode == LocationType.CIRCLE;
+            bool polygon = location.TypeCode is LocationType.POLYGON or LocationType.CURVEPOLYGON;
+            if (!circle)
+                shape.Items.Add(Item("_Circle", () => _tools.ConvertToCircle(location)));
+            if (circle)
+            {
+                shape.Items.Add(Item("Convert to _polygon", () => _tools.ConvertCircleToPolygon(location)));
+                shape.Items.Add(Item("_Segment to polygon…", () => SegmentCircle(location)));
+            }
+
+            if (polygon)
+            {
+                shape.Items.Add(Item("_Resegment…", () => SegmentCircle(location)));
+                shape.Items.Add(Item("Si_mplify shape", () => _tools.SimplifyPolygon(location)));
+            }
+
+            return shape;
         }
 
         /// <summary>

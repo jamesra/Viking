@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -142,6 +143,50 @@ namespace WebAnnotationTests
 
             Assert.IsFalse(_host.Undo());
             Assert.AreEqual("Nothing to undo", _status);
+        }
+
+        [TestMethod]
+        public void ConvertingACircleToAPolygonTracesItsOutline()
+        {
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+
+            _host.ConvertCircleToPolygon(circle);
+
+            Assert.AreEqual(Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON, circle.TypeCode);
+            Assert.IsInstanceOfType(circle.MosaicShape, typeof(Geometry.IPolygon2D));
+        }
+
+        [TestMethod]
+        public void ConvertingAPolygonToACircleKeepsItsCenter()
+        {
+            var square = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON, "POLYGON((10 10, 90 10, 90 90, 10 90, 10 10))");
+            Geometry.Vector2 center = square.Position;
+
+            _host.ConvertToCircle(square);
+
+            Assert.AreEqual(Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, square.TypeCode);
+            Assert.IsInstanceOfType(square.MosaicShape, typeof(Geometry.ICircle2D));
+            Assert.AreEqual(center.X, square.Position.X, 1e-6);
+            Assert.AreEqual(center.Y, square.Position.Y, 1e-6);
+        }
+
+        [TestMethod]
+        public void SimplifyingDropsVerticesThatAddNothing()
+        {
+            // A densely traced ring, as a pen stroke or segmentation leaves: 64 vertices on a circle of radius 40.
+            var ring = System.Linq.Enumerable.Range(0, 65).Select(i =>
+            {
+                double angle = 2 * System.Math.PI * (i % 64) / 64;
+                return $"{100 + 40 * System.Math.Cos(angle):F3} {100 + 40 * System.Math.Sin(angle):F3}";
+            });
+            var polygon = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON, $"POLYGON(({string.Join(", ", ring)}))");
+
+            _host.SimplifyPolygon(polygon);
+
+            Assert.IsTrue(SqlGeometryUtils.Extensions.ToPolygon(polygon.MosaicShape).ExteriorRing.Length < 65, _status);
         }
 
         static string RepoUserSettings([CallerFilePath] string thisSourceFile = "") =>

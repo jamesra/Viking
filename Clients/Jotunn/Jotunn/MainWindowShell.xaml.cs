@@ -685,7 +685,7 @@ namespace Jotunn
         Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels(string url) =>
             _segmentationChannels ??= new Viking.Services.Grpc.GrpcChannelManager(new FixedSegmentationEndpoint(url));
 
-        /// <summary>Viking's "Segment" on a circle location.</summary>
+        /// <summary>Viking's "Segment to Polygon" on a circle, or "Resegment" on a polygon.</summary>
         void SegmentCircle(LocationObj circle)
         {
             string url = SegmentationServiceUrl();
