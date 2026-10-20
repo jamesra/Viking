@@ -23,6 +23,7 @@ namespace Jotunn
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
 
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             Global.Initialize();
@@ -84,6 +85,8 @@ namespace Jotunn
                     return;
                 }
 
+                ShareSessionWithVikingState(volume, login);
+
                 TileLoadEnvironment.UiDispatcher = Dispatcher;
                 TileLoadEnvironment.BindVolume(volume);
                 TileLoadEnvironment.StartTexturePipeline();
@@ -133,6 +136,31 @@ namespace Jotunn
                 MessageBox.Show(ex.Message, "Jotunn", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
+        }
+
+        /// <summary>
+        /// An exception from a UI handler (often an async void one) is reported and the session kept, as Viking's
+        /// exception report does, instead of ending the process with unsaved work.
+        /// </summary>
+        void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            Trace.WriteLine($"Unhandled UI exception: {e.Exception}");
+            MessageBox.Show(MainWindow, $"An unexpected error occurred:\n\n{e.Exception.Message}", "Jotunn",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Shared WebAnnotation code (settings paths, review access, property pages) reads Viking's UI state; Jotunn
+        /// fills in the open volume and the signed-in user so that code sees the same session.
+        /// </summary>
+        static void ShareSessionWithVikingState(Volume volume, LoginWindow login)
+        {
+            Viking.UI.State.volume = new Viking.ViewModels.VolumeViewModel(volume);
+            if (login.Credentials != null)
+                Viking.UI.State.UserCredentials = login.Credentials;
+            if (login.BearerToken != null)
+                Viking.UI.State.UserBearerToken = login.BearerToken;
         }
     }
 }

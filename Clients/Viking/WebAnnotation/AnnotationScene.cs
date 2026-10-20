@@ -30,6 +30,11 @@ namespace WebAnnotation
         readonly Dictionary<int, Task> _loadBySection = new();
         readonly Dictionary<int, CancellationTokenSource> _loadCtsBySection = new();
         readonly object _loadLock = new();
+        readonly Dictionary<int, long> _lastUsedTicks = new();
+        readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
+
+        /// <summary>A section used this recently is on screen (drawn every frame) and is never evicted.</summary>
+        static readonly TimeSpan InUseWindow = TimeSpan.FromSeconds(5);
         SpriteBatch _spriteBatch;
         SpriteFont _font;
         BasicEffect _basicEffect;
@@ -65,6 +70,7 @@ namespace WebAnnotation
         {
             lock (_loadLock)
             {
+                _lastUsedTicks[sectionNumber] = _clock.ElapsedTicks;
                 if (_sections.TryGetValue(sectionNumber, out SectionAnnotationsView existing))
                     return existing;
 
@@ -73,7 +79,54 @@ namespace WebAnnotation
 
                 SectionAnnotationsView view = new(section, _transforms, _volume);
                 _sections[sectionNumber] = view;
+                EvictLeastRecentlyUsed(Global.AnnotationSettings.NumSectionsInMemory);
                 return view;
+            }
+        }
+
+        /// <summary>
+        /// Viking's section view cache limit (<c>NumSectionsInMemory</c>): drops the least recently used section views
+        /// beyond <paramref name="maxSections"/>, never one used within <see cref="InUseWindow"/>. Caller holds the lock.
+        /// </summary>
+        void EvictLeastRecentlyUsed(int maxSections)
+        {
+            long inUseSince = _clock.ElapsedTicks - (long)(InUseWindow.TotalSeconds * System.Diagnostics.Stopwatch.Frequency);
+            while (_sections.Count > Math.Max(1, maxSections))
+            {
+                int oldest = -1;
+                long oldestTicks = long.MaxValue;
+                foreach (int candidate in _sections.Keys)
+                {
+                    long used = _lastUsedTicks.TryGetValue(candidate, out long t) ? t : 0;
+                    if (used < oldestTicks)
+                    {
+                        oldestTicks = used;
+                        oldest = candidate;
+                    }
+                }
+
+                if (oldest < 0 || oldestTicks >= inUseSince)
+                    return;
+
+                _sections.Remove(oldest);
+                _lastUsedTicks.Remove(oldest);
+                _loadTarget.Remove(oldest);
+                _loadBySection.Remove(oldest);
+                if (_loadCtsBySection.TryGetValue(oldest, out CancellationTokenSource cts))
+                {
+                    cts.Cancel();
+                    _loadCtsBySection.Remove(oldest);
+                }
+            }
+        }
+
+        /// <summary>Sections whose annotation views are held; for diagnostics and tests.</summary>
+        internal int[] HeldSections
+        {
+            get
+            {
+                lock (_loadLock)
+                    return _sections.Keys.ToArray();
             }
         }
 
@@ -91,6 +144,7 @@ namespace WebAnnotation
 
                 sections = _sections.Keys.ToArray();
                 _sections.Clear();
+                _lastUsedTicks.Clear();
                 _loadTarget.Clear();
                 _loadBySection.Clear();
                 _loadCtsBySection.Clear();
