@@ -89,5 +89,42 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(obj.Label, Is.EqualTo("server label"), "the edit was saved; it is no longer pending");
             Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE));
         }
+
+        /// <summary>
+        /// The update RPC's returned copies replace the cached values the server owns (LastModified, Username), as the
+        /// WCF store's ProxyUpdate did, without queueing the object again.
+        /// </summary>
+        [Test]
+        public async Task SuccessfulSave_AppliesTheServersReturnedCopy()
+        {
+            DateTime serverTime = new DateTime(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+            var serverCopy = new Structure
+            {
+                Id = 8,
+                TypeId = 1,
+                Label = "user label",
+                Notes = string.Empty,
+                Username = "saving user",
+                Created = Timestamp.FromDateTime(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
+                LastModified = Timestamp.FromDateTime(serverTime),
+            };
+            var client = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>
+                .Create("UpdateAsync", _ => Task.FromResult(new UpdateResults<long, IStructure>(updated: new IStructure[] { serverCopy })));
+            var factory = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>>
+                .Create("GetOrCreate", _ => client);
+            var toServer = StructureStoreRegionQueryTests.FakeInterface<IObjectConverter<StructureObj, IStructure>>
+                .Create("Convert", _ => null);
+            var store = new StructureStore(factory, null, toServer, null, new StructureServerToClientUpdater(), null, null);
+
+            var obj = store.GetOrAdd(8, key => new StructureObj(key, 1), out _);
+            obj.DBAction = DBACTION.NONE;
+            obj.Label = "user label";
+
+            Assert.That(await store.Save(CancellationToken.None), Is.True);
+
+            Assert.That(obj.Username, Is.EqualTo("saving user"));
+            Assert.That(obj.LastModified, Is.EqualTo(serverTime));
+            Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE), "the server's copy is not queued for another Save");
+        }
     }
 }

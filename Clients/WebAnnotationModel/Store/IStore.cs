@@ -101,6 +101,13 @@ namespace WebAnnotationModel
         IReadOnlyCollection<OBJECT> CachedObjects { get; }
 
         /// <summary>
+        /// The failure from the most recent server fetch by ID on this store, or null when that fetch succeeded or the
+        /// server had no such object. <see cref="GetObjectByID"/> returns null in both failure cases, so callers read this
+        /// to tell an access-denied fetch from a missing object.
+        /// </summary>
+        Exception LastServerFetchError { get; }
+
+        /// <summary>
         /// Cache-only bulk lookup. Does not contact the server.
         /// <paramref name="found"/> and <paramref name="missing"/> are in request order.
         /// </summary>

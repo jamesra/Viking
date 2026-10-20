@@ -122,17 +122,13 @@ namespace WebAnnotationModel.Objects
         /// <summary>Names of properties the user changed since DBAction was last NONE. Guarded by locking itself.</summary>
         private readonly HashSet<string> _LocallyEdited = new HashSet<string>();
 
-        /// <summary>The structure whose server values this thread is applying in <see cref="ApplyServerValues"/>, if any.</summary>
-        [ThreadStatic]
-        private static StructureObj t_ApplyingServerValuesTo;
-
         /// <summary>
         /// Called by the editable setters after the value changed. Records the property as a local edit and marks the
         /// object for Save, unless the change is a server value applied by <see cref="ApplyServerValues"/> on this thread.
         /// </summary>
         private void MarkLocalEdit(string propertyName)
         {
-            if (ReferenceEquals(t_ApplyingServerValuesTo, this))
+            if (IsApplyingServerValues)
                 return;
 
             lock (_LocallyEdited)
@@ -146,26 +142,6 @@ namespace WebAnnotationModel.Objects
         {
             lock (_LocallyEdited)
                 return _LocallyEdited.Contains(propertyName);
-        }
-
-        /// <summary>
-        /// Runs <paramref name="apply"/>, which copies server values onto this structure through its setters. Changes
-        /// it makes on the calling thread are not local edits: they leave DBAction and the edit set alone, so a queued
-        /// Save stays queued and an unedited structure stays NONE. Edits from other threads are still recorded.
-        /// Used by the gRPC server-to-client updater.
-        /// </summary>
-        internal void ApplyServerValues(Action apply)
-        {
-            StructureObj previous = t_ApplyingServerValuesTo;
-            t_ApplyingServerValuesTo = this;
-            try
-            {
-                apply();
-            }
-            finally
-            {
-                t_ApplyingServerValuesTo = previous;
-            }
         }
 
         /// <summary>A saved (or server-mirroring) structure has no pending local edits.</summary>

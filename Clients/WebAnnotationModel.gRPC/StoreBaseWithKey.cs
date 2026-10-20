@@ -318,6 +318,8 @@ namespace WebAnnotationModel.gRPC
 
         public IReadOnlyCollection<OBJECT> CachedObjects => IDToObject.Values.ToArray();
 
+        public Exception LastServerFetchError { get; private set; }
+
         public bool TryGetObjectsByIDs(ICollection<KEY> keys, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing)
         {
             if (keys == null || keys.Count == 0)
@@ -349,11 +351,13 @@ namespace WebAnnotationModel.gRPC
             {
                 Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
                 obj = await client.GetAsync(ID, token);
+                LastServerFetchError = null;
             }
             catch (Exception e)
             {
                 Trace.WriteLine(e.ToString(), nameof(WebAnnotationModel));
                 Trace.WriteLine(e.Message, nameof(WebAnnotationModel));
+                LastServerFetchError = e;
                 obj = default;
             }
 
@@ -823,6 +827,8 @@ namespace WebAnnotationModel.gRPC
                 // next server refresh may overwrite the fields that were just saved.
                 foreach (OBJECT dbObj in changedObjects)
                     dbObj.DBAction = DBACTION.NONE;
+
+                await ApplySavedServerObjects(updateResults).ConfigureAwait(false);
             }
             catch(Exception e)
             {
@@ -851,6 +857,31 @@ namespace WebAnnotationModel.gRPC
             //CallOnAllUpdatesCompleted(new OnAllUpdatesCompletedEventArgs(output.ToArray()));
 
             return true;
+        }
+
+        /// <summary>
+        /// Copies the server's versions of the objects an update just saved onto the cached objects (LastModified,
+        /// Username and anything the server derives), as the WCF store's ProxyUpdate replaced them. The objects are NONE
+        /// by now, so the updater does not queue them again. Inserted objects are skipped: the server may assign them a
+        /// new key, and their create path adds them. A failure here is traced and does not fail the save.
+        /// </summary>
+        private async Task ApplySavedServerObjects(UpdateResults<KEY, SERVER_OBJECT> updateResults)
+        {
+            SERVER_OBJECT[] updated = updateResults.UpdatedObjects?.Where(o => o != null).ToArray();
+            if (updated is null || updated.Length == 0)
+                return;
+
+            try
+            {
+                ChangeInventory<OBJECT> applied = await ServerQueryResultsHandler
+                    .ProcessServerUpdate(updated, Array.Empty<KEY>())
+                    .ConfigureAwait(false);
+                await ServerQueryResultsHandler.EndBatch(applied).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine($"Saved, but could not apply the server's copies to the cache:\n{e}");
+            }
         }
 
         /// <summary>

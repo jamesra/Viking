@@ -170,6 +170,8 @@ namespace WebAnnotation
                 try
                 {
                     loc = await Store.Locations.GetObjectByID(locId);
+                    if (loc is null)
+                        fetchError = Store.Locations.LastServerFetchError;
                 }
                 catch (Exception ex)
                 {
@@ -231,10 +233,12 @@ namespace WebAnnotation
             try
             {
                 loc = await Store.Locations.GetObjectByID(locID);
+                // The store logs a failed fetch and returns null; its last fetch error says whether access was denied.
+                if (loc is null)
+                    fetchError = Store.Locations.LastServerFetchError;
             }
             catch (Exception ex)
             {
-                // The gRPC store logs and swallows most fetch faults (returning null); keep any that escape.
                 loc = null;
                 fetchError = ex;
             }

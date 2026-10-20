@@ -152,6 +152,11 @@ namespace WebAnnotationModel.gRPC.Converters
         ILocation IObjectConverter<LocationObj, ILocation>.Convert(LocationObj src) => Convert(src);
     }
 
+    /// <summary>
+    /// Copies a server refresh onto a cached location. Applied values are not local edits, so a location that mirrors the
+    /// server stays <see cref="DBACTION.NONE"/> and the next Save does not send it back under the current user's name.
+    /// A location with an unsaved local edit (DBAction not NONE) keeps the user's values until that edit is saved.
+    /// </summary>
     public class LocationServerToClientUpdater : IObjectUpdater<LocationObj, Location>,
         IObjectUpdater<LocationObj, ILocation>
     {
@@ -165,21 +170,27 @@ namespace WebAnnotationModel.gRPC.Converters
 
         public async Task<bool> Update(LocationObj obj, Location update)
         {
+            if (obj.DBAction != DBACTION.NONE)
+                return false;
+
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
             try
             {
                 obj.PropertyChanged += OnPropertyChanged;
 
-                obj.Section = update.Section;
-                obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
-                obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
-                obj.TypeCode = (LocationType)update.TypeCode;
-                obj.Terminal = update.Terminal;
-                obj.OffEdge = update.OffEdge;
-                obj.Width = update.Width;
-                obj.Username = update.Username;
-                obj.LastModified = update.LastModified.ToDateTime();
+                obj.ApplyServerValues(() =>
+                {
+                    obj.Section = update.Section;
+                    obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
+                    obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
+                    obj.TypeCode = (LocationType)update.TypeCode;
+                    obj.Terminal = update.Terminal;
+                    obj.OffEdge = update.OffEdge;
+                    obj.Width = update.Width;
+                    obj.Username = update.Username;
+                    obj.LastModified = update.LastModified.ToDateTime();
+                });
                 await obj.SetAttributes(update.Attributes.ParseAttributes());
                 await obj.SetLinksFromServerAsync(update.Links);
             }
@@ -193,21 +204,27 @@ namespace WebAnnotationModel.gRPC.Converters
 
         static async Task<bool> UpdateFromInterface(LocationObj obj, ILocation update)
         {
+            if (obj.DBAction != DBACTION.NONE)
+                return false;
+
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
             try
             {
                 obj.PropertyChanged += OnPropertyChanged;
 
-                obj.Section = update.SectionNumber;
-                obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
-                obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
-                obj.TypeCode = update.TypeCode;
-                obj.Terminal = update.Terminal;
-                obj.OffEdge = update.OffEdge;
-                obj.Width = update.Width;
-                obj.Username = update.Username;
-                obj.LastModified = update.LastModified;
+                obj.ApplyServerValues(() =>
+                {
+                    obj.Section = update.SectionNumber;
+                    obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
+                    obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
+                    obj.TypeCode = update.TypeCode;
+                    obj.Terminal = update.Terminal;
+                    obj.OffEdge = update.OffEdge;
+                    obj.Width = update.Width;
+                    obj.Username = update.Username;
+                    obj.LastModified = update.LastModified;
+                });
                 await obj.SetAttributes(ObjAttributeParser.ParseAttributes(update.Attributes ?? string.Empty));
                 await obj.SetLinksFromServerAsync(update.Links);
             }

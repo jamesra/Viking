@@ -76,10 +76,43 @@ namespace WebAnnotationModel.Objects
         {
         }
 
-        /// <summary>Marks a local edit for the next save. No-op when DBAction is already INSERT.</summary>
+        /// <summary>The object whose server values this thread is applying in <see cref="ApplyServerValues"/>, if any.</summary>
+        [ThreadStatic]
+        private static object t_ApplyingServerValuesTo;
+
+        /// <summary>True while <see cref="ApplyServerValues"/> runs for this object on the calling thread.</summary>
+        protected bool IsApplyingServerValues => ReferenceEquals(t_ApplyingServerValuesTo, this);
+
+        /// <summary>
+        /// Marks a local edit for the next save. No-op when DBAction is already INSERT, and for server values applied by
+        /// <see cref="ApplyServerValues"/> on this thread.
+        /// </summary>
         protected void SetDBActionForChange()
         {
+            if (IsApplyingServerValues)
+                return;
+
             DBAction = Viking.AnnotationServiceTypes.Interfaces.DBACTION.UPDATE;
+        }
+
+        /// <summary>
+        /// Runs <paramref name="apply"/>, which copies server values onto this object through its setters. Changes it
+        /// makes on the calling thread are not local edits: they leave DBAction alone, so a queued Save stays queued and an
+        /// object that mirrors the server stays NONE. Edits from other threads are still recorded. Used by the gRPC
+        /// server-to-client updaters.
+        /// </summary>
+        internal void ApplyServerValues(Action apply)
+        {
+            object previous = t_ApplyingServerValuesTo;
+            t_ApplyingServerValuesTo = this;
+            try
+            {
+                apply();
+            }
+            finally
+            {
+                t_ApplyingServerValuesTo = previous;
+            }
         }
 
         /// <summary>
