@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Input;
 using Geometry;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -433,6 +434,84 @@ namespace WebAnnotation.Tools
 
             StartTool(new SegmentTool(_context, viewport, channels, circle, prompt.Points, new[] { prompt.Seed }));
         }
+
+        /// <summary>Margin, in raster pixels, left free around a polygon rasterized for dilate/erode, as in Viking.</summary>
+        const int EditMaskMarginPixels = 128;
+
+        /// <summary>
+        /// Viking's "Dilate/erode mask…" on a polygon: rasterizes it at the view's resolution (no larger than
+        /// <paramref name="maxTextureSide"/>, the device's texture limit), lets the wheel grow or shrink it, then segments
+        /// from the edited mask and replaces the polygon's shape on accept.
+        /// </summary>
+        public void StartMaskEdit(LocationObj polygon, UI.Commands.Segmentation.ISegmentationViewport viewport, int maxTextureSide)
+        {
+            if (!IsIdle || polygon == null)
+                return;
+
+            Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
+            Polygon mosaic = SqlGeometryUtils.Extensions.ToPolygon(polygon.MosaicShape);
+            List<Vector2[]> volumeRings = new();
+            foreach (Vector2[] ring in new[] { mosaic.ExteriorRing }.Concat(mosaic.InteriorRings))
+            {
+                bool[] mapped = mapper.TrySectionToVolume(ring, out Vector2[] volumeRing);
+                if (mapped.Any(ok => !ok))
+                {
+                    StatusChanged?.Invoke(this, "This polygon could not be mapped onto the volume");
+                    return;
+                }
+
+                volumeRings.Add(volumeRing);
+            }
+
+            int downsample = Math.Max(1, (int)Math.Ceiling(_host.Downsample));
+            UI.Commands.Segmentation.RasterMask mask = UI.Commands.Segmentation.RasterMask.FromRings(
+                volumeRings, downsample, marginPixels: EditMaskMarginPixels, maxRasterSide: maxTextureSide);
+            if (mask == null)
+            {
+                StatusChanged?.Invoke(this, "This polygon is too small to make a mask");
+                return;
+            }
+
+            MaskEditTool tool = new(_context, mask, edited => SegmentEditedMask(polygon, viewport, edited));
+            if (!tool.IsUsable)
+            {
+                StatusChanged?.Invoke(this, "This polygon is too small to make a mask");
+                return;
+            }
+
+            StartTool(tool);
+        }
+
+        /// <summary>As Viking's SubmitEditedMask: one click inside the edited mask, with the mask as the starting seed.</summary>
+        void SegmentEditedMask(LocationObj polygon, UI.Commands.Segmentation.ISegmentationViewport viewport, UI.Commands.Segmentation.RasterMask edited)
+        {
+            UI.Commands.Segmentation.SegmentationSeed? seed = UI.Commands.Segmentation.SegmentationSeed.FromMask(edited);
+            if (seed is null || !edited.TryGetSetWorldBounds(out Rectangle setBounds))
+            {
+                StatusChanged?.Invoke(this, "The edited mask is empty, so there is nothing to segment from");
+                return;
+            }
+
+            long spanned = UI.Commands.Segmentation.SegmentationMaskTiles.TilesSpanned(setBounds, edited.Downsample);
+            if (spanned > UI.Commands.Segmentation.SegmentationMaskTiles.MaxForegroundTiles)
+            {
+                StatusChanged?.Invoke(this, $"The edited mask spans {spanned} tiles; the segmentation server accepts at most " +
+                    $"{UI.Commands.Segmentation.SegmentationMaskTiles.MaxForegroundTiles}");
+                return;
+            }
+
+            if (SegmentationChannels == null)
+            {
+                StatusChanged?.Invoke(this, "There is no segmentation service to send the edited mask to");
+                return;
+            }
+
+            StartTool(new SegmentTool(_context, viewport, SegmentationChannels, polygon, new[] { seed.Value.Center }, new[] { seed.Value }));
+        }
+
+        /// <summary>The wheel goes to a tool that uses it (mask editing); returns false to let the view zoom.</summary>
+        public bool OnMouseWheel(int delta, bool shift, bool ctrl) =>
+            _current is IAnnotationToolWheel wheel && wheel.OnMouseWheel(delta, shift, ctrl);
 
         public void ConvertToCircle(LocationObj location) => _ = ShapeActions.ConvertToCircleAsync(_context, location);
 

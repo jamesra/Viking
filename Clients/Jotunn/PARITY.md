@@ -51,6 +51,7 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 | SBFSEM-tools | "Open in SBFSEM-tools" in the location menu. |
 | Property sheet list menus | Viking's context menu providers are registered (`ExtensionManager.RegisterContextMenuProviders`). |
 | Segmentation service | Tools > Select segmentation service (Viking's window). Tools and auto-polygonize switch to the chosen service. |
+| Dilate/erode mask | Polygon menu > Change shape > Dilate/erode mask:<br>- the wheel grows or shrinks the rasterized polygon (Shift for fine steps, Ctrl still zooms)<br>- Enter segments from the edited mask, as Viking does |
 | Segmentation background | Other structures in view are background points plus a background mask, as in Viking. |
 | Export | Location menu Export > Tulip URL (morphology, network), and Annotations > Export motifs, when the volume has an export service. |
 | Annotations menu | Favorite structure types (F6), Pen mode, Randomize all colors. |
@@ -61,6 +62,5 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 ## Not yet in Jotunn
 
 - **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only (sized from that cell's view).
-- **Segmentation extras**: dilate/erode mask editing (`SegmentationMaskEditCommand`). It needs mouse-wheel routing to tools, a texture overlay, and a mask-seeded follow-up request.
 - **Pen extras**: Viking draws a preview of each choice on its choice buttons; Jotunn lists the choices by name.
 - **Update Volume Positions**: Viking's admin job needs its section viewer.

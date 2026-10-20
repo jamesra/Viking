@@ -289,6 +289,24 @@ namespace WebAnnotationTests
             StringAssert.EndsWith(PenStrokeTool.Describe(closed), "(closed shape)");
         }
 
+        [TestMethod]
+        public void MaskEditTakesTheWheelUntilCancelled()
+        {
+            var square = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON, "POLYGON((10 10, 90 10, 90 90, 10 90, 10 10))");
+            Assert.IsFalse(_host.OnMouseWheel(120, shift: false, ctrl: false), "with no tool the wheel zooms");
+
+            _host.StartMaskEdit(square, viewport: null, maxTextureSide: 2048);
+
+            Assert.IsFalse(_host.IsIdle);
+            Assert.IsTrue(_host.OnMouseWheel(120, shift: false, ctrl: false), "the mask grows");
+            StringAssert.StartsWith(_status, "Mask:");
+            Assert.IsFalse(_host.OnMouseWheel(120, shift: false, ctrl: true), "Ctrl+wheel still zooms");
+
+            Assert.IsTrue(_host.OnKeyDown(Key.Escape));
+            Assert.IsTrue(_host.IsIdle);
+        }
+
         static string RepoUserSettings([CallerFilePath] string thisSourceFile = "") =>
             Path.GetFullPath(Path.Combine(Path.GetDirectoryName(thisSourceFile) ?? "", @"..\WebAnnotation\UserSettings.xml"));
     }

@@ -880,6 +880,11 @@ namespace Viking.VolumeView
 
         public void HandleViewMouseWheel(int delta, Point cursor)
         {
+            System.Windows.Input.ModifierKeys modifiers = Keyboard.Modifiers;
+            if (AnnotationTools?.OnMouseWheel(delta, (modifiers & System.Windows.Input.ModifierKeys.Shift) != 0,
+                    (modifiers & System.Windows.Input.ModifierKeys.Control) != 0) == true)
+                return;
+
             if (Grid?.VisibleRegion == null)
                 return;
 

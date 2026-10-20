@@ -109,6 +109,7 @@ namespace Jotunn
             if (polygon)
             {
                 shape.Items.Add(Item("_Resegment…", () => SegmentCircle(location)));
+                shape.Items.Add(Item("_Dilate/erode mask…", () => EditPolygonMask(location)));
                 shape.Items.Add(Item("Si_mplify shape", () => _tools.SimplifyPolygon(location)));
                 shape.Items.Add(Item("Random c_olor", () => _tools.RandomizeColor(location)));
             }
@@ -227,6 +228,16 @@ namespace Jotunn
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Do nothing", () => { }));
             menu.IsOpen = true;
+        }
+
+        /// <summary>Viking's "Dilate/erode mask…": the texture limit comes from the view's graphics device.</summary>
+        void EditPolygonMask(LocationObj polygon)
+        {
+            if (_tools == null || _sectionGrid?.SceneHostControl is not Viking.VolumeView.SectionSceneHost host)
+                return;
+
+            int maxTextureSide = host.Device?.GraphicsProfile == Microsoft.Xna.Framework.Graphics.GraphicsProfile.HiDef ? 4096 : 2048;
+            _tools.StartMaskEdit(polygon, host, maxTextureSide);
         }
 
         static MenuItem Item(string header, Action click, bool isEnabled = true, bool? isChecked = null)
