@@ -310,6 +310,18 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        public void PenChoicesHaveVikingsPreviewViews()
+        {
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+            var convert = new WebAnnotation.UI.Actions.ChangeToPolygonAction(circle,
+                new Geometry.Polygon([new(30, 30), new(70, 30), new(70, 70), new(30, 70), new(30, 30)]),
+                WebAnnotationTests.Actions.ChangeTypeActionTests.CreateBoundedTransform());
+
+            Assert.IsNotNull(WebAnnotation.UI.Commands.ActionSelectionCanvasControl.ViewFor(convert));
+        }
+
+        [TestMethod]
         public void MaskEditTakesTheWheelUntilCancelled()
         {
             var square = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(

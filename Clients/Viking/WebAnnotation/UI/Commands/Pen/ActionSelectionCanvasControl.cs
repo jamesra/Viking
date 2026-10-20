@@ -674,6 +674,24 @@ namespace WebAnnotation.UI.Commands
             return;
         }
 
+        /// <summary>
+        /// The view that previews <paramref name="a"/>: its button icon, and the shape it would make (Passive, or Active
+        /// while pointed at). Null for an action without a view. Viking's choice buttons and Jotunn's choice menu use it.
+        /// </summary>
+        internal static IActionView? ViewFor(IAction a) => a switch
+        {
+            Change2DContourAction change2D => new Change2DContourActionView(change2D),
+            Change1DContourAction change1D => new Change1DContourActionView(change1D),
+            CutHoleAction cutHole => new CutHoleActionView(cutHole),
+            LinkLocationAction link => new LinkLocationActionView(link),
+            LinkStructureAction link => new LinkStructureActionView(link),
+            ChangeToPolygonAction changeToPolygon => new ChangeToPolygonActionView(changeToPolygon),
+            ChangeToPolylineAction changeToPolyline => new ChangeToPolylineActionView(changeToPolyline),
+            CreateStructureActionBase createStructure => new CreateStructureActionView(createStructure),
+            CreateNewLinkedLocationAction createLinked => new CreateNewLinkedLocationActionView(createLinked),
+            _ => null,
+        };
+
         public static ActionSelectionCanvasControl CreateViews(SectionViewerControl parent, IAction[] actions, OnCommandSuccess? success_callback = null)
         {
             List<IClickable> clickables = [];
@@ -691,89 +709,28 @@ namespace WebAnnotation.UI.Commands
                 List<object> actionViews = [];
                 control.ActionViews.Add(a, actionViews);
 
+                IActionView? view = ViewFor(a);
+                if (view is null)
+                    continue;
+
+                actionViews.Add(view);
+                actionButtons[a] = (IIconTexture)view;
+
+                // What a click on the drawing of the choice selects; link choices are chosen from their button only.
                 if (a is Change2DContourAction change2D)
-                {
-                    Change2DContourActionView view = new(change2D);
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(change2D.NewSmoothedVolumePolygon, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(change2D.NewSmoothedVolumePolygon, a.Execute));
                 else if (a is Change1DContourAction change1D)
-                {
-                    Change1DContourActionView view = new(change1D);
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(change1D.NewSmoothVolumePolyline, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(change1D.NewSmoothVolumePolyline, a.Execute));
                 else if (a is CutHoleAction cutHole)
-                {
-                    CutHoleActionView view = new(cutHole);
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(cutHole.NewSmoothVolumeInteriorPolygon, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
-                else if (a is LinkLocationAction)
-                {
-                    LinkLocationAction action = a as LinkLocationAction;
-
-                    LinkLocationActionView view = new(action);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
-                else if (a is LinkStructureAction)
-                {
-                    LinkStructureAction action = a as LinkStructureAction;
-
-                    LinkStructureActionView view = new(action);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(cutHole.NewSmoothVolumeInteriorPolygon, a.Execute));
                 else if (a is ChangeToPolygonAction changeToPolygon)
-                {
-                    ChangeToPolygonActionView view = new(changeToPolygon);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(changeToPolygon.NewSmoothVolumePolygon, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(changeToPolygon.NewSmoothVolumePolygon, a.Execute));
                 else if (a is ChangeToPolylineAction changeToPolyline)
-                {
-                    ChangeToPolylineActionView view = new(changeToPolyline);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(changeToPolyline.NewSmoothVolumePolyline, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
-                else if (a is CreateStructureActionBase createStructure)
-                {
-                    CreateStructureActionView view = new(createStructure);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(view.Shape, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
-                else if (a is CreateNewLinkedLocationAction createLinked)
-                {
-                    CreateNewLinkedLocationActionView view = new(createLinked);
-
-                    ClickableGeometryWrapper clickable = ClickableGeometryWrapper.CreateSimple(view.Shape, a.Execute);
-
-                    actionSelectors.Add(clickable);
-                    actionViews.Add(view);
-                    actionButtons[a] = view;
-                }
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(changeToPolyline.NewSmoothVolumePolyline, a.Execute));
+                else if (view is CreateStructureActionView createStructureView)
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(createStructureView.Shape, a.Execute));
+                else if (view is CreateNewLinkedLocationActionView createLinkedView)
+                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(createLinkedView.Shape, a.Execute));
             }
 
             control.GenerateActionButtons(actionButtons);

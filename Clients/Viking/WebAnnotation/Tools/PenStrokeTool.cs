@@ -13,8 +13,18 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.Tools
 {
-    /// <summary>One choice a finished pen stroke offers, as a menu item: what it does, and doing it.</summary>
-    public sealed record AnnotationChoice(string Label, Action Execute);
+    /// <summary>
+    /// One choice a finished pen stroke offers, as a menu item: what it does, doing it, and a drawing of its result to
+    /// show while the item is pointed at (null when the choice has none).
+    /// </summary>
+    public sealed record AnnotationChoice(string Label, Action Execute, IAnnotationToolPreview Preview = null);
+
+    /// <summary>Draws a pen action's view (Viking's choice-button preview): its Active drawing, else its Passive one.</summary>
+    sealed class ActionViewPreview(IActionView view) : IAnnotationToolPreview
+    {
+        public void DrawPreview(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect) =>
+            (view.Active ?? view.Passive)?.Draw(device, scene, OverlayStyle.Alpha);
+    }
 
     /// <summary>
     /// Viking's Pen Mode stroke: the path follows the pointer while the button is held, logging the annotations it
@@ -121,7 +131,7 @@ namespace WebAnnotation.Tools
                 return;
             }
 
-            List<AnnotationChoice> choices = actions.Distinct().Select(a => new AnnotationChoice(Describe(a), () => Run(a))).ToList();
+            List<AnnotationChoice> choices = actions.Distinct().Select(a => new AnnotationChoice(Describe(a), () => Run(a), PreviewFor(a))).ToList();
             if (choices.Count == 0)
                 _context.SetStatus("The stroke offers nothing to do here");
             else
@@ -153,6 +163,20 @@ namespace WebAnnotation.Tools
                 yield return selected;
             foreach (ulong favorite in Global.UserFavoriteStructureTypes)
                 yield return (long)favorite;
+        }
+
+        static IAnnotationToolPreview PreviewFor(IAction action)
+        {
+            try
+            {
+                IActionView view = UI.Commands.ActionSelectionCanvasControl.ViewFor(action);
+                return view == null ? null : new ActionViewPreview(view);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"No preview for {action.Type}: {ex.Message}");
+                return null;
+            }
         }
 
         void Run(IAction action)

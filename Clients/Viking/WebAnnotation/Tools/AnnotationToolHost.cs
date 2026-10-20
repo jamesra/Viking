@@ -91,6 +91,24 @@ namespace WebAnnotation.Tools
         /// <summary>Choices for the user to pick from at the pointer, such as what a pen stroke should do.</summary>
         public event EventHandler<IReadOnlyList<AnnotationChoice>> ChoicesProposed;
 
+        /// <summary>
+        /// Shows what <paramref name="choice"/> would make while it is pointed at in the choice menu; null (the menu
+        /// closed) goes back to the active tool's own feedback.
+        /// </summary>
+        public void PreviewChoice(AnnotationChoice choice)
+        {
+            if (choice?.Preview != null)
+            {
+                _scene.ToolPreview = choice.Preview;
+                _scene.ToolPreviewSection = _host.SectionNumber;
+                _host.Invalidate();
+            }
+            else
+            {
+                ShowPreviewOf(_current);
+            }
+        }
+
         /// <summary>Viking's Pen Mode (numpad * or Shift+8): a drag on the view draws a stroke instead of continuing a trace.</summary>
         public void TogglePenMode()
         {

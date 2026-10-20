@@ -254,9 +254,16 @@ namespace Jotunn
         {
             ContextMenu menu = new() { Placement = PlacementMode.MousePoint };
             foreach (WebAnnotation.Tools.AnnotationChoice choice in choices)
-                menu.Items.Add(Item(choice.Label.Replace("_", "__"), choice.Execute));
+            {
+                MenuItem item = Item(choice.Label.Replace("_", "__"), choice.Execute);
+                // As Viking's choice buttons do, pointing at a choice shows the shape it would make.
+                item.MouseEnter += (_, _) => _tools?.PreviewChoice(choice);
+                item.MouseLeave += (_, _) => _tools?.PreviewChoice(null);
+                menu.Items.Add(item);
+            }
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Do nothing", () => { }));
+            menu.Closed += (_, _) => _tools?.PreviewChoice(null);
             menu.IsOpen = true;
         }
 

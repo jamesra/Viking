@@ -47,7 +47,7 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 | SAM2 segmentation | Tab, or Tools > Segmentation:<br>- left click adds an object point, right click a background point, middle click removes the nearest point<br>- Enter or a double click accepts<br>- runs through Viking's `SegmentationViewportSession` over `SectionSceneHost` (an `ISegmentationViewport`)<br>- not yet verified against a live server |
 | Change shape | Context menu:<br>- Circle<br>- Convert to polygon<br>- Segment to polygon (circles)<br>- Resegment (polygons)<br>- Simplify shape<br>All recorded for undo. |
 | Change-type hotkeys | Circle converts in place. Curves and polygons are clicked out from the pointer and replace the location's shape. |
-| Pen Mode | Numpad * or Shift+8. A stroke offers what Viking's overlay offers (retrace, redraw, link, continue, convert circle, cut hole, create structure), in a menu at the pointer. |
+| Pen Mode | Numpad * or Shift+8. A stroke offers what Viking's overlay offers (retrace, redraw, link, continue, convert circle, cut hole, create structure), in a menu at the pointer. Pointing at a choice draws Viking's preview of it; the retraced cell's children are hidden during the stroke. |
 | SBFSEM-tools | "Open in SBFSEM-tools" in the location menu. |
 | Property sheet list menus | Viking's context menu providers are registered (`ExtensionManager.RegisterContextMenuProviders`). |
 | Segmentation service | Tools > Select segmentation service (Viking's window). Tools and auto-polygonize switch to the chosen service. |
@@ -62,4 +62,3 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 ## Not yet in Jotunn
 
 - **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only (sized from that cell's view).
-- **Pen extras**: Viking draws a preview of each choice on its choice buttons; Jotunn lists the choices by name.
