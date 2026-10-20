@@ -53,6 +53,21 @@ namespace Viking.Common
         /// </summary>
         private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToPropertyPageTable = [];
 
+        private static readonly HashSet<Assembly> PropertyPageAssemblies = [];
+
+        /// <summary>
+        /// Registers the property pages declared in <paramref name="assembly"/>, for hosts that show Viking's property
+        /// sheets without loading its extension modules (Jotunn). An assembly is registered once.
+        /// </summary>
+        public static void RegisterPropertyPages(Assembly assembly)
+        {
+            if (assembly is null || !PropertyPageAssemblies.Add(assembly))
+                return;
+
+            foreach (System.Type T in assembly.GetTypes())
+                FindPropertyPages(T);
+        }
+
         public static System.Type[] GetPropertyPages(object Obj)
         {
             System.Type ObjType = Obj.GetType();
@@ -656,10 +671,12 @@ namespace Viking.Common
         private static void FindAssemblyExtensions(Assembly Extension)
         {
             System.Type[] ExtensionTypes = Extension.GetTypes();
+            bool registerPropertyPages = PropertyPageAssemblies.Add(Extension);
             foreach (System.Type T in ExtensionTypes)
             {
                 /*Find Property Page extensions*/
-                FindPropertyPages(T);
+                if (registerPropertyPages)
+                    FindPropertyPages(T);
 
                 /*Find Command extensions */
                 FindCommands(T);

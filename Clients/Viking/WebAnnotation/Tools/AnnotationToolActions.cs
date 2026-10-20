@@ -197,6 +197,30 @@ namespace WebAnnotation.Tools
             }
         }
 
+        /// <summary>Viking's Off Edge menu item: flips the flag and saves, restoring it if the save fails.</summary>
+        public static async Task ToggleOffEdgeAsync(AnnotationToolContext context, LocationObj location)
+        {
+            try
+            {
+                bool oldTerminal = location.Terminal;
+                bool previous = location.OffEdge;
+                location.OffEdge = !previous;
+                if (!await Store.Locations.Save())
+                {
+                    location.OffEdge = previous;
+                    context.SetStatus($"Could not save location {location.ID}");
+                    return;
+                }
+
+                UndoManager.PushLocationFlags("Toggle OffEdge", location, oldTerminal, previous);
+                context.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Toggle off edge failed: {ex}");
+            }
+        }
+
         public static async Task CreateLocationLinkAsync(AnnotationToolContext context, long a, long b)
         {
             try

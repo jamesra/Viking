@@ -221,6 +221,25 @@ namespace WebAnnotation.Tools
             _ = AnnotationToolActions.DeleteLocationAsync(_context, location);
         }
 
+        /// <summary>The location drawn at <paramref name="screen"/> on the current section, or null.</summary>
+        public LocationObj LocationAt(Vector2 screen)
+        {
+            try
+            {
+                object hit = _scene.HitTest(_host.SectionNumber, _host.ScreenToWorld(screen), out _);
+                return hit is View.LocationCanvasView view && Store.Locations.TryGetObjectByID(view.ID, out LocationObj loc) ? loc : null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Annotation hit test failed: {ex.Message}");
+                return null;
+            }
+        }
+
+        public void ToggleTerminal(LocationObj location) => _ = AnnotationToolActions.ToggleTerminalAsync(_context, location);
+
+        public void ToggleOffEdge(LocationObj location) => _ = AnnotationToolActions.ToggleOffEdgeAsync(_context, location);
+
         /// <summary>Viking's Ctrl+Z: reverts the newest recorded edit and saves it. Only while no tool is active.</summary>
         public bool Undo()
         {

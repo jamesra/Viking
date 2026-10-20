@@ -666,6 +666,12 @@ namespace Viking.VolumeView
         public AnnotationToolHost AnnotationTools { get; set; }
 
         /// <summary>
+        /// A right click that did not pan, with the point in the active cell's screen space: the window shows Viking's
+        /// annotation context menu there.
+        /// </summary>
+        public event EventHandler<Geometry.Vector2> AnnotationContextMenuRequested;
+
+        /// <summary>
         /// Viking mouse: left click selects/moves/creates annotations; hold right and drag to pan;
         /// wheel zooms about the cursor.
         /// </summary>
@@ -811,12 +817,19 @@ namespace Viking.VolumeView
 
             if (button == MouseButton.Right)
             {
+                bool clicked = _panStartScreen.HasValue && !_panning;
                 _panStartScreen = null;
                 _panStartCenter = null;
                 if (_panning)
                     RunTileCacheCheckpoint();
                 _panning = false;
                 RequestRender();
+
+                if (clicked && IsInActiveCell(p))
+                {
+                    ApplyActiveCellViewport();
+                    AnnotationContextMenuRequested?.Invoke(this, ActiveCellScreen(p));
+                }
             }
         }
 

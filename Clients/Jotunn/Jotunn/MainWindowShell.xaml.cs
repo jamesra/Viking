@@ -81,6 +81,7 @@ namespace Jotunn
             _tools.GoToRequested += (_, loc) => GoToLocation(loc);
             _tools.StatusChanged += (_, text) => _status?.SetMessage(text);
             _sectionGrid.SceneHostControl.AnnotationTools = _tools;
+            _sectionGrid.SceneHostControl.AnnotationContextMenuRequested += OnAnnotationContextMenuRequested;
 
             StructureTypeTree typeTree = new();
             typeTree.StructureTypeSelected += (_, id) => _tools.SelectedStructureTypeId = (long)id;
@@ -361,6 +362,11 @@ namespace Jotunn
                 return;
             }
 
+            ConfirmAndDelete(target);
+        }
+
+        void ConfirmAndDelete(LocationObj target)
+        {
             if (MessageBox.Show(this, $"Delete location {target.ID} of structure {target.ParentID}?", "Jotunn",
                     MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
             {
