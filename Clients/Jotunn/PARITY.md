@@ -50,13 +50,13 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 | Pen Mode | Numpad * or Shift+8. A stroke offers what Viking's overlay offers (retrace, redraw, link, continue, convert circle, cut hole, create structure), in a menu at the pointer. |
 | SBFSEM-tools | "Open in SBFSEM-tools" in the location menu. |
 | Property sheet list menus | Viking's context menu providers are registered (`ExtensionManager.RegisterContextMenuProviders`). |
+| Unmarked process terminals | Location menu. The structure's unfinished branch ends, grouped by section; choosing one goes there. |
+| Random color | Polygons, for the session, as in Viking. |
+| Auto-polygonize | Viking's `AutoCirclePolygonizeController` runs unchanged over `SectionSceneHost` (an `IAutoPolygonizeHost`):<br>- double click accepts a proposal; right click opens Accept / Add points / Dismiss<br>- "Add points" uses the segment tool<br>- Tools > Auto-polygonize circles toggles Viking's setting<br>- not yet verified against a live server |
 
 ## Not yet in Jotunn
 
-- **Auto-polygonize.** `AutoCirclePolygonizeController` (about 6,000 lines with its proposals and cache) uses Viking's `SectionViewerControl` in about 100 places, including its command queue and drawing. It would need a host interface like `ISegmentationViewport`, but wider.
+- **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only, and the controller sizes its work from the whole view.
 - **Segmentation extras**: dilate/erode mask editing, and background points derived from other structures.
 - **Pen extras**: Viking hides the target cell's children during a stroke, and draws previews of each choice.
-- **Remaining location menu items:**
-  - export (Tulip/morphology): `Global.Export` is set only by Viking's module init
-  - unverified branch terminals
-  - random color
+- **Export (Tulip/morphology)**: `Global.Export` is set only by Viking's module init.
