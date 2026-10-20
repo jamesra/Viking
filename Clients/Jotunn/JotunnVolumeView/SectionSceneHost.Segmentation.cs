@@ -55,29 +55,29 @@ namespace Viking.VolumeView
 
         double ISegmentationViewport.CameraDownsample => Scene?.Camera.Downsample ?? 1;
 
-        int ISegmentationViewport.ViewportWidth
+        int ISegmentationViewport.ViewportWidth => OnUiThread(() =>
         {
-            get
-            {
-                ApplyActiveCellViewport();
-                return Scene?.Viewport.Width ?? 1;
-            }
-        }
+            ApplyActiveCellViewport();
+            return Scene?.Viewport.Width ?? 1;
+        });
 
-        int ISegmentationViewport.ViewportHeight
+        int ISegmentationViewport.ViewportHeight => OnUiThread(() =>
         {
-            get
-            {
-                ApplyActiveCellViewport();
-                return Scene?.Viewport.Height ?? 1;
-            }
-        }
+            ApplyActiveCellViewport();
+            return Scene?.Viewport.Height ?? 1;
+        });
 
-        Geometry.Vector2 ISegmentationViewport.ScreenToWorld(double x, double y)
+        Geometry.Vector2 ISegmentationViewport.ScreenToWorld(double x, double y) => OnUiThread(() =>
         {
             ApplyActiveCellViewport();
             return ScreenToWorld(new Geometry.Vector2(x, y));
-        }
+        });
+
+        /// <summary>
+        /// Reading the active cell sets the scene's viewport, which the render loop also uses, so segmentation and
+        /// auto-polygonize work running on worker threads reads it on the UI thread.
+        /// </summary>
+        T OnUiThread<T>(Func<T> read) => Dispatcher.CheckAccess() ? read() : Dispatcher.Invoke(read);
 
         int ISegmentationViewport.SectionNumber => SectionNumber;
 
