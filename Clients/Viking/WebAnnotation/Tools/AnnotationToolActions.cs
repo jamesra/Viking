@@ -221,19 +221,6 @@ namespace WebAnnotation.Tools
             }
         }
 
-        public static async Task CreateLocationLinkAsync(AnnotationToolContext context, long a, long b)
-        {
-            try
-            {
-                await Store.LocationLinks.CreateLink(a, b);
-                context.Invalidate();
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"Create location link failed: {ex}");
-            }
-        }
-
         /// <summary>Saves pending location edits; <paramref name="onSaved"/> runs once the server accepted them (undo records).</summary>
         public static async Task SaveLocationAsync(AnnotationToolContext context, LocationObj location, Action onSaved = null)
         {

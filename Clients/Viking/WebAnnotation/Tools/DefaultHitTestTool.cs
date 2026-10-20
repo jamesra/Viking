@@ -98,10 +98,10 @@ namespace WebAnnotation.Tools
                         return AnnotationToolResult.Continue;
                     }
 
-                    if (action == LocationAction.CREATELINK && hit is LocationCanvasView other)
+                    if (action == LocationAction.CREATELINK)
                     {
-                        if (Global.LastEditedAnnotationID.HasValue)
-                            _ = AnnotationToolActions.CreateLocationLinkAsync(_context, Global.LastEditedAnnotationID.Value, other.ID);
+                        if (Store.Locations.TryGetObjectByID(locationId, out LocationObj origin) && origin != null)
+                            _context.StartTool(new LinkAnnotationsTool(_context, origin, world));
                         return AnnotationToolResult.Continue;
                     }
                 }
@@ -247,7 +247,7 @@ namespace WebAnnotation.Tools
                 LocationAction.ADDCONTROLPOINT => $"{what}: click to add a control point",
                 LocationAction.REMOVECONTROLPOINT => $"{what}: click to remove this control point",
                 LocationAction.CREATELINKEDLOCATION => $"{what}: click to continue it on this section",
-                LocationAction.CREATELINK => $"{what}: click to link the last edited location to it",
+                LocationAction.CREATELINK => $"{what}: drag to another annotation to link them",
                 _ => what
             };
         }
