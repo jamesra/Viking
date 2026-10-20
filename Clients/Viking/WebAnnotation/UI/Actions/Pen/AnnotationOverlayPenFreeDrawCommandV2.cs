@@ -148,36 +148,12 @@ namespace WebAnnotation.UI.Commands
             if (_HiddenStructureIDs is not null)
                 return;
 
-            foreach (InteractionLogEvent entry in added)
-            {
-                if (entry.Interaction is not (AnnotationRegionInteraction.ENTER or AnnotationRegionInteraction.PENDOWN) ||
-                    entry.Annotation is not LocationCanvasView { ParentID: long structureId })
-                {
-                    continue;
-                }
-
-                HashSet<long> hidden = HiddenStructures.Compute(
-                    structureId,
-                    id => Store.Structures.GetCachedObject(id)?.Children.Select(c => c.ID) ?? [],
-                    id => LinkedStructureIDs(id),
-                    id => Store.Structures.GetCachedObject(id)?.ParentID);
-
-                if (hidden.Count == 0)
-                    continue;
-
-                _HiddenStructureIDs = hidden;
-                Parent.Invalidate();
+            HashSet<long>? hidden = HiddenStructures.ForStrokeEntries(added);
+            if (hidden is null)
                 return;
-            }
-        }
 
-        private static IEnumerable<long> LinkedStructureIDs(long structureId)
-        {
-            StructureObj? structure = Store.Structures.GetCachedObject(structureId);
-            if (structure is null)
-                return [];
-
-            return structure.LinksCopy?.Select(link => link.SourceID == structureId ? link.TargetID : link.SourceID) ?? [];
+            _HiddenStructureIDs = hidden;
+            Parent.Invalidate();
         }
 
         /// <summary>

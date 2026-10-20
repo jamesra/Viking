@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
+using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -63,6 +65,43 @@ namespace WebAnnotation.UI
             }
 
             return hidden;
+        }
+
+        /// <summary>
+        /// For a pen stroke's new log entries: the structures to hide while it retraces a cell, or null while no target is
+        /// known yet. The target is the first annotation the stroke starts inside (PENDOWN) or crosses into (ENTER) that
+        /// has descendants, so a stroke may begin over a child or in empty space. Uses the structure store's cache.
+        /// </summary>
+        public static HashSet<long>? ForStrokeEntries(IEnumerable<InteractionLogEvent> added)
+        {
+            foreach (InteractionLogEvent entry in added)
+            {
+                if (entry.Interaction is not (AnnotationRegionInteraction.ENTER or AnnotationRegionInteraction.PENDOWN) ||
+                    entry.Annotation is not LocationCanvasView { ParentID: long structureId })
+                {
+                    continue;
+                }
+
+                HashSet<long> hidden = Compute(
+                    structureId,
+                    id => Store.Structures.GetCachedObject(id)?.Children.Select(c => c.ID) ?? [],
+                    LinkedStructureIDs,
+                    id => Store.Structures.GetCachedObject(id)?.ParentID);
+
+                if (hidden.Count > 0)
+                    return hidden;
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<long> LinkedStructureIDs(long structureId)
+        {
+            StructureObj? structure = Store.Structures.GetCachedObject(structureId);
+            if (structure is null)
+                return [];
+
+            return structure.LinksCopy?.Select(link => link.SourceID == structureId ? link.TargetID : link.SourceID) ?? [];
         }
 
         /// <summary>Returns true when the location belongs to a hidden structure.</summary>

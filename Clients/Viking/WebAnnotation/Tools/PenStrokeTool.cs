@@ -28,6 +28,7 @@ namespace WebAnnotation.Tools
         readonly Path _path = new();
         readonly PathInteractionLogger _logger;
         readonly int _sectionNumber;
+        HashSet<long> _hidden;
 
         public PenStrokeTool(AnnotationToolContext context, Vector2 origin)
         {
@@ -35,12 +36,40 @@ namespace WebAnnotation.Tools
             _sectionNumber = context.SectionNumber;
             ICanvasViewHitTesting hitTesting = context.Scene.GetOrCreate(_sectionNumber);
             if (hitTesting != null)
-                _logger = new PathInteractionLogger(_path, hitTesting);
+            {
+                // As in Viking, once the stroke enters a cell its children are hidden: not drawn, not logged, not targets.
+                _logger = new PathInteractionLogger(_path, new HiddenStructureHitTestFilter(hitTesting, () => _hidden));
+                _logger.Log.OnLogChanged += OnLogChanged;
+            }
             _path.Push(origin);
             _context.Host.CapturePointer();
         }
 
         public string StatusText => "Pen: draw, then release to choose what the stroke does (Esc cancels)";
+
+        void OnLogChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (_hidden != null || e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Add || e.NewItems == null)
+                return;
+
+            _hidden = HiddenStructures.ForStrokeEntries(e.NewItems.OfType<InteractionLogEvent>());
+            if (_hidden != null)
+            {
+                _context.Scene.HiddenStructureIds = _hidden;
+                _context.Invalidate();
+            }
+        }
+
+        /// <summary>Draws the hidden children again once the stroke is over.</summary>
+        void Unhide()
+        {
+            if (_hidden == null)
+                return;
+
+            _hidden = null;
+            _context.Scene.HiddenStructureIds = null;
+            _context.Invalidate();
+        }
 
         public AnnotationToolResult OnMouseDown(Vector2 screen, MouseButton button, int clickCount) => AnnotationToolResult.Continue;
 
@@ -67,6 +96,7 @@ namespace WebAnnotation.Tools
         {
             _context.Host.ReleasePointer();
             _context.SetStatus(null);
+            Unhide();
             if (_path.Points.Count < 2)
                 return;
 
@@ -103,6 +133,7 @@ namespace WebAnnotation.Tools
 
         public void Cancel()
         {
+            Unhide();
             _context.Host.ReleasePointer();
             _context.SetStatus(null);
             _context.Invalidate();

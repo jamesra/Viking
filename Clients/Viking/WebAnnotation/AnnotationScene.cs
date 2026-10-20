@@ -13,6 +13,7 @@ using VikingXNAGraphics;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 using Rectangle = Geometry.Rectangle;
 
 namespace WebAnnotation
@@ -80,6 +81,11 @@ namespace WebAnnotation
 
         /// <summary>The section <see cref="ToolPreview"/> is drawn over.</summary>
         public int ToolPreviewSection { get; set; }
+
+        /// <summary>
+        /// Structures not drawn (a pen stroke retracing a cell hides the cell's children, as Viking does); null draws all.
+        /// </summary>
+        public ISet<long> HiddenStructureIds { get; set; }
 
         /// <summary>
         /// Draws more over a section's annotations (auto-polygonize proposals), given the section number; the host decides
@@ -390,9 +396,12 @@ namespace WebAnnotation
 
             Rectangle bounds = scene.VisibleWorldBounds;
             ICollection<LocationCanvasView> locations = current.GetLocations(bounds);
-            List<LocationCanvasView> visible = locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
+            ISet<long> hidden = HiddenStructureIds;
+            List<LocationCanvasView> visible = UI.HiddenStructures.ExcludeLocations(
+                locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList(), hidden);
             ICollection<LocationCanvasView> adjacent = current.AdjacentLocationsNotOverlappedInRegion(bounds);
-            List<LocationCanvasView> visibleAdjacent = adjacent.Where(l => l != null && l.IsVisible(scene)).ToList();
+            List<LocationCanvasView> visibleAdjacent = UI.HiddenStructures.ExcludeLocations(
+                adjacent.Where(l => l != null && l.IsVisible(scene)).ToList(), hidden);
 
             LocationObjRenderer.DrawBackgrounds(visible, graphicsDevice, _basicEffect, overlayEffect, lineManager, curveManager, scene, sectionNumber);
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
@@ -401,7 +410,10 @@ namespace WebAnnotation
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, startingStencil);
-            LocationLinkView.Draw(graphicsDevice, scene, lineManager, _basicEffect, overlayEffect, current.NonOverlappedLocationLinksInRegion(bounds));
+            LocationLinkView.Draw(graphicsDevice, scene, lineManager, _basicEffect, overlayEffect, UI.HiddenStructures.ExcludeLocationLinks(
+                current.NonOverlappedLocationLinksInRegion(bounds),
+                hidden,
+                locationId => Store.Locations.TryGetObjectByID(locationId, out LocationObj linkEnd) ? linkEnd?.ParentID : null));
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
 
@@ -423,7 +435,7 @@ namespace WebAnnotation
             DeviceStateManager.SetRenderStateForShapes(graphicsDevice);
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            List<StructureLinkViewModelBase> structureLinks = current.VisibleStructureLinks(scene);
+            List<StructureLinkViewModelBase> structureLinks = UI.HiddenStructures.ExcludeStructureLinks(current.VisibleStructureLinks(scene), hidden);
             StructureLinkCirclesView.Draw(graphicsDevice, scene, lineManager, structureLinks.OfType<StructureLinkCirclesView>().ToArray());
             StructureLinkCurvesView.Draw(graphicsDevice, scene, lineManager, structureLinks.OfType<StructureLinkCurvesView>().ToArray());
 
