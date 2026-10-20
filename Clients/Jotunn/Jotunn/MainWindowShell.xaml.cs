@@ -155,6 +155,15 @@ namespace Jotunn
             bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
             SectionSceneHost host = _sectionGrid?.SceneHostControl;
 
+            if (_tools != null && !_tools.IsIdle && (e.Key == Key.Back || e.Key == Key.Tab))
+            {
+                // A tool in progress owns Backspace (remove the last point); Tab must not move focus off the view.
+                if (e.Key == Key.Back)
+                    _tools.OnKeyDown(Key.Back);
+                e.Handled = true;
+                return;
+            }
+
             if (!ctrl && (e.Key == Key.OemPlus || e.Key == Key.Add))
             {
                 StepSections(shift ? 10 : 1);
@@ -218,7 +227,7 @@ namespace Jotunn
                 OnChooseFavoriteStructureTypes(this, e);
                 e.Handled = true;
             }
-            else if (!ctrl && e.Key == Key.Tab && _tools != null && _tools.IsIdle)
+            else if (!ctrl && !shift && e.Key == Key.Tab && _tools != null && _tools.IsIdle)
             {
                 StartSegmentation();
                 e.Handled = true;

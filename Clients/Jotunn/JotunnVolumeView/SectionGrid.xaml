@@ -20,7 +20,8 @@
                 MouseMove="OnViewMouseMove"
                 MouseLeftButtonUp="OnViewMouseLeftButtonUp"
                 MouseRightButtonUp="OnViewMouseRightButtonUp"
-                MouseWheel="OnViewMouseWheel"/>
+                MouseWheel="OnViewMouseWheel"
+                MouseLeave="OnViewMouseLeave"/>
         <ItemsControl x:Name="SectionsGrid"
                  Background="Transparent"
                  ScrollViewer.VerticalScrollBarVisibility="Disabled"

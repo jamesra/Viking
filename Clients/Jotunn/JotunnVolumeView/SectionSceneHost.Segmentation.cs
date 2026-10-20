@@ -160,6 +160,11 @@ namespace Viking.VolumeView
                 target.Dispose();
                 return null;
             }
+            catch
+            {
+                target.Dispose();
+                throw;
+            }
         }
 
         /// <summary>One synchronous tile pass into <paramref name="target"/>; restores the device and renderer state after.</summary>

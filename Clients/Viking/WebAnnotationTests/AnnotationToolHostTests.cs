@@ -25,7 +25,15 @@ namespace WebAnnotationTests
     {
         sealed class IdentityViewport : IViewportHost
         {
-            public int SectionNumber => 1;
+            public int SectionNumber { get; set; } = 1;
+
+            /// <summary>Moves the view to another section, as a section step does.</summary>
+            public void ShowSection(int section)
+            {
+                SectionNumber = section;
+                ViewportChanged?.Invoke(this, EventArgs.Empty);
+            }
+
             public Geometry.Rectangle VisibleWorldBounds => new(new Geometry.Vector2(0, 0), 100, 100);
             public double Downsample => 1;
             public int ViewportWidth => 100;
@@ -36,7 +44,7 @@ namespace WebAnnotationTests
             public void Invalidate() { }
             public void CapturePointer() { }
             public void ReleasePointer() { }
-            public event EventHandler ViewportChanged { add { } remove { } }
+            public event EventHandler ViewportChanged;
         }
 
         /// <summary>A tool that runs an action on a click and then finishes.</summary>
@@ -58,6 +66,7 @@ namespace WebAnnotationTests
 
         Func<int, SectionAnnotationsView> _savedLookup;
         AnnotationScene _scene;
+        IdentityViewport _viewport;
         AnnotationToolHost _host;
         string _status;
 
@@ -67,7 +76,8 @@ namespace WebAnnotationTests
             _savedLookup = AnnotationOverlay.SectionViewLookup;
             Volume volume = (Volume)FormatterServices.GetUninitializedObject(typeof(Volume));
             _scene = new AnnotationScene(volume);
-            _host = new AnnotationToolHost(new IdentityViewport(), _scene);
+            _viewport = new IdentityViewport();
+            _host = new AnnotationToolHost(_viewport, _scene);
             _host.StatusChanged += (_, text) => _status = text;
         }
 
@@ -90,6 +100,18 @@ namespace WebAnnotationTests
             Assert.IsFalse(_host.IsIdle, "the tool started from the click must survive the first tool finishing");
             Assert.AreSame(next, _scene.ToolPreview);
             Assert.IsFalse(next.Cancelled);
+        }
+
+        [TestMethod]
+        public void ChangingSectionCancelsTheToolInProgress()
+        {
+            ScriptedTool tool = new(null);
+            _host.StartTool(tool);
+
+            _viewport.ShowSection(2);
+
+            Assert.IsTrue(_host.IsIdle);
+            Assert.IsTrue(tool.Cancelled);
         }
 
         [TestMethod]

@@ -42,9 +42,43 @@ namespace WebAnnotation.Tools
                 AnnotationToolActions.CreateOrPickParentAsync(_context, structure, location);
             _defaultTool = new DefaultHitTestTool(_context);
             _current = _defaultTool;
+            _viewSection = host.SectionNumber;
+            host.ViewportChanged += OnViewportChanged;
         }
 
         public long? SelectedStructureTypeId { get; set; }
+
+        int _viewSection;
+
+        /// <summary>
+        /// A tool works on the section it started on: when the view moves to another section the active tool is
+        /// cancelled (nothing it was building is saved) and the hover target is dropped.
+        /// </summary>
+        void OnViewportChanged(object sender, EventArgs e)
+        {
+            if (_host.SectionNumber == _viewSection)
+                return;
+
+            _viewSection = _host.SectionNumber;
+            ClearHover();
+            if (IsIdle)
+                return;
+
+            _current.Cancel();
+            _queue.Clear();
+            RestoreDefault();
+            StatusChanged?.Invoke(this, "The section changed, so the tool in progress was cancelled");
+        }
+
+        /// <summary>Forgets the annotation under the pointer (the pointer left the view, or the section changed).</summary>
+        public void ClearHover()
+        {
+            if (!IsIdle)
+                return;
+
+            _defaultTool.Cancel();
+            _host.Invalidate();
+        }
 
         /// <summary>The location the user last clicked, or null after a click on empty space.</summary>
         public LocationObj SelectedLocation => _context.SelectedLocation;

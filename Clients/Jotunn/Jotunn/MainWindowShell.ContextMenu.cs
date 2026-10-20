@@ -86,6 +86,16 @@ namespace Jotunn
         MenuItem ShapeMenu(LocationObj location)
         {
             MenuItem shape = new() { Header = "Change s_hape" };
+            // Shape changes map through this section's transform, so they apply only to annotations on this section
+            // (the menu also opens on faded annotations from adjacent sections).
+            int viewSection = _sectionGrid?.SceneHostControl?.SectionNumber ?? 0;
+            if ((int)Math.Round(location.Z) != viewSection)
+            {
+                shape.IsEnabled = false;
+                shape.ToolTip = "Go to this annotation's section to change its shape";
+                return shape;
+            }
+
             bool circle = location.TypeCode == LocationType.CIRCLE;
             bool polygon = location.TypeCode is LocationType.POLYGON or LocationType.CURVEPOLYGON;
             if (!circle)

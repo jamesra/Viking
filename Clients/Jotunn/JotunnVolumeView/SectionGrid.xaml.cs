@@ -106,9 +106,13 @@ namespace Viking.VolumeView
             e.Handled = true;
         }
 
+        void OnViewMouseLeave(object sender, MouseEventArgs e) => SceneHost.HandleViewMouseLeave();
+
         void OnViewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            ((UIElement)sender).ReleaseMouseCapture();
+            // A left drag still in progress keeps the capture, so its release still arrives here.
+            if (e.LeftButton != MouseButtonState.Pressed)
+                ((UIElement)sender).ReleaseMouseCapture();
             SceneHost.HandleViewMouseUp(e.GetPosition(SceneHost), MouseButton.Right);
             UpdateMouseStatus(e.GetPosition(SceneHost));
             e.Handled = true;

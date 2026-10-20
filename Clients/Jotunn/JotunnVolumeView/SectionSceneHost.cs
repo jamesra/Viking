@@ -699,6 +699,14 @@ namespace Viking.VolumeView
         /// </summary>
         public void HandleViewMouseDown(Point p, MouseButton button, int clickCount)
         {
+            // During a left drag the other buttons do nothing: a pan or menu would steal the drag's release.
+            if (_annotating && button != MouseButton.Left)
+                return;
+
+            // A tool works on the section it started on; a click in another grid cell would switch sections under it.
+            if (AnnotationTools is { IsIdle: false } && !IsInActiveCell(p))
+                return;
+
             try
             {
                 SelectCellAt(p);
@@ -806,6 +814,15 @@ namespace Viking.VolumeView
                 ApplyActiveCellViewport();
                 AnnotationTools?.OnMouseMove(ActiveCellScreen(p));
                 return;
+            }
+
+            if (_annotating && leftButton != MouseButtonState.Pressed)
+            {
+                // The left release never reached the view (a menu opened mid-drag, or the button came up outside the
+                // window): end the drag now, so a released tool never follows the pointer.
+                ApplyActiveCellViewport();
+                AnnotationTools?.OnMouseUp();
+                _annotating = false;
             }
 
             if (leftButton != MouseButtonState.Pressed && rightButton != MouseButtonState.Pressed && IsInActiveCell(p))
@@ -1093,6 +1110,9 @@ namespace Viking.VolumeView
         /// Converts host coordinates to the active cell's local pixels so ScreenToWorld
         /// matches the viewport set for that cell.
         /// </summary>
+        /// <summary>The pointer left the view: hover feedback and hover-targeted hotkeys must not keep acting on what was under it.</summary>
+        public void HandleViewMouseLeave() => AnnotationTools?.ClearHover();
+
         bool IsInActiveCell(Point p)
         {
             if (Grid == null)
