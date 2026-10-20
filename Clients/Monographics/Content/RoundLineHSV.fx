@@ -381,8 +381,8 @@ technique Pinched
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0 PinchedLineVertexShader();
-		pixelShader = compile ps_4_0 DepthOnlyPinchedShader();
+		vertexShader = compile VS_SHADERMODEL PinchedLineVertexShader();
+		pixelShader = compile PS_SHADERMODEL DepthOnlyPinchedShader();
 	}
 	pass P0
 	{
@@ -394,7 +394,7 @@ technique Pinched
 		ZFunc = LessEqual;
 		ZEnable = true;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0 PinchedLineVertexShader();
-		pixelShader = compile ps_4_0 MyPSPinchedHSV();
+		vertexShader = compile VS_SHADERMODEL PinchedLineVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSPinchedHSV();
 	}
 }

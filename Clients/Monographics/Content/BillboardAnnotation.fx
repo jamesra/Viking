@@ -758,8 +758,8 @@ technique CircleRingOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_4_0 RingVertexShaderFunction();
-		PixelShader = compile ps_4_0 CircleRingPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL RingVertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL CircleRingPixelShaderFunction();
 	}
 }
 
@@ -832,7 +832,7 @@ technique StripeOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_4_0 TextureShaderFunction();
-		PixelShader = compile ps_4_0 StripePixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL TextureShaderFunction();
+		PixelShader = compile PS_SHADERMODEL StripePixelShaderFunction();
 	}
 }

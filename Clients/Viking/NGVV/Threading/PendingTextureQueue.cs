@@ -253,6 +253,28 @@ namespace Viking
             TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), DispatcherPriority.Normal);
         }
 
+        /// <summary>How long the pump waits before looking for a graphics device again.</summary>
+        internal static readonly TimeSpan DeviceWaitInterval = TimeSpan.FromMilliseconds(50);
+
+        /// <summary>
+        /// Runs the pump again after <see cref="DeviceWaitInterval"/>, at Background priority, while no graphics device
+        /// exists (start-up, a lost device). Re-posting at once at Normal priority kept the UI thread busy ahead of input
+        /// and rendering until the device appeared. The pump stays marked scheduled meanwhile.
+        /// </summary>
+        private static void RetryAfterDeviceWait()
+        {
+            Dispatcher? dispatcher = TileLoadEnvironment.UiDispatcher;
+            if (dispatcher is null)
+            {
+                Interlocked.Exchange(ref _pumpScheduled, 0);
+                return;
+            }
+
+            _ = Task.Delay(DeviceWaitInterval).ContinueWith(
+                _ => dispatcher.BeginInvoke(new Action(ProcessQueue), DispatcherPriority.Background),
+                TaskScheduler.Default);
+        }
+
         /// <summary>
         /// Create pending Texture2Ds on the UI thread before Present. Jotunn's
         /// CompositionTarget.Rendering loop otherwise starves Background dispatcher
@@ -382,7 +404,7 @@ namespace Viking
                             _pendingLock.ExitWriteLock();
                         }
                         requeuedForDevice = true;
-                        ContinuePump();
+                        RetryAfterDeviceWait();
                         return;
                     }
 
