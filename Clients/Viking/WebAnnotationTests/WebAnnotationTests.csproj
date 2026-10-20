@@ -65,6 +65,7 @@
     <Compile Include="UserSettingsHotkeysTests.cs" />
     <Compile Include="VertexEditTargetTests.cs" />
     <Compile Include="GlobalWithoutVikingVolumeTests.cs" />
+    <Compile Include="AnnotationToolHostTests.cs" />
     <Compile Include="HiddenStructuresTests.cs" />
     <Compile Include="ObjAttributeTests.cs" />
     <Compile Include="StructureLinkKeyTests.cs" />
