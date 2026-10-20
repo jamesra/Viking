@@ -10,8 +10,9 @@ only works well with the encoding it was trained on:
   distance from the mask's edge, with a different strength for a seed and for a mask to correct, and negatives drawn
   from the neighbouring annotations. :class:`EdgeConfidenceEncoder` builds it with the trainer's own function.
 
-Only the start window of a walk (the one the client's mask lands in) uses an encoder. Windows the walk grows into are
-prompted with the fused logits of their neighbours, as before.
+The start window of a walk (the one the client's mask lands in) is built wholly by the encoder. Windows the walk
+grows into are prompted with the fused logits of their neighbours, and the client's background masks are painted into
+them with the encoder's negatives (:meth:`PromptEncoder.background_logits`) rather than the legacy flat value.
 """
 
 from __future__ import annotations
@@ -39,6 +40,16 @@ class PromptEncoder(Protocol):
         ``shape`` is the client's foreground mask (its ``role`` says seed or correction) and ``background_masks``
         are the masks it said are not the object. Background rectangles are not passed: this encoding has no weak
         negative.
+        """
+        ...
+
+    def background_logits(
+        self, cell: Cell, background_masks: Sequence[MaskShape]
+    ) -> Optional[NDArray[np.float32]]:
+        """The 256x256 negatives (values <= 0) of ``background_masks`` in ``cell``'s window, or None when none reach it.
+
+        Painted over a continuation window's fused logits, so a window the walk grows into is told about the
+        client's background masks in the encoding the model was trained on.
         """
         ...
 
@@ -73,6 +84,27 @@ class EdgeConfidenceEncoder:
             correction_logit=self.correction_logit,
             depth_frac=self.depth_frac,
         )
+
+
+    def background_logits(
+        self, cell: Cell, background_masks: Sequence[MaskShape]
+    ) -> Optional[NDArray[np.float32]]:
+        negatives = [
+            pixels for pixels in (other.window_full(cell) for other in background_masks) if pixels is not None
+        ]
+        if not negatives:
+            return None
+        canvas = enc.encode_dense_canvas(
+            (CELL_SIZE, CELL_SIZE),
+            negatives=negatives,
+            tau=self.tau,
+            seed_logit=self.seed_logit,
+            correction_logit=self.correction_logit,
+            depth_frac=self.depth_frac,
+        )
+        if not canvas.any():
+            return None
+        return enc.area_resize(canvas, enc.LOW_RES)
 
 
 def supported_encodings() -> tuple[str, ...]:
