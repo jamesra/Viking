@@ -31,7 +31,7 @@
 	</PropertyGroup>
 	
 	<!-- Post-build event to copy output to Modules folder -->
-	<Target Name="PostBuild" AfterTargets="Build">
+	<Target Name="PostBuild" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
 		<PropertyGroup>
 			<OutputDirectory>$(OutDir)</OutputDirectory>
 			<OutputDirectory Condition="'$(OutputDirectory)' == ''">$(OutputPath)</OutputDirectory>

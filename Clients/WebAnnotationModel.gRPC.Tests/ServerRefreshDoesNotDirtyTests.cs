@@ -64,6 +64,46 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE), "a server refresh is not queued for Save");
         }
 
+        /// <summary>
+        /// A location built from a server payload mirrors the server (NONE), so it is not sent back on Save and the next
+        /// refresh is applied rather than skipped as an unsaved edit.
+        /// </summary>
+        [Test]
+        public async Task LocationFromServer_StartsNone_AndTakesLaterRefreshes()
+        {
+            Location first = ServerLocation();
+            first.Terminal = false;
+            first.LastModified = Timestamp.FromDateTime(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            LocationObj obj = new LocationServerToClientConverter().Convert(first);
+            Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE));
+
+            bool changed = await new LocationServerToClientUpdater().Update(obj, ServerLocation());
+
+            Assert.That(changed, Is.True);
+            Assert.That(obj.Terminal, Is.True);
+            Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE));
+        }
+
+        /// <summary>
+        /// A refresh carrying the cached LastModified is the same row: its shapes are not parsed again, but its links,
+        /// which live in their own table, are synced.
+        /// </summary>
+        [Test]
+        public async Task LocationRefresh_SameLastModified_SyncsLinksOnly()
+        {
+            LocationObj obj = new LocationServerToClientConverter().Convert(ServerLocation());
+            Location same = ServerLocation();
+            same.Terminal = false;
+            same.Links.Add(77);
+
+            bool changed = await new LocationServerToClientUpdater().Update(obj, same);
+
+            Assert.That(changed, Is.False);
+            Assert.That(obj.Terminal, Is.True, "the row was not re-applied");
+            Assert.That(obj.Links, Does.Contain(77L));
+            Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE));
+        }
+
         [Test]
         public async Task LocationRefresh_WithUnsavedEdit_KeepsTheEdit()
         {

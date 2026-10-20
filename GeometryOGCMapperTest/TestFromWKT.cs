@@ -218,6 +218,24 @@ namespace GeometryOGCMapperTest
         }
 
 
+        /// <summary>Coordinates in exponent notation (a vertex a hair off an axis) parse; the old regex rejected them.</summary>
+        [TestMethod]
+        public void TestWKTReadPolygonWithExponentCoordinates()
+        {
+            var result = FromWKT.ParseWKT("POLYGON ((0 0, 10 9.18485099360515E-15, 10 10, 0 10, 0 0))") as Polygon;
+            Assert.IsNotNull(result);
+            Assert.AreEqual(9.18485099360515E-15, result.ExteriorRing[1].Y, 1e-20);
+        }
+
+        /// <summary>A polygon with a hole keeps the hole as an interior ring.</summary>
+        [TestMethod]
+        public void TestWKTReadPolygonWithHole()
+        {
+            var result = FromWKT.ParseWKT("POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0), (2 2, 4 2, 4 4, 2 4, 2 2))") as Polygon;
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.InteriorRings.Count);
+        }
+
         [TestMethod]
         public void TestWKTReadPoint()
         {

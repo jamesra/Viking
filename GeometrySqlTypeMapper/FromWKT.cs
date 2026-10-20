@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 
 [assembly: InternalsVisibleTo("GeometryOGCMapperTest")]
 
@@ -13,66 +12,34 @@ namespace Geometry
 {
     public static class FromWKT
     {
-        static readonly string float_pattern = @"-?[0-9]*(?:\.[0-9]*)?";
-        static readonly string single_coord_pattern = @"\s*(?<X>" + float_pattern + @"){1}\s+(?<Y>" + float_pattern + @"){1}\s*";
-
-        private static readonly Regex single_coord_regex = new(@"\A" + single_coord_pattern + @"\Z", RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
-
-        static readonly string coord_list_pattern = @"(?:(?<coords>" + single_coord_pattern + @"),)*" +
-                                                     @"(?<coords>" + single_coord_pattern + @"){1}";
-
-        private static readonly Regex coord_list_regex =
-            new(coord_list_pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
-
-        /// <summary>
-        /// A matched set of parenthesis
-        /// </summary>
-        private static readonly string matched_parenthesis_pattern =
-            @"(?:
-               \(                           #First '('
-                    (?<matched_parenthesis>
-                        (?:
-                            [^()]           #Match all non-braces
-                            |
-                            (?<open> \( )   #Match '(' and capture into 'open'
-                            |
-                            (?<-open> \) )  #Match ')' and delete the 'open' capture
-                        )+
-                        (?(open)(?!))   #Fails if the 'open' stack isn't empty
-                    )
-                \)                  # Last ')' 
-            )*";
-
-        /// <summary>
-        /// A comma delimited list of matched parenthesis
-        /// </summary>
-        private static readonly string parenthesis_list_pattern = @"(?:\s*" + matched_parenthesis_pattern + @"\s*,)*" +
-                                                                  @"(?:\s*" + matched_parenthesis_pattern + @"){1}\s*";
-
-
-        private static readonly Regex parenthesis_list_regex = new(parenthesis_list_pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
-
-        private static readonly string WKT_pattern = @"\s*\b(?<type>[\p{Ll}\p{Lu}\p{Lt}]+)\b\s*" +
-                                                     matched_parenthesis_pattern +
-                                                     @"\s*\Z";
-
-        private static readonly Regex WKT_regex =
-            new(WKT_pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
-
         public static IShape2D ToShape2D(this string input) => ParseWKT(input);
 
+        /// <summary>
+        /// Parses "TYPE (parameters)" for POINT, LINESTRING, MULTILINESTRING, POLYGON and CURVEPOLYGON (a circle).
+        /// Scanned by hand rather than with regular expressions; the client parses a WKT ring for every location it loads.
+        /// </summary>
         public static IShape2D ParseWKT(this string input)
         {
             if (input is null)
                 throw new FormatException("Input WKT must not be null");
 
-            var m = WKT_regex.Match(input);
-            if (false == m.Success)
+            int i = SkipWhitespace(input, 0, input.Length);
+            int typeStart = i;
+            while (i < input.Length && char.IsLetter(input[i]))
+                i++;
+            if (i == typeStart)
                 throw new FormatException($"Unable to parse WKT {input}");
 
-            string coords = m.Groups["matched_parenthesis"].Value;
+            string type = input.Substring(typeStart, i - typeStart).ToUpperInvariant();
 
-            return m.Groups["type"].Value.ToUpper() switch
+            i = SkipWhitespace(input, i, input.Length);
+            if (!TryReadParenthesized(input, ref i, input.Length, out string coords) ||
+                SkipWhitespace(input, i, input.Length) != input.Length)
+            {
+                throw new FormatException($"Unable to parse WKT {input}");
+            }
+
+            return type switch
             {
                 "POINT" => ParsePointParameters(coords),
                 "LINESTRING" => ParsePolylineParameters(coords),
@@ -81,49 +48,156 @@ namespace Geometry
                 "CURVEPOLYGON" => ParseCurvePolygonParameters(coords),
                 _ => throw new FormatException($"Unable to parse WKT {input}"),
             };
-            throw new FormatException($"Unable to parse WKT {input}"); ;
+        }
+
+        /// <summary>
+        /// Reads a balanced "( ... )" group starting at <paramref name="i"/> and returns its non-empty inner text. Nested
+        /// parentheses are kept in the inner text. Leaves <paramref name="i"/> after the closing parenthesis.
+        /// </summary>
+        private static bool TryReadParenthesized(string s, ref int i, int end, out string inner)
+        {
+            inner = null;
+            if (i >= end || s[i] != '(')
+                return false;
+
+            int depth = 0;
+            for (int j = i; j < end; j++)
+            {
+                if (s[j] == '(')
+                {
+                    depth++;
+                }
+                else if (s[j] == ')')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        if (j == i + 1)
+                            return false;
+
+                        inner = s.Substring(i + 1, j - i - 1);
+                        i = j + 1;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         internal static Vector2 ParsePointParameters(string coords)
         {
-            var m = single_coord_regex.Match(coords);
-            if (m.Success == false)
-                throw new FormatException($"Cannot parse WKT to point {coords}");
+            if (coords is null)
+                throw new FormatException("Cannot parse WKT to point: no coordinates");
 
-            double X = double.Parse(m.Groups["X"].Value, NumberStyles.Float, CultureInfo.InvariantCulture);
-            double Y = double.Parse(m.Groups["Y"].Value, NumberStyles.Float, CultureInfo.InvariantCulture);
-            return new Vector2(X, Y);
+            return ParsePoint(coords, 0, coords.Length);
         }
 
+        /// <summary>
+        /// Parses a comma separated list of "X Y" coordinates. A hand-written scanner rather than a regex: region loads
+        /// parse thousands of rings, and matching every point with captures dominated the client's ingest cost.
+        /// </summary>
         internal static List<Vector2> ParsePointsFromParameters(string coords)
         {
-            var m = coord_list_regex.Match(coords);
+            if (coords is null)
+                throw new FormatException("Cannot parse WKT coordinate list: no coordinates");
 
-            if (m.Success == false)
-                throw new FormatException($"Cannot parse WKT to point {coords}");
-
-            List<Vector2> points = new(m.Groups["coords"].Captures.Count);
-            foreach (var val in m.Groups["coords"].Captures)
+            int count = 1;
+            foreach (char c in coords)
             {
-                var p = ParsePointParameters(val.ToString());
-                points.Add(p);
+                if (c == ',')
+                    count++;
+            }
+
+            List<Vector2> points = new(count);
+            int start = 0;
+            while (true)
+            {
+                int comma = coords.IndexOf(',', start);
+                int end = comma < 0 ? coords.Length : comma;
+                points.Add(ParsePoint(coords, start, end));
+                if (comma < 0)
+                    break;
+
+                start = comma + 1;
             }
 
             return points;
         }
 
+        /// <summary>
+        /// Parses exactly two numbers separated by whitespace from <paramref name="s"/>[<paramref name="start"/>,
+        /// <paramref name="end"/>), with optional surrounding whitespace. Anything else is a <see cref="FormatException"/>.
+        /// </summary>
+        private static Vector2 ParsePoint(string s, int start, int end)
+        {
+            int i = SkipWhitespace(s, start, end);
+            int xStart = i;
+            i = SkipNonWhitespace(s, i, end);
+            int xEnd = i;
+
+            int afterX = i;
+            i = SkipWhitespace(s, i, end);
+            if (i == afterX)
+                throw new FormatException($"Cannot parse WKT to point {s.Substring(start, end - start)}");
+
+            int yStart = i;
+            i = SkipNonWhitespace(s, i, end);
+            int yEnd = i;
+
+            if (SkipWhitespace(s, i, end) != end || xEnd == xStart || yEnd == yStart)
+                throw new FormatException($"Cannot parse WKT to point {s.Substring(start, end - start)}");
+
+            return new Vector2(ParseNumber(s, xStart, xEnd), ParseNumber(s, yStart, yEnd));
+        }
+
+        private static double ParseNumber(string s, int start, int end)
+        {
+            if (!double.TryParse(s.Substring(start, end - start), NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                throw new FormatException($"Cannot parse WKT coordinate {s.Substring(start, end - start)}");
+
+            return value;
+        }
+
+        private static int SkipWhitespace(string s, int i, int end)
+        {
+            while (i < end && char.IsWhiteSpace(s[i]))
+                i++;
+            return i;
+        }
+
+        private static int SkipNonWhitespace(string s, int i, int end)
+        {
+            while (i < end && !char.IsWhiteSpace(s[i]))
+                i++;
+            return i;
+        }
+
+        /// <summary>
+        /// Splits "(a), (b), ..." into the inner text of each group. Whitespace around groups and commas is allowed.
+        /// </summary>
         internal static string[] ParseParenListFromParameters(string input)
         {
-            var m = parenthesis_list_regex.Match(input);
-            if (m.Success == false)
-                throw new FormatException($"Cannot parse WKT parenthesized parameters to a list {input}");
+            if (input is null)
+                throw new FormatException("Cannot parse WKT parenthesized parameters: no input");
 
-            var captures = m.Groups["matched_parenthesis"].Captures;
-            string[] matchedParenthesis = new string[captures.Count];
-            for (int i = 0; i < matchedParenthesis.Length; i++)
-                matchedParenthesis[i] = captures[i].ToString();
+            List<string> groups = [];
+            int i = SkipWhitespace(input, 0, input.Length);
+            while (true)
+            {
+                if (!TryReadParenthesized(input, ref i, input.Length, out string inner))
+                    throw new FormatException($"Cannot parse WKT parenthesized parameters to a list {input}");
 
-            return matchedParenthesis;
+                groups.Add(inner);
+                i = SkipWhitespace(input, i, input.Length);
+                if (i == input.Length)
+                    return groups.ToArray();
+
+                if (input[i] != ',')
+                    throw new FormatException($"Cannot parse WKT parenthesized parameters to a list {input}");
+
+                i = SkipWhitespace(input, i + 1, input.Length);
+            }
         }
 
         internal static IShape2D ParsePolylineParameters(string coords)

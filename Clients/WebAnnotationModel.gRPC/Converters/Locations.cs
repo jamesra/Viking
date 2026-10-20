@@ -23,9 +23,10 @@ namespace WebAnnotationModel.gRPC.Converters
     {
         public LocationObj Convert(Location src)
         {
+            // DBAction is assigned last: every property setter marks the object UPDATE, and a location loaded from the
+            // server must start NONE so it is neither sent back on Save nor skipped by later refreshes.
             var obj = new LocationObj(src.Id, src.ParentId)
             {
-                DBAction = DBACTION.NONE,
                 Section = src.Section,
                 MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: true),
                 VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: false),
@@ -35,6 +36,7 @@ namespace WebAnnotationModel.gRPC.Converters
                 Width = src.Width,
                 Username = src.Username,
                 LastModified = src.LastModified?.ToDateTime() ?? default,
+                DBAction = DBACTION.NONE,
             };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -49,7 +51,6 @@ namespace WebAnnotationModel.gRPC.Converters
 
             var obj = new LocationObj(src.ID, src.ParentID ?? 0)
             {
-                DBAction = DBACTION.NONE,
                 Section = src.SectionNumber,
                 MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: true),
                 VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: false),
@@ -59,6 +60,7 @@ namespace WebAnnotationModel.gRPC.Converters
                 Width = src.Width,
                 Username = src.Username,
                 LastModified = src.LastModified,
+                DBAction = DBACTION.NONE,
             };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.TagsXml ?? string.Empty)).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -173,6 +175,15 @@ namespace WebAnnotationModel.gRPC.Converters
             if (obj.DBAction != DBACTION.NONE)
                 return false;
 
+            // The row is unchanged since the cached copy was made: skip parsing its shapes again. Links are a separate
+            // table and can change without touching the row, so they are still synced.
+            DateTime serverModified = update.LastModified?.ToDateTime() ?? default;
+            if (serverModified != default && obj.LastModified == serverModified && obj.Section == update.Section)
+            {
+                await obj.SetLinksFromServerAsync(update.Links);
+                return false;
+            }
+
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
             try
@@ -206,6 +217,12 @@ namespace WebAnnotationModel.gRPC.Converters
         {
             if (obj.DBAction != DBACTION.NONE)
                 return false;
+
+            if (update.LastModified != default && obj.LastModified == update.LastModified && obj.Section == update.SectionNumber)
+            {
+                await obj.SetLinksFromServerAsync(update.Links);
+                return false;
+            }
 
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;

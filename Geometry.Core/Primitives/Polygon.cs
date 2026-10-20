@@ -302,7 +302,7 @@ namespace Geometry
         /// <summary>
         /// Total verticies, minus the duplicate verticies at the end of each ring
         /// </summary>
-        public int TotalUniqueVertices => (ExteriorRing.Length - 1) + InteriorRings.Sum(ir => ir.Length - 1);
+        public int TotalUniqueVertices => (_ExteriorRing.Length - 1) + _InteriorPolygons.Sum(ip => ip._ExteriorRing.Length - 1);
 
         IPoint2D ICentroid.Centroid => Centroid;
 
@@ -3315,6 +3315,9 @@ namespace Geometry
             if (other.ShapeType != this.ShapeType)
                 return false;
 
+            if (other is Polygon polygon)
+                return this.Equals(polygon);
+
             if (other is IPolygon2D otherPoly)
                 return this.Equals(otherPoly);
 
@@ -3329,53 +3332,63 @@ namespace Geometry
             if (object.ReferenceEquals(this, other))
                 return true;
 
-            if (this.ExteriorRing.Length != other.ExteriorRing.Count)
+            if (other is Polygon polygon)
+                return this.Equals(polygon);
+
+            // The interface's rings are built on each access, so read each one once.
+            IReadOnlyList<IPoint2D> otherRing = other.ExteriorRing;
+            if (this._ExteriorRing.Length != otherRing.Count)
                 return false;
 
             if (this.TotalUniqueVertices != other.TotalUniqueVertices)
                 return false;
 
-            if (this._InteriorPolygons.Count != other.InteriorRings.Count)
+            IReadOnlyList<IPolygon2D> otherInteriors = other.InteriorPolygons;
+            if (this._InteriorPolygons.Count != otherInteriors.Count)
                 return false;
 
-            for (int iVert = 0; iVert < this.ExteriorRing.Length; iVert++)
+            for (int iVert = 0; iVert < this._ExteriorRing.Length; iVert++)
             {
-                if (false == ExteriorRing[iVert].Equals(other.ExteriorRing[iVert]))
+                if (false == _ExteriorRing[iVert].Equals(otherRing[iVert]))
                     return false;
             }
 
             for (int iInner = 0; iInner < this._InteriorPolygons.Count; iInner++)
             {
-                if (false == this.InteriorPolygons[iInner].Equals(other.InteriorPolygons[iInner]))
+                if (false == this._InteriorPolygons[iInner].Equals(otherInteriors[iInner]))
                     return false;
             }
 
             return true;
         }
 
+        /// <summary>
+        /// Same vertices in the same order, ring by ring. Reads the rings directly: the <see cref="ExteriorRing"/>
+        /// property returns a copy, so indexing it in the loop copied the ring once per vertex.
+        /// </summary>
         public bool Equals(Polygon other)
         {
             if (other is null)
                 return false;
 
-            if (this.ExteriorRing.Length != other.ExteriorRing.Length)
-                return false;
+            if (object.ReferenceEquals(this, other))
+                return true;
 
-            if (this.TotalUniqueVertices != other.TotalUniqueVertices)
+            if (this._ExteriorRing.Length != other._ExteriorRing.Length)
                 return false;
 
             if (this._InteriorPolygons.Count != other._InteriorPolygons.Count)
                 return false;
 
-            for (int iVert = 0; iVert < this.ExteriorRing.Length; iVert++)
+            for (int iVert = 0; iVert < this._ExteriorRing.Length; iVert++)
             {
-                if (false == ExteriorRing[iVert].Equals(other.ExteriorRing[iVert]))
+                if (false == _ExteriorRing[iVert].Equals(other._ExteriorRing[iVert]))
                     return false;
             }
 
             for (int iInner = 0; iInner < this._InteriorPolygons.Count; iInner++)
             {
-                if (false == this.InteriorPolygons[iInner].Equals(other.InteriorPolygons[iInner]))
+                if (false == this._InteriorPolygons[iInner].Equals(other._InteriorPolygons[iInner]))
                     return false;
             }
 

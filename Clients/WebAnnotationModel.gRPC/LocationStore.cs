@@ -57,8 +57,9 @@ namespace WebAnnotationModel.gRPC
             IObjectConverter<ILocation, LocationObj> serverObjToObjConverter,
             IStructureStore structureStore,
             ILocationLinkStore locationLinkStore,
-            IQueryLogger queryLogger = null) : base(clientFactory, null, objToServerObjConverter,
-            serverObjToObjConverter, queryLogger)
+            IQueryLogger queryLogger = null,
+            IObjectUpdater<LocationObj, ILocation> objUpdater = null) : base(clientFactory, null, objToServerObjConverter,
+            serverObjToObjConverter, queryLogger, objUpdater)
         {
             _structureStore = structureStore;
             _locationLinkStore = locationLinkStore;

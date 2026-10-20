@@ -49,3 +49,14 @@ The client above the stores was brought to parity by merging Legacy 00014315 (ba
 | Legacy: region refresh compares `TotalSeconds` (66460820) | `RegionRefreshTiming` | done | | |
 | Legacy: cancelled or failed region cell clears its LastQuery; `AreRegionQueriesComplete` (03154886) | `RegionRequestData.ClearLastQuery`, `IRegionLoader.AreRegionQueriesComplete` | done | | |
 | Legacy: cache-only lookups `GetObjectByID(id, false)`, `Values` | `GetCachedObject`, `CachedObjects` | done | | |
+
+## Client-side ingest benchmarks
+
+`Benchmarks/AnnotationParity` (BenchmarkDotNet, run in-process: `dotnet run -c Release -f net10.0-windows --project Benchmarks/AnnotationParity -- --filter * --inProcess`). `LocationIngestBenchmarks` merges generated region-load payloads (70% polygons with a 40-vertex ring, 30% circles, two links each) into a `LocationStore` through `StoreServerQueryResultsHandler`. No server is involved, and the WCF baseline needs the old service host, so the WCF column is `baseline: unavailable`; the numbers below compare the gRPC client before and after the 2026-10-19 changes (ShortRun, .NET 10, 5000 locations).
+
+| Case | Before | After | Change |
+|---|---|---|---|
+| First visit (all new) | 148 ms, 740 MB | 53-60 ms, 101 MB | WKT scanner instead of regexes |
+| Revisit, rows unchanged | 240 ms, 1.88 GB | 1.6 ms, 4.2 MB | updater skips a row whose LastModified matches (links still sync) |
+| Refresh, every row changed | 176 ms, 1.42 GB | 17 ms, 97 MB | `Polygon.Equals` read rings directly instead of copying the ring per vertex |
+| WKT parse of the polygons alone | 114 ms, 140 MB | 17-19 ms, 45 MB | hand-written coordinate and parenthesis scanner |

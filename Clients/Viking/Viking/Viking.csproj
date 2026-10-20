@@ -130,7 +130,7 @@
 
 	-->
   <!-- Post-build event to create debug output file -->
-  <Target Name="CreateDebugOutputFile" AfterTargets="Build">
+  <Target Name="CreateDebugOutputFile" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
     <WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
   </Target>
   <PropertyGroup>
@@ -143,7 +143,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <IsPublishable>True</IsPublishable>
   </PropertyGroup>
-  <Target Name="CopyGraphicsContent" AfterTargets="Build" BeforeTargets="PrepareForRun" Condition="'$(DesignTimeBuild)' != 'true'">
+  <Target Name="CopyGraphicsContent" AfterTargets="Build" BeforeTargets="PrepareForRun" Condition="'$(TargetFramework)' != '' AND '$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <_GraphicsBuildConfig Condition="'$(Configuration)' != ''">$(Configuration)</_GraphicsBuildConfig>
       <_GraphicsBuildConfig Condition="'$(_GraphicsBuildConfig)' == ''">Debug</_GraphicsBuildConfig>
@@ -173,7 +173,7 @@
   </ItemGroup>
   <!-- Main target that processes each module using item batching -->
   <!-- Run after Build and ensure project references are built first -->
-  <Target Name="CopyModules" AfterTargets="Build">
+  <Target Name="CopyModules" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
     <!-- Process each module by calling CopySingleModule with the module name -->
     <MSBuild Projects="$(MSBuildProjectFile)" Targets="CopySingleModule" Properties="ModuleName=%(ModuleToCopy.Identity)" />
     <!-- Copy shared DLLs once after all modules are processed -->
