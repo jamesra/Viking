@@ -389,13 +389,16 @@ namespace WebAnnotation.UI.AutoPolygonize
         private const float ShimmerBandFraction = 0.3f;
 
         /// <summary>
-        /// How many times longer the sweep takes than the Duration preference says. Two makes the white band travel at
-        /// half the speed it had when the preference was introduced.
+        /// How many times longer the sweep takes than the Duration preference says. Four thirds makes the white band travel
+        /// at three quarters of the speed it had when the preference was introduced.
         /// </summary>
-        private const double ShimmerDurationScale = 2.0;
+        private const double ShimmerSweepDurationScale = 4.0 / 3.0;
+
+        /// <summary>How many times longer the ripple takes than the Duration preference says.</summary>
+        private const double ShimmerRippleDurationScale = 2.0;
 
         /// <summary>Alpha of the shimmer glow at its brightest, as a fraction of the shimmer brightness preference.</summary>
-        private const float ShimmerGlowPeakFraction = 0.5f;
+        private const float ShimmerGlowPeakFraction = 1.0f;
 
         /// <summary>Smallest ripple ring half width, in mask texels, so small polygons still show a visible ring.</summary>
         private const float ShimmerRippleMinHalfWidth = 1.5f;
@@ -871,7 +874,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 shimmerStartTimestamp = Stopwatch.GetTimestamp();
             }
 
-            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / (shimmerDurationMs * ShimmerDurationScale);
+            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / (shimmerDurationMs * (shimmerStyle == AutoPolygonizeShimmerStyle.Ripple ? ShimmerRippleDurationScale : ShimmerSweepDurationScale));
             if (progress >= 1.0)
             {
                 shimmerDone = true;
@@ -1069,7 +1072,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Centre and standard deviation, in mask texels, of the round glow under the shimmer: the middle of the marked
-        /// texels' bounding box, with a deviation of a quarter of its longer side (at least one texel) so the glow fades
+        /// texels' bounding box, with a deviation of a third of its longer side (at least one texel) so the glow fades
         /// out near the polygon's edge. The grid arguments are as for <see cref="ShimmerSweepRange"/>.
         /// </summary>
         internal static (Vector2 Centre, float Sigma) ShimmerGlowShape(bool[] inside, int width, int height, int supersample)
@@ -1080,7 +1083,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             float centreX = (minX + maxX + 1) / 2f / supersample;
             float centreY = (minY + maxY + 1) / 2f / supersample;
             float longerSide = Math.Max(maxX - minX + 1, maxY - minY + 1) / (float)supersample;
-            return (new Vector2(centreX, centreY), Math.Max(1f, longerSide / 4f));
+            return (new Vector2(centreX, centreY), Math.Max(1f, longerSide / 3f));
         }
 
         /// <summary>

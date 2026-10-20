@@ -175,7 +175,7 @@ namespace WebAnnotationTests.Commands
         public void TheShimmerGlowFadesInToItsPeakHalfwayAndOutAgain()
         {
             Assert.AreEqual(0f, AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0), 1e-6);
-            Assert.AreEqual(0.4f, AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0.5), 1e-5, "half the shimmer brightness at the midpoint");
+            Assert.AreEqual(0.8f, AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0.5), 1e-5, "the full shimmer brightness at the midpoint");
             Assert.AreEqual(0f, AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 1), 1e-5);
             Assert.IsTrue(AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0.25) < AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0.5));
             Assert.IsTrue(AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0.75) < AutoPolygonizeProposal.ShimmerGlowAlpha(0.8f, 0.5));
@@ -183,7 +183,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void TheShimmerGlowIsCentredOnTheMarkedTexelsWithAQuarterOfTheirLongerSideAsDeviation()
+        public void TheShimmerGlowIsCentredOnTheMarkedTexelsWithAThirdOfTheirLongerSideAsDeviation()
         {
             // Marked texels fill columns 2..5 and rows 1..2 of a 8 x 4 grid, two clip texels per mask texel.
             bool[] inside = new bool[8 * 4];
@@ -195,7 +195,7 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(2f, centre.X, 1e-5, "(2 + 5 + 1) / 2 clip texels is 4, which is 2 mask texels");
             Assert.AreEqual(1f, centre.Y, 1e-5, "(1 + 2 + 1) / 2 clip texels is 2, which is 1 mask texel");
-            Assert.AreEqual(1f, sigma, 1e-5, "a 4 clip texel long side is 2 mask texels; a quarter would be 0.5, so the one texel floor applies");
+            Assert.AreEqual(1f, sigma, 1e-5, "a 4 clip texel long side is 2 mask texels; a third would be 0.67, so the one texel floor applies");
         }
 
         [TestMethod]
