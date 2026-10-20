@@ -25,6 +25,18 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
 
+  <!-- GraphicsDeviceSmokeTests load the content Viking ships for this framework (MonoGame 3.7 for net48, 3.8 for net10). -->
+  <Target Name="CopyGraphicsContentForTests" AfterTargets="Build">
+    <PropertyGroup>
+      <_TestGraphicsContentDir Condition="'$(TargetFramework)' == 'net48'">$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\bin\$(Configuration)\net48\Content\</_TestGraphicsContentDir>
+      <_TestGraphicsContentDir Condition="'$(TargetFramework)' != 'net48'">$(MSBuildThisFileDirectory)..\..\Monographics\bin\MonoGame\$(Configuration)\$(TargetFramework)\Content\</_TestGraphicsContentDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TestGraphicsContent Include="$(_TestGraphicsContentDir)*.xnb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_TestGraphicsContent)" DestinationFolder="$(OutDir)Content" SkipUnchangedFiles="true" />
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\MeasurementExtension\Measurement.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
