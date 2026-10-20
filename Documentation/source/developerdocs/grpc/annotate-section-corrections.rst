@@ -55,7 +55,7 @@ Catalog
    * - ``ListCorrectedSections``
      - Z values for one volume and Stos group.
    * - ``GetCorrectionManifest``
-     - Provenance, ``volume_url`` for ``volume.npz`` when hosted, and the Z list.
+     - Provenance, ``volume_url`` for ``volume.npz`` when hosted (built from the section files on first request), and the Z list.
    * - ``GetSectionCorrection``
      - Sparse lattice for one Z. Node world position is ``origin + grid index * pitch_nm``. Add ``dx`` and ``dy`` to a volume point.
 

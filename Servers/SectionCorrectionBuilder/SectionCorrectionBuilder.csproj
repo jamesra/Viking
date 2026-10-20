@@ -14,6 +14,9 @@
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.5" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="GrpcSectionCorrectionService.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\SectionCorrection\SectionCorrection.csproj" />
     <ProjectReference Include="..\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj" />
     <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />

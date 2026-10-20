@@ -26,6 +26,13 @@ namespace Viking.SectionCorrectionBuilder
         public double DisplayPitchNm { get; set; } = 1000.0;
         public string PublicVolumeUrl { get; set; }
         public string StosGroups { get; set; }
+
+        /// <summary>
+        /// A change is published only once the newest annotation edit is at least this old, so an editing session is not
+        /// rebuilt halfway through. Zero publishes at once. <see cref="Force"/> and a first build ignore it.
+        /// </summary>
+        public TimeSpan QuietPeriod { get; set; }
+
         public Action<string> Log { get; set; }
 
         /// <summary>Joint registration solve settings; null uses <see cref="JointRegistrationOptions"/> defaults.</summary>
@@ -44,8 +51,21 @@ namespace Viking.SectionCorrectionBuilder
     /// Builds residual fields from annotation SQL + VikingXML and atomically publishes
     /// {output}/{StosGroup}/manifest.json. Called by the CLI and the gRPC rebuild host.
     /// </summary>
+    /// <remarks>
+    /// Per-section fingerprints in the manifest say whether anything a group was built from has changed. The joint
+    /// registration fit couples every section, so any change rebuilds the whole group; an unchanged group is left alone.
+    /// </remarks>
     public static class CorrectionPublisher
     {
+        /// <summary>
+        /// Version of the build algorithm stamped into manifests. Bump it whenever a change to the fit or pooling code
+        /// would alter published values, so existing sets are rebuilt.
+        /// </summary>
+        public const int BuilderVersion = 1;
+
+        /// <summary>Provenance method of sets built by <see cref="JointRegistrationSolver"/>.</summary>
+        const string JointMethod = "joint-second-difference-v1";
+
         public static async Task<int> PublishVolumeAsync(
             string annotationConnection,
             string volumeUrl,
@@ -68,7 +88,7 @@ namespace Viking.SectionCorrectionBuilder
                 options,
                 volumeUrl,
                 scale,
-                () => SqlMorphologyLoader.LoadWatermarkAsync(db),
+                new SqlSectionFingerprintSource(db),
                 (volume, group) => SqlMorphologyLoader.LoadAsync(db, volume, scale, group, options.MinLocations),
                 cancellationToken).ConfigureAwait(false);
         }
@@ -100,7 +120,7 @@ namespace Viking.SectionCorrectionBuilder
                 options,
                 volumeUrl,
                 scale,
-                () => loader.LoadWatermarkAsync(cancellationToken),
+                loader,
                 async (volume, group) =>
                 {
                     (List<SqlMorphologyLoader.CandidateRow> candidates, List<SqlMorphologyLoader.LinkRow> links) =
@@ -114,7 +134,7 @@ namespace Viking.SectionCorrectionBuilder
             CorrectionPublishOptions options,
             string volumeUrl,
             UnitsAndScale.Scale scale,
-            Func<Task<DateTime>> loadWatermark,
+            ISectionFingerprintSource source,
             Func<Volume, string, Task<SqlMorphologyLoader.LoadResult>> loadMorphology,
             CancellationToken cancellationToken)
         {
@@ -133,15 +153,20 @@ namespace Viking.SectionCorrectionBuilder
                 Log(options, $"{volume.Name}: mosaic-only; publishing section corrections through the identity transform.");
             }
 
-            DateTime watermark = await loadWatermark().ConfigureAwait(false);
-            Log(options, $"Annotation watermark {watermark:u}");
-
-            SqlMorphologyLoader.LoadResult morphology = await loadMorphology(volume, groups[0]).ConfigureAwait(false);
+            // Loaded on the first group that needs a rebuild, then remapped for the others.
+            SqlMorphologyLoader.LoadResult firstLoad = null;
+            async Task<SqlMorphologyLoader.LoadResult> LoadAsync(string group)
+            {
+                firstLoad ??= await loadMorphology(volume, groups[0]).ConfigureAwait(false);
+                return firstLoad.StosGroup == group
+                    ? firstLoad
+                    : await SqlMorphologyLoader.RemapAsync(firstLoad, volume, scale, group).ConfigureAwait(false);
+            }
 
             foreach (string group in groups)
             {
                 CorrectionPublishResult result = await PublishGroupAsync(
-                    options, volume, scale, group, watermark, morphology).ConfigureAwait(false);
+                    options, volume, scale, group, source, () => LoadAsync(group), cancellationToken).ConfigureAwait(false);
                 if (result.ExitCode != 0)
                     return result.ExitCode;
             }
@@ -154,49 +179,126 @@ namespace Viking.SectionCorrectionBuilder
             Volume volume,
             UnitsAndScale.IScale scale,
             string stosGroup,
-            DateTime watermark,
-            SqlMorphologyLoader.LoadResult firstLoad)
+            ISectionFingerprintSource source,
+            Func<Task<SqlMorphologyLoader.LoadResult>> loadMorphology,
+            CancellationToken cancellationToken)
         {
             string dest = Path.Combine(options.OutputDirectory, stosGroup);
-            string existingManifest = Path.Combine(dest, PublishedCorrectionSet.ManifestFileName);
-            if (!options.Force && File.Exists(existingManifest))
+            int minLocations = options.MinLocations < 1 ? 3 : options.MinLocations;
+
+            // Read before any row, so an edit made while this build runs is seen as a change by the next one.
+            Dictionary<long, SectionFingerprintDto> current = StosFingerprint.Apply(
+                await source.LoadFingerprintsAsync(cancellationToken).ConfigureAwait(false), volume, stosGroup);
+            DateTime watermark = SectionFingerprintDiff.Newest(current.Values);
+            Log(options, $"{stosGroup}: {current.Count} sections with annotations, newest edit {watermark:u}");
+
+            string reason;
+            if (options.Force)
+            {
+                reason = "forced";
+            }
+            else if (!File.Exists(Path.Combine(dest, PublishedCorrectionSet.ManifestFileName)))
+            {
+                reason = "nothing published yet";
+            }
+            else
             {
                 try
                 {
-                    PublishedCorrectionSet existing = PublishedCorrectionSet.LoadDirectory(dest);
-                    // Sets built by the leave-one-out residual field are always rebuilt, whatever the watermark.
-                    bool current = existing.Provenance?.Method == "joint-second-difference-v1";
-                    if (!current)
-                        Log(options, $"{stosGroup}: existing set predates the joint registration fit; rebuilding.");
-                    if (current && CorrectionPublishGate.ShouldSkip(existing.Provenance?.AnnotationWatermark, watermark, force: false))
+                    CorrectionManifestDto manifest = PublishedCorrectionSet.LoadManifest(dest);
+                    reason = RebuildReason(manifest, minLocations, options.Joint ?? new JointRegistrationOptions());
+                    if (reason is null)
                     {
-                        if (options.SkipQuiver)
+                        SortedSet<long> dirty = SectionFingerprintDiff.DirtySections(manifest.SectionFingerprints, current);
+                        if (dirty.Count == 0)
+                            return UnchangedGroup(options, volume, scale, stosGroup, dest, watermark);
+
+                        if (options.QuietPeriod > TimeSpan.Zero && DateTime.UtcNow - watermark < options.QuietPeriod)
                         {
-                            Log(options, $"{stosGroup}: watermark unchanged ({watermark:u}); skipping. Use --force to rebuild.");
+                            Log(options, $"{stosGroup}: {dirty.Count} sections changed but the newest edit ({watermark:u}) is within the " +
+                                $"{options.QuietPeriod.TotalMinutes:0} minute quiet period; waiting.");
                             return new CorrectionPublishResult { ExitCode = 0, Skipped = true, Destination = dest };
                         }
 
-                        int written = QuiverRenderer.WriteMissingQuivers(
-                            Path.Combine(dest, PublishedCorrectionSet.PreviewFolderName),
-                            existing.Sections.Values,
-                            options.DisplayPitchNm,
-                            SectionBoundsNm(volume, scale, stosGroup, existing.Sections.Keys));
-                        Log(options, written == 0
-                            ? $"{stosGroup}: watermark unchanged ({watermark:u}); previews present. Use --force to rebuild."
-                            : $"{stosGroup}: watermark unchanged ({watermark:u}); wrote {written} missing previews.");
-                        return new CorrectionPublishResult { ExitCode = 0, Skipped = true, Destination = dest };
+                        reason = $"{dirty.Count} sections changed ({SectionList(dirty)})";
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or InvalidDataException)
                 {
-                    Log(options, $"{stosGroup}: could not read existing manifest ({ex.Message}); rebuilding.");
+                    reason = $"could not read existing manifest ({ex.Message})";
                 }
             }
 
+            Log(options, $"{stosGroup}: rebuilding ({reason})");
+            return await PublishAsync(options, volume, scale, stosGroup, dest, current, watermark, minLocations, loadMorphology)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Why the published set must be rebuilt even if no annotation changed, or null when its fingerprints decide.
+        /// Anything that changes what the build computes from the same rows invalidates the set.
+        /// </summary>
+        internal static string RebuildReason(CorrectionManifestDto manifest, int minLocations, JointRegistrationOptions joint)
+        {
+            if (manifest.BuilderVersion != BuilderVersion)
+                return $"builder version {manifest.BuilderVersion} -> {BuilderVersion}";
+            if (manifest.SectionFingerprints is null)
+                return "published set has no section fingerprints";
+
+            CorrectionProvenanceDto p = manifest.Provenance;
+            if (p is null)
+                return "published set has no provenance";
+            // Sets built by the leave-one-out residual field are always rebuilt.
+            if (p.Method != JointMethod)
+                return "existing set predates the joint registration fit";
+            if (p.MinLocations != minLocations)
+                return $"min locations {p.MinLocations} -> {minLocations}";
+            if (p.PitchNm != joint.PitchNm || p.KernelRadiusNm != joint.KernelRadiusNm)
+                return "lattice parameters changed";
+
+            return null;
+        }
+
+        /// <summary>Nothing changed since the last publish: keep it, and fill in previews that are missing.</summary>
+        static CorrectionPublishResult UnchangedGroup(
+            CorrectionPublishOptions options,
+            Volume volume,
+            UnitsAndScale.IScale scale,
+            string stosGroup,
+            string dest,
+            DateTime watermark)
+        {
+            if (options.SkipQuiver)
+            {
+                Log(options, $"{stosGroup}: unchanged since the last publish ({watermark:u}); skipping. Use --force to rebuild.");
+                return new CorrectionPublishResult { ExitCode = 0, Skipped = true, Destination = dest };
+            }
+
+            PublishedCorrectionSet existing = PublishedCorrectionSet.LoadDirectory(dest);
+            int written = QuiverRenderer.WriteMissingQuivers(
+                Path.Combine(dest, PublishedCorrectionSet.PreviewFolderName),
+                existing.Sections.Values,
+                options.DisplayPitchNm,
+                SectionBoundsNm(volume, scale, stosGroup, existing.Sections.Keys));
+            Log(options, written == 0
+                ? $"{stosGroup}: unchanged since the last publish ({watermark:u}); previews present. Use --force to rebuild."
+                : $"{stosGroup}: unchanged since the last publish ({watermark:u}); wrote {written} missing previews.");
+            return new CorrectionPublishResult { ExitCode = 0, Skipped = true, Destination = dest };
+        }
+
+        static async Task<CorrectionPublishResult> PublishAsync(
+            CorrectionPublishOptions options,
+            Volume volume,
+            UnitsAndScale.IScale scale,
+            string stosGroup,
+            string dest,
+            Dictionary<long, SectionFingerprintDto> fingerprints,
+            DateTime watermark,
+            int minLocations,
+            Func<Task<SqlMorphologyLoader.LoadResult>> loadMorphology)
+        {
             Log(options, $"{stosGroup}: mapping mosaic → volume and solving the joint registration field");
-            SqlMorphologyLoader.LoadResult load = firstLoad.StosGroup == stosGroup
-                ? firstLoad
-                : await SqlMorphologyLoader.RemapAsync(firstLoad, volume, scale, stosGroup).ConfigureAwait(false);
+            SqlMorphologyLoader.LoadResult load = await loadMorphology().ConfigureAwait(false);
 
             // Joint fit over every section (JointRegistrationSolver). The former per-section leave-one-out residual
             // field measured each section against uncorrected neighbours and made held-out structures less smooth.
@@ -211,7 +313,8 @@ namespace Viking.SectionCorrectionBuilder
                 Log(options, $"  {line}");
 
             PublishedCorrectionSet published = FromResidualField(
-                stosGroup, watermark, field, window, options.PublicVolumeUrl ?? "", joint, jointOptions);
+                stosGroup, watermark, field, window, options.PublicVolumeUrl ?? "", joint, jointOptions, minLocations);
+            published.Manifest.SectionFingerprints = fingerprints;
             Dictionary<long, SectionVectorField> sections = published.Sections as Dictionary<long, SectionVectorField>
                 ?? new Dictionary<long, SectionVectorField>(published.Sections);
 
@@ -257,6 +360,13 @@ namespace Viking.SectionCorrectionBuilder
             };
         }
 
+        static string SectionList(SortedSet<long> sections)
+        {
+            const int shown = 8;
+            string head = string.Join(",", sections.Take(shown));
+            return sections.Count > shown ? head + ",…" : head;
+        }
+
         /// <summary>
         /// Builds a publishable set from an in-memory residual field (builder and sampling tests).
         /// </summary>
@@ -267,7 +377,8 @@ namespace Viking.SectionCorrectionBuilder
             MorphologyGraph.ResidualWindowOptions window,
             string volumeUrl,
             JointRegistrationResult joint = null,
-            JointRegistrationOptions jointOptions = null)
+            JointRegistrationOptions jointOptions = null,
+            int minLocations = 0)
         {
             Dictionary<long, SectionVectorField> sections = [];
             foreach (IGrouping<int, (int Z, int Gx, int Gy, Geometry.Vector2 Offset, int Votes)> group in
@@ -281,6 +392,7 @@ namespace Viking.SectionCorrectionBuilder
             {
                 StosGroup = stosGroup,
                 VolumeUrl = volumeUrl ?? "",
+                BuilderVersion = BuilderVersion,
                 Provenance = new CorrectionProvenanceDto
                 {
                     BuiltUtc = DateTime.UtcNow,
@@ -288,6 +400,7 @@ namespace Viking.SectionCorrectionBuilder
                     PitchNm = field.PitchNm,
                     KernelRadiusNm = field.PublishedKernelRadiusNm,
                     MinAnnotationVotes = NeighborResidualField.MinAnnotationVotes,
+                    MinLocations = minLocations,
                     ResidualWindow = new ResidualWindowDto
                     {
                         MinBoth = window.MinBoth,
@@ -295,7 +408,7 @@ namespace Viking.SectionCorrectionBuilder
                         MinOne = window.MinOne,
                         MaxOne = window.MaxOne
                     },
-                    Method = joint is null ? null : "joint-second-difference-v1",
+                    Method = joint is null ? null : JointMethod,
                     Joint = joint is null ? null : new JointFitDto
                     {
                         Ridge = joint.ChosenRidge,
@@ -304,14 +417,17 @@ namespace Viking.SectionCorrectionBuilder
                         Identity = joint.Identity,
                         Triples = joint.Triples,
                         HeldOutTriples = joint.HeldOutTriples,
-                        HeldOutRawMedianNm = joint.HeldOutRawMedianNm,
-                        HeldOutCorrectedMedianNm = joint.HeldOutCorrectedMedianNm
+                        HeldOutRawMedianNm = Measured(joint.HeldOutRawMedianNm),
+                        HeldOutCorrectedMedianNm = Measured(joint.HeldOutCorrectedMedianNm)
                     }
                 }
             };
 
             return new PublishedCorrectionSet(manifest, sections);
         }
+
+        /// <summary>A solver score, or null when it was not measured (NaN), which JSON cannot carry.</summary>
+        static double? Measured(double value) => double.IsFinite(value) ? value : null;
 
         /// <summary>
         /// Stos groups to publish. Mosaic-only volumes (no DefaultVolumeTransform, or "None"),

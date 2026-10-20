@@ -11,7 +11,9 @@ namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
     /// Serves the catalog already loaded at startup, then checks for updates in the background.
-    /// The same background check runs on Rebuild:Cron (default Sunday 02:00 UTC).
+    /// After that it checks every Rebuild:CheckInterval (default 24 h) and rebuilds each group whose annotations or stos
+    /// changed, once the newest edit is Rebuild:QuietMinutes old. Rebuild:Cron (default Sunday 02:00 UTC) forces a
+    /// rebuild of everything as a safety net.
     /// One volume at a time via CorrectionRebuildRunner. gRPC keeps reading the previous publish
     /// until a new directory is in place.
     /// </summary>
@@ -73,25 +75,36 @@ namespace Viking.GrpcSectionCorrectionService
             if (string.IsNullOrWhiteSpace(cronText))
                 cronText = "0 2 * * 0";
 
+            // Zero disables the periodic check, leaving only the forced full rebuild on the cron.
+            TimeSpan interval = rebuild.GetValue("CheckInterval", TimeSpan.FromHours(24));
             CronExpression cron = CronExpression.Parse(cronText);
+            DateTimeOffset nextCheck = interval > TimeSpan.Zero ? DateTimeOffset.UtcNow + interval : DateTimeOffset.MaxValue;
             while (!stoppingToken.IsCancellationRequested)
             {
                 DateTimeOffset now = DateTimeOffset.UtcNow;
-                DateTimeOffset? next = cron.GetNextOccurrence(now, TimeZoneInfo.Utc);
-                if (next is null)
+                DateTimeOffset? nextFull = cron.GetNextOccurrence(now, TimeZoneInfo.Utc);
+                if (nextFull is null && nextCheck == DateTimeOffset.MaxValue)
                 {
-                    _logger.LogWarning("Rebuild cron {Cron} has no next occurrence.", cronText);
+                    _logger.LogWarning("Rebuild cron {Cron} has no next occurrence and no CheckInterval is set.", cronText);
                     return;
                 }
 
-                TimeSpan delay = next.Value - now;
+                // The cron run is a forced full rebuild, the safety net for changes the section fingerprints cannot see.
+                bool full = nextFull is not null && nextFull.Value <= nextCheck;
+                DateTimeOffset next = full ? nextFull.Value : nextCheck;
+                TimeSpan delay = next - now;
                 if (delay < TimeSpan.Zero)
                     delay = TimeSpan.Zero;
-                _logger.LogInformation("Next section-correction rebuild at {When:u}", next.Value.UtcDateTime);
+                _logger.LogInformation(
+                    "Next section-correction {Kind} at {When:u}", full ? "full rebuild" : "update check", next.UtcDateTime);
                 try
                 {
                     await Task.Delay(delay, stoppingToken).ConfigureAwait(false);
-                    await _runner.RunAsync(stoppingToken).ConfigureAwait(false);
+                    if (!full)
+                        nextCheck = DateTimeOffset.UtcNow + interval;
+                    await _runner.RunAsync(null, full, stoppingToken).ConfigureAwait(false);
+                    if (full && interval > TimeSpan.Zero)
+                        nextCheck = DateTimeOffset.UtcNow + interval;
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {

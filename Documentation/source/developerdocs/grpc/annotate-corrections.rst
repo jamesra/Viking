@@ -36,7 +36,7 @@ RPCs
    * - ``ListCorrectedSections``
      - The Z values that have a map for ``stos_group``.
    * - ``GetCorrectionManifest``
-     - Provenance plus the Z list. ``volume_url`` is the REST URL of ``volume.npz`` when that file is hosted. It is empty when the set is gRPC-only.
+     - Provenance plus the Z list. ``volume_url`` is the REST URL of ``volume.npz`` when that file is hosted; the server builds it from the section files on first request and caches it until the next publish. It is empty when the set is gRPC-only.
    * - ``GetSectionCorrection``
      - The sparse lattice for one Z. Use this to interpolate on the client.
    * - ``CorrectPoints``
