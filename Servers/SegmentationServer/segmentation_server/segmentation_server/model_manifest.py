@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -29,6 +30,7 @@ MANIFEST_SUFFIX = ".model.json"
 ENCODING_RECORD_SUFFIX = ".prompt_encoding.json"
 LEGACY_ENCODING = "legacy-flat-v1"
 UNKNOWN = "unknown"
+MODEL_NAME_ENV = "SEGMENTATION_MODEL_NAME"
 
 _SUBMISSION = {
     "tile_grid": SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID,
@@ -94,6 +96,25 @@ class ModelManifest:
 def default_manifest() -> ModelManifest:
     """A tiled model with the legacy flat mask prompt: what the server assumed before manifests existed."""
     return ModelManifest()
+
+
+def _unnamed(checkpoint: Path, *, encoding: str = LEGACY_ENCODING, record: Optional[Mapping[str, Any]] = None,
+             source: str = "none") -> ModelManifest:
+    """What a client can still be told about weights that have no ``.model.json``.
+
+    The name comes from ``SEGMENTATION_MODEL_NAME`` (the operator's label, such as the DNS prefix) or else the weights
+    file's stem. ``model_id`` stays ``unknown`` on purpose: a known id makes the server refuse requests that name another
+    one, and nobody has declared this model's id.
+    """
+    label = os.environ.get(MODEL_NAME_ENV, "").strip() or checkpoint.stem
+    return ModelManifest(
+        model_version=checkpoint.stem,
+        display_name=label,
+        description=f"Weights {checkpoint.name} served without a {MANIFEST_SUFFIX}; identity taken from the file name.",
+        prompt_encoding=encoding,
+        encoding_record=dict(record or {}),
+        source=source,
+    )
 
 
 def manifest_path(checkpoint: str | Path) -> Path:
@@ -178,6 +199,7 @@ def load_model_manifest(checkpoint: Optional[str | Path]) -> ModelManifest:
     """The manifest that goes with ``checkpoint``.
 
     Order: ``<stem>.model.json``, then ``<stem>.prompt_encoding.json`` (the encoding only), then the legacy default.
+    The last two are named from ``SEGMENTATION_MODEL_NAME`` or the file stem (see ``_unnamed``).
 
     Raises:
         ManifestError: A file is present but unreadable or not acceptable. A missing file is not an error.
@@ -200,9 +222,9 @@ def load_model_manifest(checkpoint: Optional[str | Path]) -> ModelManifest:
             "%s has no %s; using the encoding named in %s and treating the model as unnamed",
             checkpoint.name, MANIFEST_SUFFIX, record_path.name,
         )
-        return ModelManifest(prompt_encoding=record["prompt_encoding"], encoding_record=dict(record), source=record_path.name)
+        return _unnamed(checkpoint, encoding=record["prompt_encoding"], record=record, source=record_path.name)
     logger.warning(
         "%s has no %s or %s; treating it as a tiled model with the legacy flat mask prompt",
         checkpoint.name, MANIFEST_SUFFIX, ENCODING_RECORD_SUFFIX,
     )
-    return default_manifest()
+    return _unnamed(checkpoint)
