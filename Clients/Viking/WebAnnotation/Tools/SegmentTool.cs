@@ -41,6 +41,10 @@ namespace WebAnnotation.Tools
         Action<Polygon> _onAccepted;
         Action _onAbandoned;
         bool _accepted;
+
+        /// <summary>The location being resegmented, and its structure: their annotations are not background.</summary>
+        long? _excludeLocationId;
+        long? _excludeStructureId;
         IReadOnlyList<Polygon> _polygons = Array.Empty<Polygon>();
         CancellationTokenSource _request;
         int _generation;
@@ -69,6 +73,8 @@ namespace WebAnnotation.Tools
             : this(context, viewport, channels, target.Parent?.TypeID ?? 0)
         {
             _target = target;
+            _excludeLocationId = target.ID;
+            _excludeStructureId = target.ParentID;
             _foreground.AddRange(foreground);
             _seeds = seeds?.ToArray() ?? Array.Empty<SegmentationSeed>();
             RequestSegmentation();
@@ -80,9 +86,12 @@ namespace WebAnnotation.Tools
         /// </summary>
         internal SegmentTool(AnnotationToolContext context, ISegmentationViewport viewport,
             Viking.Services.Grpc.IGrpcChannelManager channels, long structureTypeId, IReadOnlyList<Vector2> foreground,
-            IReadOnlyList<SegmentationSeed> seeds, Action<Polygon> onAccepted, Action onAbandoned)
+            IReadOnlyList<SegmentationSeed> seeds, Action<Polygon> onAccepted, Action onAbandoned,
+            long? excludeLocationId = null, long? excludeStructureId = null)
             : this(context, viewport, channels, structureTypeId)
         {
+            _excludeLocationId = excludeLocationId;
+            _excludeStructureId = excludeStructureId;
             _foreground.AddRange(foreground);
             _seeds = seeds?.ToArray() ?? Array.Empty<SegmentationSeed>();
             _onAccepted = onAccepted;
@@ -220,18 +229,53 @@ namespace WebAnnotation.Tools
             _request = request;
             int generation = ++_generation;
             Vector2[] foreground = _foreground.ToArray();
-            Vector2[] background = _background.ToArray();
             double downsample = _context.Host.Downsample;
+            OtherStructuresAsBackground(foreground, downsample, out IReadOnlyList<Vector2> derived, out SegmentationMaskUnion derivedMask);
+            Vector2[] background = _background.Concat(derived).ToArray();
             _context.SetStatus("Segmenting…");
-            _ = SegmentAsync(generation, foreground, background, downsample, request.Token);
+            _ = SegmentAsync(generation, foreground, background, derivedMask, downsample, request.Token);
         }
 
-        async Task SegmentAsync(int generation, Vector2[] foreground, Vector2[] background, double downsample, CancellationToken token)
+        /// <summary>
+        /// As Viking's segmentation command does, the other structures' annotations in view are background: a point in
+        /// each (away from the user's object points) and their shapes as a background mask. The location being
+        /// resegmented and its own structure are left out.
+        /// </summary>
+        void OtherStructuresAsBackground(IReadOnlyList<Vector2> foreground, double downsample,
+            out IReadOnlyList<Vector2> points, out SegmentationMaskUnion mask)
+        {
+            points = Array.Empty<Vector2>();
+            mask = null;
+            try
+            {
+                ViewModel.SectionAnnotationsView view = _context.Scene.HeldView(_context.SectionNumber);
+                Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
+                if (view == null || mapper == null)
+                    return;
+
+                List<LocationObj> visible = view.GetLocations(_context.Host.VisibleWorldBounds)
+                    .Select(v => Store.Locations.TryGetObjectByID(v.ID, out LocationObj loc) ? loc : null)
+                    .OfType<LocationObj>()
+                    .ToList();
+                long[] excludeLocations = _excludeLocationId is long id ? new[] { id } : Array.Empty<long>();
+                double minDistance = Global.AnnotationSettings.SegmentationPointRadius * downsample;
+                points = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                    visible, mapper, foreground, minDistance, excludeLocations, _excludeStructureId);
+                mask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(visible, mapper, excludeLocations, _excludeStructureId);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Segmentation background from other structures failed: {ex.Message}");
+            }
+        }
+
+        async Task SegmentAsync(int generation, Vector2[] foreground, Vector2[] background, SegmentationMaskUnion backgroundMask,
+            double downsample, CancellationToken token)
         {
             try
             {
                 SegmentationResponse response = await _session.SegmentAsync(foreground, background, token,
-                    _seeds.Length > 0 ? _seeds : null);
+                    _seeds.Length > 0 ? _seeds : null, backgroundMask: backgroundMask);
                 if (token.IsCancellationRequested || generation != _generation)
                     return;
 

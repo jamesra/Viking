@@ -124,7 +124,7 @@ namespace WebAnnotation.Tools
         internal void StartProposalSegmentation(UI.Commands.Segmentation.ISegmentationViewport viewport, UI.AutoPolygonize.ProposalSegmentationRequest request)
         {
             StartTool(new SegmentTool(_context, viewport, SegmentationChannels, request.StructureTypeId, request.Foreground,
-                request.StartingBoxes, request.OnAccepted, request.OnAbandoned));
+                request.StartingBoxes, request.OnAccepted, request.OnAbandoned, request.LocationId, request.StructureId));
         }
 
         /// <summary>True while the active tool takes right and middle clicks itself (see <see cref="IAnnotationToolUsesAllButtons"/>).</summary>
