@@ -936,6 +936,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
+            // The band and the glow share one sine envelope, so the whole sweep rises from nothing to full brightness
+            // halfway through and falls back to nothing, instead of holding at full brightness while the band crosses.
+            float envelope = ShimmerGlowAlpha(shimmerPeakAlpha, progress);
             (float center, float halfWidth) = ShimmerBand(shimmerDiagonalLow, shimmerDiagonalHigh, progress);
             DrawStripes(
                 graphicsDevice,
@@ -946,8 +949,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 0f,
                 new Vector2(center, halfWidth),
                 0.5f,
-                shimmerPeakAlpha,
-                new Vector4(shimmerGlowCentre.X, shimmerGlowCentre.Y, shimmerGlowSigma, ShimmerGlowAlpha(shimmerPeakAlpha, progress)));
+                envelope,
+                new Vector4(shimmerGlowCentre.X, shimmerGlowCentre.Y, shimmerGlowSigma, envelope));
         }
 
         /// <summary>Releases the shimmer clip texture. Does not rearm the shimmer.</summary>
@@ -1061,8 +1064,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Alpha at the centre of the shimmer glow: none when the shimmer starts, the most halfway through, none again when
-        /// it ends, following a sine so it eases in and out.
+        /// Brightness of the sweep shimmer, both its band and its glow: none when the shimmer starts, the most halfway
+        /// through, none again when it ends, following a sine so it eases in and out.
         /// </summary>
         internal static float ShimmerGlowAlpha(float peakAlpha, double progress)
         {
