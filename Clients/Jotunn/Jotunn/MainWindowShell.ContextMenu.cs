@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -51,6 +52,8 @@ namespace Jotunn
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Merge another structure into this one…", () => ShowMergeStructures(location.ParentID ?? 0), isEnabled: location.ParentID.HasValue));
             menu.Items.Add(SplitMenu(location));
+            if (location.ParentID.HasValue)
+                menu.Items.Add(UnmarkedTerminalsMenu(location.ParentID.Value));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Delete…", () => ConfirmAndDelete(location)));
             return menu;
@@ -74,6 +77,7 @@ namespace Jotunn
             {
                 shape.Items.Add(Item("_Resegment…", () => SegmentCircle(location)));
                 shape.Items.Add(Item("Si_mplify shape", () => _tools.SimplifyPolygon(location)));
+                shape.Items.Add(Item("Random c_olor", () => _tools.RandomizeColor(location)));
             }
 
             return shape;
@@ -90,6 +94,53 @@ namespace Jotunn
                 split.Items.Add(Item($"Location {linked}…", () => ShowSplitStructure(location.ID, linked)));
             split.IsEnabled = split.Items.Count > 0;
             return split;
+        }
+
+        /// <summary>
+        /// Viking's "Unmarked process terminals": the structure's branch ends that are not marked terminal or off edge,
+        /// by section, loaded from the server when the submenu opens; choosing one goes to it.
+        /// </summary>
+        MenuItem UnmarkedTerminalsMenu(long structureId)
+        {
+            MenuItem root = new() { Header = "Unmarked process _terminals" };
+            root.Items.Add(new MenuItem { Header = "Loading…", IsEnabled = false });
+            bool loaded = false;
+            root.SubmenuOpened += async (_, _) =>
+            {
+                if (loaded)
+                    return;
+                loaded = true;
+
+                LocationPositionOnly[] ends;
+                try
+                {
+                    ends = await Store.Structures.GetUnfinishedBranchesWithPosition(structureId);
+                }
+                catch (Exception ex)
+                {
+                    root.Items.Clear();
+                    root.Items.Add(new MenuItem { Header = $"Could not load: {ex.Message}", IsEnabled = false });
+                    return;
+                }
+
+                root.Items.Clear();
+                foreach (var section in (ends ?? []).GroupBy(e => (long)e.Position.Z).OrderBy(g => g.Key))
+                {
+                    MenuItem sectionItem = new() { Header = section.Key.ToString("D4") };
+                    foreach (LocationPositionOnly end in section)
+                    {
+                        long id = end.ID;
+                        sectionItem.Items.Add(Item($"Radius {end.Radius:F1}  X {end.Position.X:F0}  Y {end.Position.Y:F0}",
+                            async () => GoToLocation(await Store.Locations.GetObjectByID(id))));
+                    }
+
+                    root.Items.Add(sectionItem);
+                }
+
+                if (root.Items.Count == 0)
+                    root.Items.Add(new MenuItem { Header = "None", IsEnabled = false });
+            };
+            return root;
         }
 
         void ShowMergeStructures(long keepId)

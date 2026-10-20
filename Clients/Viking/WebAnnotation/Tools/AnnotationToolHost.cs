@@ -378,6 +378,21 @@ namespace WebAnnotation.Tools
 
         public void SimplifyPolygon(LocationObj polygon) => _ = ShapeActions.SimplifyPolygonAsync(_context, polygon);
 
+        /// <summary>
+        /// Viking's "Random Color" for a polygon: a new display color for this session (not saved), keeping its alpha.
+        /// </summary>
+        public void RandomizeColor(LocationObj polygon)
+        {
+            ViewModel.SectionAnnotationsView view = _scene.GetOrCreate((int)Math.Round(polygon.Z));
+            if (view == null || !view.TryGetLocation(polygon.ID, out View.LocationCanvasView locationView)
+                || locationView is not View.LocationPolygonView polygonView)
+                return;
+
+            float alpha = VikingXNAGraphics.ColorExtensions.GetAlpha(polygonView.Color);
+            polygonView.Color = VikingXNAGraphics.ColorExtensions.SetAlpha(VikingXNAGraphics.ColorExtensions.Random(Microsoft.Xna.Framework.Color.Black), alpha);
+            _host.Invalidate();
+        }
+
         /// <summary>Viking's Ctrl+Z: reverts the newest recorded edit and saves it. Only while no tool is active.</summary>
         public bool Undo()
         {
