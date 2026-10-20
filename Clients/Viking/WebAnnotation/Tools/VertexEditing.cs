@@ -114,8 +114,7 @@ namespace WebAnnotation.Tools
             IVolumeToSectionTransform mapper = Mapper;
             LocationObj location = Location;
             LocationType type = location.TypeCode;
-            _ = AnnotationToolActions.SaveLocationAsync(context, location,
-                () => UndoManager.PushLocationShape("Edit Shape", location, mapper, undoShape, type));
+            _ = AnnotationToolActions.SaveShapeEditAsync(context, location, "Edit Shape", mapper, undoShape, type);
         }
 
         /// <summary>Puts the shape back as it was before the edit, without saving.</summary>

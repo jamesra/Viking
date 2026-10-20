@@ -333,8 +333,7 @@ namespace WebAnnotation.Tools
                 return;
             }
 
-            await AnnotationToolActions.SaveLocationAsync(_context, location,
-                () => UndoManager.PushLocationShape("Segment", location, mapper, undoShape, undoType));
+            await AnnotationToolActions.SaveShapeEditAsync(_context, location, "Segment", mapper, undoShape, undoType);
         }
 
         async Task DeleteServerImageAsync()

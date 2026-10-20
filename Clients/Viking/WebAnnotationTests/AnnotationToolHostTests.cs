@@ -79,6 +79,7 @@ namespace WebAnnotationTests
             _viewport = new IdentityViewport();
             _host = new AnnotationToolHost(_viewport, _scene);
             _host.StatusChanged += (_, text) => _status = text;
+            AnnotationToolActions.SaveLocations = () => System.Threading.Tasks.Task.FromResult(true);
         }
 
         [TestCleanup]
@@ -86,6 +87,8 @@ namespace WebAnnotationTests
         {
             AnnotationOverlay.SectionViewLookup = _savedLookup;
             WebAnnotation.UI.Actions.CreateStructureActionBase.CommitHandler = null;
+            AnnotationToolActions.SaveLocations = () => WebAnnotationModel.Store.Locations.Save();
+            UndoManager.Clear();
         }
 
         [TestMethod]
@@ -164,8 +167,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void UndoWithNothingRecordedSaysSo()
         {
-            while (UndoManager.CanUndo)
-                UndoManager.UndoLast();
+            UndoManager.Clear();
 
             Assert.IsFalse(_host.Undo());
             Assert.AreEqual("Nothing to undo", _status);
@@ -181,6 +183,33 @@ namespace WebAnnotationTests
 
             Assert.AreEqual(Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON, circle.TypeCode);
             Assert.IsInstanceOfType(circle.MosaicShape, typeof(Geometry.IPolygon2D));
+        }
+
+        [TestMethod]
+        public void AFailedSavePutsTheShapeBack()
+        {
+            AnnotationToolActions.SaveLocations = () => System.Threading.Tasks.Task.FromResult(false);
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+            string original = circle.MosaicShape.ToString();
+
+            _host.ConvertCircleToPolygon(circle);
+
+            Assert.AreEqual(Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, circle.TypeCode);
+            Assert.AreEqual(original, circle.MosaicShape.ToString());
+            StringAssert.Contains(_status, "put back");
+            Assert.IsFalse(UndoManager.CanUndo, "a failed save is not an undoable edit");
+        }
+
+        [TestMethod]
+        public void ASavedShapeEditCanBeUndone()
+        {
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+
+            _host.ConvertCircleToPolygon(circle);
+
+            Assert.AreEqual("Change Shape", UndoManager.NextUndoDescription);
         }
 
         [TestMethod]

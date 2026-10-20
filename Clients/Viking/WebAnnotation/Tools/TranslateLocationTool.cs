@@ -70,8 +70,7 @@ namespace WebAnnotation.Tools
 
             Microsoft.SqlServer.Types.SqlGeometry undoShape = _originalMosaic.ToSqlGeometry();
             IVolumeToSectionTransform mapper = _context.Mapper;
-            _ = AnnotationToolActions.SaveLocationAsync(_context, _location,
-                () => UndoManager.PushLocationShape("Move", _location, mapper, undoShape, _location.TypeCode));
+            _ = AnnotationToolActions.SaveShapeEditAsync(_context, _location, "Move", mapper, undoShape, _location.TypeCode);
         }
 
         public AnnotationToolResult OnKeyDown(Key key)

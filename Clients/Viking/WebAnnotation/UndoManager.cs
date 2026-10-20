@@ -28,6 +28,9 @@ namespace WebAnnotation
         /// </summary>
         public static string NextUndoDescription => Entries.Last?.Value.Description;
 
+        /// <summary>Forgets every recorded edit without reverting any.</summary>
+        public static void Clear() => Entries.Clear();
+
         public static void Push(string description, Action undo)
         {
             Entries.AddLast(new UndoEntry(description, undo));

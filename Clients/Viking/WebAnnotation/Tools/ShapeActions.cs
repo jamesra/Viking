@@ -128,8 +128,7 @@ namespace WebAnnotation.Tools
             }
 
             context.Invalidate();
-            await AnnotationToolActions.SaveLocationAsync(context, location,
-                () => UndoManager.PushLocationShape(description, location, mapper, undoShape, undoType));
+            await AnnotationToolActions.SaveShapeEditAsync(context, location, description, mapper, undoShape, undoType);
         }
     }
 }

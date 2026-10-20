@@ -53,8 +53,7 @@ namespace WebAnnotation.Tools
             {
                 Microsoft.SqlServer.Types.SqlGeometry undoShape = SqlGeometryUtils.Extensions.ToSqlGeometry(_originalMosaic);
                 Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
-                _ = AnnotationToolActions.SaveLocationAsync(_context, _location,
-                    () => UndoManager.PushLocationShape("Resize", _location, mapper, undoShape, _location.TypeCode));
+                _ = AnnotationToolActions.SaveShapeEditAsync(_context, _location, "Resize", mapper, undoShape, _location.TypeCode);
             }
             _context.SetStatus(null);
         }

@@ -237,25 +237,48 @@ namespace WebAnnotation.Tools
             }
         }
 
-        /// <summary>Saves pending location edits; <paramref name="onSaved"/> runs once the server accepted them (undo records).</summary>
-        public static async Task SaveLocationAsync(AnnotationToolContext context, LocationObj location, Action onSaved = null)
+        /// <summary>Saves the store's pending location changes; tests replace it to run without a server.</summary>
+        internal static Func<Task<bool>> SaveLocations = () => Store.Locations.Save();
+
+        /// <summary>
+        /// Saves a shape edit of <paramref name="location"/>. Accepted: the edit is recorded for Ctrl+Z under
+        /// <paramref name="description"/>. Refused or failed: the location gets its old shape and type back, so the next
+        /// save of anything else does not commit the edit that failed.
+        /// </summary>
+        public static async Task SaveShapeEditAsync(AnnotationToolContext context, LocationObj location, string description,
+            IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry undoShape, LocationType undoType)
         {
+            bool saved;
             try
             {
-                if (!await Store.Locations.Save())
-                {
-                    context.SetStatus($"Could not save location {location.ID}");
-                    return;
-                }
-
-                onSaved?.Invoke();
-                Global.LastEditedAnnotationID = location.ID;
-                context.Invalidate();
+                saved = await SaveLocations();
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"Save location failed: {ex}");
+                saved = false;
             }
+
+            if (saved)
+            {
+                UndoManager.PushLocationShape(description, location, mapper, undoShape, undoType);
+                Global.LastEditedAnnotationID = location.ID;
+                context.Invalidate();
+                return;
+            }
+
+            try
+            {
+                location.TypeCode = undoType;
+                location.SetShapeFromGeometryInSection(mapper, undoShape);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Restoring location {location.ID} after a failed save failed: {ex}");
+            }
+
+            context.SetStatus($"Could not save location {location.ID}; its shape was put back");
+            context.Invalidate();
         }
 
         public static async Task DeleteLocationAsync(AnnotationToolContext context, LocationObj location)
