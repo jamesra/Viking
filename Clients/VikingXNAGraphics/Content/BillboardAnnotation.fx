@@ -732,10 +732,10 @@ technique CircleRingOverlayEffect
 
 //How far the stripes drift sideways, toward +stripeDirection, in stripe periods per band half width the band travels.
 //The drift follows stripeBand.x / stripeBand.y, so it runs at a steady rate while a band sweeps, whatever the polygon's size,
-//and stops when no band is set. The shimmer band travels about 8.7 half widths per sweep, so 0.3 drifts about 2.6 periods.
-//Raise it for faster drift; keep it under about 0.5 so a 250 ms sweep at 30 fps moves less than half a period per frame,
+//and stops when no band is set. The shimmer band travels about 8.7 half widths per sweep, so 0.45 drifts about 3.9 periods.
+//Raise it for faster drift; keep it under about 0.5 so a 250 ms sweep at 30 fps moves about half a period or less per frame,
 //or the stripes strobe instead of gliding.
-static const float StripeDriftPeriodsPerHalfBand = 0.3;
+static const float StripeDriftPeriodsPerHalfBand = 0.45;
 
 uniform const texture StripeClipTexture;
 
