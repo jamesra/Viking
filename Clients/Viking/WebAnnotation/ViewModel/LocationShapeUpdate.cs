@@ -29,9 +29,15 @@ namespace WebAnnotation.ViewModel
         /// this is the choke point that keeps the database ring at CreatedShapeSimplify size.
         /// </summary>
         /// <returns>False when the location, polygon, or section is missing, or the save fails.</returns>
-        public static async Task<bool> ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, SectionViewerControl parent)
+        public static Task<bool> ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, SectionViewerControl parent) =>
+            parent?.Section is null
+                ? Task.FromResult(false)
+                : ApplyVolumePolygon(modelObj, volumePolygon, parent.Section.ActiveSectionToVolumeTransform, parent.Downsample);
+
+        /// <summary>As above, for a view given by its section transform and downsample (Jotunn's scene host).</summary>
+        public static async Task<bool> ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, IVolumeToSectionTransform transform, double downsample)
         {
-            if (modelObj is null || volumePolygon is null || parent?.Section is null)
+            if (modelObj is null || volumePolygon is null || transform is null)
                 return false;
 
             try
@@ -39,8 +45,8 @@ namespace WebAnnotation.ViewModel
                 AssignSimplifiedVolumePolygon(
                     modelObj,
                     volumePolygon,
-                    parent.Section.ActiveSectionToVolumeTransform,
-                    parent.Downsample);
+                    transform,
+                    downsample);
                 if (!await Store.Locations.Save())
                 {
                     MessageBox.Show($"Failed to save the new shape of location {modelObj.ID}.",

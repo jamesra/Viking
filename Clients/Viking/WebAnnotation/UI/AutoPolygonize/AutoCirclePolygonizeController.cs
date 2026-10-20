@@ -46,7 +46,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private const int TileWaitTimeoutMs = 30000;
         private static long profileBatchSequence;
 
-        private readonly SectionViewerControl parent;
+        private readonly IAutoPolygonizeHost parent;
         private readonly Action requestAnnotationLoad;
         private readonly AutoPolygonizeCache cache = new();
         private readonly SharedViewportImageLease viewportImageLease;
@@ -141,6 +141,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         public AutoCirclePolygonizeController(SectionViewerControl parent, Action requestAnnotationLoad)
+            : this(new SectionViewerAutoPolygonizeHost(parent ?? throw new ArgumentNullException(nameof(parent))), requestAnnotationLoad)
+        {
+        }
+
+        /// <summary>A controller over any view that can segment (Jotunn's scene host as well as Viking's viewer).</summary>
+        public AutoCirclePolygonizeController(IAutoPolygonizeHost parent, Action requestAnnotationLoad)
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
@@ -170,9 +176,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// queued commands so proposal overlays do not fight those tools.
         /// </summary>
         private bool ShouldShowProposals =>
-            parent.CurrentCommand is null ||
-            (parent.CurrentCommand.GetType() == typeof(DefaultCommand) &&
-             parent.CommandQueue.QueueDepth == 0);
+            parent.IsIdle;
 
         /// <summary>
         /// Starts or stops idle/confirm timers and location-store subscription.
@@ -269,10 +273,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public void ResubmitVisible()
         {
-            if (!enabled || parent.Section is null)
+            if (!enabled || !parent.HasSection)
                 return;
 
-            int sectionNumber = parent.Section.Number;
+            int sectionNumber = parent.SectionNumber;
             SegmentationDiag.Log($"AutoPolygonize.ResubmitVisible section={sectionNumber}");
             CancelProcessPhase();
             DropProposalsForSection(sectionNumber);
@@ -591,11 +595,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Draws proposals for the current section when <see cref="ShouldShowProposals"/> is true.</summary>
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
-            if (!enabled || !ShouldShowProposals || parent.Section is null)
+            if (!enabled || !ShouldShowProposals || !parent.HasSection)
                 return;
 
             RemoveProposalsThatAreNoLongerCircles();
-            int sectionNumber = parent.Section.Number;
+            int sectionNumber = parent.SectionNumber;
             bool shimmering = false;
             lock (proposalLock)
             {
@@ -624,12 +628,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             proposal = null;
             distance = double.MaxValue;
-            if (!enabled || !ShouldShowProposals || parent.Section is null || parent.Camera is null)
+            if (!enabled || !ShouldShowProposals || !parent.HasSection || !parent.HasCamera)
                 return false;
 
             RemoveProposalsThatAreNoLongerCircles();
-            double threshold = parent.Camera.Downsample * AutoPolygonizeSelection.HitTestPixels;
-            int sectionNumber = parent.Section.Number;
+            double threshold = parent.CameraDownsample * AutoPolygonizeSelection.HitTestPixels;
+            int sectionNumber = parent.SectionNumber;
 
             lock (proposalLock)
             {
@@ -759,7 +763,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             // Carve/union densifies; LocationShapeUpdate fits once then maps control points to mosaic.
-            bool dbgApplied = await LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent);
+            bool dbgApplied = await LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent.ActiveSectionToVolumeTransform, parent.Downsample);
             // #region agent log
             SegmentationDiag.Log($"DIAG H14 Accept ApplyVolumePolygon survivor={survivorId} applied={dbgApplied}");
             // #endregion
@@ -853,18 +857,14 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             try
             {
-                IGrpcChannelManager channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationCommand(
-                    parent,
+                parent.StartSegmentation(new ProposalSegmentationRequest(
                     foreground,
-                    Array.Empty<Vector2>(),
-                    onSuccess,
-                    channelManager,
+                    startingBoxes,
                     seedLoc.Parent.TypeID,
                     proposal.LocationId,
                     proposal.ParentID ?? seedLoc.ParentID,
-                    startingBoxes: startingBoxes,
-                    onAbandoned: RestoreParkedProposal);
+                    onSuccess,
+                    RestoreParkedProposal));
             }
             catch (Exception ex)
             {
@@ -893,13 +893,13 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (proposal.LocationIds.Count == 1)
             {
                 LocationObj? circle = Store.Locations.GetCachedObject(proposal.LocationId);
-                if (circle is null || circle.TypeCode != LocationType.CIRCLE || parent.Section is null)
+                if (circle is null || circle.TypeCode != LocationType.CIRCLE || !parent.HasSection)
                     return false;
 
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
                         CircleSegmentationPrompts.ToVolumePoints(
                             CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                            parent.Section.ActiveSectionToVolumeTransform),
+                            parent.ActiveSectionToVolumeTransform),
                         out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                 {
                     return false;
@@ -1091,7 +1091,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             return Math.Abs(a - b) <= scale * 0.01;
         }
 
-        private double GetCurrentDownsample() => parent.Camera?.Downsample ?? 0;
+        private double GetCurrentDownsample() => (parent.HasCamera ? parent.CameraDownsample : 0);
 
         /// <summary>
         /// False when the camera is coarser than <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
@@ -1107,7 +1107,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// True when auto-polygonize is on but the camera is too coarse to start a batch. The idle
         /// settle exits silently in that state, so the status chip needs this to say why nothing is sent.
         /// </summary>
-        internal bool IsPausedByZoom => enabled && parent.Camera is not null && !IsWithinAutoSegmentDownsample();
+        internal bool IsPausedByZoom => enabled && parent.HasCamera && !IsWithinAutoSegmentDownsample();
 
         /// <summary>
         /// Restarts the idle wait when auto-segment is on. Used after the max-downsample preference changes
@@ -1171,17 +1171,17 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             SegmentationDiag.Log(
                 $"RunBatch enter enabled={enabled} svc={Global.IsSegmentationServiceAvailable} " +
-                $"sceneNull={parent.Scene is null} sectionNull={parent.Section is null}");
-            if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || parent.Section is null)
+                $"sceneNull={parent.Scene is null} sectionNull={!parent.HasSection}");
+            if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || !parent.HasSection)
                 return;
 
             if (!IsWithinAutoSegmentDownsample())
             {
-                SegmentationDiag.Log($"RunBatch skip: downsample out of range ds={parent.Camera?.Downsample}");
+                SegmentationDiag.Log($"RunBatch skip: downsample out of range ds={parent.CameraDownsample}");
                 return;
             }
 
-            if (parent.CurrentCommand is SegmentationCommand)
+            if (parent.IsSegmenting)
             {
                 SegmentationDiag.Log("RunBatch skip: SegmentationCommand active");
                 CancelProcessPhase();
@@ -1225,7 +1225,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 // Capturing and segmenting competes with the viewer for the texture queues, so wait until the
                 // section's tiles are in. Otherwise the capture also records half-loaded tiles.
-                TileWaitResult tileWait = await WaitForSectionTilesLoadedAsync(parent.Section.Number, uploadToken).ConfigureAwait(false);
+                TileWaitResult tileWait = await WaitForSectionTilesLoadedAsync(parent.SectionNumber, uploadToken).ConfigureAwait(false);
                 SegmentationDiag.Log($"RunBatch tileWait={tileWait} cancelled={uploadToken.IsCancellationRequested}");
                 if (tileWait == TileWaitResult.TimedOut)
                 {
@@ -1239,7 +1239,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
 
                 long annotationLoadMs = stepTimer.ElapsedMilliseconds;
-                if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
+                if (uploadToken.IsCancellationRequested || !enabled || parent.IsSegmenting)
                 {
                     SegmentationDiag.Log("RunBatch abort after annotations (cancel/disabled/command)");
                     return;
@@ -1271,9 +1271,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 long candidateCollectionMs = stepTimer.ElapsedMilliseconds;
-                IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
-                int sectionNumber = parent.Section.Number;
-                double downsample = parent.Camera.Downsample;
+                IVolumeToSectionTransform transform = parent.ActiveSectionToVolumeTransform;
+                int sectionNumber = parent.SectionNumber;
+                double downsample = parent.CameraDownsample;
                 double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
 
                 stepTimer.Restart();
@@ -1289,7 +1289,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (uploadContext is null)
                     return;
 
-                if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
+                if (uploadToken.IsCancellationRequested || !enabled || parent.IsSegmenting)
                     return;
 
                 if (uploadContext.Value.ImageId != 0)
@@ -1325,7 +1325,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         Volatile.Read(ref cameraGeneration) != viewGeneration)
                         break;
 
-                    if (parent.CurrentCommand is SegmentationCommand)
+                    if (parent.IsSegmenting)
                     {
                         CancelProcessPhase();
                         break;
@@ -1554,8 +1554,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     !enabled ||
                     !IsStillCircle(circle.ID) ||
                     !cache.IsGenerationCurrent(circle.ID, generation) ||
-                    parent.Section is null ||
-                    parent.Section.Number != sectionNumber)
+                    !parent.HasSection ||
+                    parent.SectionNumber != sectionNumber)
                 {
                     return;
                 }
@@ -1711,10 +1711,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </returns>
         private async Task<AnnotationWaitResult> WaitForAnnotationsLoadedAsync(CancellationToken token)
         {
-            if (parent.Scene is null || parent.Section is null)
+            if (parent.Scene is null || !parent.HasSection)
                 return AnnotationWaitResult.Cancelled;
 
-            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(parent.Section.Number);
+            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(parent.SectionNumber);
             Rectangle? mosaicBounds = parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
             Stopwatch wait = Stopwatch.StartNew();
 
@@ -1723,7 +1723,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (Store.LocationsByRegion.AreRegionQueriesComplete(
                     mosaicBounds,
                     parent.Scene.ScreenPixelSizeInVolume,
-                    parent.Section.Number))
+                    parent.SectionNumber))
                 {
                     return AnnotationWaitResult.Complete;
                 }
@@ -1754,7 +1754,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Stopwatch wait = Stopwatch.StartNew();
             while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < TileWaitTimeoutMs)
             {
-                if (parent.Section is null || parent.Section.Number != sectionNumber)
+                if (!parent.HasSection || parent.SectionNumber != sectionNumber)
                     return TileWaitResult.Cancelled;
 
                 if (global::Viking.SectionTileLoadStatus.IsLoaded(sectionNumber))
@@ -1835,7 +1835,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Store objects for canvas views intersecting <paramref name="viewBounds"/>; used for candidates and background prompts.</summary>
         private IEnumerable<LocationObj> CollectVisibleLocationObjs(Rectangle viewBounds)
         {
-            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(parent.Section.Number);
+            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(parent.SectionNumber);
             if (sectionView is null)
                 return [];
 
@@ -2094,13 +2094,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private async Task RunForLocationAsync(long locationId, int sectionNumber, int generation)
         {
-            if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || parent.Section is null)
+            if (!enabled || !Global.IsSegmentationServiceAvailable || parent.Scene is null || !parent.HasSection)
                 return;
 
             if (!IsWithinAutoSegmentDownsample())
                 return;
 
-            if (parent.Section.Number != sectionNumber || parent.CurrentCommand is SegmentationCommand)
+            if (parent.SectionNumber != sectionNumber || parent.IsSegmenting)
                 return;
 
             LocationObj circle = Store.Locations.GetCachedObject(locationId);
@@ -2184,7 +2184,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     }
                 }
 
-                IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
+                IVolumeToSectionTransform transform = parent.ActiveSectionToVolumeTransform;
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
                         CircleSegmentationPrompts.ToVolumePoints(
                             CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
@@ -2469,7 +2469,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 seed.ParentID.Value,
                 seed.SectionNumber,
                 proposalIds,
-                parent.Section?.ActiveSectionToVolumeTransform));
+                parent.ActiveSectionToVolumeTransform));
 
             OverlapCandidate seedCandidate = ToOverlapCandidate(seed);
             List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(
@@ -2558,11 +2558,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private void TryBeginSavedSiblingOverlapResubmits()
         {
-            if (!enabled || parent.Section is null)
+            if (!enabled || !parent.HasSection)
                 return;
 
-            int sectionNumber = parent.Section.Number;
-            IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
+            int sectionNumber = parent.SectionNumber;
+            IVolumeToSectionTransform transform = parent.ActiveSectionToVolumeTransform;
             IReadOnlyList<LocationObj> visible = [.. CollectVisibleLocationObjs(GetCurrentViewportBounds())];
 
             List<AutoPolygonizeProposal> distinct;
@@ -2607,7 +2607,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     fromProposals.Add(id);
             }
 
-            IVolumeToSectionTransform? transform = parent.Section?.ActiveSectionToVolumeTransform;
+            IVolumeToSectionTransform? transform = parent.ActiveSectionToVolumeTransform;
             foreach (long id in locationIds)
             {
                 if (fromProposals.Contains(id))
@@ -2631,7 +2631,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Vector2 keepPoint,
             long? excludeParentId = null)
         {
-            if (proposed is null || parent.Section is null)
+            if (proposed is null || !parent.HasSection)
                 return proposed;
 
             IReadOnlyCollection<LocationObj> nearby = [.. CollectVisibleLocationObjs(proposed.BoundingBox)];
@@ -2639,15 +2639,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                 nearby,
                 proposed,
                 excludeLocationIds,
-                parent.Section.ActiveSectionToVolumeTransform,
-                parent.Section.Number,
+                parent.ActiveSectionToVolumeTransform,
+                parent.SectionNumber,
                 excludeParentId);
             // Circle annotations of other structures count as well, so a cell that is still only a circle is not painted over.
             List<Polygon> circleDisks = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
                 AutoPolygonizeSelection.ToCircleFootprints(nearby),
                 proposed,
                 excludeLocationIds,
-                parent.Section.Number,
+                parent.SectionNumber,
                 excludeParentId,
                 keepPoint);
             existing.AddRange(circleDisks);
@@ -2725,7 +2725,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             CancellationTokenSource? linkedCancellation = null;
             try
             {
-                if (!enabled || parent.Section is null || parent.Scene is null)
+                if (!enabled || !parent.HasSection || parent.Scene is null)
                     return;
 
                 CancellationToken lifecycleToken;
@@ -2746,7 +2746,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
 
                 LocationObj? firstLoc = Store.Locations.GetCachedObject(locationIds[0]);
-                int sectionNumber = members.Count > 0 ? members[0].SectionNumber : (int?)firstLoc?.Section ?? parent.Section.Number;
+                int sectionNumber = members.Count > 0 ? members[0].SectionNumber : (int?)firstLoc?.Section ?? parent.SectionNumber;
                 long? parentId = members.Count > 0 ? members[0].ParentID : firstLoc?.ParentID;
                 if (parentId is null)
                     return;
@@ -2763,7 +2763,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
                         visibleForPrompts,
-                        parent.Section.ActiveSectionToVolumeTransform,
+                        parent.ActiveSectionToVolumeTransform,
                         foreground,
                         Global.AnnotationSettings.SegmentationPointRadius * downsample,
                         involved,
