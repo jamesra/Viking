@@ -92,8 +92,10 @@ namespace Viking
             {
             }
 
-            ShutdownRuntime();
+            // The window is already gone (ApplicationContext reacts to HandleDestroyed), so arm the
+            // watchdog before teardown that can block: closing the viewer or a WPF window runs their handlers.
             StartExitWatchdog();
+            ShutdownRuntime();
             base.OnMainFormClosed(sender, e);
         }
 
@@ -195,7 +197,10 @@ namespace Viking
         }
 
         /// <summary>
-        /// If the WinForms loop never returns (dispatcher or gRPC still pumping), kill the process.
+        /// If teardown has not finished 3 seconds after the main window is destroyed, kill the process.
+        /// Covers <see cref="ShutdownRuntime"/>, a WinForms loop that never returns (dispatcher or gRPC still
+        /// pumping), and <see cref="ShutdownAfterMessageLoop"/>. Uses <see cref="ProcessTermination"/>, not
+        /// <see cref="Environment.Exit(int)"/>: Exit runs Grpc.Core's unbounded ProcessExit wait and stalled here.
         /// Background so a clean exit does not wait out the delay.
         /// </summary>
         private static void StartExitWatchdog()
@@ -203,8 +208,16 @@ namespace Viking
             Thread watchdog = new(() =>
             {
                 Thread.Sleep(3000);
-                Trace.WriteLine("Viking exit watchdog: Application.Run did not return; forcing Environment.Exit");
-                Environment.Exit(0);
+                try
+                {
+                    Trace.WriteLine("Viking exit watchdog: teardown did not finish; terminating process");
+                }
+                catch (Exception)
+                {
+                    // Main may have closed the log writer just before its own termination.
+                }
+
+                ProcessTermination.Terminate(0);
             })
             {
                 IsBackground = true,

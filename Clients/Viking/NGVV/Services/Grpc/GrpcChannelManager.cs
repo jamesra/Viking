@@ -107,8 +107,10 @@ namespace Viking.Services.Grpc
         {
             try
             {
-                GrpcEnvironment.ShutdownChannelsAsync().Wait(TimeSpan.FromSeconds(5));
-                Trace.WriteLine("gRPC environment shut down successfully");
+                bool finished = GrpcEnvironment.ShutdownChannelsAsync().Wait(TimeSpan.FromSeconds(5));
+                Trace.WriteLine(finished
+                    ? "gRPC environment shut down successfully"
+                    : "gRPC environment shutdown timed out after 5 s; a call is probably still in flight");
             }
             catch (Exception ex)
             {
@@ -186,8 +188,10 @@ namespace Viking.Services.Grpc
                 Task shutdown = channel.ShutdownAsync();
                 if (wait)
                 {
-                    shutdown.Wait(TimeSpan.FromSeconds(5));
-                    Trace.WriteLine("Shared gRPC channel shut down successfully");
+                    bool finished = shutdown.Wait(TimeSpan.FromSeconds(5));
+                    Trace.WriteLine(finished
+                        ? "Shared gRPC channel shut down successfully"
+                        : "Shared gRPC channel shutdown timed out after 5 s");
                     return;
                 }
 

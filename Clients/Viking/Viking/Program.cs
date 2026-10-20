@@ -243,7 +243,10 @@ namespace Viking
 
             SynchronizedDebugWriter?.Close();
             DebugLogFile?.Close();
-            Environment.Exit(0);
+
+            // Not Environment.Exit: its ProcessExit pass runs Grpc.Core's unbounded shutdown wait, which
+            // hung the windowless process whenever a gRPC call was still in flight.
+            ProcessTermination.Terminate(0);
         }
 
         private static string? FirstNonEmpty(params string?[] values)
