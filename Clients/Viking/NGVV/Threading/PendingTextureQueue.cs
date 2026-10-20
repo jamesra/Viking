@@ -354,16 +354,17 @@ namespace Viking
                     break;
 
                 bool requeuedForDevice = false;
+                Texture2D texture = null;
 
                 // Every exit for a dequeued item, including cancel, must pass through the finally below; a tile left
-                // in PendingTileViews makes TileView.GetOrLoadTextureAsync skip that tile key for the rest of the session.
+                // in PendingTileViews makes TileView.GetOrLoadTextureAsync skip that tile key for the rest of the session,
+                // and a file claim left behind stops that file from loading again. Only an item requeued to wait for a
+                // device keeps both.
                 try
                 {
                     if (item.TileView?.SectionLoadingCancelled ?? false)
                     {
                         item.Tcs.TrySetResult(null);
-                        if (item.FileKey != null)
-                            EndLoadingFile(item.FileKey, null);
                         continue;
                     }
 
@@ -385,7 +386,6 @@ namespace Viking
                         return;
                     }
 
-                    Texture2D texture = null;
                     try
                     {
                         texture = TextureReaderV2.TextureFromData(device, item.Data, item.UseMipMaps);
@@ -393,8 +393,6 @@ namespace Viking
                     catch (Exception)
                     {
                         item.Tcs.TrySetResult(null);
-                        if (item.FileKey != null)
-                            EndLoadingFile(item.FileKey, null);
                         continue;
                     }
 
@@ -402,8 +400,6 @@ namespace Viking
                         item.TileView.SetTextureFromQueue(texture);
                     item.Tcs.TrySetResult(texture);
                     texturesLoaded++;
-                    if (item.FileKey != null)
-                        EndLoadingFile(item.FileKey, texture);
                 }
                 finally
                 {
@@ -419,6 +415,8 @@ namespace Viking
                         {
                             _pendingLock.ExitWriteLock();
                         }
+                        if (item.FileKey != null)
+                            EndLoadingFile(item.FileKey, texture);
                     }
                 }
             }

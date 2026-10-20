@@ -25,8 +25,10 @@ namespace VikingCoreTests
     /// </summary>
     /// <remarks>
     /// Each test works in its own temp folder, removed in cleanup. The graphics device is an uninitialized
-    /// placeholder and no viewer is wired up, so a decoded tile reaches <see cref="PendingTextureQueue"/> and is
-    /// completed with null when the test pumps the queue; "decoded" is observed as "queued", not as a texture.
+    /// placeholder, also handed to the queue through <see cref="TileLoadEnvironment.GetDevice"/> (without a device
+    /// the queue holds tiles until one exists). It cannot create a texture, so a decoded tile reaches
+    /// <see cref="PendingTextureQueue"/> and is completed with null when the test pumps the queue; "decoded" is
+    /// observed as "queued", not as a texture.
     /// <see cref="Viking.Common.SharedResources.HttpClient"/> is replaced for the whole class so a stray server
     /// request is counted instead of leaving the machine.
     /// </remarks>
@@ -44,6 +46,7 @@ namespace VikingCoreTests
         private static readonly byte[] PngBytes = CreatePng();
 
         private HttpClient? _savedClient;
+        private Func<GraphicsDevice?>? _savedGetDevice;
         private CountingHandler _handler = new();
         private string _folder = "";
 
@@ -81,6 +84,8 @@ namespace VikingCoreTests
         public void Initialize()
         {
             _savedClient = Viking.Common.SharedResources.HttpClient;
+            _savedGetDevice = TileLoadEnvironment.GetDevice;
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
             _handler = new CountingHandler();
             Viking.Common.SharedResources.HttpClient = new HttpClient(_handler);
             _folder = Path.Combine(Path.GetTempPath(), "TextureReaderV2DiskCacheTests-" + Guid.NewGuid().ToString("N"));
@@ -91,6 +96,7 @@ namespace VikingCoreTests
         public void Cleanup()
         {
             Viking.Common.SharedResources.HttpClient = _savedClient!;
+            TileLoadEnvironment.GetDevice = _savedGetDevice;
             try
             {
                 Directory.Delete(_folder, recursive: true);
@@ -241,7 +247,7 @@ namespace VikingCoreTests
                 Thread.Sleep(5);
             }
 
-            Assert.IsNull(Await(load), "No viewer device, so the queue completes the tile with null.");
+            Assert.IsNull(Await(load), "The placeholder device cannot create a texture, so the queue completes the tile with null.");
             CollectionAssert.AreEqual(PngBytes, File.ReadAllBytes(file));
         }
 

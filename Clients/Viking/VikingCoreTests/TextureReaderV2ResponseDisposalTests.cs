@@ -27,8 +27,8 @@ namespace VikingCoreTests
     /// <remarks>
     /// <see cref="Viking.Common.SharedResources.HttpClient"/> is swapped for a client over <see cref="ScriptedHandler"/>
     /// and restored after each test. The reader has no cache file name, so the disk cache is never read or written,
-    /// and the graphics device is an uninitialized placeholder: the decode path only checks it for null, and
-    /// <see cref="PendingTextureQueue"/> completes decoded tiles with null because no viewer is wired up.
+    /// and the graphics device is an uninitialized placeholder, also returned by <see cref="TileLoadEnvironment.GetDevice"/>:
+    /// it cannot create a texture, so <see cref="PendingTextureQueue"/> completes decoded tiles with null.
     /// Most retries use 429 with <c>Retry-After: 0</c> so they do not wait; 503 and 408 wait the ~1 s jitter, so only
     /// one example uses them.
     /// </remarks>
@@ -44,6 +44,7 @@ namespace VikingCoreTests
         private static readonly GraphicsDevice PlaceholderDevice = CreatePlaceholderDevice();
 
         private HttpClient? _savedClient;
+        private Func<GraphicsDevice?>? _savedGetDevice;
 
         private static GraphicsDevice CreatePlaceholderDevice()
         {
@@ -53,17 +54,26 @@ namespace VikingCoreTests
         }
 
         [TestInitialize]
-        public void Initialize() => _savedClient = Viking.Common.SharedResources.HttpClient;
+        public void Initialize()
+        {
+            _savedClient = Viking.Common.SharedResources.HttpClient;
+            _savedGetDevice = TileLoadEnvironment.GetDevice;
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
+        }
 
         [TestCleanup]
-        public void Cleanup() => Viking.Common.SharedResources.HttpClient = _savedClient!;
+        public void Cleanup()
+        {
+            Viking.Common.SharedResources.HttpClient = _savedClient!;
+            TileLoadEnvironment.GetDevice = _savedGetDevice;
+        }
 
         /// <summary>Server replies the test can script, in the order the reader requests them.</summary>
         public enum Reply
         {
             /// <summary>200 with a body that is not an image (decode throws ArgumentException).</summary>
             OkNotAnImage,
-            /// <summary>200 with a valid PNG (decoded, then dropped by the queue without a device).</summary>
+            /// <summary>200 with a valid PNG (decoded, then completed with null by the queue on the placeholder device).</summary>
             OkPng,
             NotFound,
             InternalServerError,
@@ -206,7 +216,7 @@ namespace VikingCoreTests
 
             Assert.AreEqual(1, outcome.Responses.Count);
             AssertAllDisposed(outcome);
-            Assert.IsFalse(outcome.HasTexture, "No viewer device, so the queue completes the decoded tile with null.");
+            Assert.IsFalse(outcome.HasTexture, "The placeholder device cannot create a texture, so the queue completes the decoded tile with null.");
         }
 
         [TestMethod]

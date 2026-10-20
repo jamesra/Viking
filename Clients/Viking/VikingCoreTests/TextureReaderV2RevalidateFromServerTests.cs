@@ -24,8 +24,9 @@ namespace VikingCoreTests
     /// <remarks>
     /// The method is kept while decision <c>tile-cache-revalidation</c> is open; these tests document
     /// current behavior without requiring production edits. <see cref="Viking.Common.SharedResources.HttpClient"/>
-    /// is replaced per test; the graphics device is an uninitialized placeholder, so a successful decode
-    /// is observed by pumping <see cref="PendingTextureQueue"/> and still completes with null texture.
+    /// is replaced per test; the graphics device is an uninitialized placeholder, also returned by
+    /// <see cref="TileLoadEnvironment.GetDevice"/>, so a successful decode is observed by pumping
+    /// <see cref="PendingTextureQueue"/> and still completes with null texture.
     /// </remarks>
     [TestClass]
     public class TextureReaderV2RevalidateFromServerTests
@@ -41,6 +42,7 @@ namespace VikingCoreTests
         private static readonly byte[] PngBytes = CreatePng();
 
         private HttpClient? _savedClient;
+        private Func<GraphicsDevice?>? _savedGetDevice;
         private string _folder = "";
 
         private static GraphicsDevice CreatePlaceholderDevice()
@@ -112,6 +114,8 @@ namespace VikingCoreTests
         public void Initialize()
         {
             _savedClient = Viking.Common.SharedResources.HttpClient;
+            _savedGetDevice = TileLoadEnvironment.GetDevice;
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
             _folder = Path.Combine(Path.GetTempPath(), "TextureReaderV2Revalidate-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_folder);
         }
@@ -120,6 +124,7 @@ namespace VikingCoreTests
         public void Cleanup()
         {
             Viking.Common.SharedResources.HttpClient = _savedClient!;
+            TileLoadEnvironment.GetDevice = _savedGetDevice;
             try
             {
                 Directory.Delete(_folder, recursive: true);

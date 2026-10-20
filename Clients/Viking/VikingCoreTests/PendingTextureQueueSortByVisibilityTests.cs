@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using FsCheck;
 using Geometry;
@@ -22,6 +23,8 @@ namespace VikingCoreTests
     /// <remarks>
     /// The queue is static; tests enqueue decoded-data placeholders without running <c>ProcessQueue</c>, read order
     /// via reflection on the private item list, and drain in cleanup so file claims and pending tiles are released.
+    /// Draining needs a device, so <see cref="TileLoadEnvironment.GetDevice"/> returns an uninitialized placeholder
+    /// for each test; without one the queue keeps live items until a device exists.
     /// </remarks>
     [TestClass]
     public class PendingTextureQueueSortByVisibilityTests
@@ -38,11 +41,30 @@ namespace VikingCoreTests
             QueueType.GetMethod("ProcessQueue", StaticPrivate)
             ?? throw new MissingMethodException(QueueType.Name, "ProcessQueue");
 
+        private static readonly GraphicsDevice PlaceholderDevice = CreatePlaceholderDevice();
+
+        private Func<GraphicsDevice?>? _savedGetDevice;
+
+        private static GraphicsDevice CreatePlaceholderDevice()
+        {
+            var device = (GraphicsDevice)FormatterServices.GetUninitializedObject(typeof(GraphicsDevice));
+            GC.SuppressFinalize(device);
+            return device;
+        }
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            _savedGetDevice = TileLoadEnvironment.GetDevice;
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
             Drain();
             TextureRequestQueue.SetMaxWorkers(DefaultMaxWorkers);
+            TileLoadEnvironment.GetDevice = _savedGetDevice;
         }
 
         private static TileView CreateTile(int section, string textureName, int downsample = 1, double x = 0, double y = 0)

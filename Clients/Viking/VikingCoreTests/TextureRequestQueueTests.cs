@@ -27,8 +27,8 @@ namespace VikingCoreTests
     /// <see cref="Rig"/>, which takes every slot of the worker throttle through reflection so requests park
     /// deterministically (dequeued and waiting for a slot, or still in the list behind a full worker pool), and
     /// releases everything again on dispose. <see cref="Cleanup"/> stops the worker pool after every test.
-    /// <c>UI.State.volume</c> is null in these tests, so a request that reaches a worker completes with a null
-    /// texture without touching a graphics device.
+    /// <see cref="TileLoadEnvironment.Volume"/> is null in these tests, so a request that reaches a worker completes
+    /// with a null texture without touching a graphics device.
     /// </remarks>
     [TestClass]
     public class TextureRequestQueueTests
@@ -49,13 +49,13 @@ namespace VikingCoreTests
         private static readonly FieldInfo LockField = QueueType.GetField("_lock", StaticPrivate)
             ?? throw new MissingFieldException(QueueType.Name, "_lock");
 
-        private VolumeViewModel? _savedVolume;
+        private Volume? _savedVolume;
 
         [TestInitialize]
         public void Initialize()
         {
-            _savedVolume = Viking.UI.State.volume;
-            Viking.UI.State.volume = null;
+            _savedVolume = TileLoadEnvironment.Volume;
+            TileLoadEnvironment.Volume = null;
         }
 
         [TestCleanup]
@@ -63,7 +63,7 @@ namespace VikingCoreTests
         {
             TextureRequestQueue.StopWorkers();
             TextureRequestQueue.SetMaxWorkers(DefaultMaxWorkers);
-            Viking.UI.State.volume = _savedVolume;
+            TileLoadEnvironment.Volume = _savedVolume;
         }
 
         private static TileView CreateTile(int section, string textureName, int downsample = 1, double x = 0, double y = 0)
@@ -252,21 +252,36 @@ namespace VikingCoreTests
             PendingTextureQueue.EndLoadingFile(tile.TextureFileName);
         }
 
+        /// <summary>
+        /// A request for a file another loader has claimed waits for that load and completes with its result instead
+        /// of fetching the file again; it neither releases the other loader's claim nor takes the file afterwards.
+        /// </summary>
         [TestMethod]
         public void RequestForAFileAnotherLoaderHoldsCompletesWithoutTakingTheClaim()
         {
             TileView tile = CreateTile(6, UniqueName("foreign-claim"));
             Assert.IsTrue(PendingTextureQueue.TryBeginLoadingFile(tile.TextureFileName));
+            bool claimHeld = true;
             try
             {
                 Task<Texture2D> task = TextureRequestQueue.EnqueueRequest(tile, null!, CancellationToken.None);
+                WaitUntil(() => !QueuedTextureNames().Contains(tile.TextureFileName), "a worker to take the request");
+
+                Assert.IsFalse(task.Wait(TimeSpan.FromMilliseconds(200)), "The request completed while another loader held the file.");
+                Assert.IsTrue(TextureRequestQueue.IsTileViewPending(tile), "The waiting request left the pending set.");
+                Assert.IsFalse(PendingTextureQueue.TryBeginLoadingFile(tile.TextureFileName), "The request released a claim it does not own.");
+
+                PendingTextureQueue.EndLoadingFile(tile.TextureFileName, null);
+                claimHeld = false;
 
                 AssertCompletedNullAndReleased(task, tile);
-                Assert.IsFalse(PendingTextureQueue.TryBeginLoadingFile(tile.TextureFileName), "The request released a claim it does not own.");
+                Assert.IsTrue(PendingTextureQueue.TryBeginLoadingFile(tile.TextureFileName), "The request took the claim after the other load ended.");
+                PendingTextureQueue.EndLoadingFile(tile.TextureFileName);
             }
             finally
             {
-                PendingTextureQueue.EndLoadingFile(tile.TextureFileName);
+                if (claimHeld)
+                    PendingTextureQueue.EndLoadingFile(tile.TextureFileName);
             }
         }
 

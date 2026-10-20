@@ -30,8 +30,9 @@ namespace VikingCoreTests
     /// The escaping disk failure is a cache file the current user may not read (deny ReadData ACE): opening it throws
     /// <see cref="UnauthorizedAccessException"/>, which is not one of the exceptions <c>TryLoadingFromDiskOnly</c>
     /// turns into null, while deleting it still succeeds. <see cref="Viking.Common.SharedResources.HttpClient"/> is
-    /// replaced per test by a scripted handler; the graphics device is an uninitialized placeholder, so a decoded
-    /// tile is completed with null by <see cref="PendingTextureQueue"/> when the test pumps it.
+    /// replaced per test by a scripted handler; the graphics device is an uninitialized placeholder, also returned by
+    /// <see cref="TileLoadEnvironment.GetDevice"/>, so a decoded tile is completed with null by
+    /// <see cref="PendingTextureQueue"/> when the test pumps it.
     /// </remarks>
     [TestClass]
     public class TextureReaderV2LoadTextureFallbackTests
@@ -51,6 +52,7 @@ namespace VikingCoreTests
         private static readonly byte[] PngBytes = CreatePng();
 
         private HttpClient? _savedClient;
+        private Func<GraphicsDevice?>? _savedGetDevice;
         private string _folder = "";
 
         /// <summary>Server replies the test can script, in the order the reader requests them.</summary>
@@ -115,6 +117,8 @@ namespace VikingCoreTests
         public void Initialize()
         {
             _savedClient = Viking.Common.SharedResources.HttpClient;
+            _savedGetDevice = TileLoadEnvironment.GetDevice;
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
             _folder = Path.Combine(Path.GetTempPath(), "TextureReaderV2LoadTextureFallbackTests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_folder);
         }
@@ -123,6 +127,7 @@ namespace VikingCoreTests
         public void Cleanup()
         {
             Viking.Common.SharedResources.HttpClient = _savedClient!;
+            TileLoadEnvironment.GetDevice = _savedGetDevice;
             try
             {
                 Directory.Delete(_folder, recursive: true);
@@ -171,7 +176,7 @@ namespace VikingCoreTests
                 ProcessQueue.Invoke(null, null);
             }
 
-            Assert.IsNull(load.Result, "No viewer device, so a decoded tile is completed with null.");
+            Assert.IsNull(load.Result, "The placeholder device cannot create a texture, so a decoded tile is completed with null.");
             return (handler.Requests, reader.TextureNotFound, File.Exists(cacheFile));
         }
 

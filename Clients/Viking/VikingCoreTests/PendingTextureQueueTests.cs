@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using FsCheck;
 using Geometry;
@@ -19,9 +22,11 @@ namespace VikingCoreTests
     /// return null forever for that tile key, so the tile stays blank when the user returns to the section.
     /// </summary>
     /// <remarks>
-    /// The queue is static, so every test uses fresh texture names. No dispatcher or viewer is wired up:
-    /// <c>ProcessQueue</c> is invoked directly, and a non-cancelled item meets a null graphics device and
-    /// completes with a null texture through the same cleanup.
+    /// The queue is static, so every test uses fresh texture names. No dispatcher is wired up: <c>ProcessQueue</c>
+    /// is invoked directly. <see cref="TileLoadEnvironment.GetDevice"/> returns an uninitialized placeholder device
+    /// unless a test clears it; the placeholder cannot create a texture, so a non-cancelled item completes with a
+    /// null texture through the same cleanup. Without a device a live item goes back to the head of the queue and
+    /// stays pending until a device exists.
     /// </remarks>
     [TestClass]
     public class PendingTextureQueueTests
@@ -29,6 +34,37 @@ namespace VikingCoreTests
         private static readonly MethodInfo ProcessQueue =
             typeof(PendingTextureQueue).GetMethod("ProcessQueue", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new MissingMethodException(nameof(PendingTextureQueue), "ProcessQueue");
+
+        private static readonly FieldInfo ItemsField =
+            typeof(PendingTextureQueue).GetField("_items", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new MissingFieldException(nameof(PendingTextureQueue), "_items");
+
+        private static readonly GraphicsDevice PlaceholderDevice = CreatePlaceholderDevice();
+
+        private Func<GraphicsDevice?>? _savedGetDevice;
+
+        private static GraphicsDevice CreatePlaceholderDevice()
+        {
+            var device = (GraphicsDevice)FormatterServices.GetUninitializedObject(typeof(GraphicsDevice));
+            GC.SuppressFinalize(device);
+            return device;
+        }
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            _savedGetDevice = TileLoadEnvironment.GetDevice;
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
+        }
+
+        /// <summary>Drains with the placeholder device so a test that stopped early leaves nothing queued.</summary>
+        [TestCleanup]
+        public void Cleanup()
+        {
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
+            Drain();
+            TileLoadEnvironment.GetDevice = _savedGetDevice;
+        }
 
         private static TileView CreateTile(int section, string textureName)
         {
@@ -70,6 +106,23 @@ namespace VikingCoreTests
             return new Queued(tile, fileKey, tcs);
         }
 
+        /// <summary>File keys in queue order, read from the private item list.</summary>
+        private static string[] QueuedFileKeys()
+        {
+            var keys = new List<string>();
+            foreach (object item in (IList)ItemsField.GetValue(null)!)
+                keys.Add((string)item.GetType().GetProperty("FileKey", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(item)!);
+            return keys.ToArray();
+        }
+
+        /// <summary>The item is still queued: its tile is pending, its task open and its file claimed.</summary>
+        private static void AssertWaiting(Queued q)
+        {
+            Assert.IsTrue(PendingTextureQueue.IsTileViewPending(q.Tile), $"{q.Tile} is not pending.");
+            Assert.IsFalse(q.Tcs.Task.IsCompleted, $"{q.Tile} task completed.");
+            Assert.IsFalse(PendingTextureQueue.TryBeginLoadingFile(q.FileKey), $"{q.FileKey} claim was released.");
+        }
+
         private static void AssertReleased(Queued q)
         {
             Assert.IsTrue(q.Tcs.Task.IsCompleted, $"{q.Tile} task never completed.");
@@ -93,19 +146,31 @@ namespace VikingCoreTests
                 "A fresh TileView for the same tile key (cache rebuilt it on return to the section) must be free to load.");
         }
 
+        /// <summary>
+        /// Without a graphics device (Jotunn's may not exist yet) a live tile stays queued and pending with its file
+        /// claimed however often the pump runs; once a device exists it is completed and released.
+        /// </summary>
         [TestMethod]
-        public void TileWithoutDeviceIsNotPendingAfterDequeue()
+        public void TileWithoutDeviceWaitsQueuedAndIsReleasedOnceADeviceExists()
         {
             Queued q = Enqueue(3, "no-device-" + Guid.NewGuid().ToString("N"));
+            TileLoadEnvironment.GetDevice = () => null;
 
+            for (int pass = 0; pass < 10; pass++)
+                ProcessQueue.Invoke(null, null);
+
+            CollectionAssert.AreEqual(new[] { q.FileKey }, QueuedFileKeys());
+            AssertWaiting(q);
+
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
             Drain();
 
             AssertReleased(q);
         }
 
         /// <summary>
-        /// One pump pass skips aborted items and keeps going, but stops at the first live item when the viewer
-        /// has no graphics device, leaving later items queued for the next pass.
+        /// One pump pass skips aborted items and keeps going, but stops at the first live item when there is no
+        /// graphics device, putting it back at the head of the queue ahead of the items not yet reached.
         /// </summary>
         [TestMethod]
         public void OnePassSkipsAbortedItemsAndStopsAtFirstLiveItemWithoutDevice()
@@ -117,15 +182,19 @@ namespace VikingCoreTests
             Queued abortedLast = Enqueue(7, $"pass-{run}-c");
             abortedFirst.Tile.AbortRequest();
             abortedLast.Tile.AbortRequest();
+            TileLoadEnvironment.GetDevice = () => null;
 
             ProcessQueue.Invoke(null, null);
 
             AssertReleased(abortedFirst);
-            AssertReleased(live);
+            CollectionAssert.AreEqual(new[] { live.FileKey, abortedLast.FileKey }, QueuedFileKeys());
+            AssertWaiting(live);
             Assert.IsTrue(PendingTextureQueue.IsTileViewPending(abortedLast.Tile));
             Assert.IsFalse(abortedLast.Tcs.Task.IsCompleted);
 
+            TileLoadEnvironment.GetDevice = () => PlaceholderDevice;
             Drain();
+            AssertReleased(live);
             AssertReleased(abortedLast);
         }
 
