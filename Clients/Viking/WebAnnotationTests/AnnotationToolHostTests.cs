@@ -72,7 +72,11 @@ namespace WebAnnotationTests
         }
 
         [TestCleanup]
-        public void Cleanup() => AnnotationOverlay.SectionViewLookup = _savedLookup;
+        public void Cleanup()
+        {
+            AnnotationOverlay.SectionViewLookup = _savedLookup;
+            WebAnnotation.UI.Actions.CreateStructureActionBase.CommitHandler = null;
+        }
 
         [TestMethod]
         public void AToolStartedDuringAnotherToolsClickStartsAfterThatToolFinishes()

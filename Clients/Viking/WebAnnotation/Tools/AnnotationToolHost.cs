@@ -37,6 +37,9 @@ namespace WebAnnotation.Tools
                 loc => GoToRequested?.Invoke(this, loc),
                 text => StatusChanged?.Invoke(this, text));
             _context.ProposeChoices = choices => ChoicesProposed?.Invoke(this, choices);
+            // Structures a pen stroke creates are saved here, asking for a parent when the type needs one.
+            UI.Actions.CreateStructureActionBase.CommitHandler = (structure, location) =>
+                AnnotationToolActions.CreateOrPickParentAsync(_context, structure, location);
             _defaultTool = new DefaultHitTestTool(_context);
             _current = _defaultTool;
         }
