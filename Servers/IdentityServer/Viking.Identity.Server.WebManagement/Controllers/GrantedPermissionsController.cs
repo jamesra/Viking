@@ -191,8 +191,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
             }
 
+            if (applicationDbContext.ResourceTypeId == nameof(AnnotationContext))
+            {
+                return View("EditContext", await BuildContextPermissionsModel(applicationDbContext));
+            }
+
             var availablePerms = applicationDbContext.AvailablePermissions?.Select(p => p.PermissionId).ToList() ?? new List<string>();
-            
+
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
                 AvailablePermissions = availablePerms,
@@ -201,6 +206,119 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             };
 
             return View(model);
+        }
+
+        // POST: GrantedPermissions/EditContext/5
+        /// <summary>
+        /// Saves an annotation context's Access grants and, in the same submit, the Read / Annotate / Review grants
+        /// of the annotation server the context uses. The server is read from the context, never from the form.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditContext(long id, [Bind()] ContextPermissionsEditViewModel model)
+        {
+            var context = await _context.Set<AnnotationContext>()
+                .Include(r => r.UsersWithPermissions)
+                .Include(r => r.GroupsWithPermissions)
+                .Include(r => r.Parent)
+                .FirstOrDefaultAsync(r => r.Id == id);
+            if (context == null)
+            {
+                return NotFound();
+            }
+
+            if (false == await CanEditResourcePermissions(context))
+            {
+                return Unauthorized();
+            }
+
+            if (false == await TryFilterToAllowedPermissions(context, model.Context?.UserPermissions, model.Context?.GroupPermissions))
+            {
+                return BadRequest("One or more submitted permissions are not valid for this resource type.");
+            }
+
+            Resource database = null;
+            if (context.AnnotationServerId.HasValue)
+            {
+                database = await _context.Resource
+                    .Include(r => r.UsersWithPermissions)
+                    .Include(r => r.GroupsWithPermissions)
+                    .Include(r => r.Parent)
+                    .FirstOrDefaultAsync(r => r.Id == context.AnnotationServerId.Value);
+            }
+
+            // A database grid is only posted when the user could edit it, so it is only applied then.
+            bool applyDatabase = database != null && model.Database != null && await CanEditResourcePermissions(database);
+            if (applyDatabase &&
+                false == await TryFilterToAllowedPermissions(database, model.Database.UserPermissions, model.Database.GroupPermissions))
+            {
+                return BadRequest("One or more submitted permissions are not valid for this resource type.");
+            }
+
+            try
+            {
+                context.UpdateUsersPermissions(model.Context?.UserPermissions);
+                context.UpdateGroupsPermissions(model.Context?.GroupPermissions);
+                if (applyDatabase)
+                {
+                    database.UpdateUsersPermissions(model.Database.UserPermissions);
+                    database.UpdateGroupsPermissions(model.Database.GroupPermissions);
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!GrantedUserPermissionExists(id))
+                {
+                    return NotFound();
+                }
+
+                throw;
+            }
+
+            TempData["SuccessMessage"] = applyDatabase
+                ? $"Access to {context.Name} and permissions on {database.Name} updated"
+                : "Update submitted";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+
+        /// <summary>
+        /// The two grids for an annotation context. The database grid is built when the context has an annotation server
+        /// the user may edit; otherwise only a note is shown.
+        /// </summary>
+        private async Task<ContextPermissionsEditViewModel> BuildContextPermissionsModel(Resource contextResource)
+        {
+            var context = await _context.Set<AnnotationContext>()
+                .Include(c => c.AnnotationServer)
+                .FirstAsync(c => c.Id == contextResource.Id);
+
+            var model = new ContextPermissionsEditViewModel
+            {
+                ContextId = context.Id,
+                ContextName = context.Name,
+                Context = _permissionsHelper.ResourcePermissionsEditGrid(contextResource)
+            };
+
+            if (context.AnnotationServerId.HasValue)
+            {
+                var database = await GetPermittedForResource(context.AnnotationServerId.Value);
+                if (database != null)
+                {
+                    model.DatabaseId = database.Id;
+                    model.DatabaseName = database.Name;
+                    if (await CanEditResourcePermissions(database))
+                    {
+                        model.Database = _permissionsHelper.ResourcePermissionsEditGrid(database);
+                    }
+                    else
+                    {
+                        model.DatabaseNotEditable = true;
+                    }
+                }
+            }
+
+            return model;
         }
 
         // POST: GrantedUserPermissions/Edit/5
