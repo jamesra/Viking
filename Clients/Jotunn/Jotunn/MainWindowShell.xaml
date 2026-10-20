@@ -66,6 +66,11 @@
                 <MenuItem Header="_Merge structures…" Click="OnMergeStructures"/>
                 <MenuItem Header="_Reload annotations" Click="OnReloadAnnotations" InputGestureText="F5"/>
                 <Separator/>
+                <MenuItem Header="_Favorite structure types…" Click="OnChooseFavoriteStructureTypes" InputGestureText="F6"/>
+                <MenuItem x:Name="PenModeMenuItem" Header="Pe_n mode" IsCheckable="True" Click="OnTogglePenModeMenu" InputGestureText="Num * / Shift+8"/>
+                <MenuItem Header="Randomize all _colors" Click="OnRandomizeAllColors"/>
+                <MenuItem x:Name="ExportMotifsMenuItem" Header="Export _motifs (Tulip)" Click="OnExportMotifs"/>
+                <Separator/>
                 <MenuItem Header="Annotation _preferences…" Command="{x:Static jotunnuicommon:GlobalCommands.AnnotationPreferences}"/>
                 <MenuItem Header="Manage structure _types…" Command="{x:Static jotunnuicommon:GlobalCommands.ManageStructureTypes}"/>
             </MenuItem>

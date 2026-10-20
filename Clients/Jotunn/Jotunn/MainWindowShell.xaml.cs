@@ -96,6 +96,8 @@ namespace Jotunn
             if (!string.IsNullOrWhiteSpace(segmentationUrl))
                 _tools.SegmentationChannels = SegmentationChannels(segmentationUrl);
             AttachAutoPolygonize(_sectionGrid.SceneHostControl, scene, _tools);
+            PenModeMenuItem.IsChecked = WebAnnotation.Global.PenMode;
+            ExportMotifsMenuItem.IsEnabled = WebAnnotation.Global.Export != null;
             _sectionGrid.SceneHostControl.Invalidate();
         }
 
@@ -208,6 +210,12 @@ namespace Jotunn
             else if (_tools != null && !ctrl && (e.Key == Key.Multiply || (shift && e.Key == Key.D8)))
             {
                 _tools.TogglePenMode();
+                PenModeMenuItem.IsChecked = WebAnnotation.Global.PenMode;
+                e.Handled = true;
+            }
+            else if (!ctrl && e.Key == Key.F6)
+            {
+                OnChooseFavoriteStructureTypes(this, e);
                 e.Handled = true;
             }
             else if (!ctrl && e.Key == Key.Tab && _tools != null && _tools.IsIdle)

@@ -182,6 +182,32 @@ namespace Jotunn
 
         void OnMergeStructures(object sender, RoutedEventArgs e) => ShowMergeStructures(0);
 
+        /// <summary>Viking's F6: the favorite structure types pen strokes offer to create.</summary>
+        void OnChooseFavoriteStructureTypes(object sender, RoutedEventArgs e) =>
+            WebAnnotation.AnnotationMenu.OnChooseFavoriteStructureTypes(sender, EventArgs.Empty);
+
+        void OnTogglePenModeMenu(object sender, RoutedEventArgs e)
+        {
+            _tools?.TogglePenMode();
+            PenModeMenuItem.IsChecked = WebAnnotation.Global.PenMode;
+        }
+
+        /// <summary>Viking's "Randomize All Colors": new display colors for every loaded cell.</summary>
+        void OnRandomizeAllColors(object sender, RoutedEventArgs e)
+        {
+            int recolored = WebAnnotation.UI.StructureColors.RandomizeAll();
+            _status?.SetMessage($"Recolored {recolored} cells");
+            _sectionGrid?.SceneHostControl?.Invalidate();
+        }
+
+        void OnExportMotifs(object sender, RoutedEventArgs e)
+        {
+            if (WebAnnotation.Global.Export is WebAnnotation.Export export)
+                export.OpenMotif();
+            else
+                _status?.SetMessage("This volume has no export service");
+        }
+
         /// <summary>Viking's choice buttons after a pen stroke, as a menu at the pointer.</summary>
         void ShowChoices(System.Collections.Generic.IReadOnlyList<WebAnnotation.Tools.AnnotationChoice> choices)
         {
