@@ -45,7 +45,9 @@ namespace WebAnnotation
             _volume = volume;
             _transforms = new VolumeTransformProvider(volume);
             // Jotunn has no WinForms overlay; shared actions and views find this scene's section views through the lookup.
-            AnnotationOverlay.SectionViewLookup = GetOrCreate;
+            // Like Viking's overlay cache, the lookup returns views already built and never builds one: shared code walks
+            // every section of the volume through it (recoloring), which must not create a view per section.
+            AnnotationOverlay.SectionViewLookup = HeldView;
             if (Store.IsInitialized)
             {
                 Store.Locations.CollectionChanged += OnStoreCollectionChanged;
@@ -84,6 +86,13 @@ namespace WebAnnotation
         /// which sections it applies to.
         /// </summary>
         public Action<GraphicsDevice, VikingXNA.Scene, int> OverlayDraw { get; set; }
+
+        /// <summary>The section's annotation view if this scene has built it, else null.</summary>
+        internal SectionAnnotationsView HeldView(int sectionNumber)
+        {
+            lock (_loadLock)
+                return _sections.TryGetValue(sectionNumber, out SectionAnnotationsView view) ? view : null;
+        }
 
         internal SectionAnnotationsView GetOrCreate(int sectionNumber)
         {
