@@ -148,6 +148,9 @@ namespace Jotunn
         /// </summary>
         protected void OnKeyDownPreview(object sender, KeyEventArgs e)
         {
+            // Registered as a class handler for every Window, so dialogs' keys arrive here too; they keep their own.
+            if (!ReferenceEquals(sender, this))
+                return;
             if (IsTextInputTarget(e.OriginalSource as DependencyObject))
                 return;
 
@@ -708,10 +711,13 @@ namespace Jotunn
         /// The segmentation service in use: the one chosen with Tools > Select segmentation service (Viking's setting,
         /// which the login's choice also sets), else the login's.
         /// </summary>
-        static string SegmentationServiceUrl() =>
-            !string.IsNullOrWhiteSpace(WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl)
+        string SegmentationServiceUrl() =>
+            _segmentationServiceChosen || !string.IsNullOrWhiteSpace(WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl)
                 ? WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl
                 : App.SegmentationServiceUrl;
+
+        /// <summary>Set once Select segmentation service has been used: its choice, including None, then decides alone.</summary>
+        bool _segmentationServiceChosen;
 
         string _segmentationChannelsUrl;
 
@@ -733,7 +739,10 @@ namespace Jotunn
         /// </summary>
         void OnSelectSegmentationService(object sender, RoutedEventArgs e)
         {
+            string before = WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl;
             WebAnnotation.AnnotationMenu.OnSelectSegmentationService(sender, EventArgs.Empty);
+            if (!string.Equals(before, WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl, StringComparison.OrdinalIgnoreCase))
+                _segmentationServiceChosen = true;
 
             string url = SegmentationServiceUrl();
             if (_tools != null)

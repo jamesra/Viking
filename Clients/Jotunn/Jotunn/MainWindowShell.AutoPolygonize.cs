@@ -60,15 +60,23 @@ namespace Jotunn
             ApplyAutoPolygonizeSetting();
         }
 
-        /// <summary>Viking's double click on a proposal accepts it, even over the circle it proposes for.</summary>
+        /// <summary>
+        /// Viking's double click on a proposal accepts it, even over the circle it proposes for. The first press of that
+        /// double click is consumed too, as Viking's overlay treats the proposal as the object under the pointer;
+        /// otherwise it would place a structure or continue a trace on empty space before the accept.
+        /// </summary>
         bool OnProposalMouseDown(Geometry.Vector2 world, MouseButton button, int clickCount)
         {
-            if (_autoPolygonize == null || clickCount < 2 || button != MouseButton.Left)
+            if (_autoPolygonize == null || button != MouseButton.Left)
                 return false;
             if (!_autoPolygonize.TryHit(world, out AutoPolygonizeProposal proposal, out _))
                 return false;
 
-            return proposal.HandleMouseDoubleClick(System.Windows.Forms.MouseButtons.Left, world);
+            if (clickCount < 2)
+                return true;
+
+            proposal.HandleMouseDoubleClick(System.Windows.Forms.MouseButtons.Left, world);
+            return true;
         }
 
         /// <summary>A right click on a proposal opens its menu instead of the annotation menu.</summary>

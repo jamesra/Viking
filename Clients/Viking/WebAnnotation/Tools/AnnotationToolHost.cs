@@ -221,9 +221,27 @@ namespace WebAnnotation.Tools
 
         public void OnMouseUp()
         {
-            _current.OnMouseUp();
-            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool or ResizeCircleTool or AdjustVertexTool or LinkAnnotationsTool or PenStrokeTool)
+            IAnnotationTool tool = _current;
+            _dispatchDepth++;
+            try
+            {
+                tool.OnMouseUp();
+            }
+            finally
+            {
+                _dispatchDepth--;
+            }
+
+            if (!ReferenceEquals(tool, _defaultTool) && ReferenceEquals(tool, _current)
+                && tool is TranslateLocationTool or ResizeCircleTool or AdjustVertexTool or LinkAnnotationsTool or PenStrokeTool)
                 FinishCurrent(AnnotationToolResult.Done);
+
+            if (_dispatchDepth == 0 && _pendingStart != null)
+            {
+                IAnnotationTool next = _pendingStart;
+                _pendingStart = null;
+                StartTool(next);
+            }
         }
 
         public bool OnKeyDown(Key key)

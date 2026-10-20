@@ -1715,6 +1715,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return AnnotationWaitResult.Cancelled;
 
             SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(parent.SectionNumber);
+            if (sectionView is null)
+                return AnnotationWaitResult.Cancelled;
+
             Rectangle? mosaicBounds = parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
             Stopwatch wait = Stopwatch.StartNew();
 

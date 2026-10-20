@@ -248,6 +248,8 @@ namespace WebAnnotation.Tools
         public static async Task SaveShapeEditAsync(AnnotationToolContext context, LocationObj location, string description,
             IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry undoShape, LocationType undoType)
         {
+            // A later edit of the same location (saved on its own) must not be undone by this save failing.
+            Geometry.IShape2D savingShape = location.MosaicShape;
             bool saved;
             try
             {
@@ -264,6 +266,13 @@ namespace WebAnnotation.Tools
                 UndoManager.PushLocationShape(description, location, mapper, undoShape, undoType);
                 Global.LastEditedAnnotationID = location.ID;
                 context.Invalidate();
+                return;
+            }
+
+            if (!ReferenceEquals(location.MosaicShape, savingShape))
+            {
+                Exception laterFault = Store.IsInitialized ? Store.Locations.LastSaveFault : null;
+                context.SetStatus($"Could not save an earlier edit of location {location.ID}" + (laterFault is null ? "" : $" ({laterFault.Message})"));
                 return;
             }
 

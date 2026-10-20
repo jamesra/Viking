@@ -58,9 +58,22 @@ namespace Viking.VolumeView
 
         GraphicsDevice IAutoPolygonizeHost.Device => Device;
 
-        void IAutoPolygonizeHost.Invalidate() => Invalidate();
+        /// <summary>Called from store and cache events too, which can arrive on worker threads; WPF needs the UI thread.</summary>
+        void IAutoPolygonizeHost.Invalidate()
+        {
+            if (Dispatcher.CheckAccess())
+                Invalidate();
+            else
+                Dispatcher.BeginInvoke(new Action(Invalidate));
+        }
 
-        void IAutoPolygonizeHost.ShowTransientStatus(string message) => TransientStatus?.Invoke(this, message);
+        void IAutoPolygonizeHost.ShowTransientStatus(string message)
+        {
+            if (Dispatcher.CheckAccess())
+                TransientStatus?.Invoke(this, message);
+            else
+                Dispatcher.BeginInvoke(new Action(() => TransientStatus?.Invoke(this, message)));
+        }
 
         bool IAutoPolygonizeHost.IsIdle => AnnotationTools?.IsIdle ?? true;
 

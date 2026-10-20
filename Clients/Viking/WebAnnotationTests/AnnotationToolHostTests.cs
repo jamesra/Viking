@@ -202,6 +202,26 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        public void AFailedSaveDoesNotUndoALaterEdit()
+        {
+            var pending = new System.Threading.Tasks.TaskCompletionSource<bool>();
+            AnnotationToolActions.SaveLocations = () => pending.Task;
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+
+            _host.ConvertCircleToPolygon(circle);
+            // The user edits the location again while the first save is still on its way.
+            var later = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(
+                new System.Data.SqlTypes.SqlChars("POLYGON((0 0, 20 0, 20 20, 0 20, 0 0))"), 0);
+            var laterShape = SqlGeometryUtils.SqlToMyGeometryConverters.ToShape2D(later);
+            circle.MosaicShape = laterShape;
+            pending.SetResult(false);
+
+            Assert.AreSame(laterShape, circle.MosaicShape, "the later edit stays");
+            StringAssert.Contains(_status, "earlier edit");
+        }
+
+        [TestMethod]
         public void ASavedShapeEditCanBeUndone()
         {
             var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(

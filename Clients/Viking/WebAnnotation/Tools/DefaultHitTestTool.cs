@@ -117,7 +117,12 @@ namespace WebAnnotation.Tools
                 // As in Viking, Pen Mode turns a press that started no annotation action into a stroke, even over an
                 // annotation: that is how a boundary is retraced or a hole cut. Jotunn's type list keeps its selection,
                 // so the chosen type is offered among the stroke's choices rather than overriding Pen Mode.
-                _context.StartTool(new PenStrokeTool(_context, world));
+                bool overEmptySpace = hit is null;
+                _context.StartTool(new PenStrokeTool(_context, world, at =>
+                {
+                    if (overEmptySpace)
+                        OnEmptyClick(at);
+                }));
                 return AnnotationToolResult.Continue;
             }
 

@@ -30,9 +30,13 @@ namespace WebAnnotation.Tools
         readonly int _sectionNumber;
         HashSet<long> _hidden;
 
-        public PenStrokeTool(AnnotationToolContext context, Vector2 origin)
+        readonly Action<Vector2> _onClick;
+
+        /// <param name="onClick">What a press that drew no stroke does instead (the default tool's click).</param>
+        public PenStrokeTool(AnnotationToolContext context, Vector2 origin, Action<Vector2> onClick = null)
         {
             _context = context;
+            _onClick = onClick;
             _sectionNumber = context.SectionNumber;
             ICanvasViewHitTesting hitTesting = context.Scene.GetOrCreate(_sectionNumber);
             if (hitTesting != null)
@@ -98,7 +102,10 @@ namespace WebAnnotation.Tools
             _context.SetStatus(null);
             Unhide();
             if (_path.Points.Count < 2)
+            {
+                _onClick?.Invoke(_path.Points[0]);
                 return;
+            }
 
             List<IAction> actions;
             try
