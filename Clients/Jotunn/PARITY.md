@@ -43,23 +43,20 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 | Other users' edits | Visible sections are polled every 30 s with Viking's policy. Section views beyond `NumSectionsInMemory` are evicted. |
 | Review Changes tab | Viking's WPF feed view and backfill, for Review/Admin users. The scene's store events and poll feed it. |
 | UI exceptions | Reported, and the session is kept (`DispatcherUnhandledException`). |
+| Parent structure | A new structure whose type has a parent type asks for its parent (`PickParentStructureTool`) before anything is saved. This applies to click placement, polylines, segmentation and pen strokes. Escape discards it. |
+| SAM2 segmentation | Tab, or Tools > Segmentation:<br>- left click adds an object point, right click a background point, middle click removes the nearest point<br>- Enter or a double click accepts<br>- runs through Viking's `SegmentationViewportSession` over `SectionSceneHost` (an `ISegmentationViewport`)<br>- not yet verified against a live server |
+| Change shape | Context menu:<br>- Circle<br>- Convert to polygon<br>- Segment to polygon (circles)<br>- Resegment (polygons)<br>- Simplify shape<br>All recorded for undo. |
+| Change-type hotkeys | Circle converts in place. Curves and polygons are clicked out from the pointer and replace the location's shape. |
+| Pen Mode | Numpad * or Shift+8. A stroke offers what Viking's overlay offers (retrace, redraw, link, continue, convert circle, cut hole, create structure), in a menu at the pointer. |
+| SBFSEM-tools | "Open in SBFSEM-tools" in the location menu. |
+| Property sheet list menus | Viking's context menu providers are registered (`ExtensionManager.RegisterContextMenuProviders`). |
 
 ## Not yet in Jotunn
 
-- **Interactive SAM2 segmentation (Tab) and auto-polygonize.** `SegmentationViewportSession` uses Viking's `SectionViewerControl` for:
-  - camera, downsample, size and `ScreenToWorld`
-  - current channel and transform
-  - `RenderSceneToTexture`
-
-  A host interface implemented by `SectionSceneHost` is the way in. The command itself (about 1,700 lines, WinForms input) would then need a tool.
-- **Pen mode**: strokes that create, cut holes in, or retrace shapes.
+- **Auto-polygonize.** `AutoCirclePolygonizeController` (about 6,000 lines with its proposals and cache) uses Viking's `SectionViewerControl` in about 100 places, including its command queue and drawing. It would need a host interface like `ISegmentationViewport`, but wider.
+- **Segmentation extras**: dilate/erode mask editing, and background points derived from other structures.
+- **Pen extras**: Viking hides the target cell's children during a stroke, and draws previews of each choice.
 - **Remaining location menu items:**
-  - convert shape and simplify polygon
-  - export (Tulip/morphology)
-  - SBFSEM tools
+  - export (Tulip/morphology): `Global.Export` is set only by Viking's module init
   - unverified branch terminals
   - random color
-
-  Several of these call `AnnotationOverlay.CurrentOverlay.Parent` and need host hooks like `GoToLocationHandler`.
-- **Change location type hotkeys** (`ChangeLocationAnnotationTypeAction`): reported as not supported.
-- **Context menus inside the property sheet's lists**: these come from Viking's `ExtensionManager` context-menu providers, which Jotunn does not register. The menu shows empty.
