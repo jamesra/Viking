@@ -8,6 +8,15 @@ namespace WebAnnotation.UI
 {
     public partial class MergeStructuresForm : Form
     {
+        /// <summary>
+        /// Structure ID in the Keep box, or -1 when the box is empty or not a number. Setting a value of 0 or less empties the box.
+        /// </summary>
+        public long KeepID
+        {
+            get => StructureIdText.TryParse(textKeepID.Text, out long id) ? id : -1;
+            set => textKeepID.Text = StructureIdText.ToText(value);
+        }
+
         public MergeStructuresForm()
         {
             InitializeComponent();

@@ -44,9 +44,41 @@ namespace Jotunn
             menu.Items.Add(Item("Copy _structure ID", () => Clipboard.SetText(location.ParentID.ToString()), isEnabled: location.ParentID.HasValue));
             menu.Items.Add(Item("_Center view here", () => GoToLocation(location)));
             menu.Items.Add(new Separator());
+            menu.Items.Add(Item("_Merge another structure into this one…", () => ShowMergeStructures(location.ParentID ?? 0), isEnabled: location.ParentID.HasValue));
+            menu.Items.Add(SplitMenu(location));
+            menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Delete…", () => ConfirmAndDelete(location)));
             return menu;
         }
+
+        /// <summary>
+        /// Viking splits a structure from a location link's menu; here each link of the location is listed, and the part of
+        /// the structure on the far side of the chosen link becomes a new structure.
+        /// </summary>
+        MenuItem SplitMenu(LocationObj location)
+        {
+            MenuItem split = new() { Header = "_Split structure at link to" };
+            foreach (long linked in location.LinksCopy)
+                split.Items.Add(Item($"Location {linked}…", () => ShowSplitStructure(location.ID, linked)));
+            split.IsEnabled = split.Items.Count > 0;
+            return split;
+        }
+
+        void ShowMergeStructures(long keepId)
+        {
+            using WebAnnotation.UI.MergeStructuresForm form = new() { KeepID = keepId };
+            form.ShowDialog();
+            _sectionGrid?.SceneHostControl?.Invalidate();
+        }
+
+        void ShowSplitStructure(long keepLocationId, long splitLocationId)
+        {
+            using WebAnnotation.UI.SplitStructuresForm form = new() { KeepID = keepLocationId, SplitID = splitLocationId };
+            form.ShowDialog();
+            _sectionGrid?.SceneHostControl?.Invalidate();
+        }
+
+        void OnMergeStructures(object sender, RoutedEventArgs e) => ShowMergeStructures(0);
 
         static MenuItem Item(string header, Action click, bool isEnabled = true, bool? isChecked = null)
         {
