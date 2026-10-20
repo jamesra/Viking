@@ -75,7 +75,8 @@ namespace Jotunn.Common
             "Setup channels", nameof(SetupChannels), typeof(GlobalCommands));
 
         public static readonly RoutedUICommand ManageStructureTypes = new RoutedUICommand(
-            "Manage structure types", nameof(ManageStructureTypes), typeof(GlobalCommands));
+            "Manage structure types", nameof(ManageStructureTypes), typeof(GlobalCommands),
+            [new KeyGesture(Key.F7)]);
 
         public static readonly RoutedUICommand Bookmarks = new RoutedUICommand(
             "Bookmarks", nameof(Bookmarks), typeof(GlobalCommands));

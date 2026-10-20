@@ -72,7 +72,7 @@
                 <MenuItem x:Name="ExportMotifsMenuItem" Header="Export _motifs (Tulip)" Click="OnExportMotifs"/>
                 <Separator/>
                 <MenuItem Header="Annotation _preferences…" Command="{x:Static jotunnuicommon:GlobalCommands.AnnotationPreferences}"/>
-                <MenuItem Header="Manage structure _types…" Command="{x:Static jotunnuicommon:GlobalCommands.ManageStructureTypes}"/>
+                <MenuItem Header="Manage structure _types…" Command="{x:Static jotunnuicommon:GlobalCommands.ManageStructureTypes}" InputGestureText="F7"/>
             </MenuItem>
             <MenuItem Header="_Tools">
                 <MenuItem Header="_Measure distance" Command="{x:Static jotunnuicommon:GlobalCommands.MeasureDistance}"/>
